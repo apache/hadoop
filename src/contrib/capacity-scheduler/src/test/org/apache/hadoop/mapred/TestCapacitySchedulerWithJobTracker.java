@@ -20,30 +20,37 @@ package org.apache.hadoop.mapred;
 
 import java.util.Properties;
 
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.SleepJob;
 
 public class TestCapacitySchedulerWithJobTracker extends
-    ClusterWithCapacityScheduler {
+                                                 ClusterWithCapacityScheduler {
 
   /**
-   * Test case which checks if the jobs which 
+   * Test case which checks if the jobs which
    * fail initialization are removed from the
    * {@link CapacityTaskScheduler} waiting queue.
-   * 
+   *
    * @throws Exception
    */
   public void testFailingJobInitalization() throws Exception {
     Properties schedulerProps = new Properties();
-    schedulerProps.put("mapred.capacity-scheduler.queue.default.capacity",
-        "100");
     Properties clusterProps = new Properties();
-    clusterProps.put("mapred.tasktracker.map.tasks.maximum", String.valueOf(1));
-    clusterProps.put("mapred.tasktracker.reduce.tasks.maximum", String
-        .valueOf(1));
-    clusterProps.put("mapred.jobtracker.maxtasks.per.job", String.valueOf(1));
+    clusterProps.put("mapred.queue.names","default");
+    clusterProps.put(TTConfig.TT_MAP_SLOTS, String.valueOf(1));
+    clusterProps.put(TTConfig.TT_REDUCE_SLOTS, String.valueOf(1));
+    clusterProps.put(JTConfig.JT_TASKS_PER_JOB, String.valueOf(1));
     // cluster capacity 1 maps, 1 reduces
     startCluster(1, clusterProps, schedulerProps);
+    CapacityTaskScheduler scheduler = (CapacityTaskScheduler) getJobTracker()
+      .getTaskScheduler();
+
+     AbstractQueue root = scheduler.getRoot();
+     root.getChildren().get(0).getQueueSchedulingContext().setCapacityPercent(100);
+
     JobConf conf = getJobConf();
     conf.setSpeculativeExecution(false);
     conf.setNumTasksToExecutePerJvm(-1);
@@ -51,45 +58,56 @@ public class TestCapacitySchedulerWithJobTracker extends
     sleepJob.setConf(conf);
     Job job = sleepJob.createJob(3, 3, 1, 1, 1, 1);
     job.waitForCompletion(false);
-    assertFalse("The submitted job successfully completed", 
-        job.isSuccessful());
-    CapacityTaskScheduler scheduler = (CapacityTaskScheduler) getJobTracker()
-        .getTaskScheduler();
+    assertFalse(
+      "The submitted job successfully completed",
+      job.isSuccessful());
+
     JobQueuesManager mgr = scheduler.jobQueuesManager;
-    assertEquals("Failed job present in Waiting queue", 0, mgr
-        .getWaitingJobCount("default"));
+    assertEquals(
+      "Failed job present in Waiting queue", 0, mgr
+        .getJobQueue("default").getWaitingJobCount());
   }
 
   /**
    * Test case which checks {@link JobTracker} and {@link CapacityTaskScheduler}
-   * 
+   * <p/>
    * Test case submits 2 jobs in two different capacity scheduler queues.
    * And checks if the jobs successfully complete.
-   * 
+   *
    * @throws Exception
    */
+
   public void testJobTrackerIntegration() throws Exception {
 
     Properties schedulerProps = new Properties();
-    String[] queues = new String[] { "Q1", "Q2" };
+    String[] queues = new String[]{"Q1", "Q2"};
     Job jobs[] = new Job[2];
-    for (String q : queues) {
-      schedulerProps.put(CapacitySchedulerConf
-          .toFullPropertyName(q, "capacity"), "50");
-      schedulerProps.put(CapacitySchedulerConf.toFullPropertyName(q,
-          "minimum-user-limit-percent"), "100");
-    }
 
     Properties clusterProps = new Properties();
-    clusterProps.put("mapred.tasktracker.map.tasks.maximum", String.valueOf(2));
-    clusterProps.put("mapred.tasktracker.reduce.tasks.maximum", String
-        .valueOf(2));
+    clusterProps.put(TTConfig.TT_MAP_SLOTS, String.valueOf(2));
+    clusterProps.put(TTConfig.TT_REDUCE_SLOTS, String.valueOf(2));
     clusterProps.put("mapred.queue.names", queues[0] + "," + queues[1]);
     startCluster(2, clusterProps, schedulerProps);
+    CapacityTaskScheduler scheduler = (CapacityTaskScheduler) getJobTracker()
+      .getTaskScheduler();
+
+
+
+    AbstractQueue root = scheduler.getRoot();
+
+    for(AbstractQueue q : root.getChildren()) {
+      q.getQueueSchedulingContext().setCapacityPercent(50);
+      q.getQueueSchedulingContext().setUlMin(100);
+    }
+
+
+    LOG.info("WE CREATED THE QUEUES TEST 2");
+   // scheduler.taskTrackerManager.getQueueManager().setQueues(qs);
+   // scheduler.start();
 
     JobConf conf = getJobConf();
     conf.setSpeculativeExecution(false);
-    conf.set("mapred.committer.job.setup.cleanup.needed", "false");
+    conf.set(JobContext.SETUP_CLEANUP_NEEDED, "false");
     conf.setNumTasksToExecutePerJvm(-1);
     conf.setQueueName(queues[0]);
     SleepJob sleepJob1 = new SleepJob();
@@ -105,9 +123,11 @@ public class TestCapacitySchedulerWithJobTracker extends
     sleepJob2.setConf(conf2);
     jobs[1] = sleepJob2.createJob(3, 3, 5, 3, 5, 3);
     jobs[1].waitForCompletion(false);
-    assertTrue("Sleep job submitted to queue 1 is not successful", jobs[0]
+    assertTrue(
+      "Sleep job submitted to queue 1 is not successful", jobs[0]
         .isSuccessful());
-    assertTrue("Sleep job submitted to queue 2 is not successful", jobs[1]
+    assertTrue(
+      "Sleep job submitted to queue 2 is not successful", jobs[1]
         .isSuccessful());
   }
 }

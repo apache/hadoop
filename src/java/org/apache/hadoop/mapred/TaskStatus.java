@@ -27,12 +27,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringUtils;
 /**************************************************
  * Describes the current status of a task.  This is
  * not intended to be a comprehensive piece of data.
  *
  **************************************************/
-abstract class TaskStatus implements Writable, Cloneable {
+public abstract class TaskStatus implements Writable, Cloneable {
   static final Log LOG =
     LogFactory.getLog(TaskStatus.class.getName());
   
@@ -132,11 +133,21 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
 
   /**
-   * Sets finishTime. 
+   * Sets finishTime for the task status if and only if the
+   * start time is set and passed finish time is greater than
+   * zero.
+   * 
    * @param finishTime finish time of task.
    */
   void setFinishTime(long finishTime) {
-    this.finishTime = finishTime;
+    if(this.getStartTime() > 0 && finishTime > 0) {
+      this.finishTime = finishTime;
+    } else {
+      //Using String utils to get the stack trace.
+      LOG.error("Trying to set finish time for task " + taskid + 
+          " when no start time is set, stackTrace is : " + 
+      		StringUtils.stringifyException(new Exception()));
+    }
   }
   /**
    * Get shuffle finish time for the task. If shuffle finish time was 
@@ -201,11 +212,20 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
 
   /**
-   * Set startTime of the task.
+   * Set startTime of the task if start time is greater than zero.
    * @param startTime start time
    */
   void setStartTime(long startTime) {
-    this.startTime = startTime;
+    //Making the assumption of passed startTime to be a positive
+    //long value explicit.
+    if (startTime > 0) {
+      this.startTime = startTime;
+    } else {
+      //Using String utils to get the stack trace.
+      LOG.error("Trying to set illegal startTime for task : " + taskid +
+          ".Stack trace is : " +
+          StringUtils.stringifyException(new Exception()));
+    }
   }
   /**
    * Get current phase of this task. Phase.Map in case of map tasks, 
@@ -219,7 +239,7 @@ abstract class TaskStatus implements Writable, Cloneable {
    * Set current phase of this task.  
    * @param phase phase of this task
    */
-  void setPhase(Phase phase){
+  public void setPhase(Phase phase){
     TaskStatus.Phase oldPhase = getPhase();
     if (oldPhase != phase){
       // sort phase started
@@ -294,7 +314,7 @@ abstract class TaskStatus implements Writable, Cloneable {
    *  
    * @param mapTaskId map from which fetch failed
    */
-  synchronized void addFetchFailedMap(TaskAttemptID mapTaskId) {}
+  public abstract void addFetchFailedMap(TaskAttemptID mapTaskId);
 
   /**
    * Update the status of the task.
@@ -326,11 +346,11 @@ abstract class TaskStatus implements Writable, Cloneable {
 
     setDiagnosticInfo(status.getDiagnosticInfo());
     
-    if (status.getStartTime() != 0) {
-      this.startTime = status.getStartTime(); 
+    if (status.getStartTime() > 0) {
+      this.setStartTime(status.getStartTime()); 
     }
-    if (status.getFinishTime() != 0) {
-      this.finishTime = status.getFinishTime(); 
+    if (status.getFinishTime() > 0) {
+      this.setFinishTime(status.getFinishTime()); 
     }
     
     this.phase = status.getPhase();
@@ -359,8 +379,8 @@ abstract class TaskStatus implements Writable, Cloneable {
     setProgress(progress);
     setStateString(state);
     setPhase(phase);
-    if (finishTime != 0) {
-      this.finishTime = finishTime; 
+    if (finishTime > 0) {
+      setFinishTime(finishTime); 
     }
   }
 

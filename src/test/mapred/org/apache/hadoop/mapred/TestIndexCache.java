@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
 import junit.framework.TestCase;
 
@@ -44,7 +45,7 @@ public class TestIndexCache extends TestCase {
     Path p = new Path(System.getProperty("test.build.data", "/tmp"),
         "cache").makeQualified(fs);
     fs.delete(p, true);
-    conf.setInt("mapred.tasktracker.indexcache.mb", 1);
+    conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
     final int partsPerMap = 1000;
     final int bytesPerFile = partsPerMap * 24;
     IndexCache cache = new IndexCache(conf);
@@ -111,7 +112,7 @@ public class TestIndexCache extends TestCase {
     Path p = new Path(System.getProperty("test.build.data", "/tmp"),
         "cache").makeQualified(fs);
     fs.delete(p, true);
-    conf.setInt("mapred.tasktracker.indexcache.mb", 1);
+    conf.setInt(TTConfig.TT_INDEX_CACHE, 1);
     IndexCache cache = new IndexCache(conf);
 
     Path f = new Path(p, "badindex");

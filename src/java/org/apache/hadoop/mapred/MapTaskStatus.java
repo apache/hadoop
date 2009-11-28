@@ -105,4 +105,11 @@ class MapTaskStatus extends TaskStatus {
     super.write(out);
     out.writeLong(mapFinishTime);
   }
+
+  @Override
+  public void addFetchFailedMap(TaskAttemptID mapTaskId) {
+    throw new UnsupportedOperationException
+                ("addFetchFailedMap() not supported for MapTask");
+  }
+
 }

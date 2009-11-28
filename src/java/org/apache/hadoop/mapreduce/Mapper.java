@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 
 /** 
  * Maps input key/value pairs to a set of intermediate key/value pairs.  
@@ -94,16 +95,11 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  */
 public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 
-  public class Context 
-    extends MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
-    public Context(Configuration conf, TaskAttemptID taskid,
-                   RecordReader<KEYIN,VALUEIN> reader,
-                   RecordWriter<KEYOUT,VALUEOUT> writer,
-                   OutputCommitter committer,
-                   StatusReporter reporter,
-                   InputSplit split) throws IOException, InterruptedException {
-      super(conf, taskid, reader, writer, committer, reporter, split);
-    }
+  /**
+   * The <code>Context</code> passed on to the {@link Mapper} implementations.
+   */
+  public abstract class Context
+    implements MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
   }
   
   /**

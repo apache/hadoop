@@ -17,28 +17,20 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-
 /**
  *  Class to encapsulate Queue ACLs for a particular
  *  user.
- * 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.QueueAclsInfo} instead
  */
-class QueueAclsInfo implements Writable {
+@Deprecated
+class QueueAclsInfo extends org.apache.hadoop.mapreduce.QueueAclsInfo {
 
-  private String queueName;
-  private String[] operations;
   /**
    * Default constructor for QueueAclsInfo.
    * 
    */
   QueueAclsInfo() {
-    
+    super();
   }
 
   /**
@@ -50,31 +42,11 @@ class QueueAclsInfo implements Writable {
    * 
    */
   QueueAclsInfo(String queueName, String[] operations) {
-    this.queueName = queueName;
-    this.operations = operations;    
+    super(queueName, operations);
   }
-
-  String getQueueName() {
-    return queueName;
-  }
-
-  void setQueueName(String queueName) {
-    this.queueName = queueName;
-  }
-
-  String[] getOperations() {
-    return operations;
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    queueName = Text.readString(in);
-    operations = WritableUtils.readStringArray(in);
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Text.writeString(out, queueName);
-    WritableUtils.writeStringArray(out, operations);
+  
+  public static QueueAclsInfo downgrade(
+      org.apache.hadoop.mapreduce.QueueAclsInfo acl) {
+    return new QueueAclsInfo(acl.getQueueName(), acl.getOperations());
   }
 }

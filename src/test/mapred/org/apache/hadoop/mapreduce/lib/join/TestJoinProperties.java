@@ -35,6 +35,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 
 public class TestJoinProperties extends TestCase {
 
@@ -374,7 +375,7 @@ public class TestJoinProperties extends TestCase {
         RecordReader reader = format.createRecordReader(
 	            split, context);
       MapContext mcontext = 
-        new MapContext(conf, 
+        new MapContextImpl(conf, 
         context.getTaskAttemptID(), reader, null, null, 
         MapReduceTestUtil.createDummyReporter(), split);
       reader.initialize(split, mcontext);

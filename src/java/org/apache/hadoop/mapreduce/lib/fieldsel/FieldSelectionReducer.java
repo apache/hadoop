@@ -38,10 +38,10 @@ import org.apache.hadoop.mapreduce.Reducer;
  * the reduce output values. The fields are the union of those from the key
  * and those from the value.
  * 
- * The field separator is under attribute "mapred.data.field.separator"
+ * The field separator is under attribute "mapreduce.fieldsel.data.field.separator"
  * 
  * The reduce output field list spec is under attribute 
- * "reduce.output.key.value.fields.spec". The value is expected to be like
+ * "mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec". The value is expected to be like
  * "keyFieldsSpec:valueFieldsSpec" key/valueFieldsSpec are comma (,) 
  * separated field spec: fieldSpec,fieldSpec,fieldSpec ... Each field spec
  * can be a simple number (e.g. 5) specifying a specific field, or a range
@@ -71,10 +71,11 @@ public class FieldSelectionReducer<K, V>
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     
-    this.fieldSeparator = conf.get("mapred.data.field.separator", "\t");
+    this.fieldSeparator = 
+      conf.get(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "\t");
     
     this.reduceOutputKeyValueSpec = 
-      conf.get("reduce.output.key.value.fields.spec", "0-:");
+      conf.get(FieldSelectionHelper.REDUCE_OUTPUT_KEY_VALUE_SPEC, "0-:");
     
     allReduceValueFieldsFrom = FieldSelectionHelper.parseOutputKeyValueSpec(
       reduceOutputKeyValueSpec, reduceOutputKeyFieldList,

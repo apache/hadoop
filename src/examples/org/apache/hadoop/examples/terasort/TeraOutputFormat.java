@@ -18,22 +18,29 @@
 
 package org.apache.hadoop.examples.terasort;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileOutputCommitter;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobContext;
+import org.apache.hadoop.mapred.OutputCommitter;
 import org.apache.hadoop.mapred.RecordWriter;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TaskAttemptContext;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.Progressable;
 
 /**
- * A streamlined text output format that writes key, value, and "\r\n".
+ * An output format that writes the key and value appended together.
  */
-public class TeraOutputFormat extends TextOutputFormat<Text,Text> {
+public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
   static final String FINAL_SYNC_ATTRIBUTE = "terasort.final.sync";
 
   /**
@@ -50,28 +57,38 @@ public class TeraOutputFormat extends TextOutputFormat<Text,Text> {
     return conf.getBoolean(FINAL_SYNC_ATTRIBUTE, false);
   }
 
-  static class TeraRecordWriter extends LineRecordWriter<Text,Text> {
-    private static final byte[] newLine = "\r\n".getBytes();
+  static class TeraRecordWriter implements RecordWriter<Text,Text> {
     private boolean finalSync = false;
+    private FSDataOutputStream out;
 
-    public TeraRecordWriter(DataOutputStream out,
+    public TeraRecordWriter(FSDataOutputStream out,
                             JobConf conf) {
-      super(out);
       finalSync = getFinalSync(conf);
+      this.out = out;
     }
 
     public synchronized void write(Text key, 
                                    Text value) throws IOException {
       out.write(key.getBytes(), 0, key.getLength());
       out.write(value.getBytes(), 0, value.getLength());
-      out.write(newLine, 0, newLine.length);
     }
     
-    public void close() throws IOException {
+    public void close(Reporter reporter) throws IOException {
       if (finalSync) {
-        ((FSDataOutputStream) out).sync();
+        out.sync();
       }
-      super.close(null);
+      out.close();
+    }
+  }
+
+  @Override
+  public void checkOutputSpecs(FileSystem ignored, 
+                               JobConf job
+                              ) throws InvalidJobConfException, IOException {
+    // Ensure that the output directory is set and not already there
+    Path outDir = getOutputPath(job);
+    if (outDir == null) {
+      throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
   }
 
@@ -84,5 +101,26 @@ public class TeraOutputFormat extends TextOutputFormat<Text,Text> {
     FileSystem fs = dir.getFileSystem(job);
     FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
     return new TeraRecordWriter(fileOut, job);
+  }
+  
+  public static class TeraOutputCommitter extends FileOutputCommitter {
+
+    @Override
+    public void commitJob(JobContext jobContext) {
+    }
+
+    @Override
+    public boolean needsTaskCommit(TaskAttemptContext taskContext) {
+      return taskContext.getTaskAttemptID().getTaskID().getTaskType() ==
+               TaskType.REDUCE;
+    }
+
+    @Override
+    public void setupJob(JobContext jobContext) {
+    }
+
+    @Override
+    public void setupTask(TaskAttemptContext taskContext) {
+    }
   }
 }

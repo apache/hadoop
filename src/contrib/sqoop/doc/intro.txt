@@ -1,0 +1,34 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Introduction
+------------
+
+Sqoop is a tool designed to help users of large data import
+existing relational databases into their Hadoop clusters. Sqoop uses
+JDBC to connect to a database, examine each table's schema, and
+auto-generate the necessary classes to import data into HDFS. It
+then instantiates a MapReduce job to read tables from the database
+via the DBInputFormat (JDBC-based InputFormat). Tables are read
+into a set of files loaded into HDFS. Both SequenceFile and
+text-based targets are supported. Sqoop also supports high-performance
+imports from select databases including MySQL.
+
+This document describes how to get started using Sqoop to import
+your data into Hadoop.

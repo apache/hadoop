@@ -212,6 +212,13 @@ public class FairScheduler extends TaskScheduler {
     LOG.info("Successfully configured FairScheduler");
   }
 
+  /**
+   * Returns the LoadManager object used by the Fair Share scheduler
+   */
+  LoadManager getLoadManager() {
+    return loadMgr;
+  }
+
   @Override
   public void terminate() throws IOException {
     if (eventLog != null)
@@ -315,69 +322,116 @@ public class FairScheduler extends TaskScheduler {
     
     TaskTrackerStatus tts = tracker.getStatus();
 
-    // Scan to see whether any job needs to run a map, then a reduce
+    int mapsAssigned = 0; // loop counter for map in the below while loop
+    int reducesAssigned = 0; // loop counter for reduce in the below while
+    int mapCapacity = maxTasksToAssign(TaskType.MAP, tts);
+    int reduceCapacity = maxTasksToAssign(TaskType.REDUCE, tts);
+    boolean mapRejected = false; // flag used for ending the loop
+    boolean reduceRejected = false; // flag used for ending the loop
+
+    // Keep track of which jobs were visited for map tasks and which had tasks
+    // launched, so that we can later mark skipped jobs for delay scheduling
+    Set<JobInProgress> visitedForMap = new HashSet<JobInProgress>();
+    Set<JobInProgress> visitedForReduce = new HashSet<JobInProgress>();
+    Set<JobInProgress> launchedMap = new HashSet<JobInProgress>();
+
     ArrayList<Task> tasks = new ArrayList<Task>();
-    for (TaskType taskType: MAP_AND_REDUCE) {
-      // Keep track of which jobs were visited and which had tasks launched,
-      // so that we can later mark skipped jobs for delay scheduling
-      Set<JobInProgress> visited = new HashSet<JobInProgress>();
-      Set<JobInProgress> launched = new HashSet<JobInProgress>();
-      // Compute a maximum number of tasks to assign on this task tracker
-      int cap = maxTasksToAssign(taskType, tts);
-      // Assign up to cap tasks
-      for (int i = 0; i < cap; i++) {
-        // Break if all runnable tasks of this type are already running
-        if (taskType == TaskType.MAP && runningMaps == runnableMaps ||
-            taskType == TaskType.REDUCE && runningReduces == runnableReduces)
-          break;
-        // Break if the node can't support another task of this type
-        boolean canAssign = (taskType == TaskType.MAP) ? 
-            loadMgr.canAssignMap(tts, runnableMaps, totalMapSlots) :
-            loadMgr.canAssignReduce(tts, runnableReduces, totalReduceSlots);
-        if (canAssign) {
-          // Get the map or reduce schedulables and sort them by fair sharing
-          List<PoolSchedulable> scheds = getPoolSchedulables(taskType);
-          Collections.sort(scheds, new SchedulingAlgorithms.FairShareComparator());
-          for (Schedulable sched: scheds) {
-            eventLog.log("INFO", "Checking for " + taskType + 
-                " task in " + sched.getName());
-            Task task = sched.assignTask(tts, currentTime, visited);
-            if (task != null) {
-              JobInProgress job = taskTrackerManager.getJob(task.getJobID());
-              eventLog.log("ASSIGN", trackerName, taskType,
-                  job.getJobID(), task.getTaskID());
-              launched.add(job);
-              // Update running task counts, and the job's locality level
-              if (taskType == TaskType.MAP) {
-                runningMaps++;
-                updateLastMapLocalityLevel(job, task, tts);
-              } else {
-                runningReduces++;
-              }
-              // Add task to the list of assignments
-              tasks.add(task);
-              break;
-            } // end if(task != null)
-          } // end for(Schedulable sched: scheds)
-        } else {
-          eventLog.log("INFO", "Can't assign another " + taskType +
-              " to " + trackerName);
-          break;
-        }
-      } // end for(i = 0; i < cap; i++)
-      // If we were assigning maps, mark any jobs that were visited but
-      // did not launch a task as skipped on this heartbeat
-      if (taskType == TaskType.MAP) {
-        for (JobInProgress job: visited) {
-          if (!launched.contains(job)) {
-            infos.get(job).skippedAtLastHeartbeat = true;
-          }
+    // Scan jobs to assign tasks until neither maps nor reduces can be assigned
+    while (true) {
+      // Computing the ending conditions for the loop
+      // Reject a task type if one of the following condition happens
+      // 1. number of assigned task reaches per heatbeat limit
+      // 2. number of running tasks reaches runnable tasks
+      // 3. task is rejected by the LoadManager.canAssign
+      if (!mapRejected) {
+        if (mapsAssigned == mapCapacity ||
+            runningMaps == runnableMaps ||
+            !loadMgr.canAssignMap(tts, runnableMaps, totalMapSlots)) {
+          eventLog.log("INFO", "Can't assign another MAP to " + trackerName);
+          mapRejected = true;
         }
       }
-      // Return if assignMultiple was disabled and we found a task
-      if (!assignMultiple && tasks.size() > 0)
-        return tasks;
-    } // end for(TaskType taskType: MAP_AND_REDUCE)
+      if (!reduceRejected) {
+        if (reducesAssigned == reduceCapacity ||
+            runningReduces == runnableReduces ||
+            !loadMgr.canAssignReduce(tts, runnableReduces, totalReduceSlots)) {
+          eventLog.log("INFO", "Can't assign another REDUCE to " + trackerName);
+          reduceRejected = true;
+        }
+      }
+      // Exit while (true) loop if
+      // 1. neither maps nor reduces can be assigned
+      // 2. assignMultiple is off and we already assigned one task
+      if (mapRejected && reduceRejected ||
+          !assignMultiple && tasks.size() > 0) {
+        break; // This is the only exit of the while (true) loop
+      }
+
+      // Determine which task type to assign this time
+      // First try choosing a task type which is not rejected
+      TaskType taskType;
+      if (mapRejected) {
+        taskType = TaskType.REDUCE;
+      } else if (reduceRejected) {
+        taskType = TaskType.MAP;
+      } else {
+        // If both types are available, choose the task type with fewer running
+        // tasks on the task tracker to prevent that task type from starving
+        if (tts.countMapTasks() <= tts.countReduceTasks()) {
+          taskType = TaskType.MAP;
+        } else {
+          taskType = TaskType.REDUCE;
+        }
+      }
+
+      // Get the map or reduce schedulables and sort them by fair sharing
+      List<PoolSchedulable> scheds = getPoolSchedulables(taskType);
+      Collections.sort(scheds, new SchedulingAlgorithms.FairShareComparator());
+      boolean foundTask = false;
+      for (Schedulable sched: scheds) { // This loop will assign only one task
+        eventLog.log("INFO", "Checking for " + taskType +
+            " task in " + sched.getName());
+        Task task = taskType == TaskType.MAP ? 
+                    sched.assignTask(tts, currentTime, visitedForMap) : 
+                    sched.assignTask(tts, currentTime, visitedForReduce);
+        if (task != null) {
+          foundTask = true;
+          JobInProgress job = taskTrackerManager.getJob(task.getJobID());
+          eventLog.log("ASSIGN", trackerName, taskType,
+              job.getJobID(), task.getTaskID());
+          // Update running task counts, and the job's locality level
+          if (taskType == TaskType.MAP) {
+            launchedMap.add(job);
+            mapsAssigned++;
+            runningMaps++;
+            updateLastMapLocalityLevel(job, task, tts);
+          } else {
+            reducesAssigned++;
+            runningReduces++;
+          }
+          // Add task to the list of assignments
+          tasks.add(task);
+          break; // This break makes this loop assign only one task
+        } // end if(task != null)
+      } // end for(Schedulable sched: scheds)
+
+      // Reject the task type if we cannot find a task
+      if (!foundTask) {
+        if (taskType == TaskType.MAP) {
+          mapRejected = true;
+        } else {
+          reduceRejected = true;
+        }
+      }
+    } // end while (true)
+
+    // Mark any jobs that were visited for map tasks but did not launch a task
+    // as skipped on this heartbeat
+    for (JobInProgress job: visitedForMap) {
+      if (!launchedMap.contains(job)) {
+        infos.get(job).skippedAtLastHeartbeat = true;
+      }
+    }
     
     // If no tasks were found, return null
     return tasks.isEmpty() ? null : tasks;
@@ -824,7 +878,11 @@ public class FairScheduler extends TaskScheduler {
     List<TaskStatus> statuses = new ArrayList<TaskStatus>();
     for (TaskInProgress tip: tips) {
       for (TaskAttemptID id: tip.getActiveTasks().keySet()) {
-        statuses.add(tip.getTaskStatus(id));
+        TaskStatus stat = tip.getTaskStatus(id);
+        // status is null when the task has been scheduled but not yet running
+        if (stat != null) {
+          statuses.add(stat);
+        }
       }
     }
     return statuses;

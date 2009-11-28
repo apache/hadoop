@@ -27,7 +27,7 @@
   import="javax.servlet.jsp.*"
   import="java.text.SimpleDateFormat"
   import="org.apache.hadoop.mapred.*"
-  import="org.apache.hadoop.mapred.JobHistory.*"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
 %>
 
 <%!	private static final long serialVersionUID = 1L;
@@ -76,26 +76,31 @@ window.location.href = url;
     final String user = (parts.length >= 1)
                         ? parts[0].toLowerCase()
                         : "";
-    final String jobname = (parts.length >= 2)
+    final String jobid = (parts.length >= 2)
                            ? parts[1].toLowerCase()
                            : "";
+
     PathFilter jobLogFileFilter = new PathFilter() {
       private boolean matchUser(String fileName) {
         // return true if 
         //  - user is not specified
         //  - user matches
-        return "".equals(user) || user.equals(fileName.split("_")[5]);
+        return "".equals(user) || user.equals(fileName.split("_")[3]);
       }
 
-      private boolean matchJobName(String fileName) {
+      private boolean matchJobId(String fileName) {
         // return true if 
-        //  - jobname is not specified
-        //  - jobname contains the keyword
-        return "".equals(jobname) || fileName.split("_")[6].toLowerCase().contains(jobname);
+        //  - jobid is not specified
+        //  - jobid matches 
+        String[] jobDetails = fileName.split("_");
+        String actualId = jobDetails[0] + "_" +jobDetails[1] + "_" + jobDetails[2] ;
+        return "".equals(jobid) || jobid.equalsIgnoreCase(actualId);
       }
 
       public boolean accept(Path path) {
-        return !(path.getName().endsWith(".xml")) && matchUser(path.getName()) && matchJobName(path.getName());
+        return (!(path.getName().endsWith(".xml") || 
+          path.getName().endsWith(JobHistory.OLD_SUFFIX)) && 
+          matchUser(path.getName()) && matchJobId(path.getName()));
       }
     };
     
@@ -107,7 +112,7 @@ window.location.href = url;
     }
     Path[] jobFiles = FileUtil.stat2Paths(fs.listStatus(new Path(historyLogDir),
                                           jobLogFileFilter));
-    out.println("<!--  user : " + user + ", jobname : " + jobname + "-->");
+    out.println("<!--  user : " + user + ", jobid : " + jobid + "-->");
     if (null == jobFiles || jobFiles.length == 0)  {
       out.println("No files found!"); 
       return ; 
@@ -146,10 +151,11 @@ window.location.href = url;
     }
 
     // Display the search box
-    out.println("<form name=search><b> Filter (username:jobname) </b>"); // heading
+    out.println("<form name=search><b> Filter (username:jobid) </b>"); // heading
     out.println("<input type=text name=search size=\"20\" value=\"" + search + "\">"); // search box
     out.println("<input type=submit value=\"Filter!\" onClick=\"showUserHistory(document.getElementById('search').value)\"></form>");
-    out.println("<span class=\"small\">Example: 'smith' will display jobs either submitted by user 'smith'. 'smith:sort' will display jobs from user 'smith' having 'sort' keyword in the jobname.</span>"); // example
+    out.println("<span class=\"small\">Example: 'smith' will display jobs submitted by user 'smith'. </span>");
+    out.println("<span class=\"small\">Job Ids need to be prefixed with a colon(:) For example, :job_200908311030_0001 will display the job with that id. </span>"); // example 
     out.println("<hr>");
 
     //Show the status
@@ -164,8 +170,8 @@ window.location.href = url;
     if (!"".equals(user)) {
       out.println(" for user <b>" + user + "</b>"); // show the user if present
     }
-    if (!"".equals(jobname)) {
-      out.println(" with jobname having the keyword <b>" + jobname + "</b> in it."); // show the jobname keyword if present
+    if (!"".equals(jobid)) {
+      out.println(" for jobid <b>" + jobid + "</b> in it."); // show the jobid keyword if present
     }
     out.print("</span></i>)");
 
@@ -192,12 +198,8 @@ window.location.href = url;
         String dp1 = null;
         String dp2 = null;
         
-        try {
-          dp1 = JobHistory.JobInfo.decodeJobHistoryFileName(p1.getName());
-          dp2 = JobHistory.JobInfo.decodeJobHistoryFileName(p2.getName());
-        } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
-        }
+        dp1 = p1.getName();
+        dp2 = p2.getName();
                 
         String[] split1 = dp1.split("_");
         String[] split2 = dp2.split("_");
@@ -206,12 +208,8 @@ window.location.href = url;
         int res = new Date(Long.parseLong(split1[1])).compareTo(
                              new Date(Long.parseLong(split2[1])));
         if (res == 0) {
-          res = new Date(Long.parseLong(split1[3])).compareTo(
-                           new Date(Long.parseLong(split2[3])));
-        }
-        if (res == 0) {
-          Long l1 = Long.parseLong(split1[4]);
-          res = l1.compareTo(Long.parseLong(split2[4]));
+          Long l1 = Long.parseLong(split1[2]);
+          res = l1.compareTo(Long.parseLong(split2[2]));
         }
         return res;
       }
@@ -224,25 +222,18 @@ window.location.href = url;
 
     out.print("<table align=center border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr>");
-    out.print("<td>Job tracker Host Name</td>" +
-              "<td>Job tracker Start time</td>" +
-              "<td>Job Id</td><td>Name</td><td>User</td>") ; 
+    out.print( "<td>Job Id</td><td>User</td>") ; 
     out.print("</tr>"); 
     
     Set<String> displayedJobs = new HashSet<String>();
     for (int i = start - 1; i < start + length - 1; ++i) {
       Path jobFile = jobFiles[i];
       
-      String decodedJobFileName = 
-          JobHistory.JobInfo.decodeJobHistoryFileName(jobFile.getName());
+      String[] jobDetails = jobFile.getName().split("_");
 
-      String[] jobDetails = decodedJobFileName.split("_");
-      String trackerHostName = jobDetails[0];
-      String trackerStartTime = jobDetails[1];
-      String jobId = jobDetails[2] + "_" +jobDetails[3] + "_" + jobDetails[4] ;
-      String userName = jobDetails[5];
-      String jobName = jobDetails[6];
-      
+      String jobId = jobDetails[0] + "_" +jobDetails[1] + "_" + jobDetails[2] ;
+      String userName = jobDetails[3];
+
       // Check if the job is already displayed. There can be multiple job 
       // history files for jobs that have restarted
       if (displayedJobs.contains(jobId)) {
@@ -251,14 +242,10 @@ window.location.href = url;
         displayedJobs.add(jobId);
       }
       
-      // Encode the logfile name again to cancel the decoding done by the browser
-      String encodedJobFileName = 
-          JobHistory.JobInfo.encodeJobHistoryFileName(jobFile.getName());
 %>
 <center>
 <%	
-      printJob(trackerHostName, trackerStartTime, jobId,
-               jobName, userName, new Path(jobFile.getParent(), encodedJobFileName), 
+      printJob(jobId, userName, new Path(jobFile.getParent(), jobFile), 
                out) ; 
 %>
 </center> 
@@ -270,16 +257,12 @@ window.location.href = url;
     printNavigation(pageno, size, maxPageNo, search, out);
 %>
 <%!
-    private void printJob(String trackerHostName, String trackerid,
-                          String jobId, String jobName,
+    private void printJob(String jobId, 
                           String user, Path logFile, JspWriter out)
     throws IOException {
       out.print("<tr>"); 
-      out.print("<td>" + trackerHostName + "</td>"); 
-      out.print("<td>" + new Date(Long.parseLong(trackerid)) + "</td>"); 
       out.print("<td>" + "<a href=\"jobdetailshistory.jsp?jobid=" + jobId + 
                 "&logFile=" + logFile.toString() + "\">" + jobId + "</a></td>"); 
-      out.print("<td>" + jobName + "</td>"); 
       out.print("<td>" + user + "</td>"); 
       out.print("</tr>");
     }

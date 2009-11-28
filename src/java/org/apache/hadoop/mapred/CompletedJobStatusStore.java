@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */  
+ */
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * Persists and retrieves the Job info of a job into/from DFS.
@@ -53,14 +54,14 @@ class CompletedJobStatusStore implements Runnable {
 
   CompletedJobStatusStore(Configuration conf) throws IOException {
     active =
-      conf.getBoolean("mapred.job.tracker.persist.jobstatus.active", false);
+      conf.getBoolean(JTConfig.JT_PERSIST_JOBSTATUS, false);
 
     if (active) {
       retainTime =
-        conf.getInt("mapred.job.tracker.persist.jobstatus.hours", 0) * HOUR;
+        conf.getInt(JTConfig.JT_PERSIST_JOBSTATUS_HOURS, 0) * HOUR;
 
       jobInfoDir =
-        conf.get("mapred.job.tracker.persist.jobstatus.dir", JOB_INFO_STORE_DIR);
+        conf.get(JTConfig.JT_PERSIST_JOBSTATUS_DIR, JOB_INFO_STORE_DIR);
 
       Path path = new Path(jobInfoDir);
       

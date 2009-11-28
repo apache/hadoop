@@ -24,6 +24,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * A test to verify JobTracker's resilience to lost task trackers. 
@@ -43,9 +44,9 @@ public class TestLostTracker extends TestCase {
   @Override
   protected void setUp() throws Exception {
     JobConf conf = new JobConf();
-    conf.set("mapred.job.tracker", "localhost:0");
-    conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
-    conf.setLong("mapred.tasktracker.expiry.interval", 1000);
+    conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+    conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
+    conf.setLong(JTConfig.JT_TRACKER_EXPIRY_INTERVAL, 1000);
     jobTracker = new FakeJobTracker(conf, (clock = new FakeClock()), trackers);
     jobTracker.startExpireTrackersThread();
   }

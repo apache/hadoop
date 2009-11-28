@@ -25,10 +25,11 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mrunit.ReduceDriverBase;
-import org.apache.hadoop.mrunit.mapreduce.mock.MockReduceContextWrapper;
+import org.apache.hadoop.mrunit.mapreduce.mock.MockReduceContext;
 import org.apache.hadoop.mrunit.types.Pair;
 
 /**
@@ -46,12 +47,15 @@ public class ReduceDriver<K1, V1, K2, V2> extends ReduceDriverBase<K1, V1, K2, V
   public static final Log LOG = LogFactory.getLog(ReduceDriver.class);
 
   private Reducer<K1, V1, K2, V2> myReducer;
+  private Counters counters;
 
   public ReduceDriver(final Reducer<K1, V1, K2, V2> r) {
     myReducer = r;
+    counters = new Counters();
   }
 
   public ReduceDriver() {
+    counters = new Counters();
   }
 
   /**
@@ -78,6 +82,24 @@ public class ReduceDriver<K1, V1, K2, V2> extends ReduceDriverBase<K1, V1, K2, V
 
   public Reducer<K1, V1, K2, V2> getReducer() {
     return myReducer;
+  }
+
+  /** @return the counters used in this test */
+  public Counters getCounters() {
+    return counters;
+  }
+
+  /** Sets the counters object to use for this test.
+   * @param ctrs The counters object to use.
+   */
+  public void setCounters(final Counters ctrs) {
+    this.counters = ctrs;
+  }
+
+  /** Sets the counters to use and returns self for fluent style */
+  public ReduceDriver<K1, V1, K2, V2> withCounters(final Counters ctrs) {
+    setCounters(ctrs);
+    return this;
   }
 
   /**
@@ -175,11 +197,9 @@ public class ReduceDriver<K1, V1, K2, V2> extends ReduceDriverBase<K1, V1, K2, V
     inputs.add(new Pair<K1, List<V1>>(inputKey, inputValues));
 
     try {
-      MockReduceContextWrapper<K1, V1, K2, V2> wrapper = new MockReduceContextWrapper();
-      MockReduceContextWrapper<K1, V1, K2, V2>.MockReduceContext context =
-          wrapper.getMockContext(inputs);
-
-      myReducer.run(context);
+      MockReduceContext<K1, V1, K2, V2> context = 
+        new MockReduceContext<K1, V1, K2, V2>(inputs, getCounters());
+      myReducer.run(new WrappedReducer<K1, V1, K2, V2>().getReducerContext(context));
       return context.getOutputs();
     } catch (InterruptedException ie) {
       throw new IOException(ie);

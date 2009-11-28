@@ -64,8 +64,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 26: Modified TaskID to be aware of the new TaskTypes
    * Version 27: Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    * Version 28: Adding node health status to TaskStatus for MAPREDUCE-211
+   * Version 29: Adding user name to the serialized Task for use by TT.
    */
-  public static final long versionID = 28L;
+  public static final long versionID = 29L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

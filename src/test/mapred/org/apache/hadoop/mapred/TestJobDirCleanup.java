@@ -25,9 +25,10 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.ToolRunner;
 
 public class TestJobDirCleanup extends TestCase {
@@ -51,7 +52,7 @@ public class TestJobDirCleanup extends TestCase {
       final int taskTrackers = 10;
       Configuration conf = new Configuration();
       JobConf mrConf = new JobConf();
-      mrConf.set("mapred.tasktracker.reduce.tasks.maximum", "1");
+      mrConf.set(TTConfig.TT_REDUCE_SLOTS, "1");
       dfs = new MiniDFSCluster(conf, 1, true, null);
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();

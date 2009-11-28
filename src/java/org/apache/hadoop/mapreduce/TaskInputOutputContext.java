@@ -20,8 +20,8 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A context object that allows input and output from the task. It is only
@@ -31,28 +31,16 @@ import org.apache.hadoop.util.Progressable;
  * @param <KEYOUT> the output key type for the task
  * @param <VALUEOUT> the output value type for the task
  */
-public abstract class TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> 
-       extends TaskAttemptContext implements Progressable {
-  private RecordWriter<KEYOUT,VALUEOUT> output;
-  private StatusReporter reporter;
-  private OutputCommitter committer;
-
-  public TaskInputOutputContext(Configuration conf, TaskAttemptID taskid,
-                                RecordWriter<KEYOUT,VALUEOUT> output,
-                                OutputCommitter committer,
-                                StatusReporter reporter) {
-    super(conf, taskid);
-    this.output = output;
-    this.reporter = reporter;
-    this.committer = committer;
-  }
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> 
+       extends TaskAttemptContext {
 
   /**
    * Advance to the next key, value pair, returning null if at end.
    * @return the key object that was read into, or null if no more
    */
-  public abstract 
-  boolean nextKeyValue() throws IOException, InterruptedException;
+  public boolean nextKeyValue() throws IOException, InterruptedException;
  
   /**
    * Get the current key.
@@ -60,8 +48,7 @@ public abstract class TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract 
-  KEYIN getCurrentKey() throws IOException, InterruptedException;
+  public KEYIN getCurrentKey() throws IOException, InterruptedException;
 
   /**
    * Get the current value.
@@ -69,36 +56,33 @@ public abstract class TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract VALUEIN getCurrentValue() throws IOException, 
-                                                   InterruptedException;
+  public VALUEIN getCurrentValue() throws IOException, InterruptedException;
 
   /**
    * Generate an output key/value pair.
    */
-  public void write(KEYOUT key, VALUEOUT value
-                    ) throws IOException, InterruptedException {
-    output.write(key, value);
-  }
+  public void write(KEYOUT key, VALUEOUT value) 
+      throws IOException, InterruptedException;
 
-  public Counter getCounter(Enum<?> counterName) {
-    return reporter.getCounter(counterName);
-  }
+  /**
+   * Get the {@link Counter} for the given <code>counterName</code>.
+   * @param counterName counter name
+   * @return the <code>Counter</code> for the given <code>counterName</code>
+   */
+  public Counter getCounter(Enum<?> counterName);
 
-  public Counter getCounter(String groupName, String counterName) {
-    return reporter.getCounter(groupName, counterName);
-  }
+  /**
+   * Get the {@link Counter} for the given <code>groupName</code> and 
+   * <code>counterName</code>.
+   * @param counterName counter name
+   * @return the <code>Counter</code> for the given <code>groupName</code> and 
+   *         <code>counterName</code>
+   */
+  public Counter getCounter(String groupName, String counterName);
 
-  @Override
-  public void progress() {
-    reporter.progress();
-  }
-
-  @Override
-  public void setStatus(String status) {
-    reporter.setStatus(status);
-  }
-  
-  public OutputCommitter getOutputCommitter() {
-    return committer;
-  }
+  /**
+   * Get the {@link OutputCommitter} for the task-attempt.
+   * @return the <code>OutputCommitter</code> for the task-attempt
+   */
+  public OutputCommitter getOutputCommitter();
 }

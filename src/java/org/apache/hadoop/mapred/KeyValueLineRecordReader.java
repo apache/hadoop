@@ -27,7 +27,7 @@ import org.apache.hadoop.io.Text;
 /**
  * This class treats a line in the input as a key/value pair separated by a 
  * separator character. The separator can be specified in config file 
- * under the attribute name key.value.separator.in.input.line. The default
+ * under the attribute name mapreduce.input.keyvaluelinerecordreader.key.value.separator. The default
  * separator is the tab character ('\t').
  * 
  * @deprecated Use 
@@ -61,7 +61,7 @@ public class KeyValueLineRecordReader implements RecordReader<Text, Text> {
     lineRecordReader = new LineRecordReader(job, split);
     dummyKey = lineRecordReader.createKey();
     innerValue = lineRecordReader.createValue();
-    String sepStr = job.get("key.value.separator.in.input.line", "\t");
+    String sepStr = job.get("mapreduce.input.keyvaluelinerecordreader.key.value.separator", "\t");
     this.separator = (byte) sepStr.charAt(0);
   }
 

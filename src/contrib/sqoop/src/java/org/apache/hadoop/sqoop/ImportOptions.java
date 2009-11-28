@@ -24,10 +24,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -87,7 +89,7 @@ public class ImportOptions {
   private String jarOutputDir;
   private ControlAction action;
   private String hadoopHome;
-  private String orderByCol;
+  private String splitByCol;
   private String whereClause;
   private String debugSqlCmd;
   private String driverClassName;
@@ -99,6 +101,9 @@ public class ImportOptions {
   private boolean hiveImport;
   private String packageName; // package to prepend to auto-named classes.
   private String className; // package+class to apply to individual table import.
+  private int numMappers;
+  private boolean useCompression;
+  private long directSplitSize; // In direct mode, open a new stream every X bytes.
 
   private char inputFieldDelim;
   private char inputRecordDelim;
@@ -114,7 +119,13 @@ public class ImportOptions {
 
   private boolean areDelimsManuallySet;
 
+  private Configuration conf;
+
+  public static final int DEFAULT_NUM_MAPPERS = 4;
+
   private static final String DEFAULT_CONFIG_FILE = "sqoop.properties";
+
+  private String [] extraArgs;
 
   public ImportOptions() {
     initDefaults();
@@ -131,6 +142,23 @@ public class ImportOptions {
 
     this.connectString = connect;
     this.tableName = table;
+  }
+
+  private boolean getBooleanProperty(Properties props, String propName, boolean defaultValue) {
+    String str = props.getProperty(propName,
+        Boolean.toString(defaultValue)).toLowerCase();
+    return "true".equals(str) || "yes".equals(str) || "1".equals(str);
+  }
+
+  private long getLongProperty(Properties props, String propName, long defaultValue) {
+    String str = props.getProperty(propName,
+        Long.toString(defaultValue)).toLowerCase();
+    try {
+      return Long.parseLong(str);
+    } catch (NumberFormatException nfe) {
+      LOG.warn("Could not parse integer value for config parameter " + propName);
+      return defaultValue;
+    }
   }
 
   private void loadFromProperties() {
@@ -153,7 +181,7 @@ public class ImportOptions {
       this.password = props.getProperty("db.password", this.password);
       this.tableName = props.getProperty("db.table", this.tableName);
       this.connectString = props.getProperty("db.connect.url", this.connectString);
-      this.orderByCol = props.getProperty("db.sort.column", this.orderByCol);
+      this.splitByCol = props.getProperty("db.split.column", this.splitByCol);
       this.whereClause = props.getProperty("db.where.clause", this.whereClause);
       this.driverClassName = props.getProperty("jdbc.driver", this.driverClassName);
       this.warehouseDir = props.getProperty("hdfs.warehouse.dir", this.warehouseDir);
@@ -161,15 +189,11 @@ public class ImportOptions {
       this.className = props.getProperty("java.classname", this.className);
       this.packageName = props.getProperty("java.packagename", this.packageName);
 
-      String directImport = props.getProperty("direct.import",
-          Boolean.toString(this.direct)).toLowerCase();
-      this.direct = "true".equals(directImport) || "yes".equals(directImport)
-          || "1".equals(directImport);
-
-      String hiveImportStr = props.getProperty("hive.import",
-          Boolean.toString(this.hiveImport)).toLowerCase();
-      this.hiveImport = "true".equals(hiveImportStr) || "yes".equals(hiveImportStr)
-          || "1".equals(hiveImportStr);
+      this.direct = getBooleanProperty(props, "direct.import", this.direct);
+      this.hiveImport = getBooleanProperty(props, "hive.import", this.hiveImport);
+      this.useCompression = getBooleanProperty(props, "compression", this.useCompression);
+      this.directSplitSize = getLongProperty(props, "direct.split.size",
+          this.directSplitSize);
     } catch (IOException ioe) {
       LOG.error("Could not read properties file " + DEFAULT_CONFIG_FILE + ": " + ioe.toString());
     } finally {
@@ -227,6 +251,14 @@ public class ImportOptions {
 
     this.areDelimsManuallySet = false;
 
+    this.numMappers = DEFAULT_NUM_MAPPERS;
+    this.useCompression = false;
+    this.directSplitSize = 0;
+
+    this.conf = new Configuration();
+
+    this.extraArgs = null;
+
     loadFromProperties();
   }
 
@@ -255,7 +287,7 @@ public class ImportOptions {
     System.out.println("Import control options:");
     System.out.println("--table (tablename)          Table to read");
     System.out.println("--columns (col,col,col...)   Columns to export from table");
-    System.out.println("--order-by (column-name)     Column of the table used to order results");
+    System.out.println("--split-by (column-name)     Column of the table used to split work units");
     System.out.println("--where (where clause)       Where clause to use during export");
     System.out.println("--hadoop-home (dir)          Override $HADOOP_HOME");
     System.out.println("--hive-home (dir)            Override $HIVE_HOME");
@@ -263,9 +295,13 @@ public class ImportOptions {
     System.out.println("--as-sequencefile            Imports data to SequenceFiles");
     System.out.println("--as-textfile                Imports data as plain text (default)");
     System.out.println("--all-tables                 Import all tables in database");
-    System.out.println("                             (Ignores --table, --columns and --order-by)");
+    System.out.println("                             (Ignores --table, --columns and --split-by)");
     System.out.println("--hive-import                If set, then import the table into Hive.");
     System.out.println("                    (Uses Hive's default delimiters if none are set.)");
+    System.out.println("-m, --num-mappers (n)        Use 'n' map tasks to import in parallel");
+    System.out.println("-z, --compress               Enable compression");
+    System.out.println("--direct-split-size (n)      Split the input stream every 'n' bytes");
+    System.out.println("                             when importing in direct mode.");
     System.out.println("");
     System.out.println("Output line formatting options:");
     System.out.println("--fields-terminated-by (char)    Sets the field separator character");
@@ -295,6 +331,10 @@ public class ImportOptions {
     System.out.println("--list-tables                List tables in database and exit");
     System.out.println("--list-databases             List all databases available and exit");
     System.out.println("--debug-sql (statement)      Execute 'statement' in SQL and exit");
+    System.out.println("");
+    System.out.println("Database-specific options:");
+    System.out.println("Arguments may be passed to the database manager after a lone '-':");
+    System.out.println("  MySQL direct mode: arguments passed directly to mysqldump");
     System.out.println("");
     System.out.println("Generic Hadoop command-line options:");
     ToolRunner.printGenericCommandUsage(System.out);
@@ -409,8 +449,8 @@ public class ImportOptions {
         } else if (args[i].equals("--columns")) {
           String columnString = args[++i];
           this.columns = columnString.split(",");
-        } else if (args[i].equals("--order-by")) {
-          this.orderByCol = args[++i];
+        } else if (args[i].equals("--split-by")) {
+          this.splitByCol = args[++i];
         } else if (args[i].equals("--where")) {
           this.whereClause = args[++i];
         } else if (args[i].equals("--list-tables")) {
@@ -431,7 +471,8 @@ public class ImportOptions {
             this.password = "";
           }
         } else if (args[i].equals("--password")) {
-          LOG.warn("Setting your password on the command-line is insecure. Consider using -P instead.");
+          LOG.warn("Setting your password on the command-line is insecure. "
+              + "Consider using -P instead.");
           this.password = args[++i];
         } else if (args[i].equals("-P")) {
           this.password = securePasswordEntry();
@@ -441,6 +482,9 @@ public class ImportOptions {
           this.hiveHome = args[++i];
         } else if (args[i].equals("--hive-import")) {
           this.hiveImport = true;
+        } else if (args[i].equals("--num-mappers") || args[i].equals("-m")) {
+          String numMappersStr = args[++i];
+          this.numMappers = Integer.valueOf(numMappersStr);
         } else if (args[i].equals("--fields-terminated-by")) {
           this.outputFieldDelim = ImportOptions.toChar(args[++i]);
           this.areDelimsManuallySet = true;
@@ -491,6 +535,10 @@ public class ImportOptions {
           this.packageName = args[++i];
         } else if (args[i].equals("--class-name")) {
           this.className = args[++i];
+        } else if (args[i].equals("-z") || args[i].equals("--compress")) {
+          this.useCompression = true;
+        } else if (args[i].equals("--direct-split-size")) {
+          this.directSplitSize = Long.parseLong(args[++i]);
         } else if (args[i].equals("--list-databases")) {
           this.action = ControlAction.ListDatabases;
         } else if (args[i].equals("--generate-only")) {
@@ -507,6 +555,13 @@ public class ImportOptions {
         } else if (args[i].equals("--help")) {
           printUsage();
           throw new InvalidOptionsException("");
+        } else if (args[i].equals("-")) {
+          // Everything after a '--' goes into extraArgs.
+          ArrayList<String> extra = new ArrayList<String>();
+          for (i++; i < args.length; i++) {
+            extra.add(args[i]);
+          }
+          this.extraArgs = extra.toArray(new String[0]);
         } else {
           throw new InvalidOptionsException("Invalid argument: " + args[i] + ".\n"
               + "Try --help for usage.");
@@ -514,6 +569,9 @@ public class ImportOptions {
       }
     } catch (ArrayIndexOutOfBoundsException oob) {
       throw new InvalidOptionsException("Error: " + args[--i] + " expected argument.\n"
+          + "Try --help for usage.");
+    } catch (NumberFormatException nfe) {
+      throw new InvalidOptionsException("Error: " + args[--i] + " expected numeric argument.\n"
           + "Try --help for usage.");
     }
   }
@@ -530,9 +588,9 @@ public class ImportOptions {
       // If we're reading all tables in a database, can't filter column names.
       throw new InvalidOptionsException("--columns and --all-tables are incompatible options."
           + HELP_STR);
-    } else if (this.allTables && this.orderByCol != null) {
+    } else if (this.allTables && this.splitByCol != null) {
       // If we're reading all tables in a database, can't set pkey
-      throw new InvalidOptionsException("--order-by and --all-tables are incompatible options."
+      throw new InvalidOptionsException("--split-by and --all-tables are incompatible options."
           + HELP_STR);
     } else if (this.allTables && this.className != null) {
       // If we're reading all tables, can't set individual class name
@@ -544,6 +602,10 @@ public class ImportOptions {
     } else if (this.className != null && this.packageName != null) {
       throw new InvalidOptionsException(
           "--class-name overrides --package-name. You cannot use both." + HELP_STR);
+    } else if (this.action == ControlAction.FullImport && !this.allTables
+        && this.tableName == null) {
+      throw new InvalidOptionsException(
+          "One of --table or --all-tables is required for import." + HELP_STR);
     }
 
     if (this.hiveImport) {
@@ -594,8 +656,8 @@ public class ImportOptions {
     }
   }
 
-  public String getOrderByCol() {
-    return orderByCol;
+  public String getSplitByCol() {
+    return splitByCol;
   }
   
   public String getWhereClause() {
@@ -620,6 +682,13 @@ public class ImportOptions {
 
   public boolean isDirect() {
     return direct;
+  }
+
+  /**
+   * @return the number of map tasks to use for import
+   */
+  public int getNumMappers() {
+    return this.numMappers;
   }
 
   /**
@@ -806,5 +875,42 @@ public class ImportOptions {
    */
   public boolean isOutputEncloseRequired() {
     return this.outputMustBeEnclosed;
+  }
+
+  /**
+   * @return true if the user wants imported results to be compressed.
+   */
+  public boolean shouldUseCompression() {
+    return this.useCompression;
+  }
+
+  /**
+   * @return the file size to split by when using --direct mode.
+   */
+  public long getDirectSplitSize() {
+    return this.directSplitSize;
+  }
+
+  public Configuration getConf() {
+    return conf;
+  }
+
+  public void setConf(Configuration config) {
+    this.conf = config;
+  }
+
+  /**
+   * @return command-line arguments after a '-'
+   */
+  public String [] getExtraArgs() {
+    if (extraArgs == null) {
+      return null;
+    }
+
+    String [] out = new String[extraArgs.length];
+    for (int i = 0; i < extraArgs.length; i++) {
+      out[i] = extraArgs[i];
+    }
+    return out;
   }
 }

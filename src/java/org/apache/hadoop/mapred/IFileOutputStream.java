@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,13 @@ import org.apache.hadoop.util.DataChecksum;
  * Checksum for the contents of the file is calculated and
  * appended to the end of the file on close of the stream.
  * Used for IFiles
+ *
+ * <FRAMEWORK-USE-ONLY>
+ * This method is intended only for use by the Map/Reduce framework and not
+ * for external users
+ *
  */
-class IFileOutputStream extends FilterOutputStream {
+public class IFileOutputStream extends FilterOutputStream {
   /**
    * The output stream to be checksummed. 
    */

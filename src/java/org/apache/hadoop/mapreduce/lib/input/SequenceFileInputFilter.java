@@ -46,10 +46,12 @@ public class SequenceFileInputFilter<K, V>
     extends SequenceFileInputFormat<K, V> {
   public static final Log LOG = LogFactory.getLog(FileInputFormat.class);
   
-  final public static String FILTER_CLASS = "sequencefile.filter.class";
-  final private static String FILTER_FREQUENCY
-    = "sequencefile.filter.frequency";
-  final private static String FILTER_REGEX = "sequencefile.filter.regex";
+  final public static String FILTER_CLASS = 
+    "mapreduce.input.mapreduce.input.mapreduce.input.sequencefileinputfilter.class";
+  final public static String FILTER_FREQUENCY = 
+    "mapreduce.input.mapreduce.input.mapreduce.input.sequencefileinputfilter.frequency";
+  final public static String FILTER_REGEX = 
+    "mapreduce.input.mapreduce.input.mapreduce.input.sequencefileinputfilter.regex";
     
   public SequenceFileInputFilter() {
   }
@@ -166,7 +168,7 @@ public class SequenceFileInputFilter<K, V>
      * @param conf configuration
      */
     public void setConf(Configuration conf) {
-      this.frequency = conf.getInt("sequencefile.filter.frequency", 10);
+      this.frequency = conf.getInt(FILTER_FREQUENCY, 10);
       if (this.frequency <= 0) {
         throw new RuntimeException(
           "Negative "+FILTER_FREQUENCY + ": " + this.frequency);

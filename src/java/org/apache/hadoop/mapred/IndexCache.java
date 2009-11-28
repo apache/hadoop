@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
 class IndexCache {
 
@@ -42,7 +43,7 @@ class IndexCache {
   public IndexCache(JobConf conf) {
     this.conf = conf;
     totalMemoryAllowed =
-      conf.getInt("mapred.tasktracker.indexcache.mb", 10) * 1024 * 1024;
+      conf.getInt(TTConfig.TT_INDEX_CACHE, 10) * 1024 * 1024;
     LOG.info("IndexCache created with max memory = " + totalMemoryAllowed);
   }
 

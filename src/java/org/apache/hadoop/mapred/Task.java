@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -42,15 +40,24 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.IFile.Writer;
+import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
+import org.apache.hadoop.mapreduce.task.ReduceContextImpl;
+import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
 
 /** 
  * Base class for tasks.
@@ -60,6 +67,30 @@ import org.apache.hadoop.util.StringUtils;
 abstract public class Task implements Writable, Configurable {
   private static final Log LOG =
     LogFactory.getLog(Task.class);
+
+  // Counters used by Task subclasses
+  protected static enum Counter { 
+    MAP_INPUT_RECORDS, 
+    MAP_OUTPUT_RECORDS,
+    MAP_SKIPPED_RECORDS,
+    MAP_INPUT_BYTES, 
+    MAP_OUTPUT_BYTES,
+    COMBINE_INPUT_RECORDS,
+    COMBINE_OUTPUT_RECORDS,
+    REDUCE_INPUT_GROUPS,
+    REDUCE_SHUFFLE_BYTES,
+    REDUCE_INPUT_RECORDS,
+    REDUCE_OUTPUT_RECORDS,
+    REDUCE_SKIPPED_GROUPS,
+    REDUCE_SKIPPED_RECORDS,
+    SPILLED_RECORDS,
+    FAILED_SHUFFLE,
+    SHUFFLED_MAPS,
+    MERGED_MAP_OUTPUTS,
+  }
+  
+  public static String MERGED_OUTPUT_PREFIX = ".merged";
+  
 
   /**
    * Counters to measure the usage of the different file systems.
@@ -97,9 +128,11 @@ abstract public class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   private String jobFile;                         // job configuration file
+  private String user;                            // user running the job
   private TaskAttemptID taskId;                   // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
+  protected JobStatus.State jobRunStateForCleanup;
   protected boolean jobCleanup = false;
   protected boolean jobSetup = false;
   protected boolean taskCleanup = false;
@@ -123,7 +156,11 @@ abstract public class Task implements Writable, Configurable {
   protected org.apache.hadoop.mapreduce.OutputFormat<?,?> outputFormat;
   protected org.apache.hadoop.mapreduce.OutputCommitter committer;
   protected final Counters.Counter spilledRecordsCounter;
+  protected final Counters.Counter failedShuffleCounter;
+  protected final Counters.Counter mergedMapOutputsCounter;
   private int numSlotsRequired;
+  protected TaskUmbilicalProtocol umbilical;
+  protected JobTokens jobTokens=null; // storage of the secret keys
 
   ////////////////////////////////////////////
   // Constructors
@@ -133,6 +170,8 @@ abstract public class Task implements Writable, Configurable {
     taskStatus = TaskStatus.createTaskStatus(isMapTask());
     taskId = new TaskAttemptID();
     spilledRecordsCounter = counters.findCounter(TaskCounter.SPILLED_RECORDS);
+    failedShuffleCounter = counters.findCounter(Counter.FAILED_SHUFFLE);
+    mergedMapOutputsCounter = counters.findCounter(Counter.MERGED_MAP_OUTPUTS);
   }
 
   public Task(String jobFile, TaskAttemptID taskId, int partition, 
@@ -151,6 +190,8 @@ abstract public class Task implements Writable, Configurable {
                                                     TaskStatus.Phase.SHUFFLE, 
                                                   counters);
     spilledRecordsCounter = counters.findCounter(TaskCounter.SPILLED_RECORDS);
+    failedShuffleCounter = counters.findCounter(Counter.FAILED_SHUFFLE);
+    mergedMapOutputsCounter = counters.findCounter(Counter.MERGED_MAP_OUTPUTS);
   }
 
   ////////////////////////////////////////////
@@ -172,6 +213,23 @@ abstract public class Task implements Writable, Configurable {
   public JobID getJobID() {
     return taskId.getJobID();
   }
+
+  /**
+   * set JobToken storage 
+   * @param jt
+   */
+  public void setJobTokens(JobTokens jt) {
+    this.jobTokens = jt;
+  }
+
+  /**
+   * get JobToken storage
+   * @return storage object
+   */
+  public JobTokens getJobTokens() {
+    return this.jobTokens;
+  }
+
   
   /**
    * Get the index of this task within the job.
@@ -210,6 +268,24 @@ abstract public class Task implements Writable, Configurable {
     this.writeSkipRecs = writeSkipRecs;
   }
   
+  /**
+   * Report a fatal error to the parent (task) tracker.
+   */
+  protected void reportFatalError(TaskAttemptID id, Throwable throwable, 
+                                  String logMsg) {
+    LOG.fatal(logMsg);
+    Throwable tCause = throwable.getCause();
+    String cause = tCause == null 
+                   ? StringUtils.stringifyException(throwable)
+                   : StringUtils.stringifyException(tCause);
+    try {
+      umbilical.fatalError(id, cause);
+    } catch (IOException ioe) {
+      LOG.fatal("Failed to contact the tasktracker", ioe);
+      System.exit(-1);
+    }
+  }
+
   /**
    * Get skipRanges.
    */
@@ -268,6 +344,14 @@ abstract public class Task implements Writable, Configurable {
     return jobCleanup;
   }
 
+  boolean isJobAbortTask() {
+    // the task is an abort task if its marked for cleanup and the final 
+    // expected state is either failed or killed.
+    return isJobCleanupTask() 
+           && (jobRunStateForCleanup == JobStatus.State.KILLED 
+               || jobRunStateForCleanup == JobStatus.State.FAILED);
+  }
+  
   boolean isJobSetupTask() {
     return jobSetup;
   }
@@ -280,10 +364,29 @@ abstract public class Task implements Writable, Configurable {
     jobCleanup = true; 
   }
 
+  /**
+   * Sets the task to do job abort in the cleanup.
+   * @param status the final runstate of the job. 
+   */
+  void setJobCleanupTaskState(JobStatus.State status) {
+    jobRunStateForCleanup = status;
+  }
+  
   boolean isMapOrReduce() {
     return !jobSetup && !jobCleanup && !taskCleanup;
   }
-  
+
+  /**
+   * Get the name of the user running the job/task. TaskTracker needs task's
+   * user name even before it's JobConf is localized. So we explicitly serialize
+   * the user name.
+   * 
+   * @return user
+   */
+  String getUser() {
+    return user;
+  }
+
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
@@ -297,9 +400,13 @@ abstract public class Task implements Writable, Configurable {
     skipRanges.write(out);
     out.writeBoolean(skipping);
     out.writeBoolean(jobCleanup);
+    if (jobCleanup) {
+      WritableUtils.writeEnum(out, jobRunStateForCleanup);
+    }
     out.writeBoolean(jobSetup);
     out.writeBoolean(writeSkipRecs);
-    out.writeBoolean(taskCleanup);  
+    out.writeBoolean(taskCleanup);
+    Text.writeString(out, user);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -313,12 +420,17 @@ abstract public class Task implements Writable, Configurable {
     currentRecStartIndex = currentRecIndexIterator.next();
     skipping = in.readBoolean();
     jobCleanup = in.readBoolean();
+    if (jobCleanup) {
+      jobRunStateForCleanup = 
+        WritableUtils.readEnum(in, JobStatus.State.class);
+    }
     jobSetup = in.readBoolean();
     writeSkipRecs = in.readBoolean();
     taskCleanup = in.readBoolean();
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
+    user = Text.readString(in);
   }
 
   @Override
@@ -328,11 +440,11 @@ abstract public class Task implements Writable, Configurable {
    * Localize the given JobConf to be specific for this task.
    */
   public void localizeConfiguration(JobConf conf) throws IOException {
-    conf.set("mapred.tip.id", taskId.getTaskID().toString()); 
-    conf.set("mapred.task.id", taskId.toString());
-    conf.setBoolean("mapred.task.is.map", isMapTask());
-    conf.setInt("mapred.task.partition", partition);
-    conf.set("mapred.job.id", taskId.getJobID().toString());
+    conf.set(JobContext.TASK_ID, taskId.getTaskID().toString()); 
+    conf.set(JobContext.TASK_ATTEMPT_ID, taskId.toString());
+    conf.setBoolean(JobContext.TASK_ISMAP, isMapTask());
+    conf.setInt(JobContext.TASK_PARTITION, partition);
+    conf.set(JobContext.ID, taskId.getJobID().toString());
   }
   
   /** Run this task as a part of the named job.  This method is executed in the
@@ -368,8 +480,8 @@ abstract public class Task implements Writable, Configurable {
                          boolean useNewApi) throws IOException, 
                                                    ClassNotFoundException,
                                                    InterruptedException {
-    jobContext = new JobContext(job, id, reporter);
-    taskContext = new TaskAttemptContext(job, taskId, reporter);
+    jobContext = new JobContextImpl(job, id, reporter);
+    taskContext = new TaskAttemptContextImpl(job, taskId, reporter);
     if (getState() == TaskStatus.State.UNASSIGNED) {
       setState(TaskStatus.State.RUNNING);
     }
@@ -674,7 +786,12 @@ abstract public class Task implements Writable, Configurable {
     sendDone(umbilical);
   }
 
-  protected void statusUpdate(TaskUmbilicalProtocol umbilical) 
+  /**
+   * Send a status update to the task tracker
+   * @param umbilical
+   * @throws IOException
+   */
+  public void statusUpdate(TaskUmbilicalProtocol umbilical) 
   throws IOException {
     int retries = MAX_RETRIES;
     while (true) {
@@ -800,7 +917,27 @@ abstract public class Task implements Writable, Configurable {
     getProgress().setStatus("cleanup");
     statusUpdate(umbilical);
     // do the cleanup
-    committer.cleanupJob(jobContext);
+    LOG.info("Cleaning up job");
+    if (jobRunStateForCleanup == JobStatus.State.FAILED 
+        || jobRunStateForCleanup == JobStatus.State.KILLED) {
+      LOG.info("Aborting job with runstate : " + jobRunStateForCleanup.name());
+      if (conf.getUseNewMapper()) {
+        committer.abortJob(jobContext, jobRunStateForCleanup);
+      } else {
+        org.apache.hadoop.mapred.OutputCommitter oldCommitter = 
+          (org.apache.hadoop.mapred.OutputCommitter)committer;
+        oldCommitter.abortJob(jobContext, jobRunStateForCleanup);
+      }
+    } else if (jobRunStateForCleanup == JobStatus.State.SUCCEEDED){
+      LOG.info("Committing job");
+      committer.commitJob(jobContext);
+    } else {
+      throw new IOException("Invalid state of the job for cleanup. State found "
+                            + jobRunStateForCleanup + " expecting "
+                            + JobStatus.State.SUCCEEDED + ", " 
+                            + JobStatus.State.FAILED + " or "
+                            + JobStatus.State.KILLED);
+    }
     done(umbilical, reporter);
   }
 
@@ -820,11 +957,11 @@ abstract public class Task implements Writable, Configurable {
       this.conf = new JobConf(conf);
     }
     this.mapOutputFile.setConf(this.conf);
-    this.lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+    this.lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
     // add the static resolutions (this is required for the junit to
     // work on testcases that simulate multiple nodes on a single physical
     // node.
-    String hostToResolved[] = conf.getStrings("hadoop.net.static.resolutions");
+    String hostToResolved[] = conf.getStrings(TTConfig.TT_STATIC_RESOLUTIONS);
     if (hostToResolved != null) {
       for (String str : hostToResolved) {
         String name = str.substring(0, str.indexOf('='));
@@ -832,6 +969,7 @@ abstract public class Task implements Writable, Configurable {
         NetUtils.addStaticResolution(name, resolvedName);
       }
     }
+    this.user = this.conf.getUser();
   }
 
   public Configuration getConf() {
@@ -841,7 +979,7 @@ abstract public class Task implements Writable, Configurable {
   /**
    * OutputCollector for the combiner.
    */
-  protected static class CombineOutputCollector<K extends Object, V extends Object> 
+  public static class CombineOutputCollector<K extends Object, V extends Object> 
   implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
@@ -919,7 +1057,7 @@ abstract public class Task implements Writable, Configurable {
     /// Auxiliary methods
 
     /** Start processing next unique key. */
-    void nextKey() throws IOException {
+    public void nextKey() throws IOException {
       // read until we find a new key
       while (hasNext) { 
         readNextKey();
@@ -934,12 +1072,12 @@ abstract public class Task implements Writable, Configurable {
     }
 
     /** True iff more keys remain. */
-    boolean more() { 
+    public boolean more() { 
       return more; 
     }
 
     /** The current key. */
-    KEY getKey() { 
+    public KEY getKey() { 
       return key; 
     }
 
@@ -969,7 +1107,8 @@ abstract public class Task implements Writable, Configurable {
     }
   }
 
-  protected static class CombineValuesIterator<KEY,VALUE>
+    /** Iterator to return Combined values */
+  public static class CombineValuesIterator<KEY,VALUE>
       extends ValuesIterator<KEY,VALUE> {
 
     private final Counters.Counter combineInputCounter;
@@ -988,28 +1127,6 @@ abstract public class Task implements Writable, Configurable {
     }
   }
 
-  private static final Constructor<org.apache.hadoop.mapreduce.Reducer.Context> 
-  contextConstructor;
-  static {
-    try {
-      contextConstructor = 
-        org.apache.hadoop.mapreduce.Reducer.Context.class.getConstructor
-        (new Class[]{org.apache.hadoop.mapreduce.Reducer.class,
-            Configuration.class,
-            org.apache.hadoop.mapreduce.TaskAttemptID.class,
-            RawKeyValueIterator.class,
-            org.apache.hadoop.mapreduce.Counter.class,
-            org.apache.hadoop.mapreduce.RecordWriter.class,
-            org.apache.hadoop.mapreduce.OutputCommitter.class,
-            org.apache.hadoop.mapreduce.StatusReporter.class,
-            RawComparator.class,
-            Class.class,
-            Class.class});
-    } catch (NoSuchMethodException nme) {
-      throw new IllegalArgumentException("Can't find constructor");
-    }
-  }
-
   @SuppressWarnings("unchecked")
   protected static <INKEY,INVALUE,OUTKEY,OUTVALUE> 
   org.apache.hadoop.mapreduce.Reducer<INKEY,INVALUE,OUTKEY,OUTVALUE>.Context
@@ -1018,26 +1135,33 @@ abstract public class Task implements Writable, Configurable {
                       Configuration job,
                       org.apache.hadoop.mapreduce.TaskAttemptID taskId, 
                       RawKeyValueIterator rIter,
-                      org.apache.hadoop.mapreduce.Counter inputCounter,
+                      org.apache.hadoop.mapreduce.Counter inputKeyCounter,
+                      org.apache.hadoop.mapreduce.Counter inputValueCounter,
                       org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> output, 
                       org.apache.hadoop.mapreduce.OutputCommitter committer,
                       org.apache.hadoop.mapreduce.StatusReporter reporter,
                       RawComparator<INKEY> comparator,
                       Class<INKEY> keyClass, Class<INVALUE> valueClass
-  ) throws IOException, ClassNotFoundException {
-    try {
+  ) throws IOException, InterruptedException {
+    org.apache.hadoop.mapreduce.ReduceContext<INKEY, INVALUE, OUTKEY, OUTVALUE> 
+    reduceContext = 
+      new ReduceContextImpl<INKEY, INVALUE, OUTKEY, OUTVALUE>(job, taskId, 
+                                                              rIter, 
+                                                              inputKeyCounter, 
+                                                              inputValueCounter, 
+                                                              output, 
+                                                              committer, 
+                                                              reporter, 
+                                                              comparator, 
+                                                              keyClass, 
+                                                              valueClass);
 
-      return contextConstructor.newInstance(reducer, job, taskId,
-                                            rIter, inputCounter, output, 
-                                            committer, reporter, comparator, 
-                                            keyClass, valueClass);
-    } catch (InstantiationException e) {
-      throw new IOException("Can't create Context", e);
-    } catch (InvocationTargetException e) {
-      throw new IOException("Can't invoke Context constructor", e);
-    } catch (IllegalAccessException e) {
-      throw new IOException("Can't invoke Context constructor", e);
-    }
+    org.apache.hadoop.mapreduce.Reducer<INKEY,INVALUE,OUTKEY,OUTVALUE>.Context 
+        reducerContext = 
+          new WrappedReducer<INKEY, INVALUE, OUTKEY, OUTVALUE>().getReducerContext(
+              reduceContext);
+
+    return reducerContext;
   }
 
   protected static abstract class CombinerRunner<K,V> {
@@ -1079,7 +1203,7 @@ abstract public class Task implements Writable, Configurable {
       }
       // make a task context so we can get the classes
       org.apache.hadoop.mapreduce.TaskAttemptContext taskContext =
-        new org.apache.hadoop.mapreduce.TaskAttemptContext(job, taskId);
+        new org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl(job, taskId);
       Class<? extends org.apache.hadoop.mapreduce.Reducer<K,V,K,V>> newcls = 
         (Class<? extends org.apache.hadoop.mapreduce.Reducer<K,V,K,V>>)
            taskContext.getCombinerClass();
@@ -1188,13 +1312,12 @@ abstract public class Task implements Writable, Configurable {
           ReflectionUtils.newInstance(reducerClass, job);
       org.apache.hadoop.mapreduce.Reducer.Context 
            reducerContext = createReduceContext(reducer, job, taskId,
-                                                iterator, inputCounter, 
+                                                iterator, null, inputCounter, 
                                                 new OutputConverter(collector),
                                                 committer,
                                                 reporter, comparator, keyClass,
                                                 valueClass);
       reducer.run(reducerContext);
-    }
-    
+    } 
   }
 }

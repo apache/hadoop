@@ -1,0 +1,68 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Importing Individual Tables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In addition to full-database imports, Sqoop will allow you to import
+individual tables. Instead of using +--all-tables+, specify the name of
+a particular table with the +--table+ argument:
+
+----
+$ sqoop --connect jdbc:mysql://database.example.com/employees \
+    --table employee_names
+----
+
+You can further specify a subset of the columns in a table by using
+the +--columns+ argument. This takes a list of column names, delimited
+by commas, with no spaces in between. e.g.:
+
+----
+$ sqoop --connect jdbc:mysql://database.example.com/employees \
+    --table employee_names --columns employee_id,first_name,last_name,dept_id
+----
+
+Sqoop will use a MapReduce job to read sections of the table in
+parallel. For the MapReduce tasks to divide the table space, the
+results returned by the database must be orderable. Sqoop will
+automatically detect the primary key for a table and use that to order
+the results. If no primary key is available, or (less likely) you want
+to order the results along a different column, you can specify the
+column name with +--split-by+.
+
+.Row ordering
+IMPORTANT:  To guarantee correctness of your input, you must select an
+ordering column for which each row has a unique value. If duplicate
+values appear in the ordering column, the results of the import are
+undefined, and Sqoop will not be able to detect the error.
+
+Finally, you can control which rows of a table are imported via the
++--where+ argument. With this argument, you may specify a clause to be
+appended to the SQL statement used to select rows from the table,
+e.g.:
+
+----
+$ sqoop --connect jdbc:mysql://database.example.com/employees \
+  --table employee_names --where "employee_id > 40 AND active = 1"
+----
+
+The +--columns+, +--split-by+, and +--where+ arguments are incompatible with
++--all-tables+. If you require special handling for some of the tables,
+then you must manually run a separate import job for each table.
+

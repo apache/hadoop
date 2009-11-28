@@ -92,7 +92,7 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
    *         defaulting to {@link CompressionType#RECORD}
    */
   public static CompressionType getOutputCompressionType(JobContext job) {
-    String val = job.getConfiguration().get("mapred.output.compression.type", 
+    String val = job.getConfiguration().get(FileOutputFormat.COMPRESS_TYPE, 
                                             CompressionType.RECORD.toString());
     return CompressionType.valueOf(val);
   }
@@ -106,7 +106,7 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
   public static void setOutputCompressionType(Job job, 
 		                                          CompressionType style) {
     setCompressOutput(job, true);
-    job.getConfiguration().set("mapred.output.compression.type", 
+    job.getConfiguration().set(FileOutputFormat.COMPRESS_TYPE, 
                                style.toString());
   }
 

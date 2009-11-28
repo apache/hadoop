@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
@@ -37,6 +38,8 @@ import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.apache.hadoop.mapred.lib.db.DBInputFormat;
 import org.apache.hadoop.mapred.lib.db.DBWritable;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 import org.apache.hadoop.sqoop.ConnFactory;
 import org.apache.hadoop.sqoop.ImportOptions;
@@ -73,7 +76,7 @@ public class ImportJob {
 
     String tableClassName = new TableClassName(options).getClassForTable(tableName);
 
-    boolean isLocal = "local".equals(conf.get("mapred.job.tracker"));
+    boolean isLocal = "local".equals(conf.get(JTConfig.JT_IPC_ADDRESS));
     ClassLoader prevClassLoader = null;
     if (isLocal) {
       // If we're using the LocalJobRunner, then instead of using the compiled jar file
@@ -102,11 +105,17 @@ public class ImportJob {
         job.setMapperClass(TextImportMapper.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(NullWritable.class);
+        if (options.shouldUseCompression()) {
+          FileOutputFormat.setCompressOutput(job, true);
+          FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
+        }
       } else if (options.getFileLayout() == ImportOptions.FileLayout.SequenceFile) {
         job.setOutputFormat(SequenceFileOutputFormat.class);
-        SequenceFileOutputFormat.setCompressOutput(job, true);
-        SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-        job.set("mapred.output.value.class", tableClassName);
+        if (options.shouldUseCompression()) {
+          SequenceFileOutputFormat.setCompressOutput(job, true);
+          SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
+        }
+        job.set(JobContext.OUTPUT_VALUE_CLASS, tableClassName);
       } else {
         LOG.warn("Unknown file layout specified: " + options.getFileLayout() + "; using text.");
       }
@@ -114,10 +123,11 @@ public class ImportJob {
       job.setNumReduceTasks(0);
       job.setNumMapTasks(1);
       job.setInputFormat(DBInputFormat.class);
+      job.setMapRunnerClass(AutoProgressMapRunner.class);
 
       FileOutputFormat.setOutputPath(job, outputPath);
 
-      ConnManager mgr = ConnFactory.getManager(options);
+      ConnManager mgr = new ConnFactory(conf).getManager(options);
       String username = options.getUsername();
       if (null == username || username.length() == 0) {
         DBConfiguration.configureDB(job, mgr.getDriverClass(), options.getConnectString());
@@ -130,7 +140,7 @@ public class ImportJob {
       if (null == colNames) {
         colNames = mgr.getColumnNames(tableName);
       }
-      
+
       // It's ok if the where clause is null in DBInputFormat.setInput.
       String whereClause = options.getWhereClause();
 

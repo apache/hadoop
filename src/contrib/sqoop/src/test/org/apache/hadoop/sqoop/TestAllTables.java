@@ -31,14 +31,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 
+import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.HsqldbTestServer;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 
 /**
  * Test the --all-tables functionality that can import multiple tables.
- * ;
- * 
- *
  */
 public class TestAllTables extends ImportJobTestCase {
 
@@ -50,12 +48,7 @@ public class TestAllTables extends ImportJobTestCase {
     ArrayList<String> args = new ArrayList<String>();
 
     if (includeHadoopFlags) {
-      args.add("-D");
-      args.add("mapred.job.tracker=local");
-      args.add("-D");
-      args.add("mapred.map.tasks=1");
-      args.add("-D");
-      args.add("fs.default.name=file:///");
+      CommonArgs.addHadoopFlags(args);
     }
 
     args.add("--all-tables");
@@ -63,6 +56,8 @@ public class TestAllTables extends ImportJobTestCase {
     args.add(getWarehouseDir());
     args.add("--connect");
     args.add(HsqldbTestServer.getUrl());
+    args.add("--num-mappers");
+    args.add("1");
 
     return args.toArray(new String[0]);
   }
@@ -107,7 +102,7 @@ public class TestAllTables extends ImportJobTestCase {
     Path warehousePath = new Path(this.getWarehouseDir());
     for (String tableName : this.tableNames) {
       Path tablePath = new Path(warehousePath, tableName);
-      Path filePath = new Path(tablePath, "part-00000");
+      Path filePath = new Path(tablePath, "part-m-00000");
 
       // dequeue the expected value for this table. This
       // list has the same order as the tableNames list.

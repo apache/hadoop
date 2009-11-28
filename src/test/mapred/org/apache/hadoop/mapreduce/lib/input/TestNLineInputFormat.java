@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 
 public class TestNLineInputFormat extends TestCase {
   private static int MAX_LENGTH = 200;
@@ -90,7 +91,7 @@ public class TestNLineInputFormat extends TestCase {
       assertEquals("reader class is LineRecordReader.", 
         LineRecordReader.class, clazz);
       MapContext<LongWritable, Text, LongWritable, Text> mcontext = 
-        new MapContext<LongWritable, Text, LongWritable, Text>(
+        new MapContextImpl<LongWritable, Text, LongWritable, Text>(
           job.getConfiguration(), context.getTaskAttemptID(), reader, null,
           null, MapReduceTestUtil.createDummyReporter(), splits.get(i));
       reader.initialize(splits.get(i), mcontext);

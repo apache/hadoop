@@ -37,11 +37,14 @@
 
 //command definitions
 enum command {
+  INITIALIZE_USER,
   INITIALIZE_JOB,
+  INITIALIZE_DISTRIBUTEDCACHE,
   LAUNCH_TASK_JVM,
   INITIALIZE_TASK,
   TERMINATE_TASK_JVM,
   KILL_TASK_JVM,
+  RUN_DEBUG_SCRIPT,
 };
 
 enum errorcodes {
@@ -63,9 +66,16 @@ enum errorcodes {
   PREPARE_TASK_LOGS_FAILED, //16
   INVALID_TT_LOG_DIR, //17
   OUT_OF_MEMORY, //18
+  INITIALIZE_DISTCACHE_FAILED, //19
+  INITIALIZE_USER_FAILED, //20
+  UNABLE_TO_EXECUTE_DEBUG_SCRIPT, //21
 };
 
-#define TT_JOB_DIR_PATTERN "%s/taskTracker/jobcache/%s"
+#define USER_DIR_PATTERN "%s/taskTracker/%s"
+
+#define TT_JOB_DIR_PATTERN USER_DIR_PATTERN"/jobcache/%s"
+
+#define USER_DISTRIBUTED_CACHE_DIR_PATTERN USER_DIR_PATTERN"/distcache"
 
 #define JOB_DIR_TO_JOB_WORK_PATTERN "%s/work"
 
@@ -75,7 +85,7 @@ enum errorcodes {
 
 #define TASK_SCRIPT_PATTERN "%s/%s/taskjvm.sh"
 
-#define TT_SYS_DIR_KEY "mapred.local.dir"
+#define TT_SYS_DIR_KEY "mapreduce.cluster.local.dir"
 
 #define TT_LOG_DIR_KEY "hadoop.log.dir"
 
@@ -91,9 +101,16 @@ extern FILE *LOGFILE;
 int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     const char *tt_root);
 
+int run_debug_script_as_user(const char * user, const char *jobid, const char *taskid,
+    const char *tt_root);
+
+int initialize_user(const char *user);
+
 int initialize_task(const char *jobid, const char *taskid, const char *user);
 
 int initialize_job(const char *jobid, const char *user);
+
+int initialize_distributed_cache(const char *user);
 
 int kill_user_task(const char *user, const char *task_pid, int sig);
 

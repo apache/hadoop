@@ -84,7 +84,7 @@ public enum ConfProp {
    * Property name for naming the job tracker (URI). This property is related
    * to {@link #PI_MASTER_HOST_NAME}
    */
-  JOB_TRACKER_URI(false, "mapred.job.tracker", "localhost:50020"),
+  JOB_TRACKER_URI(false, "mapreduce.jobtracker.address", "localhost:50020"),
 
   /**
    * Property name for naming the default file system (URI).

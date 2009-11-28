@@ -52,9 +52,9 @@ public class Grep extends Configured implements Tool {
           Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
 
     Configuration conf = getConf();
-    conf.set("mapred.mapper.regex", args[2]);
+    conf.set(RegexMapper.PATTERN, args[2]);
     if (args.length == 4)
-      conf.set("mapred.mapper.regex.group", args[3]);
+      conf.set(RegexMapper.GROUP, args[3]);
 
     Job grepJob = new Job(conf);
     

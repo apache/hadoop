@@ -18,7 +18,7 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
   <header>
-    <title>Fair Scheduler Guide</title>
+    <title>Fair Scheduler</title>
   </header>
   <body>
 
@@ -26,7 +26,7 @@
       <title>Purpose</title>
 
       <p>This document describes the Fair Scheduler, a pluggable
-        Map/Reduce scheduler for Hadoop which provides a way to share
+        MapReduce scheduler for Hadoop which provides a way to share
         large clusters.</p>
     </section>
 
@@ -108,7 +108,7 @@
       </p>
 <source>
 &lt;property&gt;
-  &lt;name&gt;mapred.jobtracker.taskScheduler&lt;/name&gt;
+  &lt;name&gt;mapreduce.jobtracker.taskscheduler&lt;/name&gt;
   &lt;value&gt;org.apache.hadoop.mapred.FairScheduler&lt;/value&gt;
 &lt;/property&gt;
 </source>
@@ -148,7 +148,7 @@
           The following parameters can be set in <em>mapred-site.xml</em>
           to affect the behavior of the fair scheduler:
         </p>
-        <p><strong>Basic Parameters:</strong></p>
+        <p><strong>Basic Parameters</strong></p>
         <table>
           <tr>
           <th>Name</th><th>Description</th>
@@ -163,25 +163,25 @@
           </tr>
           <tr>
           <td>
+            mapred.fairscheduler.pool
+          </td>
+          <td>
+            Specify the pool that a job belongs in.  
+            If this is specified then mapred.fairscheduler.poolnameproperty is ignored.
+          </td>
+          </tr>
+          <tr>
+          <td>
             mapred.fairscheduler.poolnameproperty
           </td>
           <td>
             Specify which jobconf property is used to determine the pool that a
-            job belongs in. String, default: <em>user.name</em>
+            job belongs in. String, default: <em>mapreduce.job.mapreduce.job.user.name</em>
             (i.e. one pool for each user). 
             Another useful value is <em>group.name</em> to create a
             pool per Unix group.
-            Finally, a common setting is to use a non-standard property
-            such as <em>pool.name</em> as the pool name property, and make it
-            default to <em>user.name</em> through the following setting:<br/>
-            <code>&lt;property&gt;</code><br/> 
-            <code>&nbsp;&nbsp;&lt;name&gt;pool.name&lt;/name&gt;</code><br/>
-            <code>&nbsp;&nbsp;&lt;value&gt;${user.name}&lt;/value&gt;</code><br/>
-            <code>&lt;/property&gt;</code><br/>
-            This allows you to specify the pool name explicitly for some jobs
-            through the jobconf (e.g. passing <em>-Dpool.name=&lt;name&gt;</em>
-            to <em>bin/hadoop jar</em>, while having the default be the user's
-            pool.
+            mapred.fairscheduler. poolnameproperty is used only for jobs in which 
+            mapred.fairscheduler.pool is not explicitly set.
           </td>
           </tr>
           <tr>
@@ -195,7 +195,8 @@
           </td>
           </tr>
         </table>
-        <p><strong>Advanced Parameters:</strong></p>
+        <p> <br></br></p>
+        <p><strong>Advanced Parameters</strong> </p>
         <table>
           <tr>
           <th>Name</th><th>Description</th>
@@ -399,7 +400,7 @@
     &lt;minReduces&gt;5&lt;/minReduces&gt;
     &lt;minSharePreemptionTimeout&gt;300&lt;/minSharePreemptionTimeout&gt;
   &lt;/pool&gt;
-  &lt;user name="sample_user"&gt;
+  &lt;mapreduce.job.mapreduce.job.user.name="sample_user"&gt;
     &lt;maxRunningJobs&gt;6&lt;/maxRunningJobs&gt;
   &lt;/user&gt;
   &lt;userMaxJobsDefault&gt;3&lt;/userMaxJobsDefault&gt;
@@ -532,7 +533,7 @@
      implementing a "shortest job first" policy which reduces response
      times for interactive jobs even further.
      These extension points are listed in
-     <a href="#Advanced+Parameters">advanced mapred-site.xml properties</a>.
+     <a href="#Scheduler+Parameters+in+mapred-site.xml">Advanced Parameters</a>.
      </p>
     </section>
     -->

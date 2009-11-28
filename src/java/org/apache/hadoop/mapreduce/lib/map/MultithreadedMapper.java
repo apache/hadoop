@@ -24,11 +24,13 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.StatusReporter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -56,6 +58,9 @@ public class MultithreadedMapper<K1, V1, K2, V2>
   extends Mapper<K1, V1, K2, V2> {
 
   private static final Log LOG = LogFactory.getLog(MultithreadedMapper.class);
+  public static String NUM_THREADS = "mapreduce.mapper.multithreadedmapper.threads";
+  public static String MAP_CLASS = "mapreduce.mapper.multithreadedmapper.mapclass";
+  
   private Class<? extends Mapper<K1,V1,K2,V2>> mapClass;
   private Context outer;
   private List<MapRunner> runners;
@@ -66,8 +71,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
    * @return the number of threads
    */
   public static int getNumberOfThreads(JobContext job) {
-    return job.getConfiguration().
-            getInt("mapred.map.multithreadedrunner.threads", 10);
+    return job.getConfiguration().getInt(NUM_THREADS, 10);
   }
 
   /**
@@ -76,8 +80,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
    * @param threads the new number of threads
    */
   public static void setNumberOfThreads(Job job, int threads) {
-    job.getConfiguration().setInt("mapred.map.multithreadedrunner.threads", 
-                                  threads);
+    job.getConfiguration().setInt(NUM_THREADS, threads);
   }
 
   /**
@@ -93,8 +96,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
   public static <K1,V1,K2,V2>
   Class<Mapper<K1,V1,K2,V2>> getMapperClass(JobContext job) {
     return (Class<Mapper<K1,V1,K2,V2>>) 
-         job.getConfiguration().getClass("mapred.map.multithreadedrunner.class",
-                                         Mapper.class);
+      job.getConfiguration().getClass(MAP_CLASS, Mapper.class);
   }
   
   /**
@@ -113,8 +115,7 @@ public class MultithreadedMapper<K1, V1, K2, V2>
       throw new IllegalArgumentException("Can't have recursive " + 
                                          "MultithreadedMapper instances.");
     }
-    job.getConfiguration().setClass("mapred.map.multithreadedrunner.class",
-                                    cls, Mapper.class);
+    job.getConfiguration().setClass(MAP_CLASS, cls, Mapper.class);
   }
 
   /**
@@ -245,13 +246,15 @@ public class MultithreadedMapper<K1, V1, K2, V2>
     MapRunner(Context context) throws IOException, InterruptedException {
       mapper = ReflectionUtils.newInstance(mapClass, 
                                            context.getConfiguration());
-      subcontext = new Context(outer.getConfiguration(), 
-                            outer.getTaskAttemptID(),
-                            new SubMapRecordReader(),
-                            new SubMapRecordWriter(), 
-                            context.getOutputCommitter(),
-                            new SubMapStatusReporter(),
-                            outer.getInputSplit());
+      MapContext<K1, V1, K2, V2> mapContext = 
+        new MapContextImpl<K1, V1, K2, V2>(outer.getConfiguration(), 
+                                           outer.getTaskAttemptID(),
+                                           new SubMapRecordReader(),
+                                           new SubMapRecordWriter(), 
+                                           context.getOutputCommitter(),
+                                           new SubMapStatusReporter(),
+                                           outer.getInputSplit());
+      subcontext = new WrappedMapper<K1, V1, K2, V2>().getMapContext(mapContext);
     }
 
     public Throwable getThrowable() {

@@ -26,6 +26,38 @@ to call at top-level: ant deploy-contrib compile-core-test
   <import file="../build-contrib.xml"/>
   <property environment="env"/>
   <property name="sqoop.thirdparty.lib.dir" value="" />
+  <property name="mrunit.class.dir" value="${build.dir}/../mrunit/classes" />
+
+  <!-- ================================================================== -->
+  <!-- Compile test code                                                  -->
+  <!-- Override with our own version so we can enforce build dependencies -->
+  <!-- on compile-mapred-test for MiniMRCluster, and MRUnit.              -->
+  <!-- ================================================================== -->
+  <target name="compile-test" depends="compile-examples" if="test.available">
+    <echo message="Compiling ${name} dependencies" />
+    <!-- need top-level compile-mapred-test for MiniMRCluster -->
+    <subant target="compile-mapred-test">
+      <fileset dir="../../.." includes="build.xml" />
+    </subant>
+
+    <!-- Need MRUnit compiled for some tests -->
+    <subant target="compile">
+      <fileset dir="../mrunit" includes="build.xml" />
+    </subant>
+
+    <echo message="contrib: ${name}"/>
+    <javac
+     encoding="${build.encoding}"
+     srcdir="${src.test}"
+     includes="**/*.java"
+     destdir="${build.test}"
+     debug="${javac.debug}">
+    <classpath>
+      <path refid="test.classpath"/>
+      <pathelement path="${mrunit.class.dir}" />
+    </classpath>
+    </javac>
+  </target>
 
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
@@ -53,6 +85,11 @@ to call at top-level: ant deploy-contrib compile-core-test
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="contrib.name" value="${name}"/>
+
+
+      <!-- define this property to force Sqoop to throw better exceptions on errors
+           during testing, instead of printing a short message and exiting with status 1. -->
+      <sysproperty key="sqoop.throwOnError" value="" />
 
       <!--
            Added property needed to use the .class files for compilation
@@ -92,13 +129,16 @@ to call at top-level: ant deploy-contrib compile-core-test
       -->
       <sysproperty key="hive.home" value="${basedir}/testdata/hive" />
 
-      <!-- tools.jar from Sun JDK also required to invoke javac. -->
       <classpath>
         <path refid="test.classpath"/>
         <path refid="contrib-classpath"/>
+        <!-- tools.jar from Sun JDK also required to invoke javac. -->
         <pathelement path="${env.JAVA_HOME}/lib/tools.jar" />
+        <!-- need thirdparty JDBC drivers for thirdparty tests -->
         <fileset dir="${sqoop.thirdparty.lib.dir}"
             includes="*.jar" />
+        <!-- need MRUnit for some tests -->
+        <pathelement path="${mrunit.class.dir}" />
       </classpath>
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${build.test}" unless="testcase">
@@ -109,7 +149,15 @@ to call at top-level: ant deploy-contrib compile-core-test
         <fileset dir="${src.test}" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <fail if="tests.failed">Tests failed!</fail>
+    <antcall target="checkfailure"/>
+  </target>
+
+  <target name="doc">
+    <exec executable="make" failonerror="true">
+      <arg value="-C" />
+      <arg value="${basedir}/doc" />
+      <arg value="BUILDROOT=${build.dir}" />
+    </exec>
   </target>
 
 </project>

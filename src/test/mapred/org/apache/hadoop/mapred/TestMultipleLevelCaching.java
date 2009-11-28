@@ -30,6 +30,7 @@ import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSeq
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * This test checks whether the task caches are created and used properly.
@@ -106,7 +107,7 @@ public class TestMultipleLevelCaching extends TestCase {
       JobConf jc = new JobConf();
       // cache-level = level (unshared levels) + 1(topmost shared node i.e /a) 
       //               + 1 (for host)
-      jc.setInt("mapred.task.cache.levels", level + 2);
+      jc.setInt(JTConfig.JT_TASKCACHE_LEVELS, level + 2);
       mr = new MiniMRCluster(taskTrackers, namenode, 1, new String[] {rack2}, 
     		                 new String[] {"host2.com"}, jc);
 

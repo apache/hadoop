@@ -26,11 +26,15 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.JvmTask;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.security.JobTokens;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
@@ -54,6 +58,9 @@ class Child {
     LOG.debug("Child starting");
 
     JobConf defaultConf = new JobConf();
+    // set tcp nodelay
+    defaultConf.setBoolean("ipc.client.tcpnodelay", true);
+    
     String host = args[0];
     int port = Integer.parseInt(args[1]);
     InetSocketAddress address = new InetSocketAddress(host, port);
@@ -62,6 +69,13 @@ class Child {
     int jvmIdInt = Integer.parseInt(args[3]);
     JVMId jvmId = new JVMId(firstTaskid.getJobID(),
         firstTaskid.getTaskType() == TaskType.MAP,jvmIdInt);
+    
+    // file name is passed thru env
+    String jobTokenFile = System.getenv().get("JOB_TOKEN_FILE");
+    FileSystem localFs = FileSystem.getLocal(defaultConf);
+    JobTokens jt = loadJobTokens(jobTokenFile, localFs);
+    LOG.debug("Child: got jobTokenfile=" + jobTokenFile);
+    
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
           TaskUmbilicalProtocol.versionID,
@@ -138,8 +152,11 @@ class Child {
         //are viewable immediately
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
-
-        // setup the child's mapred-local-dir. The child is now sandboxed and
+        
+        // set the jobTokenFile into task
+        task.setJobTokens(jt);
+        
+        // setup the child's Configs.LOCAL_DIR. The child is now sandboxed and
         // can only see files down and under attemtdir only.
         TaskRunner.setupChildMapredLocalDirs(task, job);
 
@@ -150,7 +167,7 @@ class Child {
 
         numTasksToExecute = job.getNumTasksToExecutePerJvm();
         assert(numTasksToExecute != 0);
-        TaskLog.cleanup(job.getInt("mapred.userlog.retain.hours", 24));
+        TaskLog.cleanup(job.getInt(JobContext.TASK_LOG_RETAIN_HOURS, 24));
 
         task.setConf(job);
 
@@ -170,22 +187,32 @@ class Child {
     } catch (FSError e) {
       LOG.fatal("FSError from child", e);
       umbilical.fsError(taskid, e.getMessage());
-    } catch (Throwable throwable) {
-      LOG.warn("Error running child : "
-          + StringUtils.stringifyException(throwable));
+    } catch (Exception exception) {
+      LOG.warn("Exception running child : "
+          + StringUtils.stringifyException(exception));
       try {
         if (task != null) {
           // do cleanup for the task
           task.taskCleanup(umbilical);
         }
-      } catch (Throwable th) {
-        LOG.info("Error cleaning up : " + StringUtils.stringifyException(th));
+      } catch (Exception e) {
+        LOG.info("Exception cleaning up : " + StringUtils.stringifyException(e));
       }
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      throwable.printStackTrace(new PrintStream(baos));
+      exception.printStackTrace(new PrintStream(baos));
       if (taskid != null) {
         umbilical.reportDiagnosticInfo(taskid, baos.toString());
+      }
+    } catch (Throwable throwable) {
+      LOG.fatal("Error running child : "
+    	        + StringUtils.stringifyException(throwable));
+      if (taskid != null) {
+        Throwable tCause = throwable.getCause();
+        String cause = tCause == null 
+                                 ? throwable.getMessage() 
+                                 : StringUtils.stringifyException(tCause);
+        umbilical.fatalError(taskid, cause);
       }
     } finally {
       RPC.stopProxy(umbilical);
@@ -196,5 +223,23 @@ class Child {
       // there is no more logging done.
       LogManager.shutdown();
     }
+  }
+  
+  /**
+   * load secret keys from a file
+   * @param jobTokenFile
+   * @param conf
+   * @throws IOException
+   */
+  private static JobTokens loadJobTokens(String jobTokenFile, FileSystem localFS) 
+  throws IOException {
+    Path localJobTokenFile = new Path (jobTokenFile);
+    FSDataInputStream in = localFS.open(localJobTokenFile);
+    JobTokens jt = new JobTokens();
+    jt.readFields(in);
+        
+    LOG.debug("Loaded jobTokenFile from: "+localJobTokenFile.toUri().getPath());
+    in.close();
+    return jt;
   }
 }

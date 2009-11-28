@@ -156,7 +156,7 @@ specified with the configuration property <tt><a
 <li>The {@link org.apache.hadoop.mapred.JobTracker} (MapReduce master)
 host and port.  This is specified with the configuration property
 <tt><a
-href="../mapred-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>.
+href="../mapred-default.html#mapreduce.jobtracker.address">mapreduce.jobtracker.address</a></tt>.
 </li>
 
 <li>A <em>slaves</em> file that lists the names of all the hosts in
@@ -194,7 +194,7 @@ conf/mapred-site.xml:
 <xmp><configuration>
 
   <property>
-    <name>mapred.job.tracker</name>
+    <name>mapreduce.jobtracker.address</name>
     <value>localhost:9001</value>
   </property>
 
@@ -255,7 +255,7 @@ href="../core-default.html#fs.default.name">fs.default.name</a></tt>,
   as <tt><em>hdfs://master.example.com/</em></tt> in <tt>conf/core-site.xml</tt>.</li>
 
 <li>The host and port of the your master server in the value
-of <tt><a href="../mapred-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>
+of <tt><a href="../mapred-default.html#mapreduce.jobtracker.address">mapreduce.jobtracker.address</a></tt>
 as <tt><em>master.example.com</em>:<em>port</em></tt> in <tt>conf/mapred-site.xml</tt>.</li>
 
 <li>Directories for <tt><a
@@ -268,18 +268,18 @@ that <tt>dfs.data.dir</tt> may contain a space- or comma-separated
 list of directory names, so that data may be stored on multiple local
 devices.</li>
 
-<li><tt><a href="../mapred-default.html#mapred.local.dir">mapred.local.dir</a></tt>
+<li><tt><a href="../mapred-default.html#mapreduce.cluster.local.dir">mapreduce.cluster.local.dir</a></tt>
   in <tt>conf/mapred-site.xml</tt>, the local directory where temporary 
   MapReduce data is stored.  It also may be a list of directories.</li>
 
 <li><tt><a
-href="../mapred-default.html#mapred.map.tasks">mapred.map.tasks</a></tt>
+href="../mapred-default.html#mapreduce.job.maps">mapreduce.job.maps</a></tt>
 and <tt><a
-href="../mapred-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt> 
+href="../mapred-default.html#mapreduce.job.reduces">mapreduce.job.reduces</a></tt> 
 in <tt>conf/mapred-site.xml</tt>.
 As a rule of thumb, use 10x the
-number of slave processors for <tt>mapred.map.tasks</tt>, and 2x the
-number of slave processors for <tt>mapred.reduce.tasks</tt>.</li>
+number of slave processors for <tt>mapreduce.job.maps</tt>, and 2x the
+number of slave processors for <tt>mapreduce.job.reduces</tt>.</li>
 
 </ol>
 

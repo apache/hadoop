@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<!-- 
+Before you can run these subtargets directly, you need 
+to call at top-level: ant deploy-contrib compile-core-test
+-->
+<project name="mumak" default="jar" basedir="."
+   xmlns:ivy="antlib:org.apache.ivy.ant"> 
+
+  <property name="main-class"  value="org.apache.hadoop.mapred.SimulatorEngine"/>
+  <property name="version" value="0.21.0-dev"/>
+  <property name="javac.args" value=""/>
+  <property name="javac.version" value="1.6"/>
+  <property name="javac.args.warnings" value="-Xlint:unchecked"/>
+  <import file="../build-contrib.xml"/>
+  <property name="mumak.stamp.file" value="${build.dir}/mumak.uptodate.stamp"/>
+
+  <target name="compile-java-sources" depends="init, ivy-retrieve-common" unless="skip.contrib">
+    <echo message="contrib: ${name}"/>
+    <javac
+    encoding="${build.encoding}"
+    srcdir="${src.dir}"
+    includes="**/*.java"
+    destdir="${build.classes}"
+    debug="${javac.debug}"
+    deprecation="${javac.deprecation}">
+    <classpath refid="contrib-classpath"/>
+    </javac>
+  </target>
+
+  <!-- Weaving aspects in place -->
+  <target name="compile-aspects" depends="check.aspects,compile-java-sources"
+      unless="build.unnecessary"> 
+    <!-- AspectJ task definition -->
+    <taskdef
+        resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
+      <classpath>
+        <pathelement location="${common.ivy.lib.dir}/aspectjtools-1.6.5.jar"/>
+      </classpath>
+    </taskdef>
+    <echo message="${javac.version}"/>
+    <echo message="Start weaving aspects in place"/>
+    <iajc
+      encoding="${build.encoding}" 
+      srcdir="${hadoop.root}/src/java/;${hadoop.root}/build/src/;${src.dir}"
+      includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
+      destDir="${build.classes}"
+      debug="${javac.debug}"
+      target="${javac.version}"
+      source="${javac.version}"
+      fork="yes"
+      deprecation="${javac.deprecation}">
+      <classpath refid="contrib-classpath"/>
+    </iajc>
+    <touch file="${mumak.stamp.file}" mkdirs="true" />
+    <echo message="Weaving of aspects is finished"/>
+  </target>
+
+  <target name="compile" depends="compile-aspects" unless="skip.contrib"/>
+
+  <target name="package" depends="jar">
+    <mkdir dir="${dist.dir}/contrib/${name}" />
+    <mkdir dir="${dist.dir}/contrib/${name}/bin" />
+    <mkdir dir="${dist.dir}/contrib/${name}/conf" />
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false">
+      <fileset dir="${build.dir}">
+        <include name="${dest.jar}" />
+      </fileset>
+    </copy>
+    <copy todir="${dist.dir}/contrib/${name}/bin" includeEmptyDirs="true"
+		overwrite="true">
+      <fileset dir="${root}/bin" />
+    </copy>
+    <copy todir="${dist.dir}/contrib/${name}/conf" includeEmptyDirs="true">
+      <fileset dir="${root}/conf" />
+    </copy>
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="${common.ivy.lib.dir}">
+        <include name="*.jar"/>
+      </fileset>
+    </copy>
+    <exec executable="sed">
+      <arg value="-i"/>
+      <arg value="-e"/>
+      <arg value="s/^HADOOP_VERSION=/HADOOP_VERSION=${version}/"/>
+      <arg value="${dist.dir}/contrib/${name}/bin/mumak.sh"/>
+    </exec>
+    <chmod dir="${dist.dir}/contrib/${name}/bin" perm="a+x" includes="*.sh" />
+  </target>
+
+  <target name="check.aspects">
+    <uptodate property="build.unnecessary"
+        targetfile="${mumak.stamp.file}">
+      <srcfiles dir="${hadoop.root}/src/java/"
+        includes="org/apache/hadoop/**/*.java" />
+      <srcfiles dir="${hadoop.root}/src/webapps/"
+        includes="**/*.jsp" />
+      <srcfiles dir="${src.dir}" includes="org/apache/hadoop/**/*.aj" />
+    </uptodate>
+  </target>
+
+</project>
+

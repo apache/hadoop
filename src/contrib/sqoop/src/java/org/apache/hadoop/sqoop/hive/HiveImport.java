@@ -35,7 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.util.Executor;
-import org.apache.hadoop.sqoop.util.LoggingStreamHandlerFactory;
+import org.apache.hadoop.sqoop.util.LoggingAsyncSink;
 
 /**
  * Utility to import a table into the Hive metastore. Manages the connection
@@ -158,8 +158,9 @@ public class HiveImport {
       args.add("-f");
       args.add(tmpFilename);
 
-      LoggingStreamHandlerFactory lshf = new LoggingStreamHandlerFactory(LOG);
-      int ret = Executor.exec(args.toArray(new String[0]), env.toArray(new String[0]), lshf, lshf);
+      LoggingAsyncSink logSink = new LoggingAsyncSink(LOG);
+      int ret = Executor.exec(args.toArray(new String[0]),
+          env.toArray(new String[0]), logSink, logSink);
       if (0 != ret) {
         throw new IOException("Hive exited with status " + ret);
       }

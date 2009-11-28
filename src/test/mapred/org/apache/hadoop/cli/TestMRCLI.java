@@ -25,6 +25,7 @@ import org.apache.hadoop.tools.HadoopArchives;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.tools.MRAdmin;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.ToolRunner;
@@ -43,7 +44,7 @@ public class TestMRCLI extends TestHDFSCLI{
     JobConf mrConf = new JobConf(conf);
     mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1, 
                            null, null, mrConf);
-    jobtracker = mrCluster.createJobConf().get("mapred.job.tracker", "local");
+    jobtracker = mrCluster.createJobConf().get(JTConfig.JT_IPC_ADDRESS, "local");
     cmdExecutor = new MRCmdExecutor(jobtracker);
     archiveCmdExecutor = new ArchiveCmdExecutor(namenode, mrConf);
   }

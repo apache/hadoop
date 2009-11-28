@@ -27,6 +27,8 @@ import java.util.Collection;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.ClusterMetrics;
+import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 
 /**
  * Status information on the current state of the Map-Reduce cluster.
@@ -57,7 +59,9 @@ import org.apache.hadoop.io.WritableUtils;
  * {@link JobClient#getClusterStatus()}.</p>
  * 
  * @see JobClient
+ * @deprecated  Use {@link ClusterMetrics} or {@link TaskTrackerInfo} instead
  */
+@Deprecated
 public class ClusterStatus implements Writable {
   /**
    * Class which encapsulates information about a blacklisted tasktracker.

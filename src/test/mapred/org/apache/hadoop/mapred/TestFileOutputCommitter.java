@@ -23,6 +23,8 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.JobContextImpl;
+import org.apache.hadoop.mapred.TaskAttemptContextImpl;
 
 public class TestFileOutputCommitter extends TestCase {
   private static Path outDir = new Path(
@@ -35,11 +37,11 @@ public class TestFileOutputCommitter extends TestCase {
   @SuppressWarnings("unchecked")
   public void testCommitter() throws Exception {
     JobConf job = new JobConf();
-    job.set("mapred.task.id", attempt);
+    job.set(JobContext.TASK_ATTEMPT_ID, attempt);
     job.setOutputCommitter(FileOutputCommitter.class);
     FileOutputFormat.setOutputPath(job, outDir);
-    JobContext jContext = new JobContext(job, taskID.getJobID());
-    TaskAttemptContext tContext = new TaskAttemptContext(job, taskID);
+    JobContext jContext = new JobContextImpl(job, taskID.getJobID());
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(job, taskID);
     FileOutputCommitter committer = new FileOutputCommitter();
     FileOutputFormat.setWorkOutputPath(job, 
       committer.getTempTaskOutputPath(tContext));
@@ -73,7 +75,7 @@ public class TestFileOutputCommitter extends TestCase {
       theRecordWriter.close(reporter);
     }
     committer.commitTask(tContext);
-    committer.cleanupJob(jContext);
+    committer.commitJob(jContext);
     
     File expectedFile = new File(new Path(outDir, file).toString());
     StringBuffer expectedOutput = new StringBuffer();

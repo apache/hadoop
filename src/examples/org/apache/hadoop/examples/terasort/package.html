@@ -102,8 +102,9 @@ TeraGen used
 1800 tasks to generate a total of 10 billion rows in HDFS, with a
 block size of 1024 MB.
 TeraSort was configured with 1800 maps and 1800 reduces, and
-<i>io.sort.mb</i>,
-<i>io.sort.factor</i>, <i>fs.inmemory.size.mb</i>, and task heap size
+<i>mapreduce.task.io.sort.mb</i>,
+<i>mapreduce.task.io.sort.factor</i>,
+<i>fs.inmemory.size.mb</i>, and task heap size
 sufficient that transient data was never spilled to disk, other at the
 end of the map. The sampler looked at 100,000 keys to determine the
 reduce boundaries, which lead to imperfect balancing with reduce

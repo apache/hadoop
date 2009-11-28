@@ -54,7 +54,7 @@ public class TestLineInputFormat extends TestCase {
     localFs.delete(workDir, true);
     FileInputFormat.setInputPaths(job, workDir);
     int numLinesPerMap = 5;
-    job.setInt("mapred.line.input.format.linespermap", numLinesPerMap);
+    job.setInt("mapreduce.input.lineinputformat.linespermap", numLinesPerMap);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;

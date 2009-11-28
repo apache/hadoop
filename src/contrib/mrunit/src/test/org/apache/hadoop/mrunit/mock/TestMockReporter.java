@@ -27,7 +27,7 @@ public class TestMockReporter extends TestCase {
 
   @Test
   public void testGetInputSplitForMapper() {
-    InputSplit split = new MockReporter(MockReporter.ReporterType.Mapper).getInputSplit();
+    InputSplit split = new MockReporter(MockReporter.ReporterType.Mapper, null).getInputSplit();
     assertTrue(null != split);
   }
 
@@ -36,7 +36,7 @@ public class TestMockReporter extends TestCase {
   @Test
   public void testGetInputSplitForReducer() {
     try {
-      new MockReporter(MockReporter.ReporterType.Reducer).getInputSplit();
+      new MockReporter(MockReporter.ReporterType.Reducer, null).getInputSplit();
       fail(); // shouldn't get here
     } catch (UnsupportedOperationException uoe) {
       // expected this.

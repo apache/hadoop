@@ -28,7 +28,17 @@ import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.ThreadedMapBenchmark;
+import org.apache.hadoop.mapreduce.FailJob;
+import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.ProgramDriver;
+
+import org.apache.hadoop.hdfs.NNBench;
+import org.apache.hadoop.fs.TestFileSystem;
+import org.apache.hadoop.fs.TestDFSIO;
+import org.apache.hadoop.fs.DFSCIOTest;
+import org.apache.hadoop.fs.DistributedFSCheck;
+import org.apache.hadoop.io.FileBench;
+import org.apache.hadoop.fs.JHLogAnalyzer;
 
 /**
  * Driver for Map-reduce tests.
@@ -69,6 +79,25 @@ public class MapredTestDriver {
       pgd.addClass("MRReliabilityTest", ReliabilityTest.class,
           "A program that tests the reliability of the MR framework by " +
           "injecting faults/failures");
+      pgd.addClass("fail", FailJob.class, "a job that always fails");
+      pgd.addClass("sleep", SleepJob.class, 
+                   "A job that sleeps at each map and reduce task.");
+      pgd.addClass("nnbench", NNBench.class, 
+          "A benchmark that stresses the namenode.");
+      pgd.addClass("testfilesystem", TestFileSystem.class, 
+          "A test for FileSystem read/write.");
+      pgd.addClass("TestDFSIO", TestDFSIO.class, 
+          "Distributed i/o benchmark.");
+      pgd.addClass("DFSCIOTest", DFSCIOTest.class, "" +
+          "Distributed i/o benchmark of libhdfs.");
+      pgd.addClass("DistributedFSCheck", DistributedFSCheck.class, 
+          "Distributed checkup of the file system consistency.");
+      pgd.addClass("filebench", FileBench.class, 
+          "Benchmark SequenceFile(Input|Output)Format " +
+          "(block,record compressed and uncompressed), " +
+          "Text(Input|Output)Format (compressed and uncompressed)");
+      pgd.addClass(JHLogAnalyzer.class.getSimpleName(), JHLogAnalyzer.class, 
+          "Job History Log analyzer.");
     } catch(Throwable e) {
       e.printStackTrace();
     }

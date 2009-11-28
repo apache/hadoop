@@ -204,7 +204,8 @@ public class UpdateIndex {
     IndexUpdateConfiguration iconf = new IndexUpdateConfiguration(jobConf);
 
     if (inputPathsString != null) {
-      jobConf.set("mapred.input.dir", inputPathsString);
+      jobConf.set(org.apache.hadoop.mapreduce.lib.input.
+        FileInputFormat.INPUT_DIR, inputPathsString);
     }
     inputPaths = FileInputFormat.getInputPaths(jobConf);
     if (inputPaths.length == 0) {

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,9 +28,14 @@ import org.apache.hadoop.util.DataChecksum;
 /**
  * A checksum input stream, used for IFiles.
  * Used to validate the checksum of files created by {@link IFileOutputStream}. 
- */
+ * 
+ * <FRAMEWORK-USE-ONLY>
+ * This method is intended only for use by the Map/Reduce framework and not
+ * for external users
+ *
+*/
 
-class IFileInputStream extends InputStream {
+public class IFileInputStream extends InputStream {
   
   private final InputStream in; //The input stream to be verified for checksum. 
   private final long length; //The total length of the input file

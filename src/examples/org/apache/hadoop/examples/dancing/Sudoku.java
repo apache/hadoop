@@ -154,7 +154,7 @@ public class Sudoku {
       line = file.readLine();
     }
     size = result.size();
-    board = (int[][]) result.toArray(new int [size][]);
+    board = result.toArray(new int [size][]);
     squareYSize = (int) Math.sqrt(size);
     squareXSize = size / squareYSize;
     file.close();
@@ -236,8 +236,8 @@ public class Sudoku {
       rowValues[i] = false;
     }
     // find the square coordinates
-    int xBox = (int) x / squareXSize;
-    int yBox = (int) y / squareYSize;
+    int xBox = x / squareXSize;
+    int yBox = y / squareYSize;
     // mark the column
     rowValues[x*size + num - 1] = true;
     // mark the row

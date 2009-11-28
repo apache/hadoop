@@ -67,7 +67,7 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
   @SuppressWarnings("unchecked")
   public void configure(JobConf jobConf) {
     int numberOfThreads =
-      jobConf.getInt("mapred.map.multithreadedrunner.threads", 10);
+      jobConf.getInt(MultithreadedMapper.NUM_THREADS, 10);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Configuring jobConf " + jobConf.getJobName() +
                 " to use " + numberOfThreads + " threads");

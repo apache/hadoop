@@ -66,6 +66,25 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   //private static Log log = LogFactory.getLog("Counters.class");
   
   /**
+   * Downgrade new {@link org.apache.hadoop.mapreduce.Counters} to old Counters
+   * @param newCounters new Counters
+   * @return old Counters instance corresponding to newCounters
+   */
+  static Counters downgrade(org.apache.hadoop.mapreduce.Counters newCounters) {
+    Counters oldCounters = new Counters();
+    for (org.apache.hadoop.mapreduce.CounterGroup newGroup: newCounters) {
+      String groupName = newGroup.getName();
+      Group oldGroup = oldCounters.getGroup(groupName);
+      for (org.apache.hadoop.mapreduce.Counter newCounter: newGroup) {
+        Counter oldCounter = oldGroup.getCounterForName(newCounter.getName());
+        oldCounter.setDisplayName(newCounter.getDisplayName());
+        oldCounter.increment(newCounter.getValue());
+      }
+    }
+    return oldCounters;
+  }
+
+  /**
    * A counter record, comprising its name and value. 
    */
   public static class Counter extends org.apache.hadoop.mapreduce.Counter {

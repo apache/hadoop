@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.*;
@@ -100,7 +101,7 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
       writer.close(context);
     }
     committer.commitTask(context);
-    committer.cleanupJob(job);
+    committer.commitJob(job);
 
     InputFormat<IntWritable, DoubleWritable> iformat =
       new SequenceFileInputFormat<IntWritable, DoubleWritable>();
@@ -112,7 +113,7 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
       RecordReader<IntWritable, DoubleWritable> reader =
         iformat.createRecordReader(split, context);
       MapContext<IntWritable, DoubleWritable, BytesWritable, BytesWritable> 
-        mcontext = new MapContext<IntWritable, DoubleWritable,
+        mcontext = new MapContextImpl<IntWritable, DoubleWritable,
           BytesWritable, BytesWritable>(job.getConfiguration(), 
           context.getTaskAttemptID(), reader, null, null, 
           MapReduceTestUtil.createDummyReporter(), 

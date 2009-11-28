@@ -55,6 +55,8 @@ import org.apache.hadoop.util.ToolRunner;
  *            <i>in-dir</i> <i>out-dir</i> 
  */
 public class Sort<K,V> extends Configured implements Tool {
+  public static final String REDUCES_PER_HOST = 
+    "mapreduce.sort.reducesperhost";
   private Job job = null;
 
   static int printUsage() {
@@ -81,7 +83,7 @@ public class Sort<K,V> extends Configured implements Tool {
     JobClient client = new JobClient(conf);
     ClusterStatus cluster = client.getClusterStatus();
     int num_reduces = (int) (cluster.getMaxReduceTasks() * 0.9);
-    String sort_reduces = conf.get("test.sort.reduces_per_host");
+    String sort_reduces = conf.get(REDUCES_PER_HOST);
     if (sort_reduces != null) {
        num_reduces = cluster.getTaskTrackers() * 
                        Integer.parseInt(sort_reduces);

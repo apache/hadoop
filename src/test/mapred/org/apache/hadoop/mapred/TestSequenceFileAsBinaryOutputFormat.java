@@ -53,7 +53,7 @@ public class TestSequenceFileAsBinaryOutputFormat extends TestCase {
       fail("Failed to create output directory");
     }
 
-    job.set("mapred.task.id", attempt);
+    job.set(JobContext.TASK_ATTEMPT_ID, attempt);
     FileOutputFormat.setOutputPath(job, dir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, dir);
 

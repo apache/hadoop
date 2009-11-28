@@ -27,7 +27,7 @@ import org.apache.hadoop.sqoop.ImportOptions;
  * Manages connections to hsqldb databases.
  * Extends generic SQL manager.
  */
-public class HsqldbManager extends GenericJdbcManager implements ConnManager {
+public class HsqldbManager extends GenericJdbcManager {
 
   public static final Log LOG = LogFactory.getLog(HsqldbManager.class.getName());
 

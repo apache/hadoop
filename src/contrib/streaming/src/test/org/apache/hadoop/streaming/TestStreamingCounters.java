@@ -21,6 +21,7 @@ package org.apache.hadoop.streaming;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
@@ -38,7 +39,7 @@ public class TestStreamingCounters extends TestStreaming {
   {
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -62,10 +63,12 @@ public class TestStreamingCounters extends TestStreaming {
       assertNotNull("Counter", counter);
       assertEquals(3, counter.getCounter());
     } finally {
-      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
-      INPUT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
+      try {
+        INPUT_FILE.delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
   }
   

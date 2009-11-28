@@ -32,6 +32,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -282,7 +283,8 @@ public class TestJoinDatamerge extends TestCase {
   private static void checkOuterConsistency(Job job, Path[] src) 
       throws IOException {
     Path outf = FileOutputFormat.getOutputPath(job);
-    FileStatus[] outlist = cluster.getFileSystem().listStatus(outf);
+    FileStatus[] outlist = cluster.getFileSystem().listStatus(outf, new 
+                             Utils.OutputFileUtils.OutputFilesFilter());
     assertEquals("number of part files is more than 1. It is" + outlist.length,
       1, outlist.length);
     assertTrue("output file with zero length" + outlist[0].getLen(),
@@ -388,7 +390,8 @@ public class TestJoinDatamerge extends TestCase {
     job.waitForCompletion(true);
     assertTrue("Job failed", job.isSuccessful());
 
-    FileStatus[] outlist = cluster.getFileSystem().listStatus(outf);
+    FileStatus[] outlist = cluster.getFileSystem().listStatus(outf, 
+                             new Utils.OutputFileUtils.OutputFilesFilter());
     assertEquals(1, outlist.length);
     assertTrue(0 < outlist[0].getLen());
     SequenceFile.Reader r =

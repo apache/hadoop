@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -96,7 +98,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
       throws IOException {
     JobConf conf = new JobConf();
     dfsCluster = new MiniDFSCluster(conf, NUMBER_OF_NODES, true, null);
-    conf.set("mapred.task.tracker.task-controller",
+    conf.set(TTConfig.TT_TASK_CONTROLLER,
         MyLinuxTaskController.class.getName());
     mrCluster =
         new MiniMRCluster(NUMBER_OF_NODES, dfsCluster.getFileSystem().getUri()
@@ -163,7 +165,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
         sb.append(",");
       }
     }
-    writer.println(String.format("mapred.local.dir=%s", sb.toString()));
+    writer.println(String.format(MRConfig.LOCAL_DIR + "=%s", sb.toString()));
 
     writer
         .println(String.format("hadoop.log.dir=%s", TaskLog.getBaseLogDir()));
@@ -255,7 +257,9 @@ public class ClusterWithLinuxTaskController extends TestCase {
    */
   protected void assertOwnerShip(Path outDir, FileSystem fs)
       throws IOException {
-    for (FileStatus status : fs.listStatus(outDir, new OutputLogFilter())) {
+    for (FileStatus status : fs.listStatus(outDir, 
+                                           new Utils.OutputFileUtils
+                                                    .OutputFilesFilter())) {
       String owner = status.getOwner();
       String group = status.getGroup();
       LOG.info("Ownership of the file is " + status.getPath() + " is " + owner

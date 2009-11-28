@@ -18,22 +18,32 @@
 package org.apache.hadoop.mapred;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.mapred.JvmManager.JvmEnv;
+import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
+import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 
 import junit.framework.TestCase;
@@ -54,20 +64,53 @@ public class TestTaskTrackerLocalization extends TestCase {
       LogFactory.getLog(TestTaskTrackerLocalization.class);
 
   protected TaskTracker tracker;
+  protected UserGroupInformation taskTrackerUGI;
+  protected TaskController taskController;
   protected JobConf trackerFConf;
+  private JobConf localizedJobConf;
   protected JobID jobId;
   protected TaskAttemptID taskId;
   protected Task task;
   protected String[] localDirs;
   protected static LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator("mapred.local.dir");
+      new LocalDirAllocator(MRConfig.LOCAL_DIR);
+  protected Path attemptWorkDir;
+  protected File[] attemptLogFiles;
+  protected JobConf localizedTaskConf;
+
+  class InlineCleanupQueue extends CleanupQueue {
+    List<Path> stalePaths = new ArrayList<Path>();
+
+    public InlineCleanupQueue() {
+      // do nothing
+    }
+
+    @Override
+    public void addToQueue(FileSystem fs, Path... paths) {
+      // delete in-line
+      for (Path p : paths) {
+        try {
+          LOG.info("Trying to delete the path " + p);
+          if (!fs.delete(p, true)) {
+            LOG.warn("Stale path " + p.toUri().getPath());
+            stalePaths.add(p);
+          }
+        } catch (IOException e) {
+          LOG.warn("Caught exception while deleting path "
+              + p.toUri().getPath());
+          LOG.info(StringUtils.stringifyException(e));
+          stalePaths.add(p);
+        }
+      }
+    }
+  }
 
   @Override
   protected void setUp()
       throws Exception {
     TEST_ROOT_DIR =
-        new File(System.getProperty("test.build.data", "/tmp"),
-            "testTaskTrackerLocalization");
+        new File(System.getProperty("test.build.data", "/tmp"), getClass()
+            .getSimpleName());
     if (!TEST_ROOT_DIR.exists()) {
       TEST_ROOT_DIR.mkdirs();
     }
@@ -85,9 +128,59 @@ public class TestTaskTrackerLocalization extends TestCase {
     for (int i = 0; i < numLocalDirs; i++) {
       localDirs[i] = new File(ROOT_MAPRED_LOCAL_DIR, "0_" + i).getPath();
     }
-    trackerFConf.setStrings("mapred.local.dir", localDirs);
+    trackerFConf.setStrings(MRConfig.LOCAL_DIR, localDirs);
 
-    // Create the job jar file
+    // Create the job configuration file. Same as trackerConf in this test.
+    Job job = new Job(trackerFConf);
+
+    job.setUGIAndUserGroupNames();
+
+    // JobClient uploads the job jar to the file system and sets it in the
+    // jobConf.
+    uploadJobJar(job);
+
+    // JobClient uploads the jobConf to the file system.
+    File jobConfFile = uploadJobConf(job.getConfiguration());
+    
+        // Set up the TaskTracker
+    tracker = new TaskTracker();
+    tracker.setConf(trackerFConf);
+
+    // for test case system FS is the local FS
+    tracker.localFs = tracker.systemFS = FileSystem.getLocal(trackerFConf);
+    tracker.systemDirectory = new Path(TEST_ROOT_DIR.getAbsolutePath());
+    
+    taskTrackerUGI = UserGroupInformation.login(trackerFConf);
+
+    // Set up the task to be localized
+    String jtIdentifier = "200907202331";
+    jobId = new JobID(jtIdentifier, 1);
+    taskId =
+        new TaskAttemptID(jtIdentifier, jobId.getId(), TaskType.MAP, 1, 0);
+    task =
+        new MapTask(jobConfFile.toURI().toString(), taskId, 1, null, null, 1);
+    task.setConf(job.getConfiguration()); // Set conf. Set user name in particular.
+
+    // create jobTokens file
+    uploadJobTokensFile(); 
+    
+    
+    taskController = new DefaultTaskController();
+    taskController.setConf(trackerFConf);
+    taskController.setup();
+
+    tracker.setLocalizer(new Localizer(tracker.localFs, localDirs,
+        taskController));
+  }
+
+  /**
+   * @param job
+   * @throws IOException
+   * @throws FileNotFoundException
+   */
+  private void uploadJobJar(Job job)
+      throws IOException,
+      FileNotFoundException {
     File jobJarFile = new File(TEST_ROOT_DIR, "jobjar-on-dfs.jar");
     JarOutputStream jstream =
         new JarOutputStream(new FileOutputStream(jobJarFile));
@@ -99,30 +192,42 @@ public class TestTaskTrackerLocalization extends TestCase {
     jstream.closeEntry();
     jstream.finish();
     jstream.close();
-    trackerFConf.setJar(jobJarFile.toURI().toString());
+    job.setJar(jobJarFile.toURI().toString());
+  }
 
-    // Create the job configuration file
+  /**
+   * @param conf
+   * @return
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  protected File uploadJobConf(Configuration conf)
+      throws FileNotFoundException,
+      IOException {
     File jobConfFile = new File(TEST_ROOT_DIR, "jobconf-on-dfs.xml");
     FileOutputStream out = new FileOutputStream(jobConfFile);
-    trackerFConf.writeXml(out);
+    conf.writeXml(out);
     out.close();
-
-    // Set up the TaskTracker
-    tracker = new TaskTracker();
-    tracker.setConf(trackerFConf);
-    tracker.systemFS = FileSystem.getLocal(trackerFConf); // for test case
-
-    // Set up the task to be localized
-    String jtIdentifier = "200907202331";
-    jobId = new JobID(jtIdentifier, 1);
-    taskId =
-        new TaskAttemptID(jtIdentifier, jobId.getId(), TaskType.MAP, 1, 0);
-    task =
-        new MapTask(jobConfFile.toURI().toString(), taskId, 1, null, null, 1);
-
-    TaskController taskController = new DefaultTaskController();
-    taskController.setConf(trackerFConf);
-    taskController.setup();
+    return jobConfFile;
+  }
+  
+  /**
+   * create fake JobTokens file
+   * @return
+   * @throws IOException
+   */
+  protected void uploadJobTokensFile() throws IOException {
+    
+    File dir = new File(TEST_ROOT_DIR, jobId.toString());
+    if(!dir.exists())
+      assertTrue("faild to create dir="+dir.getAbsolutePath(), dir.mkdirs());
+    
+    File jobTokenFile = new File(dir, JobTokens.JOB_TOKEN_FILENAME);
+    FileOutputStream fos = new FileOutputStream(jobTokenFile);
+    java.io.DataOutputStream out = new java.io.DataOutputStream(fos);
+    JobTokens jt = new JobTokens();
+    jt.write(out); // writing empty file, we don't the keys for this test 
+    out.close();
   }
 
   @Override
@@ -131,7 +236,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
 
-  private static String[] getFilePermissionAttrs(String path)
+  protected static String[] getFilePermissionAttrs(String path)
       throws IOException {
     String output = Shell.execCommand("stat", path, "-c", "%A:%U:%G");
     return output.split(":|\n");
@@ -146,106 +251,162 @@ public class TestTaskTrackerLocalization extends TestCase {
     assertTrue("Path " + path + " has the permissions " + attrs[0]
         + " instead of the expected " + expectedPermissions, attrs[0]
         .equals(expectedPermissions));
-    assertTrue("Path " + path + " is not user owned not by "
-        + expectedOwnerUser + " but by " + attrs[1], attrs[1]
-        .equals(expectedOwnerUser));
-    assertTrue("Path " + path + " is not group owned not by "
-        + expectedOwnerGroup + " but by " + attrs[2], attrs[2]
-        .equals(expectedOwnerGroup));
+    assertTrue("Path " + path + " is user owned not by " + expectedOwnerUser
+        + " but by " + attrs[1], attrs[1].equals(expectedOwnerUser));
+    assertTrue("Path " + path + " is group owned not by " + expectedOwnerGroup
+        + " but by " + attrs[2], attrs[2].equals(expectedOwnerGroup));
   }
 
   /**
    * Verify the task-controller's setup functionality
    * 
    * @throws IOException
-   * @throws LoginException
    */
   public void testTaskControllerSetup()
-      throws IOException,
-      LoginException {
+      throws IOException {
     // Task-controller is already set up in the test's setup method. Now verify.
-    UserGroupInformation ugi = UserGroupInformation.login(new JobConf());
     for (String localDir : localDirs) {
 
       // Verify the local-dir itself.
       File lDir = new File(localDir);
       assertTrue("localDir " + lDir + " doesn't exists!", lDir.exists());
-      checkFilePermissions(lDir.getAbsolutePath(), "drwxr-xr-x", ugi
-          .getUserName(), ugi.getGroupNames()[0]);
-
-      // Verify the distributed cache dir.
-      File distributedCacheDir =
-          new File(localDir, TaskTracker.getDistributedCacheDir());
-      assertTrue("distributed cache dir " + distributedCacheDir
-          + " doesn't exists!", distributedCacheDir.exists());
-      checkFilePermissions(distributedCacheDir.getAbsolutePath(),
-          "drwxr-xr-x", ugi.getUserName(), ugi.getGroupNames()[0]);
-
-      // Verify the job cache dir.
-      File jobCacheDir = new File(localDir, TaskTracker.getJobCacheSubdir());
-      assertTrue("jobCacheDir " + jobCacheDir + " doesn't exists!",
-          jobCacheDir.exists());
-      checkFilePermissions(jobCacheDir.getAbsolutePath(), "drwxr-xr-x", ugi
-          .getUserName(), ugi.getGroupNames()[0]);
+      checkFilePermissions(lDir.getAbsolutePath(), "drwxr-xr-x", task
+          .getUser(), taskTrackerUGI.getGroupNames()[0]);
     }
 
     // Verify the pemissions on the userlogs dir
     File taskLog = TaskLog.getUserLogDir();
-    checkFilePermissions(taskLog.getAbsolutePath(), "drwxr-xr-x", ugi
-        .getUserName(), ugi.getGroupNames()[0]);
+    checkFilePermissions(taskLog.getAbsolutePath(), "drwxr-xr-x", task
+        .getUser(), taskTrackerUGI.getGroupNames()[0]);
   }
 
   /**
-   * Test job localization on a TT. Tests localization of job.xml, job.jar and
-   * corresponding setting of configuration.
+   * Test the localization of a user on the TT.
    * 
    * @throws IOException
-   * @throws LoginException
    */
-  public void testJobLocalization()
-      throws IOException,
-      LoginException {
+  public void testUserLocalization()
+      throws IOException {
 
     // /////////// The main method being tested
-    JobConf localizedJobConf = tracker.localizeJobFiles(task);
+    tracker.getLocalizer().initializeUserDirs(task.getUser());
     // ///////////
 
-    // Check the directory structure
+    // Check the directory structure and permissions
+    checkUserLocalization();
+
+    // For the sake of testing re-entrancy of initializeUserDirs(), we remove
+    // the user directories now and make sure that further calls of the method
+    // don't create directories any more.
+    for (String dir : localDirs) {
+      File userDir = new File(dir, TaskTracker.getUserDir(task.getUser()));
+      FileUtil.fullyDelete(userDir);
+    }
+
+    // Now call the method again.
+    tracker.getLocalizer().initializeUserDirs(task.getUser());
+
+    // Files should not be created now and so shouldn't be there anymore.
+    for (String dir : localDirs) {
+      File userDir = new File(dir, TaskTracker.getUserDir(task.getUser()));
+      assertFalse("Unexpectedly, user-dir " + userDir.getAbsolutePath()
+          + " exists!", userDir.exists());
+    }
+  }
+
+  protected void checkUserLocalization()
+      throws IOException {
     for (String dir : localDirs) {
 
       File localDir = new File(dir);
-      assertTrue("mapred.local.dir " + localDir + " isn'task created!",
+      assertTrue(MRConfig.LOCAL_DIR + localDir + " isn'task created!",
           localDir.exists());
 
       File taskTrackerSubDir = new File(localDir, TaskTracker.SUBDIR);
       assertTrue("taskTracker sub-dir in the local-dir " + localDir
           + "is not created!", taskTrackerSubDir.exists());
 
-      File jobCache = new File(taskTrackerSubDir, TaskTracker.JOBCACHE);
-      assertTrue("jobcache in the taskTrackerSubdir " + taskTrackerSubDir
-          + " isn'task created!", jobCache.exists());
+      File userDir = new File(taskTrackerSubDir, task.getUser());
+      assertTrue("user-dir in taskTrackerSubdir " + taskTrackerSubDir
+          + "is not created!", userDir.exists());
+      checkFilePermissions(userDir.getAbsolutePath(), "drwx------", task
+          .getUser(), taskTrackerUGI.getGroupNames()[0]);
+
+      File jobCache = new File(userDir, TaskTracker.JOBCACHE);
+      assertTrue("jobcache in the userDir " + userDir + " isn't created!",
+          jobCache.exists());
+      checkFilePermissions(jobCache.getAbsolutePath(), "drwx------", task
+          .getUser(), taskTrackerUGI.getGroupNames()[0]);
+
+      // Verify the distributed cache dir.
+      File distributedCacheDir =
+          new File(localDir, TaskTracker
+              .getDistributedCacheDir(task.getUser()));
+      assertTrue("distributed cache dir " + distributedCacheDir
+          + " doesn't exists!", distributedCacheDir.exists());
+      checkFilePermissions(distributedCacheDir.getAbsolutePath(),
+          "drwx------", task.getUser(), taskTrackerUGI.getGroupNames()[0]);
+    }
+  }
+
+  /**
+   * Test job localization on a TT. Tests localization of job.xml, job.jar and
+   * corresponding setting of configuration. Also test
+   * {@link TaskController#initializeJob(JobInitializationContext)}
+   * 
+   * @throws IOException
+   */
+  public void testJobLocalization()
+      throws IOException {
+
+    tracker.getLocalizer().initializeUserDirs(task.getUser());
+
+    // /////////// The main method being tested
+    localizedJobConf = tracker.localizeJobFiles(task);
+    // ///////////
+
+    // Now initialize the job via task-controller so as to set
+    // ownership/permissions of jars, job-work-dir
+    JobInitializationContext context = new JobInitializationContext();
+    context.jobid = jobId;
+    context.user = task.getUser();
+    context.workDir =
+        new File(localizedJobConf.get(TaskTracker.JOB_LOCAL_DIR));
+
+    // /////////// The method being tested
+    taskController.initializeJob(context);
+    // ///////////
+
+    checkJobLocalization();
+  }
+
+  protected void checkJobLocalization()
+      throws IOException {
+    // Check the directory structure
+    for (String dir : localDirs) {
+
+      File localDir = new File(dir);
+      File taskTrackerSubDir = new File(localDir, TaskTracker.SUBDIR);
+      File userDir = new File(taskTrackerSubDir, task.getUser());
+      File jobCache = new File(userDir, TaskTracker.JOBCACHE);
 
       File jobDir = new File(jobCache, jobId.toString());
-      assertTrue("job-dir in " + jobCache + " isn'task created!", jobDir
-          .exists());
+      assertTrue("job-dir in " + jobCache + " isn't created!", jobDir.exists());
 
       // check the private permissions on the job directory
-      UserGroupInformation ugi = UserGroupInformation.login(localizedJobConf);
-      checkFilePermissions(jobDir.getAbsolutePath(), "drwx------", ugi
-          .getUserName(), ugi.getGroupNames()[0]);
+      checkFilePermissions(jobDir.getAbsolutePath(), "drwx------", task
+          .getUser(), taskTrackerUGI.getGroupNames()[0]);
     }
 
     // check the localization of job.xml
-    LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
-
     assertTrue("job.xml is not localized on this TaskTracker!!", lDirAlloc
-        .getLocalPathToRead(TaskTracker.getLocalJobConfFile(jobId.toString()),
-            trackerFConf) != null);
+        .getLocalPathToRead(TaskTracker.getLocalJobConfFile(task.getUser(),
+            jobId.toString()), trackerFConf) != null);
 
     // check the localization of job.jar
     Path jarFileLocalized =
-        lDirAlloc.getLocalPathToRead(TaskTracker.getJobJarFile(jobId
-            .toString()), trackerFConf);
+        lDirAlloc.getLocalPathToRead(TaskTracker.getJobJarFile(task.getUser(),
+            jobId.toString()), trackerFConf);
     assertTrue("job.jar is not localized on this TaskTracker!!",
         jarFileLocalized != null);
     assertTrue("lib/lib1.jar is not unjarred on this TaskTracker!!", new File(
@@ -257,22 +418,22 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // check the creation of job work directory
     assertTrue("job-work dir is not created on this TaskTracker!!", lDirAlloc
-        .getLocalPathToRead(TaskTracker.getJobWorkDir(jobId.toString()),
-            trackerFConf) != null);
+        .getLocalPathToRead(TaskTracker.getJobWorkDir(task.getUser(), jobId
+            .toString()), trackerFConf) != null);
 
-    // Check the setting of job.local.dir and job.jar which will eventually be
+    // Check the setting of mapreduce.job.local.dir and job.jar which will eventually be
     // used by the user's task
     boolean jobLocalDirFlag = false, mapredJarFlag = false;
     String localizedJobLocalDir =
         localizedJobConf.get(TaskTracker.JOB_LOCAL_DIR);
     String localizedJobJar = localizedJobConf.getJar();
-    for (String localDir : localizedJobConf.getStrings("mapred.local.dir")) {
+    for (String localDir : localizedJobConf.getStrings(MRConfig.LOCAL_DIR)) {
       if (localizedJobLocalDir.equals(localDir + Path.SEPARATOR
-          + TaskTracker.getJobWorkDir(jobId.toString()))) {
+          + TaskTracker.getJobWorkDir(task.getUser(), jobId.toString()))) {
         jobLocalDirFlag = true;
       }
       if (localizedJobJar.equals(localDir + Path.SEPARATOR
-          + TaskTracker.getJobJarFile(jobId.toString()))) {
+          + TaskTracker.getJobJarFile(task.getUser(), jobId.toString()))) {
         mapredJarFlag = true;
       }
     }
@@ -280,7 +441,7 @@ public class TestTaskTrackerLocalization extends TestCase {
         + " is not set properly to the target users directory : "
         + localizedJobLocalDir, jobLocalDirFlag);
     assertTrue(
-        "mapred.jar is not set properly to the target users directory : "
+        "mapreduce.job.jar is not set properly to the target users directory : "
             + localizedJobJar, mapredJarFlag);
   }
 
@@ -288,13 +449,21 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Test task localization on a TT.
    * 
    * @throws IOException
-   * @throws LoginException
    */
   public void testTaskLocalization()
-      throws IOException,
-      LoginException {
+      throws IOException {
 
-    JobConf localizedJobConf = tracker.localizeJobFiles(task);
+    tracker.getLocalizer().initializeUserDirs(task.getUser());
+    localizedJobConf = tracker.localizeJobFiles(task);
+
+    // Now initialize the job via task-controller so as to set
+    // ownership/permissions of jars, job-work-dir
+    JobInitializationContext jobContext = new JobInitializationContext();
+    jobContext.jobid = jobId;
+    jobContext.user = task.getUser();
+    jobContext.workDir =
+        new File(localizedJobConf.get(TaskTracker.JOB_LOCAL_DIR));
+    taskController.initializeJob(jobContext);
 
     TaskInProgress tip = tracker.new TaskInProgress(task, trackerFConf);
     tip.setJobConf(localizedJobConf);
@@ -304,78 +473,195 @@ public class TestTaskTrackerLocalization extends TestCase {
     // //////////
 
     // check the functionality of localizeTask
-    for (String dir : trackerFConf.getStrings("mapred.local.dir")) {
-      assertTrue("attempt-dir in localDir " + dir + " is not created!!",
-          new File(dir, TaskTracker.getLocalTaskDir(jobId.toString(), taskId
-              .toString())).exists());
+    for (String dir : trackerFConf.getStrings(MRConfig.LOCAL_DIR)) {
+      File attemptDir =
+          new File(dir, TaskTracker.getLocalTaskDir(task.getUser(), jobId
+              .toString(), taskId.toString()));
+      assertTrue("attempt-dir " + attemptDir + " in localDir " + dir
+          + " is not created!!", attemptDir.exists());
     }
 
-    Path workDir =
-        lDirAlloc.getLocalPathToRead(TaskTracker.getTaskWorkDir(task
-            .getJobID().toString(), task.getTaskID().toString(), task
-            .isTaskCleanupTask()), trackerFConf);
+    attemptWorkDir =
+        lDirAlloc.getLocalPathToRead(TaskTracker.getTaskWorkDir(
+            task.getUser(), task.getJobID().toString(), task.getTaskID()
+                .toString(), task.isTaskCleanupTask()), trackerFConf);
     assertTrue("atttempt work dir for " + taskId.toString()
-        + " is not created in any of the configured dirs!!", workDir != null);
+        + " is not created in any of the configured dirs!!",
+        attemptWorkDir != null);
 
     TaskRunner runner = task.createRunner(tracker, tip);
 
     // /////// Few more methods being tested
     runner.setupChildTaskConfiguration(lDirAlloc);
-    TaskRunner.createChildTmpDir(new File(workDir.toUri().getPath()),
+    TaskRunner.createChildTmpDir(new File(attemptWorkDir.toUri().getPath()),
         localizedJobConf);
-    File[] logFiles = TaskRunner.prepareLogFiles(task.getTaskID());
-    // ///////
+    attemptLogFiles = TaskRunner.prepareLogFiles(task.getTaskID());
 
     // Make sure the task-conf file is created
     Path localTaskFile =
         lDirAlloc.getLocalPathToRead(TaskTracker.getTaskConfFile(task
-            .getJobID().toString(), task.getTaskID().toString(), task
-            .isTaskCleanupTask()), trackerFConf);
+            .getUser(), task.getJobID().toString(), task.getTaskID()
+            .toString(), task.isTaskCleanupTask()), trackerFConf);
     assertTrue("Task conf file " + localTaskFile.toString()
         + " is not created!!", new File(localTaskFile.toUri().getPath())
         .exists());
 
     // /////// One more method being tested. This happens in child space.
-    JobConf localizedTaskConf = new JobConf(localTaskFile);
+    localizedTaskConf = new JobConf(localTaskFile);
     TaskRunner.setupChildMapredLocalDirs(task, localizedTaskConf);
     // ///////
 
-    // Make sure that the mapred.local.dir is sandboxed
+    // Initialize task via TaskController
+    TaskControllerContext taskContext =
+        new TaskController.TaskControllerContext();
+    taskContext.env =
+        new JvmEnv(null, null, null, null, -1, new File(localizedJobConf
+            .get(TaskTracker.JOB_LOCAL_DIR)), null, localizedJobConf);
+    taskContext.task = task;
+    // /////////// The method being tested
+    taskController.initializeTask(taskContext);
+    // ///////////
+
+    checkTaskLocalization();
+  }
+
+  protected void checkTaskLocalization()
+      throws IOException {
+    // Make sure that the mapreduce.cluster.local.dir is sandboxed
     for (String childMapredLocalDir : localizedTaskConf
-        .getStrings("mapred.local.dir")) {
+        .getStrings(MRConfig.LOCAL_DIR)) {
       assertTrue("Local dir " + childMapredLocalDir + " is not sandboxed !!",
-          childMapredLocalDir.endsWith(TaskTracker.getLocalTaskDir(jobId
-              .toString(), taskId.toString(), false)));
+          childMapredLocalDir.endsWith(TaskTracker.getLocalTaskDir(task
+              .getUser(), jobId.toString(), taskId.toString(), false)));
     }
 
     // Make sure task task.getJobFile is changed and pointed correctly.
     assertTrue(task.getJobFile().endsWith(
-        TaskTracker
-            .getTaskConfFile(jobId.toString(), taskId.toString(), false)));
+        TaskTracker.getTaskConfFile(task.getUser(), jobId.toString(), taskId
+            .toString(), false)));
 
     // Make sure that the tmp directories are created
     assertTrue("tmp dir is not created in workDir "
-        + workDir.toUri().getPath(),
-        new File(workDir.toUri().getPath(), "tmp").exists());
+        + attemptWorkDir.toUri().getPath(), new File(attemptWorkDir.toUri()
+        .getPath(), "tmp").exists());
 
-    // Make sure that the log are setup properly
+    // Make sure that the logs are setup properly
     File logDir =
         new File(HADOOP_LOG_DIR, TaskLog.USERLOGS_DIR_NAME + Path.SEPARATOR
             + task.getTaskID().toString());
     assertTrue("task's log dir " + logDir.toString() + " doesn't exist!",
         logDir.exists());
-    UserGroupInformation ugi = UserGroupInformation.login(localizedJobConf);
-    checkFilePermissions(logDir.getAbsolutePath(), "drwx------", ugi
-        .getUserName(), ugi.getGroupNames()[0]);
+    checkFilePermissions(logDir.getAbsolutePath(), "drwx------", task
+        .getUser(), taskTrackerUGI.getGroupNames()[0]);
 
     File expectedStdout = new File(logDir, TaskLog.LogName.STDOUT.toString());
     assertTrue("stdout log file is improper. Expected : "
-        + expectedStdout.toString() + " Observed : " + logFiles[0].toString(),
-        expectedStdout.toString().equals(logFiles[0].toString()));
+        + expectedStdout.toString() + " Observed : "
+        + attemptLogFiles[0].toString(), expectedStdout.toString().equals(
+        attemptLogFiles[0].toString()));
     File expectedStderr =
         new File(logDir, Path.SEPARATOR + TaskLog.LogName.STDERR.toString());
     assertTrue("stderr log file is improper. Expected : "
-        + expectedStderr.toString() + " Observed : " + logFiles[1].toString(),
-        expectedStderr.toString().equals(logFiles[1].toString()));
+        + expectedStderr.toString() + " Observed : "
+        + attemptLogFiles[1].toString(), expectedStderr.toString().equals(
+        attemptLogFiles[1].toString()));
+  }
+
+  /**
+   * @throws IOException
+   */
+  public void testTaskCleanup()
+      throws IOException {
+
+    // Localize job and localize task.
+    tracker.getLocalizer().initializeUserDirs(task.getUser());
+    localizedJobConf = tracker.localizeJobFiles(task);
+    // Now initialize the job via task-controller so as to set
+    // ownership/permissions of jars, job-work-dir
+    JobInitializationContext jobContext = new JobInitializationContext();
+    jobContext.jobid = jobId;
+    jobContext.user = localizedJobConf.getUser();
+    jobContext.workDir =
+        new File(localizedJobConf.get(TaskTracker.JOB_LOCAL_DIR));
+    taskController.initializeJob(jobContext);
+    TaskInProgress tip = tracker.new TaskInProgress(task, trackerFConf);
+    tip.setJobConf(localizedJobConf);
+    tip.localizeTask(task);
+    Path workDir =
+        lDirAlloc.getLocalPathToRead(TaskTracker.getTaskWorkDir(
+            task.getUser(), task.getJobID().toString(), task.getTaskID()
+                .toString(), task.isTaskCleanupTask()), trackerFConf);
+    TaskRunner runner = task.createRunner(tracker, tip);
+    tip.setTaskRunner(runner);
+    runner.setupChildTaskConfiguration(lDirAlloc);
+    TaskRunner.createChildTmpDir(new File(workDir.toUri().getPath()),
+        localizedJobConf);
+    TaskRunner.prepareLogFiles(task.getTaskID());
+    Path localTaskFile =
+        lDirAlloc.getLocalPathToRead(TaskTracker.getTaskConfFile(task
+            .getUser(), task.getJobID().toString(), task.getTaskID()
+            .toString(), task.isTaskCleanupTask()), trackerFConf);
+    JobConf localizedTaskConf = new JobConf(localTaskFile);
+    TaskRunner.setupChildMapredLocalDirs(task, localizedTaskConf);
+    TaskControllerContext taskContext =
+        new TaskController.TaskControllerContext();
+    taskContext.env =
+        new JvmEnv(null, null, null, null, -1, new File(localizedJobConf
+            .get(TaskTracker.JOB_LOCAL_DIR)), null, localizedJobConf);
+    taskContext.task = task;
+    // /////////// The method being tested
+    taskController.initializeTask(taskContext);
+
+    // TODO: Let the task run and create files.
+
+    InlineCleanupQueue cleanupQueue = new InlineCleanupQueue();
+    tracker.directoryCleanupThread = cleanupQueue;
+
+    // ////////// The central methods being tested
+    tip.removeTaskFiles(true, taskId);
+    tracker.removeJobFiles(task.getUser(), jobId.toString());
+    // //////////
+
+    // TODO: make sure that all files intended to be deleted are deleted.
+
+    assertTrue("Some task files are not deleted!! Number of stale paths is "
+        + cleanupQueue.stalePaths.size(), cleanupQueue.stalePaths.size() == 0);
+
+    // Check that the empty $mapreduce.cluster.local.dir/taskTracker/$user dirs are still
+    // there.
+    for (String localDir : localDirs) {
+      Path userDir =
+          new Path(localDir, TaskTracker.getUserDir(task.getUser()));
+      assertTrue("User directory " + userDir + " is not present!!",
+          tracker.localFs.exists(userDir));
+    }
+
+    // Test userlogs cleanup.
+    verifyUserLogsCleanup();
+  }
+
+  /**
+   * Test userlogs cleanup.
+   * 
+   * @throws IOException
+   */
+  private void verifyUserLogsCleanup()
+      throws IOException {
+    Path logDir =
+        new Path(HADOOP_LOG_DIR.toURI().getPath(), TaskLog.USERLOGS_DIR_NAME
+            + Path.SEPARATOR + task.getTaskID().toString());
+
+    // Logs should be there before cleanup.
+    assertTrue("Userlogs dir " + logDir + " is not presen as expected!!",
+        tracker.localFs.exists(logDir));
+
+    // ////////// Another being tested
+    TaskLog.cleanup(-1); // -1 so as to move purgeTimeStamp to future and file
+    // modification time behind retainTimeStatmp
+    // //////////
+
+    // Logs should be gone after cleanup.
+    assertFalse("Userlogs dir " + logDir + " is not deleted as expected!!",
+        tracker.localFs.exists(logDir));
   }
 }

@@ -52,7 +52,7 @@ import org.apache.hadoop.util.ToolRunner;
  *            [<i>in-dir</i>]* <i>in-dir</i> <i>out-dir</i> 
  */
 public class Join extends Configured implements Tool {
-
+  public static String REDUCES_PER_HOST = "mapreduce.join.reduces_per_host";
   static int printUsage() {
     System.out.println("join [-r <reduces>] " +
                        "[-inFormat <input format class>] " +
@@ -77,7 +77,7 @@ public class Join extends Configured implements Tool {
     JobClient client = new JobClient(conf);
     ClusterStatus cluster = client.getClusterStatus();
     int num_reduces = (int) (cluster.getMaxReduceTasks() * 0.9);
-    String join_reduces = conf.get("mapreduce.join.reduces_per_host");
+    String join_reduces = conf.get(REDUCES_PER_HOST);
     if (join_reduces != null) {
        num_reduces = cluster.getTaskTrackers() * 
                        Integer.parseInt(join_reduces);

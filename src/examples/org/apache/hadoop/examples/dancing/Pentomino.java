@@ -21,6 +21,10 @@ package org.apache.hadoop.examples.dancing;
 import java.util.*;
 
 public class Pentomino {
+  public static final String DEPTH = "mapreduce.pentomino.depth";
+  public static final String WIDTH = "mapreduce.pentomino.width";
+  public static final String HEIGHT = "mapreduce.pentomino.height";
+  public static final String CLASS = "mapreduce.pentomino.class";
 
   /**
    * This interface just is a marker for what types I expect to get back
@@ -56,7 +60,7 @@ public class Pentomino {
       }
       this.shape = new boolean[lines.size()][];
       for(int i=0 ; i < lines.size(); i++) {
-        this.shape[i] = (boolean[]) lines.get(i);
+        this.shape[i] = lines.get(i);
       }
     }
     
@@ -379,7 +383,7 @@ public class Pentomino {
     }
     boolean[] row = new boolean[dancer.getNumberColumns()];
     for(int idx = 0; idx < pieces.size(); ++idx) {
-      Piece piece = (Piece) pieces.get(idx);
+      Piece piece = pieces.get(idx);
       row[idx + pieceBase] = true;
       generateRows(dancer, piece, width, height, false, row, idx == 0);
       if (piece.getFlippable()) {

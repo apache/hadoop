@@ -246,9 +246,9 @@ public class TestMapCollection extends TestCase {
       boolean pedantic) throws Exception {
     JobConf conf = new JobConf(new Configuration(), SpillMapper.class);
 
-    conf.setInt("io.sort.mb", ioSortMB);
-    conf.set("io.sort.record.percent", Float.toString(recPer));
-    conf.set("io.sort.spill.percent", Float.toString(spillPer));
+    conf.setInt(JobContext.IO_SORT_MB, ioSortMB);
+    conf.set(JobContext.MAP_SORT_RECORD_PERCENT, Float.toString(recPer));
+    conf.set(JobContext.MAP_SORT_SPILL_PERCENT, Float.toString(spillPer));
 
     conf.setInt("test.keywritable.length", keylen);
     conf.setInt("test.valwritable.length", vallen);
@@ -280,7 +280,7 @@ public class TestMapCollection extends TestCase {
   }
 
   public void testLargeRecords() throws Exception {
-    // maps emitting records larger than io.sort.mb
+    // maps emitting records larger than mapreduce.task.io.sort.mb
     runTest("largerec", 100, 1024*1024, 5, false);
     runTest("largekeyzeroval", 1024*1024, 0, 5, false);
   }

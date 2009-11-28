@@ -30,10 +30,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -97,7 +96,7 @@ public class TaskDistributedCacheManager {
         Map<String, Path> classPaths = new HashMap<String, Path>();
         if (paths != null) {
           for (Path p : paths) {
-            classPaths.put(p.toString(), p);
+            classPaths.put(p.toUri().getPath().toString(), p);
           }
         }
         for (int i = 0; i < uris.length; ++i) {
@@ -152,13 +151,9 @@ public class TaskDistributedCacheManager {
       URI uri = cacheFile.uri;
       FileSystem fileSystem = FileSystem.get(uri, taskConf);
       FileStatus fileStatus = fileSystem.getFileStatus(new Path(uri.getPath()));
-      String cacheId = this.distributedCacheManager.makeRelative(uri, taskConf);
-      String cachePath = cacheSubdir + Path.SEPARATOR + cacheId;
-      Path localPath = lDirAlloc.getLocalPathForWrite(cachePath,
-                                fileStatus.getLen(), taskConf);
-      String baseDir = localPath.toString().replace(cacheId, "");
+
       Path p = distributedCacheManager.getLocalCache(uri, taskConf,
-          new Path(baseDir), fileStatus, 
+          cacheSubdir, fileStatus, 
           cacheFile.type == CacheFile.FileType.ARCHIVE,
           cacheFile.timestamp, workdirPath, false);
 
@@ -174,11 +169,12 @@ public class TaskDistributedCacheManager {
 
     // Update the configuration object with localized data.
     if (!localArchives.isEmpty()) {
-      DistributedCache.setLocalArchives(taskConf, 
+      TrackerDistributedCacheManager.setLocalArchives(taskConf, 
         stringifyPathList(localArchives));
     }
     if (!localFiles.isEmpty()) {
-      DistributedCache.setLocalFiles(taskConf, stringifyPathList(localFiles));
+      TrackerDistributedCacheManager.setLocalFiles(taskConf,
+        stringifyPathList(localFiles));
     }
 
   }
@@ -214,7 +210,7 @@ public class TaskDistributedCacheManager {
    */
   public void release() throws IOException {
     for (CacheFile c : cacheFiles) {
-      distributedCacheManager.releaseCache(c.uri, taskConf);
+      distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp);
     }
   }
 
@@ -222,7 +218,7 @@ public class TaskDistributedCacheManager {
    * Creates a class loader that includes the designated
    * files and archives.
    */
-  public ClassLoader makeClassLoader(final ClassLoader parent) 
+  public ClassLoader makeClassLoader(final ClassLoader parent)
       throws MalformedURLException {
     final URL[] urls = new URL[classPaths.size()];
     for (int i = 0; i < classPaths.size(); ++i) {
@@ -232,7 +228,7 @@ public class TaskDistributedCacheManager {
       @Override
       public ClassLoader run() {
         return new URLClassLoader(urls, parent);
-      }     
+      }
     });
   }
 }

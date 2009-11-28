@@ -25,6 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
 public class TestTrackerBlacklistAcrossJobs extends TestCase {
   private static final String hosts[] = new String[] {
@@ -36,7 +38,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     String hostname = "";
     
     public void configure(JobConf job) {
-      this.hostname = job.get("slave.host.name");
+      this.hostname = job.get(TTConfig.TT_HOST_NAME);
     }
     
     public void map(NullWritable key, NullWritable value,
@@ -57,7 +59,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     fileSys = FileSystem.get(conf);
     // start mr cluster
     JobConf jtConf = new JobConf();
-    jtConf.setInt("mapred.max.tracker.blacklists", 1);
+    jtConf.setInt(JTConfig.JT_MAX_TRACKER_BLACKLISTS, 1);
 
     mr = new MiniMRCluster(3, fileSys.getUri().toString(),
                            1, null, hosts, jtConf);
@@ -65,7 +67,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     // setup job configuration
     JobConf mrConf = mr.createJobConf();
     JobConf job = new JobConf(mrConf);
-    job.setInt("mapred.max.tracker.failures", 1);
+    job.setInt(JobContext.MAX_TASK_FAILURES_PER_TRACKER, 1);
     job.setNumMapTasks(6);
     job.setNumReduceTasks(0);
     job.setMapperClass(FailOnHostMapper.class);

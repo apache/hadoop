@@ -38,9 +38,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputLogFilter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SkipBadRecords;
+import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
@@ -69,7 +70,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 
   protected void setUp() throws Exception {
     Properties props = new Properties();
-    props.setProperty("mapred.job.tracker.retire.jobs", "false");
+    props.setProperty(JTConfig.JT_RETIREJOBS, "false");
     startCluster(true, props);
   }
 
@@ -125,7 +126,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     badRecs.addAll(REDUCER_BAD_RECORDS);
     Path[] outputFiles = FileUtil.stat2Paths(
         getFileSystem().listStatus(getOutputDir(),
-        new OutputLogFilter()));
+        new Utils.OutputFileUtils.OutputFilesFilter()));
     
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
@@ -169,20 +170,21 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-reducer", badReducer,
       "-verbose",
       "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
-      "-jobconf", "mapred.skip.attempts.to.start.skipping="+attSkip,
-      "-jobconf", "mapred.skip.out.dir=none",
-      "-jobconf", "mapred.map.max.attempts="+mapperAttempts,
-      "-jobconf", "mapred.reduce.max.attempts="+reducerAttempts,
-      "-jobconf", "mapred.skip.map.max.skip.records="+Long.MAX_VALUE,
-      "-jobconf", "mapred.skip.reduce.max.skip.groups="+Long.MAX_VALUE,
-      "-jobconf", "mapred.map.tasks=1",
-      "-jobconf", "mapred.reduce.tasks=1",
+      "-jobconf", "mapreduce.task.skip.start.attempts="+attSkip,
+      "-jobconf", "mapreduce.job.skip.outdir=none",
+      "-jobconf", "mapreduce.map.maxattempts="+mapperAttempts,
+      "-jobconf", "mapreduce.reduce.maxattempts="+reducerAttempts,
+      "-jobconf", "mapreduce.map.skip.maxrecords="+Long.MAX_VALUE,
+      "-jobconf", "mapreduce.reduce.skip.maxgroups="+Long.MAX_VALUE,
+      "-jobconf", "mapreduce.job.maps=1",
+      "-jobconf", "mapreduce.job.reduces=1",
       "-jobconf", "fs.default.name="+clusterConf.get("fs.default.name"),
-      "-jobconf", "mapred.job.tracker="+clusterConf.get("mapred.job.tracker"),
-      "-jobconf", "mapred.job.tracker.http.address="
-                    +clusterConf.get("mapred.job.tracker.http.address"),
+      "-jobconf", "mapreduce.jobtracker.address=" + 
+                   clusterConf.get(JTConfig.JT_IPC_ADDRESS),
+      "-jobconf", "mapreduce.jobtracker.http.address="
+                    +clusterConf.get(JTConfig.JT_HTTP_ADDRESS),
       "-jobconf", "stream.debug=set",
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
     StreamJob job = new StreamJob(args, false);      
@@ -202,22 +204,22 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
       "-reducer", badReducer,
       "-verbose",
       "-inputformat", "org.apache.hadoop.mapred.KeyValueTextInputFormat",
-      "-jobconf", "mapred.skip.attempts.to.start.skipping=1",
+      "-jobconf", "mapreduce.task.skip.start.attempts=1",
       //actually fewer attempts are required than specified
       //but to cater to the case of slow processed counter update, need to 
       //have more attempts
-      "-jobconf", "mapred.map.max.attempts=20",
-      "-jobconf", "mapred.reduce.max.attempts=15",
-      "-jobconf", "mapred.skip.map.max.skip.records=1",
-      "-jobconf", "mapred.skip.reduce.max.skip.groups=1",
-      "-jobconf", "mapred.map.tasks=1",
-      "-jobconf", "mapred.reduce.tasks=1",
+      "-jobconf", "mapreduce.map.maxattempts=20",
+      "-jobconf", "mapreduce.reduce.maxattempts=15",
+      "-jobconf", "mapreduce.map.skip.maxrecords=1",
+      "-jobconf", "mapreduce.reduce.skip.maxgroups=1",
+      "-jobconf", "mapreduce.job.maps=1",
+      "-jobconf", "mapreduce.job.reduces=1",
       "-jobconf", "fs.default.name="+clusterConf.get("fs.default.name"),
-      "-jobconf", "mapred.job.tracker="+clusterConf.get("mapred.job.tracker"),
-      "-jobconf", "mapred.job.tracker.http.address="
-                    +clusterConf.get("mapred.job.tracker.http.address"),
+      "-jobconf", "mapreduce.jobtracker.address="+clusterConf.get(JTConfig.JT_IPC_ADDRESS),
+      "-jobconf", "mapreduce.jobtracker.http.address="
+                    +clusterConf.get(JTConfig.JT_HTTP_ADDRESS),
       "-jobconf", "stream.debug=set",
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
     StreamJob job = new StreamJob(args, false);      

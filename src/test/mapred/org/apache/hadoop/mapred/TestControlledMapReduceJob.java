@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.ControlledMapReduceJob.ControlledMapReduceJobRunner;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
 /**
  * Test to verify the controlled behavior of a ControlledMapReduceJob.
@@ -42,8 +43,8 @@ public class TestControlledMapReduceJob extends ClusterMapReduceTestCase {
       throws Exception {
 
     Properties props = new Properties();
-    props.setProperty("mapred.tasktracker.map.tasks.maximum", "2");
-    props.setProperty("mapred.tasktracker.reduce.tasks.maximum", "2");
+    props.setProperty(TTConfig.TT_MAP_SLOTS, "2");
+    props.setProperty(TTConfig.TT_REDUCE_SLOTS, "2");
     startCluster(true, props);
     LOG.info("Started the cluster");
 

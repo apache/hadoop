@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapred.JobTracker.ReasonForBlackListing;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 public class TestTaskTrackerBlacklisting extends TestCase {
@@ -144,9 +145,9 @@ public class TestTaskTrackerBlacklisting extends TestCase {
       new TestSetup(new TestSuite(TestTaskTrackerBlacklisting.class)) {
       protected void setUp() throws Exception {
         JobConf conf = new JobConf();
-        conf.set("mapred.job.tracker", "localhost:0");
-        conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
-        conf.setInt("mapred.max.tracker.blacklists", 1);
+        conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+        conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
+        conf.setInt(JTConfig.JT_MAX_TRACKER_BLACKLISTS, 1);
 
         jobTracker = 
           new FakeJobTracker(conf, (clock = new FakeJobTrackerClock()),
@@ -173,7 +174,7 @@ public class TestTaskTrackerBlacklisting extends TestCase {
         healthStatus.setLastReported(status.getLastReported());
       }
       jobTracker.heartbeat(tts, false, initialContact, 
-                           false, (short) responseId);
+                           false, responseId);
     }
     responseId++;
   }
@@ -468,8 +469,8 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     conf.setSpeculativeExecution(false);
     conf.setNumMapTasks(0);
     conf.setNumReduceTasks(5);
-    conf.set("mapred.max.reduce.failures.percent", ".70");
-    conf.setBoolean("mapred.committer.job.setup.cleanup.needed", false);
+    conf.set(JobContext.REDUCE_FAILURES_MAXPERCENT, ".70");
+    conf.setBoolean(JobContext.SETUP_CLEANUP_NEEDED, false);
     conf.setMaxTaskFailuresPerTracker(1);
     FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
     job.setClusterSize(trackers.length);

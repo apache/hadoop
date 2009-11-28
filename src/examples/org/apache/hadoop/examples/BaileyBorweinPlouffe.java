@@ -68,7 +68,8 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
   public static final String DESCRIPTION
       = "A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact digits of Pi.";
 
-  private static final String NAME = BaileyBorweinPlouffe.class.getSimpleName();
+  private static final String NAME = "mapreduce." + 
+    BaileyBorweinPlouffe.class.getSimpleName();
 
   //custom job properties
   private static final String WORKING_DIR_PROPERTY = NAME + ".dir";
@@ -327,11 +328,11 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
     job.setInputFormatClass(BbpInputFormat.class);
 
     // disable task timeout
-    jobconf.setLong("mapred.task.timeout", 0);
+    jobconf.setLong(JobContext.TASK_TIMEOUT, 0);
 
     // do not use speculative execution
-    jobconf.setBoolean("mapred.map.tasks.speculative.execution", false);
-    jobconf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+    jobconf.setBoolean(JobContext.MAP_SPECULATIVE, false);
+    jobconf.setBoolean(JobContext.REDUCE_SPECULATIVE, false);
     return job;
   }
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.conf;
 import junit.framework.Assert;
 
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.LongWritable;
@@ -58,7 +59,7 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
     JobConf conf = new JobConf(false);
 
     //seeding JT and NN info into non-defaults (empty jobconf)
-    conf.set("mapred.job.tracker", createJobConf().get("mapred.job.tracker"));
+    conf.set(JTConfig.JT_IPC_ADDRESS, createJobConf().get(JTConfig.JT_IPC_ADDRESS));
     conf.set("fs.default.name", createJobConf().get("fs.default.name"));
 
     conf.setJobName("mr");
@@ -83,7 +84,7 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
 
     Path[] outputFiles = FileUtil.stat2Paths(
                            getFileSystem().listStatus(outDir,
-                           new OutputLogFilter()));
+                           new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));

@@ -30,7 +30,7 @@
 <title>Hadoop Streaming</title>
 
 <p>
-Hadoop streaming is a utility that comes with the Hadoop distribution. The utility allows you to create and run Map/Reduce jobs with any executable or 
+Hadoop streaming is a utility that comes with the Hadoop distribution. The utility allows you to create and run MapReduce jobs with any executable or 
 script as the mapper and/or the reducer. For example:
 </p>
 <source>
@@ -47,7 +47,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 <title>How Streaming Works </title>
 <p>
 In the above example, both the mapper and the reducer are executables that read the input from stdin (line by line) and emit the output to stdout. 
-The utility will create a Map/Reduce job, submit the job to an appropriate cluster, and monitor the progress of the job until it completes.
+The utility will create a MapReduce job, submit the job to an appropriate cluster, and monitor the progress of the job until it completes.
 </p>
 <p>
   When an executable is specified for mappers, each mapper task will launch the executable as a separate process when the mapper is initialized. 
@@ -63,7 +63,7 @@ line-oriented outputs from the stdout of the process, converts each line into a 
 prefix of a line up to the first tab character is the key and the rest of the line (excluding the tab character) is the value. However, this can be customized, as discussed later.
 </p>
 <p>
-This is the basis for the communication protocol between the Map/Reduce framework and the streaming mapper/reducer.
+This is the basis for the communication protocol between the MapReduce framework and the streaming mapper/reducer.
 </p>
 <p>
 You can supply a Java class as the mapper and/or the reducer. The above example is equivalent to:
@@ -161,7 +161,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 <section>
 <title>Specifying Other Plugins for Jobs </title>
 <p>
-Just as with a normal Map/Reduce job, you can specify other plugins for a streaming job:
+Just as with a normal MapReduce job, you can specify other plugins for a streaming job:
 </p>
 <source>
    -inputformat JavaClassName
@@ -188,7 +188,7 @@ Since the TextInputFormat returns keys of LongWritable class, which are actually
 <!-- GENERIC COMMAND OPTIONS-->
 <section>
 <title>Generic Command Options</title>
-<p>Streaming supports <a href="streaming.html#Streaming+Command+Options">streaming command options</a> as well as generic command options.
+<p>Streaming supports generic command options as well as <a href="streaming.html#Streaming+Command+Options">streaming command options</a>.
 The general command line syntax is shown below. </p>
 <p><strong>Note:</strong> Be sure to place the generic options before the streaming options, otherwise the command will fail. 
 For an example, see <a href="streaming.html#Making+Archives+Available+to+Tasks">Making Archives Available to Tasks</a>.</p>
@@ -201,7 +201,7 @@ For an example, see <a href="streaming.html#Making+Archives+Available+to+Tasks">
 <tr><td> -D  property=value </td><td> Optional </td><td> Use value for given property </td></tr>
 <tr><td> -fs host:port or local </td><td> Optional </td><td> Specify a namenode </td></tr>
 <tr><td> -jt host:port or local </td><td> Optional </td><td> Specify a job tracker </td></tr>
-<tr><td> -files </td><td> Optional </td><td> Specify comma-separated files to be copied to the Map/Reduce cluster </td></tr>
+<tr><td> -files </td><td> Optional </td><td> Specify comma-separated files to be copied to the MapReduce cluster </td></tr>
 <tr><td> -libjars  </td><td> Optional </td><td> Specify comma-separated jar files to include in the classpath </td></tr>
 <tr><td> -archives </td><td> Optional </td><td> Specify comma-separated archives to be unarchived on the compute machines </td></tr>
 </table>
@@ -223,9 +223,9 @@ To change the local temp directory use:
 To specify additional local temp directories use:
 </p>
 <source>
-   -D mapred.local.dir=/tmp/local
-   -D mapred.system.dir=/tmp/system
-   -D mapred.temp.dir=/tmp/temp
+   -D mapreduce.cluster.local.dir=/tmp/local
+   -D mapreduce.jobtracker.system.dir=/tmp/system
+   -D mapreduce.cluster.temp.dir=/tmp/temp
 </source>
 <p><strong>Note:</strong> For more details on jobconf parameters see:
 <a href="ext:mapred-default">mapred-default.html</a></p>
@@ -234,14 +234,14 @@ To specify additional local temp directories use:
 <section>
 <title>Specifying Map-Only Jobs </title>
 <p>
-Often, you may want to process input data using a map function only. To do this, simply set mapred.reduce.tasks to zero. 
-The Map/Reduce framework will not create any reducer tasks. Rather, the outputs of the mapper tasks will be the final output of the job.
+Often, you may want to process input data using a map function only. To do this, simply set mapreduce.job.reduces to zero. 
+The MapReduce framework will not create any reducer tasks. Rather, the outputs of the mapper tasks will be the final output of the job.
 </p>
 <source>
-    -D mapred.reduce.tasks=0
+    -D mapreduce.job.reduces=0
 </source>
 <p>
-To be backward compatible, Hadoop Streaming also supports the "-reduce NONE" option, which is equivalent to "-D mapred.reduce.tasks=0".
+To be backward compatible, Hadoop Streaming also supports the "-reduce NONE" option, which is equivalent to "-D mapreduce.job.reduces=0".
 </p>
 </section>
 
@@ -252,7 +252,7 @@ To specify the number of reducers, for example two, use:
 </p>
 <source>
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
-    -D mapred.reduce.tasks=2 \
+    -D mapreduce.job.reduces=2 \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
@@ -263,7 +263,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 <section>
 <title>Customizing How Lines are Split into Key/Value Pairs</title>
 <p>
-As noted earlier, when the Map/Reduce framework reads a line from the stdout of the mapper, it splits the line into a key/value pair. 
+As noted earlier, when the MapReduce framework reads a line from the stdout of the mapper, it splits the line into a key/value pair. 
 By default, the prefix of the line up to the first tab character is the key and the rest of the line (excluding the tab character) is the value.
 </p>
 <p>
@@ -290,7 +290,7 @@ If a line has less than four "."s, then the whole line will be the key and the v
 Similarly, you can use "-D stream.reduce.output.field.separator=SEP" and "-D stream.num.reduce.output.fields=NUM" to specify 
 the nth field separator in a line of the reduce outputs as the separator between the key and the value.
 </p>
-<p> Similarly, you can specify "stream.map.input.field.separator" and "stream.reduce.input.field.separator" as the input separator for Map/Reduce 
+<p> Similarly, you can specify "stream.map.input.field.separator" and "stream.reduce.input.field.separator" as the input separator for MapReduce 
 inputs. By default the separator is the tab character.</p>
 </section>
 
@@ -306,8 +306,7 @@ These files and archives are cached across jobs. You can retrieve the host and f
 <p><strong>Note:</strong>
 The -files and -archives options are generic options.
 Be sure to place the generic options before the command options, otherwise the command will fail. 
-For an example, see <a href="streaming.html#The+-archives+Option">The -archives Option</a>.
-Also see <a href="streaming.html#Other+Supported+Options">Other Supported Options</a>.
+For an example, see <a href="streaming.html#Making+Archives+Available+to+Tasks">Making Archives Available to Tasks</a>.
 </p>
 
 <section>
@@ -322,6 +321,10 @@ This symlink points to the local copy of testfile.txt.
 </p>
 <source>
 -files hdfs://host:fs_port/user/testfile.txt
+</source>
+<p> User can specify a different symlink name for -files using #. </p>
+<source>
+-files hdfs://host:fs_port/user/testfile.txt#testfile
 </source>
 <p>
 Multiple entries can be specified like this:
@@ -343,6 +346,10 @@ The -archives option allows you to copy jars locally to the current working dire
 <source>
 -archives hdfs://host:fs_port/user/testfile.jar
 </source>
+<p> User can specify a different symlink name for -archives using #. </p>
+<source>
+-archives hdfs://host:fs_port/user/testfile.tgz#tgzdir
+</source>
 
 <p>
 In this example, the input.txt file has two lines specifying the names of the two files: cachedir.jar/cache.txt and cachedir.jar/cache2.txt. 
@@ -351,9 +358,9 @@ In this example, the input.txt file has two lines specifying the names of the tw
 <source>
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
                   -archives 'hdfs://hadoop-nn1.example.com/user/me/samples/cachefile/cachedir.jar' \  
-                  -D mapred.map.tasks=1 \
-                  -D mapred.reduce.tasks=1 \ 
-                  -D mapred.job.name="Experiment" \
+                  -D mapreduce.job.maps=1 \
+                  -D mapreduce.job.reduces=1 \ 
+                  -D mapreduce.job.name="Experiment" \
                   -input "/user/me/samples/cachefile/input.txt"  \
                   -output "/user/me/samples/cachefile/out" \  
                   -mapper "xargs cat"  \
@@ -401,7 +408,7 @@ This is just the second cache string
 <p>
 Hadoop has a library class, 
 <a href="ext:api/org/apache/hadoop/mapred/lib/keyfieldbasedpartitioner">KeyFieldBasedPartitioner</a>, 
-that is useful for many applications. This class allows the Map/Reduce 
+that is useful for many applications. This class allows the MapReduce 
 framework to partition the map outputs based on certain key fields, not
 the whole keys. For example:
 </p>
@@ -409,9 +416,9 @@ the whole keys. For example:
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
     -D stream.map.output.field.separator=. \
     -D stream.num.map.output.key.fields=4 \
-    -D map.output.key.field.separator=. \
-    -D mapred.text.key.partitioner.options=-k1,2 \
-    -D mapred.reduce.tasks=12 \
+    -D mapreduce.map.output.key.field.separator=. \
+    -D mapreduce.partition.keypartitioner.options=-k1,2 \
+    -D mapreduce.job.reduces=12 \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
@@ -421,11 +428,11 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 <p>
 Here, <em>-D stream.map.output.field.separator=.</em> and <em>-D stream.num.map.output.key.fields=4</em> are as explained in previous example. The two variables are used by streaming to identify the key/value pair of mapper. 
 </p><p>
-The map output keys of the above Map/Reduce job normally have four fields
-separated by ".". However, the Map/Reduce framework will partition the map
+The map output keys of the above MapReduce job normally have four fields
+separated by ".". However, the MapReduce framework will partition the map
 outputs by the first two fields of the keys using the 
-<em>-D mapred.text.key.partitioner.options=-k1,2</em> option. 
-Here, <em>-D map.output.key.field.separator=.</em> specifies the separator 
+<em>-D mapreduce.partition.keypartitioner.options=-k1,2</em> option. 
+Here, <em>-D mapreduce.map.output.key.field.separator=.</em> specifies the separator 
 for the partition. This guarantees that all the key/value pairs with the 
 same first two fields in the keys will be partitioned into the same reducer.
 </p><p>
@@ -470,22 +477,22 @@ provided by the Unix/GNU Sort. For example:
 </p>
 <source>
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
-    -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
+    -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
     -D stream.map.output.field.separator=. \
     -D stream.num.map.output.key.fields=4 \
-    -D map.output.key.field.separator=. \
-    -D mapred.text.key.comparator.options=-k2,2nr \
-    -D mapred.reduce.tasks=12 \
+    -D mapreduce.map.output.key.field.separator=. \
+    -D mapreduce.partition.keycomparator.options=-k2,2nr \
+    -D mapreduce.job.reduces=12 \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
     -reducer org.apache.hadoop.mapred.lib.IdentityReducer 
 </source>
 <p>
-The map output keys of the above Map/Reduce job normally have four fields
-separated by ".". However, the Map/Reduce framework will sort the 
+The map output keys of the above MapReduce job normally have four fields
+separated by ".". However, the MapReduce framework will sort the 
 outputs by the second field of the keys using the 
-<em>-D mapred.text.key.comparator.options=-k2,2nr</em> option. 
+<em>-D mapreduce.partition.keycomparator.options=-k2,2nr</em> option. 
 Here, <em>-n</em> specifies that the sorting is numerical sorting and 
 <em>-r</em> specifies that the result should be reversed. A simple illustration
 is shown below:
@@ -526,7 +533,7 @@ To use Aggregate, simply specify "-reducer aggregate":
 </p>
 <source>
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
-    -D mapred.reduce.tasks=12 \
+    -D mapreduce.job.reduces=12 \
     -input myInputDirs \
     -output myOutputDir \
     -mapper myAggregatorForKeyCount.py \
@@ -571,11 +578,11 @@ You can select an arbitrary list of fields as the reduce output key, and an arbi
 <source>
 $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
     -D map.output.key.field.separa=. \
-    -D mapred.text.key.partitioner.options=-k1,2 \
-    -D mapred.data.field.separator=. \
-    -D map.output.key.value.fields.spec=6,5,1-3:0- \
-    -D reduce.output.key.value.fields.spec=0-2:5- \
-    -D mapred.reduce.tasks=12 \
+    -D mapreduce.partition.keypartitioner.options=-k1,2 \
+    -D mapreduce.fieldsel.data.field.separator=. \
+    -D mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec=6,5,1-3:0- \
+    -D mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec=0-2:5- \
+    -D mapreduce.job.reduces=12 \
     -input myInputDirs \
     -output myOutputDir \
     -mapper org.apache.hadoop.mapred.lib.FieldSelectionMapReduce \
@@ -584,13 +591,13 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 </source>
 
 <p>
-The option "-D map.output.key.value.fields.spec=6,5,1-3:0-" specifies key/value selection for the map outputs. 
+The option "-D mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec=6,5,1-3:0-" specifies key/value selection for the map outputs. 
 Key selection spec and value selection spec are separated by ":". 
 In this case, the map output key will consist of fields 6, 5, 1, 2, and 3. 
 The map output value will consist of all fields (0- means field 0 and all the subsequent fields). 
 </p>
 <p>
-The option "-D reduce.output.key.value.fields.spec=0-2:5-" specifies 
+The option "-D mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec=0-2:5-" specifies 
 key/value selection for the reduce outputs. In this case, the reduce 
 output key will consist of fields 0, 1, 2 (corresponding to the original 
 fields 6, 5, 1). The reduce output value will consist of all fields starting
@@ -653,7 +660,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 <section>
 <title>How many reducers should I use? </title>
 <p>
-See the Hadoop Wiki for details: <a href="mapred_tutorial.html#Reducer">Reducer</a>
+For details see <a href="mapred_tutorial.html#Reducer">Reducer</a>.
 </p>
 </section>
 
@@ -676,7 +683,7 @@ charlie 80
 dan     75
 
 $ c2='cut -f2'; $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/hadoop-streaming.jar \
-    -D mapred.job.name='Experiment'
+    -D mapreduce.job.name='Experiment'
     -input /user/me/samples/student_marks 
     -output /user/me/samples/student_out 
     -mapper \"$c2\" -reducer 'cat'  
@@ -735,7 +742,7 @@ You can specify multiple input directories with multiple '-input' options:
 <section>
 <title>How do I generate output files with gzip format? </title>
 <p>
-Instead of plain text files, you can generate gzip files as your generated output. Pass '-D mapred.output.compress=true -D  mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec' as option to your streaming job.
+Instead of plain text files, you can generate gzip files as your generated output. Pass '-D mapreduce.output.fileoutputformat.compress=true -D  mapreduce.output.fileoutputformat.compression.codec=org.apache.hadoop.io.compress.GzipCodec' as option to your streaming job.
 </p>
 </section>
 
@@ -790,9 +797,9 @@ to stderr.
 <section>
 <title>How do I get the JobConf variables in a streaming job's mapper/reducer?</title>
 <p>
-See <a href="mapred_tutorial.html#Configured+Parameters">Configured Parameters</a>. 
+See the <a href="mapred_tutorial.html#Configured+Parameters">Configured Parameters</a>. 
 During the execution of a streaming job, the names of the "mapred" parameters are transformed. The dots ( . ) become underscores ( _ ).
-For example, mapred.job.id becomes mapred_job_id and mapred.jar becomes mapred_jar. In your code, use the parameter names with the underscores.
+For example, mapreduce.job.id becomes mapreduce.job.id and mapreduce.job.jar becomes mapreduce.job.jar. In your code, use the parameter names with the underscores.
 </p>
 </section>
 

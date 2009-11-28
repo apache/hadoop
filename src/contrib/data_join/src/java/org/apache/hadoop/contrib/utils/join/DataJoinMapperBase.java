@@ -25,6 +25,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.JobContext;
 
 /**
  * This abstract class serves as the base class for the mapper class of a data
@@ -55,7 +56,7 @@ public abstract class DataJoinMapperBase extends JobBase {
   public void configure(JobConf job) {
     super.configure(job);
     this.job = job;
-    this.inputFile = job.get("map.input.file");
+    this.inputFile = job.get(JobContext.MAP_INPUT_FILE);
     this.inputTag = generateInputTag(this.inputFile);
   }
 

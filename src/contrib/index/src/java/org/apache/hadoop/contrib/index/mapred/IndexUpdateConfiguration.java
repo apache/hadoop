@@ -23,6 +23,8 @@ import org.apache.hadoop.contrib.index.example.HashingDistributionPolicy;
 import org.apache.hadoop.contrib.index.example.LineDocInputFormat;
 import org.apache.hadoop.contrib.index.example.LineDocLocalAnalysis;
 import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 
@@ -62,7 +64,7 @@ public class IndexUpdateConfiguration {
    * @return the IO sort space in MB
    */
   public int getIOSortMB() {
-    return conf.getInt("io.sort.mb", 100);
+    return conf.getInt(JobContext.IO_SORT_MB, 100);
   }
 
   /**
@@ -70,7 +72,7 @@ public class IndexUpdateConfiguration {
    * @param mb  the IO sort space in MB
    */
   public void setIOSortMB(int mb) {
-    conf.setInt("io.sort.mb", mb);
+    conf.setInt(JobContext.IO_SORT_MB, mb);
   }
 
   /**
@@ -78,7 +80,7 @@ public class IndexUpdateConfiguration {
    * @return the Map/Reduce temp directory
    */
   public String getMapredTempDir() {
-    return conf.get("mapred.temp.dir");
+    return conf.get(MRConfig.TEMP_DIR);
   }
 
   //

@@ -20,10 +20,9 @@ package org.apache.hadoop.streaming;
 
 import junit.framework.TestCase;
 import java.io.*;
-import java.util.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.mapreduce.JobContext;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
@@ -65,7 +64,7 @@ public class TestStreamAggregate extends TestCase
       "-reducer", "aggregate",
       //"-verbose",
       //"-jobconf", "stream.debug=set"
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", JobContext.PRESERVE_FAILED_TASK_FILES + "=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }
@@ -74,7 +73,7 @@ public class TestStreamAggregate extends TestCase
   {
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -94,10 +93,12 @@ public class TestStreamAggregate extends TestCase
     } catch(Exception e) {
       failTrace(e);
     } finally {
-      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
-      INPUT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
+      try {
+        INPUT_FILE.delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch (IOException e) {
+        failTrace(e);
+      }
     }
   }
 

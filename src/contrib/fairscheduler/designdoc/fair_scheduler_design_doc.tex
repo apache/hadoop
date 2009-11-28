@@ -45,9 +45,9 @@ This section provides a quick overview of the features of the Fair Scheduler. A 
 
 \subsection{Pools}
 
-The Fair Scheduler groups jobs into ``pools" and performs fair sharing between these pools. Each pool can use either FIFO or fair sharing to schedule jobs internal to the pool. The pool that a job is placed in is determined by a JobConf property, the ``pool name property". By default, this is {\tt user.name}, so that there is one pool per user. However, different properties can be used, e.g.~{\tt group.name} to have one pool per Unix group.
+The Fair Scheduler groups jobs into ``pools" and performs fair sharing between these pools. Each pool can use either FIFO or fair sharing to schedule jobs internal to the pool. The pool that a job is placed in is determined by a JobConf property, the ``pool name property". By default, this is {\tt mapreduce.job.user.name}, so that there is one pool per user. However, different properties can be used, e.g.~{\tt group.name} to have one pool per Unix group.
 
-A common trick is to set the pool name property to an unused property name such as {\tt pool.name} and make this default to {\tt user.name}, so that there is one pool per user but it is also possible to place jobs into ``special" pools by setting their {\tt pool.name} directly. The {\tt mapred-site.xml} snippet below shows how to do this:
+A common trick is to set the pool name property to an unused property name such as {\tt pool.name} and make this default to {\tt mapreduce.job.user.name}, so that there is one pool per user but it is also possible to place jobs into ``special" pools by setting their {\tt pool.name} directly. The {\tt mapred-site.xml} snippet below shows how to do this:
 
 \begin{verbatim}
 <property>
@@ -57,7 +57,7 @@ A common trick is to set the pool name property to an unused property name such 
 
 <property>
   <name>pool.name</name>
-  <value>${user.name}</value>
+  <value>${mapreduce.job.user.name}</value>
 </property>
 \end{verbatim}
 

@@ -38,10 +38,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.Job.RawSplit;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.StaticMapping;
@@ -75,8 +77,8 @@ public class TestJobInProgress extends TestCase {
     TestSetup setup = new TestSetup(new TestSuite(TestJobInProgress.class)) {
       protected void setUp() throws Exception {
         JobConf conf = new JobConf();
-        conf.set("mapred.job.tracker", "localhost:0");
-        conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+        conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+        conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
         conf.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
         jobTracker = new FakeJobTracker(conf, new FakeClock(), trackers);
@@ -99,14 +101,14 @@ public class TestJobInProgress extends TestCase {
     }
 
     @Override
-    JobClient.RawSplit[] createSplits() {
+    Job.RawSplit[] createSplits() {
       // Set all splits to reside on one host. This will ensure that 
       // one tracker gets data local, one gets rack local and two others
       // get non-local maps
-      RawSplit[] splits = new RawSplit[numMapTasks];
+      Job.RawSplit[] splits = new Job.RawSplit[numMapTasks];
       String[] splitHosts0 = new String[] { hosts[0] };
       for (int i = 0; i < numMapTasks; i++) {
-        splits[i] = new RawSplit();
+        splits[i] = new Job.RawSplit();
         splits[i].setDataLength(0);
         splits[i].setLocations(splitHosts0);
       }
@@ -165,7 +167,7 @@ public class TestJobInProgress extends TestCase {
     conf.setNumReduceTasks(numReds);
     conf.setSpeculativeExecution(false);
     conf.setBoolean(
-        "mapred.committer.job.setup.cleanup.needed", false);
+        JobContext.SETUP_CLEANUP_NEEDED, false);
     MyFakeJobInProgress job1 = new MyFakeJobInProgress(conf, jobTracker);
     job1.initTasks();
 

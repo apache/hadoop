@@ -50,7 +50,7 @@ public class TestMRKeyFieldBasedPartitioner extends TestCase {
     // check if the hashcode is correct with specified keyspec
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
-    conf.set("mapred.text.key.partitioner.options", "-k2,2");
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,2");
     kfbp.setConf(conf);
     String expectedOutput = "def";
     byte[] eBytes = expectedOutput.getBytes();
@@ -62,7 +62,7 @@ public class TestMRKeyFieldBasedPartitioner extends TestCase {
     // test with invalid end index in keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
-    conf.set("mapred.text.key.partitioner.options", "-k2,5");
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,5");
     kfbp.setConf(conf);
     expectedOutput = "def\txyz";
     eBytes = expectedOutput.getBytes();
@@ -74,7 +74,7 @@ public class TestMRKeyFieldBasedPartitioner extends TestCase {
     // test with 0 end index in keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
-    conf.set("mapred.text.key.partitioner.options", "-k2");
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2");
     kfbp.setConf(conf);
     expectedOutput = "def\txyz";
     eBytes = expectedOutput.getBytes();
@@ -86,7 +86,7 @@ public class TestMRKeyFieldBasedPartitioner extends TestCase {
     // test with invalid keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
-    conf.set("mapred.text.key.partitioner.options", "-k10");
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k10");
     kfbp.setConf(conf);
     assertEquals("Partitioner doesnt work as expected", 0, 
                  kfbp.getPartition(new Text(input), new Text(), numReducers));
@@ -94,7 +94,7 @@ public class TestMRKeyFieldBasedPartitioner extends TestCase {
     // test with multiple keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
-    conf.set("mapred.text.key.partitioner.options", "-k2,2 -k4,4");
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,2 -k4,4");
     kfbp.setConf(conf);
     input = "abc\tdef\tpqr\txyz";
     expectedOutput = "def";
@@ -110,7 +110,7 @@ public class TestMRKeyFieldBasedPartitioner extends TestCase {
     // test with invalid start index in keyspecs
     kfbp = new KeyFieldBasedPartitioner<Text, Text>();
     conf = new Configuration();
-    conf.set("mapred.text.key.partitioner.options", "-k2,2 -k30,21 -k4,4 -k5");
+    conf.set(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS, "-k2,2 -k30,21 -k4,4 -k5");
     kfbp.setConf(conf);
     expectedOutput = "def";
     eBytes = expectedOutput.getBytes();

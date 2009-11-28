@@ -29,51 +29,51 @@ fi
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
-  -D test.randomtextwrite.total_bytes=${COMPRESSED_DATA_BYTES} \
-  -D test.randomtextwrite.bytes_per_map=$((${COMPRESSED_DATA_BYTES} / ${NUM_MAPS})) \
-  -D test.randomtextwrite.min_words_key=5 \
-  -D test.randomtextwrite.max_words_key=10 \
-  -D test.randomtextwrite.min_words_value=100 \
-  -D test.randomtextwrite.max_words_value=10000 \
-  -D mapred.output.compress=true \
+  -D mapreduce.randomtextwriter.totalbytes=${COMPRESSED_DATA_BYTES} \
+  -D mapreduce.randomtextwriter.bytespermap=$((${COMPRESSED_DATA_BYTES} / ${NUM_MAPS})) \
+  -D mapreduce.randomtextwriter.minwordskey=5 \
+  -D mapreduce.randomtextwriter.maxwordskey=10 \
+  -D mapreduce.randomtextwriter.minwordsvalue=100 \
+  -D mapreduce.randomtextwriter.maxwordsvalue=10000 \
+  -D mapreduce.output.fileoutputformat.compress=true \
   -D mapred.map.output.compression.type=BLOCK \
-  -outFormat org.apache.hadoop.mapred.SequenceFileOutputFormat \
+  -outFormat org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat \
   ${VARCOMPSEQ} &
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
-  -D test.randomtextwrite.total_bytes=${COMPRESSED_DATA_BYTES} \
-  -D test.randomtextwrite.bytes_per_map=$((${COMPRESSED_DATA_BYTES} / ${NUM_MAPS})) \
-  -D test.randomtextwrite.min_words_key=5 \
-  -D test.randomtextwrite.max_words_key=5 \
-  -D test.randomtextwrite.min_words_value=100 \
-  -D test.randomtextwrite.max_words_value=100 \
-  -D mapred.output.compress=true \
+  -D mapreduce.randomtextwriter.totalbytes=${COMPRESSED_DATA_BYTES} \
+  -D mapreduce.randomtextwriter.bytespermap=$((${COMPRESSED_DATA_BYTES} / ${NUM_MAPS})) \
+  -D mapreduce.randomtextwriter.minwordskey=5 \
+  -D mapreduce.randomtextwriter.maxwordskey=5 \
+  -D mapreduce.randomtextwriter.minwordsvalue=100 \
+  -D mapreduce.randomtextwriter.maxwordsvalue=100 \
+  -D mapreduce.output.fileoutputformat.compress=true \
   -D mapred.map.output.compression.type=BLOCK \
-  -outFormat org.apache.hadoop.mapred.SequenceFileOutputFormat \
+  -outFormat org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat \
   ${FIXCOMPSEQ} &
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
-  -D test.randomtextwrite.total_bytes=${UNCOMPRESSED_DATA_BYTES} \
-  -D test.randomtextwrite.bytes_per_map=$((${UNCOMPRESSED_DATA_BYTES} / ${NUM_MAPS})) \
-  -D test.randomtextwrite.min_words_key=1 \
-  -D test.randomtextwrite.max_words_key=10 \
-  -D test.randomtextwrite.min_words_value=0 \
-  -D test.randomtextwrite.max_words_value=200 \
-  -D mapred.output.compress=false \
-  -outFormat org.apache.hadoop.mapred.TextOutputFormat \
+  -D mapreduce.randomtextwriter.totalbytes=${UNCOMPRESSED_DATA_BYTES} \
+  -D mapreduce.randomtextwriter.bytespermap=$((${UNCOMPRESSED_DATA_BYTES} / ${NUM_MAPS})) \
+  -D mapreduce.randomtextwriter.minwordskey=1 \
+  -D mapreduce.randomtextwriter.maxwordskey=10 \
+  -D mapreduce.randomtextwriter.minwordsvalue=0 \
+  -D mapreduce.randomtextwriter.maxwordsvalue=200 \
+  -D mapreduce.output.fileoutputformat.compress=false \
+  -outFormat org.apache.hadoop.mapreduce.lib.output.TextOutputFormat \
   ${VARINFLTEXT} &
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \
-  -D test.randomtextwrite.total_bytes=${INDIRECT_DATA_BYTES} \
-  -D test.randomtextwrite.bytes_per_map=$((${INDIRECT_DATA_BYTES} / ${INDIRECT_DATA_FILES})) \
-  -D test.randomtextwrite.min_words_key=5 \
-  -D test.randomtextwrite.max_words_key=5 \
-  -D test.randomtextwrite.min_words_value=20 \
-  -D test.randomtextwrite.max_words_value=20 \
-  -D mapred.output.compress=true \
+  -D mapreduce.randomtextwriter.totalbytes=${INDIRECT_DATA_BYTES} \
+  -D mapreduce.randomtextwriter.bytespermap=$((${INDIRECT_DATA_BYTES} / ${INDIRECT_DATA_FILES})) \
+  -D mapreduce.randomtextwriter.minwordskey=5 \
+  -D mapreduce.randomtextwriter.maxwordskey=5 \
+  -D mapreduce.randomtextwriter.minwordsvalue=20 \
+  -D mapreduce.randomtextwriter.maxwordsvalue=20 \
+  -D mapreduce.output.fileoutputformat.compress=true \
   -D mapred.map.output.compression.type=BLOCK \
-  -outFormat org.apache.hadoop.mapred.TextOutputFormat \
+  -outFormat org.apache.hadoop.mapreduce.lib.output.TextOutputFormat \
   ${FIXCOMPTEXT} &

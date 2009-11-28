@@ -26,7 +26,11 @@
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"
-  import="org.apache.hadoop.mapred.JobHistory.*"
+  import="org.apache.hadoop.mapreduce.TaskType"
+  import="org.apache.hadoop.mapreduce.Counters"
+  import="org.apache.hadoop.mapreduce.TaskID"
+  import="org.apache.hadoop.mapreduce.TaskAttemptID"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
 %>
 
 <%!	private static SimpleDateFormat dateFormat = new SimpleDateFormat("d/MM HH:mm:ss") ; %>
@@ -36,41 +40,42 @@
 <%	
   String jobid = request.getParameter("jobid");
   String logFile = request.getParameter("logFile");
-  String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String taskid = request.getParameter("taskid"); 
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobInfo job = JSPUtil.getJobInfo(request, fs);
-  JobHistory.Task task = job.getAllTasks().get(taskid); 
-  String type = task.get(Keys.TASK_TYPE);
+  JobHistoryParser.JobInfo job = JSPUtil.getJobInfo(request, fs);
+  JobHistoryParser.TaskInfo task = job.getAllTasks().get(TaskID.forName(taskid)); 
+  TaskType type = task.getTaskType();
 %>
 <html>
 <body>
-<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"> <%=jobid %> </a></h2>
+<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=logFile%>"> <%=jobid %> </a></h2>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td>
 <%	
-  if (Values.REDUCE.name().equals(type)) {
+  if (TaskType.REDUCE.equals(type)) {
 %>
     <td>Shuffle Finished</td><td>Sort Finished</td>
 <%
   }
 %>
-<td>Finish Time</td><td>Host</td><td>Error</td><td>Task Logs</td></tr>
+<td>Finish Time</td><td>Host</td><td>Error</td><td>Task Logs</td>
+<td>Counters</td></tr>
+
 <%
-  for (JobHistory.TaskAttempt attempt : task.getTaskAttempts().values()) {
-    printTaskAttempt(attempt, type, out);
+  for (JobHistoryParser.TaskAttemptInfo attempt : task.getAllTaskAttempts().values()) {
+    printTaskAttempt(attempt, type, out, logFile);
   }
 %>
 </table>
 </center>
 <%	
-  if (Values.MAP.name().equals(type)) {
+  if (TaskType.MAP.equals(type)) {
 %>
 <h3>Input Split Locations</h3>
 <table border="2" cellpadding="5" cellspacing="2">
 <%
-    for (String split : StringUtils.split(task.get(Keys.SPLITS)))
+    for (String split : StringUtils.split(task.getSplitLocations()))
     {
       out.println("<tr><td>" + split + "</td></tr>");
     }
@@ -80,33 +85,31 @@
   }
 %>
 <%!
-  private void printTaskAttempt(JobHistory.TaskAttempt taskAttempt,
-                                String type, JspWriter out) 
+  private void printTaskAttempt(JobHistoryParser.TaskAttemptInfo taskAttempt,
+                                TaskType type, JspWriter out, String logFile) 
   throws IOException {
     out.print("<tr>"); 
-    out.print("<td>" + taskAttempt.get(Keys.TASK_ATTEMPT_ID) + "</td>");
+    out.print("<td>" + taskAttempt.getAttemptId() + "</td>");
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat,
-              taskAttempt.getLong(Keys.START_TIME), 0 ) + "</td>"); 
-    if (Values.REDUCE.name().equals(type)) {
-      JobHistory.ReduceAttempt reduceAttempt = 
-            (JobHistory.ReduceAttempt)taskAttempt; 
+              taskAttempt.getStartTime(), 0 ) + "</td>"); 
+    if (TaskType.REDUCE.equals(type)) {
       out.print("<td>" + 
                 StringUtils.getFormattedTimeWithDiff(dateFormat, 
-                reduceAttempt.getLong(Keys.SHUFFLE_FINISHED), 
-                reduceAttempt.getLong(Keys.START_TIME)) + "</td>"); 
+                taskAttempt.getShuffleFinishTime(),
+                taskAttempt.getStartTime()) + "</td>"); 
       out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
-                reduceAttempt.getLong(Keys.SORT_FINISHED), 
-                reduceAttempt.getLong(Keys.SHUFFLE_FINISHED)) + "</td>"); 
+                taskAttempt.getSortFinishTime(),
+                taskAttempt.getShuffleFinishTime()) + "</td>"); 
     }
     out.print("<td>"+ StringUtils.getFormattedTimeWithDiff(dateFormat,
-              taskAttempt.getLong(Keys.FINISH_TIME), 
-              taskAttempt.getLong(Keys.START_TIME) ) + "</td>"); 
-    out.print("<td>" + taskAttempt.get(Keys.HOSTNAME) + "</td>");
-    out.print("<td>" + taskAttempt.get(Keys.ERROR) + "</td>");
+              taskAttempt.getFinishTime(),
+              taskAttempt.getStartTime()) + "</td>"); 
+    out.print("<td>" + taskAttempt.getHostname() + "</td>");
+    out.print("<td>" + taskAttempt.getError() + "</td>");
 
     // Print task log urls
     out.print("<td>");	
-    String taskLogsUrl = JobHistory.getTaskLogsUrl(taskAttempt);
+    String taskLogsUrl = HistoryViewer.getTaskLogsUrl(taskAttempt);
     if (taskLogsUrl != null) {
 	    String tailFourKBUrl = taskLogsUrl + "&start=-4097";
 	    String tailEightKBUrl = taskLogsUrl + "&start=-8193";
@@ -118,6 +121,20 @@
         out.print("n/a");
     }
     out.print("</td>");
+    Counters counters = taskAttempt.getCounters();
+    if (counters != null) {
+      TaskAttemptID attemptId = taskAttempt.getAttemptId();
+      TaskID taskId = attemptId.getTaskID();
+      org.apache.hadoop.mapreduce.JobID jobId = taskId.getJobID();
+      out.print("<td>" 
+       + "<a href=\"/taskstatshistory.jsp?jobid=" + jobId
+           + "&taskid=" + taskId
+           + "&attemptid=" + attemptId
+           + "&logFile=" + logFile + "\">"
+           + counters.countCounters() + "</a></td>");
+    } else {
+      out.print("<td></td>");
+    }
     out.print("</tr>"); 
   }
 %>

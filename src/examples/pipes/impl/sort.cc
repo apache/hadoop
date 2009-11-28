@@ -52,7 +52,7 @@ public:
   }
 };
 
-const std::string SortMap::MAP_KEEP_PERCENT("hadoop.sort.map.keep.percent");
+const std::string SortMap::MAP_KEEP_PERCENT("mapreduce.loadgen.sort.map.preserve.percent");
 
 class SortReduce: public HadoopPipes::Reducer {
 private:
@@ -87,7 +87,7 @@ public:
 };
 
 const std::string 
-  SortReduce::REDUCE_KEEP_PERCENT("hadoop.sort.reduce.keep.percent");
+  SortReduce::REDUCE_KEEP_PERCENT("mapreduce.loadgen.sort.reduce.preserve.percent");
 
 int main(int argc, char *argv[]) {
   return HadoopPipes::runTask(HadoopPipes::TemplateFactory<SortMap,

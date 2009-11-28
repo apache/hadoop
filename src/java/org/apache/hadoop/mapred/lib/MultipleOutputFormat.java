@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -47,7 +48,10 @@ import org.apache.hadoop.util.Progressable;
  * Case three: This class is used for a map only job. The job wants to use an
  * output file name that depends on both the keys and the input file name,
  * 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.output.MultipleOutputs} instead
  */
+@Deprecated
 public abstract class MultipleOutputFormat<K, V>
 extends FileOutputFormat<K, V> {
 
@@ -171,7 +175,7 @@ extends FileOutputFormat<K, V> {
 
   /**
    * Generate the outfile name based on a given anme and the input file name. If
-   * the map input file does not exists (i.e. this is not for a map only job),
+   * the {@link JobContext#MAP_INPUT_FILE} does not exists (i.e. this is not for a map only job),
    * the given name is returned unchanged. If the config value for
    * "num.of.trailing.legs.to.use" is not set, or set 0 or negative, the given
    * name is returned unchanged. Otherwise, return a file name consisting of the
@@ -185,9 +189,10 @@ extends FileOutputFormat<K, V> {
    * @return the outfile name based on a given anme and the input file name.
    */
   protected String getInputFileBasedOutputFileName(JobConf job, String name) {
-    String infilepath = job.get("map.input.file");
+    String infilepath = job.get(JobContext.MAP_INPUT_FILE);
     if (infilepath == null) {
-      // if the map input file does not exists, then return the given name
+      // if the {@link JobContext#MAP_INPUT_FILE} does not exists,
+      // then return the given name
       return name;
     }
     int numOfTrailingLegsToUse = job.getInt("mapred.outputformat.numOfTrailingLegs", 0);

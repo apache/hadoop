@@ -72,7 +72,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     conf.setJobName("mr");
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(1);
-    conf.setInt("mapred.task.timeout", 30*1000);
+    conf.setInt(JobContext.TASK_TIMEOUT, 30*1000);
     SkipBadRecords.setMapperMaxSkipRecords(conf, Long.MAX_VALUE);
     SkipBadRecords.setReducerMaxSkipGroups(conf, Long.MAX_VALUE);
     
@@ -167,7 +167,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     
     Path[] outputFiles = FileUtil.stat2Paths(
         getFileSystem().listStatus(getOutputDir(),
-        new OutputLogFilter()));
+        new Utils.OutputFileUtils.OutputFilesFilter()));
     
     List<String> mapperOutput=getProcessed(input, mapperBadRecords);
     LOG.debug("mapperOutput " + mapperOutput.size());

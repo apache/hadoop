@@ -49,8 +49,8 @@ public class TestCompressedEmptyMapOutputs extends TestCase {
   throws Exception {
     // Scale down the default settings for RandomWriter for the test-case
     // Generates NUM_HADOOP_SLAVES * RW_MAPS_PER_HOST * RW_BYTES_PER_MAP -> 1MB
-    job.setInt("test.randomwrite.bytes_per_map", RW_BYTES_PER_MAP);
-    job.setInt("test.randomwriter.maps_per_host", RW_MAPS_PER_HOST);
+    job.setInt(RandomWriter.BYTES_PER_MAP, RW_BYTES_PER_MAP);
+    job.setInt(RandomWriter.MAPS_PER_HOST, RW_MAPS_PER_HOST);
     String[] rwArgs = {sortInput.toString()};
     
     // Run RandomWriter

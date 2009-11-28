@@ -28,13 +28,16 @@ import java.util.regex.Matcher;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.mapreduce.SleepJob;
+import org.apache.hadoop.mapreduce.util.TestProcfsBasedProcessTree;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.TestProcfsBasedProcessTree;
 import org.apache.hadoop.util.ToolRunner;
 
 import junit.framework.TestCase;
@@ -57,10 +60,10 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
   private void startCluster(JobConf conf)
       throws Exception {
-    conf.set("mapred.job.tracker.handler.count", "1");
-    conf.set("mapred.tasktracker.map.tasks.maximum", "1");
-    conf.set("mapred.tasktracker.reduce.tasks.maximum", "1");
-    conf.set("mapred.tasktracker.tasks.sleeptime-before-sigkill", "0");
+    conf.set(JTConfig.JT_IPC_HANDLER_COUNT, "1");
+    conf.set(TTConfig.TT_MAP_SLOTS, "1");
+    conf.set(TTConfig.TT_REDUCE_SLOTS, "1");
+    conf.set(TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL, "0");
     miniMRCluster = new MiniMRCluster(1, "file:///", 1, null, null, conf);
   }
 
@@ -170,11 +173,8 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
-        2 * 1024L);
-    fConf.setLong(
-        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
-        2 * 1024L);
+    fConf.setLong(MRConfig.MAPMEMORY_MB, 2 * 1024L);
+    fConf.setLong(MRConfig.REDUCEMEMORY_MB, 2 * 1024L);
     startCluster(new JobConf());
 
     JobConf conf = new JobConf(miniMRCluster.createJobConf());
@@ -199,13 +199,10 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
     // very small value, so that no task escapes to successful completion.
-    fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
+    fConf.set(TTConfig.TT_MEMORY_MANAGER_MONITORING_INTERVAL,
         String.valueOf(300));
-    fConf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
-        2 * 1024);
-    fConf.setLong(
-        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
-        2 * 1024);
+    fConf.setLong(MRConfig.MAPMEMORY_MB, 2 * 1024);
+    fConf.setLong(MRConfig.REDUCEMEMORY_MB, 2 * 1024);
     startCluster(fConf);
     runJobExceedingMemoryLimit();
   }
@@ -227,7 +224,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
     // very small value, so that no task escapes to successful completion.
-    fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
+    fConf.set(TTConfig.TT_MEMORY_MANAGER_MONITORING_INTERVAL,
         String.valueOf(300));
     //set old values, max vm property per task and upper limit on the tasks
     //vm
@@ -320,16 +317,16 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     // Start cluster with proper configuration.
     JobConf fConf = new JobConf();
-    fConf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+    fConf.setLong(MRConfig.MAPMEMORY_MB,
         1L);
     fConf.setLong(
-        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY, 1L);
+        MRConfig.REDUCEMEMORY_MB, 1L);
 
     // Because of the above, the total tt limit is 2mb
     long TASK_TRACKER_LIMIT = 2 * 1024 * 1024L;
 
     // very small value, so that no task escapes to successful completion.
-    fConf.set("mapred.tasktracker.taskmemorymanager.monitoring-interval",
+    fConf.set(TTConfig.TT_MEMORY_MANAGER_MONITORING_INTERVAL,
         String.valueOf(300));
 
     startCluster(fConf);

@@ -44,7 +44,7 @@ public class LazyOutputFormat<K, V> extends FilterOutputFormat<K, V> {
   public static void  setOutputFormatClass(JobConf job, 
       Class<? extends OutputFormat> theClass) {
       job.setOutputFormat(LazyOutputFormat.class);
-      job.setClass("mapred.lazy.output.format", theClass, OutputFormat.class);
+      job.setClass("mapreduce.output.lazyoutputformat.outputformat", theClass, OutputFormat.class);
   }
 
   @Override
@@ -68,7 +68,7 @@ public class LazyOutputFormat<K, V> extends FilterOutputFormat<K, V> {
   @SuppressWarnings("unchecked")
   private void getBaseOutputFormat(JobConf job) throws IOException {
     baseOut = ReflectionUtils.newInstance(
-        job.getClass("mapred.lazy.output.format", null, OutputFormat.class), 
+        job.getClass("mapreduce.output.lazyoutputformat.outputformat", null, OutputFormat.class), 
         job); 
     if (baseOut == null) {
       throw new IOException("Ouput format not set for LazyOutputFormat");

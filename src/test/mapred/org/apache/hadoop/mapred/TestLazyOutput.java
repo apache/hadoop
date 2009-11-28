@@ -56,7 +56,7 @@ public class TestLazyOutput extends TestCase {
     private String id;
 
     public void configure(JobConf job) {
-      id = job.get("mapred.task.id");
+      id = job.get(JobContext.TASK_ATTEMPT_ID);
     }
 
     public void map(LongWritable key, Text val,
@@ -74,7 +74,7 @@ public class TestLazyOutput extends TestCase {
     private String id;
 
     public void configure(JobConf job) {
-      id = job.get("mapred.task.id");
+      id = job.get(JobContext.TASK_ATTEMPT_ID);
     }
 
     /** Writes all keys and values directly to output. */
@@ -157,7 +157,7 @@ public class TestLazyOutput extends TestCase {
 
       Path[] fileList = 
         FileUtil.stat2Paths(fileSys.listStatus(output1,
-            new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
         System.out.println("Test1 File list[" + i + "]" + ": "+ fileList[i]);
       }
@@ -169,7 +169,7 @@ public class TestLazyOutput extends TestCase {
 
       fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output2,
-            new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
         System.out.println("Test2 File list[" + i + "]" + ": "+ fileList[i]);
       }
@@ -182,7 +182,7 @@ public class TestLazyOutput extends TestCase {
 
       fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output3,
-            new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
         System.out.println("Test3 File list[" + i + "]" + ": "+ fileList[i]);
       }

@@ -25,6 +25,8 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.TestHDFSServerPorts;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -61,15 +63,15 @@ public class TestMRServerPorts extends TestCase {
    */
   private JobTracker startJobTracker(JobConf conf, JTRunner runner) 
   throws IOException, LoginException {
-    conf.set("mapred.job.tracker", "localhost:0");
-    conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+    conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+    conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
     JobTracker jt = null;
     try {
       jt = JobTracker.startTracker(conf);
       runner.setJobTracker(jt);
       runner.start();
-      conf.set("mapred.job.tracker", "localhost:" + jt.getTrackerPort());
-      conf.set("mapred.job.tracker.http.address", 
+      conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:" + jt.getTrackerPort());
+      conf.set(JTConfig.JT_HTTP_ADDRESS, 
                             "0.0.0.0:" + jt.getInfoPort());
     } catch(InterruptedException e) {
       throw new IOException(e.getLocalizedMessage());
@@ -134,23 +136,23 @@ public class TestMRServerPorts extends TestCase {
 
       // start job tracker on the same port as name-node
       JobConf conf2 = new JobConf(hdfs.getConfig());
-      conf2.set("mapred.job.tracker",
+      conf2.set(JTConfig.JT_IPC_ADDRESS,
                 FileSystem.getDefaultUri(hdfs.getConfig()).toString());
-      conf2.set("mapred.job.tracker.http.address",
+      conf2.set(JTConfig.JT_HTTP_ADDRESS,
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       boolean started = canStartJobTracker(conf2);
       assertFalse(started); // should fail
 
       // bind http server to the same port as name-node
-      conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
-      conf2.set("mapred.job.tracker.http.address",
+      conf2.set(JTConfig.JT_IPC_ADDRESS, TestHDFSServerPorts.NAME_NODE_HOST + 0);
+      conf2.set(JTConfig.JT_HTTP_ADDRESS,
         hdfs.getConfig().get("dfs.http.address"));
       started = canStartJobTracker(conf2);
       assertFalse(started); // should fail again
 
       // both ports are different from the name-node ones
-      conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
-      conf2.set("mapred.job.tracker.http.address",
+      conf2.set(JTConfig.JT_IPC_ADDRESS, TestHDFSServerPorts.NAME_NODE_HOST + 0);
+      conf2.set(JTConfig.JT_HTTP_ADDRESS,
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       started = canStartJobTracker(conf2);
       assertTrue(started); // should start now
@@ -179,25 +181,25 @@ public class TestMRServerPorts extends TestCase {
       jt = startJobTracker(conf2, runner);
 
       // start job tracker on the same port as name-node
-      conf2.set("mapred.task.tracker.report.address",
+      conf2.set(TTConfig.TT_REPORT_ADDRESS,
                 FileSystem.getDefaultUri(hdfs.getConfig()).toString());
-      conf2.set("mapred.task.tracker.http.address",
+      conf2.set(TTConfig.TT_HTTP_ADDRESS,
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       boolean started = canStartTaskTracker(conf2);
       assertFalse(started); // should fail
 
       // bind http server to the same port as name-node
-      conf2.set("mapred.task.tracker.report.address",
+      conf2.set(TTConfig.TT_REPORT_ADDRESS,
         TestHDFSServerPorts.NAME_NODE_HOST + 0);
-      conf2.set("mapred.task.tracker.http.address",
+      conf2.set(TTConfig.TT_HTTP_ADDRESS,
         hdfs.getConfig().get("dfs.http.address"));
       started = canStartTaskTracker(conf2);
       assertFalse(started); // should fail again
 
       // both ports are different from the name-node ones
-      conf2.set("mapred.task.tracker.report.address",
+      conf2.set(TTConfig.TT_REPORT_ADDRESS,
         TestHDFSServerPorts.NAME_NODE_HOST + 0);
-      conf2.set("mapred.task.tracker.http.address",
+      conf2.set(TTConfig.TT_HTTP_ADDRESS,
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       started = canStartTaskTracker(conf2);
       assertTrue(started); // should start now

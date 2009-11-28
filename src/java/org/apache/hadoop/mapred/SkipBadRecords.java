@@ -72,16 +72,16 @@ public class SkipBadRecords {
     "ReduceProcessedGroups";
   
   private static final String ATTEMPTS_TO_START_SKIPPING = 
-    "mapred.skip.attempts.to.start.skipping";
+    JobContext.SKIP_START_ATTEMPTS;
   private static final String AUTO_INCR_MAP_PROC_COUNT = 
-    "mapred.skip.map.auto.incr.proc.count";
+    JobContext.MAP_SKIP_INCR_PROC_COUNT;
   private static final String AUTO_INCR_REDUCE_PROC_COUNT = 
-    "mapred.skip.reduce.auto.incr.proc.count";
-  private static final String OUT_PATH = "mapred.skip.out.dir";
+    JobContext.REDUCE_SKIP_INCR_PROC_COUNT;
+  private static final String OUT_PATH = JobContext.SKIP_OUTDIR;
   private static final String MAPPER_MAX_SKIP_RECORDS = 
-    "mapred.skip.map.max.skip.records";
+    JobContext.MAP_SKIP_MAX_RECORDS;
   private static final String REDUCER_MAX_SKIP_GROUPS = 
-    "mapred.skip.reduce.max.skip.groups";
+    JobContext.REDUCE_SKIP_MAXGROUPS;
   
   /**
    * Get the number of Task attempts AFTER which skip mode 

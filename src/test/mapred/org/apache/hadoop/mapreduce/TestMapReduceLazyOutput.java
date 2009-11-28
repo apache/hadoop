@@ -36,7 +36,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.OutputLogFilter;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -147,7 +147,7 @@ public class TestMapReduceLazyOutput extends TestCase {
 
       Path[] fileList = 
         FileUtil.stat2Paths(fileSys.listStatus(output1,
-            new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
         System.out.println("Test1 File list[" + i + "]" + ": "+ fileList[i]);
       }
@@ -159,7 +159,7 @@ public class TestMapReduceLazyOutput extends TestCase {
 
       fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output2,
-            new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
         System.out.println("Test2 File list[" + i + "]" + ": "+ fileList[i]);
       }
@@ -172,7 +172,7 @@ public class TestMapReduceLazyOutput extends TestCase {
 
       fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output3,
-            new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {
         System.out.println("Test3 File list[" + i + "]" + ": "+ fileList[i]);
       }

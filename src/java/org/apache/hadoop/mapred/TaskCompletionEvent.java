@@ -18,35 +18,25 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-
 /**
  * This is used to track task completion events on 
  * job tracker. 
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.TaskCompletionEvent} instead
  */
-public class TaskCompletionEvent implements Writable{
+@Deprecated
+public class TaskCompletionEvent 
+    extends org.apache.hadoop.mapreduce.TaskCompletionEvent {
   static public enum Status {FAILED, KILLED, SUCCEEDED, OBSOLETE, TIPFAILED};
-    
-  private int eventId; 
-  private String taskTrackerHttp;
-  private int taskRunTime; // using int since runtime is the time difference
-  private TaskAttemptID taskId;
-  Status status; 
-  boolean isMap = false;
-  private int idWithinJob;
+  
   public static final TaskCompletionEvent[] EMPTY_ARRAY = 
-    new TaskCompletionEvent[0];
+	    new TaskCompletionEvent[0];
   /**
    * Default constructor for Writable.
    *
    */
-  public TaskCompletionEvent(){
-    taskId = new TaskAttemptID();
+  public TaskCompletionEvent() {
+    super();
   }
 
   /**
@@ -64,20 +54,16 @@ public class TaskCompletionEvent implements Writable{
                              boolean isMap,
                              Status status, 
                              String taskTrackerHttp){
-      
-    this.taskId = taskId;
-    this.idWithinJob = idWithinJob;
-    this.isMap = isMap;
-    this.eventId = eventId; 
-    this.status =status; 
-    this.taskTrackerHttp = taskTrackerHttp;
+    super(eventId, taskId, idWithinJob, isMap, org.apache.hadoop.mapreduce.
+          TaskCompletionEvent.Status.valueOf(status.name()), taskTrackerHttp);
   }
-  /**
-   * Returns event Id. 
-   * @return event id
-   */
-  public int getEventId() {
-    return eventId;
+  
+  static TaskCompletionEvent downgrade(
+    org.apache.hadoop.mapreduce.TaskCompletionEvent event) {
+    return new TaskCompletionEvent(event.getEventId(),
+      TaskAttemptID.downgrade(event.getTaskAttemptId()),event.idWithinJob(),
+      event.isMapTask(), Status.valueOf(event.getStatus().name()),
+      event.getTaskTrackerHttp());
   }
   /**
    * Returns task id. 
@@ -86,7 +72,7 @@ public class TaskCompletionEvent implements Writable{
    */
   @Deprecated
   public String getTaskId() {
-    return taskId.toString();
+    return getTaskAttemptId().toString();
   }
   
   /**
@@ -94,7 +80,7 @@ public class TaskCompletionEvent implements Writable{
    * @return task id
    */
   public TaskAttemptID getTaskAttemptId() {
-    return taskId;
+    return TaskAttemptID.downgrade(super.getTaskAttemptId());
   }
   
   /**
@@ -102,133 +88,57 @@ public class TaskCompletionEvent implements Writable{
    * @return task tracker status
    */
   public Status getTaskStatus() {
-    return status;
+    return Status.valueOf(super.getStatus().name());
   }
-  /**
-   * http location of the tasktracker where this task ran. 
-   * @return http location of tasktracker user logs
-   */
-  public String getTaskTrackerHttp() {
-    return taskTrackerHttp;
-  }
-
-  /**
-   * Returns time (in millisec) the task took to complete. 
-   */
-  public int getTaskRunTime() {
-    return taskRunTime;
-  }
-
-  /**
-   * Set the task completion time
-   * @param taskCompletionTime time (in millisec) the task took to complete
-   */
-  public void setTaskRunTime(int taskCompletionTime) {
-    this.taskRunTime = taskCompletionTime;
-  }
-
-  /**
-   * set event Id. should be assigned incrementally starting from 0. 
-   * @param eventId
-   */
-  public void setEventId(
-                         int eventId) {
-    this.eventId = eventId;
-  }
+  
   /**
    * Sets task id. 
    * @param taskId
-   * @deprecated use {@link #setTaskID(TaskAttemptID)} instead.
+   * @deprecated use {@link #setTaskAttemptId(TaskAttemptID)} instead.
    */
   @Deprecated
   public void setTaskId(String taskId) {
-    this.taskId = TaskAttemptID.forName(taskId);
+    this.setTaskAttemptId(TaskAttemptID.forName(taskId));
   }
   
   /**
    * Sets task id. 
    * @param taskId
    */
-  public void setTaskID(TaskAttemptID taskId) {
-    this.taskId = taskId;
+  protected void setTaskAttemptId(TaskAttemptID taskId) {
+    super.setTaskAttemptId(taskId);
   }
   
   /**
    * Set task status. 
    * @param status
    */
-  public void setTaskStatus(
-                            Status status) {
-    this.status = status;
+  protected void setTaskStatus(Status status) {
+    super.setTaskStatus(org.apache.hadoop.mapreduce.
+      TaskCompletionEvent.Status.valueOf(status.name()));
   }
+  
+  /**
+   * Set the task completion time
+   * @param taskCompletionTime time (in millisec) the task took to complete
+   */
+  protected void setTaskRunTime(int taskCompletionTime) {
+    super.setTaskRunTime(taskCompletionTime);
+  }
+
+  /**
+   * set event Id. should be assigned incrementally starting from 0. 
+   * @param eventId
+   */
+  protected void setEventId(int eventId) {
+    super.setEventId(eventId);
+  }
+
   /**
    * Set task tracker http location. 
    * @param taskTrackerHttp
    */
-  public void setTaskTrackerHttp(
-                                 String taskTrackerHttp) {
-    this.taskTrackerHttp = taskTrackerHttp;
-  }
-    
-  @Override
-  public String toString(){
-    StringBuffer buf = new StringBuffer(); 
-    buf.append("Task Id : "); 
-    buf.append(taskId); 
-    buf.append(", Status : ");  
-    buf.append(status.name());
-    return buf.toString();
-  }
-    
-  @Override
-  public boolean equals(Object o) {
-    if(o == null)
-      return false;
-    if(o.getClass().equals(this.getClass())) {
-      TaskCompletionEvent event = (TaskCompletionEvent) o;
-      return this.isMap == event.isMapTask() 
-             && this.eventId == event.getEventId()
-             && this.idWithinJob == event.idWithinJob() 
-             && this.status.equals(event.getTaskStatus())
-             && this.taskId.equals(event.getTaskAttemptId()) 
-             && this.taskRunTime == event.getTaskRunTime()
-             && this.taskTrackerHttp.equals(event.getTaskTrackerHttp());
-    }
-    return false;
-  }
-
-  @Override
-  public int hashCode() {
-    return toString().hashCode(); 
-  }
-
-  public boolean isMapTask() {
-    return isMap;
-  }
-    
-  public int idWithinJob() {
-    return idWithinJob;
-  }
-  //////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    taskId.write(out); 
-    WritableUtils.writeVInt(out, idWithinJob);
-    out.writeBoolean(isMap);
-    WritableUtils.writeEnum(out, status); 
-    WritableUtils.writeString(out, taskTrackerHttp);
-    WritableUtils.writeVInt(out, taskRunTime);
-    WritableUtils.writeVInt(out, eventId);
-  }
-  
-  public void readFields(DataInput in) throws IOException {
-    taskId.readFields(in); 
-    idWithinJob = WritableUtils.readVInt(in);
-    isMap = in.readBoolean();
-    status = WritableUtils.readEnum(in, Status.class);
-    taskTrackerHttp = WritableUtils.readString(in);
-    taskRunTime = WritableUtils.readVInt(in);
-    eventId = WritableUtils.readVInt(in);
+  protected void setTaskTrackerHttp(String taskTrackerHttp) {
+    super.setTaskTrackerHttp(taskTrackerHttp);
   }
 }

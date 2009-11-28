@@ -87,6 +87,6 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text>
   }
 
   public void configure(JobConf conf) {
-    N = conf.getInt("mapred.line.input.format.linespermap", 1);
+    N = conf.getInt("mapreduce.input.lineinputformat.linespermap", 1);
   }
 }

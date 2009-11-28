@@ -22,11 +22,13 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.mapreduce.TaskAttemptID"
+  import="org.apache.hadoop.mapreduce.TaskID"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"
-  import="org.apache.hadoop.mapred.JobHistory.*"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
 %>
 
 <%!	
@@ -39,28 +41,27 @@
 <%	
   String jobid = request.getParameter("jobid");
   String logFile = request.getParameter("logFile");
-  String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String taskStatus = request.getParameter("status"); 
   String taskType = request.getParameter("taskType"); 
   
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobInfo job = JSPUtil.getJobInfo(request, fs);
-  Map<String, JobHistory.Task> tasks = job.getAllTasks(); 
+  JobHistoryParser.JobInfo job = JSPUtil.getJobInfo(request, fs);
+  Map<TaskID, JobHistoryParser.TaskInfo> tasks = job.getAllTasks(); 
 %>
 <html>
 <body>
-<h2><%=taskStatus%> <%=taskType %> task list for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"><%=jobid %> </a></h2>
+<h2><%=taskStatus%> <%=taskType %> task list for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=logFile%>"><%=jobid %> </a></h2>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td><td>Finish Time<br/></td><td>Error</td></tr>
 <%
-  for (JobHistory.Task task : tasks.values()) {
-    if (taskType.equals(task.get(Keys.TASK_TYPE))){
-      Map <String, TaskAttempt> taskAttempts = task.getTaskAttempts();
-      for (JobHistory.TaskAttempt taskAttempt : taskAttempts.values()) {
-        if (taskStatus.equals(taskAttempt.get(Keys.TASK_STATUS)) || 
-          taskStatus.equals("all")){
-          printTask(jobid, encodedLogFileName, taskAttempt, out); 
+  for (JobHistoryParser.TaskInfo task : tasks.values()) {
+    if (taskType.equalsIgnoreCase(task.getTaskType().toString())) {
+      Map <TaskAttemptID, JobHistoryParser.TaskAttemptInfo> taskAttempts = task.getAllTaskAttempts();
+      for (JobHistoryParser.TaskAttemptInfo taskAttempt : taskAttempts.values()) {
+        if (taskStatus.equals(taskAttempt.getTaskStatus()) || 
+          taskStatus.equalsIgnoreCase("all")){
+          printTask(jobid, logFile, taskAttempt, out); 
         }
       }
     }
@@ -69,17 +70,17 @@
 </table>
 <%!
   private void printTask(String jobid, String logFile,
-    JobHistory.TaskAttempt attempt, JspWriter out) throws IOException{
+    JobHistoryParser.TaskAttemptInfo attempt, JspWriter out) throws IOException{
     out.print("<tr>"); 
     out.print("<td>" + "<a href=\"taskdetailshistory.jsp?jobid=" + jobid + 
-          "&logFile="+ logFile +"&taskid="+attempt.get(Keys.TASKID)+"\">" +
-          attempt.get(Keys.TASKID) + "</a></td>");
+          "&logFile="+ logFile +"&taskid="+attempt.getAttemptId().getTaskID().toString() +"\">" +
+          attempt.getAttemptId().getTaskID() + "</a></td>");
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
-          attempt.getLong(Keys.START_TIME), 0 ) + "</td>");
+          attempt.getStartTime(), 0 ) + "</td>");
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
-          attempt.getLong(Keys.FINISH_TIME),
-          attempt.getLong(Keys.START_TIME) ) + "</td>");
-    out.print("<td>" + attempt.get(Keys.ERROR) + "</td>");
+          attempt.getFinishTime(),
+          attempt.getStartTime() ) + "</td>");
+    out.print("<td>" + attempt.getError() + "</td>");
     out.print("</tr>"); 
   }
 %>

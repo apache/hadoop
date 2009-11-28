@@ -39,7 +39,7 @@
 
 <property>
   <name>streamSort.smallJobs.inputFiles</name>
-  <value>${VARINFLTEXT}/{part-00000,part-00001,part-00002}</value>
+  <value>${VARINFLTEXT}/{part-*-00000,part-*-00001,part-*-00002}</value>
   <description></description>
 </property>
 
@@ -74,7 +74,7 @@
 </property>
 <property>
   <name>streamSort.mediumJobs.inputFiles</name>
-  <value>${VARINFLTEXT}/{part-000*0,part-000*1,part-000*2}</value>
+  <value>${VARINFLTEXT}/{part-*-000*0,part-*-000*1,part-*-000*2}</value>
   <description></description>
 </property>
 <property>
@@ -131,7 +131,7 @@
 </property>
 <property>
   <name>javaSort.smallJobs.inputFiles</name>
-  <value>${VARINFLTEXT}/{part-00000,part-00001,part-00002}</value>
+  <value>${VARINFLTEXT}/{part-*-00000,part-*-00001,part-*-00002}</value>
   <description></description>
 </property>
 <property>
@@ -160,7 +160,7 @@
 </property>
 <property>
   <name>javaSort.mediumJobs.inputFiles</name>
-  <value>${VARINFLTEXT}/{part-000*0,part-000*1,part-000*2}</value>
+  <value>${VARINFLTEXT}/{part-*-000*0,part-*-000*1,part-*-000*2}</value>
   <description></description>
 </property>
 <property>
@@ -217,7 +217,7 @@
 </property>
 <property>
   <name>combiner.smallJobs.inputFiles</name>
-  <value>${VARINFLTEXT}/{part-00000,part-00001,part-00002}</value>
+  <value>${VARINFLTEXT}/{part-*-00000,part-*-00001,part-*-00002}</value>
   <description></description>
 </property>
 <property>
@@ -246,7 +246,7 @@
 </property>
 <property>
   <name>combiner.mediumJobs.inputFiles</name>
-  <value>${VARINFLTEXT}/{part-000*0,part-000*1,part-000*2}</value>
+  <value>${VARINFLTEXT}/{part-*-000*0,part-*-000*1,part-*-000*2}</value>
   <description></description>
 </property>
 <property>
@@ -303,7 +303,7 @@
 </property>
 <property>
   <name>monsterQuery.smallJobs.inputFiles</name>
-  <value>${FIXCOMPSEQ}/{part-00000,part-00001,part-00002}</value>
+  <value>${FIXCOMPSEQ}/{part-*-00000,part-*-00001,part-*-00002}</value>
   <description></description>
 </property>
 <property>
@@ -332,7 +332,7 @@
 </property>
 <property>
   <name>monsterQuery.mediumJobs.inputFiles</name>
-  <value>${FIXCOMPSEQ}/{part-000*0,part-000*1,part-000*2}</value>
+  <value>${FIXCOMPSEQ}/{part-*-000*0,part-*-000*1,part-*-000*2}</value>
   <description></description>
 </property>
 <property>
@@ -390,7 +390,7 @@
 
 <property>
   <name>webdataScan.smallJobs.inputFiles</name>
-  <value>${VARCOMPSEQ}/{part-00000,part-00001,part-00002}</value>
+  <value>${VARCOMPSEQ}/{part-*-00000,part-*-00001,part-*-00002}</value>
   <description></description>
 </property>
 <property>
@@ -413,7 +413,7 @@
 
 <property>
   <name>webdataScan.mediumJobs.inputFiles</name>
-  <value>${VARCOMPSEQ}/{part-000*0,part-000*1,part-000*2}</value>
+  <value>${VARCOMPSEQ}/{part-*-000*0,part-*-000*1,part-*-000*2}</value>
   <description></description>
 </property>
 <property>
@@ -469,7 +469,7 @@
 </property>
 <property>
   <name>webdataSort.smallJobs.inputFiles</name>
-  <value>${VARCOMPSEQ}/{part-00000,part-00001,part-00002}</value>
+  <value>${VARCOMPSEQ}/{part-*-00000,part-*-00001,part-*-00002}</value>
   <description></description>
 </property>
 <property>
@@ -498,7 +498,7 @@
 </property>
 <property>
   <name>webdataSort.mediumJobs.inputFiles</name>
-  <value>${VARCOMPSEQ}/{part-000*0,part-000*1,part-000*2}</value>
+  <value>${VARCOMPSEQ}/{part-*-000*0,part-*-000*1,part-*-000*2}</value>
   <description></description>
 </property>
 <property>

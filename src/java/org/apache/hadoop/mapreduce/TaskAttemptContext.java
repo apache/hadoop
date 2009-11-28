@@ -18,49 +18,31 @@
 
 package org.apache.hadoop.mapreduce;
 
-import java.io.IOException;
-
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Progressable;
 
 /**
  * The context for task attempts.
  */
-public class TaskAttemptContext extends JobContext implements Progressable {
-  private final TaskAttemptID taskId;
-  private String status = "";
-  
-  public TaskAttemptContext(Configuration conf, 
-                            TaskAttemptID taskId) {
-    super(conf, taskId.getJobID());
-    this.taskId = taskId;
-  }
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface TaskAttemptContext extends JobContext, Progressable {
 
   /**
    * Get the unique name for this task attempt.
    */
-  public TaskAttemptID getTaskAttemptID() {
-    return taskId;
-  }
+  public TaskAttemptID getTaskAttemptID();
 
   /**
    * Set the current status of the task to the given string.
    */
-  public void setStatus(String msg) throws IOException {
-    status = msg;
-  }
+  public void setStatus(String msg);
 
   /**
    * Get the last set status message.
    * @return the current status message
    */
-  public String getStatus() {
-    return status;
-  }
+  public String getStatus();
 
-  /**
-   * Report progress. The subtypes actually do work in this method.
-   */
-  public void progress() { 
-  }
 }

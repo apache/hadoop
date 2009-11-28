@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.lib.partition.KeyFieldHelper.KeyDescription;
 
@@ -46,6 +48,8 @@ public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2>
 
   private static final Log LOG = LogFactory.getLog(
                                    KeyFieldBasedPartitioner.class.getName());
+  public static String PARTITIONER_OPTIONS = 
+    "mapreduce.partition.keypartitioner.options";
   private int numOfPartitionFields;
   
   private KeyFieldHelper keyFieldHelper = new KeyFieldHelper();
@@ -55,15 +59,15 @@ public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2>
   public void setConf(Configuration conf) {
     this.conf = conf;
     String keyFieldSeparator = 
-      conf.get("map.output.key.field.separator", "\t");
+      conf.get(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR, "\t");
     keyFieldHelper.setKeyFieldSeparator(keyFieldSeparator);
     if (conf.get("num.key.fields.for.partition") != null) {
       LOG.warn("Using deprecated num.key.fields.for.partition. " +
-      		"Use mapred.text.key.partitioner.options instead");
+      		"Use mapreduce.partition.keypartitioner.options instead");
       this.numOfPartitionFields = conf.getInt("num.key.fields.for.partition",0);
       keyFieldHelper.setKeyFieldSpec(1,numOfPartitionFields);
     } else {
-      String option = conf.get("mapred.text.key.partitioner.options");
+      String option = conf.get(PARTITIONER_OPTIONS);
       keyFieldHelper.parseOption(option);
     }
   }
@@ -119,4 +123,30 @@ public class KeyFieldBasedPartitioner<K2, V2> extends Partitioner<K2, V2>
   protected int getPartition(int hash, int numReduceTasks) {
     return (hash & Integer.MAX_VALUE) % numReduceTasks;
   }
+  
+  /**
+   * Set the {@link KeyFieldBasedPartitioner} options used for 
+   * {@link Partitioner}
+   * 
+   * @param keySpec the key specification of the form -k pos1[,pos2], where,
+   *  pos is of the form f[.c][opts], where f is the number
+   *  of the key field to use, and c is the number of the first character from
+   *  the beginning of the field. Fields and character posns are numbered 
+   *  starting with 1; a character position of zero in pos2 indicates the
+   *  field's last character. If '.c' is omitted from pos1, it defaults to 1
+   *  (the beginning of the field); if omitted from pos2, it defaults to 0 
+   *  (the end of the field).
+   */
+  public void setKeyFieldPartitionerOptions(Job job, String keySpec) {
+    job.getConfiguration().set(PARTITIONER_OPTIONS, keySpec);
+  }
+  
+  /**
+   * Get the {@link KeyFieldBasedPartitioner} options
+   */
+  public String getKeyFieldPartitionerOption(JobContext job) {
+    return job.getConfiguration().get(PARTITIONER_OPTIONS);
+  }
+
+
 }

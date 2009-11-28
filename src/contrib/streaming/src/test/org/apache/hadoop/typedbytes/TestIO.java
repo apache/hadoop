@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -120,6 +121,24 @@ public class TestIO extends TestCase {
     istream.close();
   }
 
+  public void testCustomTypesIO() throws IOException {
+    byte[] rawBytes = new byte[] { 100, 0, 0, 0, 3, 1, 2, 3 };
+    
+    FileOutputStream ostream = new FileOutputStream(tmpfile);
+    DataOutputStream dostream = new DataOutputStream(ostream);
+    TypedBytesOutput out = new TypedBytesOutput(dostream);
+    out.writeRaw(rawBytes);
+    dostream.close();
+    ostream.close();
+
+    FileInputStream istream = new FileInputStream(tmpfile);
+    DataInputStream distream = new DataInputStream(istream);
+    TypedBytesInput in = new TypedBytesInput(distream);
+    assertTrue(Arrays.equals(rawBytes, in.readRaw()));
+    distream.close();
+    istream.close();
+  }
+  
   public void testRecordIO() throws IOException {
     RecRecord1 r1 = new RecRecord1();
     r1.setBoolVal(true);

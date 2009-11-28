@@ -33,27 +33,27 @@ import org.apache.hadoop.sqoop.util.ImportError;
  * The implementations of this class drive the actual discussion with
  * the database about table formats, etc.
  */
-public interface ConnManager {
+public abstract class ConnManager {
 
   /**
    * Return a list of all databases on a server
    */
-  String [] listDatabases();
+  public abstract String [] listDatabases();
 
   /**
    * Return a list of all tables in a database
    */
-  String [] listTables();
+  public abstract String [] listTables();
 
   /**
    * Return a list of column names in a table in the order returned by the db.
    */
-  String [] getColumnNames(String tableName);
+  public abstract String [] getColumnNames(String tableName);
 
   /**
    * Return the name of the primary key for a table, or null if there is none.
    */
-  String getPrimaryKey(String tableName);
+  public abstract String getPrimaryKey(String tableName);
 
   /**
    * Return an unordered mapping from colname to sqltype for
@@ -61,7 +61,7 @@ public interface ConnManager {
    *
    * The Integer type id is a constant from java.sql.Types
    */
-  Map<String, Integer> getColumnTypes(String tableName);
+  public abstract Map<String, Integer> getColumnTypes(String tableName);
 
   /**
    * Execute a SQL statement to read the named set of columns from a table.
@@ -70,32 +70,32 @@ public interface ConnManager {
    * The client is responsible for calling ResultSet.close() when done with the
    * returned ResultSet object.
    */
-  ResultSet readTable(String tableName, String [] columns) throws SQLException;
+  public abstract ResultSet readTable(String tableName, String [] columns) throws SQLException;
 
   /**
    * @return the actual database connection
    */
-  Connection getConnection() throws SQLException;
+  public abstract Connection getConnection() throws SQLException;
 
   /**
    * @return a string identifying the driver class to load for this JDBC connection type.
    */
-  String getDriverClass();
+  public abstract String getDriverClass();
 
   /**
    * Execute a SQL statement 's' and print its results to stdout
    */
-  void execAndPrint(String s);
+  public abstract void execAndPrint(String s);
 
   /**
    * Perform an import of a table from the database into HDFS
    */
-  void importTable(String tableName, String jarFile, Configuration conf)
+  public abstract void importTable(ImportJobContext context)
       throws IOException, ImportError;
 
   /**
    * Perform any shutdown operations on the connection.
    */
-  void close() throws SQLException;
+  public abstract void close() throws SQLException;
 }
 

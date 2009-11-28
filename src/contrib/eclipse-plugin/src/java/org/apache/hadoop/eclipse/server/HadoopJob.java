@@ -50,17 +50,20 @@ public class HadoopJob {
     }
 
     static JobState ofInt(int state) {
-      switch (state) {
-        case JobStatus.PREP:
-          return PREPARE;
-        case JobStatus.RUNNING:
-          return RUNNING;
-        case JobStatus.FAILED:
-          return FAILED;
-        case JobStatus.SUCCEEDED:
-          return SUCCEEDED;
-        default:
-          return null;
+      if (state == JobStatus.PREP) {
+        return PREPARE;
+      }
+      else if (state == JobStatus.RUNNING) {
+        return RUNNING;
+      }
+      else if (state == JobStatus.FAILED) {
+        return FAILED;
+      }
+      else if (state == JobStatus.SUCCEEDED) {
+        return SUCCEEDED;
+      }
+      else {
+        return null;
       }
     }
   }

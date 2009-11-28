@@ -113,7 +113,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
                                                   Progressable progress)
     throws IOException {
     boolean isCompressed = getCompressOutput(job);
-    String keyValueSeparator = job.get("mapred.textoutputformat.separator", 
+    String keyValueSeparator = job.get("mapreduce.output.textoutputformat.separator", 
                                        "\t");
     if (!isCompressed) {
       Path file = FileOutputFormat.getTaskOutputPath(job, name);

@@ -71,12 +71,12 @@ public class TestMiniMRDFSSort extends TestCase {
     return setup;
   }
 
-  private static void runRandomWriter(JobConf job, Path sortInput) 
+  public static void runRandomWriter(JobConf job, Path sortInput) 
   throws Exception {
     // Scale down the default settings for RandomWriter for the test-case
     // Generates NUM_HADOOP_SLAVES * RW_MAPS_PER_HOST * RW_BYTES_PER_MAP
-    job.setInt("test.randomwrite.bytes_per_map", RW_BYTES_PER_MAP);
-    job.setInt("test.randomwriter.maps_per_host", RW_MAPS_PER_HOST);
+    job.setInt(RandomWriter.BYTES_PER_MAP, RW_BYTES_PER_MAP);
+    job.setInt(RandomWriter.MAPS_PER_HOST, RW_MAPS_PER_HOST);
     String[] rwArgs = {sortInput.toString()};
     
     // Run RandomWriter
@@ -86,8 +86,8 @@ public class TestMiniMRDFSSort extends TestCase {
   private static void runSort(JobConf job, Path sortInput, Path sortOutput) 
   throws Exception {
 
-    job.setInt("mapred.job.reuse.jvm.num.tasks", -1);
-    job.setInt("io.sort.mb", 1);
+    job.setInt(JobContext.JVM_NUMTASKS_TORUN, -1);
+    job.setInt(JobContext.IO_SORT_MB, 1);
     job.setNumMapTasks(12);
 
     // Setup command-line arguments to 'sort'
@@ -140,7 +140,7 @@ public class TestMiniMRDFSSort extends TestCase {
                                       boolean reuse) throws IOException {
     // setup a map-only job that reads the input and only sets the counters
     // based on how many times the jvm was reused.
-    job.setInt("mapred.job.reuse.jvm.num.tasks", reuse ? -1 : 1);
+    job.setInt(JobContext.JVM_NUMTASKS_TORUN, reuse ? -1 : 1);
     FileInputFormat.setInputPaths(job, SORT_INPUT_PATH);
     job.setInputFormat(SequenceFileInputFormat.class);
     job.setOutputFormat(NullOutputFormat.class);

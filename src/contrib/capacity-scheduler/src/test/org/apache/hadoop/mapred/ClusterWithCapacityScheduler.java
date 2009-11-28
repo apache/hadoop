@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * A test-cluster based on {@link MiniMRCluster} that is started with
@@ -102,7 +103,7 @@ public class ClusterWithCapacityScheduler extends TestCase {
       setUpSchedulerConfigFile(schedulerProperties);
     }
 
-    clusterConf.set("mapred.jobtracker.taskScheduler",
+    clusterConf.set(JTConfig.JT_TASK_SCHEDULER,
         CapacityTaskScheduler.class.getName());
     mrCluster =
         new MiniMRCluster(numTaskTrackers, "file:///", 1, null, null,

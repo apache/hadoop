@@ -27,6 +27,7 @@ import junit.framework.TestSuite;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 public class TestSpeculativeExecution extends TestCase {
 
@@ -49,8 +50,8 @@ public class TestSpeculativeExecution extends TestCase {
       new TestSetup(new TestSuite(TestSpeculativeExecution.class)) {
       protected void setUp() throws Exception {
         JobConf conf = new JobConf();
-        conf.set("mapred.job.tracker", "localhost:0");
-        conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+        conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+        conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
         jobTracker = new FakeJobTracker(conf, (clock = new SpecFakeClock()),
             trackers);
         for (String tracker : trackers) {
@@ -109,7 +110,7 @@ public class TestSpeculativeExecution extends TestCase {
     conf.setSpeculativeExecution(true);
     conf.setNumMapTasks(5);
     conf.setNumReduceTasks(5);
-    conf.setFloat("mapred.speculative.execution.slowTaskThreshold", 0.5f);
+    conf.setFloat(JobContext.SPECULATIVE_SLOWTASK_THRESHOLD, 0.5f);
     FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);    
     job.initTasks();
     //schedule maps
@@ -145,7 +146,7 @@ public class TestSpeculativeExecution extends TestCase {
     conf.setSpeculativeExecution(true);
     conf.setNumMapTasks(5);
     conf.setNumReduceTasks(0);
-    conf.setFloat("mapred.speculative.execution.slowTaskThreshold", 0.5f);
+    conf.setFloat(JobContext.SPECULATIVE_SLOWTASK_THRESHOLD, 0.5f);
     FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
     job.initTasks();
 

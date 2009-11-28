@@ -18,11 +18,11 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
         <header>
-        <title>Archives Guide</title>
+        <title>Hadoop Archives Guide</title>
         </header>
         <body>
         <section>
-        <title> What are Hadoop archives? </title>
+        <title>Overview</title>
         <p>
         Hadoop archives are special format archives. A Hadoop archive
         maps to a file system directory. A Hadoop archive always has a *.har
@@ -32,8 +32,9 @@
         within the part files. 
         </p>
         </section>
+        
         <section>
-        <title> How to create an archive? </title>
+        <title> How to Create an Archive </title>
         <p>
         <code>Usage: hadoop archive -archiveName name &lt;src&gt;* &lt;dest&gt;</code>
         </p>
@@ -42,8 +43,8 @@
         An example would be foo.har. The name should have a *.har extension. 
         The inputs are file system pathnames which work as usual with regular
         expressions. The destination directory would contain the archive.
-        Note that this is a Map/Reduce job that creates the archives. You would
-        need a map reduce cluster to run this. The following is an example:</p>
+        Note that this is a MapReduce job that creates the archives. You would
+        need a MapReduce cluster to run this. The following is an example:</p>
         <p>
         <code>hadoop archive -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</code>
         </p><p>
@@ -52,28 +53,29 @@
         The sources are not changed or removed when an archive is created.
         </p>
         </section>
+        
         <section>
-        <title> How to look up files in archives? </title>
+        <title> How to Look Up Files in Archives </title>
         <p>
         The archive exposes itself as a file system layer. So all the fs shell
         commands in the archives work but with a different URI. Also, note that
-        archives are immutable. So, rename's, deletes and creates return
-        an error. URI for Hadoop Archives is 
+        archives are immutable. So, rename, delete and create will return
+        an error. The URI for Hadoop Archives is:
         </p><p><code>har://scheme-hostname:port/archivepath/fileinarchive</code></p><p>
         If no scheme is provided it assumes the underlying filesystem. 
-        In that case the URI would look like 
+        In that case the URI would look like this:
         </p><p><code>
         har:///archivepath/fileinarchive</code></p>
         <p>
         Here is an example of archive. The input to the archives is /dir. The directory dir contains 
-        files filea, fileb. To archive /dir to /user/hadoop/foo.har, the command is 
+        files filea, fileb. To archive /dir to /user/hadoop/foo.har, the command is: 
         </p>
         <p><code>hadoop archive -archiveName foo.har /dir /user/hadoop</code>
         </p><p>
-        To get file listing for files in the created archive 
+        To get file listing for files in the created archive: 
         </p>
         <p><code>hadoop dfs -lsr har:///user/hadoop/foo.har</code></p>
-        <p>To cat filea in archive -
+        <p>To cat filea in archive:
         </p><p><code>hadoop dfs -cat har:///user/hadoop/foo.har/dir/filea</code></p>
         </section>
 	</body>

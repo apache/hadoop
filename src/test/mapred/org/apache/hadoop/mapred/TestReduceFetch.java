@@ -33,13 +33,13 @@ public class TestReduceFetch extends TestReduceFetchFromPartialMem {
   public void testReduceFromDisk() throws Exception {
     final int MAP_TASKS = 8;
     JobConf job = mrCluster.createJobConf();
-    job.set("mapred.job.reduce.input.buffer.percent", "0.0");
+    job.set(JobContext.REDUCE_INPUT_BUFFER_PERCENT, "0.0");
     job.setNumMapTasks(MAP_TASKS);
     job.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, "-Xmx128m");
-    job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
-    job.set("mapred.job.shuffle.input.buffer.percent", "0.14");
-    job.setInt("io.sort.factor", 2);
-    job.setInt("mapred.inmem.merge.threshold", 4);
+    job.setLong(JobContext.REDUCE_MEMORY_TOTAL_BYTES, 128 << 20);
+    job.set(JobContext.SHUFFLE_INPUT_BUFFER_PERCENT, "0.05");
+    job.setInt(JobContext.IO_SORT_FACTOR, 2);
+    job.setInt(JobContext.REDUCE_MERGE_INMEM_THRESHOLD, 4);
     Counters c = runJob(job);
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
     final long out = c.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getCounter();
@@ -56,9 +56,9 @@ public class TestReduceFetch extends TestReduceFetchFromPartialMem {
   public void testReduceFromMem() throws Exception {
     final int MAP_TASKS = 3;
     JobConf job = mrCluster.createJobConf();
-    job.set("mapred.job.reduce.input.buffer.percent", "1.0");
-    job.set("mapred.job.shuffle.input.buffer.percent", "1.0");
-    job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
+    job.set(JobContext.REDUCE_INPUT_BUFFER_PERCENT, "1.0");
+    job.set(JobContext.SHUFFLE_INPUT_BUFFER_PERCENT, "1.0");
+    job.setLong(JobContext.REDUCE_MEMORY_TOTAL_BYTES, 128 << 20);
     job.setNumMapTasks(MAP_TASKS);
     Counters c = runJob(job);
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();

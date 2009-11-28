@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
@@ -59,13 +59,9 @@ public class TaskLog {
   private static final File LOG_DIR = 
     new File(getBaseLogDir(), USERLOGS_DIR_NAME).getAbsoluteFile();
   
+  // localFS is set in (and used by) writeToIndexFile()
   static LocalFileSystem localFS = null;
   static {
-    try {
-      localFS = FileSystem.getLocal(new Configuration());
-    } catch (IOException ioe) {
-      LOG.warn("Getting local file system failed.");
-    }
     if (!LOG_DIR.exists()) {
       boolean b = LOG_DIR.mkdirs();
       if (!b) {
@@ -200,6 +196,10 @@ public class TaskLog {
     File indexFile = getIndexFile(currentTaskid.toString(), isCleanup);
     Path indexFilePath = new Path(indexFile.getAbsolutePath());
     Path tmpIndexFilePath = new Path(tmpIndexFile.getAbsolutePath());
+
+    if (localFS == null) {// set localFS once
+      localFS = FileSystem.getLocal(new Configuration());
+    }
     localFS.rename (tmpIndexFilePath, indexFilePath);
   }
   private static void resetPrevLengths(TaskAttemptID firstTaskid) {
@@ -395,7 +395,7 @@ public class TaskLog {
    * @return the number of bytes to cap the log files at
    */
   public static long getTaskLogLength(JobConf conf) {
-    return conf.getLong("mapred.userlog.limit.kb", 0) * 1024;
+    return conf.getLong(JobContext.TASK_USERLOG_LIMIT, 0) * 1024;
   }
 
   /**
@@ -561,6 +561,37 @@ public class TaskLog {
   }
   
   /**
+   * Construct the command line for running the debug script
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @return the command line as a String
+   * @throws IOException
+   */
+  static String buildDebugScriptCommandLine(List<String> cmd, String debugout)
+  throws IOException {
+    StringBuilder mergedCmd = new StringBuilder();
+    mergedCmd.append("exec ");
+    boolean isExecutable = true;
+    for(String s: cmd) {
+      if (isExecutable) {
+        // the executable name needs to be expressed as a shell path for the  
+        // shell to find it.
+        mergedCmd.append(FileUtil.makeShellPath(new File(s)));
+        isExecutable = false; 
+      } else {
+        mergedCmd.append(s);
+      }
+      mergedCmd.append(" ");
+    }
+    mergedCmd.append(" < /dev/null ");
+    mergedCmd.append(" >");
+    mergedCmd.append(debugout);
+    mergedCmd.append(" 2>&1 ");
+    return mergedCmd.toString();
+  }
+  /**
    * Add quotes to each of the command strings and
    * return as a single string 
    * @param cmd The command to be quoted
@@ -604,25 +635,7 @@ public class TaskLog {
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
     result.add("-c");
-    StringBuffer mergedCmd = new StringBuffer();
-    mergedCmd.append("exec ");
-    boolean isExecutable = true;
-    for(String s: cmd) {
-      if (isExecutable) {
-        // the executable name needs to be expressed as a shell path for the  
-        // shell to find it.
-        mergedCmd.append(FileUtil.makeShellPath(new File(s)));
-        isExecutable = false; 
-      } else {
-        mergedCmd.append(s);
-      }
-      mergedCmd.append(" ");
-    }
-    mergedCmd.append(" < /dev/null ");
-    mergedCmd.append(" >");
-    mergedCmd.append(debugout);
-    mergedCmd.append(" 2>&1 ");
-    result.add(mergedCmd.toString());
+    result.add(buildDebugScriptCommandLine(cmd, debugout));
     return result;
   }
   

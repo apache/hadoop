@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
 /**
  * Tests various failures in setup/cleanup of job, like 
@@ -47,16 +49,16 @@ public class TestSetupAndCleanupFailure extends TestCase {
     }
   }
 
-  // Commiter with cleanupJob throwing exception
-  static class CommitterWithFailCleanup extends FileOutputCommitter {
+  // Commiter with commitJob throwing exception
+  static class CommitterWithFailCommit extends FileOutputCommitter {
     @Override
-    public void cleanupJob(JobContext context) throws IOException {
+    public void commitJob(JobContext context) throws IOException {
       throw new IOException();
     }
   }
 
   // Committer waits for a file to be created on dfs.
-  static class CommitterWithLongSetupAndCleanup extends FileOutputCommitter {
+  static class CommitterWithLongSetupAndCommit extends FileOutputCommitter {
     
     private void waitForSignalFile(FileSystem fs, Path signalFile) 
     throws IOException {
@@ -76,9 +78,9 @@ public class TestSetupAndCleanupFailure extends TestCase {
     }
     
     @Override
-    public void cleanupJob(JobContext context) throws IOException {
+    public void commitJob(JobContext context) throws IOException {
       waitForSignalFile(FileSystem.get(context.getJobConf()), cleanupSignalFile);
-      super.cleanupJob(context);
+      super.commitJob(context);
     }
   }
 
@@ -121,7 +123,7 @@ public class TestSetupAndCleanupFailure extends TestCase {
   throws IOException {
     // launch job with waiting setup/cleanup
     JobConf jobConf = mr.createJobConf();
-    jobConf.setOutputCommitter(CommitterWithLongSetupAndCleanup.class);
+    jobConf.setOutputCommitter(CommitterWithLongSetupAndCommit.class);
     RunningJob job = UtilsForTests.runJob(jobConf, inDir, outDir);
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
     JobInProgress jip = jt.getJob(job.getID());
@@ -229,15 +231,14 @@ public class TestSetupAndCleanupFailure extends TestCase {
       dfs = new MiniDFSCluster(conf, 4, true, null);
       fileSys = dfs.getFileSystem();
       JobConf jtConf = new JobConf();
-      jtConf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
-      jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
-      jtConf.setLong("mapred.tasktracker.expiry.interval", 10 * 1000);
-      jtConf.setInt("mapred.reduce.copy.backoff", 4);
+      jtConf.setInt(TTConfig.TT_MAP_SLOTS, 1);
+      jtConf.setInt(TTConfig.TT_REDUCE_SLOTS, 1);
+      jtConf.setLong(JTConfig.JT_TRACKER_EXPIRY_INTERVAL, 10 * 1000);
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1,
                              null, null, jtConf);
       // test setup/cleanup throwing exceptions
       testFailCommitter(CommitterWithFailSetup.class, mr.createJobConf());
-      testFailCommitter(CommitterWithFailCleanup.class, mr.createJobConf());
+      testFailCommitter(CommitterWithFailCommit.class, mr.createJobConf());
       // test the command-line kill for setup/cleanup attempts. 
       testSetupAndCleanupKill(mr, dfs, true);
       // remove setup/cleanup signal files.

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -154,9 +155,9 @@ public class ValueAggregatorJob {
     if (specFile != null) {
       conf.addResource(specFile);
     }
-    String userJarFile = conf.get("user.jar.file");
+    String userJarFile = conf.get(ValueAggregatorJobBase.USER_JAR);
     if (userJarFile != null) {
-      conf.set("mapred.jar", userJarFile);
+      conf.set(JobContext.JAR, userJarFile);
     }
 
     Job theJob = new Job(conf);
@@ -192,10 +193,10 @@ public class ValueAggregatorJob {
   public static Configuration setAggregatorDescriptors(
       Class<? extends ValueAggregatorDescriptor>[] descriptors) {
     Configuration conf = new Configuration();
-    conf.setInt("aggregator.descriptor.num", descriptors.length);
+    conf.setInt(ValueAggregatorJobBase.DESCRIPTOR_NUM, descriptors.length);
     //specify the aggregator descriptors
     for(int i=0; i< descriptors.length; i++) {
-      conf.set("aggregator.descriptor." + i, 
+      conf.set(ValueAggregatorJobBase.DESCRIPTOR + i, 
                "UserDefined," + descriptors[i].getName());
     }
     return conf;

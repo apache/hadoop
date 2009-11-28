@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mrunit.mock;
 
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Counters.Counter;
@@ -24,6 +25,7 @@ import org.apache.hadoop.mapred.Counters.Counter;
 public class MockReporter implements Reporter {
 
   private MockInputSplit inputSplit = new MockInputSplit();
+  private Counters counters;
 
   public enum ReporterType {
     Mapper,
@@ -32,8 +34,9 @@ public class MockReporter implements Reporter {
 
   private ReporterType typ;
 
-  public MockReporter(final ReporterType kind) {
+  public MockReporter(final ReporterType kind, final Counters ctrs) {
     this.typ = kind;
+    this.counters = ctrs;
   }
 
   @Override
@@ -48,12 +51,16 @@ public class MockReporter implements Reporter {
 
   @Override
   public void incrCounter(Enum key, long amount) {
-    // do nothing.
+    if (null != counters) {
+      counters.incrCounter(key, amount);
+    }
   }
 
   @Override
   public void incrCounter(String group, String counter, long amount) {
-    // do nothing.
+    if (null != counters) {
+      counters.incrCounter(group, counter, amount);
+    }
   }
 
   @Override
@@ -67,15 +74,23 @@ public class MockReporter implements Reporter {
   }
 
   @Override
-  public Counter getCounter(String s1, String s2) {
-    // do nothing
-    return null;
+  public Counter getCounter(String group, String name) {
+    Counters.Counter counter = null;
+    if (counters != null) {
+      counter = counters.findCounter(group, name);
+    }
+
+    return counter;
   }
 
   @Override
   public Counter getCounter(Enum key) {
-    // do nothing
-    return null;
+    Counters.Counter counter = null;
+    if (counters != null) {
+      counter = counters.findCounter(key);
+    }
+
+    return counter;
   }
 }
 

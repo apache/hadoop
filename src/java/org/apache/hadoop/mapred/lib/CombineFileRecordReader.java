@@ -145,9 +145,9 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
                             {split, jc, reporter, Integer.valueOf(idx)});
 
       // setup some helper config variables.
-      jc.set("map.input.file", split.getPath(idx).toString());
-      jc.setLong("map.input.start", split.getOffset(idx));
-      jc.setLong("map.input.length", split.getLength(idx));
+      jc.set(JobContext.MAP_INPUT_FILE, split.getPath(idx).toString());
+      jc.setLong(JobContext.MAP_INPUT_START, split.getOffset(idx));
+      jc.setLong(JobContext.MAP_INPUT_PATH, split.getLength(idx));
     } catch (Exception e) {
       throw new RuntimeException (e);
     }

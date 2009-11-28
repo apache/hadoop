@@ -112,7 +112,10 @@ import java.util.*;
  *
  * }
  * </pre>
+ * @deprecated Use 
+ * {@link org.apache.hadoop.mapreduce.lib.output.MultipleOutputs} instead
  */
+@Deprecated
 public class MultipleOutputs {
 
   private static final String NAMED_OUTPUTS = "mo.namedOutputs";

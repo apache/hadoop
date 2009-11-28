@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
@@ -206,7 +207,8 @@ public class JobControl implements Runnable {
     }
   }
 	
-  synchronized private void checkRunningJobs() {
+  synchronized private void checkRunningJobs() 
+      throws IOException, InterruptedException {
 		
     Map<String, ControlledJob> oldJobs = null;
     oldJobs = this.runningJobs;
@@ -218,7 +220,8 @@ public class JobControl implements Runnable {
     }
   }
 	
-  synchronized private void checkWaitingJobs() {
+  synchronized private void checkWaitingJobs() 
+      throws IOException, InterruptedException {
     Map<String, ControlledJob> oldJobs = null;
     oldJobs = this.waitingJobs;
     this.waitingJobs = new Hashtable<String, ControlledJob>();
@@ -265,9 +268,13 @@ public class JobControl implements Runnable {
 					
         }
       }
-      checkRunningJobs();	
-      checkWaitingJobs();		
-      startReadyJobs();		
+      try {
+        checkRunningJobs();	
+        checkWaitingJobs();
+        startReadyJobs();
+      } catch (Exception e) {
+  	    this.runnerState = ThreadState.STOPPED;
+      }
       if (this.runnerState != ThreadState.RUNNING && 
           this.runnerState != ThreadState.SUSPENDED) {
         break;

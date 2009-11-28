@@ -56,6 +56,8 @@ import org.apache.hadoop.util.LineReader;
  */
 
 public class NLineInputFormat extends FileInputFormat<LongWritable, Text> { 
+  public static final String LINES_PER_MAP = 
+    "mapreduce.input.lineinputformat.linespermap";
 
   public RecordReader<LongWritable, Text> createRecordReader(
       InputSplit genericSplit, TaskAttemptContext context) 
@@ -136,8 +138,7 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text> {
    * @param numLines the number of lines per split
    */
   public static void setNumLinesPerSplit(Job job, int numLines) {
-    job.getConfiguration().setInt(
-      "mapred.line.input.format.linespermap", numLines);
+    job.getConfiguration().setInt(LINES_PER_MAP, numLines);
   }
 
   /**
@@ -146,7 +147,6 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text> {
    * @return the number of lines per split
    */
   public static int getNumLinesPerSplit(JobContext job) {
-    return job.getConfiguration().getInt(
-      "mapred.line.input.format.linespermap", 1);
+    return job.getConfiguration().getInt(LINES_PER_MAP, 1);
   }
 }

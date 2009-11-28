@@ -17,33 +17,18 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-
-/** A report on the state of a task. */
-public class TaskReport implements Writable {
-  private TaskID taskid;
-  private float progress;
-  private String state;
-  private String[] diagnostics;
-  private long startTime; 
-  private long finishTime; 
-  private Counters counters;
-  private TIPStatus currentStatus;
+/** A report on the state of a task. 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.TaskReport} instead
+ **/
+@Deprecated
+public class TaskReport extends org.apache.hadoop.mapreduce.TaskReport {
   
-  private Collection<TaskAttemptID> runningAttempts = 
-    new ArrayList<TaskAttemptID>();
-  private TaskAttemptID successfulAttempt = new TaskAttemptID();
   public TaskReport() {
-    taskid = new TaskID();
+    super();
   }
   
   /**
@@ -80,160 +65,83 @@ public class TaskReport implements Writable {
              String[] diagnostics, TIPStatus currentStatus, 
              long startTime, long finishTime,
              Counters counters) {
-    this.taskid = taskid;
-    this.progress = progress;
-    this.state = state;
-    this.diagnostics = diagnostics;
-    this.currentStatus = currentStatus;
-    this.startTime = startTime; 
-    this.finishTime = finishTime;
-    this.counters = counters;
-  }
-    
-  /** @deprecated use {@link #getTaskID()} instead */
-  @Deprecated
-  public String getTaskId() { return taskid.toString(); }
-  /** The id of the task. */
-  public TaskID getTaskID() { return taskid; }
-  /** The amount completed, between zero and one. */
-  public float getProgress() { return progress; }
-  /** The most recent state, reported by a {@link Reporter}. */
-  public String getState() { return state; }
-  /** A list of error messages. */
-  public String[] getDiagnostics() { return diagnostics; }
-  /** A table of counters. */
-  public Counters getCounters() { return counters; }
-  /** The current status */
-  public TIPStatus getCurrentStatus() {
-    return currentStatus;
+    super(taskid, progress, state, diagnostics, currentStatus, startTime,
+      finishTime, new org.apache.hadoop.mapreduce.Counters(counters));
   }
   
-  /**
-   * Get finish time of task. 
-   * @return 0, if finish time was not set else returns finish time.
-   */
-  public long getFinishTime() {
-    return finishTime;
+  static TaskReport downgrade(
+      org.apache.hadoop.mapreduce.TaskReport report) {
+    return new TaskReport(TaskID.downgrade(report.getTaskId()),
+      report.getProgress(), report.getState(), report.getDiagnostics(),
+      report.getCurrentStatus(), report.getStartTime(), report.getFinishTime(),
+      Counters.downgrade(report.getTaskCounters()));
   }
-
-  /** 
-   * set finish time of task. 
-   * @param finishTime finish time of task. 
-   */
-  void setFinishTime(long finishTime) {
-    this.finishTime = finishTime;
+  
+  static TaskReport[] downgradeArray(org.apache.hadoop.
+      mapreduce.TaskReport[] reports) {
+    List<TaskReport> ret = new ArrayList<TaskReport>();
+    for (org.apache.hadoop.mapreduce.TaskReport report : reports) {
+      ret.add(downgrade(report));
+    }
+    return ret.toArray(new TaskReport[0]);
   }
-
-  /**
-   * Get start time of task. 
-   * @return 0 if start time was not set, else start time. 
-   */
-  public long getStartTime() {
-    return startTime;
+  
+  /** The id of the task. */
+  public TaskID getTaskID() { return TaskID.downgrade(super.getTaskId()); }
+  
+  public Counters getCounters() { 
+    return Counters.downgrade(super.getTaskCounters()); 
   }
-
-  /** 
-   * set start time of the task. 
-   */ 
-  void setStartTime(long startTime) {
-    this.startTime = startTime;
-  }
-
+  
   /** 
    * set successful attempt ID of the task. 
    */ 
   public void setSuccessfulAttempt(TaskAttemptID t) {
-    successfulAttempt = t;
+    super.setSuccessfulAttemptId(t);
   }
   /**
    * Get the attempt ID that took this task to completion
    */
   public TaskAttemptID getSuccessfulTaskAttempt() {
-    return successfulAttempt;
+    return TaskAttemptID.downgrade(super.getSuccessfulTaskAttemptId());
   }
   /** 
    * set running attempt(s) of the task. 
    */ 
   public void setRunningTaskAttempts(
       Collection<TaskAttemptID> runningAttempts) {
-    this.runningAttempts = runningAttempts;
+    Collection<org.apache.hadoop.mapreduce.TaskAttemptID> attempts = 
+      new ArrayList<org.apache.hadoop.mapreduce.TaskAttemptID>();
+    for (TaskAttemptID id : runningAttempts) {
+      attempts.add(id);
+    }
+    super.setRunningTaskAttemptIds(attempts);
   }
   /**
    * Get the running task attempt IDs for this task
    */
   public Collection<TaskAttemptID> getRunningTaskAttempts() {
-    return runningAttempts;
-  }
-
-
-  @Override
-  public boolean equals(Object o) {
-    if(o == null)
-      return false;
-    if(o.getClass().equals(this.getClass())) {
-      TaskReport report = (TaskReport) o;
-      return counters.equals(report.getCounters())
-             && Arrays.toString(this.diagnostics)
-                      .equals(Arrays.toString(report.getDiagnostics()))
-             && this.finishTime == report.getFinishTime()
-             && this.progress == report.getProgress()
-             && this.startTime == report.getStartTime()
-             && this.state.equals(report.getState())
-             && this.taskid.equals(report.getTaskID());
+    Collection<TaskAttemptID> attempts = new ArrayList<TaskAttemptID>();
+    for (org.apache.hadoop.mapreduce.TaskAttemptID id : 
+         super.getRunningTaskAttemptIds()) {
+      attempts.add(TaskAttemptID.downgrade(id));
     }
-    return false; 
+    return attempts;
+  }
+  
+  /** 
+   * set finish time of task. 
+   * @param finishTime finish time of task. 
+   */
+  protected void setFinishTime(long finishTime) {
+    super.setFinishTime(finishTime);
   }
 
-  @Override
-  public int hashCode() {
-    return (counters.toString() + Arrays.toString(this.diagnostics) 
-            + this.finishTime + this.progress + this.startTime + this.state 
-            + this.taskid.toString()).hashCode();
-  }
-  //////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    taskid.write(out);
-    out.writeFloat(progress);
-    Text.writeString(out, state);
-    out.writeLong(startTime);
-    out.writeLong(finishTime);
-    WritableUtils.writeStringArray(out, diagnostics);
-    counters.write(out);
-    WritableUtils.writeEnum(out, currentStatus);
-    if (currentStatus == TIPStatus.RUNNING) {
-      WritableUtils.writeVInt(out, runningAttempts.size());
-      TaskAttemptID t[] = new TaskAttemptID[0];
-      t = runningAttempts.toArray(t);
-      for (int i = 0; i < t.length; i++) {
-        t[i].write(out);
-      }
-    } else if (currentStatus == TIPStatus.COMPLETE) {
-      successfulAttempt.write(out);
-    }
+  /** 
+   * set start time of the task. 
+   */ 
+  protected void setStartTime(long startTime) {
+    super.setStartTime(startTime);
   }
 
-  public void readFields(DataInput in) throws IOException {
-    this.taskid.readFields(in);
-    this.progress = in.readFloat();
-    this.state = Text.readString(in);
-    this.startTime = in.readLong(); 
-    this.finishTime = in.readLong();
-    
-    diagnostics = WritableUtils.readStringArray(in);
-    counters = new Counters();
-    counters.readFields(in);
-    currentStatus = WritableUtils.readEnum(in, TIPStatus.class);
-    if (currentStatus == TIPStatus.RUNNING) {
-      int num = WritableUtils.readVInt(in);    
-      for (int i = 0; i < num; i++) {
-        TaskAttemptID t = new TaskAttemptID();
-        t.readFields(in);
-        runningAttempts.add(t);
-      }
-    } else if (currentStatus == TIPStatus.COMPLETE) {
-      successfulAttempt.readFields(in);
-    }
-  }
 }

@@ -81,7 +81,7 @@ public class TestMapOutputType extends TestCase
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
     fs.delete(testdir, true);
-    conf.setInt("io.sort.mb", 1);
+    conf.setInt(JobContext.IO_SORT_MB, 1);
     conf.setInputFormat(SequenceFileInputFormat.class);
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);

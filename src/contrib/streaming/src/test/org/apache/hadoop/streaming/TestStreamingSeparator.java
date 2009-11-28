@@ -23,6 +23,7 @@ import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -36,7 +37,7 @@ public class TestStreamingSeparator extends TestCase
   protected File INPUT_FILE = new File("TestStreamingSeparator.input.txt");
   protected File OUTPUT_DIR = new File("TestStreamingSeparator.out");
   protected String input = "roses1are.red\nviolets1are.blue\nbunnies1are.pink\n";
-  // key.value.separator.in.input.line reads 1 as separator
+  // mapreduce.input.keyvaluelinerecordreader.key.value.separator reads 1 as separator
   // stream.map.input.field.separator uses 2 as separator
   // map behaves like "/usr/bin/tr 2 3"; (translate 2 to 3)
   protected String map = StreamUtil.makeJavaCommand(TrApp.class, new String[]{"2", "3"});
@@ -45,7 +46,7 @@ public class TestStreamingSeparator extends TestCase
   // reduce behaves like "/usr/bin/tr 3 4"; (translate 3 to 4)
   protected String reduce = StreamUtil.makeJavaCommand(TrAppReduce.class, new String[]{"3", "4"});
   // stream.reduce.output.field.separator recognize 4 as separator
-  // mapred.textoutputformat.separator outputs 5 as separator
+  // mapreduce.output.textoutputformat.separator outputs 5 as separator
   protected String outputExpect = "bunnies5are.pink\nroses5are.red\nviolets5are.blue\n";
 
   private StreamJob job;
@@ -73,15 +74,15 @@ public class TestStreamingSeparator extends TestCase
       "-reducer", reduce,
       //"-verbose",
       //"-jobconf", "stream.debug=set"
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
       "-inputformat", "KeyValueTextInputFormat",
-      "-jobconf", "key.value.separator.in.input.line=1",
+      "-jobconf", "mapreduce.input.keyvaluelinerecordreader.key.value.separator=1",
       "-jobconf", "stream.map.input.field.separator=2",
       "-jobconf", "stream.map.output.field.separator=3",
       "-jobconf", "stream.reduce.input.field.separator=3",
       "-jobconf", "stream.reduce.output.field.separator=4",
-      "-jobconf", "mapred.textoutputformat.separator=5",
+      "-jobconf", "mapreduce.output.textoutputformat.separator=5",
     };
   }
   
@@ -89,7 +90,7 @@ public class TestStreamingSeparator extends TestCase
   {
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -109,10 +110,12 @@ public class TestStreamingSeparator extends TestCase
     } catch(Exception e) {
       failTrace(e);
     } finally {
-      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
-      INPUT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
+      try {
+        INPUT_FILE.delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch (IOException e) {
+        failTrace(e);
+      }
     }
   }
 

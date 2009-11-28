@@ -21,7 +21,14 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.examples.RandomWriter;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 public class TestMapredHeartbeat extends TestCase {
   public void testJobDirCleanup() throws IOException {
@@ -42,7 +49,7 @@ public class TestMapredHeartbeat extends TestCase {
       
       // test configured heartbeat interval
       taskTrackers = 5;
-      conf.setInt("mapred.heartbeats.in.second", 1);
+      conf.setInt(JTConfig.JT_HEARTBEATS_IN_SECOND, 1);
       mr = new MiniMRCluster(taskTrackers, "file:///", 3, 
           null, null, conf);
       jc = new JobClient(mr.createJobConf());
@@ -55,7 +62,7 @@ public class TestMapredHeartbeat extends TestCase {
       
       // test configured heartbeat interval is capped with min value
       taskTrackers = 5;
-      conf.setInt("mapred.heartbeats.in.second", 10);
+      conf.setInt(JTConfig.JT_HEARTBEATS_IN_SECOND, 10);
       mr = new MiniMRCluster(taskTrackers, "file:///", 3, 
           null, null, conf);
       jc = new JobClient(mr.createJobConf());
@@ -68,6 +75,37 @@ public class TestMapredHeartbeat extends TestCase {
       if (mr != null) { mr.shutdown(); }
     }
   }
+  
+  public void testOutOfBandHeartbeats() throws Exception {
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    try {
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 4, true, null);
+      
+      int taskTrackers = 1;
+      JobConf jobConf = new JobConf();
+      jobConf.setFloat(JTConfig.JT_HEARTBEATS_SCALING_FACTOR, 30.0f);
+      jobConf.setBoolean(TTConfig.TT_OUTOFBAND_HEARBEAT, true);
+      mr = new MiniMRCluster(taskTrackers, 
+                             dfs.getFileSystem().getUri().toString(), 3, 
+                             null, null, jobConf);
+      long start = System.currentTimeMillis();
+      TestMiniMRDFSSort.runRandomWriter(mr.createJobConf(), new Path("rw"));
+      long end = System.currentTimeMillis();
+      
+      final int expectedRuntimeSecs = 120;
+      final int runTimeSecs = (int)((end-start) / 1000); 
+      System.err.println("Runtime is " + runTimeSecs);
+      assertEquals("Actual runtime " + runTimeSecs + "s not less than expected " +
+      		         "runtime of " + expectedRuntimeSecs + "s!", 
+                   true, (runTimeSecs <= 120));
+    } finally {
+      if (mr != null) { mr.shutdown(); }
+      if (dfs != null) { dfs.shutdown(); }
+    }
+  }
+  
 }
 
 

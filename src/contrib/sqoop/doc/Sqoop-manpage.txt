@@ -1,0 +1,193 @@
+sqoop(1)
+========
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+NAME
+----
+sqoop - SQL-to-Hadoop import tool
+
+SYNOPSIS
+--------
+'sqoop' <options>
+
+DESCRIPTION
+-----------
+Sqoop is a tool designed to help users of large data import existing
+relational databases into their Hadoop clusters. Sqoop uses JDBC to
+connect to a database, examine each table's schema, and auto-generate
+the necessary classes to import data into HDFS. It then instantiates
+a MapReduce job to read tables from the database via the DBInputFormat
+(JDBC-based InputFormat). Tables are read into a set of files loaded
+into HDFS. Both SequenceFile and text-based targets are supported. Sqoop
+also supports high-performance imports from select databases including MySQL.
+
+OPTIONS
+-------
+
+The +--connect+ option is always required. To perform an import, one of
++--table+ or +--all-tables+ is required as well. Alternatively, you can
+specify +--generate-only+ or one of the arguments in "Additional commands."
+
+
+Database connection options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+--connect (jdbc-uri)::
+  Specify JDBC connect string (required)
+
+--driver (class-name)::
+  Manually specify JDBC driver class to use
+
+--username (username)::
+  Set authentication username
+
+--password (password)::
+  Set authentication password
+  (Note: This is very insecure. You should use -P instead.)
+
+-P::
+  Prompt for user password
+
+--direct::
+  Use direct import fast path (mysql only)
+
+Import control options
+~~~~~~~~~~~~~~~~~~~~~~
+
+--all-tables::
+  Import all tables in database
+  (Ignores +--table+, +--columns+, +--order-by+, and +--where+)
+
+--columns (col,col,col...)::
+  Columns to export from table
+
+--split-by (column-name)::
+  Column of the table used to split the table for parallel import
+
+--hadoop-home (dir)::
+  Override $HADOOP_HOME
+
+--hive-home (dir)::
+  Override $HIVE_HOME
+
+--warehouse-dir (dir)::
+  Tables are uploaded to the HDFS path +/warehouse/dir/(tablename)/+
+
+--as-sequencefile::
+  Imports data to SequenceFiles
+
+--as-textfile::
+  Imports data as plain text (default)
+
+--hive-import::
+  If set, then import the table into Hive
+
+--table (table-name)::
+  The table to import
+
+--where (clause)::
+  Import only the rows for which _clause_ is true.
+  e.g.: `--where "user_id > 400 AND hidden == 0"`
+
+--compress::
+-z::
+  Uses gzip to compress data as it is written to HDFS
+
+--direct-split-size (size)::
+  When using direct mode, write to multiple files of
+  approximately _size_ bytes each.
+
+
+Output line formatting options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include::output-formatting.txt[]
+include::output-formatting-args.txt[]
+
+Input line parsing options
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+include::input-formatting.txt[]
+include::input-formatting-args.txt[]
+
+Code generation options
+~~~~~~~~~~~~~~~~~~~~~~~
+
+--bindir (dir)::
+  Output directory for compiled objects
+
+--class-name (name)::
+  Sets the name of the class to generate. By default, classes are
+  named after the table they represent. Using this parameters
+  ignores +--package-name+.
+
+--generate-only::
+  Stop after code generation; do not import
+
+--outdir (dir)::
+  Output directory for generated code
+
+--package-name (package)::
+  Puts auto-generated classes in the named Java package
+
+Additional commands
+~~~~~~~~~~~~~~~~~~~
+
+These commands cause Sqoop to report information and exit;
+no import or code generation is performed.
+
+--debug-sql (statement)::
+  Execute 'statement' in SQL and display the results
+
+--help::
+  Display usage information and exit
+
+--list-databases::
+  List all databases available and exit
+
+--list-tables::
+  List tables in database and exit
+
+Database-specific options
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Additional arguments may be passed to the database manager
+after a lone '-' on the command-line.
+
+In MySQL direct mode, additional arguments are passed directly to
+mysqldump.
+
+ENVIRONMENT
+-----------
+
+JAVA_HOME::
+  As part of its import process, Sqoop generates and compiles Java code
+  by invoking the Java compiler *javac*(1). As a result, JAVA_HOME must
+  be set to the location of your JDK (note: This cannot just be a JRE).
+  e.g., +/usr/java/default+. Hadoop (and Sqoop) requires Sun Java 1.6 which
+  can be downloaded from http://java.sun.com.
+
+HADOOP_HOME::
+  The location of the Hadoop jar files. If you installed Hadoop via RPM
+  or DEB, these are in +/usr/lib/hadoop-20+.
+
+HIVE_HOME::
+  If you are performing a Hive import, you must identify the location of
+  Hive's jars and configuration. If you installed Hive via RPM or DEB,
+  these are in +/usr/lib/hive+.
+

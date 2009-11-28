@@ -1,0 +1,58 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Importing Data Into Hive
+------------------------
+
+Sqoop's primary function is to upload your data into files in HDFS. If
+you have a Hive metastore associated with your HDFS cluster, Sqoop can
+also import the data into Hive by generating and executing a +CREATE
+TABLE+ statement to define the data's layout in Hive. Importing data
+into Hive is as simple as adding the *+--hive-import+* option to your
+Sqoop command line.
+
+After your data is imported into HDFS, Sqoop will generate a Hive
+script containing a +CREATE TABLE+ operation defining your columns using
+Hive's types, and a +LOAD DATA INPATH+ statement to move the data files
+into Hive's warehouse directory. The script will be executed by
+calling the installed copy of hive on the machine where Sqoop is run.
+If you have multiple Hive installations, or +hive+ is not in your
++$PATH+ use the *+--hive-home+* option to identify the Hive installation
+directory. Sqoop will use +$HIVE_HOME/bin/hive+ from here.
+
+NOTE: This function is incompatible with +--as-sequencefile+.
+
+Hive's text parser does not know how to support escaping or enclosing
+characters. Sqoop will print a warning if you use +--escaped-by+,
++--enclosed-by+, or +--optionally-enclosed-by+ since Hive does not know
+how to parse these. It will pass the field and record terminators through
+to Hive. If you do not set any delimiters and do use +--hive-import+,
+the field delimiter will be set to +^A+ and the record delimiter will
+be set to +\n+ to be consistent with Hive's defaults.
+
+Hive's Type System
+~~~~~~~~~~~~~~~~~~
+
+Hive users will note that there is not a one-to-one mapping between
+SQL types and Hive types. In general, SQL types that do not have a
+direct mapping (e.g., +DATE+, +TIME+, and +TIMESTAMP+) will be coerced to
++STRING+ in Hive. The +NUMERIC+ and +DECIMAL+ SQL types will be coerced to
++DOUBLE+. In these cases, Sqoop will emit a warning in its log messages
+informing you of the loss of precision.
+

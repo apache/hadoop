@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
@@ -71,7 +72,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
   @Override
   public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
-    padFraction = conf.getFloat("mapred.jobtracker.taskalloc.capacitypad", 
+    padFraction = conf.getFloat(JTConfig.JT_TASK_ALLOC_PAD_FRACTION, 
                                  0.01f);
     this.eagerTaskInitializationListener =
       new EagerTaskInitializationListener(conf);

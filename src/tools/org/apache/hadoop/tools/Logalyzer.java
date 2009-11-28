@@ -46,6 +46,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
+import org.apache.hadoop.mapreduce.lib.map.RegexMapper;
 
 /**
  * Logalyzer: A utility tool for archiving and analyzing hadoop logs.
@@ -64,7 +65,17 @@ import org.apache.hadoop.mapred.lib.LongSumReducer;
 public class Logalyzer {
   // Constants
   private static Configuration fsConfig = new Configuration();
+  public static String SORT_COLUMNS = 
+    "logalizer.logcomparator.sort.columns";
+  public static String COLUMN_SEPARATOR = 
+    "logalizer.logcomparator.column.separator";
   
+  static {
+    Configuration.addDeprecation("mapred.reducer.sort", 
+      new String[] {SORT_COLUMNS});
+    Configuration.addDeprecation("mapred.reducer.separator", 
+      new String[] {COLUMN_SEPARATOR});
+  }
   /** A {@link Mapper} that extracts text matching a regular expression. */
   public static class LogRegexMapper<K extends WritableComparable>
     extends MapReduceBase
@@ -73,7 +84,7 @@ public class Logalyzer {
     private Pattern pattern;
     
     public void configure(JobConf job) {
-      pattern = Pattern.compile(job.get("mapred.mapper.regex"));
+      pattern = Pattern.compile(job.get(RegexMapper.PATTERN));
     }
     
     public void map(K key, Text value,
@@ -105,13 +116,13 @@ public class Logalyzer {
       }
       
       //Initialize the specification for *comparision*
-      String sortColumns = this.conf.get("mapred.reducer.sort", null);
+      String sortColumns = this.conf.get(SORT_COLUMNS, null);
       if (sortColumns != null) {
         sortSpec = sortColumns.split(",");
       }
       
       //Column-separator
-      columnSeparator = this.conf.get("mapred.reducer.separator", "");
+      columnSeparator = this.conf.get(COLUMN_SEPARATOR, "");
     }
     
     public Configuration getConf() {
@@ -217,9 +228,9 @@ public class Logalyzer {
     grepJob.setInputFormat(TextInputFormat.class);
     
     grepJob.setMapperClass(LogRegexMapper.class);
-    grepJob.set("mapred.mapper.regex", grepPattern);
-    grepJob.set("mapred.reducer.sort", sortColumns);
-    grepJob.set("mapred.reducer.separator", columnSeparator);
+    grepJob.set(RegexMapper.PATTERN, grepPattern);
+    grepJob.set(SORT_COLUMNS, sortColumns);
+    grepJob.set(COLUMN_SEPARATOR, columnSeparator);
     
     grepJob.setCombinerClass(LongSumReducer.class);
     grepJob.setReducerClass(LongSumReducer.class);

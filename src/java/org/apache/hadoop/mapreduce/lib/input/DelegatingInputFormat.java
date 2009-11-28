@@ -119,17 +119,9 @@ public class DelegatingInputFormat<K, V> extends InputFormat<K, V> {
     return splits;
   }
 
-  @SuppressWarnings("unchecked")
+  @Override
   public RecordReader<K, V> createRecordReader(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
-
-    // Find the InputFormat and then the RecordReader from the
-    // TaggedInputSplit.
-    TaggedInputSplit taggedInputSplit = (TaggedInputSplit) split;
-    InputFormat<K, V> inputFormat = (InputFormat<K, V>) ReflectionUtils
-      .newInstance(taggedInputSplit.getInputFormatClass(),
-         context.getConfiguration());
-    return inputFormat.createRecordReader(taggedInputSplit.getInputSplit(),
-      context);
+    return new DelegatingRecordReader<K, V>(split, context);
   }
 }

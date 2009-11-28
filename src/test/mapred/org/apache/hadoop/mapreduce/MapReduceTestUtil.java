@@ -43,12 +43,13 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.OutputLogFilter;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -132,7 +133,7 @@ public class MapReduceTestUtil {
    */
   public static Job createCopyJob(Configuration conf, Path outdir, 
       Path... indirs) throws Exception {
-    conf.setInt("mapred.map.tasks", 3);
+    conf.setInt(JobContext.NUM_MAPS, 3);
     Job theJob = new Job(conf);
     theJob.setJobName("DataMoveJob");
 
@@ -158,7 +159,7 @@ public class MapReduceTestUtil {
   public static Job createFailJob(Configuration conf, Path outdir, 
       Path... indirs) throws Exception {
 
-    conf.setInt("mapred.map.max.attempts", 2);
+    conf.setInt(JobContext.MAP_MAX_ATTEMPTS, 2);
     Job theJob = new Job(conf);
     theJob.setJobName("Fail-Job");
 
@@ -213,7 +214,7 @@ public class MapReduceTestUtil {
     throws IOException, InterruptedException {
       Text dumbKey = new Text("");
       while (values.hasNext()) {
-        Text data = (Text) values.next();
+        Text data = values.next();
         context.write(dumbKey, data);
       }
     }
@@ -370,8 +371,8 @@ public class MapReduceTestUtil {
   public static TaskAttemptContext createDummyMapTaskAttemptContext(
       Configuration conf) {
     TaskAttemptID tid = new TaskAttemptID("jt", 1, TaskType.MAP, 0, 0);
-    conf.set("mapred.task.id", tid.toString());
-    return new TaskAttemptContext(conf, tid);    
+    conf.set(JobContext.TASK_ATTEMPT_ID, tid.toString());
+    return new TaskAttemptContextImpl(conf, tid);    
   }
 
   public static StatusReporter createDummyReporter() {
@@ -395,7 +396,7 @@ public class MapReduceTestUtil {
     StringBuffer result = new StringBuffer();
 
     Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
-           new OutputLogFilter()));
+           new Utils.OutputFileUtils.OutputFilesFilter()));
     for (Path outputFile : fileList) {
       LOG.info("Path" + ": "+ outputFile);
       BufferedReader file = 

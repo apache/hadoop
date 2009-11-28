@@ -17,26 +17,23 @@
  */
 package org.apache.hadoop.vaidya.statistics.job;
 
-import java.util.ArrayList;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobHistory;
-import org.apache.hadoop.mapred.JobHistory.JobInfo;
-import org.apache.hadoop.mapred.JobHistory.Keys;
-import org.apache.hadoop.mapred.Counters;
-import org.apache.hadoop.mapred.Counters.Counter;
 import java.text.ParseException;
-
-//import org.apache.hadoop.vaidya.statistics.job.JobStatisticsInterface.JobKeys;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Collections;
+import org.apache.hadoop.mapred.Counters;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapred.TaskStatus;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 
 /**
  *
@@ -65,7 +62,7 @@ public class JobStatistics implements JobStatisticsInterface {
   /*
    * Aggregated Job level counters 
    */
-  private JobHistory.JobInfo _jobInfo;
+  private JobHistoryParser.JobInfo _jobInfo;
   
   /*
    * Job stats 
@@ -152,8 +149,9 @@ public class JobStatistics implements JobStatisticsInterface {
     this._jobConf = jobConf;
     this._jobInfo = jobInfo;
     this._job = new Hashtable<Enum, String>();
-    populate_Job(this._job, this._jobInfo.getValues());  
-    populate_MapReduceTaskLists(this._mapTaskList, this._reduceTaskList, this._jobInfo.getAllTasks());
+    populate_Job(this._job, jobInfo);  
+    populate_MapReduceTaskLists(this._mapTaskList, this._reduceTaskList, 
+        jobInfo.getAllTasks());
 
     // Add the Job Type: MAP_REDUCE, MAP_ONLY
     if (getLongValue(JobKeys.TOTAL_REDUCES) == 0) {
@@ -167,120 +165,100 @@ public class JobStatistics implements JobStatisticsInterface {
    * 
    */
   private void populate_MapReduceTaskLists (ArrayList<MapTaskStatistics> mapTaskList, 
-                              ArrayList<ReduceTaskStatistics> reduceTaskList, 
-                              java.util.Map<String, JobHistory.Task> taskMap) throws ParseException {
-    /*
-     * 
-     */
+                     ArrayList<ReduceTaskStatistics> reduceTaskList, 
+                     Map<TaskID, TaskInfo> taskMap)
+  throws ParseException {
     int num_tasks = taskMap.entrySet().size();
-    java.util.Iterator<Map.Entry<String, JobHistory.Task>> ti = taskMap.entrySet().iterator();
-    for (int i = 0; i < num_tasks; i++)
-    {
-      Map.Entry<String, JobHistory.Task> entry = (Map.Entry<String, JobHistory.Task>) ti.next();
-      JobHistory.Task task = entry.getValue();
-      if (task.get(Keys.TASK_TYPE).equals("MAP")) {
-      MapTaskStatistics mapT = new MapTaskStatistics();
-      java.util.Map<JobHistory.Keys, String> mapTask = task.getValues();
-      java.util.Map<JobHistory.Keys, String> successTaskAttemptMap  =  getLastSuccessfulTaskAttempt(task);
-      // NOTE: Following would lead to less number of actual tasks collected in the tasklist array
-      if (successTaskAttemptMap != null) {
-        mapTask.putAll(successTaskAttemptMap);
-      } else {
-        System.err.println("Task:<"+task.get(Keys.TASKID)+"> is not successful - SKIPPING");
-      }
-      int size = mapTask.size();
-      java.util.Iterator<Map.Entry<JobHistory.Keys, String>> kv = mapTask.entrySet().iterator();
-      for (int j = 0; j < size; j++)
-      {
-        Map.Entry<JobHistory.Keys, String> mtc = kv.next();
-        JobHistory.Keys key = mtc.getKey();
-        String value = mtc.getValue();
-        //System.out.println("JobHistory.MapKeys."+key+": "+value);
-        switch (key) {
-        case TASKID: mapT.setValue(MapTaskKeys.TASK_ID, value); break;
-        case TASK_ATTEMPT_ID: mapT.setValue(MapTaskKeys.ATTEMPT_ID, value); break;
-        case HOSTNAME: mapT.setValue(MapTaskKeys.HOSTNAME, value); break;
-        case TASK_TYPE: mapT.setValue(MapTaskKeys.TASK_TYPE, value); break;
-        case TASK_STATUS: mapT.setValue(MapTaskKeys.STATUS, value); break;
-        case START_TIME: mapT.setValue(MapTaskKeys.START_TIME, value); break;
-        case FINISH_TIME: mapT.setValue(MapTaskKeys.FINISH_TIME, value); break;
-        case SPLITS: mapT.setValue(MapTaskKeys.SPLITS, value); break;
-        case TRACKER_NAME: mapT.setValue(MapTaskKeys.TRACKER_NAME, value); break;
-        case STATE_STRING: mapT.setValue(MapTaskKeys.STATE_STRING, value); break;
-        case HTTP_PORT: mapT.setValue(MapTaskKeys.HTTP_PORT, value); break;
-        case ERROR: mapT.setValue(MapTaskKeys.ERROR, value); break;
-        case COUNTERS:
-          value.concat(",");
-          parseAndAddMapTaskCounters(mapT, value);
-          mapTaskList.add(mapT);
-          break;
-        default: System.err.println("JobHistory.MapKeys."+key+" : NOT INCLUDED IN PERFORMANCE ADVISOR MAP COUNTERS");
-          break;
-        }
-      }
-      
-      // Add number of task attempts
-      mapT.setValue(MapTaskKeys.NUM_ATTEMPTS, (new Integer(task.getTaskAttempts().size())).toString());
-
-      // Add EXECUTION_TIME = FINISH_TIME - START_TIME
-      long etime = mapT.getLongValue(MapTaskKeys.FINISH_TIME) - mapT.getLongValue(MapTaskKeys.START_TIME);
-      mapT.setValue(MapTaskKeys.EXECUTION_TIME, (new Long(etime)).toString());
-      
-      }else if (task.get(Keys.TASK_TYPE).equals("REDUCE")) {
-
-        ReduceTaskStatistics reduceT = new ReduceTaskStatistics();
-        java.util.Map<JobHistory.Keys, String> reduceTask = task.getValues();
-        java.util.Map<JobHistory.Keys, String> successTaskAttemptMap  =  getLastSuccessfulTaskAttempt(task);
-        // NOTE: Following would lead to less number of actual tasks collected in the tasklist array
-        if (successTaskAttemptMap != null) {
-          reduceTask.putAll(successTaskAttemptMap);
-        } else {
-          System.err.println("Task:<"+task.get(Keys.TASKID)+"> is not successful - SKIPPING");
-        }
-        int size = reduceTask.size();
-        java.util.Iterator<Map.Entry<JobHistory.Keys, String>> kv = reduceTask.entrySet().iterator();
-        for (int j = 0; j < size; j++)
-        {
-          Map.Entry<JobHistory.Keys, String> rtc = kv.next();
-          JobHistory.Keys key = rtc.getKey();
-          String value = rtc.getValue();
-          //System.out.println("JobHistory.ReduceKeys."+key+": "+value);
-          switch (key) {
-          case TASKID: reduceT.setValue(ReduceTaskKeys.TASK_ID, value); break;
-          case TASK_ATTEMPT_ID: reduceT.setValue(ReduceTaskKeys.ATTEMPT_ID, value); break;
-          case HOSTNAME: reduceT.setValue(ReduceTaskKeys.HOSTNAME, value); break;
-          case TASK_TYPE: reduceT.setValue(ReduceTaskKeys.TASK_TYPE, value); break;
-          case TASK_STATUS: reduceT.setValue(ReduceTaskKeys.STATUS, value); break;
-          case START_TIME: reduceT.setValue(ReduceTaskKeys.START_TIME, value); break;
-          case FINISH_TIME: reduceT.setValue(ReduceTaskKeys.FINISH_TIME, value); break;
-          case SHUFFLE_FINISHED: reduceT.setValue(ReduceTaskKeys.SHUFFLE_FINISH_TIME, value); break;
-          case SORT_FINISHED: reduceT.setValue(ReduceTaskKeys.SORT_FINISH_TIME, value); break;
-          case SPLITS: reduceT.setValue(ReduceTaskKeys.SPLITS, value); break;
-          case TRACKER_NAME: reduceT.setValue(ReduceTaskKeys.TRACKER_NAME, value); break;
-          case STATE_STRING: reduceT.setValue(ReduceTaskKeys.STATE_STRING, value); break;
-          case HTTP_PORT: reduceT.setValue(ReduceTaskKeys.HTTP_PORT, value); break;
-          case COUNTERS:
-            value.concat(",");
-            parseAndAddReduceTaskCounters(reduceT, value);
-            reduceTaskList.add(reduceT);
-            break;
-          default: System.err.println("JobHistory.ReduceKeys."+key+" : NOT INCLUDED IN PERFORMANCE ADVISOR REDUCE COUNTERS");
-            break;
-          }
-        }
+// DO we need these lists?
+//    List<TaskAttemptInfo> successfulMapAttemptList = 
+//      new ArrayList<TaskAttemptInfo>();
+//    List<TaskAttemptInfo> successfulReduceAttemptList = 
+//      new ArrayList<TaskAttemptInfo>();
+    for (JobHistoryParser.TaskInfo taskInfo: taskMap.values()) {
+      if (taskInfo.getTaskType().equals(TaskType.MAP)) {
+        MapTaskStatistics mapT = new MapTaskStatistics();
+        TaskAttemptInfo successfulAttempt  =  
+          getLastSuccessfulTaskAttempt(taskInfo);
+        mapT.setValue(MapTaskKeys.TASK_ID, 
+            successfulAttempt.getAttemptId().getTaskID().toString()); 
+        mapT.setValue(MapTaskKeys.ATTEMPT_ID, 
+            successfulAttempt.getAttemptId().toString()); 
+        mapT.setValue(MapTaskKeys.HOSTNAME, 
+            successfulAttempt.getTrackerName()); 
+        mapT.setValue(MapTaskKeys.TASK_TYPE, 
+            successfulAttempt.getTaskType().toString()); 
+        mapT.setValue(MapTaskKeys.STATUS, 
+            successfulAttempt.getTaskStatus().toString()); 
+        mapT.setValue(MapTaskKeys.START_TIME, successfulAttempt.getStartTime()); 
+        mapT.setValue(MapTaskKeys.FINISH_TIME, successfulAttempt.getFinishTime()); 
+        mapT.setValue(MapTaskKeys.SPLITS, taskInfo.getSplitLocations()); 
+        mapT.setValue(MapTaskKeys.TRACKER_NAME, successfulAttempt.getTrackerName()); 
+        mapT.setValue(MapTaskKeys.STATE_STRING, successfulAttempt.getState()); 
+        mapT.setValue(MapTaskKeys.HTTP_PORT, successfulAttempt.getHttpPort()); 
+        mapT.setValue(MapTaskKeys.ERROR, successfulAttempt.getError()); 
+        parseAndAddMapTaskCounters(mapT, 
+            successfulAttempt.getCounters().toString());
+        mapTaskList.add(mapT);
 
         // Add number of task attempts
-        reduceT.setValue(ReduceTaskKeys.NUM_ATTEMPTS, (new Integer(task.getTaskAttempts().size())).toString());
+        mapT.setValue(MapTaskKeys.NUM_ATTEMPTS, 
+            (new Integer(taskInfo.getAllTaskAttempts().size())).toString());
 
         // Add EXECUTION_TIME = FINISH_TIME - START_TIME
-        long etime1 = reduceT.getLongValue(ReduceTaskKeys.FINISH_TIME) - reduceT.getLongValue(ReduceTaskKeys.START_TIME);
-        reduceT.setValue(ReduceTaskKeys.EXECUTION_TIME, (new Long(etime1)).toString());
+        long etime = mapT.getLongValue(MapTaskKeys.FINISH_TIME) - 
+          mapT.getLongValue(MapTaskKeys.START_TIME);
+        mapT.setValue(MapTaskKeys.EXECUTION_TIME, (new Long(etime)).toString());
 
-      } else if (task.get(Keys.TASK_TYPE).equals("CLEANUP") ||
-                 task.get(Keys.TASK_TYPE).equals("SETUP")) {
+      }else if (taskInfo.getTaskType().equals(TaskType.REDUCE)) {
+
+        ReduceTaskStatistics reduceT = new ReduceTaskStatistics();
+        TaskAttemptInfo successfulAttempt  = 
+          getLastSuccessfulTaskAttempt(taskInfo);
+        reduceT.setValue(ReduceTaskKeys.TASK_ID,
+            successfulAttempt.getAttemptId().getTaskID().toString()); 
+        reduceT.setValue(ReduceTaskKeys.ATTEMPT_ID,
+            successfulAttempt.getAttemptId().toString()); 
+        reduceT.setValue(ReduceTaskKeys.HOSTNAME,
+            successfulAttempt.getTrackerName()); 
+        reduceT.setValue(ReduceTaskKeys.TASK_TYPE, 
+            successfulAttempt.getTaskType().toString()); 
+        reduceT.setValue(ReduceTaskKeys.STATUS, 
+            successfulAttempt.getTaskStatus().toString()); 
+        reduceT.setValue(ReduceTaskKeys.START_TIME,
+            successfulAttempt.getStartTime()); 
+        reduceT.setValue(ReduceTaskKeys.FINISH_TIME,
+            successfulAttempt.getFinishTime()); 
+        reduceT.setValue(ReduceTaskKeys.SHUFFLE_FINISH_TIME,
+            successfulAttempt.getShuffleFinishTime()); 
+        reduceT.setValue(ReduceTaskKeys.SORT_FINISH_TIME,
+            successfulAttempt.getSortFinishTime()); 
+        reduceT.setValue(ReduceTaskKeys.SPLITS, ""); 
+        reduceT.setValue(ReduceTaskKeys.TRACKER_NAME,
+            successfulAttempt.getTrackerName()); 
+        reduceT.setValue(ReduceTaskKeys.STATE_STRING,
+            successfulAttempt.getState()); 
+        reduceT.setValue(ReduceTaskKeys.HTTP_PORT,
+            successfulAttempt.getHttpPort()); 
+        parseAndAddReduceTaskCounters(reduceT,
+            successfulAttempt.getCounters().toString());
+
+        reduceTaskList.add(reduceT);
+
+        // Add number of task attempts
+        reduceT.setValue(ReduceTaskKeys.NUM_ATTEMPTS, 
+            (new Integer(taskInfo.getAllTaskAttempts().size())).toString());
+
+        // Add EXECUTION_TIME = FINISH_TIME - START_TIME
+        long etime1 = reduceT.getLongValue(ReduceTaskKeys.FINISH_TIME) - 
+        reduceT.getLongValue(ReduceTaskKeys.START_TIME);
+        reduceT.setValue(ReduceTaskKeys.EXECUTION_TIME,
+            (new Long(etime1)).toString());
+
+      } else if (taskInfo.getTaskType().equals(TaskType.JOB_CLEANUP) ||
+                 taskInfo.getTaskType().equals(TaskType.JOB_SETUP)) {
         //System.out.println("INFO: IGNORING TASK TYPE : "+task.get(Keys.TASK_TYPE));
       } else {
-        System.err.println("UNKNOWN TASK TYPE : "+task.get(Keys.TASK_TYPE));
+        System.err.println("UNKNOWN TASK TYPE : "+taskInfo.getTaskType());
       }
     }
   }
@@ -288,61 +266,39 @@ public class JobStatistics implements JobStatisticsInterface {
   /*
    * Get last successful task attempt to be added in the stats
    */
-  private java.util.Map<JobHistory.Keys, String> getLastSuccessfulTaskAttempt(JobHistory.Task task) {
+  private TaskAttemptInfo getLastSuccessfulTaskAttempt(TaskInfo task) {
     
-    Map<String, JobHistory.TaskAttempt> taskAttempts = task.getTaskAttempts();
-    int size = taskAttempts.size();
-    java.util.Iterator<Map.Entry<String, JobHistory.TaskAttempt>> kv = taskAttempts.entrySet().iterator();
-    for (int i=0; i<size; i++) {
-      // CHECK_IT: Only one SUCCESSFUL TASK ATTEMPT
-      Map.Entry<String, JobHistory.TaskAttempt> tae = kv.next();
-      JobHistory.TaskAttempt attempt = tae.getValue();
-      if (attempt.getValues().get(JobHistory.Keys.TASK_STATUS).equals("SUCCESS")) {
-        return attempt.getValues();
+    for (TaskAttemptInfo ai: task.getAllTaskAttempts().values()) {
+      if (ai.getTaskStatus().equals(TaskStatus.State.SUCCEEDED.toString())) {
+        return ai;
       }
     }
-    
     return null;
   }
   
   /*
    * Popuate the job stats 
    */
-  private void populate_Job (Hashtable<Enum, String> job, java.util.Map<JobHistory.Keys, String> jobC) throws ParseException {
-    int size = jobC.size(); 
-    java.util.Iterator<Map.Entry<JobHistory.Keys, String>> kv = jobC.entrySet().iterator();
-    for (int i = 0; i < size; i++)
-    {
-      Map.Entry<JobHistory.Keys, String> entry = (Map.Entry<JobHistory.Keys, String>) kv.next();
-      JobHistory.Keys key = entry.getKey();
-      String value = entry.getValue();
-      //System.out.println("JobHistory.JobKeys."+key+": "+value);
-      switch (key) {
-      case JOBTRACKERID: job.put(JobKeys.JOBTRACKERID, value); break;
-      case FINISH_TIME: job.put(JobKeys.FINISH_TIME, value); break;
-      case JOBID: job.put(JobKeys.JOBID, value); break;
-      case JOBNAME: job.put(JobKeys.JOBNAME, value); break;
-      case USER: job.put(JobKeys.USER, value); break;
-      case JOBCONF: job.put(JobKeys.JOBCONF, value); break;
-      case SUBMIT_TIME: job.put(JobKeys.SUBMIT_TIME, value); break;
-      case LAUNCH_TIME: job.put(JobKeys.LAUNCH_TIME, value); break;
-      case TOTAL_MAPS: job.put(JobKeys.TOTAL_MAPS, value); break;
-      case TOTAL_REDUCES: job.put(JobKeys.TOTAL_REDUCES, value); break;
-      case FAILED_MAPS: job.put(JobKeys.FAILED_MAPS, value); break;
-      case FAILED_REDUCES: job.put(JobKeys.FAILED_REDUCES, value); break;
-      case FINISHED_MAPS: job.put(JobKeys.FINISHED_MAPS, value); break;
-      case FINISHED_REDUCES: job.put(JobKeys.FINISHED_REDUCES, value); break;
-      case JOB_STATUS: job.put(JobKeys.STATUS, value); break;
-      case JOB_PRIORITY: job.put(JobKeys.JOB_PRIORITY, value); break;
-      case COUNTERS:
-        value.concat(",");
-        parseAndAddJobCounters(job, value);
-        break;
-      default:   System.err.println("JobHistory.Keys."+key+" : NOT INCLUDED IN PERFORMANCE ADVISOR COUNTERS");
-               break;
-      }
-    }
+  private void populate_Job (Hashtable<Enum, String> job, JobInfo jobInfo) throws ParseException {
+    job.put(JobKeys.FINISH_TIME, String.valueOf(jobInfo.getFinishTime()));
+    job.put(JobKeys.JOBID, jobInfo.getJobId().toString()); 
+    job.put(JobKeys.JOBNAME, jobInfo.getJobname()); 
+    job.put(JobKeys.USER, jobInfo.getUsername()); 
+    job.put(JobKeys.JOBCONF, jobInfo.getJobConfPath()); 
+    job.put(JobKeys.SUBMIT_TIME, String.valueOf(jobInfo.getSubmitTime())); 
+    job.put(JobKeys.LAUNCH_TIME, String.valueOf(jobInfo.getLaunchTime())); 
+    job.put(JobKeys.TOTAL_MAPS, String.valueOf(jobInfo.getTotalMaps())); 
+    job.put(JobKeys.TOTAL_REDUCES, String.valueOf(jobInfo.getTotalReduces())); 
+    job.put(JobKeys.FAILED_MAPS, String.valueOf(jobInfo.getFailedMaps())); 
+    job.put(JobKeys.FAILED_REDUCES, String.valueOf(jobInfo.getFailedReduces())); 
+    job.put(JobKeys.FINISHED_MAPS, String.valueOf(jobInfo.getFinishedMaps())); 
+    job.put(JobKeys.FINISHED_REDUCES, 
+        String.valueOf(jobInfo.getFinishedReduces())); 
+    job.put(JobKeys.STATUS, jobInfo.getJobStatus().toString()); 
+    job.put(JobKeys.JOB_PRIORITY, jobInfo.getPriority()); 
+    parseAndAddJobCounters(job, jobInfo.getTotalCounters().toString());
   }
+  
   
   /*
    * Parse and add the job counters

@@ -263,7 +263,7 @@ class ControlledMapReduceJob extends Configured implements Tool,
       signalFileDir = new Path(conf.get("signal.dir.path"));
       numReducers = conf.getNumReduceTasks();
       fs = FileSystem.get(conf);
-      String taskAttemptId = conf.get("mapred.task.id");
+      String taskAttemptId = conf.get(JobContext.TASK_ATTEMPT_ID);
       if (taskAttemptId != null) {
         TaskAttemptID taskAttemptID = TaskAttemptID.forName(taskAttemptId);
         taskNumber = taskAttemptID.getTaskID().getId();
@@ -421,7 +421,7 @@ class ControlledMapReduceJob extends Configured implements Tool,
 
     // Set the following for reduce tasks to be able to be started running
     // immediately along with maps.
-    conf.set("mapred.reduce.slowstart.completed.maps", String.valueOf(0));
+    conf.set(JobContext.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, String.valueOf(0));
 
     return conf;
   }

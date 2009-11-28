@@ -34,6 +34,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -66,7 +67,7 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
 
     // use WordCount example
     FileSystem.setDefaultUri(conf, fileSys);
-    conf.set("mapred.job.tracker", jobTracker);
+    conf.set(JTConfig.JT_IPC_ADDRESS, jobTracker);
     conf.setJobName("foo");
 
     conf.setInputFormat(TextInputFormat.class);

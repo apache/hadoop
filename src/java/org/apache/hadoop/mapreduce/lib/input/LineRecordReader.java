@@ -24,10 +24,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.SplitCompressionInputStream;
+import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.mapreduce.Counter;
@@ -38,12 +41,15 @@ import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.util.LineReader;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.fs.Seekable;
 
 /**
  * Treats keys as offset in file and value as line. 
  */
 public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private static final Log LOG = LogFactory.getLog(LineRecordReader.class);
+  public static final String MAX_LINE_LENGTH = 
+    "mapreduce.input.linerecordreader.line.maxlength";
 
   private CompressionCodecFactory compressionCodecs = null;
   private long start;
@@ -51,6 +57,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private long end;
   private LineReader in;
   private FSDataInputStream fileIn;
+  private Seekable filePosition;
   private int maxLineLength;
   private LongWritable key = null;
   private Text value = null;
@@ -64,8 +71,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     inputByteCounter = ((MapContext)context).getCounter(
       FileInputFormat.COUNTER_GROUP, FileInputFormat.BYTES_READ);
     Configuration job = context.getConfiguration();
-    this.maxLineLength = job.getInt("mapred.linerecordreader.maxlength",
-                                    Integer.MAX_VALUE);
+    this.maxLineLength = job.getInt(MAX_LINE_LENGTH, Integer.MAX_VALUE);
     start = split.getStart();
     end = start + split.getLength();
     final Path file = split.getPath();
@@ -73,40 +79,57 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     codec = compressionCodecs.getCodec(file);
 
     // open the file and seek to the start of the split
-    FileSystem fs = file.getFileSystem(job);
-    fileIn = fs.open(split.getPath());
+    final FileSystem fs = file.getFileSystem(job);
+    fileIn = fs.open(file);
     if (isCompressedInput()) {
       decompressor = CodecPool.getDecompressor(codec);
-      in = new LineReader(codec.createInputStream(fileIn, decompressor), job);
+      if (codec instanceof SplittableCompressionCodec) {
+        final SplitCompressionInputStream cIn =
+          ((SplittableCompressionCodec)codec).createInputStream(
+            fileIn, decompressor, start, end,
+            SplittableCompressionCodec.READ_MODE.BYBLOCK);
+        in = new LineReader(cIn, job);
+        start = cIn.getAdjustedStart();
+        end = cIn.getAdjustedEnd();
+        filePosition = cIn;
+      } else {
+        in = new LineReader(codec.createInputStream(fileIn, decompressor), job);
+        filePosition = fileIn;
+      }
     } else {
       fileIn.seek(start);
       in = new LineReader(fileIn, job);
+      filePosition = fileIn;
     }
     // If this is not the first split, we always throw away first record
     // because we always (except the last split) read one extra line in
     // next() method.
     if (start != 0) {
-      start += in.readLine(new Text(), 0, maxBytesToConsume());
+      start += in.readLine(new Text(), 0, maxBytesToConsume(start));
     }
     this.pos = start;
   }
   
-  private boolean isCompressedInput() { return (codec != null); }
-  
-  private int maxBytesToConsume() {
-    return (isCompressedInput()) ? Integer.MAX_VALUE
-                           : (int) Math.min(Integer.MAX_VALUE, (end - start));
+  private boolean isCompressedInput() {
+    return (codec != null);
   }
-  
+
+  private int maxBytesToConsume(long pos) {
+    return isCompressedInput()
+      ? Integer.MAX_VALUE
+      : (int) Math.min(Integer.MAX_VALUE, end - pos);
+  }
+
   private long getFilePosition() throws IOException {
     long retVal;
-    if (isCompressedInput()) {
-      retVal = fileIn.getPos();
+    if (isCompressedInput() && null != filePosition) {
+      retVal = filePosition.getPos();
     } else {
       retVal = pos;
     }
     return retVal;
   }
+
   public boolean nextKeyValue() throws IOException {
     if (key == null) {
       key = new LongWritable();
@@ -120,7 +143,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     // split limit i.e. (end - 1)
     while (getFilePosition() <= end) {
       newSize = in.readLine(value, maxLineLength,
-                            Math.max(maxBytesToConsume(), maxLineLength));
+          Math.max(maxBytesToConsume(pos), maxLineLength));
       if (newSize == 0) {
         break;
       }

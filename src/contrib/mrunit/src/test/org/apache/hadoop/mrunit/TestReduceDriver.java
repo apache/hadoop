@@ -22,13 +22,17 @@ import static org.apache.hadoop.mrunit.testutil.ExtendedAssert.assertListEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.mrunit.types.Pair;
 import org.junit.Before;
@@ -221,6 +225,46 @@ public class TestReduceDriver extends TestCase {
     } catch (RuntimeException re) {
       // expected.
     }
+  }
+
+  /**
+   * Reducer that counts its values twice; the second iteration
+   * according to mapreduce semantics should be empty.
+   */
+  private static class DoubleIterReducer<K, V>
+      extends MapReduceBase implements Reducer<K, V, K, LongWritable> {
+    public void reduce(K key, Iterator<V> values,
+        OutputCollector<K, LongWritable> out, Reporter r) throws IOException {
+      long count = 0;
+
+      while (values.hasNext()) {
+        count++;
+        values.next();
+      }
+
+      // This time around, iteration should yield no values.
+      while (values.hasNext()) {
+        count++;
+        values.next();
+      }
+      out.collect(key, new LongWritable(count));
+    }
+  }
+
+  @Test
+  public void testDoubleIteration() {
+    reducer = new DoubleIterReducer<Text, LongWritable>();
+    driver = new ReduceDriver<Text, LongWritable, Text, LongWritable>(
+        reducer);
+
+    driver
+        .withInputKey(new Text("foo"))
+        .withInputValue(new LongWritable(1))
+        .withInputValue(new LongWritable(1))
+        .withInputValue(new LongWritable(1))
+        .withInputValue(new LongWritable(1))
+        .withOutput(new Text("foo"), new LongWritable(4))
+        .runTest();
   }
 }
 

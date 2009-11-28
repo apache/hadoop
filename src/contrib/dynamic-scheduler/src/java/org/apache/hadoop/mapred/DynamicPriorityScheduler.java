@@ -18,15 +18,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -77,7 +71,7 @@ class DynamicPriorityScheduler extends TaskScheduler {
     Allocations(Configuration conf, QueueManager queueManager) {
       this.conf = conf;
       this.queueManager = queueManager;
-      this.infoQueues = queueManager.getQueues();
+      this.infoQueues = queueManager.getLeafQueueNames();
       
       this.store = ReflectionUtils.newInstance(
           conf.getClass(PrioritySchedulerOptions.DYNAMIC_SCHEDULER_STORE,
@@ -237,7 +231,7 @@ class DynamicPriorityScheduler extends TaskScheduler {
     long interval = conf.getLong(PrioritySchedulerOptions.DYNAMIC_SCHEDULER_ALLOC_INTERVAL,20)*1000;
      
     timer.scheduleAtFixedRate(allocations, interval, interval);   
-    for (String queue: queueManager.getQueues()) {
+    for (String queue: queueManager.getLeafQueueNames()) {
       Object info = queueManager.getSchedulerInfo(queue);
       QueueInfo queueInfo = new QueueInfo(queue, info, allocations); 
       queueManager.setSchedulerInfo(queue, queueInfo);

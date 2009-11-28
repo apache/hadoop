@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred.lib;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
+import org.apache.hadoop.mapreduce.JobContext;
 
 /**
  * This comparator implementation provides a subset of the features provided
@@ -33,8 +34,8 @@ import org.apache.hadoop.mapred.JobConfigurable;
  *  character. If '.c' is omitted from pos1, it defaults to 1 (the beginning
  *  of the field); if omitted from pos2, it defaults to 0 (the end of the
  *  field). opts are ordering options (any of 'nr' as described above). 
- * We assume that the fields in the key are separated by 
- * map.output.key.field.separator.
+ * We assume that the fields in the key are separated by
+ * {@link JobContext#MAP_OUTPUT_KEY_FIELD_SEPERATOR} 
  * @deprecated Use 
  * {@link org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator} 
  * instead

@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -83,7 +84,7 @@ public class ReliabilityTest extends Configured implements Tool {
   
   public int run(String[] args) throws Exception {
     Configuration conf = getConf();
-    if ("local".equals(conf.get("mapred.job.tracker", "local"))) {
+    if ("local".equals(conf.get(JTConfig.JT_IPC_ADDRESS, "local"))) {
       displayUsage();
     }
     String[] otherArgs = 
@@ -103,8 +104,8 @@ public class ReliabilityTest extends Configured implements Tool {
     
     //to protect against the case of jobs failing even when multiple attempts
     //fail, set some high values for the max attempts
-    conf.setInt("mapred.map.max.attempts", 10);
-    conf.setInt("mapred.reduce.max.attempts", 10);
+    conf.setInt(JobContext.MAP_MAX_ATTEMPTS, 10);
+    conf.setInt(JobContext.REDUCE_MAX_ATTEMPTS, 10);
     runSleepJobTest(new JobClient(new JobConf(conf)), conf);
     runSortJobTests(new JobClient(new JobConf(conf)), conf);
     return 0;
@@ -122,7 +123,7 @@ public class ReliabilityTest extends Configured implements Tool {
         "-r", Integer.toString(maxReduces),
         "-mt", Integer.toString(mapSleepTime),
         "-rt", Integer.toString(reduceSleepTime)};
-    runTest(jc, conf, "org.apache.hadoop.examples.SleepJob", sleepJobArgs, 
+    runTest(jc, conf, "org.apache.hadoop.mapreduce.SleepJob", sleepJobArgs, 
         new KillTaskThread(jc, 2, 0.2f, false, 2),
         new KillTrackerThread(jc, 2, 0.4f, false, 1));
     LOG.info("SleepJob done");

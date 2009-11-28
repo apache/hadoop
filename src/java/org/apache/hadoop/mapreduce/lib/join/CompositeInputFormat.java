@@ -121,7 +121,7 @@ public class CompositeInputFormat<K extends WritableComparable>
   public List<InputSplit> getSplits(JobContext job) 
       throws IOException, InterruptedException {
     setFormat(job.getConfiguration());
-    job.getConfiguration().setLong("mapred.min.split.size", Long.MAX_VALUE);
+    job.getConfiguration().setLong("mapreduce.input.fileinputformat.split.minsize", Long.MAX_VALUE);
     return root.getSplits(job);
   }
 

@@ -81,8 +81,8 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  *       private int noRecords = 0;
  *       
  *       public void configure(JobConf job) {
- *         mapTaskId = job.get("mapred.task.id");
- *         inputFile = job.get("map.input.file");
+ *         mapTaskId = job.get(JobContext.TASK_ATTEMPT_ID);
+ *         inputFile = job.get(JobContext.MAP_INPUT_FILE);
  *       }
  *       
  *       public void map(K key, V val,
@@ -145,8 +145,8 @@ public interface Mapper<K1, V1, K2, V2> extends JobConfigurable, Closeable {
    * takes an insignificant amount of time to process individual key/value 
    * pairs, this is crucial since the framework might assume that the task has 
    * timed-out and kill that task. The other way of avoiding this is to set 
-   * <a href="{@docRoot}/../mapred-default.html#mapred.task.timeout">
-   * mapred.task.timeout</a> to a high-enough value (or even zero for no 
+   * <a href="{@docRoot}/../mapred-default.html#mapreduce.task.timeout">
+   * mapreduce.task.timeout</a> to a high-enough value (or even zero for no 
    * time-outs).</p>
    * 
    * @param key the input key.

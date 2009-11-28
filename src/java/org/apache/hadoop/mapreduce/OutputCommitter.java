@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
-
 /**
  * <code>OutputCommitter</code> describes the commit of task output for a 
  * Map-Reduce job.
@@ -69,9 +68,38 @@ public abstract class OutputCommitter {
    * 
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException
+   * @deprecated Use {@link #commitJob(JobContext)} or
+   *                 {@link #abortJob(JobContext, JobStatus.State)} instead.
    */
-  public abstract void cleanupJob(JobContext jobContext) throws IOException;
+  @Deprecated
+  public void cleanupJob(JobContext jobContext) throws IOException { }
 
+  /**
+   * For committing job's output after successful job completion. Note that this
+   * is invoked for jobs with final runstate as SUCCESSFUL.	
+   * 
+   * @param jobContext Context of the job whose output is being written.
+   * @throws IOException
+   */
+  public void commitJob(JobContext jobContext) throws IOException {
+    cleanupJob(jobContext);
+  }
+
+  
+  /**
+   * For aborting an unsuccessful job's output. Note that this is invoked for 
+   * jobs with final runstate as {@link JobStatus.State#FAILED} or 
+   * {@link JobStatus.State#KILLED}.
+   *
+   * @param jobContext Context of the job whose output is being written.
+   * @param state final runstate of the job
+   * @throws IOException
+   */
+  public void abortJob(JobContext jobContext, JobStatus.State state) 
+  throws IOException {
+    cleanupJob(jobContext);
+  }
+  
   /**
    * Sets up output for the task.
    * 

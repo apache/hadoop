@@ -28,6 +28,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job.RawSplit;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -35,14 +37,21 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapreduce.ClusterMetrics;
+import org.apache.hadoop.mapreduce.QueueInfo;
+import org.apache.hadoop.mapreduce.TaskCompletionEvent;
+import org.apache.hadoop.mapreduce.TaskTrackerInfo;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.mapreduce.server.jobtracker.State;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
-class LocalJobRunner implements JobSubmissionProtocol {
+public class LocalJobRunner implements ClientProtocol {
   public static final Log LOG =
     LogFactory.getLog(LocalJobRunner.class);
 
@@ -57,9 +66,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private static final String jobDir =  "localRunner/";
   
   public long getProtocolVersion(String protocol, long clientVersion) {
-    return JobSubmissionProtocol.versionID;
+    return ClientProtocol.versionID;
   }
   
+  @SuppressWarnings("unchecked")
   static RawSplit[] getRawSplits(JobContext jContext, JobConf job)
       throws Exception {
     JobConf jobConf = jContext.getJobConf();
@@ -120,10 +130,11 @@ class LocalJobRunner implements JobSubmissionProtocol {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public Job(JobID jobid, JobConf conf) throws IOException {
+    public Job(JobID jobid) throws IOException {
       this.systemJobDir = new Path(getSystemDir(), jobid.toString());
       this.systemJobFile = new Path(systemJobDir, "job.xml");
       this.id = jobid;
+      JobConf conf = new JobConf(systemJobFile);
       this.localFs = FileSystem.getLocal(conf);
       this.localJobDir = localFs.makeQualified(conf.getLocalPath(jobDir));
       this.localJobFile = new Path(this.localJobDir, id + ".xml");
@@ -135,7 +146,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.taskDistributedCacheManager = 
           trackerDistributerdCacheManager.newTaskDistributedCacheManager(conf);
       taskDistributedCacheManager.setup(
-          new LocalDirAllocator("mapred.local.dir"), 
+          new LocalDirAllocator(MRConfig.LOCAL_DIR), 
           new File(systemJobDir.toString()),
           "archive");
       
@@ -188,7 +199,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     @Override
     public void run() {
       JobID jobId = profile.getJobID();
-      JobContext jContext = new JobContext(conf, jobId);
+      JobContext jContext = new JobContextImpl(job, jobId);
       OutputCommitter outputCommitter = job.getOutputCommitter();
       try {
         // split input into minimum number of splits
@@ -299,7 +310,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           }
         }
         // delete the temporary directory in output directory
-        outputCommitter.cleanupJob(jContext);
+        outputCommitter.commitJob(jContext);
         status.setCleanupProgress(1.0f);
 
         if (killed) {
@@ -312,7 +323,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
       } catch (Throwable t) {
         try {
-          outputCommitter.cleanupJob(jContext);
+          outputCommitter.abortJob(jContext, 
+            org.apache.hadoop.mapreduce.JobStatus.State.FAILED);
         } catch (IOException ioe) {
           LOG.info("Error cleaning up job:" + id);
         }
@@ -415,16 +427,26 @@ class LocalJobRunner implements JobSubmissionProtocol {
       LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
     }
     
+    public synchronized void fatalError(TaskAttemptID taskId, String msg) 
+    throws IOException {
+      LOG.fatal("Fatal: "+ msg + "from task: " + taskId);
+    }
+    
     public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
         int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
-      return new MapTaskCompletionEventsUpdate(TaskCompletionEvent.EMPTY_ARRAY,
-                                               false);
+      return new MapTaskCompletionEventsUpdate(
+        org.apache.hadoop.mapred.TaskCompletionEvent.EMPTY_ARRAY, false);
     }
     
   }
 
+  public LocalJobRunner(Configuration conf) throws IOException {
+    this(new JobConf(conf));
+  }
+
+  @Deprecated
   public LocalJobRunner(JobConf conf) throws IOException {
-    this.fs = FileSystem.get(conf);
+    this.fs = FileSystem.getLocal(conf);
     this.conf = conf;
     myMetrics = new JobTrackerMetricsInst(null, new JobConf(conf));
   }
@@ -432,118 +454,144 @@ class LocalJobRunner implements JobSubmissionProtocol {
   // JobSubmissionProtocol methods
 
   private static int jobid = 0;
-  public synchronized JobID getNewJobId() {
-    return new JobID("local", ++jobid);
+  public synchronized org.apache.hadoop.mapreduce.JobID getNewJobID() {
+    return new org.apache.hadoop.mapreduce.JobID("local", ++jobid);
   }
 
-  public JobStatus submitJob(JobID jobid) throws IOException {
-    return new Job(jobid, this.conf).status;
+  public org.apache.hadoop.mapreduce.JobStatus submitJob(
+      org.apache.hadoop.mapreduce.JobID jobid) 
+      throws IOException {
+    return new Job(JobID.downgrade(jobid)).status;
   }
 
-  public void killJob(JobID id) {
+  public void killJob(org.apache.hadoop.mapreduce.JobID id) {
     jobs.get(id).killed = true;
     jobs.get(id).interrupt();
   }
 
-  public void setJobPriority(JobID id, String jp) throws IOException {
+  public void setJobPriority(org.apache.hadoop.mapreduce.JobID id,
+      String jp) throws IOException {
     throw new UnsupportedOperationException("Changing job priority " +
                       "in LocalJobRunner is not supported.");
   }
   
   /** Throws {@link UnsupportedOperationException} */
-  public boolean killTask(TaskAttemptID taskId, boolean shouldFail) throws IOException {
+  public boolean killTask(org.apache.hadoop.mapreduce.TaskAttemptID taskId,
+      boolean shouldFail) throws IOException {
     throw new UnsupportedOperationException("Killing tasks in " +
     "LocalJobRunner is not supported");
   }
 
-  public JobProfile getJobProfile(JobID id) {
-    Job job = jobs.get(id);
-    if(job != null)
-      return job.getProfile();
-    else 
-      return null;
+  public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(
+      org.apache.hadoop.mapreduce.JobID id, TaskType type) {
+    return new org.apache.hadoop.mapreduce.TaskReport[0];
   }
 
-  public TaskReport[] getMapTaskReports(JobID id) {
-    return new TaskReport[0];
-  }
-  public TaskReport[] getReduceTaskReports(JobID id) {
-    return new TaskReport[0];
-  }
-  public TaskReport[] getCleanupTaskReports(JobID id) {
-    return new TaskReport[0];
-  }
-  public TaskReport[] getSetupTaskReports(JobID id) {
-    return new TaskReport[0];
-  }
-
-  public JobStatus getJobStatus(JobID id) {
-    Job job = jobs.get(id);
+  public org.apache.hadoop.mapreduce.JobStatus getJobStatus(
+      org.apache.hadoop.mapreduce.JobID id) {
+    Job job = jobs.get(JobID.downgrade(id));
     if(job != null)
       return job.status;
     else 
       return null;
   }
   
-  public Counters getJobCounters(JobID id) {
-    Job job = jobs.get(id);
-    return job.currentCounters;
+  public org.apache.hadoop.mapreduce.Counters getJobCounters(
+      org.apache.hadoop.mapreduce.JobID id) {
+    Job job = jobs.get(JobID.downgrade(id));
+    return new org.apache.hadoop.mapreduce.Counters(job.currentCounters);
   }
 
   public String getFilesystemName() throws IOException {
     return fs.getUri().toString();
   }
   
-  public ClusterStatus getClusterStatus(boolean detailed) {
-    return new ClusterStatus(1, 0, 0, map_tasks, reduce_tasks, 1, 1, 
-                             JobTracker.State.RUNNING);
+  public ClusterMetrics getClusterMetrics() {
+    return new ClusterMetrics(map_tasks, reduce_tasks, map_tasks, reduce_tasks,
+      0, 0, 1, 1, jobs.size(), 1, 0, 0);
   }
 
-  public JobStatus[] jobsToComplete() {return null;}
+  public State getJobTrackerState() throws IOException, InterruptedException {
+    return State.RUNNING;
+  }
 
-  public TaskCompletionEvent[] getTaskCompletionEvents(JobID jobid
+  public long getTaskTrackerExpiryInterval() throws IOException, InterruptedException {
+    return 0;
+  }
+
+  /** 
+   * Get all active trackers in cluster. 
+   * @return array of TaskTrackerInfo
+   */
+  public TaskTrackerInfo[] getActiveTrackers() 
+      throws IOException, InterruptedException {
+    return null;
+  }
+
+  /** 
+   * Get all blacklisted trackers in cluster. 
+   * @return array of TaskTrackerInfo
+   */
+  public TaskTrackerInfo[] getBlacklistedTrackers() 
+      throws IOException, InterruptedException {
+    return null;
+  }
+
+  public TaskCompletionEvent[] getTaskCompletionEvents(
+      org.apache.hadoop.mapreduce.JobID jobid
       , int fromEventId, int maxEvents) throws IOException {
     return TaskCompletionEvent.EMPTY_ARRAY;
   }
   
-  public JobStatus[] getAllJobs() {return null;}
+  public org.apache.hadoop.mapreduce.JobStatus[] getAllJobs() {return null;}
 
   
   /**
    * Returns the diagnostic information for a particular task in the given job.
    * To be implemented
    */
-  public String[] getTaskDiagnostics(TaskAttemptID taskid)
-  		throws IOException{
+  public String[] getTaskDiagnostics(
+      org.apache.hadoop.mapreduce.TaskAttemptID taskid) throws IOException{
 	  return new String [0];
   }
 
   /**
-   * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getSystemDir()
+   * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getSystemDir()
    */
   public String getSystemDir() {
-    Path sysDir = new Path(conf.get("mapred.system.dir", "/tmp/hadoop/mapred/system"));  
+    Path sysDir = new Path(
+      conf.get(JTConfig.JT_SYSTEM_DIR, "/tmp/hadoop/mapred/system"));  
     return fs.makeQualified(sysDir).toString();
   }
 
-  @Override
-  public JobStatus[] getJobsFromQueue(String queue) throws IOException {
+  public String getJobHistoryDir() {
     return null;
   }
 
   @Override
-  public JobQueueInfo[] getQueues() throws IOException {
+  public QueueInfo[] getChildQueues(String queueName) throws IOException {
+    return null;
+  }
+
+  @Override
+  public QueueInfo[] getRootQueues() throws IOException {
+    return null;
+  }
+
+  @Override
+  public QueueInfo[] getQueues() throws IOException {
     return null;
   }
 
 
   @Override
-  public JobQueueInfo getQueueInfo(String queue) throws IOException {
+  public QueueInfo getQueue(String queue) throws IOException {
     return null;
   }
 
   @Override
-  public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException{
+  public org.apache.hadoop.mapreduce.QueueAclsInfo[] 
+      getQueueAclsForCurrentUser() throws IOException{
     return null;
   }
 }

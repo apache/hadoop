@@ -30,6 +30,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.TestNoJobSetupCleanup;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -59,7 +60,7 @@ public class TestJobInProgressListener extends TestCase {
       @Override
       protected void setUp() throws Exception {
         conf = new JobConf();   
-        conf.setClass("mapred.jobtracker.taskScheduler", MyScheduler.class,
+        conf.setClass(JTConfig.JT_TASK_SCHEDULER, MyScheduler.class,
                       TaskScheduler.class);
         mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
         jobtracker = mr.getJobTrackerRunner().getJobTracker();

@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskReport;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * Tests for the ability of a streaming task to set the status
@@ -49,11 +51,11 @@ public class TestStreamingStatus extends TestCase {
       "-input", INPUT_FILE,
       "-output", OUTPUT_DIR,
       "-mapper", map,
-      "-jobconf", "mapred.map.tasks=1",
-      "-jobconf", "mapred.reduce.tasks=0",      
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", JobContext.NUM_MAPS + "=1",
+      "-jobconf", JobContext.NUM_REDUCES + "=0",      
+      "-jobconf", JobContext.PRESERVE_FAILED_TASK_FILES + "=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-      "-jobconf", "mapred.job.tracker=localhost:"+jobtrackerPort,
+      "-jobconf", JTConfig.JT_IPC_ADDRESS + "=localhost:"+jobtrackerPort,
       "-jobconf", "fs.default.name=file:///"
     };
   }
@@ -80,7 +82,7 @@ public class TestStreamingStatus extends TestCase {
     MiniMRCluster mr = null;
     FileSystem fs = null;
     JobConf conf = new JobConf();
-    conf.setBoolean("mapred.job.tracker.retire.jobs", false);
+    conf.setBoolean(JTConfig.JT_RETIREJOBS, false);
     try {
       mr = new MiniMRCluster(1, "file:///", 3, null , null, conf);
 

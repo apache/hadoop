@@ -38,6 +38,7 @@ import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes plain text files. */
 public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
+  public static String SEPERATOR = "mapreduce.output.textoutputformat.separator";
   protected static class LineRecordWriter<K, V>
     extends RecordWriter<K, V> {
     private static final String utf8 = "UTF-8";
@@ -112,8 +113,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
                          ) throws IOException, InterruptedException {
     Configuration conf = job.getConfiguration();
     boolean isCompressed = getCompressOutput(job);
-    String keyValueSeparator= conf.get("mapred.textoutputformat.separator",
-                                       "\t");
+    String keyValueSeparator= conf.get(SEPERATOR, "\t");
     CompressionCodec codec = null;
     String extension = "";
     if (isCompressed) {

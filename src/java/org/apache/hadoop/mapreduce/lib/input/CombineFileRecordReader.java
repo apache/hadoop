@@ -140,9 +140,9 @@ public class CombineFileRecordReader<K, V> extends RecordReader<K, V> {
 
       Configuration conf = context.getConfiguration();
       // setup some helper config variables.
-      conf.set("map.input.file", split.getPath(idx).toString());
-      conf.setLong("map.input.start", split.getOffset(idx));
-      conf.setLong("map.input.length", split.getLength(idx));
+      conf.set(JobContext.MAP_INPUT_FILE, split.getPath(idx).toString());
+      conf.setLong(JobContext.MAP_INPUT_START, split.getOffset(idx));
+      conf.setLong(JobContext.MAP_INPUT_PATH, split.getLength(idx));
     } catch (Exception e) {
       throw new RuntimeException (e);
     }

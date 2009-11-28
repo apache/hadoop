@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mrunit.MapReduceDriverBase;
@@ -51,14 +52,17 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
 
   private Mapper<K1, V1, K2, V2> myMapper;
   private Reducer<K2, V2, K3, V3> myReducer;
+  private Counters counters;
 
   public MapReduceDriver(final Mapper<K1, V1, K2, V2> m,
                          final Reducer<K2, V2, K3, V3> r) {
     myMapper = m;
     myReducer = r;
+    counters = new Counters();
   }
 
   public MapReduceDriver() {
+    counters = new Counters();
   }
 
   /** Set the Mapper instance to use with this test driver
@@ -105,6 +109,24 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
    */
   public Reducer<K2, V2, K3, V3> getReducer() {
     return myReducer;
+  }
+
+  /** @return the counters used in this test */
+  public Counters getCounters() {
+    return counters;
+  }
+
+  /** Sets the counters object to use for this test.
+   * @param ctrs The counters object to use.
+   */
+  public void setCounters(final Counters ctrs) {
+    this.counters = ctrs;
+  }
+
+  /** Sets the counters to use and returns self for fluent style */
+  public MapReduceDriver<K1, V1, K2, V2, K3, V3> withCounters(final Counters ctrs) {
+    setCounters(ctrs);
+    return this;
   }
 
   /**
@@ -180,7 +202,7 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
       LOG.debug("Mapping input " + input.toString() + ")");
 
       mapOutputs.addAll(new MapDriver<K1, V1, K2, V2>(myMapper).withInput(
-              input).run());
+              input).withCounters(getCounters()).run());
     }
 
     List<Pair<K2, List<V2>>> reduceInputs = shuffle(mapOutputs);
@@ -195,6 +217,7 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
           + sb.toString() + ")");
 
       reduceOutputs.addAll(new ReduceDriver<K2, V2, K3, V3>(myReducer)
+              .withCounters(getCounters())
               .withInputKey(inputKey).withInputValues(inputValues).run());
     }
 

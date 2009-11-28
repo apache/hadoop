@@ -22,6 +22,7 @@ import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.mapred.TestJobQueueTaskScheduler.FakeTaskTrackerManager;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 public class TestLimitTasksPerJobTaskScheduler extends TestCase {
   protected JobConf jobConf;
@@ -53,7 +54,7 @@ public class TestLimitTasksPerJobTaskScheduler extends TestCase {
   }
 
   public void testMaxRunningTasksPerJob() throws IOException {
-    jobConf.setLong(LimitTasksPerJobTaskScheduler.MAX_TASKS_PER_JOB_PROPERTY,
+    jobConf.setLong(JTConfig.JT_RUNNINGTASKS_PER_JOB,
         4L);
     scheduler.setConf(jobConf);
     TestJobQueueTaskScheduler.submitJobs(taskTrackerManager, jobConf, 
@@ -88,7 +89,7 @@ public class TestLimitTasksPerJobTaskScheduler extends TestCase {
   
   public void testMaxRunningTasksPerJobWithInterleavedTrackers()
       throws IOException {
-    jobConf.setLong(LimitTasksPerJobTaskScheduler.MAX_TASKS_PER_JOB_PROPERTY,
+    jobConf.setLong(JTConfig.JT_RUNNINGTASKS_PER_JOB,
         4L);
     scheduler.setConf(jobConf);
     TestJobQueueTaskScheduler.submitJobs(taskTrackerManager, jobConf, 2, JobStatus.RUNNING);

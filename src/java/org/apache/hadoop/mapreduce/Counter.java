@@ -50,6 +50,17 @@ public class Counter implements Writable {
     this.displayName = displayName;
   }
   
+  /** Create a counter.
+   * @param name the name within the group's enum.
+   * @param displayName a name to be displayed.
+   * @param value the counter value.
+   */
+  public Counter(String name, String displayName, long value) {
+    this.name = name;
+    this.displayName = displayName;
+    this.value = value;
+  }
+  
   @Deprecated
   protected synchronized void setDisplayName(String displayName) {
     this.displayName = displayName;

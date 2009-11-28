@@ -22,10 +22,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.examples.SleepJob;
+import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.LinuxMemoryCalculatorPlugin;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 import junit.framework.TestCase;
@@ -157,10 +159,8 @@ public class TestTTMemoryReporting extends TestCase {
         4 * 1024 * 1024 * 1024L);
     conf.setLong(DummyMemoryCalculatorPlugin.MAXPMEM_TESTING_PROPERTY,
         2 * 1024 * 1024 * 1024L);
-    conf.setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
-        512L);
-    conf.setLong(
-        JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY, 1024L);
+    conf.setLong(MRConfig.MAPMEMORY_MB, 512L);
+    conf.setLong(MRConfig.REDUCEMEMORY_MB, 1024L);
     
     try {
       setUpCluster(conf);
@@ -202,9 +202,9 @@ public class TestTTMemoryReporting extends TestCase {
 
   private void setUpCluster(JobConf conf)
                                 throws Exception {
-    conf.setClass("mapred.jobtracker.taskScheduler",
+    conf.setClass(JTConfig.JT_TASK_SCHEDULER,
         TestTTMemoryReporting.FakeTaskScheduler.class, TaskScheduler.class);
-    conf.set("mapred.job.tracker.handler.count", "1");
+    conf.set(JTConfig.JT_IPC_HANDLER_COUNT, "1");
     miniMRCluster = new MiniMRCluster(1, "file:///", 3, null, null, conf);
   }
   

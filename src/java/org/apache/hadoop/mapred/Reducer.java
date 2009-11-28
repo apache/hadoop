@@ -109,7 +109,7 @@ import org.apache.hadoop.io.Closeable;
  *       private int noKeys = 0;
  *       
  *       public void configure(JobConf job) {
- *         reduceTaskId = job.get("mapred.task.id");
+ *         reduceTaskId = job.get(JobContext.TASK_ATTEMPT_ID);
  *       }
  *       
  *       public void reduce(K key, Iterator&lt;V&gt; values,
@@ -185,8 +185,8 @@ public interface Reducer<K2, V2, K3, V3> extends JobConfigurable, Closeable {
    * takes an insignificant amount of time to process individual key/value 
    * pairs, this is crucial since the framework might assume that the task has 
    * timed-out and kill that task. The other way of avoiding this is to set 
-   * <a href="{@docRoot}/../mapred-default.html#mapred.task.timeout">
-   * mapred.task.timeout</a> to a high-enough value (or even zero for no 
+   * <a href="{@docRoot}/../mapred-default.html#mapreduce.task.timeout">
+   * mapreduce.task.timeout</a> to a high-enough value (or even zero for no 
    * time-outs).</p>
    * 
    * @param key the key.

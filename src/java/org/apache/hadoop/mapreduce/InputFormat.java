@@ -50,8 +50,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
  * bytes, of the input files. However, the {@link FileSystem} blocksize of  
  * the input files is treated as an upper bound for input splits. A lower bound 
  * on the split size can be set via 
- * <a href="{@docRoot}/../mapred-default.html#mapred.min.split.size">
- * mapred.min.split.size</a>.</p>
+ * <a href="{@docRoot}/../mapred-default.html#mapreduce.input.fileinputformat.split.minsize">
+ * mapreduce.input.fileinputformat.split.minsize</a>.</p>
  * 
  * <p>Clearly, logical splits based on input-size is insufficient for many 
  * applications since record boundaries are to respected. In such cases, the

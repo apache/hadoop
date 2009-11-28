@@ -45,9 +45,6 @@ public class HsqldbTestServer {
   // singleton server instance.
   private static Server server;
 
-  // When we create databases in HSqlDb, where do we put the files?
-  private static final String DATABASE_DATA_DIR = "./hsqldb-data";
-
   private static final String DATABASE_NAME = "db1";
 
   // hsqldb always capitalizes table and column names
@@ -56,7 +53,7 @@ public class HsqldbTestServer {
 
   private static final String EMPLOYEE_TABLE_NAME = "EMPLOYEES";
 
-  private static final String DB_URL = "jdbc:hsqldb:hsql://localhost/" + DATABASE_NAME;
+  private static final String DB_URL = "jdbc:hsqldb:mem:" + DATABASE_NAME;
   private static final String DRIVER_CLASS = "org.hsqldb.jdbcDriver";
 
   // all user-created HSQLDB tables are in the "PUBLIC" schema when connected to a database.
@@ -87,11 +84,10 @@ public class HsqldbTestServer {
    */
   public void start() {
     if (null == server) {
-      LOG.info("Starting new hsqldb server; database=" + DATABASE_NAME + "; dir="
-          + DATABASE_DATA_DIR);
+      LOG.info("Starting new hsqldb server; database=" + DATABASE_NAME);
       server = new Server();
-      server.setDatabasePath(0, DATABASE_DATA_DIR);
-      server.setDatabaseName(0, DATABASE_NAME);
+      server.putPropertiesFromString("database.0=mem:" + DATABASE_NAME
+          + ";no_system_exit=true");
       server.start();
     }
   }

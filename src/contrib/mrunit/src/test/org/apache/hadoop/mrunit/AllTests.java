@@ -42,6 +42,7 @@ public final class AllTests  {
     suite.addTestSuite(TestReduceDriver.class);
     suite.addTestSuite(TestTestDriver.class);
     suite.addTestSuite(TestExample.class);
+    suite.addTestSuite(TestCounters.class);
 
     suite.addTest(org.apache.hadoop.mrunit.types.AllTests.suite());
     suite.addTest(org.apache.hadoop.mrunit.mapreduce.AllTests.suite());

@@ -19,7 +19,7 @@
 package org.apache.hadoop.sqoop.manager;
 
 import org.apache.hadoop.sqoop.ImportOptions;
-import org.apache.hadoop.sqoop.mapred.ImportJob;
+import org.apache.hadoop.sqoop.mapreduce.DataDrivenImportJob;
 import org.apache.hadoop.sqoop.util.ImportError;
 import org.apache.hadoop.sqoop.util.ResultSetPrinter;
 
@@ -45,7 +45,7 @@ import org.apache.hadoop.conf.Configuration;
  * This is an abstract class; it requires a database-specific
  * ConnManager implementation to actually create the connection.
  */
-public abstract class SqlManager implements ConnManager {
+public abstract class SqlManager extends ConnManager {
 
   public static final Log LOG = LogFactory.getLog(SqlManager.class.getName());
 
@@ -98,6 +98,7 @@ public abstract class SqlManager implements ConnManager {
     } finally {
       try {
         results.close();
+        getConnection().commit();
       } catch (SQLException sqlE) {
         LOG.warn("SQLException closing ResultSet: " + sqlE.toString());
       }
@@ -146,6 +147,7 @@ public abstract class SqlManager implements ConnManager {
     } finally {
       try {
         results.close();
+        getConnection().commit();
       } catch (SQLException sqlE) { 
         LOG.warn("SQLException closing ResultSet: " + sqlE.toString());
       }
@@ -216,6 +218,7 @@ public abstract class SqlManager implements ConnManager {
       if (null != results) {
         try {
           results.close();
+          getConnection().commit();
         } catch (SQLException sqlE) {
           LOG.warn("Exception closing ResultSet: " + sqlE.toString());
         }
@@ -240,6 +243,7 @@ public abstract class SqlManager implements ConnManager {
         }
       } finally {
         results.close();
+        getConnection().commit();
       }
     } catch (SQLException sqlException) {
       LOG.error("Error reading primary key metadata: " + sqlException.toString());
@@ -254,24 +258,27 @@ public abstract class SqlManager implements ConnManager {
 
   /**
    * Default implementation of importTable() is to launch a MapReduce job
-   * via ImportJob to read the table with DBInputFormat.
+   * via DataDrivenImportJob to read the table with DataDrivenDBInputFormat.
    */
-  public void importTable(String tableName, String jarFile, Configuration conf)
+  public void importTable(ImportJobContext context)
       throws IOException, ImportError {
-    ImportJob importer = new ImportJob(options);
-    String orderCol = options.getOrderByCol();
-    if (null == orderCol) {
-      // If the user didn't specify an ordering column, try to infer one.
-      orderCol = getPrimaryKey(tableName);
+    String tableName = context.getTableName();
+    String jarFile = context.getJarFile();
+    ImportOptions options = context.getOptions();
+    DataDrivenImportJob importer = new DataDrivenImportJob(options);
+    String splitCol = options.getSplitByCol();
+    if (null == splitCol) {
+      // If the user didn't specify a splitting column, try to infer one.
+      splitCol = getPrimaryKey(tableName);
     }
 
-    if (null == orderCol) {
+    if (null == splitCol) {
       // Can't infer a primary key.
       throw new ImportError("No primary key could be found for table " + tableName
-          + ". Please specify one with --order-by.");
+          + ". Please specify one with --split-by.");
     }
 
-    importer.runImport(tableName, jarFile, orderCol, conf);
+    importer.runImport(tableName, jarFile, splitCol, options.getConf());
   }
 
   /**
@@ -380,6 +387,7 @@ public abstract class SqlManager implements ConnManager {
     } finally {
       try {
         results.close();
+        getConnection().commit();
       } catch (SQLException sqlE) {
         LOG.warn("SQLException closing ResultSet: " + sqlE.toString());
       }
@@ -412,6 +420,7 @@ public abstract class SqlManager implements ConnManager {
 
     // We only use this for metadata queries. Loosest semantics are okay.
     connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+    connection.setAutoCommit(false);
 
     return connection;
   }

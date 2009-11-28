@@ -50,10 +50,10 @@ public class TestStreamingExitStatus extends TestCase
       "-output", OUTPUT_DIR.getAbsolutePath(),
       "-mapper", (failMap ? failingTask : echoTask),
       "-reducer", (failMap ? echoTask : failingTask),
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
       "-jobconf", "stream.non.zero.exit.is.failure=" + exitStatusIsFailure,
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-      "-jobconf", "io.sort.mb=10"
+      "-jobconf", "mapreduce.task.io.sort.mb=10"
     };
   }
 

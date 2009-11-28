@@ -24,6 +24,7 @@ import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * Test if the job retire works fine. 
@@ -38,8 +39,8 @@ public class TestJobRetire extends TestCase {
     try {
       JobConf conf = new JobConf();
 
-      conf.setBoolean("mapred.job.tracker.retire.jobs", true);
-      conf.setLong("mapred.job.tracker.retiredjobs.cache.size", 1);
+      conf.setBoolean(JTConfig.JT_RETIREJOBS, true);
+      conf.setLong(JTConfig.JT_RETIREJOB_CACHE_SIZE, 1);
       mr = new MiniMRCluster(0, 0, 1, "file:///", 1, null, null, null, conf, 0);
       JobConf jobConf = mr.createJobConf();
       JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
@@ -81,7 +82,7 @@ public class TestJobRetire extends TestCase {
     assertNotNull("Job is not in cache", jobtracker.getJobStatus(id));
     
     // get the job conf filename
-    String name = JobHistory.JobInfo.getLocalJobFilePath(id);
+    String name = jobtracker.getLocalJobFilePath(id);
     File file = new File(name);
  
     assertFalse("JobConf file not deleted", file.exists());

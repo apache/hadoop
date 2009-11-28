@@ -16,6 +16,10 @@
        <Bug pattern="DLS_DEAD_LOCAL_STORE" />
      </Match>
      <Match>
+       <Class name="~.*_jspx" />
+       <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+     </Match>
+     <Match>
        <Field name="_jspx_dependants" />
        <Bug pattern="UWF_UNWRITTEN_FIELD" />
      </Match>
@@ -49,6 +53,10 @@
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
      </Match>
      <Match>
+       <Class name="~org.apache.hadoop.mapred.*" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+     <Match>
        <Class name="~org.apache.hadoop.mapred.lib.aggregate.*" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
      </Match>
@@ -59,6 +67,14 @@
      <Match>
        <Class name="org.apache.hadoop.mapred.SequenceFileInputFilter$Filter" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+     <Match>
+       <Class name="~org.apache.hadoop.util.*" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
+     </Match>
+     <Match>
+       <Class name="~org.apache.hadoop.filecache.*" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
      </Match>
      <!--
        Ignore warnings for usage of System.exit. This is
@@ -112,6 +128,20 @@
        <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.OutputCommitter" />
+       <Or>
+       <Method name="abortJob" />
+       <Method name="commitJob" />
+       <Method name="cleanupJob" />
+       </Or>
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReader" />
+       <Method name="next" />
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
      <!--
        Ignoring this warning as resolving this would need a non-trivial change in code 
      -->
@@ -152,6 +182,39 @@
        <Class name="org.apache.hadoop.mapred.MapTask$MapOutputBuffer" />
        <Field name="kvindex" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeThread" />
+       <Field name="inputs" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.JobTracker" />
+       <Method name="updateTaskTrackerStatus" />
+       <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+     </Match>
+
+    <!--
+     This class is unlikely to get subclassed, so ignore
+    -->
+     <Match>
+       <Class name="org.apache.hadoop.mapreduce.task.reduce.MergeManager" />
+       <Bug pattern="SC_START_IN_CTOR" />
+     </Match>
+
+    <!--
+      Do not bother if equals is not implemented. We will not need it here
+    -->
+     <Match>
+      <Class name="org.apache.hadoop.mapreduce.task.reduce.ShuffleScheduler$Penalty" />
+      <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.mapred.Task" />
+       <Method name="reportFatalError" />
+       <Bug pattern="DM_EXIT" />
      </Match>
 
      <!-- 
@@ -230,4 +293,23 @@
        <Bug pattern="OBL_UNSATISFIED_OBLIGATION" />
      </Match>
 
+    <Match>
+       <Class name="org.apache.hadoop.mapred.TaskScheduler$QueueRefresher" />
+       <Bug pattern="SIC_INNER_SHOULD_BE_STATIC" />
+    </Match>
+
+    <Match>
+      <Class name="org.apache.hadoop.examples.terasort.TeraInputFormat$1" />
+      <Method name="run" />
+      <Bug pattern="DM_EXIT" />
+    </Match>
+    <Match>
+      <Class name="org.apache.hadoop.examples.terasort.TeraOutputFormat$TeraOutputCommitter"/>
+      <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+    </Match>
+    <Match>
+      <Class name="org.apache.hadoop.examples.terasort.Unsigned16" />
+      <Method name="getHexDigit"/>
+      <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
+     </Match>
  </FindBugsFilter>

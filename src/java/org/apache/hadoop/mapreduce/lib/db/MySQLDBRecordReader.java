@@ -38,7 +38,7 @@ public class MySQLDBRecordReader<T extends DBWritable> extends DBRecordReader<T>
 
   // Execute statements for mysql in unbuffered mode.
   protected ResultSet executeQuery(String query) throws SQLException {
-    PreparedStatement statement = getConnection().prepareStatement(query,
+    statement = getConnection().prepareStatement(query,
       ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
     statement.setFetchSize(Integer.MIN_VALUE); // MySQL: read row-at-a-time.
     return statement.executeQuery();

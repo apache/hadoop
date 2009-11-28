@@ -92,13 +92,13 @@ public class MySQLManager extends GenericJdbcManager {
   }
 
   @Override
-  public void importTable(String tableName, String jarFile, Configuration conf)
+  public void importTable(ImportJobContext context)
         throws IOException, ImportError {
 
     // Check that we're not doing a MapReduce from localhost. If we are, point
     // out that we could use mysqldump.
     if (!MySQLManager.warningPrinted) {
-      String connectString = options.getConnectString();
+      String connectString = context.getOptions().getConnectString();
 
       if (null != connectString && connectString.indexOf("//localhost") != -1) {
         // if we're not doing a remote connection, they should have a LocalMySQLManager.
@@ -114,7 +114,7 @@ public class MySQLManager extends GenericJdbcManager {
     }
 
     // Then run the normal importTable() method.
-    super.importTable(tableName, jarFile, conf);
+    super.importTable(context);
   }
 
   /**

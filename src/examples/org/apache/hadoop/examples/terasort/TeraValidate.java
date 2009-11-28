@@ -20,9 +20,11 @@ package org.apache.hadoop.examples.terasort;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.zip.Checksum;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.FileSplit;
@@ -31,8 +33,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Partitioner;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -50,14 +54,24 @@ import org.apache.hadoop.util.ToolRunner;
  * will have the problem report.
  */
 public class TeraValidate extends Configured implements Tool {
-  private static final Text error = new Text("error");
+  private static final Text ERROR = new Text("error");
+  private static final Text CHECKSUM = new Text("checksum");
+  
+  private static String textifyBytes(Text t) {
+    BytesWritable b = new BytesWritable();
+    b.set(t.getBytes(), 0, t.getLength());
+    return b.toString();
+  }
 
   static class ValidateMapper extends MapReduceBase 
       implements Mapper<Text,Text,Text,Text> {
     private Text lastKey;
     private OutputCollector<Text,Text> output;
     private String filename;
-    
+    private Unsigned16 checksum = new Unsigned16();
+    private Unsigned16 tmp = new Unsigned16();
+    private Checksum crc32 = new PureJavaCrc32();
+
     /**
      * Get the final part of the input name
      * @param split the input split
@@ -67,26 +81,38 @@ public class TeraValidate extends Configured implements Tool {
       return split.getPath().getName();
     }
 
+    private int getPartition(FileSplit split) {
+      return Integer.parseInt(split.getPath().getName().substring(5));
+    }
+
     public void map(Text key, Text value, OutputCollector<Text,Text> output,
                     Reporter reporter) throws IOException {
       if (lastKey == null) {
-        filename = getFilename((FileSplit) reporter.getInputSplit());
+        FileSplit fs = (FileSplit) reporter.getInputSplit();
+        filename = getFilename(fs);
         output.collect(new Text(filename + ":begin"), key);
         lastKey = new Text();
         this.output = output;
       } else {
         if (key.compareTo(lastKey) < 0) {
-          output.collect(error, new Text("misorder in " + filename + 
-                                         " last: '" + lastKey + 
-                                         "' current: '" + key + "'"));
+          output.collect(ERROR, new Text("misorder in " + filename + 
+                                         " between " + textifyBytes(lastKey) + 
+                                         " and " + textifyBytes(key)));
         }
       }
+      // compute the crc of the key and value and add it to the sum
+      crc32.reset();
+      crc32.update(key.getBytes(), 0, key.getLength());
+      crc32.update(value.getBytes(), 0, value.getLength());
+      tmp.set(crc32.getValue());
+      checksum.add(tmp);
       lastKey.set(key);
     }
     
     public void close() throws IOException {
       if (lastKey != null) {
         output.collect(new Text(filename + ":end"), lastKey);
+        output.collect(CHECKSUM, new Text(checksum.toString()));
       }
     }
   }
@@ -104,20 +130,31 @@ public class TeraValidate extends Configured implements Tool {
     public void reduce(Text key, Iterator<Text> values,
                        OutputCollector<Text, Text> output, 
                        Reporter reporter) throws IOException {
-      if (error.equals(key)) {
+      if (ERROR.equals(key)) {
         while(values.hasNext()) {
           output.collect(key, values.next());
         }
+      } else if (CHECKSUM.equals(key)) {
+        Unsigned16 tmp = new Unsigned16();
+        Unsigned16 sum = new Unsigned16();
+        while (values.hasNext()) {
+          String val = values.next().toString();
+          tmp.set(val);
+          sum.add(tmp);
+        }
+        output.collect(CHECKSUM, new Text(sum.toString()));
       } else {
         Text value = values.next();
         if (firstKey) {
           firstKey = false;
         } else {
           if (value.compareTo(lastValue) < 0) {
-            output.collect(error, 
-                           new Text("misordered keys last: " + 
-                                    lastKey + " '" + lastValue +
-                                    "' current: " + key + " '" + value + "'"));
+            output.collect(ERROR, 
+                           new Text("bad key partitioning:\n  file " + 
+                                    lastKey + " key " + 
+                                    textifyBytes(lastValue) +
+                                    "\n  file " + key + " key " + 
+                                    textifyBytes(value)));
           }
         }
         lastKey.set(key);
@@ -127,8 +164,16 @@ public class TeraValidate extends Configured implements Tool {
     
   }
 
+  private static void usage() throws IOException {
+    System.err.println("teravalidate <out-dir> <report-dir>");
+  }
+
   public int run(String[] args) throws Exception {
     JobConf job = (JobConf) getConf();
+    if (args.length != 2) {
+      usage();
+      return 1;
+    }
     TeraInputFormat.setInputPaths(job, new Path(args[0]));
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
     job.setJobName("TeraValidate");
@@ -140,7 +185,8 @@ public class TeraValidate extends Configured implements Tool {
     // force a single reducer
     job.setNumReduceTasks(1);
     // force a single split 
-    job.setLong("mapred.min.split.size", Long.MAX_VALUE);
+    job.setLong(org.apache.hadoop.mapreduce.lib.input.
+                FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE);
     job.setInputFormat(TeraInputFormat.class);
     JobClient.runJob(job);
     return 0;

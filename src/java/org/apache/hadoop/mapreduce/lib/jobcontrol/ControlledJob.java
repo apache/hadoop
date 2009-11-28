@@ -48,7 +48,7 @@ public class ControlledJob {
   // A job will be in one of the following states
   public static enum State {SUCCESS, WAITING, RUNNING, READY, FAILED,
                             DEPENDENT_FAILED}; 
-	
+  public static final String CREATE_DIR = "mapreduce.jobcontrol.createdir.ifnotexist";
   private State state;
   private String controlID;     // assigned and used by JobControl class
   private Job job;               // mapreduce job to be executed.
@@ -228,7 +228,7 @@ public class ControlledJob {
     return this.state == State.READY;
   }
 
-  public void killJob() throws IOException {
+  public void killJob() throws IOException, InterruptedException {
     job.killJob();
   }
   
@@ -236,7 +236,7 @@ public class ControlledJob {
    * Check the state of this running job. The state may 
    * remain the same, become SUCCESS or FAILED.
    */
-  private void checkRunningState() {
+  private void checkRunningState() throws IOException, InterruptedException {
     try {
       if (job.isComplete()) {
         if (job.isSuccessful()) {
@@ -261,7 +261,7 @@ public class ControlledJob {
    * Check and update the state of this job. The state changes  
    * depending on its current state and the states of the depending jobs.
    */
-   synchronized State checkState() {
+   synchronized State checkState() throws IOException, InterruptedException {
     if (this.state == State.RUNNING) {
       checkRunningState();
     }
@@ -303,7 +303,7 @@ public class ControlledJob {
   protected synchronized void submit() {
     try {
       Configuration conf = job.getConfiguration();
-      if (conf.getBoolean("create.empty.dir.if.nonexist", false)) {
+      if (conf.getBoolean(CREATE_DIR, false)) {
         FileSystem fs = FileSystem.get(conf);
         Path inputPaths[] = FileInputFormat.getInputPaths(job);
         for (int i = 0; i < inputPaths.length; i++) {

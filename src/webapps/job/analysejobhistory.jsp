@@ -26,7 +26,7 @@
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"
-  import="org.apache.hadoop.mapred.JobHistory.*"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
 %>
 
 <%!	private static SimpleDateFormat dateFormat 
@@ -38,93 +38,96 @@
 <%
   String jobid = request.getParameter("jobid");
   String logFile = request.getParameter("logFile");
-  String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String numTasks = request.getParameter("numTasks");
   int showTasks = 10 ; 
   if (numTasks != null) {
     showTasks = Integer.parseInt(numTasks);  
   }
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobInfo job = JSPUtil.getJobInfo(request, fs);
+  JobHistoryParser.JobInfo job = JSPUtil.getJobInfo(request, fs);
 %>
-<h2>Hadoop Job <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"><%=jobid %> </a></h2>
-<b>User : </b> <%=job.get(Keys.USER) %><br/> 
-<b>JobName : </b> <%=job.get(Keys.JOBNAME) %><br/> 
-<b>JobConf : </b> <%=job.get(Keys.JOBCONF) %><br/> 
-<b>Submitted At : </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 ) %><br/> 
-<b>Launched At : </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
-<b>Finished At : </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
-<b>Status : </b> <%= ((job.get(Keys.JOB_STATUS) == null)?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
+<h2>Hadoop Job <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=logFile%>"><%=jobid %> </a></h2>
+<b>User : </b> <%=job.getUsername() %><br/> 
+<b>JobName : </b> <%=job.getJobname() %><br/> 
+<b>JobConf : </b> <%=job.getJobConfPath() %><br/> 
+<b>Submitted At : </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getSubmitTime(), 0 ) %><br/> 
+<b>Launched At : </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLaunchTime(), job.getSubmitTime()) %><br/>
+<b>Finished At : </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getFinishTime(), job.getLaunchTime()) %><br/>
+<b>Status : </b> <%= ((job.getJobStatus() == null)?"Incomplete" :job.getJobStatus()) %><br/> 
 <hr/>
 <center>
 <%
-  if (!Values.SUCCESS.name().equals(job.get(Keys.JOB_STATUS))) {
+  if (!JobStatus.getJobRunState(JobStatus.SUCCEEDED).equals(job.getJobStatus())) {
     out.print("<h3>No Analysis available as job did not finish</h3>");
     return;
   }
-  Map<String, JobHistory.Task> tasks = job.getAllTasks();
-  int finishedMaps = job.getInt(Keys.FINISHED_MAPS)  ;
-  int finishedReduces = job.getInt(Keys.FINISHED_REDUCES) ;
-  JobHistory.Task [] mapTasks = new JobHistory.Task[finishedMaps]; 
-  JobHistory.Task [] reduceTasks = new JobHistory.Task[finishedReduces]; 
-  int mapIndex = 0 , reduceIndex=0; 
-  long avgMapTime = 0;
-  long avgReduceTime = 0;
-  long avgShuffleTime = 0;
+  
+  HistoryViewer.AnalyzedJob avg = new HistoryViewer.AnalyzedJob(job);
+  JobHistoryParser.TaskAttemptInfo [] mapTasks = avg.getMapTasks();
+  JobHistoryParser.TaskAttemptInfo [] reduceTasks = avg.getReduceTasks();
 
-  for (JobHistory.Task task : tasks.values()) {
-    Map<String, TaskAttempt> attempts = task.getTaskAttempts();
-    for (JobHistory.TaskAttempt attempt : attempts.values()) {
-      if (attempt.get(Keys.TASK_STATUS).equals(Values.SUCCESS.name())) {
-        long avgFinishTime = (attempt.getLong(Keys.FINISH_TIME) -
-      		                attempt.getLong(Keys.START_TIME));
-        if (Values.MAP.name().equals(task.get(Keys.TASK_TYPE))) {
-          mapTasks[mapIndex++] = attempt ; 
-          avgMapTime += avgFinishTime;
-        } else if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) { 
-          reduceTasks[reduceIndex++] = attempt;
-          avgShuffleTime += (attempt.getLong(Keys.SHUFFLE_FINISHED) - 
-                             attempt.getLong(Keys.START_TIME));
-          avgReduceTime += (attempt.getLong(Keys.FINISH_TIME) -
-                            attempt.getLong(Keys.SHUFFLE_FINISHED));
-        }
-        break;
-      }
+  Comparator<JobHistoryParser.TaskAttemptInfo> cMap = 
+    new Comparator<JobHistoryParser.TaskAttemptInfo>() {
+    public int compare(JobHistoryParser.TaskAttemptInfo t1, 
+        JobHistoryParser.TaskAttemptInfo t2) {
+      long l1 = t1.getFinishTime() - t1.getStartTime();
+      long l2 = t2.getFinishTime() - t2.getStartTime();
+      return (l2 < l1 ? -1 : (l2 == l1 ? 0 : 1));
     }
-  }
-	 
-  if (finishedMaps > 0) {
-    avgMapTime /= finishedMaps;
-  }
-  if (finishedReduces > 0) {
-    avgReduceTime /= finishedReduces;
-    avgShuffleTime /= finishedReduces;
-  }
-  Comparator<JobHistory.Task> cMap = new Comparator<JobHistory.Task>(){
-    public int compare(JobHistory.Task t1, JobHistory.Task t2){
-      long l1 = t1.getLong(Keys.FINISH_TIME) - t1.getLong(Keys.START_TIME); 
-      long l2 = t2.getLong(Keys.FINISH_TIME) - t2.getLong(Keys.START_TIME);
-      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
+  };
+
+  Comparator<JobHistoryParser.TaskAttemptInfo> cShuffle = 
+    new Comparator<JobHistoryParser.TaskAttemptInfo>() {
+    public int compare(JobHistoryParser.TaskAttemptInfo t1, 
+        JobHistoryParser.TaskAttemptInfo t2) {
+      long l1 = t1.getShuffleFinishTime() - t1.getStartTime();
+      long l2 = t2.getShuffleFinishTime() - t2.getStartTime();
+      return (l2 < l1 ? -1 : (l2 == l1 ? 0 : 1));
+    }
+  };
+
+  Comparator<JobHistoryParser.TaskAttemptInfo> cFinishShuffle = 
+    new Comparator<JobHistoryParser.TaskAttemptInfo>() {
+    public int compare(JobHistoryParser.TaskAttemptInfo t1, 
+        JobHistoryParser.TaskAttemptInfo t2) {
+      long l1 = t1.getShuffleFinishTime(); 
+      long l2 = t2.getShuffleFinishTime();
+      return (l2 < l1 ? -1 : (l2 == l1 ? 0 : 1));
+    }
+  };
+
+  Comparator<JobHistoryParser.TaskAttemptInfo> cFinishMapRed = 
+    new Comparator<JobHistoryParser.TaskAttemptInfo>() {
+    public int compare(JobHistoryParser.TaskAttemptInfo t1, 
+        JobHistoryParser.TaskAttemptInfo t2) {
+      long l1 = t1.getFinishTime(); 
+      long l2 = t2.getFinishTime();
+      return (l2 < l1 ? -1 : (l2 == l1 ? 0 : 1));
+    }
+  };
+  
+  Comparator<JobHistoryParser.TaskAttemptInfo> cReduce = 
+    new Comparator<JobHistoryParser.TaskAttemptInfo>() {
+    public int compare(JobHistoryParser.TaskAttemptInfo t1, 
+        JobHistoryParser.TaskAttemptInfo t2) {
+      long l1 = t1.getFinishTime() -
+                t1.getShuffleFinishTime();
+      long l2 = t2.getFinishTime() -
+                t2.getShuffleFinishTime();
+      return (l2 < l1 ? -1 : (l2 == l1 ? 0 : 1));
     }
   }; 
-  Comparator<JobHistory.Task> cShuffle = new Comparator<JobHistory.Task>(){
-    public int compare(JobHistory.Task t1, JobHistory.Task t2){
-      long l1 = t1.getLong(Keys.SHUFFLE_FINISHED) - 
-                t1.getLong(Keys.START_TIME); 
-      long l2 = t2.getLong(Keys.SHUFFLE_FINISHED) - 
-                t2.getLong(Keys.START_TIME); 
-      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
-    }
-  }; 
+
+  if (mapTasks == null || mapTasks.length <= 0) return;
   Arrays.sort(mapTasks, cMap);
-  JobHistory.Task minMap = mapTasks[mapTasks.length-1] ;
+  JobHistoryParser.TaskAttemptInfo minMap = mapTasks[mapTasks.length-1] ;
 %>
 
 <h3>Time taken by best performing Map task 
-<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=minMap.get(Keys.TASKID)%>">
-<%=minMap.get(Keys.TASKID) %></a> : <%=StringUtils.formatTimeDiff(minMap.getLong(Keys.FINISH_TIME), minMap.getLong(Keys.START_TIME) ) %></h3>
+<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=minMap.getAttemptId().getTaskID()%>">
+<%=minMap.getAttemptId().getTaskID() %></a> : <%=StringUtils.formatTimeDiff(minMap.getFinishTime(), minMap.getStartTime() ) %></h3>
 <h3>Average time taken by Map tasks: 
-<%=StringUtils.formatTimeDiff(avgMapTime, 0) %></h3>
+<%=StringUtils.formatTimeDiff(avg.getAvgMapTime(), 0) %></h3>
 <h3>Worse performing map tasks</h3>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Time taken</td></tr>
@@ -132,48 +135,40 @@
   for (int i=0;i<showTasks && i<mapTasks.length; i++) {
 %>
     <tr>
-    <td><a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=mapTasks[i].get(Keys.TASKID)%>">
-        <%=mapTasks[i].get(Keys.TASKID) %></a></td>
-    <td><%=StringUtils.formatTimeDiff(mapTasks[i].getLong(Keys.FINISH_TIME), mapTasks[i].getLong(Keys.START_TIME)) %></td>
+    <td><a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=mapTasks[i].getAttemptId().getTaskID()%>">
+        <%=mapTasks[i].getAttemptId().getTaskID() %></a></td>
+    <td><%=StringUtils.formatTimeDiff(mapTasks[i].getFinishTime(), mapTasks[i].getStartTime()) %></td>
     </tr>
 <%
   }
 %>
 </table>
 <%  
-  Comparator<JobHistory.Task> cFinishMapRed = 
-    new Comparator<JobHistory.Task>() {
-    public int compare(JobHistory.Task t1, JobHistory.Task t2){
-      long l1 = t1.getLong(Keys.FINISH_TIME); 
-      long l2 = t2.getLong(Keys.FINISH_TIME);
-      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
-    }
-  };
   Arrays.sort(mapTasks, cFinishMapRed);
-  JobHistory.Task lastMap = mapTasks[0] ;
+  JobHistoryParser.TaskAttemptInfo lastMap = mapTasks[0] ;
 %>
 
 <h3>The last Map task 
-<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>
-&taskid=<%=lastMap.get(Keys.TASKID)%>"><%=lastMap.get(Keys.TASKID) %></a> 
+<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>
+&taskid=<%=lastMap.getAttemptId().getTaskID()%>"><%=lastMap.getAttemptId().getTaskID() %></a> 
 finished at (relative to the Job launch time): 
 <%=StringUtils.getFormattedTimeWithDiff(dateFormat, 
-                              lastMap.getLong(Keys.FINISH_TIME), 
-                              job.getLong(Keys.LAUNCH_TIME) ) %></h3>
+                              lastMap.getFinishTime(), 
+                              job.getLaunchTime()) %></h3>
 <hr/>
 
 <%
   if (reduceTasks.length <= 0) return;
   Arrays.sort(reduceTasks, cShuffle); 
-  JobHistory.Task minShuffle = reduceTasks[reduceTasks.length-1] ;
+  JobHistoryParser.TaskAttemptInfo minShuffle = reduceTasks[reduceTasks.length-1] ;
 %>
 <h3>Time taken by best performing shuffle
-<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>
-&taskid=<%=minShuffle.get(Keys.TASKID)%>"><%=minShuffle.get(Keys.TASKID)%></a> : 
-<%=StringUtils.formatTimeDiff(minShuffle.getLong(Keys.SHUFFLE_FINISHED), 
-                              minShuffle.getLong(Keys.START_TIME) ) %></h3>
+<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>
+&taskid=<%=minShuffle.getAttemptId().getTaskID()%>"><%=minShuffle.getAttemptId().getTaskID()%></a> : 
+<%=StringUtils.formatTimeDiff(minShuffle.getShuffleFinishTime(),
+                              minShuffle.getStartTime() ) %></h3>
 <h3>Average time taken by Shuffle: 
-<%=StringUtils.formatTimeDiff(avgShuffleTime, 0) %></h3>
+<%=StringUtils.formatTimeDiff(avg.getAvgShuffleTime(), 0) %></h3>
 <h3>Worse performing Shuffle(s)</h3>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Time taken</td></tr>
@@ -182,12 +177,12 @@ finished at (relative to the Job launch time):
 %>
     <tr>
     <td><a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=
-<%=encodedLogFileName%>&taskid=<%=reduceTasks[i].get(Keys.TASKID)%>">
-<%=reduceTasks[i].get(Keys.TASKID) %></a></td>
+<%=logFile%>&taskid=<%=reduceTasks[i].getAttemptId().getTaskID()%>">
+<%=reduceTasks[i].getAttemptId().getTaskID() %></a></td>
     <td><%=
            StringUtils.formatTimeDiff(
-                       reduceTasks[i].getLong(Keys.SHUFFLE_FINISHED),
-                       reduceTasks[i].getLong(Keys.START_TIME)) %>
+                       reduceTasks[i].getShuffleFinishTime(),
+                       reduceTasks[i].getStartTime()) %>
     </td>
     </tr>
 <%
@@ -195,48 +190,31 @@ finished at (relative to the Job launch time):
 %>
 </table>
 <%  
-  Comparator<JobHistory.Task> cFinishShuffle = 
-    new Comparator<JobHistory.Task>() {
-    public int compare(JobHistory.Task t1, JobHistory.Task t2){
-      long l1 = t1.getLong(Keys.SHUFFLE_FINISHED); 
-      long l2 = t2.getLong(Keys.SHUFFLE_FINISHED);
-      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
-    }
-  };
   Arrays.sort(reduceTasks, cFinishShuffle);
-  JobHistory.Task lastShuffle = reduceTasks[0] ;
+  JobHistoryParser.TaskAttemptInfo lastShuffle = reduceTasks[0] ;
 %>
 
 <h3>The last Shuffle  
-<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>
-&taskid=<%=lastShuffle.get(Keys.TASKID)%>"><%=lastShuffle.get(Keys.TASKID)%>
+<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>
+&taskid=<%=lastShuffle.getAttemptId().getTaskID()%>"><%=lastShuffle.getAttemptId().getTaskID()%>
 </a> finished at (relative to the Job launch time): 
 <%=StringUtils.getFormattedTimeWithDiff(dateFormat,
-                              lastShuffle.getLong(Keys.SHUFFLE_FINISHED), 
-                              job.getLong(Keys.LAUNCH_TIME) ) %></h3>
+                              lastShuffle.getShuffleFinishTime(),
+                              job.getLaunchTime() ) %></h3>
 
 <%
-  Comparator<JobHistory.Task> cReduce = new Comparator<JobHistory.Task>(){
-    public int compare(JobHistory.Task t1, JobHistory.Task t2){
-      long l1 = t1.getLong(Keys.FINISH_TIME) - 
-                t1.getLong(Keys.SHUFFLE_FINISHED); 
-      long l2 = t2.getLong(Keys.FINISH_TIME) - 
-                t2.getLong(Keys.SHUFFLE_FINISHED);
-      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
-    }
-  }; 
   Arrays.sort(reduceTasks, cReduce); 
-  JobHistory.Task minReduce = reduceTasks[reduceTasks.length-1] ;
+  JobHistoryParser.TaskAttemptInfo minReduce = reduceTasks[reduceTasks.length-1] ;
 %>
 <hr/>
 <h3>Time taken by best performing Reduce task : 
-<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=minReduce.get(Keys.TASKID)%>">
-<%=minReduce.get(Keys.TASKID) %></a> : 
-<%=StringUtils.formatTimeDiff(minReduce.getLong(Keys.FINISH_TIME),
-    minReduce.getLong(Keys.SHUFFLE_FINISHED) ) %></h3>
+<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=minReduce.getAttemptId().getTaskID()%>">
+<%=minReduce.getAttemptId().getTaskID() %></a> : 
+<%=StringUtils.formatTimeDiff(minReduce.getFinishTime(),
+    minReduce.getShuffleFinishTime() ) %></h3>
 
 <h3>Average time taken by Reduce tasks: 
-<%=StringUtils.formatTimeDiff(avgReduceTime, 0) %></h3>
+<%=StringUtils.formatTimeDiff(avg.getAvgReduceTime(), 0) %></h3>
 <h3>Worse performing reduce tasks</h3>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Time taken</td></tr>
@@ -244,11 +222,11 @@ finished at (relative to the Job launch time):
   for (int i=0;i<showTasks && i<reduceTasks.length; i++) {
 %>
     <tr>
-    <td><a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=reduceTasks[i].get(Keys.TASKID)%>">
-        <%=reduceTasks[i].get(Keys.TASKID) %></a></td>
+    <td><a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=reduceTasks[i].getAttemptId().getTaskID()%>">
+        <%=reduceTasks[i].getAttemptId().getTaskID() %></a></td>
     <td><%=StringUtils.formatTimeDiff(
-             reduceTasks[i].getLong(Keys.FINISH_TIME), 
-             reduceTasks[i].getLong(Keys.SHUFFLE_FINISHED)) %></td>
+             reduceTasks[i].getFinishTime(),
+             reduceTasks[i].getShuffleFinishTime()) %></td>
     </tr>
 <%
   }
@@ -256,15 +234,15 @@ finished at (relative to the Job launch time):
 </table>
 <%  
   Arrays.sort(reduceTasks, cFinishMapRed);
-  JobHistory.Task lastReduce = reduceTasks[0] ;
+  JobHistoryParser.TaskAttemptInfo lastReduce = reduceTasks[0] ;
 %>
 
 <h3>The last Reduce task 
-<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>
-&taskid=<%=lastReduce.get(Keys.TASKID)%>"><%=lastReduce.get(Keys.TASKID)%>
+<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>
+&taskid=<%=lastReduce.getAttemptId().getTaskID()%>"><%=lastReduce.getAttemptId().getTaskID()%>
 </a> finished at (relative to the Job launch time): 
 <%=StringUtils.getFormattedTimeWithDiff(dateFormat,
-                              lastReduce.getLong(Keys.FINISH_TIME), 
-                              job.getLong(Keys.LAUNCH_TIME) ) %></h3>
+                              lastReduce.getFinishTime(),
+                              job.getLaunchTime() ) %></h3>
 </center>
 </body></html>

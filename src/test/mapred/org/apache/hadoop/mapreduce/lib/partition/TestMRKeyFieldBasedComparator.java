@@ -26,8 +26,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.mapred.OutputLogFilter;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.map.InverseMapper;
@@ -42,7 +43,7 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
   public TestMRKeyFieldBasedComparator() throws IOException {
     super(HadoopTestCase.LOCAL_MR, HadoopTestCase.LOCAL_FS, 1, 1);
     conf = createJobConf();
-    conf.set("map.output.key.field.separator", " ");
+    conf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR, " ");
   }
   
   private void testComparator(String keySpec, int expect) 
@@ -51,9 +52,9 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
     Path inDir = new Path(root, "test_cmp/in");
     Path outDir = new Path(root, "test_cmp/out");
     
-    conf.set("mapred.text.key.comparator.options", keySpec);
-    conf.set("mapred.text.key.partitioner.options", "-k1.1,1.1");
-    conf.set("map.output.key.field.separator", " ");
+    conf.set("mapreduce.partition.keycomparator.options", keySpec);
+    conf.set("mapreduce.partition.keypartitioner.options", "-k1.1,1.1");
+    conf.set(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR, " ");
 
     Job job = MapReduceTestUtil.createJob(conf, inDir, outDir, 1, 2,
                 line1 +"\n" + line2 + "\n"); 
@@ -69,7 +70,7 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
 
     // validate output
     Path[] outputFiles = FileUtil.stat2Paths(getFileSystem().listStatus(outDir,
-        new OutputLogFilter()));
+        new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -119,7 +120,7 @@ public class TestMRKeyFieldBasedComparator extends HadoopTestCase {
   public void testWithoutMRJob(String keySpec, int expect) throws Exception {
     KeyFieldBasedComparator<Void, Void> keyFieldCmp = 
       new KeyFieldBasedComparator<Void, Void>();
-    conf.set("mapred.text.key.comparator.options", keySpec);
+    conf.set("mapreduce.partition.keycomparator.options", keySpec);
     keyFieldCmp.setConf(conf);
     int result = keyFieldCmp.compare(line1_bytes, 0, line1_bytes.length,
         line2_bytes, 0, line2_bytes.length);

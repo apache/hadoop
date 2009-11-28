@@ -1,0 +1,55 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Supported Databases
+-------------------
+
+Sqoop uses JDBC to connect to databases. JDBC is a compatibility layer
+that allows a program to access many different databases through a common
+API. Slight differences in the SQL language spoken by each database, however,
+may mean that Sqoop can't use every database out of the box, or that some
+databases may be used in an inefficient manner.
+
+When you provide a connect string to Sqoop, it inspects the protocol scheme to
+determine appropriate vendor-specific logic to use. If Sqoop knows about
+a given database, it will work automatically. If not, you may need to
+specify the driver class to load via +--driver+. This will use a generic
+code path which will use standard SQL to access the database. Sqoop provides
+some databases with faster, non-JDBC-based access mechanisms. These can be
+enabled by specfying the +--direct+ parameter.
+
+Sqoop includes vendor-specific code paths for the following databases:
+
+[grid="all"]
+`-----------`--------`--------------------`---------------------
+Database    version  +--direct+ support?  connect string matches
+----------------------------------------------------------------
+HSQLDB      1.8.0+   No                   +jdbc:hsqldb:*//+
+MySQL       5.0+     Yes                  +jdbc:mysql://+
+Oracle      10.2.0+  No                   +jdbc:oracle:*//+
+PostgreSQL  8.3+     Yes                  +jdbc:postgresql://+
+----------------------------------------------------------------
+
+Sqoop may work with older versions of the databases listed, but we have
+only tested it with the versions specified above.
+
+Even if Sqoop supports a database internally, you may still need to
+install the database vendor's JDBC driver in your +$HADOOP_HOME/lib+
+path.
+

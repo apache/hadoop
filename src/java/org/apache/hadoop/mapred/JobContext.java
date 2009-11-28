@@ -1,4 +1,5 @@
-/* Licensed to the Apache Software Foundation (ASF) under one
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -23,36 +24,18 @@ import org.apache.hadoop.util.Progressable;
  * @deprecated Use {@link org.apache.hadoop.mapreduce.JobContext} instead.
  */
 @Deprecated
-public class JobContext extends org.apache.hadoop.mapreduce.JobContext {
-  private JobConf job;
-  private Progressable progress;
-
-  JobContext(JobConf conf, org.apache.hadoop.mapreduce.JobID jobId, 
-             Progressable progress) {
-    super(conf, jobId);
-    this.job = conf;
-    this.progress = progress;
-  }
-
-  JobContext(JobConf conf, org.apache.hadoop.mapreduce.JobID jobId) {
-    this(conf, jobId, Reporter.NULL);
-  }
-  
+public interface JobContext extends org.apache.hadoop.mapreduce.JobContext {
   /**
    * Get the job Configuration
    * 
    * @return JobConf
    */
-  public JobConf getJobConf() {
-    return job;
-  }
+  public JobConf getJobConf();
   
   /**
    * Get the progress mechanism for reporting progress.
    * 
    * @return progress mechanism 
    */
-  public Progressable getProgressible() {
-    return progress;
-  }
+  public Progressable getProgressible();
 }

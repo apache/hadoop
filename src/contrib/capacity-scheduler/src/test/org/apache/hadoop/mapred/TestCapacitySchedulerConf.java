@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Properties;
 
 import junit.framework.TestCase;
 
@@ -34,7 +33,7 @@ public class TestCapacitySchedulerConf extends TestCase {
   private static String testDataDir = System.getProperty("test.build.data");
   private static String testConfFile;
   
-  private Map<String, String> defaultProperties;
+  //private Map<String, String> defaultProperties;
   private CapacitySchedulerConf testConf;
   private PrintWriter writer;
   
@@ -48,16 +47,6 @@ public class TestCapacitySchedulerConf extends TestCase {
   }
   
   public TestCapacitySchedulerConf() {
-    defaultProperties = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent",
-                       "maximum-initialized-jobs-per-user"}, 
-        new String[] { "100", 
-                        "false", 
-                        "100",
-                        "2" }
-                      );
   }
 
   
@@ -71,213 +60,8 @@ public class TestCapacitySchedulerConf extends TestCase {
       confFile.delete();  
     }
   }
-  
-  public void testDefaults() {
-    testConf = new CapacitySchedulerConf();
-    Map<String, Map<String, String>> queueDetails
-                            = new HashMap<String, Map<String,String>>();
-    queueDetails.put("default", defaultProperties);
-    checkQueueProperties(testConf, queueDetails);
-  }
-  
-  public void testQueues() {
 
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent",
-                       "maximum-initialized-jobs-per-user"}, 
-        new String[] { "10", 
-                        "true",
-                        "25",
-                        "4"}
-                      );
 
-    Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent",
-                       "maximum-initialized-jobs-per-user"}, 
-        new String[] { "100", 
-                        "false", 
-                        "50",
-                        "1"}
-                      );
-
-    startConfig();
-    writeQueueDetails("default", q1Props);
-    writeQueueDetails("research", q2Props);
-    endConfig();
-
-    testConf = new CapacitySchedulerConf(new Path(testConfFile));
-
-    Map<String, Map<String, String>> queueDetails
-              = new HashMap<String, Map<String,String>>();
-    queueDetails.put("default", q1Props);
-    queueDetails.put("research", q2Props);
-    checkQueueProperties(testConf, queueDetails);
-  }
-  
-  public void testQueueWithDefaultProperties() {
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "minimum-user-limit-percent" }, 
-        new String[] { "20", 
-                        "75" }
-                      );
-    startConfig();
-    writeQueueDetails("default", q1Props);
-    endConfig();
-
-    testConf = new CapacitySchedulerConf(new Path(testConfFile));
-
-    Map<String, Map<String, String>> queueDetails
-              = new HashMap<String, Map<String,String>>();
-    Map<String, String> expProperties = new HashMap<String, String>();
-    for (String key : q1Props.keySet()) {
-      expProperties.put(key, q1Props.get(key));
-    }
-    expProperties.put("supports-priority", "false");
-    expProperties.put("maximum-initialized-jobs-per-user", "2");
-    queueDetails.put("default", expProperties);
-    checkQueueProperties(testConf, queueDetails);
-  }
-
-  public void testReload() throws IOException {
-    // use the setup in the test case testQueues as a base...
-    testQueues();
-    
-    // write new values to the file...
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "20.5", 
-                        "true", 
-                        "40" }
-                      );
-
-    Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "100", 
-                        "false",
-                        "50" }
-                      );
-
-    openFile();
-    startConfig();
-    writeDefaultConfiguration();
-    writeQueueDetails("default", q1Props);
-    writeQueueDetails("production", q2Props);
-    endConfig();
-    testConf.reloadConfiguration();
-    Map<String, Map<String, String>> queueDetails 
-                      = new HashMap<String, Map<String, String>>();
-    queueDetails.put("default", q1Props);
-    queueDetails.put("production", q2Props);
-    checkQueueProperties(testConf, queueDetails);
-  }
-
-  public void testQueueWithUserDefinedDefaultProperties() throws IOException {
-    openFile();
-    startConfig();
-    writeUserDefinedDefaultConfiguration();
-    endConfig();
-
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "capacity",
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "-1", 
-                        "true", 
-                        "50" }
-                      );
-
-    Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "capacity",
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "-1", 
-                        "true",
-                        "50" }
-                      );
-    
-    testConf = new CapacitySchedulerConf(new Path(testConfFile));
-
-    Map<String, Map<String, String>> queueDetails
-              = new HashMap<String, Map<String,String>>();
-    
-    queueDetails.put("default", q1Props);
-    queueDetails.put("production", q2Props);
-    
-    checkQueueProperties(testConf, queueDetails);
-  }
-  
-  public void testQueueWithDefaultPropertiesOverriden() throws IOException {
-    openFile();
-    startConfig();
-    writeUserDefinedDefaultConfiguration();
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "capacity",
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "-1", 
-                        "true", 
-                        "50" }
-                      );
-
-    Map<String, String> q2Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "40", 
-                        "true",
-                        "50" }
-                      );
-    Map<String, String> q3Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "40", 
-                        "true",
-                        "50" }
-                      );
-    writeQueueDetails("production", q2Props);
-    writeQueueDetails("test", q3Props);
-    endConfig();
-    testConf = new CapacitySchedulerConf(new Path(testConfFile));
-    Map<String, Map<String, String>> queueDetails
-              = new HashMap<String, Map<String,String>>();
-    queueDetails.put("default", q1Props);
-    queueDetails.put("production", q2Props);
-    queueDetails.put("test", q3Props);
-    checkQueueProperties(testConf, queueDetails);
-  }
-  
-  public void testInvalidUserLimit() throws IOException {
-    openFile();
-    startConfig();
-    Map<String, String> q1Props = setupQueueProperties(
-        new String[] { "capacity", 
-                       "supports-priority",
-                       "minimum-user-limit-percent" }, 
-        new String[] { "-1",
-                        "true", 
-                        "-50" }
-                      );
-    writeQueueDetails("default", q1Props);
-    endConfig();
-    try {
-      testConf = new CapacitySchedulerConf(new Path(testConfFile));
-      testConf.getMinimumUserLimitPercent("default");
-      fail("Expect Invalid user limit to raise Exception");
-    }catch(IllegalArgumentException e) {
-      assertTrue(true);
-    }
-  }
-  
   public void testInitializationPollerProperties() 
     throws Exception {
     /*
@@ -328,29 +112,6 @@ public class TestCapacitySchedulerConf extends TestCase {
   }
   
 
-  private void checkQueueProperties(
-                        CapacitySchedulerConf testConf,
-                        Map<String, Map<String, String>> queueDetails) {
-    for (String queueName : queueDetails.keySet()) {
-      Map<String, String> map = queueDetails.get(queueName);
-      assertEquals(Float.parseFloat(map.get("capacity")),
-           testConf.getCapacity(queueName));
-      assertEquals(Integer.parseInt(map.get("minimum-user-limit-percent")),
-          testConf.getMinimumUserLimitPercent(queueName));
-      assertEquals(Boolean.parseBoolean(map.get("supports-priority")),
-          testConf.isPrioritySupported(queueName));
-    }
-  }
-  
-  private Map<String, String> setupQueueProperties(String[] keys, 
-                                                String[] values) {
-    HashMap<String, String> map = new HashMap<String, String>();
-    for(int i=0; i<keys.length; i++) {
-      map.put(keys[i], values[i]);
-    }
-    return map;
-  }
-
   private void openFile() throws IOException {
     
     if (testDataDir != null) {
@@ -366,33 +127,6 @@ public class TestCapacitySchedulerConf extends TestCase {
     writer.println("<?xml version=\"1.0\"?>");
     writer.println("<configuration>");
   }
-  
-  private void writeQueueDetails(String queue, Map<String, String> props) {
-    for (String key : props.keySet()) {
-      writer.println("<property>");
-      writer.println("<name>mapred.capacity-scheduler.queue." 
-                        + queue + "." + key +
-                    "</name>");
-      writer.println("<value>"+props.get(key)+"</value>");
-      writer.println("</property>");
-    }
-  }
-  
-  
-  private void writeDefaultConfiguration() {
-    writeProperty("mapred.capacity-scheduler.default-supports-priority"
-        , "false");
-    writeProperty("mapred.capacity-scheduler.default-minimum-user-limit-percent"
-        , "100");
-  }
-
-
-  private void writeUserDefinedDefaultConfiguration() {
-    writeProperty("mapred.capacity-scheduler.default-supports-priority"
-        , "true");
-    writeProperty("mapred.capacity-scheduler.default-minimum-user-limit-percent"
-        , "50");
-  }
 
 
   private void writeProperty(String name, String value) {
@@ -406,6 +140,32 @@ public class TestCapacitySchedulerConf extends TestCase {
   private void endConfig() {
     writer.println("</configuration>");
     writer.close();
+  }
+
+  public void testConfigurationValuesConversion() throws IOException {
+    Properties prp = new Properties();
+
+    prp.setProperty("capacity","10");
+    prp.setProperty("maximum-capacity","20.5");
+    prp.setProperty("supports-priority","false");
+    prp.setProperty("minimum-user-limit-percent","23");
+
+    CapacitySchedulerConf conf = new CapacitySchedulerConf();
+    conf.setProperties("default",prp);
+
+    assertTrue(conf.getCapacity("default") == 10f);
+    assertTrue(conf.getMaxCapacity("default") == 20.5f);
+    assertTrue(conf.isPrioritySupported("default") == false);
+    assertTrue(conf.getMinimumUserLimitPercent("default")==23);
+
+    //check for inproper stuff
+    prp.setProperty("capacity","h");
+    prp.setProperty("maximum-capacity","20");
+
+    //This is because h is invalid value.
+    assertTrue(conf.getCapacity("default") == -1);
+    
+    assertFalse(conf.getMaxCapacity("default") != 20);
   }
   
 }

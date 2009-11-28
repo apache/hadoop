@@ -22,7 +22,7 @@
 int write_config_file(char *file_name) {
   FILE *file;
   char const *str =
-      "mapred.local.dir=/tmp/testing1,/tmp/testing2,/tmp/testing3,/tmp/testing4\n";
+      "mapreduce.cluster.local.dir=/tmp/testing1,/tmp/testing2,/tmp/testing3,/tmp/testing4\n";
 
   file = fopen(file_name, "w");
   if (file == NULL) {
@@ -67,7 +67,7 @@ void test_check_variable_against_config() {
   // Test obtaining a value for a key from the config
   char *config_values[4] = { "/tmp/testing1", "/tmp/testing2",
       "/tmp/testing3", "/tmp/testing4" };
-  char *value = (char *) get_value("mapred.local.dir");
+  char *value = (char *) get_value("mapreduce.cluster.local.dir");
   if (strcmp(value, "/tmp/testing1,/tmp/testing2,/tmp/testing3,/tmp/testing4")
       != 0) {
     printf("Obtaining a value for a key from the config failed.\n");
@@ -75,7 +75,7 @@ void test_check_variable_against_config() {
   }
 
   // Test the parsing of a multiple valued key from the config
-  char **values = (char **)get_values("mapred.local.dir");
+  char **values = (char **)get_values("mapreduce.cluster.local.dir");
   char **values_ptr = values;
   int i = 0;
   while (*values_ptr != NULL) {
@@ -87,12 +87,12 @@ void test_check_variable_against_config() {
     values_ptr++;
   }
 
-  if (check_variable_against_config("mapred.local.dir", "/tmp/testing5") == 0) {
+  if (check_variable_against_config("mapreduce.cluster.local.dir", "/tmp/testing5") == 0) {
     printf("Configuration should not contain /tmp/testing5! \n");
     goto cleanup;
   }
 
-  if (check_variable_against_config("mapred.local.dir", "/tmp/testing4") != 0) {
+  if (check_variable_against_config("mapreduce.cluster.local.dir", "/tmp/testing4") != 0) {
     printf("Configuration should contain /tmp/testing4! \n");
     goto cleanup;
   }
@@ -111,11 +111,24 @@ void test_check_variable_against_config() {
   rmdir(hadoop_conf_dir);
 }
 
+void test_get_user_directory() {
+  char *user_dir = (char *) get_user_directory("/tmp", "user");
+  printf("user_dir obtained is %s\n", user_dir);
+  int ret = 0;
+  if (strcmp(user_dir, "/tmp/taskTracker/user") != 0) {
+    ret = -1;
+  }
+  free(user_dir);
+  assert(ret == 0);
+}
+
 void test_get_job_directory() {
-  char *job_dir = (char *) get_job_directory("/tmp", "job_200906101234_0001");
+  char *job_dir = (char *) get_job_directory("/tmp", "user",
+      "job_200906101234_0001");
   printf("job_dir obtained is %s\n", job_dir);
   int ret = 0;
-  if (strcmp(job_dir, "/tmp/taskTracker/jobcache/job_200906101234_0001") != 0) {
+  if (strcmp(job_dir, "/tmp/taskTracker/user/jobcache/job_200906101234_0001")
+      != 0) {
     ret = -1;
   }
   free(job_dir);
@@ -123,30 +136,34 @@ void test_get_job_directory() {
 }
 
 void test_get_attempt_directory() {
-  char *attempt_dir = (char *) get_attempt_directory(
-      "/tmp/taskTracker/jobcache/job_200906101234_0001",
-      "attempt_200906112028_0001_m_000000_0");
+  char *job_dir = (char *) get_job_directory("/tmp", "user",
+      "job_200906101234_0001");
+  printf("job_dir obtained is %s\n", job_dir);
+  char *attempt_dir = (char *) get_attempt_directory(job_dir,
+      "attempt_200906101234_0001_m_000000_0");
   printf("attempt_dir obtained is %s\n", attempt_dir);
   int ret = 0;
   if (strcmp(
       attempt_dir,
-      "/tmp/taskTracker/jobcache/job_200906101234_0001/attempt_200906112028_0001_m_000000_0")
+      "/tmp/taskTracker/user/jobcache/job_200906101234_0001/attempt_200906101234_0001_m_000000_0")
       != 0) {
     ret = -1;
   }
+  free(job_dir);
   free(attempt_dir);
   assert(ret == 0);
 }
 
 void test_get_task_launcher_file() {
-  char *task_file = (char *) get_task_launcher_file(
-      "/tmp/taskTracker/jobcache/job_200906101234_0001",
+  char *job_dir = (char *) get_job_directory("/tmp", "user",
+      "job_200906101234_0001");
+  char *task_file = (char *) get_task_launcher_file(job_dir,
       "attempt_200906112028_0001_m_000000_0");
   printf("task_file obtained is %s\n", task_file);
   int ret = 0;
   if (strcmp(
       task_file,
-      "/tmp/taskTracker/jobcache/job_200906101234_0001/attempt_200906112028_0001_m_000000_0/taskjvm.sh")
+      "/tmp/taskTracker/user/jobcache/job_200906101234_0001/attempt_200906112028_0001_m_000000_0/taskjvm.sh")
       != 0) {
     ret = -1;
   }
@@ -168,13 +185,27 @@ void test_get_task_log_dir() {
 }
 
 int main(int argc, char **argv) {
-  printf("Starting tests\n");
+  printf("\nStarting tests\n");
   LOGFILE = stdout;
+
+  printf("\nTesting check_variable_against_config()\n");
   test_check_variable_against_config();
+
+  printf("\nTesting get_user_directory()\n");
+  test_get_user_directory();
+
+  printf("\nTesting get_job_directory()\n");
   test_get_job_directory();
+
+  printf("\nTesting get_attempt_directory()\n");
   test_get_attempt_directory();
+
+  printf("\nTesting get_task_launcher_file()\n");
   test_get_task_launcher_file();
+
+  printf("\nTesting get_task_log_dir()\n");
   test_get_task_log_dir();
-  printf("Finished tests\n");
+
+  printf("\nFinished tests\n");
   return 0;
 }

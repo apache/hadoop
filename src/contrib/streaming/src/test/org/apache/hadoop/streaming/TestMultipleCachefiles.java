@@ -34,7 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.OutputLogFilter;
+import org.apache.hadoop.mapred.Utils;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 /**
  * This test case tests the symlink creation
  * utility provided by distributed caching 
@@ -73,7 +74,7 @@ public class TestMultipleCachefiles extends TestCase
         mr  = new MiniMRCluster(1, namenode, 3);
         // During tests, the default Configuration will use a local mapred
         // So don't specify -config or -cluster
-        String strJobtracker = "mapred.job.tracker=" + "localhost:" + mr.getJobTrackerPort();
+        String strJobtracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.getJobTrackerPort();
         String strNamenode = "fs.default.name=" + namenode;
         String argv[] = new String[] {
           "-input", INPUT_FILE,
@@ -122,7 +123,8 @@ public class TestMultipleCachefiles extends TestCase
         String line2 = null;
         Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
                                      new Path(OUTPUT_DIR),
-                                     new OutputLogFilter()));
+                                     new Utils.OutputFileUtils
+                                              .OutputFilesFilter()));
         for (int i = 0; i < fileList.length; i++){
           System.out.println(fileList[i].toString());
           BufferedReader bread =

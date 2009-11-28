@@ -6,16 +6,16 @@
 <configuration>
 
 <property>
-  <name>io.sort.mb</name>
+  <name>mapreduce.task.io.sort.mb</name>
   <value>10</value>
 </property>
 <property>
-  <name>mapred.hosts.exclude</name>
+  <name>mapreduce.jobtracker.hosts.exclude.filename</name>
   <value>hosts.exclude</value>
   <description></description>
 </property>
 <property>
-  <name>mapred.job.tracker.retire.jobs</name>
+  <name>mapreduce.jobtracker.retirejobs</name>
   <value>false</value>
   <description></description>
 </property>

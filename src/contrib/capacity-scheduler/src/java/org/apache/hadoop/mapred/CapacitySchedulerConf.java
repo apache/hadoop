@@ -17,21 +17,44 @@
 
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
+import java.util.Properties;
+import java.util.Map;
+import java.util.HashMap;
+
 /**
- * Class providing access to resource manager configuration.
+ * Class providing access to Capacity scheduler configuration and default values
+ * for queue-configuration. Capacity scheduler configuration includes settings
+ * for the {@link JobInitializationPoller} and default values for queue
+ * configuration. These are read from the file
+ * {@link CapacitySchedulerConf#SCHEDULER_CONF_FILE} on the CLASSPATH. The main
+ * queue configuration is defined in the file
+ * {@link QueueManager#QUEUE_CONF_FILE_NAME} on the CLASSPATH.
  * 
- * Resource manager configuration involves setting up queues, and defining
- * various properties for the queues. These are typically read from a file 
- * called capacity-scheduler.xml that must be in the classpath of the
- * application. The class provides APIs to get/set and reload the 
- * configuration for the queues.
+ * <p>
+ * 
+ * This class also provides APIs to get and set the configuration for the
+ * queues.
  */
 class CapacitySchedulerConf {
-  
-  /** Default file name from which the resource manager configuration is read. */ 
+
+  static final Log LOG = LogFactory.getLog(CapacitySchedulerConf.class);
+
+  static final String CAPACITY_PROPERTY = "capacity";
+
+  static final String SUPPORTS_PRIORITY_PROPERTY = "supports-priority";
+
+  static final String MAXIMUM_INITIALIZED_JOBS_PER_USER_PROPERTY =
+      "maximum-initialized-jobs-per-user";
+
+  static final String MINIMUM_USER_LIMIT_PERCENT_PROPERTY =
+      "minimum-user-limit-percent";
+
+  /** Default file name from which the capacity scheduler configuration is read. */
   public static final String SCHEDULER_CONF_FILE = "capacity-scheduler.xml";
   
   private int defaultUlimitMinimum;
@@ -40,6 +63,9 @@ class CapacitySchedulerConf {
   
   private static final String QUEUE_CONF_PROPERTY_NAME_PREFIX = 
     "mapred.capacity-scheduler.queue.";
+
+  private Map<String, Properties> queueProperties
+    = new HashMap<String,Properties>();
 
   /**
    * If {@link JobConf#MAPRED_TASK_MAXPMEM_PROPERTY} is set to
@@ -74,18 +100,12 @@ class CapacitySchedulerConf {
   @Deprecated
   static final String UPPER_LIMIT_ON_TASK_PMEM_PROPERTY =
     "mapred.capacity-scheduler.task.limit.maxpmem";
-
+  
   /**
-   *  Configuration that provides the maximum cap for the map task in a queue
-   *  at any given point of time.
+   * A maximum capacity defines a limit beyond which a sub-queue
+   * cannot use the capacity of its parent queue.
    */
-  static final String MAX_MAP_CAP_PROPERTY = "max.map.slots";
-
-  /**
-   *  Configuration that provides the maximum cap for the reduce task in a queue
-   *  at any given point of time.
-   */
-  static final String MAX_REDUCE_CAP_PROPERTY = "max.reduce.slots";
+  static final String MAX_CAPACITY_PROPERTY ="maximum-capacity";
 
   /**
    * The constant which defines the default initialization thread
@@ -102,29 +122,29 @@ class CapacitySchedulerConf {
   private Configuration rmConf;
 
   private int defaultMaxJobsPerUsersToInitialize;
-  
+
   /**
-   * Create a new ResourceManagerConf.
+   * Create a new CapacitySchedulerConf.
    * This method reads from the default configuration file mentioned in
-   * {@link RM_CONF_FILE}, that must be present in the classpath of the
+   * {@link SCHEDULER_CONF_FILE}, that must be present in the classpath of the
    * application.
    */
   public CapacitySchedulerConf() {
     rmConf = new Configuration(false);
-    rmConf.addResource(SCHEDULER_CONF_FILE);
+    getCSConf().addResource(SCHEDULER_CONF_FILE);
     initializeDefaults();
   }
 
   /**
-   * Create a new ResourceManagerConf reading the specified configuration
+   * Create a new CapacitySchedulerConf reading the specified configuration
    * file.
    * 
    * @param configFile {@link Path} to the configuration file containing
-   * the resource manager configuration.
+   * the Capacity scheduler configuration.
    */
   public CapacitySchedulerConf(Path configFile) {
     rmConf = new Configuration(false);
-    rmConf.addResource(configFile);
+    getCSConf().addResource(configFile);
     initializeDefaults();
   }
   
@@ -133,13 +153,17 @@ class CapacitySchedulerConf {
    * which is used by the Capacity Scheduler.
    */
   private void initializeDefaults() {
-    defaultUlimitMinimum = rmConf.getInt(
+    defaultUlimitMinimum = getCSConf().getInt(
         "mapred.capacity-scheduler.default-minimum-user-limit-percent", 100);
-    defaultSupportPriority = rmConf.getBoolean(
+    defaultSupportPriority = getCSConf().getBoolean(
         "mapred.capacity-scheduler.default-supports-priority", false);
-    defaultMaxJobsPerUsersToInitialize = rmConf.getInt(
+    defaultMaxJobsPerUsersToInitialize = getCSConf().getInt(
         "mapred.capacity-scheduler.default-maximum-initialized-jobs-per-user",
         2);
+  }
+
+  void setProperties(String queueName , Properties properties) {
+    this.queueProperties.put(queueName,properties);
   }
   
   /**
@@ -163,31 +187,60 @@ class CapacitySchedulerConf {
     //In case of both capacity and default capacity not configured.
     //Last check is if the configuration is specified and is marked as
     //negative we throw exception
-    String raw = rmConf.getRaw(toFullPropertyName(queue, 
-        "capacity"));
-    if(raw == null) {
-      return -1;
-    }
-    float result = rmConf.getFloat(toFullPropertyName(queue, 
-                                   "capacity"), 
-                                   -1);
-    if (result < 0.0 || result > 100.0) {
+    String raw = getProperty(queue, CAPACITY_PROPERTY);
+
+    float result = this.getFloat(raw,-1);
+    
+    if (result > 100.0) {
       throw new IllegalArgumentException("Illegal capacity for queue " + queue +
                                          " of " + result);
     }
     return result;
   }
-  
+
+  String getProperty(String queue,String property) {
+    if(!queueProperties.containsKey(queue))
+     throw new IllegalArgumentException("Invalid queuename " + queue);
+
+    //This check is still required as sometimes we create queue with null
+    //This is typically happens in case of test.
+    if(queueProperties.get(queue) != null) {
+      return queueProperties.get(queue).getProperty(property);
+    }
+
+    return null;
+  }
+
   /**
-   * Sets the capacity of the given queue.
+   * Return the maximum percentage of the cluster capacity that can be
+   * used by the given queue
+   * This percentage defines a limit beyond which a
+   * sub-queue cannot use the capacity of its parent queue.
+   * This provides a means to limit how much excess capacity a
+   * sub-queue can use. By default, there is no limit.
+   *
+   * The maximum-capacity-stretch of a queue can only be
+   * greater than or equal to its minimum capacity.
    * 
    * @param queue name of the queue
-   * @param capacity percent of the cluster for the queue.
+   * @return maximum capacity percent of cluster for the queue
    */
-  public void setCapacity(String queue,float capacity) {
-    rmConf.setFloat(toFullPropertyName(queue, "capacity"),capacity);
+  public float getMaxCapacity(String queue) {
+    String raw = getProperty(queue, MAX_CAPACITY_PROPERTY);
+    float result = getFloat(raw,-1);
+    result = (result <= 0) ? -1 : result; 
+    if (result > 100.0) {
+      throw new IllegalArgumentException("Illegal maximum-capacity-stretch " +
+        "for queue " + queue +" of " + result);
+    }
+
+    if((result != -1) && (result < getCapacity(queue))) {
+      throw new IllegalArgumentException("maximum-capacity-stretch " +
+        "for a queue should be greater than capacity ");
+    }
+    return result;
   }
-  
+
   /**
    * Get whether priority is supported for this queue.
    * 
@@ -198,21 +251,10 @@ class CapacitySchedulerConf {
    * @return Whether this queue supports priority or not.
    */
   public boolean isPrioritySupported(String queue) {
-    return rmConf.getBoolean(toFullPropertyName(queue, "supports-priority"),
-        defaultSupportPriority);  
+    String raw = getProperty(queue, SUPPORTS_PRIORITY_PROPERTY);
+    return Boolean.parseBoolean(raw);
   }
-  
-  /**
-   * Set whether priority is supported for this queue.
-   * 
-   * 
-   * @param queue name of the queue
-   * @param value true, if the queue must support priorities, false otherwise.
-   */
-  public void setPrioritySupported(String queue, boolean value) {
-    rmConf.setBoolean(toFullPropertyName(queue, "supports-priority"), value);
-  }
-  
+
   /**
    * Get the minimum limit of resources for any user submitting jobs in 
    * this queue, in percentage.
@@ -229,35 +271,13 @@ class CapacitySchedulerConf {
    * 
    */
   public int getMinimumUserLimitPercent(String queue) {
-    int userLimit = rmConf.getInt(toFullPropertyName(queue,
-        "minimum-user-limit-percent"), defaultUlimitMinimum);
+    String raw = getProperty(queue, MINIMUM_USER_LIMIT_PERCENT_PROPERTY);
+    int userLimit = getInt(raw,defaultUlimitMinimum);
     if(userLimit <= 0 || userLimit > 100) {
       throw new IllegalArgumentException("Invalid user limit : "
           + userLimit + " for queue : " + queue);
     }
     return userLimit;
-  }
-  
-  /**
-   * Set the minimum limit of resources for any user submitting jobs in
-   * this queue, in percentage.
-   * 
-   * @param queue name of the queue
-   * @param value minimum limit of resources for any user submitting jobs
-   * in this queue
-   */
-  public void setMinimumUserLimitPercent(String queue, int value) {
-    rmConf.setInt(toFullPropertyName(queue, "minimum-user-limit-percent"), 
-                    value);
-  }
-  
-  /**
-   * Reload configuration by clearing the information read from the 
-   * underlying configuration file.
-   */
-  public synchronized void reloadConfiguration() {
-    rmConf.reloadConfiguration();
-    initializeDefaults();
   }
   
   static final String toFullPropertyName(String queue, 
@@ -275,27 +295,16 @@ class CapacitySchedulerConf {
    * or zero.
    */
   public int getMaxJobsPerUserToInitialize(String queue) {
-    int maxJobsPerUser = rmConf.getInt(toFullPropertyName(queue,
-        "maximum-initialized-jobs-per-user"), 
-        defaultMaxJobsPerUsersToInitialize);
+    String raw =
+        getProperty(queue, MAXIMUM_INITIALIZED_JOBS_PER_USER_PROPERTY);
+    int maxJobsPerUser = getInt(raw,defaultMaxJobsPerUsersToInitialize);
     if(maxJobsPerUser <= 0) {
       throw new IllegalArgumentException(
           "Invalid maximum jobs per user configuration " + maxJobsPerUser);
     }
     return maxJobsPerUser;
   }
-  
-  /**
-   * Sets the maximum number of jobs which are allowed to be initialized 
-   * for a user in the queue.
-   * 
-   * @param queue queue name.
-   * @param value maximum number of jobs allowed to be initialized per user.
-   */
-  public void setMaxJobsPerUserToInitialize(String queue, int value) {
-    rmConf.setInt(toFullPropertyName(queue, 
-        "maximum-initialized-jobs-per-user"), value);
-  }
+
 
   /**
    * Amount of time in milliseconds which poller thread and initialization
@@ -308,7 +317,7 @@ class CapacitySchedulerConf {
    * @throws IllegalArgumentException if time is negative or zero.
    */
   public long getSleepInterval() {
-    long sleepInterval = rmConf.getLong(
+    long sleepInterval = getCSConf().getLong(
         "mapred.capacity-scheduler.init-poll-interval", 
         INITIALIZATION_THREAD_POLLING_INTERVAL);
     
@@ -338,7 +347,7 @@ class CapacitySchedulerConf {
    * in parallel.
    */
   public int getMaxWorkerThreads() {
-    int maxWorkerThreads = rmConf.getInt(
+    int maxWorkerThreads = getCSConf().getInt(
         "mapred.capacity-scheduler.init-worker-threads", 
         MAX_INITIALIZATION_WORKER_THREADS);
     if(maxWorkerThreads <= 0) {
@@ -347,62 +356,28 @@ class CapacitySchedulerConf {
     }
     return maxWorkerThreads;
   }
-  /**
-   * Set the sleep interval which initialization poller would sleep before 
-   * it looks at the jobs in the job queue.
-   * 
-   * @param interval sleep interval
-   */
-  public void setSleepInterval(long interval) {
-    rmConf.setLong(
-        "mapred.capacity-scheduler.init-poll-interval", interval);
-  }
-  
-  /**
-   * Sets number of threads which can be spawned to initialize jobs in
-   * parallel.
-   * 
-   * @param poolSize number of threads to be spawned to initialize jobs
-   * in parallel.
-   */
-  public void setMaxWorkerThreads(int poolSize) {
-    rmConf.setInt(
-        "mapred.capacity-scheduler.init-worker-threads", poolSize);
+
+  public Configuration getCSConf() {
+    return rmConf;
   }
 
-  /**
-   * get the max map slots cap
-   * @param queue
-   * @return
-   */
-  public int getMaxMapCap(String queue) {
-    return rmConf.getInt(toFullPropertyName(queue,MAX_MAP_CAP_PROPERTY),-1);
+  float getFloat(String valueString,float defaultValue) {
+    if (valueString == null)
+      return defaultValue;
+    try {
+      return Float.parseFloat(valueString);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
 
-  /**
-   * Used for testing
-   * @param queue
-   * @param val
-   */
-  public void setMaxMapCap(String queue,int val) {
-    rmConf.setInt(toFullPropertyName(queue,MAX_MAP_CAP_PROPERTY),val);
-  }
-
-  /**
-   * get the max reduce slots cap
-   * @param queue
-   * @return
-   */
-  public int getMaxReduceCap(String queue) {
-    return rmConf.getInt(toFullPropertyName(queue,MAX_REDUCE_CAP_PROPERTY),-1);    
-  }
-
-  /**
-   * Used for testing
-   * @param queue
-   * @param val
-   */
-  public void setMaxReduceCap(String queue,int val) {
-    rmConf.setInt(toFullPropertyName(queue,MAX_REDUCE_CAP_PROPERTY),val);
+  int getInt(String valueString,int defaultValue) {
+    if (valueString == null)
+      return defaultValue;
+    try {
+      return Integer.parseInt(valueString);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
 }

@@ -223,5 +223,43 @@ public class TestReduceDriver extends TestCase {
       // expected.
     }
   }
+
+  /**
+   * Reducer that counts its values twice; the second iteration
+   * according to mapreduce semantics should be empty.
+   */
+  private static class DoubleIterReducer<K, V>
+      extends Reducer<K, V, K, LongWritable> {
+    public void reduce(K key, Iterable<V> values, Context c)
+        throws IOException, InterruptedException {
+      long count = 0;
+
+      for (V val : values) {
+        count++;
+      }
+
+      // This time around, iteration should yield no values.
+      for (V val : values) {
+        count++;
+      }
+      c.write(key, new LongWritable(count));
+    }
+  }
+
+  @Test
+  public void testDoubleIteration() {
+    reducer = new DoubleIterReducer<Text, LongWritable>();
+    driver = new ReduceDriver<Text, LongWritable, Text, LongWritable>(
+        reducer);
+
+    driver
+        .withInputKey(new Text("foo"))
+        .withInputValue(new LongWritable(1))
+        .withInputValue(new LongWritable(1))
+        .withInputValue(new LongWritable(1))
+        .withInputValue(new LongWritable(1))
+        .withOutput(new Text("foo"), new LongWritable(4))
+        .runTest();
+  }
 }
 

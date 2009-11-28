@@ -33,6 +33,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A Convenience class that creates output lazily.  
  */
 public class LazyOutputFormat <K,V> extends FilterOutputFormat<K, V> {
+  public static String OUTPUT_FORMAT = 
+    "mapreduce.output.lazyoutputformat.outputformat";
   /**
    * Set the underlying output format for LazyOutputFormat.
    * @param job the {@link Job} to modify
@@ -42,7 +44,7 @@ public class LazyOutputFormat <K,V> extends FilterOutputFormat<K, V> {
   public static void  setOutputFormatClass(Job job, 
                                      Class<? extends OutputFormat> theClass) {
       job.setOutputFormatClass(LazyOutputFormat.class);
-      job.getConfiguration().setClass("mapred.lazy.output.format", 
+      job.getConfiguration().setClass(OUTPUT_FORMAT, 
           theClass, OutputFormat.class);
   }
 
@@ -50,7 +52,7 @@ public class LazyOutputFormat <K,V> extends FilterOutputFormat<K, V> {
   private void getBaseOutputFormat(Configuration conf) 
   throws IOException {
     baseOut =  ((OutputFormat<K, V>) ReflectionUtils.newInstance(
-        conf.getClass("mapred.lazy.output.format", null), conf));
+      conf.getClass(OUTPUT_FORMAT, null), conf));
     if (baseOut == null) {
       throw new IOException("Output Format not set for LazyOutputFormat");
     }

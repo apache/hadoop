@@ -701,8 +701,8 @@ namespace HadoopPipes {
       }
       if (reducer != NULL) {
         int64_t spillSize = 100;
-        if (jobConf->hasKey("io.sort.mb")) {
-          spillSize = jobConf->getInt("io.sort.mb");
+        if (jobConf->hasKey("mapreduce.task.io.sort.mb")) {
+          spillSize = jobConf->getInt("mapreduce.task.io.sort.mb");
         }
         writer = new CombineRunner(spillSize * 1024 * 1024, this, reducer, 
                                    uplink, partitioner, numReduces);
@@ -937,7 +937,7 @@ namespace HadoopPipes {
    */
   void* ping(void* ptr) {
     TaskContextImpl* context = (TaskContextImpl*) ptr;
-    char* portStr = getenv("hadoop.pipes.command.port");
+    char* portStr = getenv("mapreduce.pipes.command.port");
     int MAX_RETRIES = 3;
     int remaining_retries = MAX_RETRIES;
     while (!context->isDone()) {
@@ -990,7 +990,7 @@ namespace HadoopPipes {
     try {
       TaskContextImpl* context = new TaskContextImpl(factory);
       Protocol* connection;
-      char* portStr = getenv("hadoop.pipes.command.port");
+      char* portStr = getenv("mapreduce.pipes.command.port");
       int sock = -1;
       FILE* stream = NULL;
       FILE* outStream = NULL;
@@ -1024,8 +1024,8 @@ namespace HadoopPipes {
                                      + strerror(errno));
 
         connection = new BinaryProtocol(stream, context, outStream);
-      } else if (getenv("hadoop.pipes.command.file")) {
-        char* filename = getenv("hadoop.pipes.command.file");
+      } else if (getenv("mapreduce.pipes.commandfile")) {
+        char* filename = getenv("mapreduce.pipes.commandfile");
         string outFilename = filename;
         outFilename += ".out";
         stream = fopen(filename, "r");

@@ -19,8 +19,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.SleepJob;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.ToolRunner;
 
 import junit.framework.TestCase;
@@ -46,12 +48,12 @@ public class TestSubmitJob extends TestCase {
       throws Exception {
     JobConf jtConf = new JobConf();
     jtConf
-        .setLong(JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY, 1 * 1024L);
-    jtConf.setLong(JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+        .setLong(MRConfig.MAPMEMORY_MB, 1 * 1024L);
+    jtConf.setLong(MRConfig.REDUCEMEMORY_MB,
         2 * 1024L);
-    jtConf.setLong(JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
+    jtConf.setLong(JTConfig.JT_MAX_MAPMEMORY_MB,
         3 * 1024L);
-    jtConf.setLong(JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
+    jtConf.setLong(JTConfig.JT_MAX_REDUCEMEMORY_MB,
         4 * 1024L);
 
     miniMRCluster = new MiniMRCluster(0, "file:///", 0, null, null, jtConf);

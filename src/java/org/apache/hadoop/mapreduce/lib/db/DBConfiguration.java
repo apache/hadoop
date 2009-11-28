@@ -43,54 +43,59 @@ public class DBConfiguration {
 
   /** The JDBC Driver class name */
   public static final String DRIVER_CLASS_PROPERTY = 
-      "mapred.jdbc.driver.class";
+    "mapreduce.jdbc.driver.class";
   
   /** JDBC Database access URL */
-  public static final String URL_PROPERTY = "mapred.jdbc.url";
+  public static final String URL_PROPERTY = "mapreduce.jdbc.url";
 
   /** User name to access the database */
-  public static final String USERNAME_PROPERTY = "mapred.jdbc.username";
+  public static final String USERNAME_PROPERTY = "mapreduce.jdbc.username";
   
   /** Password to access the database */
-  public static final String PASSWORD_PROPERTY = "mapred.jdbc.password";
+  public static final String PASSWORD_PROPERTY = "mapreduce.jdbc.password";
 
   /** Input table name */
   public static final String INPUT_TABLE_NAME_PROPERTY = 
-      "mapred.jdbc.input.table.name";
+    "mapreduce.jdbc.input.table.name";
 
   /** Field names in the Input table */
   public static final String INPUT_FIELD_NAMES_PROPERTY = 
-      "mapred.jdbc.input.field.names";
+    "mapreduce.jdbc.input.field.names";
 
   /** WHERE clause in the input SELECT statement */
   public static final String INPUT_CONDITIONS_PROPERTY = 
-      "mapred.jdbc.input.conditions";
+    "mapreduce.jdbc.input.conditions";
   
   /** ORDER BY clause in the input SELECT statement */
   public static final String INPUT_ORDER_BY_PROPERTY = 
-      "mapred.jdbc.input.orderby";
+    "mapreduce.jdbc.input.orderby";
   
   /** Whole input query, exluding LIMIT...OFFSET */
-  public static final String INPUT_QUERY = "mapred.jdbc.input.query";
+  public static final String INPUT_QUERY = "mapreduce.jdbc.input.query";
   
   /** Input query to get the count of records */
   public static final String INPUT_COUNT_QUERY = 
-      "mapred.jdbc.input.count.query";
+    "mapreduce.jdbc.input.count.query";
+  
+  /** Input query to get the max and min values of the jdbc.input.query */
+  public static final String INPUT_BOUNDING_QUERY =
+      "mapred.jdbc.input.bounding.query";
   
   /** Class name implementing DBWritable which will hold input tuples */
-  public static final String INPUT_CLASS_PROPERTY = "mapred.jdbc.input.class";
+  public static final String INPUT_CLASS_PROPERTY = 
+    "mapreduce.jdbc.input.class";
 
   /** Output table name */
   public static final String OUTPUT_TABLE_NAME_PROPERTY = 
-      "mapred.jdbc.output.table.name";
+    "mapreduce.jdbc.output.table.name";
 
   /** Field names in the Output table */
   public static final String OUTPUT_FIELD_NAMES_PROPERTY = 
-      "mapred.jdbc.output.field.names";  
+    "mapreduce.jdbc.output.field.names";  
 
   /** Number of fields in the Output table */
   public static final String OUTPUT_FIELD_COUNT_PROPERTY = 
-      "mapred.jdbc.output.field.count";  
+    "mapreduce.jdbc.output.field.count";  
   
   /**
    * Sets the DB access related fields in the {@link Configuration}.  
@@ -207,7 +212,17 @@ public class DBConfiguration {
       conf.set(DBConfiguration.INPUT_COUNT_QUERY, query);
     }
   }
-  
+
+  public void setInputBoundingQuery(String query) {
+    if (query != null && query.length() > 0) {
+      conf.set(DBConfiguration.INPUT_BOUNDING_QUERY, query);
+    }
+  }
+
+  public String getInputBoundingQuery() {
+    return conf.get(DBConfiguration.INPUT_BOUNDING_QUERY);
+  }
+
   public Class<?> getInputClass() {
     return conf.getClass(DBConfiguration.INPUT_CLASS_PROPERTY,
                          NullDBWritable.class);

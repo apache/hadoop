@@ -27,6 +27,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.streaming.io.InputWriter;
 import org.apache.hadoop.streaming.io.OutputReader;
 import org.apache.hadoop.streaming.io.TextInputWriter;
@@ -68,7 +69,7 @@ public class PipeMapper extends PipeMapRed implements Mapper {
     //processed records could be different(equal or less) than the no of 
     //records input.
     SkipBadRecords.setAutoIncrMapperProcCount(job, false);
-    skipping = job.getBoolean("mapred.skip.on", false);
+    skipping = job.getBoolean(JobContext.SKIP_RECORDS, false);
     if (mapInputWriterClass_.getCanonicalName().equals(TextInputWriter.class.getCanonicalName())) {
       String inputFormatClassName = job.getClass("mapred.input.format.class", TextInputFormat.class).getCanonicalName();
       ignoreKey = inputFormatClassName.equals(TextInputFormat.class.getCanonicalName());

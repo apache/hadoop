@@ -34,6 +34,7 @@ public final class AllTests  {
     suite.addTestSuite(TestMapDriver.class);
     suite.addTestSuite(TestReduceDriver.class);
     suite.addTestSuite(TestMapReduceDriver.class);
+    suite.addTestSuite(TestCounters.class);
 
     return suite;
   }

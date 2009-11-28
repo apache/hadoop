@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -62,13 +63,18 @@ class NodeHealthCheckerService {
   static private final String ERROR_PATTERN = "ERROR";
 
   /* Configuration keys */
-  static final String HEALTH_CHECK_SCRIPT_PROPERTY = "mapred.healthChecker.script.path";
+  static final String HEALTH_CHECK_SCRIPT_PROPERTY = 
+    TTConfig.TT_HEALTH_CHECKER_SCRIPT_PATH;
 
-  static final String HEALTH_CHECK_INTERVAL_PROPERTY = "mapred.healthChecker.interval";
+  static final String HEALTH_CHECK_INTERVAL_PROPERTY = 
+    TTConfig.TT_HEALTH_CHECKER_INTERVAL;
 
-  static final String HEALTH_CHECK_FAILURE_INTERVAL_PROPERTY = "mapred.healthChecker.script.timeout";
+  static final String HEALTH_CHECK_FAILURE_INTERVAL_PROPERTY = 
+    TTConfig.TT_HEALTH_CHECKER_SCRIPT_TIMEOUT;
 
-  static final String HEALTH_CHECK_SCRIPT_ARGUMENTS_PROPERTY = "mapred.healthChecker.script.args";
+  static final String HEALTH_CHECK_SCRIPT_ARGUMENTS_PROPERTY = 
+    TTConfig.TT_HEALTH_CHECKER_SCRIPT_ARGS;
+  
   /* end of configuration keys */
   /** Time out error message */
   static final String NODE_HEALTH_SCRIPT_TIMED_OUT_MSG = "Node health script timed out";
@@ -211,12 +217,14 @@ class NodeHealthCheckerService {
    * Method which initializes the values for the script path and interval time.
    */
   private void initialize(Configuration conf) {
-    this.nodeHealthScript = conf.get(HEALTH_CHECK_SCRIPT_PROPERTY);
-    this.intervalTime = conf.getLong(HEALTH_CHECK_INTERVAL_PROPERTY,
+    this.nodeHealthScript = 
+        conf.get(TTConfig.TT_HEALTH_CHECKER_SCRIPT_PATH);
+    this.intervalTime = conf.getLong(TTConfig.TT_HEALTH_CHECKER_INTERVAL,
         DEFAULT_HEALTH_CHECK_INTERVAL);
-    this.scriptTimeout = conf.getLong(HEALTH_CHECK_FAILURE_INTERVAL_PROPERTY,
+    this.scriptTimeout = conf.getLong(
+        TTConfig.TT_HEALTH_CHECKER_SCRIPT_TIMEOUT,
         DEFAULT_HEALTH_SCRIPT_FAILURE_INTERVAL);
-    String[] args = conf.getStrings(HEALTH_CHECK_SCRIPT_ARGUMENTS_PROPERTY,
+    String[] args = conf.getStrings(TTConfig.TT_HEALTH_CHECKER_SCRIPT_ARGS,
         new String[] {});
     timer = new NodeHealthMonitorExecutor(args);
   }
@@ -323,7 +331,8 @@ class NodeHealthCheckerService {
    * @return true if node health monitoring service can be started.
    */
   static boolean shouldRun(Configuration conf) {
-    String nodeHealthScript = conf.get(HEALTH_CHECK_SCRIPT_PROPERTY);
+    String nodeHealthScript = 
+      conf.get(TTConfig.TT_HEALTH_CHECKER_SCRIPT_PATH);
     if (nodeHealthScript == null || nodeHealthScript.trim().isEmpty()) {
       return false;
     }

@@ -47,6 +47,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 import org.apache.commons.logging.Log;
 
@@ -226,7 +227,7 @@ public class UtilsForTests {
   /**
    * A utility that waits for specified amount of time
    */
-  static void waitFor(long duration) {
+  public static void waitFor(long duration) {
     try {
       synchronized (waitLock) {
         waitLock.wait(duration);
@@ -374,9 +375,9 @@ public class UtilsForTests {
 
     public void configure(JobConf conf) {
       try {
-        String taskId = conf.get("mapred.task.id");
+        String taskId = conf.get(JobContext.TASK_ATTEMPT_ID);
         id = Integer.parseInt(taskId.split("_")[4]);
-        totalMaps = Integer.parseInt(conf.get("mapred.map.tasks"));
+        totalMaps = Integer.parseInt(conf.get(JobContext.NUM_MAPS));
         fs = FileSystem.get(conf);
         signal = new Path(conf.get(getTaskSignalParameter(true)));
       } catch (IOException ioe) {
@@ -595,7 +596,7 @@ public class UtilsForTests {
   }
 
   // Run a job that will be succeeded and wait until it completes
-  static RunningJob runJobSucceed(JobConf conf, Path inDir, Path outDir)
+  public static RunningJob runJobSucceed(JobConf conf, Path inDir, Path outDir)
          throws IOException {
     conf.setJobName("test-job-succeed");
     conf.setMapperClass(IdentityMapper.class);
@@ -614,7 +615,7 @@ public class UtilsForTests {
   }
 
   // Run a job that will be failed and wait until it completes
-  static RunningJob runJobFail(JobConf conf, Path inDir, Path outDir)
+  public static RunningJob runJobFail(JobConf conf, Path inDir, Path outDir)
          throws IOException {
     conf.setJobName("test-job-fail");
     conf.setMapperClass(FailMapper.class);
@@ -633,7 +634,7 @@ public class UtilsForTests {
   }
 
   // Run a job that will be killed and wait until it completes
-  static RunningJob runJobKill(JobConf conf,  Path inDir, Path outDir)
+  public static RunningJob runJobKill(JobConf conf,  Path inDir, Path outDir)
          throws IOException {
 
     conf.setJobName("test-job-kill");
@@ -678,7 +679,8 @@ public class UtilsForTests {
     public void map(WritableComparable key, Writable value,
         OutputCollector<WritableComparable, Writable> out, Reporter reporter)
         throws IOException {
-
+      //NOTE- the next line is required for the TestDebugScript test to succeed
+      System.err.println("failing map");
       throw new RuntimeException("failing map");
     }
   }
@@ -714,4 +716,16 @@ public class UtilsForTests {
     fos.close();
   }
 
+  static JobTracker getJobTracker() {
+    JobConf conf = new JobConf();
+    conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+    conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
+    JobTracker jt;
+    try {
+      jt = new JobTracker(conf);
+      return jt;
+    } catch (Exception e) {
+      throw new RuntimeException("Could not start jt", e);
+    }
+  }
 }

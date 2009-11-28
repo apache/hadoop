@@ -28,6 +28,8 @@ import java.util.TreeMap;
  * 
  */
 public class UniqValueCount implements ValueAggregator<Object> {
+  public static final String MAX_NUM_UNIQUE_VALUES = 
+    "mapreduce.aggregate.max.num.unique.values";
 
   private TreeMap<Object, Object> uniqItems = null;
 

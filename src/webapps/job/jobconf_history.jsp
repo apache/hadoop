@@ -26,6 +26,7 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
 %>
 
 <%!	private static final long serialVersionUID = 1L;

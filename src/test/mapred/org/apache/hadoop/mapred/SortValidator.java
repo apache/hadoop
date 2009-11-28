@@ -33,6 +33,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.fs.*;
@@ -55,7 +56,11 @@ public class SortValidator extends Configured implements Tool {
 
   static private final IntWritable sortInput = new IntWritable(1); 
   static private final IntWritable sortOutput = new IntWritable(2); 
-
+  static public String SORT_REDUCES = 
+    "mapreduce.sortvalidator.sort.reduce.tasks";
+  static public String MAPS_PER_HOST = "mapreduce.sortvalidator.mapsperhost";
+  static public String REDUCES_PER_HOST = 
+    "mapreduce.sortvalidator.reducesperhost";
   static void printUsage() {
     System.err.println("sortvalidate [-m <maps>] [-r <reduces>] [-deep] " +
                        "-sortInput <sort-input-dir> -sortOutput <sort-output-dir>");
@@ -64,7 +69,7 @@ public class SortValidator extends Configured implements Tool {
 
   static private IntWritable deduceInputFile(JobConf job) {
     Path[] inputPaths = FileInputFormat.getInputPaths(job);
-    Path inputFile = new Path(job.get("map.input.file"));
+    Path inputFile = new Path(job.get(JobContext.MAP_INPUT_FILE));
 
     // value == one for sort-input; value == two for sort-output
     return (inputFile.getParent().equals(inputPaths[0])) ? 
@@ -208,12 +213,12 @@ public class SortValidator extends Configured implements Tool {
           
           // Figure the 'current' partition and no. of reduces of the 'sort'
           try {
-            URI inputURI = new URI(job.get("map.input.file"));
+            URI inputURI = new URI(job.get(JobContext.MAP_INPUT_FILE));
             String inputFile = inputURI.getPath();
             // part file is of the form part-r-xxxxx
             partition = Integer.valueOf(inputFile.substring(
               inputFile.lastIndexOf("part") + 7)).intValue();
-            noSortReducers = job.getInt("sortvalidate.sort.reduce.tasks", -1);
+            noSortReducers = job.getInt(SORT_REDUCES, -1);
           } catch (Exception e) {
             System.err.println("Caught: " + e);
             System.exit(-1);
@@ -322,7 +327,7 @@ public class SortValidator extends Configured implements Tool {
 
       int noSortReduceTasks = 
         outputfs.listStatus(sortOutput, sortPathsFilter).length;
-      jobConf.setInt("sortvalidate.sort.reduce.tasks", noSortReduceTasks);
+      jobConf.setInt(SORT_REDUCES, noSortReduceTasks);
       int noSortInputpaths =  inputfs.listStatus(sortInput).length;
 
       jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
@@ -347,7 +352,7 @@ public class SortValidator extends Configured implements Tool {
       FileOutputFormat.setOutputPath(jobConf, outputPath);
       
       // Uncomment to run locally in a single process
-      //job_conf.set("mapred.job.tracker", "local");
+      //job_conf.set(JTConfig.JT, "local");
       Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
       System.out.println("\nSortValidator.RecordStatsChecker: Validate sort " +
                          "from " + inputPaths[0] + " (" + 
@@ -468,11 +473,11 @@ public class SortValidator extends Configured implements Tool {
       ClusterStatus cluster = client.getClusterStatus();
       if (noMaps == -1) {
         noMaps = cluster.getTaskTrackers() * 
-          jobConf.getInt("test.sortvalidate.maps_per_host", 10);
+          jobConf.getInt(MAPS_PER_HOST, 10);
       }
       if (noReduces == -1) {
         noReduces = (int) (cluster.getMaxReduceTasks() * 0.9);
-        String sortReduces = jobConf.get("test.sortvalidate.reduces_per_host");
+        String sortReduces = jobConf.get(REDUCES_PER_HOST);
         if (sortReduces != null) {
            noReduces = cluster.getTaskTrackers() * 
                            Integer.parseInt(sortReduces);
@@ -491,7 +496,7 @@ public class SortValidator extends Configured implements Tool {
       FileOutputFormat.setOutputPath(jobConf, outputPath);
       
       // Uncomment to run locally in a single process
-      //job_conf.set("mapred.job.tracker", "local");
+      //job_conf.set(JTConfig.JT, "local");
       Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
       System.out.println("\nSortValidator.RecordChecker: Running on " +
                          cluster.getTaskTrackers() +

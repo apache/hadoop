@@ -117,21 +117,11 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
  */
 public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
 
-  public class Context 
-    extends ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
-    public Context(Configuration conf, TaskAttemptID taskid,
-                   RawKeyValueIterator input, 
-                   Counter inputCounter,
-                   RecordWriter<KEYOUT,VALUEOUT> output,
-                   OutputCommitter committer,
-                   StatusReporter reporter,
-                   RawComparator<KEYIN> comparator,
-                   Class<KEYIN> keyClass,
-                   Class<VALUEIN> valueClass
-                   ) throws IOException, InterruptedException {
-      super(conf, taskid, input, inputCounter, output, committer, reporter, 
-            comparator, keyClass, valueClass);
-    }
+  /**
+   * The <code>Context</code> passed on to the {@link Reducer} implementations.
+   */
+  public abstract class Context 
+    implements ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
   }
 
   /**

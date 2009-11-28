@@ -101,7 +101,8 @@ public class TestUserDefinedCounters extends TestCase {
     RunningJob runningJob = JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-        fs.listStatus(OUTPUT_DIR, new OutputLogFilter()));
+        fs.listStatus(OUTPUT_DIR, 
+                      new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = fs.open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));

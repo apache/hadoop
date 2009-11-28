@@ -1,0 +1,42 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Controlling the Input Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+include::input-formatting.txt[]
+
+The following arguments allow you to control the input format of
+records:
+
+include::input-formatting-args.txt[]
+
+If you have already imported data into HDFS in a text-based
+representation and want to change the delimiters being used, you
+should regenerate the class via `sqoop --generate-only`, specifying
+the new delimiters with +--fields-terminated-by+, etc., and the old
+delimiters with +--input-fields-terminated-by+, etc. Then run a
+MapReduce job where your mapper creates an instance of your record
+class, uses its +parse()+ method to read the fields using the old
+delimiters, and emits a new +Text+ output value via the record's
++toString()+ method, which will use the new delimiters. You'll then
+want to regenerate the class another time without the
++--input-fields-terminated-by+ specified so that the new delimiters
+are used for both input and output.
+

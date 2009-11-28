@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mrunit.mock.MockOutputCollector;
 import org.apache.hadoop.mrunit.mock.MockReporter;
@@ -45,13 +46,35 @@ public class ReduceDriver<K1, V1, K2, V2> extends ReduceDriverBase<K1, V1, K2, V
   public static final Log LOG = LogFactory.getLog(ReduceDriver.class);
 
   private Reducer<K1, V1, K2, V2> myReducer;
+  private Counters counters;
 
   public ReduceDriver(final Reducer<K1, V1, K2, V2> r) {
     myReducer = r;
+    counters = new Counters();
   }
 
   public ReduceDriver() {
+    counters = new Counters();
   }
+
+  /** @return the counters used in this test */
+  public Counters getCounters() {
+    return counters;
+  }
+
+  /** Sets the counters object to use for this test.
+   * @param ctrs The counters object to use.
+   */
+  public void setCounters(final Counters ctrs) {
+    this.counters = ctrs;
+  }
+
+  /** Sets the counters to use and returns self for fluent style */
+  public ReduceDriver<K1, V1, K2, V2> withCounters(final Counters ctrs) {
+    setCounters(ctrs);
+    return this;
+  }
+
 
   /**
    * Sets the reducer object to use for this test
@@ -172,7 +195,7 @@ public class ReduceDriver<K1, V1, K2, V2> extends ReduceDriverBase<K1, V1, K2, V
   public List<Pair<K2, V2>> run() throws IOException {
     MockOutputCollector<K2, V2> outputCollector =
       new MockOutputCollector<K2, V2>();
-    MockReporter reporter = new MockReporter(MockReporter.ReporterType.Reducer);
+    MockReporter reporter = new MockReporter(MockReporter.ReporterType.Reducer, getCounters());
 
     myReducer.reduce(inputKey, inputValues.iterator(), outputCollector,
             reporter);

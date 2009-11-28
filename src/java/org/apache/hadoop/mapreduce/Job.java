@@ -18,48 +18,503 @@
 
 package org.apache.hadoop.mapreduce;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.Arrays;
+import java.net.URI;
 
+import javax.security.auth.login.LoginException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapred.TaskCompletionEvent;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
+import org.apache.hadoop.mapreduce.util.ConfigUtil;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 
 /**
- * The job submitter's view of the Job. It allows the user to configure the
+ * The job submitter's view of the Job.
+ * 
+ * <p>It allows the user to configure the
  * job, submit it, control its execution, and query the state. The set methods
  * only work until the job is submitted, afterwards they will throw an 
- * IllegalStateException.
+ * IllegalStateException. </p>
+ * 
+ * <p>
+ * Normally the user creates the application, describes various facets of the
+ * job via {@link Job} and then submits the job and monitor its progress.</p>
+ * 
+ * <p>Here is an example on how to submit a job:</p>
+ * <p><blockquote><pre>
+ *     // Create a new Job
+ *     Job job = new Job(new Configuration());
+ *     job.setJarByClass(MyJob.class);
+ *     
+ *     // Specify various job-specific parameters     
+ *     job.setJobName("myjob");
+ *     
+ *     job.setInputPath(new Path("in"));
+ *     job.setOutputPath(new Path("out"));
+ *     
+ *     job.setMapperClass(MyJob.MyMapper.class);
+ *     job.setReducerClass(MyJob.MyReducer.class);
+ *
+ *     // Submit the job, then poll for progress until the job is complete
+ *     job.waitForCompletion(true);
+ * </pre></blockquote></p>
+ * 
+ * 
  */
-public class Job extends JobContext {  
-  public static enum JobState {DEFINE, RUNNING};
-  private JobState state = JobState.DEFINE;
-  private JobClient jobClient;
-  private RunningJob info;
+public class Job extends JobContextImpl implements JobContext {  
+  private static final Log LOG = LogFactory.getLog(Job.class);
 
+  public static enum JobState {DEFINE, RUNNING};
+  private static final long MAX_JOBSTATUS_AGE = 1000 * 2;
+  public static final String OUTPUT_FILTER = "mapreduce.client.output.filter";
+  /** Key in mapred-*.xml that sets completionPollInvervalMillis */
+  public static final String COMPLETION_POLL_INTERVAL_KEY = 
+    "mapreduce.client.completion.pollinterval";
+  
+  /** Default completionPollIntervalMillis is 5000 ms. */
+  static final int DEFAULT_COMPLETION_POLL_INTERVAL = 5000;
+  /** Key in mapred-*.xml that sets progMonitorPollIntervalMillis */
+  public static final String PROGRESS_MONITOR_POLL_INTERVAL_KEY =
+    "mapreduce.client.progressmonitor.pollinterval";
+  /** Default progMonitorPollIntervalMillis is 1000 ms. */
+  static final int DEFAULT_MONITOR_POLL_INTERVAL = 1000;
+
+  public static final String USED_GENERIC_PARSER = 
+    "mapreduce.client.genericoptionsparser.used";
+  public static final String SUBMIT_REPLICATION = 
+    "mapreduce.client.submit.file.replication";
+
+  public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
+
+  static {
+    ConfigUtil.loadResources();
+  }
+
+  private JobState state = JobState.DEFINE;
+  private JobStatus status;
+  private long statustime;
+  private Cluster cluster;
+  
+  @Deprecated
   public Job() throws IOException {
     this(new Configuration());
   }
 
+  @Deprecated
   public Job(Configuration conf) throws IOException {
-    super(conf, null);
-    jobClient = new JobClient((JobConf) getConfiguration());
+    this(new Cluster(conf), conf);
   }
 
+  @Deprecated
   public Job(Configuration conf, String jobName) throws IOException {
     this(conf);
     setJobName(jobName);
   }
 
+  Job(Cluster cluster) throws IOException {
+    this(cluster, new Configuration());
+  }
+
+  Job(Cluster cluster, Configuration conf) throws IOException {
+    super(conf, null);
+    this.cluster = cluster;
+  }
+
+  Job(Cluster cluster, JobStatus status,
+             Configuration conf) throws IOException {
+    this(cluster, conf);
+    state = JobState.RUNNING;
+    this.status = status;
+  }
+  
+  public static Job getInstance(Cluster cluster) throws IOException {
+     return new Job(cluster);
+  }
+  
+  public static Job getInstance(Cluster cluster, Configuration conf) 
+      throws IOException {
+    return new Job(cluster, conf);
+  }
+  
+  public static Job getInstance(Cluster cluster, JobStatus status, 
+      Configuration conf) throws IOException {
+    return new Job(cluster, status, conf);
+  }
+  
   private void ensureState(JobState state) throws IllegalStateException {
     if (state != this.state) {
       throw new IllegalStateException("Job in state "+ this.state + 
                                       " instead of " + state);
     }
+  }
+
+  /**
+   * Some methods rely on having a recent job status object.  Refresh
+   * it, if necessary
+   */
+  synchronized void ensureFreshStatus() 
+      throws IOException, InterruptedException {
+    if (System.currentTimeMillis() - statustime > MAX_JOBSTATUS_AGE) {
+      updateStatus();
+    }
+  }
+    
+  /** Some methods need to update status immediately. So, refresh
+   * immediately
+   * @throws IOException
+   */
+  synchronized void updateStatus() throws IOException, InterruptedException {
+    this.status = cluster.getClient().getJobStatus(status.getJobID());
+    if (this.status == null) {
+      throw new IOException("Job status not available ");
+    }
+    this.statustime = System.currentTimeMillis();
+  }
+  
+  public JobStatus getStatus() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status;
+  }
+  /**
+   * Get the job identifier.
+   * 
+   * @return the job identifier.
+   */
+  public JobID getID() {
+    ensureState(JobState.RUNNING);
+    return status.getJobID();
+  }
+
+  /**
+   * Returns the current state of the Job.
+   * 
+   * @return JobStatus#State
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public JobStatus.State getJobState() 
+      throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.getState();
+  }
+  
+  /**
+   * Get the URL where some job progress information will be displayed.
+   * 
+   * @return the URL where some job progress information will be displayed.
+   */
+  public String getTrackingURL(){
+    ensureState(JobState.RUNNING);
+    return status.getTrackingUrl().toString();
+  }
+
+  /**
+   * Get the path of the submitted job configuration.
+   * 
+   * @return the path of the submitted job configuration.
+   */
+  public String getJobFile() {
+    ensureState(JobState.RUNNING);
+    return status.getJobFile();
+  }
+
+  /**
+   * Get start time of the job.
+   * 
+   * @return the start time of the job
+   */
+  public long getStartTime() {
+    ensureState(JobState.RUNNING);
+    return status.getStartTime();
+  }
+
+  /**
+   * Get finish time of the job.
+   * 
+   * @return the finish time of the job
+   */
+  public long getFinishTime() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.getFinishTime();
+  }
+
+  /**
+   * Get scheduling info of the job.
+   * 
+   * @return the scheduling info of the job
+   */
+  public String getSchedulingInfo() {
+    ensureState(JobState.RUNNING);
+    return status.getSchedulingInfo();
+  }
+
+  /**
+   * Get scheduling info of the job.
+   * 
+   * @return the scheduling info of the job
+   */
+  public JobPriority getPriority() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.getPriority();
+  }
+
+  /**
+   * The user-specified job name.
+   */
+  public String getJobName() {
+    if (state == JobState.DEFINE) {
+      return super.getJobName();
+    }
+    ensureState(JobState.RUNNING);
+    return status.getJobName();
+  }
+
+  public String getHistoryUrl() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.getHistoryFile();
+  }
+
+  public boolean isRetired() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.isRetired();
+  }
+
+  /**
+   * Dump stats to screen.
+   */
+  @Override
+  public String toString() {
+    ensureState(JobState.RUNNING);
+    try {
+      updateStatus();
+    } catch (IOException e) {
+    } catch (InterruptedException ie) {
+    }
+    StringBuffer sb = new StringBuffer();
+    sb.append("Job: ").append(status.getJobID()).append("\n");
+    sb.append("Job File: ").append(status.getJobFile()).append("\n");
+    sb.append("Job Tracking URL : ").append(status.getTrackingUrl());
+    sb.append("\n");
+    sb.append("map() completion: ");
+    sb.append(status.getMapProgress()).append("\n");
+    sb.append("reduce() completion: ");
+    sb.append(status.getReduceProgress()).append("\n");
+    sb.append("Job state: ");
+    sb.append(status.getState()).append("\n");
+    sb.append("history URL: ");
+    sb.append(status.getHistoryFile()).append("\n");
+    sb.append("retired: ").append(status.isRetired());
+    return sb.toString();
+  }
+      
+  /**
+   * Get the information of the current state of the tasks of a job.
+   * 
+   * @param type Type of the task
+   * @return the list of all of the map tips.
+   * @throws IOException
+   */
+  public TaskReport[] getTaskReports(TaskType type) 
+      throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    return cluster.getClient().getTaskReports(getID(), type);
+  }
+
+  /**
+   * Get the <i>progress</i> of the job's map-tasks, as a float between 0.0 
+   * and 1.0.  When all map tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's map-tasks.
+   * @throws IOException
+   */
+  public float mapProgress() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    ensureFreshStatus();
+    return status.getMapProgress();
+  }
+
+  /**
+   * Get the <i>progress</i> of the job's reduce-tasks, as a float between 0.0 
+   * and 1.0.  When all reduce tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's reduce-tasks.
+   * @throws IOException
+   */
+  public float reduceProgress() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    ensureFreshStatus();
+    return status.getReduceProgress();
+  }
+
+  /**
+   * Get the <i>progress</i> of the job's cleanup-tasks, as a float between 0.0 
+   * and 1.0.  When all cleanup tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's cleanup-tasks.
+   * @throws IOException
+   */
+  public float cleanupProgress() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    ensureFreshStatus();
+    return status.getCleanupProgress();
+  }
+
+  /**
+   * Get the <i>progress</i> of the job's setup-tasks, as a float between 0.0 
+   * and 1.0.  When all setup tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's setup-tasks.
+   * @throws IOException
+   */
+  public float setupProgress() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    ensureFreshStatus();
+    return status.getSetupProgress();
+  }
+
+  /**
+   * Check if the job is finished or not. 
+   * This is a non-blocking call.
+   * 
+   * @return <code>true</code> if the job is complete, else <code>false</code>.
+   * @throws IOException
+   */
+  public boolean isComplete() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.isJobComplete();
+  }
+
+  /**
+   * Check if the job completed successfully. 
+   * 
+   * @return <code>true</code> if the job succeeded, else <code>false</code>.
+   * @throws IOException
+   */
+  public boolean isSuccessful() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.getState() == JobStatus.State.SUCCEEDED;
+  }
+
+  /**
+   * Kill the running job.  Blocks until all job tasks have been
+   * killed as well.  If the job is no longer running, it simply returns.
+   * 
+   * @throws IOException
+   */
+  public void killJob() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    cluster.getClient().killJob(getID());
+  }
+
+  /**
+   * Set the priority of a running job.
+   * @param priority the new priority for the job.
+   * @throws IOException
+   */
+  public void setPriority(JobPriority priority) 
+      throws IOException, InterruptedException {
+    if (state == JobState.DEFINE) {
+      conf.setJobPriority(
+        org.apache.hadoop.mapred.JobPriority.valueOf(priority.name()));
+    } else {
+      ensureState(JobState.RUNNING);
+      cluster.getClient().setJobPriority(getID(), priority.toString());
+    }
+  }
+
+  /**
+   * Get events indicating completion (success/failure) of component tasks.
+   *  
+   * @param startFrom index to start fetching events from
+   * @param numEvents number of events to fetch
+   * @return an array of {@link TaskCompletionEvent}s
+   * @throws IOException
+   */
+  public TaskCompletionEvent[] getTaskCompletionEvents(int startFrom,
+      int numEvents) throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    return cluster.getClient().getTaskCompletionEvents(getID(),
+      startFrom, numEvents); 
+  }
+  
+  /**
+   * Kill indicated task attempt.
+   * 
+   * @param taskId the id of the task to be terminated.
+   * @throws IOException
+   */
+  public boolean killTask(TaskAttemptID taskId) 
+      throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    return cluster.getClient().killTask(taskId, false);
+  }
+
+  /**
+   * Fail indicated task attempt.
+   * 
+   * @param taskId the id of the task to be terminated.
+   * @throws IOException
+   */
+  public boolean failTask(TaskAttemptID taskId) 
+      throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    return cluster.getClient().killTask(taskId, true);
+  }
+
+  /**
+   * Gets the counters for this job.
+   * 
+   * @return the counters for this job.
+   * @throws IOException
+   */
+  public Counters getCounters() 
+      throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    return cluster.getClient().getJobCounters(getID());
+  }
+
+  /**
+   * Gets the diagnostic messages for a given task attempt.
+   * @param taskid
+   * @return the list of diagnostic messages for the task
+   * @throws IOException
+   */
+  public String[] getTaskDiagnostics(TaskAttemptID taskid) 
+      throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    return cluster.getClient().getTaskDiagnostics(taskid);
   }
 
   /**
@@ -91,7 +546,8 @@ public class Job extends JobContext {
   public void setInputFormatClass(Class<? extends InputFormat> cls
                                   ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
-    conf.setClass(INPUT_FORMAT_CLASS_ATTR, cls, InputFormat.class);
+    conf.setClass(INPUT_FORMAT_CLASS_ATTR, cls, 
+                  InputFormat.class);
   }
 
   /**
@@ -102,7 +558,8 @@ public class Job extends JobContext {
   public void setOutputFormatClass(Class<? extends OutputFormat> cls
                                    ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
-    conf.setClass(OUTPUT_FORMAT_CLASS_ATTR, cls, OutputFormat.class);
+    conf.setClass(OUTPUT_FORMAT_CLASS_ATTR, cls, 
+                  OutputFormat.class);
   }
 
   /**
@@ -121,15 +578,26 @@ public class Job extends JobContext {
    * @param cls the example class
    */
   public void setJarByClass(Class<?> cls) {
+    ensureState(JobState.DEFINE);
     conf.setJarByClass(cls);
   }
-  
+
   /**
-   * Get the pathname of the job's jar.
-   * @return the pathname
+   * Set the job jar 
    */
-  public String getJar() {
-    return conf.getJar();
+  public void setJar(String jar) {
+    ensureState(JobState.DEFINE);
+    conf.setJar(jar);
+  }
+
+  /**
+   * Set the reported username for this job.
+   * 
+   * @param user the username for this job.
+   */
+  public void setUser(String user) {
+    ensureState(JobState.DEFINE);
+    conf.setUser(user);
   }
 
   /**
@@ -162,7 +630,8 @@ public class Job extends JobContext {
   public void setPartitionerClass(Class<? extends Partitioner> cls
                                   ) throws IllegalStateException {
     ensureState(JobState.DEFINE);
-    conf.setClass(PARTITIONER_CLASS_ATTR, cls, Partitioner.class);
+    conf.setClass(PARTITIONER_CLASS_ATTR, cls, 
+                  Partitioner.class);
   }
 
   /**
@@ -298,133 +767,133 @@ public class Job extends JobContext {
    */
   public void setJobSetupCleanupNeeded(boolean needed) {
     ensureState(JobState.DEFINE);
-    conf.setBoolean("mapred.committer.job.setup.cleanup.needed", needed);
+    conf.setBoolean(SETUP_CLEANUP_NEEDED, needed);
   }
 
   /**
-   * Get the URL where some job progress information will be displayed.
-   * 
-   * @return the URL where some job progress information will be displayed.
+   * Set the given set of archives
+   * @param archives The list of archives that need to be localized
    */
-  public String getTrackingURL() {
-    ensureState(JobState.RUNNING);
-    return info.getTrackingURL();
+  public void setCacheArchives(URI[] archives) {
+    ensureState(JobState.DEFINE);
+    DistributedCache.setCacheArchives(archives, conf);
   }
 
   /**
-   * Get the job identifier.
-   * 
-   * @return the job identifier.
+   * Set the given set of files
+   * @param files The list of files that need to be localized
    */
-  public JobID getID() {
-    ensureState(JobState.RUNNING);
-    return info.getID();
+  public void setCacheFiles(URI[] files) {
+    ensureState(JobState.DEFINE);
+    DistributedCache.setCacheFiles(files, conf);
+  }
+
+  /**
+   * Add a archives to be localized
+   * @param uri The uri of the cache to be localized
+   */
+  public void addCacheArchive(URI uri) {
+    ensureState(JobState.DEFINE);
+    DistributedCache.addCacheArchive(uri, conf);
   }
   
   /**
-   * Get the <i>progress</i> of the job's map-tasks, as a float between 0.0 
-   * and 1.0.  When all map tasks have completed, the function returns 1.0.
-   * 
-   * @return the progress of the job's map-tasks.
-   * @throws IOException
+   * Add a file to be localized
+   * @param uri The uri of the cache to be localized
    */
-  public float mapProgress() throws IOException {
-    ensureState(JobState.RUNNING);
-    return info.mapProgress();
+  public void addCacheFile(URI uri) {
+    ensureState(JobState.DEFINE);
+    DistributedCache.addCacheFile(uri, conf);
   }
 
   /**
-   * Get the <i>progress</i> of the job's reduce-tasks, as a float between 0.0 
-   * and 1.0.  When all reduce tasks have completed, the function returns 1.0.
+   * Add an file path to the current set of classpath entries It adds the file
+   * to cache as well.
    * 
-   * @return the progress of the job's reduce-tasks.
-   * @throws IOException
+   * @param file Path of the file to be added
    */
-  public float reduceProgress() throws IOException {
-    ensureState(JobState.RUNNING);
-    return info.reduceProgress();
+  public void addFileToClassPath(Path file)
+    throws IOException {
+    ensureState(JobState.DEFINE);
+    DistributedCache.addFileToClassPath(file, conf);
   }
 
   /**
-   * Check if the job is finished or not. 
-   * This is a non-blocking call.
+   * Add an archive path to the current set of classpath entries. It adds the
+   * archive to cache as well.
    * 
-   * @return <code>true</code> if the job is complete, else <code>false</code>.
-   * @throws IOException
+   * @param archive Path of the archive to be added
    */
-  public boolean isComplete() throws IOException {
-    ensureState(JobState.RUNNING);
-    return info.isComplete();
+  public void addArchiveToClassPath(Path archive)
+    throws IOException {
+    ensureState(JobState.DEFINE);
+    DistributedCache.addArchiveToClassPath(archive, conf);
   }
 
   /**
-   * Check if the job completed successfully. 
-   * 
-   * @return <code>true</code> if the job succeeded, else <code>false</code>.
-   * @throws IOException
+   * This method allows you to create symlinks in the current working directory
+   * of the task to all the cache files/archives
    */
-  public boolean isSuccessful() throws IOException {
-    ensureState(JobState.RUNNING);
-    return info.isSuccessful();
-  }
-
-  /**
-   * Kill the running job.  Blocks until all job tasks have been
-   * killed as well.  If the job is no longer running, it simply returns.
-   * 
-   * @throws IOException
-   */
-  public void killJob() throws IOException {
-    ensureState(JobState.RUNNING);
-    info.killJob();
-  }
-    
-  /**
-   * Get events indicating completion (success/failure) of component tasks.
-   *  
-   * @param startFrom index to start fetching events from
-   * @return an array of {@link TaskCompletionEvent}s
-   * @throws IOException
-   */
-  public TaskCompletionEvent[] getTaskCompletionEvents(int startFrom
-                                                       ) throws IOException {
-    ensureState(JobState.RUNNING);
-    return info.getTaskCompletionEvents(startFrom);
+  public void createSymlink() {
+    ensureState(JobState.DEFINE);
+    DistributedCache.createSymlink(conf);
   }
   
-  /**
-   * Kill indicated task attempt.
+  /** 
+   * Expert: Set the number of maximum attempts that will be made to run a
+   * map task.
    * 
-   * @param taskId the id of the task to be terminated.
-   * @throws IOException
+   * @param n the number of attempts per map task.
    */
-  public void killTask(TaskAttemptID taskId) throws IOException {
-    ensureState(JobState.RUNNING);
-    info.killTask(org.apache.hadoop.mapred.TaskAttemptID.downgrade(taskId), 
-                  false);
+  public void setMaxMapAttempts(int n) {
+    ensureState(JobState.DEFINE);
+    conf.setMaxMapAttempts(n);
+  }
+
+  /** 
+   * Expert: Set the number of maximum attempts that will be made to run a
+   * reduce task.
+   * 
+   * @param n the number of attempts per reduce task.
+   */
+  public void setMaxReduceAttempts(int n) {
+    ensureState(JobState.DEFINE);
+    conf.setMaxReduceAttempts(n);
   }
 
   /**
-   * Fail indicated task attempt.
-   * 
-   * @param taskId the id of the task to be terminated.
-   * @throws IOException
+   * Set whether the system should collect profiler information for some of 
+   * the tasks in this job? The information is stored in the user log 
+   * directory.
+   * @param newValue true means it should be gathered
    */
-  public void failTask(TaskAttemptID taskId) throws IOException {
-    ensureState(JobState.RUNNING);
-    info.killTask(org.apache.hadoop.mapred.TaskAttemptID.downgrade(taskId), 
-                  true);
+  public void setProfileEnabled(boolean newValue) {
+    ensureState(JobState.DEFINE);
+    conf.setProfileEnabled(newValue);
   }
 
   /**
-   * Gets the counters for this job.
-   * 
-   * @return the counters for this job.
-   * @throws IOException
+   * Set the profiler configuration arguments. If the string contains a '%s' it
+   * will be replaced with the name of the profiling output file when the task
+   * runs.
+   *
+   * This value is passed to the task child JVM on the command line.
+   *
+   * @param value the configuration string
    */
-  public Counters getCounters() throws IOException {
-    ensureState(JobState.RUNNING);
-    return new Counters(info.getCounters());
+  public void setProfileParams(String value) {
+    ensureState(JobState.DEFINE);
+    conf.setProfileParams(value);
+  }
+
+  /**
+   * Set the ranges of maps or reduces to profile. setProfileEnabled(true) 
+   * must also be called.
+   * @param newValue a set of integer ranges of the map ids
+   */
+  public void setProfileTaskRange(boolean isMap, String newValue) {
+    ensureState(JobState.DEFINE);
+    conf.setProfileTaskRange(isMap, newValue);
   }
 
   private void ensureNotSet(String attr, String msg) throws IOException {
@@ -455,12 +924,12 @@ public class Job extends JobContext {
       }      
     } else {
       String mode = "map compatability";
-      ensureNotSet(JobContext.INPUT_FORMAT_CLASS_ATTR, mode);
-      ensureNotSet(JobContext.MAP_CLASS_ATTR, mode);
+      ensureNotSet(INPUT_FORMAT_CLASS_ATTR, mode);
+      ensureNotSet(MAP_CLASS_ATTR, mode);
       if (numReduces != 0) {
-        ensureNotSet(JobContext.PARTITIONER_CLASS_ATTR, mode);
+        ensureNotSet(PARTITIONER_CLASS_ATTR, mode);
        } else {
-        ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
+        ensureNotSet(OUTPUT_FORMAT_CLASS_ATTR, mode);
       }
     }
     if (numReduces != 0) {
@@ -472,8 +941,8 @@ public class Job extends JobContext {
         ensureNotSet(oldReduceClass, mode);   
       } else {
         String mode = "reduce compatability";
-        ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
-        ensureNotSet(JobContext.REDUCE_CLASS_ATTR, mode);   
+        ensureNotSet(OUTPUT_FORMAT_CLASS_ATTR, mode);
+        ensureNotSet(REDUCE_CLASS_ATTR, mode);   
       }
     }   
   }
@@ -486,7 +955,8 @@ public class Job extends JobContext {
                               ClassNotFoundException {
     ensureState(JobState.DEFINE);
     setUseNewAPI();
-    info = jobClient.submitJobInternal(conf);
+    status = new JobSubmitter(cluster.getFileSystem(),
+      cluster.getClient()).submitJobInternal(this);
     state = JobState.RUNNING;
    }
   
@@ -504,11 +974,343 @@ public class Job extends JobContext {
       submit();
     }
     if (verbose) {
-      jobClient.monitorAndPrintJob(conf, info);
+      monitorAndPrintJob();
     } else {
-      info.waitForCompletion();
+      // get the completion poll interval from the client.
+      int completionPollIntervalMillis = 
+        Job.getCompletionPollInterval(cluster.getConf());
+      while (!isComplete()) {
+        try {
+          Thread.sleep(completionPollIntervalMillis);
+        } catch (InterruptedException ie) {
+        }
+      }
     }
     return isSuccessful();
   }
   
+  /**
+   * Monitor a job and print status in real-time as progress is made and tasks 
+   * fail.
+   * @return true if the job succeeded
+   * @throws IOException if communication to the JobTracker fails
+   */
+  public boolean monitorAndPrintJob() 
+      throws IOException, InterruptedException {
+    String lastReport = null;
+    Job.TaskStatusFilter filter;
+    Configuration clientConf = cluster.getConf();
+    filter = Job.getTaskOutputFilter(clientConf);
+    JobID jobId = getID();
+    LOG.info("Running job: " + jobId);
+    int eventCounter = 0;
+    boolean profiling = getProfileEnabled();
+    IntegerRanges mapRanges = getProfileTaskRange(true);
+    IntegerRanges reduceRanges = getProfileTaskRange(false);
+    int progMonitorPollIntervalMillis = 
+      Job.getProgressPollInterval(clientConf);
+    while (!isComplete()) {
+      Thread.sleep(progMonitorPollIntervalMillis);
+      String report = 
+        (" map " + StringUtils.formatPercent(mapProgress(), 0)+
+            " reduce " + 
+            StringUtils.formatPercent(reduceProgress(), 0));
+      if (!report.equals(lastReport)) {
+        LOG.info(report);
+        lastReport = report;
+      }
+
+      TaskCompletionEvent[] events = 
+        getTaskCompletionEvents(eventCounter, 10); 
+      eventCounter += events.length;
+      printTaskEvents(events, filter, profiling, mapRanges, reduceRanges);
+    }
+    LOG.info("Job complete: " + jobId);
+    Counters counters = getCounters();
+    if (counters != null) {
+      LOG.info(counters.toString());
+    }
+    return isSuccessful();
+  }
+
+  private void printTaskEvents(TaskCompletionEvent[] events,
+      Job.TaskStatusFilter filter, boolean profiling, IntegerRanges mapRanges,
+      IntegerRanges reduceRanges) throws IOException, InterruptedException {
+    for (TaskCompletionEvent event : events) {
+      TaskCompletionEvent.Status status = event.getStatus();
+      if (profiling && 
+         (status == TaskCompletionEvent.Status.SUCCEEDED ||
+            status == TaskCompletionEvent.Status.FAILED) &&
+            (event.isMapTask() ? mapRanges : reduceRanges).
+              isIncluded(event.idWithinJob())) {
+        downloadProfile(event);
+      }
+      switch (filter) {
+      case NONE:
+        break;
+      case SUCCEEDED:
+        if (event.getStatus() == 
+          TaskCompletionEvent.Status.SUCCEEDED) {
+          LOG.info(event.toString());
+          displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
+        }
+        break; 
+      case FAILED:
+        if (event.getStatus() == 
+          TaskCompletionEvent.Status.FAILED) {
+          LOG.info(event.toString());
+          // Displaying the task diagnostic information
+          TaskAttemptID taskId = event.getTaskAttemptId();
+          String[] taskDiagnostics = getTaskDiagnostics(taskId); 
+          if (taskDiagnostics != null) {
+            for (String diagnostics : taskDiagnostics) {
+              System.err.println(diagnostics);
+            }
+          }
+          // Displaying the task logs
+          displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
+        }
+        break; 
+      case KILLED:
+        if (event.getStatus() == TaskCompletionEvent.Status.KILLED){
+          LOG.info(event.toString());
+        }
+        break; 
+      case ALL:
+        LOG.info(event.toString());
+        displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
+        break;
+      }
+    }
+  }
+  
+  private void downloadProfile(TaskCompletionEvent e) throws IOException  {
+    URLConnection connection = new URL(
+      getTaskLogURL(e.getTaskAttemptId(), e.getTaskTrackerHttp()) + 
+      "&filter=profile").openConnection();
+    InputStream in = connection.getInputStream();
+    OutputStream out = new FileOutputStream(e.getTaskAttemptId() + ".profile");
+    IOUtils.copyBytes(in, out, 64 * 1024, true);
+  }
+  
+  private void displayTaskLogs(TaskAttemptID taskId, String baseUrl)
+      throws IOException {
+    // The tasktracker for a 'failed/killed' job might not be around...
+    if (baseUrl != null) {
+      // Construct the url for the tasklogs
+      String taskLogUrl = getTaskLogURL(taskId, baseUrl);
+      
+      // Copy tasks's stdout of the JobClient
+      getTaskLogs(taskId, new URL(taskLogUrl+"&filter=stdout"), System.out);
+        
+      // Copy task's stderr to stderr of the JobClient 
+      getTaskLogs(taskId, new URL(taskLogUrl+"&filter=stderr"), System.err);
+    }
+  }
+    
+  private void getTaskLogs(TaskAttemptID taskId, URL taskLogUrl, 
+                           OutputStream out) {
+    try {
+      URLConnection connection = taskLogUrl.openConnection();
+      BufferedReader input = 
+        new BufferedReader(new InputStreamReader(connection.getInputStream()));
+      BufferedWriter output = 
+        new BufferedWriter(new OutputStreamWriter(out));
+      try {
+        String logData = null;
+        while ((logData = input.readLine()) != null) {
+          if (logData.length() > 0) {
+            output.write(taskId + ": " + logData + "\n");
+            output.flush();
+          }
+        }
+      } finally {
+        input.close();
+      }
+    } catch(IOException ioe) {
+      LOG.warn("Error reading task output" + ioe.getMessage()); 
+    }
+  }
+  
+  private String getTaskLogURL(TaskAttemptID taskId, String baseUrl) {
+    return (baseUrl + "/tasklog?plaintext=true&taskid=" + taskId); 
+  }
+
+  /**
+   * Set the UGI, user name and the group name for the job.
+   * 
+   * This method is called by job submission code while submitting the job.
+   * Internal to MapReduce project. 
+   * @throws IOException
+   */
+  public void setUGIAndUserGroupNames()
+      throws IOException {
+    UnixUserGroupInformation ugi = Job.getUGI(conf);
+    setUser(ugi.getUserName());
+    if (ugi.getGroupNames().length > 0) {
+      conf.set("group.name", ugi.getGroupNames()[0]);
+    }
+  }
+
+  /** The interval at which monitorAndPrintJob() prints status */
+  public static int getProgressPollInterval(Configuration conf) {
+    // Read progress monitor poll interval from config. Default is 1 second.
+    int progMonitorPollIntervalMillis = conf.getInt(
+      PROGRESS_MONITOR_POLL_INTERVAL_KEY, DEFAULT_MONITOR_POLL_INTERVAL);
+    if (progMonitorPollIntervalMillis < 1) {
+      LOG.warn(PROGRESS_MONITOR_POLL_INTERVAL_KEY + 
+        " has been set to an invalid value; "
+        + " replacing with " + DEFAULT_MONITOR_POLL_INTERVAL);
+      progMonitorPollIntervalMillis = DEFAULT_MONITOR_POLL_INTERVAL;
+    }
+    return progMonitorPollIntervalMillis;
+  }
+
+  /** The interval at which waitForCompletion() should check. */
+  public static int getCompletionPollInterval(Configuration conf) {
+    int completionPollIntervalMillis = conf.getInt(
+      COMPLETION_POLL_INTERVAL_KEY, DEFAULT_COMPLETION_POLL_INTERVAL);
+    if (completionPollIntervalMillis < 1) { 
+      LOG.warn(COMPLETION_POLL_INTERVAL_KEY + 
+       " has been set to an invalid value; "
+       + "replacing with " + DEFAULT_COMPLETION_POLL_INTERVAL);
+      completionPollIntervalMillis = DEFAULT_COMPLETION_POLL_INTERVAL;
+    }
+    return completionPollIntervalMillis;
+  }
+
+  /**
+   * Get the task output filter.
+   * 
+   * @param conf the configuration.
+   * @return the filter level.
+   */
+  public static TaskStatusFilter getTaskOutputFilter(Configuration conf) {
+    return TaskStatusFilter.valueOf(conf.get(Job.OUTPUT_FILTER, "FAILED"));
+  }
+
+  /**
+   * Modify the Configuration to set the task output filter.
+   * 
+   * @param conf the Configuration to modify.
+   * @param newValue the value to set.
+   */
+  public static void setTaskOutputFilter(Configuration conf, 
+      TaskStatusFilter newValue) {
+    conf.set(Job.OUTPUT_FILTER, newValue.toString());
+  }
+
+  public static UnixUserGroupInformation getUGI(Configuration job) 
+      throws IOException {
+    UnixUserGroupInformation ugi = null;
+    try {
+      ugi = UnixUserGroupInformation.login(job, true);
+    } catch (LoginException e) {
+      throw (IOException)(new IOException(
+        "Failed to get the current user's information.").initCause(e));
+    }
+    return ugi;
+  }
+
+  /**
+   * Read a splits file into a list of raw splits.
+   * 
+   * @param in the stream to read from
+   * @return the complete list of splits
+   * @throws IOException
+   */
+  public static RawSplit[] readSplitFile(DataInput in) throws IOException {
+    byte[] header = new byte[JobSubmitter.SPLIT_FILE_HEADER.length];
+    in.readFully(header);
+    if (!Arrays.equals(JobSubmitter.SPLIT_FILE_HEADER, header)) {
+      throw new IOException("Invalid header on split file");
+    }
+    int vers = WritableUtils.readVInt(in);
+    if (vers != JobSubmitter.CURRENT_SPLIT_FILE_VERSION) {
+      throw new IOException("Unsupported split version " + vers);
+    }
+    int len = WritableUtils.readVInt(in);
+    RawSplit[] result = new RawSplit[len];
+    for (int i=0; i < len; ++i) {
+      result[i] = new RawSplit();
+      result[i].readFields(in);
+    }
+    return result;
+  }
+
+  public static class RawSplit implements Writable {
+    private String splitClass;
+    private BytesWritable bytes = new BytesWritable();
+    private String[] locations;
+    long dataLength;
+
+    public RawSplit() {
+    }
+    
+    protected RawSplit(String splitClass, BytesWritable bytes,
+        String[] locations, long dataLength) {
+      this.splitClass = splitClass;
+      this.bytes = bytes;
+      this.locations = locations;
+      this.dataLength = dataLength;
+    }
+
+    public void setBytes(byte[] data, int offset, int length) {
+      bytes.set(data, offset, length);
+    }
+
+    public void setClassName(String className) {
+      splitClass = className;
+    }
+      
+    public String getClassName() {
+      return splitClass;
+    }
+      
+    public BytesWritable getBytes() {
+      return bytes;
+    }
+
+    public void clearBytes() {
+      bytes = null;
+    }
+      
+    public void setLocations(String[] locations) {
+      this.locations = locations;
+    }
+      
+    public String[] getLocations() {
+      return locations;
+    }
+
+    public long getDataLength() {
+      return dataLength;
+    }
+
+    public void setDataLength(long l) {
+      dataLength = l;
+    }
+      
+    public void readFields(DataInput in) throws IOException {
+      splitClass = Text.readString(in);
+      dataLength = in.readLong();
+      bytes.readFields(in);
+      int len = WritableUtils.readVInt(in);
+      locations = new String[len];
+      for (int i=0; i < len; ++i) {
+        locations[i] = Text.readString(in);
+      }
+    }
+      
+    public void write(DataOutput out) throws IOException {
+      Text.writeString(out, splitClass);
+      out.writeLong(dataLength);
+      bytes.write(out);
+      WritableUtils.writeVInt(out, locations.length);
+      for (int i = 0; i < locations.length; i++) {
+        Text.writeString(out, locations[i]);
+      }        
+    }
+  }
+
 }

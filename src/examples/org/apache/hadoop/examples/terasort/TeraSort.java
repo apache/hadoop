@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.examples.terasort;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.examples.terasort.TeraOutputFormat.TeraOutputCommitter;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
@@ -88,13 +87,13 @@ public class TeraSort extends Configured implements Tool {
         if (key.getLength() <= level) {
           return child[0].findPartition(key);
         }
-        return child[key.getBytes()[level]].findPartition(key);
+        return child[key.getBytes()[level] & 0xff].findPartition(key);
       }
       void setChild(int idx, TrieNode child) {
         this.child[idx] = child;
       }
       void print(PrintStream strm) throws IOException {
-        for(int ch=0; ch < 255; ++ch) {
+        for(int ch=0; ch < 256; ++ch) {
           for(int i = 0; i < 2*getLevel(); ++i) {
             strm.print(' ');
           }
@@ -123,7 +122,7 @@ public class TeraSort extends Configured implements Tool {
       }
       int findPartition(Text key) {
         for(int i=lower; i<upper; ++i) {
-          if (splitPoints[i].compareTo(key) >= 0) {
+          if (splitPoints[i].compareTo(key) > 0) {
             return i;
           }
         }
@@ -150,16 +149,15 @@ public class TeraSort extends Configured implements Tool {
      */
     private static Text[] readPartitions(FileSystem fs, Path p, 
                                          JobConf job) throws IOException {
-      SequenceFile.Reader reader = new SequenceFile.Reader(fs, p, job);
-      List<Text> parts = new ArrayList<Text>();
-      Text key = new Text();
-      NullWritable value = NullWritable.get();
-      while (reader.next(key, value)) {
-        parts.add(key);
-        key = new Text();
+      int reduces = job.getNumReduceTasks();
+      Text[] result = new Text[reduces - 1];
+      DataInputStream reader = fs.open(p);
+      for(int i=0; i < reduces - 1; ++i) {
+        result[i] = new Text();
+        result[i].readFields(reader);
       }
       reader.close();
-      return parts.toArray(new Text[parts.size()]);  
+      return result;
     }
 
     /**
@@ -197,7 +195,7 @@ public class TeraSort extends Configured implements Tool {
                                      maxDepth);
       }
       // pick up the rest
-      trial.getBytes()[depth] = 127;
+      trial.getBytes()[depth] = (byte) 255;
       result.child[255] = buildTrie(splits, currentBound, upper, trial,
                                     maxDepth);
       return result;
@@ -223,27 +221,77 @@ public class TeraSort extends Configured implements Tool {
     
   }
   
+  /**
+   * A total order partitioner that assigns keys based on their first 
+   * PREFIX_LENGTH bytes, assuming a flat distribution.
+   */
+  public static class SimplePartitioner implements Partitioner<Text, Text>{
+    int prefixesPerReduce;
+    private static final int PREFIX_LENGTH = 3;
+    public void configure(JobConf job) {
+      prefixesPerReduce = (int) Math.ceil((1 << (8 * PREFIX_LENGTH)) / 
+                                          (float) job.getNumReduceTasks());
+    }
+    @Override
+    public int getPartition(Text key, Text value, int numPartitions) {
+      byte[] bytes = key.getBytes();
+      int len = Math.min(PREFIX_LENGTH, key.getLength());
+      int prefix = 0;
+      for(int i=0; i < len; ++i) {
+        prefix = (prefix << 8) | (0xff & bytes[i]);
+      }
+      return prefix / prefixesPerReduce;
+    }
+  }
+
+  public static boolean getUseSimplePartitioner(Configuration conf) {
+    return conf.getBoolean("terasort.partitioner.simple", false);
+  }
+
+  public static void setUseSimplePartitioner(Configuration conf,
+                                             boolean value) {
+    conf.setBoolean("terasort.partitioner.simple", value);
+  }
+
   public int run(String[] args) throws Exception {
     LOG.info("starting");
     JobConf job = (JobConf) getConf();
     Path inputDir = new Path(args[0]);
-    inputDir = inputDir.makeQualified(inputDir.getFileSystem(job));
-    Path partitionFile = new Path(inputDir, TeraInputFormat.PARTITION_FILENAME);
-    URI partitionUri = new URI(partitionFile.toString() +
-                               "#" + TeraInputFormat.PARTITION_FILENAME);
-    TeraInputFormat.setInputPaths(job, new Path(args[0]));
-    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+    Path outputDir = new Path(args[1]);
+    boolean useSimplePartitioner = getUseSimplePartitioner(job);
+    FileSystem outputFileSystem = outputDir.getFileSystem(job);
+    outputDir = outputDir.makeQualified(outputFileSystem);
+    if (outputFileSystem.exists(outputDir)) {
+      throw new IOException("Output directory " + outputDir + 
+                            " already exists.");
+    }
+    TeraInputFormat.setInputPaths(job, inputDir);
+    FileOutputFormat.setOutputPath(job, outputDir);
     job.setJobName("TeraSort");
     job.setJarByClass(TeraSort.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     job.setInputFormat(TeraInputFormat.class);
     job.setOutputFormat(TeraOutputFormat.class);
-    job.setPartitionerClass(TotalOrderPartitioner.class);
-    TeraInputFormat.writePartitionFile(job, partitionFile);
-    DistributedCache.addCacheFile(partitionUri, job);
-    DistributedCache.createSymlink(job);
-    job.setInt("dfs.replication", 1);
+    if (useSimplePartitioner) {
+      job.setPartitionerClass(SimplePartitioner.class);
+    } else {
+      long start = System.currentTimeMillis();
+      Path partitionFile = new Path(outputDir, 
+                                    TeraInputFormat.PARTITION_FILENAME);
+      URI partitionUri = new URI(partitionFile.toString() +
+                                 "#" + TeraInputFormat.PARTITION_FILENAME);
+      TeraInputFormat.writePartitionFile(job, partitionFile);
+      DistributedCache.addCacheFile(partitionUri, job);
+      DistributedCache.createSymlink(job);    
+      long end = System.currentTimeMillis();
+      System.out.println("Spent " + (end - start) + "ms computing partitions.");
+      job.setPartitionerClass(TotalOrderPartitioner.class);
+    }
+    job.setOutputCommitter(TeraOutputCommitter.class);
+    
+    job.setInt("dfs.replication", 
+               job.getInt("terasort.output.replication", 1));
     TeraOutputFormat.setFinalSync(job, true);
     JobClient.runJob(job);
     LOG.info("done");

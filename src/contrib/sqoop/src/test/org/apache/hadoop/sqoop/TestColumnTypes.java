@@ -36,9 +36,6 @@ import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
  *    write(DataOutput), readFields(DataInput)
  * - And optionally, that we can push to the database:
  *    write(PreparedStatement)
- *
- * 
- *
  */
 public class TestColumnTypes extends ImportJobTestCase {
 
@@ -217,14 +214,24 @@ public class TestColumnTypes extends ImportJobTestCase {
 
   @Test
   public void testTimestamp2() {
+    try {
+    LOG.debug("Beginning testTimestamp2");
     verifyType("TIMESTAMP", "'2009-04-24 18:24:00.0002'",
         "2009-04-24 18:24:00.000200000",
         "2009-04-24 18:24:00.0002");
+    } finally {
+      LOG.debug("End testTimestamp2");
+    }
   }
 
   @Test
   public void testTimestamp3() {
+    try {
+    LOG.debug("Beginning testTimestamp3");
     verifyType("TIMESTAMP", "null", null);
+    } finally {
+      LOG.debug("End testTimestamp3");
+    }
   }
 
   @Test

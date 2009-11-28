@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -128,13 +129,13 @@ public class TestNodeRefresh extends TestCase {
   }
 
   /**
-   * Check default value of mapred.hosts.exclude. Also check if only 
+   * Check default value of HOSTS_EXCLUDE. Also check if only 
    * owner/supergroup user is allowed to this command.
    */
   public void testMRRefreshDefault() throws IOException {  
     // start a cluster with 2 hosts and no exclude-hosts file
     Configuration conf = new Configuration();
-    conf.set("mapred.hosts.exclude", "");
+    conf.set(JTConfig.JT_HOSTS_EXCLUDE_FILENAME, "");
     startCluster(2, 1, 0, conf);
 
     conf = mr.createJobConf(new JobConf(conf));
@@ -204,7 +205,7 @@ public class TestNodeRefresh extends TestCase {
     UnixUserGroupInformation.saveToConf(conf, 
         UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
     // set the supergroup
-    conf.set("mapred.permissions.supergroup", "abc");
+    conf.set(JTConfig.JT_SUPERGROUP, "abc");
     startCluster(2, 1, 0, conf);
 
     conf = mr.createJobConf(new JobConf(conf));
@@ -378,85 +379,4 @@ public class TestNodeRefresh extends TestCase {
     stopCluster();
   }
 
-  /**
-   * Check if excluded hosts are decommissioned across restart  
-   */
-  public void testMRExcludeHostsAcrossRestarts() throws IOException {
-    // start a cluster with 2 hosts and empty exclude-hosts file
-    Configuration conf = new Configuration();
-    conf.setBoolean("mapred.jobtracker.restart.recover", true);
-
-    File file = new File("hosts.exclude");
-    file.delete();
-    startCluster(1, 1, 0, conf);
-    String hostToDecommission = getHostname(1);
-    conf = mr.createJobConf(new JobConf(conf));
-
-    // submit a job
-    Path inDir = new Path("input");
-    Path outDir = new Path("output");
-    Path signalFilename = new Path("share");
-    JobConf newConf = new JobConf(conf);
-    UtilsForTests.configureWaitingJobConf(newConf, inDir, outDir, 30, 1, 
-        "restart-decommission", signalFilename.toString(), 
-        signalFilename.toString());
-    
-    JobClient jobClient = new JobClient(newConf);
-    RunningJob job = jobClient.submitJob(newConf);
-    JobID id = job.getID();
-    
-    // wait for 50%
-    UtilsForTests.waitForJobHalfDone(job);
-
-    
-    // change the exclude-hosts file to include one host
-    FileOutputStream out = new FileOutputStream(file);
-    LOG.info("Writing excluded nodes to log file " + file.toString());
-    BufferedWriter writer = null;
-    try {
-      writer = new BufferedWriter(new OutputStreamWriter(out));
-      writer.write( hostToDecommission + "\n"); // decommission first host
-    } finally {
-      if (writer != null) {
-        writer.close();
-      }
-      out.close();
-    }
-    file.deleteOnExit();
-
-    // restart the jobtracker
-    mr.stopJobTracker();
-    mr.startJobTracker();
-    
-    // Wait for the JT to be ready
-    UtilsForTests.waitForJobTracker(jobClient);
-
-    jt = mr.getJobTrackerRunner().getJobTracker();
-    UtilsForTests.signalTasks(dfs, dfs.getFileSystem(), 
-        signalFilename.toString(), signalFilename.toString(), 1);
-
-    assertTrue("Decommissioning of tracker has no effect restarted job", 
-        jt.getJob(job.getID()).failedMapTasks > 0);
-    
-    // check the cluster status and tracker size
-    assertEquals("Tracker is not lost upon host decommissioning", 
-                 0, jt.getClusterStatus(false).getTaskTrackers());
-    assertEquals("Excluded node count is incorrect", 
-                 1, jt.getClusterStatus(false).getNumExcludedNodes());
-    
-    // check if the host is disallowed
-    for (TaskTrackerStatus status : jt.taskTrackers()) {
-      assertFalse("Tracker from decommissioned host still exist", 
-                  status.getHost().equals(hostToDecommission));
-    }
-
-    // start a tracker so that the jobs move to completion
-    String newTrackerHostName = getHostname(2);
-    mr.startTaskTracker(newTrackerHostName, null, 2, 1);
-    
-    // wait for the job
-    job.waitForCompletion();
-
-    stopCluster();
-  }
 }

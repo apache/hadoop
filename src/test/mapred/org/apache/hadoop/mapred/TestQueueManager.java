@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,690 +18,564 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
-
-import javax.security.auth.login.LoginException;
-
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.SleepJob;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import static org.apache.hadoop.mapred.QueueManagerTestUtils.*;
+import static org.apache.hadoop.mapred.QueueConfigurationParser.*;
+import static org.junit.Assert.*;
+
+import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.SecurityUtil.AccessControlList;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.After;
+import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
-public class TestQueueManager extends TestCase {
+import java.io.File;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.Map.Entry;
 
-  private static final Log LOG = LogFactory.getLog(TestQueueManager.class);
-  
-  private MiniDFSCluster miniDFSCluster;
-  private MiniMRCluster miniMRCluster;
 
-  public void testDefaultQueueConfiguration() {
-    JobConf conf = new JobConf();
-    QueueManager qMgr = new QueueManager(conf);
-    Set<String> expQueues = new TreeSet<String>();
-    expQueues.add("default");
-    verifyQueues(expQueues, qMgr.getQueues());
-    // pass true so it will fail if the key is not found.
-    assertFalse(conf.getBoolean("mapred.acls.enabled", true));
+public class TestQueueManager {
+
+  private static final Log LOG = LogFactory.getLog(
+    TestQueueManager.class);
+
+  @After
+  public void tearDown() throws Exception {
+    new File(CONFIG).delete();
   }
-  
-  public void testMultipleQueues() {
-    JobConf conf = new JobConf();
-    conf.set("mapred.queue.names", "q1,q2,Q3");
-    QueueManager qMgr = new QueueManager(conf);
-    Set<String> expQueues = new TreeSet<String>();
-    expQueues.add("q1");
-    expQueues.add("q2");
-    expQueues.add("Q3");
-    verifyQueues(expQueues, qMgr.getQueues());
+
+  @Test
+  public void testDefault() throws Exception {
+    QueueManager qm = new QueueManager();
+    Queue root = qm.getRoot();
+    assertEquals(root.getChildren().size(), 1);
+    assertEquals(root.getChildren().iterator().next().getName(), "default");
+    assertFalse(qm.isAclsEnabled());
+    assertNull(root.getChildren().iterator().next().getChildren());
   }
-  
-  public void testSchedulerInfo() {
-    JobConf conf = new JobConf();
-    conf.set("mapred.queue.names", "qq1,qq2");
-    QueueManager qMgr = new QueueManager(conf);
-    qMgr.setSchedulerInfo("qq1", "queueInfoForqq1");
-    qMgr.setSchedulerInfo("qq2", "queueInfoForqq2");
-    assertEquals(qMgr.getSchedulerInfo("qq2"), "queueInfoForqq2");
-    assertEquals(qMgr.getSchedulerInfo("qq1"), "queueInfoForqq1");
-  }
-  
-  public void testAllEnabledACLForJobSubmission() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "*");
-    verifyJobSubmission(conf, true);
-  }
-  
-  public void testAllDisabledACLForJobSubmission() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "");
-    verifyJobSubmission(conf, false);
-  }
-  
-  public void testUserDisabledACLForJobSubmission() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job", 
-                                "3698-non-existent-user");
-    verifyJobSubmission(conf, false);
-  }
-  
-  public void testDisabledACLForNonDefaultQueue() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    // allow everyone in default queue
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "*");
-    // setup a different queue
-    conf.set("mapred.queue.names", "default,q1");
-    // setup a different acl for this queue.
-    conf.set("mapred.queue.q1.acl-submit-job", "dummy-user");
-    // verify job submission to other queue fails.
-    verifyJobSubmission(conf, false, "q1");
-  }
-  
-  public void testSubmissionToInvalidQueue() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = new JobConf();
-    conf.set("mapred.queue.names","default");
-    setUpCluster(conf);
-    String queueName = "q1";
-    try {
-      Job rjob = submitSleepJob(1, 1, 100, 100, true, null, queueName);
-    } catch (IOException ioe) {      
-       assertTrue(ioe.getMessage().contains("Queue \"" + queueName + "\" does not exist"));
-       return;
-    } finally {
-      tearDownCluster();
+
+  @Test
+  public void testXMLParsing() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
+    Set<Queue> rootQueues = qm.getRoot().getChildren();
+    List<String> names = new ArrayList<String>();
+    for (Queue q : rootQueues) {
+      names.add(q.getName());
     }
-    fail("Job submission to invalid queue job shouldnot complete , it should fail with proper exception ");   
-  }
-  
-  public void testEnabledACLForNonDefaultQueue() throws IOException,
-      LoginException, InterruptedException, ClassNotFoundException {
-    // login as self...
-    UserGroupInformation ugi = UnixUserGroupInformation.login();
-    String userName = ugi.getUserName();
-    // allow everyone in default queue
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job", "*");
-    // setup a different queue
-    conf.set("mapred.queue.names", "default,q2");
-    // setup a different acl for this queue.
-    conf.set("mapred.queue.q2.acl-submit-job", userName);
-    // verify job submission to other queue fails.
-    verifyJobSubmission(conf, true, "q2");
-  }
-  
-  public void testUserEnabledACLForJobSubmission() 
-      throws IOException, LoginException, 
-             InterruptedException, ClassNotFoundException {
-    // login as self...
-    UserGroupInformation ugi = UnixUserGroupInformation.login();
-    String userName = ugi.getUserName();
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job",
-                                  "3698-junk-user," + userName 
-                                    + " 3698-junk-group1,3698-junk-group2");
-    verifyJobSubmission(conf, true);
-  }
-  
-  public void testGroupsEnabledACLForJobSubmission() 
-      throws IOException, LoginException, 
-             InterruptedException, ClassNotFoundException {
-    // login as self, get one group, and add in allowed list.
-    UserGroupInformation ugi = UnixUserGroupInformation.login();
-    String[] groups = ugi.getGroupNames();
-    assertTrue(groups.length > 0);
-    JobConf conf = setupConf("mapred.queue.default.acl-submit-job",
-                                "3698-junk-user1,3698-junk-user2 " 
-                                  + groups[groups.length-1] 
-                                           + ",3698-junk-group");
-    verifyJobSubmission(conf, true);
-  }
-  
-  public void testAllEnabledACLForJobKill() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", "*");
-    verifyJobKill(conf, true);
+
+    //Size of root.
+    assertEquals(rootQueues.size(), 2);
+
+    //check root level queues
+    assertTrue(names.contains("q1"));
+    assertTrue(names.contains("p1"));
+
+
+    //check for leaf names
+    Set<String> leafNames = qm.getLeafQueueNames();
+    Queue p = qm.getQueue("p1");
+    Set<Queue> children = p.getChildren();
+    assertTrue(children.size() == 2);
+
+    //check leaf level queues
+    assertTrue(
+      leafNames.contains(
+        "p1" + NAME_SEPARATOR + "p11"));
+    assertTrue(
+      leafNames.contains(
+        "p1" + NAME_SEPARATOR + "p12"));
+
+
+    Queue q = qm.getQueue(
+      "p1" + NAME_SEPARATOR + "p12");
+
+    assertTrue(
+      q.getAcls().get(
+        QueueManager.toFullPropertyName(
+          q.getName(), ACL_SUBMIT_JOB_TAG)).getUsers().contains(
+        "u1"));
+
+    assertTrue(
+      q.getAcls().get(
+        QueueManager.toFullPropertyName(
+          q.getName(),
+          ACL_ADMINISTER_JOB_TAG))
+        .getUsers().contains("u2"));
+    assertTrue(q.getState().equals(QueueState.STOPPED));
   }
 
-  public void testAllDisabledACLForJobKill() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", "");
-    verifyJobKillAsOtherUser(conf, false, "dummy-user,dummy-user-group");
+  @Test
+  public void testhasAccess() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocumentWithAcls(doc,"true");
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
+
+    UserGroupInformation ugi;
+    // test for acls access when acls are set with *
+    ugi = new UnixUserGroupInformation("u1", new String[]{" "});
+    assertTrue(qm.hasAccess("p1" + NAME_SEPARATOR + "p12",
+        Queue.QueueOperation.SUBMIT_JOB, ugi));
+    ugi = new UnixUserGroupInformation("u2", new String[]{" "});
+    assertTrue(qm.hasAccess("p1" + NAME_SEPARATOR + "p12",
+        Queue.QueueOperation.ADMINISTER_JOBS, ugi));
+    
+    // test for acls access when acls are not set with *
+    ugi = new UnixUserGroupInformation("u1", new String[]{" "});
+    assertTrue(qm.hasAccess("p1" + NAME_SEPARATOR + "p11",
+        Queue.QueueOperation.SUBMIT_JOB, ugi));
+    ugi = new UnixUserGroupInformation("u2", new String[]{" "});
+    assertTrue(qm.hasAccess("p1" + NAME_SEPARATOR + "p11",
+        Queue.QueueOperation.ADMINISTER_JOBS, ugi));
+    
+    // test for acls access when acls are not specified but acls is enabled
+    ugi = new UnixUserGroupInformation("u1", new String[]{" "});
+    assertTrue(qm.hasAccess("p1" + NAME_SEPARATOR + "p13",
+        Queue.QueueOperation.SUBMIT_JOB, ugi));
+    ugi = new UnixUserGroupInformation("u2", new String[]{" "});
+    assertTrue(qm.hasAccess("p1" + NAME_SEPARATOR + "p13",
+        Queue.QueueOperation.ADMINISTER_JOBS, ugi));
+    
+    assertTrue(qm.isRunning("p1" + NAME_SEPARATOR + "p13"));
   }
   
-  public void testOwnerAllowedForJobKill() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", 
-                                              "junk-user");
-    verifyJobKill(conf, true);
+  @Test
+  public void testQueueView() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
+    
+    for (Queue queue : qm.getRoot().getChildren()) {
+      checkHierarchy(queue, qm);
+    }
   }
-  
-  public void testUserDisabledACLForJobKill() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    //setup a cluster allowing a user to submit
-    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs", 
-                                              "dummy-user");
-    verifyJobKillAsOtherUser(conf, false, "dummy-user,dummy-user-group");
+
+  private void checkHierarchy(Queue queue, QueueManager queueManager) {
+    JobQueueInfo jobQueueInfo = queueManager.getJobQueueInfo(queue.getName());
+    assertEquals(queue.getName(),jobQueueInfo.getQueueName());
+    assertEquals(queue.getState(),jobQueueInfo.getState());
+    if (queue.getChildren() !=null && queue.getChildren().size() > 0) {
+      for (Queue childQueue : queue.getChildren()) {
+        checkHierarchy(childQueue, queueManager);
+      }
+    }
   }
-  
-  public void testUserEnabledACLForJobKill() throws IOException, 
-      LoginException, InterruptedException, ClassNotFoundException {
-    // login as self...
-    UserGroupInformation ugi = UnixUserGroupInformation.login();
-    String userName = ugi.getUserName();
-    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs",
-                                              "dummy-user,"+userName);
-    verifyJobKillAsOtherUser(conf, true, "dummy-user,dummy-user-group");
+
+  @Test
+  public void testhasAccessForParent() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
+
+    UserGroupInformation ugi =
+      new UnixUserGroupInformation("u1", new String[]{" "});
+    assertFalse(
+      qm.hasAccess(
+        "p1",
+        Queue.QueueOperation.SUBMIT_JOB, ugi));
   }
-  
-  public void testUserDisabledForJobPriorityChange() 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    JobConf conf = setupConf("mapred.queue.default.acl-administer-jobs",
-                              "junk-user");
-    verifyJobPriorityChangeAsOtherUser(conf, false, 
-                              "junk-user,junk-user-group");
+
+  @Test
+  public void testValidation() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    Element queues = createQueuesNode(doc, "false");
+    Element q1 = createQueue(doc, "q1");
+
+    q1.appendChild(createAcls(doc, "acl-submit-job", "u1"));
+    q1.appendChild(createAcls(doc, "acl-administer-jobs", "u2"));
+    q1.appendChild(createQueue(doc, "p15"));
+    q1.appendChild(createQueue(doc, "p16"));
+
+    queues.appendChild(q1);
+    writeToFile(doc, CONFIG);
+    try {
+      new QueueManager(CONFIG);
+      fail("Should throw an exception as configuration is wrong ");
+    } catch (RuntimeException re) {
+      LOG.info(re.getMessage());
+    }
+  }
+
+  @Test
+  public void testInvalidName() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    Element queues = createQueuesNode(doc, "false");
+    Element q1 = createQueue(doc, "");
+    queues.appendChild(q1);
+    writeToFile(doc, CONFIG);
+    try {
+      new QueueManager(CONFIG);
+      fail("Should throw an exception as configuration is wrong ");
+    } catch (Exception re) {
+      re.printStackTrace();
+      LOG.info(re.getMessage());
+    }
+    checkForConfigFile();
+    doc = createDocument();
+    queues = createQueuesNode(doc, "false");
+    q1 = doc.createElement("queue");
+    queues.appendChild(q1);
+    writeToFile(doc, CONFIG);
+    try {
+      new QueueManager(CONFIG);
+      fail("Should throw an exception as configuration is wrong ");
+    } catch (RuntimeException re) {
+      re.printStackTrace();
+      LOG.info(re.getMessage());
+    }
+  }
+
+  @Test
+  public void testEmptyProperties() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    Element queues = createQueuesNode(doc, "false");
+    Element q1 = createQueue(doc, "q1");
+    Element p = createProperties(doc, null);
+    q1.appendChild(p);
+    queues.appendChild(q1);
+  }
+
+  @Test
+  public void testEmptyFile() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    writeToFile(doc, CONFIG);
+    try {
+      new QueueManager(CONFIG);
+      fail("Should throw an exception as configuration is wrong ");
+    } catch (Exception re) {
+      re.printStackTrace();
+      LOG.info(re.getMessage());
+    }
+  }
+
+  @Test
+  public void testJobQueueInfoGeneration() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
+
+    List<JobQueueInfo> rootQueues =
+      qm.getRoot().getJobQueueInfo().getChildren();
+    assertEquals(rootQueues.size(), 2);
+    List<String> names = new ArrayList<String>();
+    for (JobQueueInfo q : rootQueues) {
+      names.add(q.getQueueName());
+      if (q.getQueueName().equals("q1")) {
+        Properties p = q.getProperties();
+        assertEquals(p.getProperty("capacity"), "10");
+        assertEquals(p.getProperty("maxCapacity"), "35");
+
+        assertTrue(q.getChildren().isEmpty());
+      } else if (q.getQueueName().equals("p1")) {
+        List<JobQueueInfo> children = q.getChildren();
+        assertEquals(children.size(), 2);
+        for (JobQueueInfo child : children) {
+          if (child.getQueueName().equals(
+            "p1" + NAME_SEPARATOR + "p12")) {
+            assertEquals(
+              child.getQueueState(), QueueState.STOPPED.getStateName());
+          } else if (child.getQueueName().equals(
+            "p1" + NAME_SEPARATOR + "p11")) {
+            assertEquals(
+              child.getQueueState(), QueueState.RUNNING.getStateName());
+          } else {
+            fail("Only 2 children");
+          }
+        }
+      } else {
+        fail("Only 2 queues with q1 and p1 ");
+      }
+    }
   }
 
   /**
-   * Test to verify refreshing of queue properties by using MRAdmin tool.
+   * Test the refresh of queues.
    * 
    * @throws Exception
    */
-  public void testACLRefresh() throws Exception {
-    String queueConfigPath =
-        System.getProperty("test.build.extraconf", "build/test/extraconf");
-    File queueConfigFile =
-        new File(queueConfigPath, QueueManager.QUEUE_CONF_FILE_NAME);
-    File hadoopConfigFile = new File(queueConfigPath, "mapred-site.xml");
-    try {
-      //Setting up default mapred-site.xml
-      Properties hadoopConfProps = new Properties();
-      //these properties should be retained.
-      hadoopConfProps.put("mapred.queue.names", "default,q1,q2");
-      hadoopConfProps.put("mapred.acls.enabled", "true");
-      //These property should always be overridden
-      hadoopConfProps.put("mapred.queue.default.acl-submit-job", "u1");
-      hadoopConfProps.put("mapred.queue.q1.acl-submit-job", "u2");
-      hadoopConfProps.put("mapred.queue.q2.acl-submit-job", "u1");
-      UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
-      
-      //Actual property which would be used.
-      Properties queueConfProps = new Properties();
-      queueConfProps.put("mapred.queue.default.acl-submit-job", " ");
-      //Writing out the queue configuration file.
-      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
-      
-      //Create a new configuration to be used with QueueManager
-      JobConf conf = new JobConf();
-      QueueManager queueManager = new QueueManager(conf);
-      UserGroupInformation ugi = UnixUserGroupInformation.getCurrentUGI();
-      //Job Submission should fail because ugi to be used is set to blank.
-      assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("default", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("q1", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("q2", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      
-      //Test job submission as alternate user.
-      Configuration alternateUserConfig = new Configuration();
-      alternateUserConfig.set("hadoop.job.ugi","u1,users");
-      UserGroupInformation alternateUgi = 
-        UserGroupInformation.readFrom(alternateUserConfig);
-      assertTrue("Alternate User Job Submission failed before refresh.",
-          queueManager.hasAccess("q2", Queue.QueueOperation.
-              SUBMIT_JOB, alternateUgi));
-      
-      //Set acl for the current user.
-      queueConfProps.put("mapred.queue.default.acl-submit-job", ugi.getUserName());
-      queueConfProps.put("mapred.queue.q1.acl-submit-job", ugi.getUserName());
-      queueConfProps.put("mapred.queue.q2.acl-submit-job", ugi.getUserName());
-      //write out queue-acls.xml.
-      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
-      //refresh configuration
-      queueManager.refreshQueues(conf);
-      //Submission should succeed
-      assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("default", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("q1", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("q2", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertFalse("Alternate User Job Submission succeeded after refresh.",
-          queueManager.hasAccess("q2", Queue.QueueOperation.
-              SUBMIT_JOB, alternateUgi));
-      //delete the ACL file.
-      queueConfigFile.delete();
-      
-      //rewrite the mapred-site.xml
-      hadoopConfProps.put("mapred.acls.enabled", "true");
-      hadoopConfProps.put("mapred.queue.default.acl-submit-job", ugi.getUserName());
-      UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
-      queueManager.refreshQueues(conf);
-      assertTrue("User Job Submission failed after refresh and no queue acls file.",
-          queueManager.hasAccess("default", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-    } finally{
-      if(queueConfigFile.exists()) {
-        queueConfigFile.delete();
+  @Test
+  public void testRefresh() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
+    Queue beforeRefreshRoot = qm.getRoot();
+    //remove the file and create new one.
+    Set<Queue> rootQueues = beforeRefreshRoot.getChildren();
+    for (Queue qs : rootQueues) {
+      if (qs.getName().equals("q1")) {
+
+        assertEquals(qs.getProperties().getProperty("capacity"), "10");
+        assertEquals(qs.getProperties().getProperty("maxCapacity"), "35");
+
+      } else if (qs.getName().equals("p1")) {
+
+        Set<Queue> children = qs.getChildren();
+        for (Queue child : children) {
+          if (child.getName().equals(
+            "p1" + NAME_SEPARATOR + "p12")) {
+            assertTrue(
+              child.getAcls().get(
+                QueueManager.toFullPropertyName(
+                  child.getName(), ACL_SUBMIT_JOB_TAG))
+                .getUsers().contains("u1"));
+
+            assertTrue(
+              child.getAcls().get(
+                QueueManager.toFullPropertyName(
+                  child.getName(),
+                  ACL_ADMINISTER_JOB_TAG))
+                .getUsers().contains("u2"));
+            assertTrue(child.getState().equals(QueueState.STOPPED));
+          } else {
+            assertTrue(child.getState().equals(QueueState.RUNNING));
+          }
+        }
       }
-      if(hadoopConfigFile.exists()) {
-        hadoopConfigFile.delete();
+    }
+    checkForConfigFile();
+    doc = createDocument();
+    refreshSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueConfigurationParser cp = new QueueConfigurationParser(CONFIG);
+    qm.getRoot().isHierarchySameAs(cp.getRoot());
+    qm.setQueues(
+      cp.getRoot().getChildren().toArray(
+        new Queue[cp.getRoot().getChildren().size()]));
+    Queue afterRefreshRoot = qm.getRoot();
+    //remove the file and create new one.
+    rootQueues = afterRefreshRoot.getChildren();
+    for (Queue qs : rootQueues) {
+      if (qs.getName().equals("q1")) {
+
+        assertEquals(qs.getProperties().getProperty("capacity"), "70");
+        assertEquals(qs.getProperties().getProperty("maxCapacity"), "35");
+
+      } else if (qs.getName().equals("p1")) {
+
+        Set<Queue> children = qs.getChildren();
+        for (Queue child : children) {
+          if (child.getName().equals(
+            "p1" + NAME_SEPARATOR + "p12")) {
+            assertTrue(
+              child.getAcls().get(
+                QueueManager.toFullPropertyName(
+                  child.getName(),
+                  ACL_SUBMIT_JOB_TAG))
+                .getUsers().contains("u3"));
+
+            assertTrue(
+              child.getAcls().get(
+                QueueManager.toFullPropertyName(
+                  child.getName(),
+                  ACL_ADMINISTER_JOB_TAG))
+                .getUsers().contains("u4"));
+            assertTrue(child.getState().equals(QueueState.RUNNING));
+          } else {
+            assertTrue(child.getState().equals(QueueState.STOPPED));
+          }
+        }
       }
     }
   }
 
+  @Test
+  public void testRefreshWithInvalidFile() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);
+    writeToFile(doc, CONFIG);
+    QueueManager qm = new QueueManager(CONFIG);
 
+    checkForConfigFile();
+    doc = createDocument();
+    Element queues = createQueuesNode(doc, "false");
+    Element q1 = createQueue(doc, "");
+    queues.appendChild(q1);
+    writeToFile(doc, CONFIG);
+    try {
+      QueueConfigurationParser cp = new QueueConfigurationParser(CONFIG);
+
+      fail("Should throw an exception as configuration is wrong ");
+    } catch (Throwable re) {
+      re.printStackTrace();
+      LOG.info(re.getMessage());
+    }
+  }
 
   /**
-   * Test to verify refreshing of queue properties by using MRAdmin tool.
-   *
+   * Class to store the array of queues retrieved by parsing the string 
+   * that is dumped in Json format
+   */
+  static class JsonQueueTree {
+    boolean acls_enabled;
+    
+    JsonQueue[] queues;
+
+    public JsonQueue[] getQueues() {
+      return queues;
+    }
+
+    public void setQueues(JsonQueue[] queues) {
+      this.queues = queues;
+    }
+
+    public boolean isAcls_enabled() {
+      return acls_enabled;
+    }
+
+    public void setAcls_enabled(boolean aclsEnabled) {
+      acls_enabled = aclsEnabled;
+    }
+  }
+  
+  /**
+   * Class to store the contents of each queue that is dumped in JSON format.
+   */
+  static class JsonQueue {
+    String name;
+    String state;
+    String acl_submit_job;
+    String acl_administer_jobs;
+    JsonProperty[] properties;
+    JsonQueue[] children;
+    public String getName() {
+      return name;
+    }
+    public String getState() {
+      return state;
+    }
+    public JsonProperty[] getProperties() {
+      return properties;
+    }
+    public JsonQueue[] getChildren() {
+      return children;
+    }
+    public void setName(String name) {
+      this.name = name;
+    }
+    public void setState(String state) {
+      this.state = state;
+    }
+    public void setProperties(JsonProperty[] properties) {
+      this.properties = properties;
+    }
+    public void setChildren(JsonQueue[] children) {
+      this.children = children;
+    }
+    public String getAcl_submit_job() {
+      return acl_submit_job;
+    }
+    public void setAcl_submit_job(String aclSubmitJob) {
+      acl_submit_job = aclSubmitJob;
+    }
+    public String getAcl_administer_jobs() {
+      return acl_administer_jobs;
+    }
+    public void setAcl_administer_jobs(String aclAdministerJobs) {
+      acl_administer_jobs = aclAdministerJobs;
+    }
+  }
+  
+  /**
+   * Class to store the contents of attribute "properties" in Json dump
+   */
+  static class JsonProperty {
+    String key;
+    String value;
+    public String getKey() {
+      return key;
+    }
+    public void setKey(String key) {
+      this.key = key;
+    }
+    public String getValue() {
+      return value;
+    }
+    public void setValue(String value) {
+      this.value = value;
+    }
+  }
+
+  /**
+   * checks the format of the dump in JSON format when 
+   * QueueManager.dumpConfiguration(Writer) is called.
    * @throws Exception
    */
-  public void testStateRefresh() throws Exception {
-    String queueConfigPath =
-        System.getProperty("test.build.extraconf", "build/test/extraconf");
-    File queueConfigFile =
-        new File(queueConfigPath, QueueManager.QUEUE_CONF_FILE_NAME);
-    try {
-      //Setting up default mapred-site.xml
-      Properties queueConfProps = new Properties();
-      //these properties should be retained.
-      queueConfProps.put("mapred.queue.names", "default,qu1");
-      queueConfProps.put("mapred.acls.enabled", "true");
-      //These property should always be overridden
-      queueConfProps.put("mapred.queue.default.state", "running");
-      queueConfProps.put("mapred.queue.qu1.state", "stopped");
-      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
-
-      //Create a new configuration to be used with QueueManager
-      JobConf conf = new JobConf();
-      setUpCluster(conf);
-      QueueManager queueManager = 
-        this.miniMRCluster.getJobTrackerRunner().getJobTracker().getQueueManager();
-
-      try{
-        Job job = submitSleepJob(10, 2, 10, 10, true,null, "default" );
-        assert(job.isSuccessful());
-      }catch(Exception e){
-        fail("submit job in default queue should be sucessful ");
-      }
-
-      try{
-        submitSleepJob(10, 2, 10, 10, true,null, "qu1" );
-        fail("submit job in default queue should be failed ");
-      }catch(Exception e){
-        assert(e.getMessage().contains("Queue \"" + "qu1" + "\" is not running"));
-      }
-
-      // verify state of queues before refresh
-      JobQueueInfo queueInfo = queueManager.getJobQueueInfo("default");
-      assertEquals(Queue.QueueState.RUNNING.getStateName(), 
-                    queueInfo.getQueueState());
-      queueInfo = queueManager.getJobQueueInfo("qu1");
-      assertEquals(Queue.QueueState.STOPPED.getStateName(),
-                    queueInfo.getQueueState());
-
-      queueConfProps.put("mapred.queue.default.state", "stopped");
-      queueConfProps.put("mapred.queue.qu1.state", "running");
-      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
-
-      //refresh configuration
-      queueManager.refreshQueues(conf);
-
-      //Job Submission should pass now because ugi to be used is set to blank.
-      try{
-        submitSleepJob(10, 2, 10, 10, true,null,"qu1");
-      }catch(Exception e){
-        fail("submit job in qu1 queue should be sucessful ");
-      }
-
-      try{
-        submitSleepJob(10, 2, 10, 10, true,null, "default" );
-        fail("submit job in default queue should be failed ");
-      }catch(Exception e){
-        assert(e.getMessage().contains("Queue \"" + "default" + "\" is not running"));
-      }
-      
-      // verify state of queues after refresh
-      queueInfo = queueManager.getJobQueueInfo("default");
-      assertEquals(Queue.QueueState.STOPPED.getStateName(), 
-                    queueInfo.getQueueState());
-      queueInfo = queueManager.getJobQueueInfo("qu1");
-      assertEquals(Queue.QueueState.RUNNING.getStateName(),
-                    queueInfo.getQueueState());
-    } finally{
-      if(queueConfigFile.exists()) {
-        queueConfigFile.delete();
-      }
-      this.tearDownCluster();
+  @Test
+  public void testDumpConfiguration() throws Exception {
+    checkForConfigFile();
+    Document doc = createDocument();
+    createSimpleDocument(doc);    
+    writeToFile(doc, CONFIG);
+    StringWriter out = new StringWriter();
+    QueueManager.dumpConfiguration(out,CONFIG,null);
+    ObjectMapper mapper = new ObjectMapper();
+    // parse the Json dump
+    JsonQueueTree queueTree =
+      mapper.readValue(out.toString(), JsonQueueTree.class);
+    
+    // check if acls_enabled is correct
+    assertEquals(true, queueTree.isAcls_enabled());
+    // check for the number of top-level queues
+    assertEquals(2, queueTree.getQueues().length);
+    
+    HashMap<String, JsonQueue> topQueues = new HashMap<String, JsonQueue>();
+    for (JsonQueue topQueue : queueTree.getQueues()) {
+      topQueues.put(topQueue.getName(), topQueue);
     }
-  }
-
-  public void testQueueAclRefreshWithInvalidConfFile() throws IOException {
-    String queueConfigPath =
-      System.getProperty("test.build.extraconf", "build/test/extraconf");
-    File queueConfigFile =
-      new File(queueConfigPath, QueueManager.QUEUE_CONF_FILE_NAME);
-    File hadoopConfigFile = new File(queueConfigPath, "hadoop-site.xml");
-    try {
-      // queue properties with which the cluster is started.
-      Properties hadoopConfProps = new Properties();
-      hadoopConfProps.put("mapred.queue.names", "default,q1,q2");
-      hadoopConfProps.put("mapred.acls.enabled", "true");
-      UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
-      
-      //properties for mapred-queue-acls.xml
-      Properties queueConfProps = new Properties();
-      UserGroupInformation ugi = UnixUserGroupInformation.getCurrentUGI();
-      queueConfProps.put("mapred.queue.default.acl-submit-job", ugi.getUserName());
-      queueConfProps.put("mapred.queue.q1.acl-submit-job", ugi.getUserName());
-      queueConfProps.put("mapred.queue.q2.acl-submit-job", ugi.getUserName());
-      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
-      
-      Configuration conf = new JobConf();
-      QueueManager queueManager = new QueueManager(conf);
-      //Testing access to queue.
-      assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("default", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("q1", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("q2", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      
-      //Write out a new incomplete invalid configuration file.
-      PrintWriter writer = new PrintWriter(new FileOutputStream(queueConfigFile));
-      writer.println("<configuration>");
-      writer.println("<property>");
-      writer.flush();
-      writer.close();
-      try {
-        //Exception to be thrown by queue manager because configuration passed
-        //is invalid.
-        queueManager.refreshQueues(conf);
-        fail("Refresh of ACLs should have failed with invalid conf file.");
-      } catch (Exception e) {
-      }
-      assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("default", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("q1", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-      assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("q2", Queue.QueueOperation.
-              SUBMIT_JOB, ugi));
-    } finally {
-      //Cleanup the configuration files in all cases
-      if(hadoopConfigFile.exists()) {
-        hadoopConfigFile.delete();
-      }
-      if(queueConfigFile.exists()) {
-        queueConfigFile.delete();
-      }
+    
+    // check for consistency in number of children
+    assertEquals(2, topQueues.get("p1").getChildren().length);
+    
+    HashMap<String, JsonQueue> childQueues = new HashMap<String, JsonQueue>();
+    for (JsonQueue child : topQueues.get("p1").getChildren()) {
+      childQueues.put(child.getName(), child);
     }
-  }
-  
-  
-  private JobConf setupConf(String aclName, String aclValue) {
-    JobConf conf = new JobConf();
-    conf.setBoolean("mapred.acls.enabled", true);
-    conf.set(aclName, aclValue);
-    return conf;
-  }
-  
-  private void verifyQueues(Set<String> expectedQueues, 
-                                          Set<String> actualQueues) {
-    assertEquals(expectedQueues.size(), actualQueues.size());
-    for (String queue : expectedQueues) {
-      assertTrue(actualQueues.contains(queue));
+    
+    // check for consistency in state
+    assertEquals("stopped", childQueues.get("p1:p12").getState());
+     
+    // check for consistency in properties
+    HashMap<String, JsonProperty> q1_properties =
+      new HashMap<String, JsonProperty>();
+    for (JsonProperty prop : topQueues.get("q1").getProperties()) {
+      q1_properties.put(prop.getKey(), prop);
     }
+    assertEquals("10", q1_properties.get("capacity").getValue());
+    assertEquals("35", q1_properties.get("maxCapacity").getValue());
+    
+    // check for acls
+    assertEquals("u1", childQueues.get("p1:p12").getAcl_submit_job());
+    assertEquals("u2", childQueues.get("p1:p12").getAcl_administer_jobs());
   }
-  
-  private void verifyJobSubmission(JobConf conf, boolean shouldSucceed) 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    verifyJobSubmission(conf, shouldSucceed, "default");
-  }
-
-  private void verifyJobSubmission(JobConf conf, boolean shouldSucceed, 
-                                   String queue) 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    setUpCluster(conf);
-    try {
-      runAndVerifySubmission(conf, shouldSucceed, queue, null);
-    } finally {
-      tearDownCluster();
-    }
-  }
-
-  private void runAndVerifySubmission(JobConf conf, boolean shouldSucceed,
-      String queue, String userInfo)
-      throws IOException, InterruptedException, ClassNotFoundException {
-    try {
-      Job rjob = submitSleepJob(1, 1, 100, 100, true, null, queue);
-      if (shouldSucceed) {
-        assertTrue(rjob.isSuccessful());
-      } else {
-        fail("Job submission should have failed.");
-      }
-    } catch (IOException ioe) {
-      if (shouldSucceed) {
-        throw ioe;
-      } else {
-        LOG.info("exception while submitting job: " + ioe.getMessage());
-        assertTrue(ioe.getMessage().
-            contains("cannot perform operation " +
-            "SUBMIT_JOB on queue " + queue));
-        // check if the system directory gets cleaned up or not
-        JobTracker jobtracker = miniMRCluster.getJobTrackerRunner().getJobTracker();
-        Path sysDir = new Path(jobtracker.getSystemDir());
-        FileSystem fs = sysDir.getFileSystem(conf);
-        int size = fs.listStatus(sysDir).length;
-        while (size > 1) { // ignore the jobtracker.info file
-          System.out.println("Waiting for the job files in sys directory to be cleaned up");
-          UtilsForTests.waitFor(100);
-          size = fs.listStatus(sysDir).length;
-        }
-      }
-    } finally {
-      tearDownCluster();
-    }
-}
-
-  private void verifyJobKill(JobConf conf, boolean shouldSucceed) 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    setUpCluster(conf);
-    try {
-      Job rjob = submitSleepJob(1, 1, 1000, 1000, false);
-      assertFalse(rjob.isComplete());
-      while(rjob.mapProgress() == 0.0f) {
-        try {
-          Thread.sleep(10);  
-        } catch (InterruptedException ie) {
-          break;
-        }
-      }
-      rjob.killJob();
-      while (!rjob.isComplete()) {
-        try {
-          Thread.sleep(10);  
-        } catch (InterruptedException ie) {
-          break;
-        }
-      }
-      if (shouldSucceed) {
-        assertTrue(!rjob.isSuccessful());
-      } else {
-        fail("Job kill should have failed.");
-      }
-    } catch (IOException ioe) {
-      if (shouldSucceed) {
-        throw ioe;
-      } else {
-        LOG.info("exception while submitting job: " + ioe.getMessage());
-        assertTrue(ioe.getMessage().
-                        contains("cannot perform operation " +
-                                    "ADMINISTER_JOBS on queue default"));
-      }
-    } finally {
-      tearDownCluster();
-    }
-  }
-
-  
-  private void verifyJobKillAsOtherUser(JobConf conf, boolean shouldSucceed,
-                                        String otherUserInfo) 
-  throws IOException, InterruptedException, ClassNotFoundException {
-    setUpCluster(conf);
-    try {
-      // submit a job as another user.
-      String userInfo = otherUserInfo;
-      Job job = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
-      assertFalse(job.isComplete());
-
-      //try to kill as self
-      try {
-        JobClient jc = new JobClient(miniMRCluster.createJobConf());
-        RunningJob rjob = jc.getJob((JobID)job.getID());
-        rjob.killJob();
-        if (!shouldSucceed) {
-          fail("should fail kill operation");  
-        }
-      } catch (IOException ioe) {
-        if (shouldSucceed) {
-          throw ioe;
-        }
-        //verify it fails
-        LOG.info("exception while submitting job: " + ioe.getMessage());
-        assertTrue(ioe.getMessage().
-                        contains("cannot perform operation " +
-                                    "ADMINISTER_JOBS on queue default"));
-      }
-      //wait for job to complete on its own
-      while (!job.isComplete()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-          break;
-        }
-      }
-    } finally {
-      tearDownCluster();
-    }
-  }
-  
-  private void verifyJobPriorityChangeAsOtherUser(JobConf conf, 
-                          boolean shouldSucceed, String otherUserInfo)
-  throws IOException, InterruptedException, ClassNotFoundException {
-    setUpCluster(conf);
-    try {
-      // submit job as another user.
-      String userInfo = otherUserInfo;
-      Job job = submitSleepJob(1, 1, 1000, 1000, false, userInfo);
-      assertFalse(job.isComplete());
-      
-      // try to change priority as self
-      try {
-        JobClient jc = new JobClient(miniMRCluster.createJobConf());
-        RunningJob rjob = jc.getJob((JobID)job.getID());
-        rjob.setJobPriority("VERY_LOW");
-        if (!shouldSucceed) {
-          fail("changing priority should fail.");
-        }
-      } catch (IOException ioe) {
-        //verify it fails
-        LOG.info("exception while submitting job: " + ioe.getMessage());
-        assertTrue(ioe.getMessage().
-                        contains("cannot perform operation " +
-                                    "ADMINISTER_JOBS on queue default"));
-      }
-      //wait for job to complete on its own
-      while (!job.isComplete()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ie) {
-          break;
-        }
-      }
-    } finally {
-      tearDownCluster();
-    }
-  }
-  
-  private void setUpCluster(JobConf conf) throws IOException {
-    miniDFSCluster = new MiniDFSCluster(conf, 1, true, null);
-    FileSystem fileSys = miniDFSCluster.getFileSystem();
-    String namenode = fileSys.getUri().toString();
-    miniMRCluster = new MiniMRCluster(1, namenode, 3, 
-                      null, null, conf);
-  }
-  
-  private void tearDownCluster() throws IOException {
-    if (miniMRCluster != null) { miniMRCluster.shutdown(); }
-    if (miniDFSCluster != null) { miniDFSCluster.shutdown(); }
-  }
-  
-  private Job submitSleepJob(int numMappers, int numReducers, 
-                             long mapSleepTime, long reduceSleepTime,
-                             boolean shouldComplete) 
-      throws IOException, InterruptedException, ClassNotFoundException {
-    return submitSleepJob(numMappers, numReducers, mapSleepTime,
-                          reduceSleepTime, shouldComplete, null);
-  }
-  
-  private Job submitSleepJob(int numMappers, int numReducers, 
-                             long mapSleepTime, long reduceSleepTime,
-                             boolean shouldComplete, String userInfo) 
-  throws IOException, InterruptedException, ClassNotFoundException {
-    return submitSleepJob(numMappers, numReducers, mapSleepTime, 
-                          reduceSleepTime, shouldComplete, userInfo, null);
-  }
-
-  private Job submitSleepJob(int numMappers, int numReducers, 
-                             long mapSleepTime, long reduceSleepTime,
-                             boolean shouldComplete, String userInfo,
-                             String queueName) 
-  throws IOException, InterruptedException, ClassNotFoundException {
-    Configuration clientConf = new Configuration();
-    clientConf.set("mapred.job.tracker", "localhost:"
-        + miniMRCluster.getJobTrackerPort());
-    if (userInfo != null) {
-      clientConf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, userInfo);
-    }
-    if (queueName != null) {
-      clientConf.set("mapred.job.queue.name", queueName);
-    }
-    SleepJob sleep = new SleepJob();
-    sleep.setConf(clientConf);
-    Job job = sleep.createJob(numMappers, numReducers, 
-        mapSleepTime, (int)mapSleepTime/100,
-        reduceSleepTime, (int)reduceSleepTime/100);
-    if (shouldComplete) {
-      job.waitForCompletion(false);  
-    } else {
-      job.submit();
-    }
-    return job;
-  }
-
 }

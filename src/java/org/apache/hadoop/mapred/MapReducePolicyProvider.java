@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.Service;
@@ -30,7 +31,7 @@ public class MapReducePolicyProvider extends PolicyProvider {
       new Service("security.inter.tracker.protocol.acl", 
                   InterTrackerProtocol.class),
       new Service("security.job.submission.protocol.acl",
-                  JobSubmissionProtocol.class),
+                  ClientProtocol.class),
       new Service("security.task.umbilical.protocol.acl", 
                   TaskUmbilicalProtocol.class),
       new Service("security.refresh.policy.protocol.acl", 

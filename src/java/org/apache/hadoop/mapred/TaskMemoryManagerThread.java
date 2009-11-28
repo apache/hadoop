@@ -29,8 +29,9 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
-import org.apache.hadoop.util.ProcfsBasedProcessTree;
-import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -50,11 +51,14 @@ class TaskMemoryManagerThread extends Thread {
   private Map<TaskAttemptID, ProcessTreeInfo> tasksToBeAdded;
   private List<TaskAttemptID> tasksToBeRemoved;
 
+  private static final String MEMORY_USAGE_STRING =
+    "Memory usage of ProcessTree %s for task-id %s : %d bytes, " +
+      "limit : %d bytes";
+  
   public TaskMemoryManagerThread(TaskTracker taskTracker) {
     this(taskTracker.getTotalMemoryAllottedForTasksOnTT() * 1024 * 1024L,
-            taskTracker.getJobConf().getLong(
-                "mapred.tasktracker.taskmemorymanager.monitoring-interval", 
-                5000L));         
+      taskTracker.getJobConf().getLong(
+        TTConfig.TT_MEMORY_MANAGER_MONITORING_INTERVAL, 5000L));         
     this.taskTracker = taskTracker;
   }
 
@@ -179,7 +183,7 @@ class TaskMemoryManagerThread extends Thread {
                   taskTracker
                       .getJobConf()
                       .getLong(
-                          "mapred.tasktracker.tasks.sleeptime-before-sigkill",
+                          TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL,
                           ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
 
               // create process tree object
@@ -209,18 +213,19 @@ class TaskMemoryManagerThread extends Thread {
           // are processes more than 1 iteration old.
           long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
           long limit = ptInfo.getMemLimit();
-          LOG.info("Memory usage of ProcessTree " + pId + " :"
-              + currentMemUsage + "bytes. Limit : " + limit + "bytes");
+          LOG.info(String.format(MEMORY_USAGE_STRING, 
+                                pId, tid.toString(), currentMemUsage, limit));
 
           if (isProcessTreeOverLimit(tid.toString(), currentMemUsage, 
                                       curMemUsageOfAgedProcesses, limit)) {
             // Task (the root process) is still alive and overflowing memory.
-            // Clean up.
+            // Dump the process-tree and then clean it up.
             String msg =
                 "TaskTree [pid=" + pId + ",tipID=" + tid
                     + "] is running beyond memory-limits. Current usage : "
                     + currentMemUsage + "bytes. Limit : " + limit
-                    + "bytes. Killing task.";
+                    + "bytes. Killing task. \nDump of the process-tree for "
+                    + tid + " : \n" + pTree.getProcessTreeDump();
             LOG.warn(msg);
             taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 

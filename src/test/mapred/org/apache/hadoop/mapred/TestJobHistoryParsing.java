@@ -17,87 +17,101 @@
  */
 package org.apache.hadoop.mapred;
 
-
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Map;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobHistory.*;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
+import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
+import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
+
+/**
+ * Unit test to test if the JobHistory writer/parser is able to handle
+ * values with special characters
+ * This test also tests if the job history module is able to gracefully
+ * ignore events after the event writer is closed
+ *
+ */
 public class TestJobHistoryParsing  extends TestCase {
-  ArrayList<PrintWriter> historyWriter = new ArrayList<PrintWriter>();
-
-  /**
-   * Listener for a test history log file, it populates JobHistory.JobInfo 
-   * object with data from log file. 
-   */
-  static class TestListener implements Listener {
-    JobInfo job;
-
-    TestListener(JobInfo job) {
-      this.job = job;
-    }
-    // JobHistory.Listener implementation 
-    public void handle(RecordTypes recType, 
-                       Map<JobHistory.Keys, String> values)
-    throws IOException {
-      if (recType == JobHistory.RecordTypes.Job) {
-        job.handle(values);
-      }
-    }
-  }
 
   public void testHistoryParsing() throws IOException {
     // open a test history file
-    Path historyDir = new Path(System.getProperty("test.build.data", "."), 
+    Path historyDir = new Path(System.getProperty("test.build.data", "."),
                                 "history");
     JobConf conf = new JobConf();
     conf.set("hadoop.job.history.location", historyDir.toString());
     FileSystem fs = FileSystem.getLocal(new JobConf());
-    JobHistory.init(null, conf, "localhost", 1234, fs);
-    Path historyLog = new Path(historyDir, "testlog");
-    PrintWriter out = new PrintWriter(fs.create(historyLog));
-    historyWriter.add(out);
-    // log keys and values into history
-    String value1 = "Value has equal=to, \"quotes\" and spaces in it";
-    String value2 = "Value has \n new line \n and " + 
-                    "dot followed by new line .\n in it ";
-    String value3 = "Value has characters: " +
-                    "`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./" +
-                    "~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:\"'ZXCVBNM<>?" + 
-                    "\t\b\n\f\"\n in it";
-    String value4 = "Value ends with escape\\";
-    String value5 = "Value ends with \\\" \\.\n";
-    
-    // Log the history version
-    JobHistory.MetaInfoManager.logMetaInfo(historyWriter);
-    
-    JobHistory.log(historyWriter, RecordTypes.Job, 
-                   new JobHistory.Keys[] {Keys.JOBTRACKERID, 
-                                          Keys.TRACKER_NAME, 
-                                          Keys.JOBNAME, 
-                                          Keys.JOBCONF,
-                                          Keys.USER},
-                   new String[] {value1, value2, value3, value4, value5});
-    // close history file
-    out.close();
-    historyWriter.remove(out);
 
-    // parse history
-    String jobId = "job_200809171136_0001"; // random jobid for tesing 
-    JobHistory.JobInfo job = new JobHistory.JobInfo(jobId);
-    JobHistory.parseHistoryFromFS(historyLog.toString(), 
-                 new TestListener(job), fs);
-    // validate keys and values
-    assertEquals(value1, job.get(Keys.JOBTRACKERID));
-    assertEquals(value2, job.get(Keys.TRACKER_NAME));
-    assertEquals(value3, job.get(Keys.JOBNAME));
-    assertEquals(value4, job.get(Keys.JOBCONF));
-    assertEquals(value5, job.get(Keys.USER));
+    // Some weird strings
+    String username = "user";
+    String weirdJob = "Value has \n new line \n and " +
+                    "dot followed by new line .\n in it +" +
+                    "ends with escape\\";
+    String weirdPath = "Value has characters: " +
+                    "`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./" +
+                    "~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:\"'ZXCVBNM<>?" +
+                    "\t\b\n\f\"\n in it";
+
+    conf.setUser(username);
+
+    MiniMRCluster mr = null;
+    mr = new MiniMRCluster(2, "file:///", 3, null, null, conf);
+
+    JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
+    JobHistory jh = jt.getJobHistory();
+
+    jh.init(jt, conf, "localhost", 1234);
+    JobID jobId = JobID.forName("job_200809171136_0001");
+    jh.setupEventWriter(jobId, conf);
+    JobSubmittedEvent jse =
+      new JobSubmittedEvent(jobId, weirdJob, username, 12345, weirdPath);
+    jh.logEvent(jse, jobId);
+
+    JobFinishedEvent jfe =
+      new JobFinishedEvent(jobId, 12346, 1, 1, 0, 0, new Counters(),
+          new Counters(), new Counters());
+    jh.logEvent(jfe, jobId);
+    jh.closeWriter(jobId);
+
+    // Try to write one more event now, should not fail
+    TaskID tid = TaskID.forName("task_200809171136_0001_m_000002");
+    TaskFinishedEvent tfe =
+      new TaskFinishedEvent(tid, 0, TaskType.MAP, "", null);
+    boolean caughtException = false;
+
+    try {
+      jh.logEvent(tfe, jobId);
+    } catch (Exception e) {
+      caughtException = true;
+    }
+
+    assertFalse("Writing an event after closing event writer is not handled",
+        caughtException);
+
+    String historyFileName = jobId.toString() + "_" + username;
+    Path historyFilePath = new Path (historyDir.toString(),
+      historyFileName);
+
+    System.out.println("History File is " + historyFilePath.toString());
+
+    JobHistoryParser parser =
+      new JobHistoryParser(fs, historyFilePath);
+
+    JobHistoryParser.JobInfo jobInfo = parser.parse();
+
+    assertTrue (jobInfo.getUsername().equals(username));
+    assertTrue(jobInfo.getJobname().equals(weirdJob));
+    assertTrue(jobInfo.getJobConfPath().equals(weirdPath));
+
+    if (mr != null) {
+      mr.shutdown();
+    }
   }
 }

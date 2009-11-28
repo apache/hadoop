@@ -90,7 +90,7 @@ public class TestReduceTask extends TestCase {
     @SuppressWarnings("unchecked")
     RawKeyValueIterator rawItr = 
       Merger.merge(conf, rfs, Text.class, Text.class, codec, new Path[]{path}, 
-                   false, conf.getInt("io.sort.factor", 100), tmpDir, 
+                   false, conf.getInt(JobContext.IO_SORT_FACTOR, 100), tmpDir, 
                    new Text.Comparator(), new NullProgress(), null, null, null);
     @SuppressWarnings("unchecked") // WritableComparators are not generic
     ReduceTask.ValuesIterator valItr = 

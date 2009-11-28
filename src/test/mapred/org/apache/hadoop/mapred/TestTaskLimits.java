@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import junit.framework.TestCase;
 import java.io.IOException;
 
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+
 /**
  * A JUnit test to test configured task limits.
  */
@@ -29,8 +31,8 @@ public class TestTaskLimits extends TestCase {
   static void runTest(int maxTasks, int numMaps, int numReds, 
                       boolean shouldFail) throws Exception {
     JobConf conf = new JobConf();
-    conf.setInt("mapred.jobtracker.maxtasks.per.job", maxTasks);
-    conf.set("mapred.job.tracker.handler.count", "1");
+    conf.setInt(JTConfig.JT_TASKS_PER_JOB, maxTasks);
+    conf.set(JTConfig.JT_IPC_HANDLER_COUNT, "1");
     MiniMRCluster mr = new MiniMRCluster(0, "file:///", 1, null, null, conf);
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
     JobConf jc = mr.createJobConf();

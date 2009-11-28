@@ -51,7 +51,7 @@ public class TestStreamingFailure extends TestStreaming
       "-reducer", reduce,
       //"-verbose",
       //"-jobconf", "stream.debug=set"
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }
@@ -75,7 +75,11 @@ public class TestStreamingFailure extends TestStreaming
     } catch(Exception e) {
       // Expecting an exception
     } finally {
-      OUTPUT_DIR.getAbsoluteFile().delete();
+      try {
+      FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
   }
 

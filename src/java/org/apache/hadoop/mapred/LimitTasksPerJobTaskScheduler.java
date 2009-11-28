@@ -20,27 +20,23 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A {@link TaskScheduler} that limits the maximum number of tasks
  * running for a job. The limit is set by means of the
- * <code>mapred.jobtracker.scheduler.maxRunningTasksPerJob</code>
- * property.
+ * {@link JTConfig#JT_RUNNINGTASKS_PER_JOB} property.
  */
 class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
   
   private static final Log LOG = LogFactory.getLog(
     "org.apache.hadoop.mapred.TaskLimitedJobQueueTaskScheduler");
-  
-  public static final String MAX_TASKS_PER_JOB_PROPERTY = 
-    "mapred.jobtracker.taskScheduler.maxRunningTasksPerJob";
   
   private long maxTasksPerJob;
   
@@ -60,9 +56,10 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
   @Override
   public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
-    maxTasksPerJob = conf.getLong(MAX_TASKS_PER_JOB_PROPERTY ,Long.MAX_VALUE);
+    maxTasksPerJob = 
+      conf.getLong(JTConfig.JT_RUNNINGTASKS_PER_JOB, Long.MAX_VALUE);
     if (maxTasksPerJob <= 0) {
-      String msg = MAX_TASKS_PER_JOB_PROPERTY +
+      String msg = JTConfig.JT_RUNNINGTASKS_PER_JOB +
         " is set to zero or a negative value. Aborting.";
       LOG.fatal(msg);
       throw new RuntimeException (msg);

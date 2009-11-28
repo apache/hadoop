@@ -127,7 +127,7 @@ public class TestComparators extends TestCase
     public void reduce(IntWritable key, Iterator<Writable> values, 
                        OutputCollector<IntWritable, Text> out,
                        Reporter reporter) throws IOException {
-      int currentKey = ((IntWritable)(key)).get();
+      int currentKey = key.get();
       // keys should be in descending order
       if (currentKey > lastKey) {
         fail("Keys not in sorted descending order");

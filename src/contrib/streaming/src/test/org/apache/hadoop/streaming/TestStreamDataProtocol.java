@@ -23,6 +23,7 @@ import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
 
@@ -70,10 +71,10 @@ public class TestStreamDataProtocol extends TestCase
       //"-verbose",
       "-jobconf", "stream.map.output.field.separator=.",
       "-jobconf", "stream.num.map.output.key.fields=2",
-      "-jobconf", "map.output.key.field.separator=.",
+      "-jobconf", "mapreduce.mapreduce.mapreduce.map.output.key.field.separator=.",
       "-jobconf", "num.key.fields.for.partition=1",
-      "-jobconf", "mapred.reduce.tasks=2",
-      "-jobconf", "keep.failed.task.files=true",
+      "-jobconf", "mapreduce.job.reduces=2",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }
@@ -82,7 +83,7 @@ public class TestStreamDataProtocol extends TestCase
   {
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -103,10 +104,12 @@ public class TestStreamDataProtocol extends TestCase
     } catch(Exception e) {
       failTrace(e);
     } finally {
-      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
-      INPUT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
+      try {
+        INPUT_FILE.delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch (IOException e) {
+        failTrace(e);
+      }
     }
   }
 

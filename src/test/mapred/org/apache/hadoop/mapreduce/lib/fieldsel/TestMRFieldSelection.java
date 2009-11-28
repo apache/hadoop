@@ -52,9 +52,10 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     StringBuffer expectedOutput = new StringBuffer();
     constructInputOutputData(inputData, expectedOutput, numOfInputLines);
     
-    conf.set("mapred.data.field.separator", "-");
-    conf.set("map.output.key.value.fields.spec", "6,5,1-3:0-");
-    conf.set("reduce.output.key.value.fields.spec", ":4,3,2,1,0,0-");
+    conf.set(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "-");
+    conf.set(FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC, "6,5,1-3:0-");
+    conf.set(
+      FieldSelectionHelper.REDUCE_OUTPUT_KEY_VALUE_SPEC, ":4,3,2,1,0,0-");
     Job job = MapReduceTestUtil.createJob(conf, inDir, outDir,
       1, 1, inputData.toString());
     job.setMapperClass(FieldSelectionMapper.class);

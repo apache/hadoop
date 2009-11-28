@@ -45,9 +45,12 @@ import org.apache.commons.cli.Parser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
@@ -123,6 +126,8 @@ public class StreamJob implements Tool {
       return submitAndMonitorJob();
     }catch (IllegalArgumentException ex) {
       //ignore, since log will already be printed
+      // print the log in debug mode.
+      LOG.debug("Error in streaming job", ex);
       return 1;
     }
   }
@@ -348,13 +353,13 @@ public class StreamJob implements Tool {
     return OptionBuilder.withDescription(desc).create(name);
   }
   
-  private static void validate(final List<String> values) 
+  private void validate(final List<String> values) 
   throws IllegalArgumentException {
     for (String file : values) {
       File f = new File(file);  
       if (!f.canRead()) {
-        throw new IllegalArgumentException("File : " + f.getAbsolutePath() 
-                                           + " is not readable."); 
+        fail("File: " + f.getAbsolutePath() 
+          + " does not exist, or is not readable."); 
       }
     }
   }
@@ -503,7 +508,7 @@ public class StreamJob implements Tool {
     System.out.println("  The location of this working directory is unspecified.");
     System.out.println();
     System.out.println("To set the number of reduce tasks (num. of output files):");
-    System.out.println("  -D mapred.reduce.tasks=10");
+    System.out.println("  -D " + JobContext.NUM_REDUCES + "=10");
     System.out.println("To skip the sort/combine/shuffle/sort/reduce step:");
     System.out.println("  Use -numReduceTasks 0");
     System.out
@@ -514,18 +519,18 @@ public class StreamJob implements Tool {
     System.out.println("  This equivalent -reducer NONE");
     System.out.println();
     System.out.println("To speed up the last maps:");
-    System.out.println("  -D mapred.map.tasks.speculative.execution=true");
+    System.out.println("  -D " + JobContext.MAP_SPECULATIVE + "=true");
     System.out.println("To speed up the last reduces:");
-    System.out.println("  -D mapred.reduce.tasks.speculative.execution=true");
+    System.out.println("  -D " + JobContext.REDUCE_SPECULATIVE + "=true");
     System.out.println("To name the job (appears in the JobTracker Web UI):");
-    System.out.println("  -D mapred.job.name='My Job' ");
+    System.out.println("  -D " + JobContext.JOB_NAME + "='My Job'");
     System.out.println("To change the local temp directory:");
     System.out.println("  -D dfs.data.dir=/tmp/dfs");
     System.out.println("  -D stream.tmpdir=/tmp/streaming");
     System.out.println("Additional local temp directories with -cluster local:");
-    System.out.println("  -D mapred.local.dir=/tmp/local");
-    System.out.println("  -D mapred.system.dir=/tmp/system");
-    System.out.println("  -D mapred.temp.dir=/tmp/temp");
+    System.out.println("  -D " + MRConfig.LOCAL_DIR + "=/tmp/local");
+    System.out.println("  -D " + JTConfig.JT_SYSTEM_DIR + "=/tmp/system");
+    System.out.println("  -D " + MRConfig.TEMP_DIR + "=/tmp/temp");
     System.out.println("To treat tasks with non-zero exit status as SUCCEDED:");    
     System.out.println("  -D stream.non.zero.exit.is.failure=false");
     System.out.println("Use a custom hadoopStreaming build along a standard hadoop install:");
@@ -610,7 +615,7 @@ public class StreamJob implements Tool {
     if (packageFiles_.size() + unjarFiles.size() == 0) {
       return null;
     }
-    String tmp = jobConf_.get("stream.tmpdir"); //, "/tmp/${user.name}/"
+    String tmp = jobConf_.get("stream.tmpdir"); //, "/tmp/${mapreduce.job.user.name}/"
     File tmpDir = (tmp == null) ? null : new File(tmp);
     // tmpDir=null means OS default tmp dir
     File jobJar = File.createTempFile("streamjob", ".jar", tmpDir);
@@ -652,7 +657,7 @@ public class StreamJob implements Tool {
 
     // The correct FS must be set before this is called!
     // (to resolve local vs. dfs drive letter differences) 
-    // (mapred.working.dir will be lazily initialized ONCE and depends on FS)
+    // (mapreduce.job.working.dir will be lazily initialized ONCE and depends on FS)
     for (int i = 0; i < inputSpecs_.size(); i++) {
       FileInputFormat.addInputPaths(jobConf_, 
                         (String) inputSpecs_.get(i));
@@ -894,7 +899,7 @@ public class StreamJob implements Tool {
   }
 
   protected String getJobTrackerHostPort() {
-    return jobConf_.get("mapred.job.tracker");
+    return jobConf_.get(JTConfig.JT_IPC_ADDRESS);
   }
 
   protected void jobInfo() {
@@ -903,7 +908,7 @@ public class StreamJob implements Tool {
     } else {
       String hp = getJobTrackerHostPort();
       LOG.info("To kill this job, run:");
-      LOG.info(getHadoopClientHome() + "/bin/hadoop job  -Dmapred.job.tracker=" + hp + " -kill "
+      LOG.info(getHadoopClientHome() + "/bin/hadoop job  -D" + JTConfig.JT_IPC_ADDRESS + "=" + hp + " -kill "
                + jobId_);
       //LOG.info("Job file: " + running_.getJobFile());
       LOG.info("Tracking URL: " + StreamUtil.qualifyHost(running_.getTrackingURL()));

@@ -32,10 +32,12 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
 import org.apache.hadoop.mapred.JobInProgress.DataStatistics;
 import org.apache.hadoop.mapred.SortedRanges.Range;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
+import org.apache.hadoop.mapreduce.jobhistory.TaskUpdatedEvent;
 import org.apache.hadoop.net.Node;
 
 
@@ -63,10 +65,11 @@ class TaskInProgress {
 
   // Defines the TIP
   private String jobFile = null;
-  private RawSplit rawSplit;
+  private Job.RawSplit rawSplit;
   private int numMaps;
   private int partition;
   private JobTracker jobtracker;
+  private JobHistory jobHistory;
   private TaskID id;
   private JobInProgress job;
   private final int numSlotsRequired;
@@ -110,7 +113,7 @@ class TaskInProgress {
   /**
    * Map from taskId -> TaskStatus
    */
-  private TreeMap<TaskAttemptID,TaskStatus> taskStatuses = 
+  TreeMap<TaskAttemptID,TaskStatus> taskStatuses = 
     new TreeMap<TaskAttemptID,TaskStatus>();
 
   // Map from taskId -> TaskTracker Id, 
@@ -137,7 +140,7 @@ class TaskInProgress {
    * Constructor for MapTask
    */
   public TaskInProgress(JobID jobid, String jobFile, 
-                        RawSplit rawSplit, 
+                        Job.RawSplit rawSplit, 
                         JobTracker jobtracker, JobConf conf, 
                         JobInProgress job, int partition,
                         int numSlotsRequired) {
@@ -151,6 +154,9 @@ class TaskInProgress {
     this.numSlotsRequired = numSlotsRequired;
     setMaxTaskAttempts();
     init(jobid);
+    if (jobtracker != null) {
+      this.jobHistory = jobtracker.getJobHistory();
+    }
   }
         
   /**
@@ -170,6 +176,9 @@ class TaskInProgress {
     this.numSlotsRequired = numSlotsRequired;
     setMaxTaskAttempts();
     init(jobid);
+    if (jobtracker != null) {
+      this.jobHistory = jobtracker.getJobHistory();
+    }
   }
   
   /**
@@ -287,7 +296,8 @@ class TaskInProgress {
    */
   public void setExecFinishTime(long finishTime) {
     execFinishTime = finishTime;
-    JobHistory.Task.logUpdates(id, execFinishTime); // log the update
+    TaskUpdatedEvent tue = new TaskUpdatedEvent(id, execFinishTime);
+    jobHistory.logEvent(tue, id.getJobID());
   }
   
   /**
@@ -975,6 +985,8 @@ class TaskInProgress {
   public Task addRunningTask(TaskAttemptID taskid, 
                              String taskTracker,
                              boolean taskCleanup) {
+    // 1 slot is enough for taskCleanup task
+    int numSlotsNeeded = taskCleanup ? 1 : numSlotsRequired;
     // create the task
     Task t = null;
     if (isMapTask()) {
@@ -989,9 +1001,9 @@ class TaskInProgress {
         split = new BytesWritable();
       }
       t = new MapTask(jobFile, taskid, partition, splitClass, split,
-                      numSlotsRequired);
+                      numSlotsNeeded);
     } else {
-      t = new ReduceTask(jobFile, taskid, partition, numMaps, numSlotsRequired);
+      t = new ReduceTask(jobFile, taskid, partition, numMaps, numSlotsNeeded);
     }
     if (jobCleanup) {
       t.setJobCleanupTask();

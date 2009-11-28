@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.conf.*;
 
 public class TestMRSequenceFileInputFilter extends TestCase {
@@ -96,7 +97,7 @@ public class TestMRSequenceFileInputFilter extends TestCase {
       RecordReader<Text, BytesWritable> reader =
         format.createRecordReader(split, context);
       MapContext<Text, BytesWritable, Text, BytesWritable> mcontext = 
-        new MapContext<Text, BytesWritable, Text, BytesWritable>(
+        new MapContextImpl<Text, BytesWritable, Text, BytesWritable>(
         job.getConfiguration(), 
         context.getTaskAttemptID(), reader, null, null, 
         MapReduceTestUtil.createDummyReporter(), split);

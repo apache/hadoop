@@ -16,9 +16,11 @@
 *~
 .classpath
 .project
+.launches
 .settings
 .svn
 build/
+build.properties
 conf/masters
 conf/slaves
 conf/core-site.xml

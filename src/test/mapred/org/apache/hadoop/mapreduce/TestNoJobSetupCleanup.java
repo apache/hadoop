@@ -25,11 +25,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.mapred.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 public class TestNoJobSetupCleanup extends HadoopTestCase {
   private static String TEST_ROOT_DIR =
@@ -91,7 +92,7 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
       super.checkOutputSpecs(job);
       // creating dummy TaskAttemptID
       TaskAttemptID tid = new TaskAttemptID("jt", 1, TaskType.JOB_SETUP, 0, 0);
-      getOutputCommitter(new TaskAttemptContext(job.getConfiguration(), tid)).
+      getOutputCommitter(new TaskAttemptContextImpl(job.getConfiguration(), tid)).
         setupJob(job);
     }
   }

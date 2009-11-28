@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.JobContext;
 
 /** 
  * This class implements the common functionalities of 
@@ -156,6 +157,6 @@ public class ValueAggregatorBaseDescriptor
    * @param conf a configuration object
    */
   public void configure(Configuration conf) {
-    this.inputFile = conf.get("map.input.file");
+    this.inputFile = conf.get(JobContext.MAP_INPUT_FILE);
   }
 }

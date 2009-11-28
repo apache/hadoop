@@ -18,72 +18,87 @@
 
 package org.apache.hadoop.sqoop;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.sqoop.manager.ConnManager;
-import org.apache.hadoop.sqoop.manager.GenericJdbcManager;
-import org.apache.hadoop.sqoop.manager.HsqldbManager;
-import org.apache.hadoop.sqoop.manager.LocalMySQLManager;
-import org.apache.hadoop.sqoop.manager.MySQLManager;
-import org.apache.hadoop.sqoop.manager.OracleManager;
+import org.apache.hadoop.sqoop.manager.DefaultManagerFactory;
+import org.apache.hadoop.sqoop.manager.ManagerFactory;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * Static factory class to create the ConnManager type required
+ * Factory class to create the ConnManager type required
  * for the current import job.
+ *
+ * This class delegates the actual responsibility for instantiating
+ * ConnManagers to one or more instances of ManagerFactory. ManagerFactories
+ * are consulted in the order specified in sqoop-site.xml (sqoop.connection.factories).
  */
-public final class ConnFactory {
+public class ConnFactory {
 
   public static final Log LOG = LogFactory.getLog(ConnFactory.class.getName());
 
-  private ConnFactory() { }
+  public ConnFactory(Configuration conf) {
+    factories = new LinkedList<ManagerFactory>();
+    instantiateFactories(conf);
+  }
+
+  /** The sqoop-site.xml configuration property used to set the list of 
+   * available ManagerFactories.
+   */
+  public final static String FACTORY_CLASS_NAMES_KEY = "sqoop.connection.factories";
+
+  // The default value for sqoop.connection.factories is the name of the DefaultManagerFactory.
+  final static String DEFAULT_FACTORY_CLASS_NAMES = DefaultManagerFactory.class.getName(); 
+
+  /** The list of ManagerFactory instances consulted by getManager().
+   */
+  private List<ManagerFactory> factories;
 
   /**
-   * Factory method to get a ConnManager for the given JDBC connect string
+   * Create the ManagerFactory instances that should populate
+   * the factories list.
+   */
+  private void instantiateFactories(Configuration conf) {
+    String [] classNameArray =
+        conf.getStrings(FACTORY_CLASS_NAMES_KEY, DEFAULT_FACTORY_CLASS_NAMES);
+
+    for (String className : classNameArray) {
+      try {
+        className = className.trim(); // Ignore leading/trailing whitespace.
+        ManagerFactory factory = ReflectionUtils.newInstance(
+            (Class<ManagerFactory>) conf.getClassByName(className), conf);
+        LOG.debug("Loaded manager factory: " + className);
+        factories.add(factory);
+      } catch (ClassNotFoundException cnfe) {
+        LOG.error("Could not load ManagerFactory " + className + " (not found)");
+      }
+    }
+  }
+
+  /**
+   * Factory method to get a ConnManager for the given JDBC connect string.
    * @param opts The parsed command-line options
    * @return a ConnManager instance for the appropriate database
    * @throws IOException if it cannot find a ConnManager for this schema
    */
-  public static ConnManager getManager(ImportOptions opts) throws IOException {
-
-    String manualDriver = opts.getDriverClassName();
-    if (manualDriver != null) {
-      // User has manually specified JDBC implementation with --driver.
-      // Just use GenericJdbcManager.
-      return new GenericJdbcManager(manualDriver, opts);
-    }
-
-    String connectStr = opts.getConnectString();
-
-    int schemeStopIdx = connectStr.indexOf("//");
-    if (-1 == schemeStopIdx) {
-      // no scheme component?
-      throw new IOException("Malformed connect string: " + connectStr);
-    }
-
-    String scheme = connectStr.substring(0, schemeStopIdx);
-
-    if (null == scheme) {
-      // We don't know if this is a mysql://, hsql://, etc.
-      // Can't do anything with this.
-      throw new IOException("Null scheme associated with connect string.");
-    }
-
-    if (scheme.equals("jdbc:mysql:")) {
-      if (opts.isDirect()) {
-        return new LocalMySQLManager(opts);
-      } else {
-        return new MySQLManager(opts);
+  public ConnManager getManager(ImportOptions opts) throws IOException {
+    // Try all the available manager factories.
+    for (ManagerFactory factory : factories) {
+      LOG.debug("Trying ManagerFactory: " + factory.getClass().getName());
+      ConnManager mgr = factory.accept(opts);
+      if (null != mgr) {
+        LOG.debug("Instantiated ConnManager.");
+        return mgr;
       }
-    } else if (scheme.equals("jdbc:hsqldb:hsql:")) {
-      return new HsqldbManager(opts);
-    } else if (scheme.startsWith("jdbc:oracle:")) {
-      return new OracleManager(opts);
-    } else {
-      throw new IOException("Unknown connection scheme: " + scheme);
     }
+
+    throw new IOException("No manager for connect string: " + opts.getConnectString());
   }
 }
 

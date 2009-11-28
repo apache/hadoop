@@ -61,7 +61,8 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static public void setSequenceFileOutputKeyClass(JobConf conf, 
                                                    Class<?> theClass) {
-    conf.setClass("mapred.seqbinary.output.key.class", theClass, Object.class);
+    conf.setClass(org.apache.hadoop.mapreduce.lib.output.
+      SequenceFileAsBinaryOutputFormat.KEY_CLASS, theClass, Object.class);
   }
 
   /**
@@ -74,8 +75,8 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static public void setSequenceFileOutputValueClass(JobConf conf, 
                                                      Class<?> theClass) {
-    conf.setClass("mapred.seqbinary.output.value.class", 
-                  theClass, Object.class);
+    conf.setClass(org.apache.hadoop.mapreduce.lib.output.
+      SequenceFileAsBinaryOutputFormat.VALUE_CLASS, theClass, Object.class);
   }
 
   /**
@@ -84,9 +85,10 @@ public class SequenceFileAsBinaryOutputFormat
    * @return the key class of the {@link SequenceFile}
    */
   static public Class<? extends WritableComparable> getSequenceFileOutputKeyClass(JobConf conf) { 
-    return conf.getClass("mapred.seqbinary.output.key.class", 
-                         conf.getOutputKeyClass().asSubclass(WritableComparable.class),
-                         WritableComparable.class);
+    return conf.getClass(org.apache.hadoop.mapreduce.lib.output.
+      SequenceFileAsBinaryOutputFormat.KEY_CLASS, 
+      conf.getOutputKeyClass().asSubclass(WritableComparable.class),
+      WritableComparable.class);
   }
 
   /**
@@ -95,9 +97,9 @@ public class SequenceFileAsBinaryOutputFormat
    * @return the value class of the {@link SequenceFile}
    */
   static public Class<? extends Writable> getSequenceFileOutputValueClass(JobConf conf) { 
-    return conf.getClass("mapred.seqbinary.output.value.class", 
-                         conf.getOutputValueClass().asSubclass(Writable.class),
-                         Writable.class);
+    return conf.getClass(org.apache.hadoop.mapreduce.lib.output.
+      SequenceFileAsBinaryOutputFormat.VALUE_CLASS, 
+      conf.getOutputValueClass().asSubclass(Writable.class), Writable.class);
   }
   
   @Override 

@@ -38,6 +38,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 public class SequenceFileAsBinaryOutputFormat 
     extends SequenceFileOutputFormat <BytesWritable,BytesWritable> {
+  public static String KEY_CLASS = "mapreduce.output.seqbinaryoutputformat.key.class"; 
+  public static String VALUE_CLASS = "mapreduce.output.seqbinaryoutputformat.value.class"; 
 
   /** 
    * Inner class used for appendRaw
@@ -83,7 +85,7 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static public void setSequenceFileOutputKeyClass(Job job, 
       Class<?> theClass) {
-    job.getConfiguration().setClass("mapred.seqbinary.output.key.class",
+    job.getConfiguration().setClass(KEY_CLASS,
       theClass, Object.class);
   }
 
@@ -97,7 +99,7 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static public void setSequenceFileOutputValueClass(Job job, 
       Class<?> theClass) {
-    job.getConfiguration().setClass("mapred.seqbinary.output.value.class", 
+    job.getConfiguration().setClass(VALUE_CLASS, 
                   theClass, Object.class);
   }
 
@@ -108,7 +110,7 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static public Class<? extends WritableComparable> 
       getSequenceFileOutputKeyClass(JobContext job) { 
-    return job.getConfiguration().getClass("mapred.seqbinary.output.key.class",
+    return job.getConfiguration().getClass(KEY_CLASS,
       job.getOutputKeyClass().asSubclass(WritableComparable.class), 
       WritableComparable.class);
   }
@@ -120,8 +122,7 @@ public class SequenceFileAsBinaryOutputFormat
    */
   static public Class<? extends Writable> getSequenceFileOutputValueClass(
       JobContext job) { 
-    return job.getConfiguration().getClass(
-      "mapred.seqbinary.output.value.class", 
+    return job.getConfiguration().getClass(VALUE_CLASS, 
       job.getOutputValueClass().asSubclass(Writable.class), Writable.class);
   }
   

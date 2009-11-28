@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.OutputLogFilter;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -84,10 +84,10 @@ public class TestMapReduceAggregates extends TestCase {
     System.out.println("inputData:");
     System.out.println(inputData.toString());
 
-    conf.setInt("aggregator.descriptor.num", 1);
-    conf.set("aggregator.descriptor.0", 
+    conf.setInt(ValueAggregatorJobBase.DESCRIPTOR_NUM, 1);
+    conf.set(ValueAggregatorJobBase.DESCRIPTOR + ".0", 
       "UserDefined,org.apache.hadoop.mapreduce.lib.aggregate.AggregatorTests");
-    conf.setLong("aggregate.max.num.unique.values", 14);
+    conf.setLong(UniqValueCount.MAX_NUM_UNIQUE_VALUES, 14);
     
     Job job = new Job(conf);
     FileInputFormat.setInputPaths(job, INPUT_DIR);
@@ -127,7 +127,7 @@ public class TestMapReduceAggregates extends TestCase {
     FileSystem fs = outDir.getFileSystem(conf);
     StringBuffer result = new StringBuffer();
     Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
-                        new OutputLogFilter()));
+                        new Utils.OutputFileUtils.OutputFilesFilter()));
     for(int i=0; i < fileList.length; ++i) {
       BufferedReader file = 
         new BufferedReader(new InputStreamReader(fs.open(fileList[i])));

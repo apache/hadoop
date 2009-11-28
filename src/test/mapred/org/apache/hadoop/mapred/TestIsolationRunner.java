@@ -23,6 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
+import javax.security.auth.login.LoginException;
+
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -32,7 +34,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** 
  * Re-runs a map task using the IsolationRunner. 
@@ -104,15 +108,20 @@ public class TestIsolationRunner extends TestCase {
   }
 
   private Path getAttemptJobXml(JobConf conf, JobID jobId, TaskType taskType)
-      throws IOException {
+      throws IOException,
+      LoginException {
     String taskid =
         new TaskAttemptID(new TaskID(jobId, taskType, 0), 0).toString();
-    return new LocalDirAllocator("mapred.local.dir").getLocalPathToRead(
-        TaskTracker.getTaskConfFile(jobId.toString(), taskid, false), conf);
+    return new LocalDirAllocator(MRConfig.LOCAL_DIR).getLocalPathToRead(
+        TaskTracker.getTaskConfFile(UserGroupInformation.login(conf)
+            .getUserName(), jobId.toString(), taskid, false), conf);
   }
 
-  public void testIsolationRunOfMapTask() throws 
-      IOException, InterruptedException, ClassNotFoundException {
+  public void testIsolationRunOfMapTask()
+      throws IOException,
+      InterruptedException,
+      ClassNotFoundException,
+      LoginException {
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(1, "file:///", 4);

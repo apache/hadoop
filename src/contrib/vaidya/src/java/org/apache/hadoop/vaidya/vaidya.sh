@@ -42,6 +42,6 @@ if [ -z $JAVA_HOME ] ; then
   exit -1;
 fi
 
-hadoopVersion=`$HADOOP_HOME/bin/hadoop version | awk 'BEGIN { RS = "" ; FS = "\n" } ; { print $1 }' | awk '{print $2}'`
+hadoopVersion=`$HADOOP_HOME/bin/hadoop version | grep Hadoop | awk '{print $2}'`
 
 $JAVA_HOME/bin/java -Xmx1024m -classpath $HADOOP_HOME/hadoop-${hadoopVersion}-core.jar:$HADOOP_HOME/contrib/vaidya/hadoop-${hadoopVersion}-vaidya.jar:$HADOOP_HOME/lib/commons-logging-1.0.4.jar:${CLASSPATH} org.apache.hadoop.vaidya.postexdiagnosis.PostExPerformanceDiagnoser $@

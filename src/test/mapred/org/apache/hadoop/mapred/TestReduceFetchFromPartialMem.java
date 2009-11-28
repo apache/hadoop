@@ -77,17 +77,17 @@ public class TestReduceFetchFromPartialMem extends TestCase {
 
   /** Verify that at least one segment does not hit disk */
   public void testReduceFromPartialMem() throws Exception {
-    final int MAP_TASKS = 5;
+    final int MAP_TASKS = 7;
     JobConf job = mrCluster.createJobConf();
     job.setNumMapTasks(MAP_TASKS);
-    job.setInt("mapred.inmem.merge.threshold", 0);
-    job.set("mapred.job.reduce.input.buffer.percent", "1.0");
-    job.setInt("mapred.reduce.parallel.copies", 1);
-    job.setInt("io.sort.mb", 10);
+    job.setInt(JobContext.REDUCE_MERGE_INMEM_THRESHOLD, 0);
+    job.set(JobContext.REDUCE_INPUT_BUFFER_PERCENT, "1.0");
+    job.setInt(JobContext.SHUFFLE_PARALLEL_COPIES, 1);
+    job.setInt(JobContext.IO_SORT_MB, 10);
     job.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, "-Xmx128m");
-    job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
-    job.set("mapred.job.shuffle.input.buffer.percent", "0.14");
-    job.set("mapred.job.shuffle.merge.percent", "1.0");
+    job.setLong(JobContext.REDUCE_MEMORY_TOTAL_BYTES, 128 << 20);
+    job.set(JobContext.SHUFFLE_INPUT_BUFFER_PERCENT, "0.14");
+    job.set(JobContext.SHUFFLE_MERGE_EPRCENT, "1.0");
     Counters c = runJob(job);
     final long out = c.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getCounter();
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
@@ -112,7 +112,7 @@ public class TestReduceFetchFromPartialMem extends TestCase {
     @Override
     public void configure(JobConf conf) {
       nMaps = conf.getNumMapTasks();
-      id = nMaps - conf.getInt("mapred.task.partition", -1) - 1;
+      id = nMaps - conf.getInt(JobContext.TASK_PARTITION, -1) - 1;
       Arrays.fill(b, 0, 4096, (byte)'V');
       ((StringBuilder)fmt.out()).append(keyfmt);
     }
@@ -248,8 +248,8 @@ public class TestReduceFetchFromPartialMem extends TestCase {
     conf.setNumReduceTasks(1);
     conf.setInputFormat(FakeIF.class);
     conf.setNumTasksToExecutePerJvm(1);
-    conf.setInt("mapred.map.max.attempts", 0);
-    conf.setInt("mapred.reduce.max.attempts", 0);
+    conf.setInt(JobContext.MAP_MAX_ATTEMPTS, 0);
+    conf.setInt(JobContext.REDUCE_MAX_ATTEMPTS, 0);
     FileInputFormat.setInputPaths(conf, new Path("/in"));
     final Path outp = new Path("/out");
     FileOutputFormat.setOutputPath(conf, outp);

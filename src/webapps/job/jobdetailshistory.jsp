@@ -23,132 +23,53 @@
   import="java.io.*"
   import="java.util.*"
   import="org.apache.hadoop.fs.*"
+  import="org.apache.hadoop.mapreduce.TaskAttemptID"
+  import="org.apache.hadoop.mapreduce.TaskID"
+  import="org.apache.hadoop.mapreduce.Counter"
+  import="org.apache.hadoop.mapreduce.Counters"
+  import="org.apache.hadoop.mapreduce.CounterGroup"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
-  import="java.text.SimpleDateFormat"
-  import="org.apache.hadoop.mapred.JobHistory.*"
+  import="java.text.*"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
 %>
-<%!	private static final long serialVersionUID = 1L;
+<%!private static final long serialVersionUID = 1L;
 %>
 
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
     String jobid = request.getParameter("jobid");
     String logFile = request.getParameter("logFile");
-	String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
-	
+
     Path jobFile = new Path(logFile);
     String[] jobDetails = jobFile.getName().split("_");
-    String jobUniqueString = jobDetails[0] + "_" +jobDetails[1] + "_" + jobid ;
-	
+    String jobUniqueString = jobid;
+
     FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-    JobInfo job = JSPUtil.getJobInfo(request, fs);
+    JobHistoryParser.JobInfo job = JSPUtil.getJobInfo(request, fs);
 %>
-<html><body>
+
+<html>
+<head>
+<title>Hadoop Job <%=jobid%> on History Viewer</title>
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css">
+</head>
+<body>
+
 <h2>Hadoop Job <%=jobid %> on <a href="jobhistory.jsp">History Viewer</a></h2>
 
-<b>User: </b> <%=job.get(Keys.USER) %><br/> 
-<b>JobName: </b> <%=job.get(Keys.JOBNAME) %><br/> 
+<b>User: </b> <%=job.getUsername() %><br/> 
+<b>JobName: </b> <%=job.getJobname() %><br/> 
 <b>JobConf: </b> <a href="jobconf_history.jsp?jobid=<%=jobid%>&jobLogDir=<%=new Path(logFile).getParent().toString()%>&jobUniqueString=<%=jobUniqueString%>"> 
-                 <%=job.get(Keys.JOBCONF) %></a><br/> 
-<b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
-<b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
-<b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
-<b>Status: </b> <%= ((job.get(Keys.JOB_STATUS) == "")?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
+                 <%=job.getJobConfPath() %></a><br/> 
+<b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getSubmitTime(), 0 )  %><br/> 
+<b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLaunchTime(), job.getSubmitTime()) %><br/>
+<b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getFinishTime(), job.getLaunchTime()) %><br/>
+<b>Status: </b> <%= ((job.getJobStatus()) == null ? "Incomplete" :job.getJobStatus()) %><br/> 
 <%
-    Map<String, JobHistory.Task> tasks = job.getAllTasks();
-    int totalMaps = 0 ; 
-    int totalReduces = 0;
-    int totalCleanups = 0; 
-    int totalSetups = 0; 
-    int numFailedMaps = 0; 
-    int numKilledMaps = 0;
-    int numFailedReduces = 0 ; 
-    int numKilledReduces = 0;
-    int numFinishedCleanups = 0;
-    int numFailedCleanups = 0;
-    int numKilledCleanups = 0;
-    int numFinishedSetups = 0;
-    int numFailedSetups = 0;
-    int numKilledSetups = 0;
-	
-    long mapStarted = 0 ; 
-    long mapFinished = 0 ; 
-    long reduceStarted = 0 ; 
-    long reduceFinished = 0;
-    long cleanupStarted = 0;
-    long cleanupFinished = 0; 
-    long setupStarted = 0;
-    long setupFinished = 0; 
-        
-    Map <String,String> allHosts = new TreeMap<String,String>();
-    for (JobHistory.Task task : tasks.values()) {
-      Map<String, TaskAttempt> attempts = task.getTaskAttempts();
-      allHosts.put(task.get(Keys.HOSTNAME), "");
-      for (TaskAttempt attempt : attempts.values()) {
-        long startTime = attempt.getLong(Keys.START_TIME) ; 
-        long finishTime = attempt.getLong(Keys.FINISH_TIME) ; 
-        if (Values.MAP.name().equals(task.get(Keys.TASK_TYPE))){
-          if (mapStarted==0 || mapStarted > startTime ) {
-            mapStarted = startTime; 
-          }
-          if (mapFinished < finishTime ) {
-            mapFinished = finishTime ; 
-          }
-          totalMaps++; 
-          if (Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numFailedMaps++; 
-          } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numKilledMaps++;
-          }
-        } else if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) {
-          if (reduceStarted==0||reduceStarted > startTime) {
-            reduceStarted = startTime ; 
-          }
-          if (reduceFinished < finishTime) {
-            reduceFinished = finishTime; 
-          }
-          totalReduces++; 
-          if (Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numFailedReduces++;
-          } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numKilledReduces++;
-          }
-        } else if (Values.CLEANUP.name().equals(task.get(Keys.TASK_TYPE))) {
-          if (cleanupStarted==0||cleanupStarted > startTime) {
-            cleanupStarted = startTime ; 
-          }
-          if (cleanupFinished < finishTime) {
-            cleanupFinished = finishTime; 
-          }
-          totalCleanups++; 
-          if (Values.SUCCESS.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numFinishedCleanups++;
-          } else if (Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numFailedCleanups++;
-          } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numKilledCleanups++;
-          } 
-        } else if (Values.SETUP.name().equals(task.get(Keys.TASK_TYPE))) {
-          if (setupStarted==0||setupStarted > startTime) {
-            setupStarted = startTime ; 
-          }
-          if (setupFinished < finishTime) {
-            setupFinished = finishTime; 
-          }
-          totalSetups++; 
-          if (Values.SUCCESS.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numFinishedSetups++;
-          } else if (Values.FAILED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numFailedSetups++;
-          } else if (Values.KILLED.name().equals(attempt.get(Keys.TASK_STATUS))) {
-            numKilledSetups++;
-          }
-        }
-      }
-    }
+    HistoryViewer.SummarizedJob sj = new HistoryViewer.SummarizedJob(job);
 %>
-<b><a href="analysejobhistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>">Analyse This Job</a></b> 
+<b><a href="analysejobhistory.jsp?jobid=<%=jobid %>&logFile=<logFile%>">Analyse This Job</a></b> 
 <hr/>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
@@ -157,82 +78,148 @@
 </tr>
 <tr>
 <td>Setup</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=all">
-        <%=totalSetups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.SUCCESS %>">
-        <%=numFinishedSetups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.FAILED %>">
-        <%=numFailedSetups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.KILLED %>">
-        <%=numKilledSetups%></a></td>  
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, setupStarted, 0) %></td>
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, setupFinished, setupStarted) %></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_SETUP&status=all">
+        <%=sj.getTotalSetups()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_SETUP&status=SUCCEEDED">
+        <%=sj.getNumFinishedSetups()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_SETUP&status=FAILED">
+        <%=sj.getNumFailedSetups()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_SETUP&status=KILLED">
+        <%=sj.getNumKilledSetups()%></a></td>  
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getSetupStarted(), 0) %></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getSetupFinished(), sj.getSetupStarted()) %></td>
 </tr>
 <tr>
 <td>Map</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=all">
-        <%=totalMaps %></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.SUCCESS %>">
-        <%=job.getInt(Keys.FINISHED_MAPS) %></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.FAILED %>">
-        <%=numFailedMaps %></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.KILLED %>">
-        <%=numKilledMaps %></a></td>
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, mapStarted, 0) %></td>
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, mapFinished, mapStarted) %></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=MAP&status=all">
+        <%=sj.getTotalMaps()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=MAP&status=SUCCEEDED">
+        <%=job.getFinishedMaps() %></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=MAP&status=FAILED">
+        <%=sj.getNumFailedMaps()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=MAP&status=KILLED">
+        <%=sj.getNumKilledMaps()%></a></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getMapStarted(), 0) %></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getMapFinished(), sj.getMapStarted()) %></td>
 </tr>
 <tr>
 <td>Reduce</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=all">
-        <%=totalReduces%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.SUCCESS %>">
-        <%=job.getInt(Keys.FINISHED_REDUCES)%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.FAILED %>">
-        <%=numFailedReduces%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.KILLED %>">
-        <%=numKilledReduces%></a></td>  
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceStarted, 0) %></td>
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceFinished, reduceStarted) %></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=REDUCE&status=all">
+        <%=sj.getTotalReduces()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=REDUCE&status=SUCCEEDED">
+        <%=job.getFinishedReduces()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=REDUCE&status=FAILED">
+        <%=sj.getNumFailedReduces()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=REDUCE&status=KILLED">
+        <%=sj.getNumKilledReduces()%></a></td>  
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getReduceStarted(), 0) %></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getReduceFinished(), sj.getReduceStarted()) %></td>
 </tr>
 <tr>
 <td>Cleanup</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=all">
-        <%=totalCleanups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.SUCCESS %>">
-        <%=numFinishedCleanups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.FAILED %>">
-        <%=numFailedCleanups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.KILLED %>">
-        <%=numKilledCleanups%></a></td>  
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, cleanupStarted, 0) %></td>
-    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, cleanupFinished, cleanupStarted) %></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_CLEANUP&status=all">
+        <%=sj.getTotalCleanups()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_CLEANUP&status=SUCCEEDED">
+        <%=sj.getNumFinishedCleanups()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_CLEANUP&status=FAILED">
+        <%=sj.getNumFailedCleanups()%></a></td>
+    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile%>&taskType=JOB_CLEANUP&status=KILLED>">
+        <%=sj.getNumKilledCleanups()%></a></td>  
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getCleanupStarted(), 0) %></td>
+    <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, sj.getCleanupFinished(), sj.getCleanupStarted()) %></td>
 </tr>
 </table>
 
+<br>
+<br>
+
+<table border=2 cellpadding="5" cellspacing="2">
+  <tr>
+  <th><br/></th>
+  <th>Counter</th>
+  <th>Map</th>
+  <th>Reduce</th>
+  <th>Total</th>
+</tr>
+
+<%  
+
+ Counters totalCounters = job.getTotalCounters();
+ Counters mapCounters = job.getMapCounters();
+ Counters reduceCounters = job.getReduceCounters();
+
+ if (totalCounters != null) {
+   for (String groupName : totalCounters.getGroupNames()) {
+     CounterGroup totalGroup = totalCounters.getGroup(groupName);
+     CounterGroup mapGroup = mapCounters.getGroup(groupName);
+     CounterGroup reduceGroup = reduceCounters.getGroup(groupName);
+  
+     Format decimal = new DecimalFormat();
+  
+     boolean isFirst = true;
+     Iterator<Counter> ctrItr = totalGroup.iterator();
+     while(ctrItr.hasNext()) {
+       Counter counter = ctrItr.next();
+       String name = counter.getName();
+       String mapValue = 
+        decimal.format(mapGroup.findCounter(name).getValue());
+       String reduceValue = 
+        decimal.format(reduceGroup.findCounter(name).getValue());
+       String totalValue = 
+        decimal.format(counter.getValue());
+%>
+       <tr>
+<%
+       if (isFirst) {
+         isFirst = false;
+%>
+         <td rowspan="<%=totalGroup.size()%>"><%=totalGroup.getDisplayName()%></td>
+<%
+       }
+%>
+       <td><%=counter.getDisplayName()%></td>
+       <td align="right"><%=mapValue%></td>
+       <td align="right"><%=reduceValue%></td>
+       <td align="right"><%=totalValue%></td>
+     </tr>
+<%
+      }
+    }
+  }
+%>
+</table>
+<br>
+
 <br/>
  <%
-    DefaultJobHistoryParser.FailedOnNodesFilter filter = 
-                 new DefaultJobHistoryParser.FailedOnNodesFilter();
-    JobHistory.parseHistoryFromFS(logFile, filter, fs); 
-    Map<String, Set<String>> badNodes = filter.getValues(); 
+    HistoryViewer.FilteredJob filter = new HistoryViewer.FilteredJob(job,TaskStatus.State.FAILED.toString()); 
+    Map<String, Set<TaskID>> badNodes = filter.getFilteredMap(); 
     if (badNodes.size() > 0) {
  %>
 <h3>Failed tasks attempts by nodes </h3>
 <table border="1">
 <tr><td>Hostname</td><td>Failed Tasks</td></tr>
  <%	  
-      for (Map.Entry<String, Set<String>> entry : badNodes.entrySet()) {
+      for (Map.Entry<String, Set<TaskID>> entry : badNodes.entrySet()) {
         String node = entry.getKey();
-        Set<String> failedTasks = entry.getValue();
+        Set<TaskID> failedTasks = entry.getValue();
 %>
         <tr>
         <td><%=node %></td>
         <td>
 <%
-        for (String t : failedTasks) {
+          boolean firstId = true;
+          for (TaskID tid : failedTasks) {
+             if (firstId) {
+              firstId = false;
 %>
-          <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+            <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=tid %>"><%=tid %></a>
 <%		  
+          } else {
+%>	
+            ,&nbsp<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=tid %>"><%=tid %></a>
+<%		  
+          }
         }
 %>	
         </td>
@@ -243,29 +230,36 @@
  %>
 </table>
 <br/>
+
  <%
-    DefaultJobHistoryParser.KilledOnNodesFilter killedFilter =
-                 new DefaultJobHistoryParser.KilledOnNodesFilter();
-    JobHistory.parseHistoryFromFS(logFile, filter, fs); 
-    badNodes = killedFilter.getValues(); 
+    filter = new HistoryViewer.FilteredJob(job, TaskStatus.State.KILLED.toString());
+    badNodes = filter.getFilteredMap(); 
     if (badNodes.size() > 0) {
  %>
 <h3>Killed tasks attempts by nodes </h3>
 <table border="1">
 <tr><td>Hostname</td><td>Killed Tasks</td></tr>
  <%	  
-      for (Map.Entry<String, Set<String>> entry : badNodes.entrySet()) {
+      for (Map.Entry<String, Set<TaskID>> entry : badNodes.entrySet()) {
         String node = entry.getKey();
-        Set<String> killedTasks = entry.getValue();
+        Set<TaskID> killedTasks = entry.getValue();
 %>
         <tr>
         <td><%=node %></td>
         <td>
 <%
-        for (String t : killedTasks) {
+        boolean firstId = true;
+        for (TaskID tid : killedTasks) {
+             if (firstId) {
+              firstId = false;
 %>
-          <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+            <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=tid %>"><%=tid %></a>
 <%		  
+          } else {
+%>	
+            ,&nbsp<a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile%>&taskid=<%=tid %>"><%=tid %></a>
+<%		  
+          }
         }
 %>	
         </td>

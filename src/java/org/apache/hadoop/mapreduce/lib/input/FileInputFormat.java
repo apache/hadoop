@@ -52,6 +52,14 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   public static final String COUNTER_GROUP = 
                                 "FileInputFormatCounters";
   public static final String BYTES_READ = "BYTES_READ";
+  public static final String INPUT_DIR = 
+    "mapreduce.input.fileinputformat.inputdir";
+  public static final String SPLIT_MAXSIZE = 
+    "mapreduce.input.fileinputformat.split.maxsize";
+  public static final String SPLIT_MINSIZE = 
+    "mapreduce.input.fileinputformat.split.minsize";
+  public static final String PATHFILTER_CLASS = 
+    "mapreduce.input.pathFilter.class";
 
   private static final Log LOG = LogFactory.getLog(FileInputFormat.class);
 
@@ -117,7 +125,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    */
   public static void setInputPathFilter(Job job,
                                         Class<? extends PathFilter> filter) {
-    job.getConfiguration().setClass("mapred.input.pathFilter.class", filter, 
+    job.getConfiguration().setClass(PATHFILTER_CLASS, filter, 
                                     PathFilter.class);
   }
 
@@ -128,7 +136,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    */
   public static void setMinInputSplitSize(Job job,
                                           long size) {
-    job.getConfiguration().setLong("mapred.min.split.size", size);
+    job.getConfiguration().setLong(SPLIT_MINSIZE, size);
   }
 
   /**
@@ -137,7 +145,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * @return the minimum number of bytes that can be in a split
    */
   public static long getMinSplitSize(JobContext job) {
-    return job.getConfiguration().getLong("mapred.min.split.size", 1L);
+    return job.getConfiguration().getLong(SPLIT_MINSIZE, 1L);
   }
 
   /**
@@ -147,7 +155,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    */
   public static void setMaxInputSplitSize(Job job,
                                           long size) {
-    job.getConfiguration().setLong("mapred.max.split.size", size);
+    job.getConfiguration().setLong(SPLIT_MAXSIZE, size);
   }
 
   /**
@@ -156,7 +164,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * @return the maximum number of bytes a split can include
    */
   public static long getMaxSplitSize(JobContext context) {
-    return context.getConfiguration().getLong("mapred.max.split.size", 
+    return context.getConfiguration().getLong(SPLIT_MAXSIZE, 
                                               Long.MAX_VALUE);
   }
 
@@ -167,7 +175,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    */
   public static PathFilter getInputPathFilter(JobContext context) {
     Configuration conf = context.getConfiguration();
-    Class<?> filterClass = conf.getClass("mapred.input.pathFilter.class", null,
+    Class<?> filterClass = conf.getClass(PATHFILTER_CLASS, null,
         PathFilter.class);
     return (filterClass != null) ?
         (PathFilter) ReflectionUtils.newInstance(filterClass, conf) : null;
@@ -344,7 +352,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       path = inputPaths[i].makeQualified(fs);
       str.append(StringUtils.escapeString(path.toString()));
     }
-    conf.set("mapred.input.dir", str.toString());
+    conf.set(INPUT_DIR, str.toString());
   }
 
   /**
@@ -360,8 +368,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     FileSystem fs = FileSystem.get(conf);
     path = path.makeQualified(fs);
     String dirStr = StringUtils.escapeString(path.toString());
-    String dirs = conf.get("mapred.input.dir");
-    conf.set("mapred.input.dir", dirs == null ? dirStr : dirs + "," + dirStr);
+    String dirs = conf.get(INPUT_DIR);
+    conf.set(INPUT_DIR, dirs == null ? dirStr : dirs + "," + dirStr);
   }
   
   // This method escapes commas in the glob pattern of the given paths.
@@ -410,7 +418,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    * @return the list of input {@link Path}s for the map-reduce job.
    */
   public static Path[] getInputPaths(JobContext context) {
-    String dirs = context.getConfiguration().get("mapred.input.dir", "");
+    String dirs = context.getConfiguration().get(INPUT_DIR, "");
     String [] list = StringUtils.split(dirs);
     Path[] result = new Path[list.length];
     for (int i = 0; i < list.length; i++) {

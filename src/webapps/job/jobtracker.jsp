@@ -25,6 +25,7 @@
   import="java.util.*"
   import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapreduce.*"
   import="org.apache.hadoop.util.*"
 %>
 <%!	private static final long serialVersionUID = 1L;
@@ -32,45 +33,56 @@
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   ClusterStatus status = tracker.getClusterStatus();
+  ClusterMetrics metrics = tracker.getClusterMetrics();
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-  JobQueueInfo[] queues = tracker.getQueues();
-  Vector<JobInProgress> runningJobs = tracker.runningJobs();
-  Vector<JobInProgress> completedJobs = tracker.completedJobs();
-  Vector<JobInProgress> failedJobs = tracker.failedJobs();
+  JobQueueInfo[] queues = tracker.getJobQueues();
+  List<JobInProgress> runningJobs = tracker.getRunningJobs();
+  List<JobInProgress> completedJobs = tracker.getCompletedJobs();
+  List<JobInProgress> failedJobs = tracker.getFailedJobs();
 %>
 <%!
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
   
-  public void generateSummaryTable(JspWriter out, ClusterStatus status,
+  public void generateSummaryTable(JspWriter out, ClusterMetrics metrics,
                                    JobTracker tracker) throws IOException {
-    String tasksPerNode = status.getTaskTrackers() > 0 ?
-      percentFormat.format(((double)(status.getMaxMapTasks() +
-                      status.getMaxReduceTasks())) / status.getTaskTrackers()):
+    String tasksPerNode = metrics.getTaskTrackerCount() > 0 ?
+      percentFormat.format(((double)(metrics.getMapSlotCapacity() +
+      metrics.getReduceSlotCapacity())) / metrics.getTaskTrackerCount()):
       "-";
     out.print("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n"+
-              "<tr><th>Maps</th><th>Reduces</th>" + 
+              "<tr><th>Queues</th>" +
+              "<th>Running Map Tasks</th><th>Running Reduce Tasks</th>" + 
               "<th>Total Submissions</th>" +
-              "<th>Nodes</th><th>Map Task Capacity</th>" +
-              "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th>" + 
+              "<th>Nodes</th>" +
+              "<th>Occupied Map Slots</th><th>Occupied Reduce Slots</th>" + 
+              "<th>Reserved Map Slots</th><th>Reserved Reduce Slots</th>" + 
+              "<th>Map Slot Capacity</th>" +
+              "<th>Reduce Slot Capacity</th><th>Avg. Slots/Node</th>" + 
               "<th>Blacklisted Nodes</th>" +
               "<th>Excluded Nodes</th></tr>\n");
-    out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
-              status.getReduceTasks() + "</td><td>" + 
-              tracker.getTotalSubmissions() +
+    out.print("<tr><td><a href=\"queueinfo.jsp\">" +
+              tracker.getRootQueues().length + "</a></td><td>" + 
+              metrics.getRunningMaps() + "</td><td>" +
+              metrics.getRunningReduces() + "</td><td>" + 
+              metrics.getTotalJobSubmissions() +
               "</td><td><a href=\"machines.jsp?type=active\">" +
-              status.getTaskTrackers() +
-              "</a></td><td>" + status.getMaxMapTasks() +
-              "</td><td>" + status.getMaxReduceTasks() +
+              metrics.getTaskTrackerCount() + "</a></td><td>" + 
+              metrics.getOccupiedMapSlots() + "</td><td>" +
+              metrics.getOccupiedReduceSlots() + "</td><td>" + 
+              metrics.getReservedMapSlots() + "</td><td>" +
+              metrics.getReservedReduceSlots() + "</td><td>" + 
+              + metrics.getMapSlotCapacity() +
+              "</td><td>" + metrics.getReduceSlotCapacity() +
               "</td><td>" + tasksPerNode +
               "</td><td><a href=\"machines.jsp?type=blacklisted\">" +
-              status.getBlacklistedTrackers() + "</a>" +
+              metrics.getBlackListedTaskTrackerCount() + "</a>" +
               "</td><td><a href=\"machines.jsp?type=excluded\">" +
-              status.getNumExcludedNodes() + "</a>" +
+              metrics.getDecommissionedTaskTrackerCount() + "</a>" +
               "</td></tr></table>\n");
 
     out.print("<br>");
-    if (tracker.hasRestarted()) {
+    if (tracker.recoveryManager.shouldRecover()) {
       out.print("<span class=\"small\"><i>");
       if (tracker.hasRecovered()) {
         out.print("The JobTracker got restarted and recovered back in " );
@@ -117,40 +129,9 @@
 <hr>
 <h2>Cluster Summary (Heap Size is <%= StringUtils.byteDesc(status.getUsedMemory()) %>/<%= StringUtils.byteDesc(status.getMaxMemory()) %>)</h2>
 <% 
- generateSummaryTable(out, status, tracker); 
+ generateSummaryTable(out, metrics, tracker); 
 %>
 <hr>
-<h2 id="scheduling_info">Scheduling Information</h2>
-<table border="2" cellpadding="5" cellspacing="2">
-<thead style="font-weight: bold">
-<tr>
-<td> Queue Name </td>
-<td> State </td>
-<td> Scheduling Information</td>
-</tr>
-</thead>
-<tbody>
-<%
-for(JobQueueInfo queue: queues) {
-  String queueName = queue.getQueueName();
-  String state = queue.getQueueState();
-  String schedulingInformation = queue.getSchedulingInfo();
-  if(schedulingInformation == null || schedulingInformation.trim().equals("")) {
-    schedulingInformation = "NA";
-  }
-%>
-<tr>
-<td><a href="jobqueue_details.jsp?queueName=<%=queueName%>"><%=queueName%></a></td>
-<td><%=state%></td>
-<td><%=schedulingInformation.replaceAll("\n","<br/>") %>
-</td>
-</tr>
-<%
-}
-%>
-</tbody>
-</table>
-<hr/>
 <b>Filter (Jobid, Priority, User, Name)</b> <input type="text" id="filter" onkeyup="applyfilter()"> <br>
 <span class="small">Example: 'user:smith 3200' will filter by 'smith' only in the user field and '3200' in all fields</span>
 <hr>

@@ -42,7 +42,11 @@ public class TextInputFormat extends FileInputFormat<LongWritable, Text>
   }
   
   protected boolean isSplitable(FileSystem fs, Path file) {
-    return compressionCodecs.getCodec(file) == null;
+    final CompressionCodec codec = compressionCodecs.getCodec(file);
+    if (null == codec) {
+      return true;
+    }
+    return codec instanceof SplittableCompressionCodec;
   }
 
   public RecordReader<LongWritable, Text> getRecordReader(

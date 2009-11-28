@@ -20,9 +20,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -64,7 +64,7 @@ public class TestJobExecutionAsDifferentUser extends
 
     // Run a job with jvm reuse
     JobConf myConf = getClusterConf();
-    myConf.set("mapred.job.reuse.jvm.num.tasks", "-1");
+    myConf.set(JobContext.JVM_NUMTASKS_TORUN, "-1");
     String[] args = { "-m", "6", "-r", "3", "-mt", "1000", "-rt", "1000" };
     assertEquals(0, ToolRunner.run(myConf, new SleepJob(), args));
   }

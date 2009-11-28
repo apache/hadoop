@@ -54,7 +54,7 @@ public class TestWrappedRecordReaderClassloader extends TestCase {
 
     Path base = new Path(testdir, "/empty");
     Path[] src = { new Path(base, "i0"), new Path("i1"), new Path("i2") };
-    job.set("mapred.join.expr", CompositeInputFormat.compose("outer",
+    job.set("mapreduce.join.expr", CompositeInputFormat.compose("outer",
         IF_ClassLoaderChecker.class, src));
 
     CompositeInputFormat<NullWritable> inputFormat = new CompositeInputFormat<NullWritable>();

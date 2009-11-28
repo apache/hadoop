@@ -41,18 +41,18 @@ public class TrApp
     // test that some JobConf properties are exposed as expected     
     // Note the dots translated to underscore: 
     // property names have been escaped in PipeMapRed.safeEnvVarName()
-    expectDefined("mapred_local_dir");
+    expectDefined("mapreduce_cluster_local_dir");
     expect("mapred_output_format_class", "org.apache.hadoop.mapred.TextOutputFormat");
-    expect("mapred_output_key_class", "org.apache.hadoop.io.Text");
-    expect("mapred_output_value_class", "org.apache.hadoop.io.Text");
+    expect("mapreduce_job_output_key_class", "org.apache.hadoop.io.Text");
+    expect("mapreduce_job_output_value_class", "org.apache.hadoop.io.Text");
 
-    expect("mapred_task_is_map", "true");
-    expectDefined("mapred_task_id");
+    expect("mapreduce_task_ismap", "true");
+    expectDefined("mapreduce_task_attempt_id");
 
-    expectDefined("map_input_file");
-    expectDefined("map_input_length");
+    expectDefined("mapreduce_map_input_file");
+    expectDefined("mapreduce_map_input_length");
 
-    expectDefined("io_sort_factor");
+    expectDefined("mapreduce_task_io_sort_factor");
 
     // the FileSplit context properties are not available in local hadoop..
     // so can't check them in this test.

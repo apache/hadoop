@@ -42,8 +42,10 @@ public class RegexMapper<K> extends MapReduceBase
   private int group;
 
   public void configure(JobConf job) {
-    pattern = Pattern.compile(job.get("mapred.mapper.regex"));
-    group = job.getInt("mapred.mapper.regex.group", 0);
+    pattern = Pattern.compile(job.get(org.apache.hadoop.mapreduce.lib.map.
+                RegexMapper.PATTERN));
+    group = job.getInt(org.apache.hadoop.mapreduce.lib.map.
+              RegexMapper.GROUP, 0);
   }
 
   public void map(K key, Text value,

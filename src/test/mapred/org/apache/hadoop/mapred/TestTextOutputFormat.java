@@ -47,7 +47,7 @@ public class TestTextOutputFormat extends TestCase {
   @SuppressWarnings("unchecked")
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
-    job.set("mapred.task.id", attempt);
+    job.set(JobContext.TASK_ATTEMPT_ID, attempt);
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);
@@ -99,8 +99,8 @@ public class TestTextOutputFormat extends TestCase {
   public void testFormatWithCustomSeparator() throws Exception {
     JobConf job = new JobConf();
     String separator = "\u0001";
-    job.set("mapred.textoutputformat.separator", separator);
-    job.set("mapred.task.id", attempt);
+    job.set("mapreduce.output.textoutputformat.separator", separator);
+    job.set(JobContext.TASK_ATTEMPT_ID, attempt);
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);

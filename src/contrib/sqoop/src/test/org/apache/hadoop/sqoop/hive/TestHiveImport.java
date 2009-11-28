@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.HsqldbTestServer;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 
@@ -46,12 +47,7 @@ public class TestHiveImport extends ImportJobTestCase {
     ArrayList<String> args = new ArrayList<String>();
 
     if (includeHadoopFlags) {
-      args.add("-D");
-      args.add("mapred.job.tracker=local");
-      args.add("-D");
-      args.add("mapred.map.tasks=1");
-      args.add("-D");
-      args.add("fs.default.name=file:///");
+      CommonArgs.addHadoopFlags(args);
     }
 
     args.add("--table");
@@ -61,8 +57,10 @@ public class TestHiveImport extends ImportJobTestCase {
     args.add("--connect");
     args.add(HsqldbTestServer.getUrl());
     args.add("--hive-import");
-    args.add("--order-by");
+    args.add("--split-by");
     args.add(getColNames()[0]);
+    args.add("--num-mappers");
+    args.add("1");
 
     if (null != moreArgs) {
       for (String arg: moreArgs) {

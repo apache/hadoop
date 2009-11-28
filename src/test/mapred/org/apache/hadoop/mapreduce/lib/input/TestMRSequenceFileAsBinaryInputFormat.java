@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 
 import junit.framework.TestCase;
 
@@ -79,7 +80,7 @@ public class TestMRSequenceFileAsBinaryInputFormat extends TestCase {
       RecordReader<BytesWritable, BytesWritable> reader =
             bformat.createRecordReader(split, context);
       MapContext<BytesWritable, BytesWritable, BytesWritable, BytesWritable> 
-        mcontext = new MapContext<BytesWritable, BytesWritable,
+        mcontext = new MapContextImpl<BytesWritable, BytesWritable,
           BytesWritable, BytesWritable>(job.getConfiguration(), 
           context.getTaskAttemptID(), reader, null, null, 
           MapReduceTestUtil.createDummyReporter(), 

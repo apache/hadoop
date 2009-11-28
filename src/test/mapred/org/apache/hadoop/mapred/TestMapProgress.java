@@ -27,9 +27,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  *  Validates map phase progress.
@@ -133,18 +134,19 @@ public class TestMapProgress extends TestCase {
     job.setNumReduceTasks(0);
     TaskAttemptID taskId = TaskAttemptID.forName(
                                   "attempt_200907082313_0424_m_000000_0");
-    job.setClass("mapreduce.outputformat.class",
+    job.setClass("mapreduce.job.outputformat.class",
                  NullOutputFormat.class, OutputFormat.class);
-    job.set("mapred.input.dir", TEST_ROOT_DIR);
+    job.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
+            TEST_ROOT_DIR);
     jobId = taskId.getJobID();
     
-    JobContext jContext = new JobContext(job, jobId);
-    RawSplit[] rawSplits = LocalJobRunner.getRawSplits(jContext, job);
+    JobContext jContext = new JobContextImpl(job, jobId);
+    Job.RawSplit[] rawSplits = LocalJobRunner.getRawSplits(jContext, job);
 
     job.setUseNewMapper(true); // use new api
     for (int i = 0; i < rawSplits.length; i++) {// rawSplits.length is 1
       map = new TestMapTask(
-          job.get("mapred.system.dir", "/tmp/hadoop/mapred/system") +
+          job.get(JTConfig.JT_SYSTEM_DIR, "/tmp/hadoop/mapred/system") +
           jobId + "job.xml",  
           taskId, i,
           rawSplits[i].getClassName(),

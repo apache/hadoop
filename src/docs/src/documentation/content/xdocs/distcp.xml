@@ -30,10 +30,10 @@
       <title>Overview</title>
 
       <p>DistCp (distributed copy) is a tool used for large inter/intra-cluster
-      copying. It uses Map/Reduce to effect its distribution, error
+      copying. It uses MapReduce to effect its distribution, error
       handling and recovery, and reporting. It expands a list of files and
       directories into input to map tasks, each of which will copy a partition
-      of the files specified in the source list. Its Map/Reduce pedigree has
+      of the files specified in the source list. Its MapReduce pedigree has
       endowed it with some quirks in both its semantics and execution. The
       purpose of this document is to offer guidance for common tasks and to
       elucidate its model.</p>
@@ -45,36 +45,35 @@
 
       <section>
         <title>Basic</title>
-        <p>The most common invocation of DistCp is an inter-cluster copy:</p>
-        <p><code>bash$ hadoop distcp hdfs://nn1:8020/foo/bar \</code><br/>
-           <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 hdfs://nn2:8020/bar/foo</code></p>
+    <p>The most common invocation of DistCp is an inter-cluster copy:</p>
+<source>
+bash$ hadoop distcp hdfs://nn1:8020/foo/bar \ 
+            hdfs://nn2:8020/bar/foo 
+</source>             
 
         <p>This will expand the namespace under <code>/foo/bar</code> on nn1
         into a temporary file, partition its contents among a set of map
         tasks, and start a copy on each TaskTracker from nn1 to nn2. Note
         that DistCp expects absolute paths.</p>
 
-        <p>One can also specify multiple source directories on the command
-        line:</p>
-        <p><code>bash$ hadoop distcp hdfs://nn1:8020/foo/a \</code><br/>
-           <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 hdfs://nn1:8020/foo/b \</code><br/>
-           <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 hdfs://nn2:8020/bar/foo</code></p>
+    <p>One can also specify multiple source directories on the command line:</p>
+<source>
+bash$ hadoop distcp hdfs://nn1:8020/foo/a \ 
+            hdfs://nn1:8020/foo/b \ 
+            hdfs://nn2:8020/bar/foo 
+</source>             
 
-        <p>Or, equivalently, from a file using the <code>-f</code> option:<br/>
-        <code>bash$ hadoop distcp -f hdfs://nn1:8020/srclist \</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              &nbsp;hdfs://nn2:8020/bar/foo</code><br/></p>
+<p>Or, equivalently, from a file using the <code>-f</code> option:</p>
+<source>
+bash$ hadoop distcp -f hdfs://nn1:8020/srclist \ 
+            hdfs://nn2:8020/bar/foo 
+</source>          
 
-        <p>Where <code>srclist</code> contains<br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b</code></p>
+<p>Where <code>srclist</code> contains:</p> 
+<source>
+hdfs://nn1:8020/foo/a 
+hdfs://nn1:8020/foo/b 
+</source>
 
         <p>When copying from multiple sources, DistCp will abort the copy with
         an error message if two sources collide, but collisions at the
@@ -89,11 +88,11 @@
         both the source and destination file systems. For HDFS, both the source
         and destination must be running the same version of the protocol or use
         a backwards-compatible protocol (see <a href="#cpver">Copying Between
-        Versions</a>).</p>
+        Versions of HDFS</a>).</p>
 
         <p>After a copy, it is recommended that one generates and cross-checks
         a listing of the source and destination to verify that the copy was
-        truly successful. Since DistCp employs both Map/Reduce and the
+        truly successful. Since DistCp employs both MapReduce and the
         FileSystem API, issues in or between any of the three could adversely
         and silently affect the copy. Some have had success running with
         <code>-update</code> enabled to perform a second pass, but users should
@@ -107,11 +106,13 @@
 
       </section> <!-- Basic -->
 
+
       <section id="options">
         <title>Options</title>
 
         <section>
         <title>Option Index</title>
+        <p></p>
         <table>
           <tr><th> Flag </th><th> Description </th><th> Notes </th></tr>
 
@@ -150,7 +151,7 @@
               <td>Overwrite destination</td>
               <td>If a map fails and <code>-i</code> is not specified, all the
               files in the split, not only those that failed, will be recopied.
-              As discussed in the <a href="#uo">following</a>, it also changes
+              As discussed in <a href="#uo">Update and Overwrite</a>, it also changes
               the semantics for generating destination paths, so users should
               use this carefully.
               </td></tr>
@@ -159,8 +160,8 @@
               <td>As noted in the preceding, this is not a &quot;sync&quot;
               operation. The only criterion examined is the source and
               destination file sizes; if they differ, the source file
-              replaces the destination file. As discussed in the
-              <a href="#uo">following</a>, it also changes the semantics for
+              replaces the destination file. As discussed in 
+              <a href="#uo">Update and Overwrite</a>, it also changes the semantics for
               generating destination paths, so users should use this carefully.
               </td></tr>
           <tr><td><code>-f &lt;urilist_uri&gt;</code></td>
@@ -187,7 +188,9 @@
 
         </table>
 
-      </section>
+      </section> <!-- Option Index -->
+
+
 
       <section id="Symbolic-Representations">
         <title>Symbolic Representations</title>
@@ -200,7 +203,7 @@
           <li>1230k = 1230 * 1024 = 1259520</li>
           <li>891g = 891 * 1024^3 = 956703965184</li>
         </ul>
-      </section>
+      </section> <!-- Symbolic-Representations -->
 
       <section id="uo">
         <title>Update and Overwrite</title>
@@ -210,12 +213,15 @@
         <code>/foo/b</code> to <code>/bar/foo</code>, where the sources contain
         the following:</p>
 
-        <p><code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a/aa</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a/ab</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b/ba</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b/ab</code></p>
+        
+<source>
+    hdfs://nn1:8020/foo/a 
+    hdfs://nn1:8020/foo/a/aa 
+    hdfs://nn1:8020/foo/a/ab 
+    hdfs://nn1:8020/foo/b 
+    hdfs://nn1:8020/foo/b/ba 
+    hdfs://nn1:8020/foo/b/ab 
+</source>
 
         <p>If either <code>-update</code> or <code>-overwrite</code> is set,
         then both sources will map an entry to <code>/bar/foo/ab</code> at the
@@ -226,46 +232,51 @@
         <p>In the default case, both <code>/bar/foo/a</code> and
         <code>/bar/foo/b</code> will be created and neither will collide.</p>
 
-        <p>Now consider a legal copy using <code>-update</code>:<br/>
-        <code>distcp -update hdfs://nn1:8020/foo/a \</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              hdfs://nn1:8020/foo/b \</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              hdfs://nn2:8020/bar</code></p>
+<p>Now consider a legal copy using <code>-update</code>:</p>
+<source>
+distcp -update hdfs://nn1:8020/foo/a \ 
+    hdfs://nn1:8020/foo/b \ 
+    hdfs://nn1:8020/foo/file1 \
+    hdfs://nn2:8020/bar 
+</source>
 
-        <p>With sources/sizes:</p>
+<p>With sources/sizes:</p>
+<source>
+    hdfs://nn1:8020/foo/a 
+    hdfs://nn1:8020/foo/a/aa 32 
+    hdfs://nn1:8020/foo/a/ab 32 
+    hdfs://nn1:8020/foo/b 
+    hdfs://nn1:8020/foo/b/ba 64 
+    hdfs://nn1:8020/foo/b/bb 32 
+    hdfs://nn1:8020/foo/file1 20
+</source>
 
-        <p><code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a/aa 32</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/a/ab 32</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b/ba 64</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn1:8020/foo/b/bb 32</code></p>
+<p>And destination/sizes:</p>
+<source>
+    hdfs://nn2:8020/bar 
+    hdfs://nn2:8020/bar/aa 32 
+    hdfs://nn2:8020/bar/ba 32 
+    hdfs://nn2:8020/bar/bb 64 
+    hdfs://nn1:8020/foo/file1 15
+</source>
 
-        <p>And destination/sizes:</p>
-
-        <p><code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/aa 32</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/ba 32</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/bb 64</code></p>
-
-        <p>Will effect:</p>
-
-        <p><code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/aa 32</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/ab 32</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/ba 64</code><br/>
-        <code>&nbsp;&nbsp;&nbsp;&nbsp;hdfs://nn2:8020/bar/bb 32</code></p>
+<p>Will effect:</p>
+<source>
+    hdfs://nn2:8020/bar 
+    hdfs://nn2:8020/bar/aa 32 
+    hdfs://nn2:8020/bar/ab 32 
+    hdfs://nn2:8020/bar/ba 64 
+    hdfs://nn2:8020/bar/bb 32 
+    hdfs://nn1:8020/foo/file1 20
+</source>
 
         <p>Only <code>aa</code> is not overwritten on nn2. If
         <code>-overwrite</code> were specified, all elements would be
         overwritten.</p>
 
-      </section> <!-- Update and Overwrite -->
+    </section> <!-- Update and Overwrite -->
 
-      </section> <!-- Options -->
+    </section> <!-- Options -->
 
     </section> <!-- Usage -->
 
@@ -273,7 +284,7 @@
       <title>Appendix</title>
 
       <section>
-        <title>Map sizing</title>
+        <title>Map Sizing</title>
 
           <p>DistCp makes a faint attempt to size each map comparably so that
           each copies roughly the same number of bytes. Note that files are the
@@ -293,7 +304,7 @@
       </section>
 
       <section id="cpver">
-        <title>Copying between versions of HDFS</title>
+        <title>Copying Between Versions of HDFS</title>
 
         <p>For copying between two different versions of Hadoop, one will
         usually use HftpFileSystem. This is a read-only FileSystem, so DistCp
@@ -306,7 +317,37 @@
       </section>
 
       <section>
-        <title>Map/Reduce and other side-effects</title>
+        <title>Copying to S3</title>
+
+        <p>DistCp can be used to copy data between HDFS and other filesystems,
+        including those backed by S3. The <code>s3n</code> FileSystem
+        implementation allows DistCp (and Hadoop in general) to use an S3
+        bucket as a source or target for transfers. To transfer data from
+        HDFS to an S3 bucket, invoke DistCp using arguments like the following:
+        </p>
+<source>
+bash$ hadoop distcp hdfs://nn:8020/foo/bar \
+    s3n://$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY@&lt;bucket&gt;/foo/bar
+</source>
+
+        <p><code>$AWS_ACCESS_KEY_ID</code> and
+        <code>$AWS_SECRET_ACCESS_KEY</code> are environment variables holding
+        S3 access credentials.</p>
+
+        <p>Some FileSystem operations take longer on S3 than on HDFS. If you
+        are transferring large files to S3 (e.g., 1 GB and up), you may
+        experience timeouts during your job. To prevent this, you should set
+        the task timeout to a larger interval than is typically used:
+        </p>
+<source>
+bash$ hadoop distcp -D mapred.task.timeout=1800000 \
+    hdfs://nn:8020/foo/bar \
+    s3n://$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY@&lt;bucket&gt;/foo/bar
+</source>
+      </section>
+
+      <section>
+        <title>MapReduce and Other Side-effects</title>
 
         <p>As has been mentioned in the preceding, should a map fail to copy
         one of its inputs, there will be several side-effects.</p>
@@ -320,7 +361,7 @@
           copied by a previous map on a re-execution will be marked as
           &quot;skipped&quot;.</li>
 
-          <li>If a map fails <code>mapred.map.max.attempts</code> times, the
+          <li>If a map fails <code>mapreduce.map.maxattempts</code> times, the
           remaining map tasks will be killed (unless <code>-i</code> is
           set).</li>
 

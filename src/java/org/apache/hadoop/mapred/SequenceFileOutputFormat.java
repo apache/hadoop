@@ -102,8 +102,8 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
    *         defaulting to {@link CompressionType#RECORD}
    */
   public static CompressionType getOutputCompressionType(JobConf conf) {
-    String val = conf.get("mapred.output.compression.type", 
-                          CompressionType.RECORD.toString());
+    String val = conf.get(org.apache.hadoop.mapreduce.lib.output.
+      FileOutputFormat.COMPRESS_TYPE, CompressionType.RECORD.toString());
     return CompressionType.valueOf(val);
   }
   
@@ -116,7 +116,8 @@ public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
   public static void setOutputCompressionType(JobConf conf, 
 		                                          CompressionType style) {
     setCompressOutput(conf, true);
-    conf.set("mapred.output.compression.type", style.toString());
+    conf.set(org.apache.hadoop.mapreduce.lib.output.
+      FileOutputFormat.COMPRESS_TYPE, style.toString());
   }
 
 }

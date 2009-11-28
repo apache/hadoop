@@ -64,9 +64,9 @@ public class IndexUpdater implements IIndexUpdater {
     IndexUpdateConfiguration iconf = new IndexUpdateConfiguration(conf);
     Shard.setIndexShards(iconf, shards);
 
-    // MapTask.MapOutputBuffer uses "io.sort.mb" to decide its max buffer size
-    // (max buffer size = 1/2 * "io.sort.mb").
-    // Here we half-en "io.sort.mb" because we use the other half memory to
+    // MapTask.MapOutputBuffer uses JobContext.IO_SORT_MB to decide its max buffer size
+    // (max buffer size = 1/2 * JobContext.IO_SORT_MB).
+    // Here we half-en JobContext.IO_SORT_MB because we use the other half memory to
     // build an intermediate form/index in Combiner.
     iconf.setIOSortMB(iconf.getIOSortMB() / 2);
 
@@ -93,10 +93,10 @@ public class IndexUpdater implements IIndexUpdater {
       buffer.append(inputs[i].toString());
     }
     LOG.info("mapred.input.dir = " + buffer.toString());
-    LOG.info("mapred.output.dir = " + 
+    LOG.info("mapreduce.output.fileoutputformat.outputdir = " + 
              FileOutputFormat.getOutputPath(jobConf).toString());
-    LOG.info("mapred.map.tasks = " + jobConf.getNumMapTasks());
-    LOG.info("mapred.reduce.tasks = " + jobConf.getNumReduceTasks());
+    LOG.info("mapreduce.job.maps = " + jobConf.getNumMapTasks());
+    LOG.info("mapreduce.job.reduces = " + jobConf.getNumReduceTasks());
     LOG.info(shards.length + " shards = " + iconf.getIndexShards());
     // better if we don't create the input format instance
     LOG.info("mapred.input.format.class = "

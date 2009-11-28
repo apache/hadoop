@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -131,7 +132,8 @@ public class InputSampler<K,V> extends Configured implements Tool  {
       for (int i = 0; i < splitsToSample; ++i) {
         RecordReader<K,V> reader = inf.createRecordReader(
           splits.get(i * splitStep), 
-          new TaskAttemptContext(job.getConfiguration(), new TaskAttemptID()));
+          new TaskAttemptContextImpl(job.getConfiguration(), 
+                                     new TaskAttemptID()));
         while (reader.nextKeyValue()) {
           samples.add(reader.getCurrentKey());
           ++records;
@@ -209,7 +211,8 @@ public class InputSampler<K,V> extends Configured implements Tool  {
       for (int i = 0; i < splitsToSample ||
                      (i < splits.size() && samples.size() < numSamples); ++i) {
         RecordReader<K,V> reader = inf.createRecordReader(splits.get(i), 
-          new TaskAttemptContext(job.getConfiguration(), new TaskAttemptID()));
+          new TaskAttemptContextImpl(job.getConfiguration(), 
+                                     new TaskAttemptID()));
         while (reader.nextKeyValue()) {
           if (r.nextDouble() <= freq) {
             if (samples.size() < numSamples) {
@@ -277,7 +280,8 @@ public class InputSampler<K,V> extends Configured implements Tool  {
       for (int i = 0; i < splitsToSample; ++i) {
         RecordReader<K,V> reader = inf.createRecordReader(
           splits.get(i * splitStep),
-          new TaskAttemptContext(job.getConfiguration(), new TaskAttemptID()));
+          new TaskAttemptContextImpl(job.getConfiguration(), 
+                                     new TaskAttemptID()));
         while (reader.nextKeyValue()) {
           ++records;
           if ((double) kept / records < freq) {

@@ -1,4 +1,5 @@
-/* Licensed to the Apache Software Foundation (ASF) under one
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -24,39 +25,12 @@ import org.apache.hadoop.util.Progressable;
  *   instead.
  */
 @Deprecated
-public class TaskAttemptContext 
+public interface TaskAttemptContext 
        extends org.apache.hadoop.mapreduce.TaskAttemptContext {
-  private Progressable progress;
 
-  TaskAttemptContext(JobConf conf, TaskAttemptID taskid) {
-    this(conf, taskid, Reporter.NULL);
-  }
-  
-  TaskAttemptContext(JobConf conf, TaskAttemptID taskid,
-                     Progressable progress) {
-    super(conf, taskid);
-    this.progress = progress;
-  }
-  
-  /**
-   * Get the taskAttemptID.
-   *  
-   * @return TaskAttemptID
-   */
-  public TaskAttemptID getTaskAttemptID() {
-    return (TaskAttemptID) super.getTaskAttemptID();
-  }
-  
-  public Progressable getProgressible() {
-    return progress;
-  }
-  
-  public JobConf getJobConf() {
-    return (JobConf) getConfiguration();
-  }
+  public TaskAttemptID getTaskAttemptID();
 
-  @Override
-  public void progress() {
-    progress.progress();
-  }
+  public Progressable getProgressible();
+  
+  public JobConf getJobConf();
 }

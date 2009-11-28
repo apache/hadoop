@@ -75,7 +75,7 @@ public class TestMultipleTextOutputFormat extends TestCase {
     FileSystem fs = FileSystem.getLocal(job);
     String name = "part-00000";
     //pretend that we have input file with 1/2/3 as the suffix
-    job.set("map.input.file", "1/2/3");
+    job.set(JobContext.MAP_INPUT_FILE, "1/2/3");
     // we use the last two legs of the input file as the output file
     job.set("mapred.outputformat.numOfTrailingLegs", "2");
     MultipleTextOutputFormat<Text, Text> theOutputFormat = new MultipleTextOutputFormat<Text, Text>();
@@ -86,7 +86,7 @@ public class TestMultipleTextOutputFormat extends TestCase {
   
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
-    job.set("mapred.task.id", attempt);
+    job.set(JobContext.TASK_ATTEMPT_ID, attempt);
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);

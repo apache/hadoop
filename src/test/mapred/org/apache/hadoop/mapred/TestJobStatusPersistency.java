@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
   static final Path TEST_DIR = 
@@ -77,8 +78,8 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
 
   public void testPersistency() throws Exception {
     Properties config = new Properties();
-    config.setProperty("mapred.job.tracker.persist.jobstatus.active", "true");
-    config.setProperty("mapred.job.tracker.persist.jobstatus.hours", "1");
+    config.setProperty(JTConfig.JT_PERSIST_JOBSTATUS, "true");
+    config.setProperty(JTConfig.JT_PERSIST_JOBSTATUS_HOURS, "1");
     stopCluster();
     startCluster(false, config);
     JobID jobId = runJob();
@@ -117,9 +118,9 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     fs.delete(TEST_DIR, true);
     
     Properties config = new Properties();
-    config.setProperty("mapred.job.tracker.persist.jobstatus.active", "true");
-    config.setProperty("mapred.job.tracker.persist.jobstatus.hours", "1");
-    config.setProperty("mapred.job.tracker.persist.jobstatus.dir", 
+    config.setProperty(JTConfig.JT_PERSIST_JOBSTATUS, "true");
+    config.setProperty(JTConfig.JT_PERSIST_JOBSTATUS_HOURS, "1");
+    config.setProperty(JTConfig.JT_PERSIST_JOBSTATUS_DIR, 
                        fs.makeQualified(TEST_DIR).toString());
     stopCluster();
     startCluster(false, config);

@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import java.io.*;
-import java.util.*;
-import junit.framework.TestCase;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.BitSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.conf.Configuration;
@@ -33,19 +39,25 @@ import org.apache.hadoop.mapreduce.MapContext;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
-public class TestMRKeyValueTextInputFormat extends TestCase {
+import org.junit.Test;
+import static junit.framework.Assert.*;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+public class TestMRKeyValueTextInputFormat {
   private static final Log LOG =
     LogFactory.getLog(TestMRKeyValueTextInputFormat.class.getName());
 
-  private static int MAX_LENGTH = 10000;
-  
   private static Configuration defaultConf = new Configuration();
   private static FileSystem localFs = null; 
   static {
     try {
+      defaultConf.set("fs.default.name", "file:///");
       localFs = FileSystem.getLocal(defaultConf);
     } catch (IOException e) {
       throw new RuntimeException("init failure", e);
@@ -55,8 +67,9 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestKeyValueTextInputFormat");
   
+  @Test
   public void testFormat() throws Exception {
-    Job job = new Job(new Configuration());
+    Job job = new Job(new Configuration(defaultConf));
     Path file = new Path(workDir, "test.txt");
 
     int seed = new Random().nextInt();
@@ -66,6 +79,7 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
     localFs.delete(workDir, true);
     FileInputFormat.setInputPaths(job, workDir);
 
+    final int MAX_LENGTH = 10000;
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
          length += random.nextInt(MAX_LENGTH / 10) + 1) {
@@ -105,7 +119,7 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
           assertEquals("reader class is KeyValueLineRecordReader.", 
             KeyValueLineRecordReader.class, clazz);
           MapContext<Text, Text, Text, Text> mcontext = 
-            new MapContext<Text, Text, Text, Text>(job.getConfiguration(), 
+            new MapContextImpl<Text, Text, Text, Text>(job.getConfiguration(), 
             context.getTaskAttemptID(), reader, null, null, 
             MapReduceTestUtil.createDummyReporter(), splits.get(j));
           reader.initialize(splits.get(j), mcontext);
@@ -121,7 +135,10 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
               value = reader.getCurrentValue();
               clazz = value.getClass();
               assertEquals("Value class is Text.", Text.class, clazz);
-              int v = Integer.parseInt(value.toString());
+              final int k = Integer.parseInt(key.toString());
+              final int v = Integer.parseInt(value.toString());
+              assertEquals("Bad key", 0, k % 2);
+              assertEquals("Mismatched key/value", k / 2, v);
               LOG.debug("read " + v);
               assertFalse("Key in multiple partitions.", bits.get(v));
               bits.set(v);
@@ -137,12 +154,113 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
 
     }
   }
+
+  @Test
+  public void testSplitableCodecs() throws Exception {
+    final Job job = new Job(defaultConf);
+    final Configuration conf = job.getConfiguration();
+
+    // Create the codec
+    CompressionCodec codec = null;
+    try {
+      codec = (CompressionCodec)
+      ReflectionUtils.newInstance(conf.getClassByName("org.apache.hadoop.io.compress.BZip2Codec"), conf);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException("Illegal codec!");
+    }
+    Path file = new Path(workDir, "test"+codec.getDefaultExtension());
+
+    int seed = new Random().nextInt();
+    LOG.info("seed = " + seed);
+    Random random = new Random(seed);
+
+    localFs.delete(workDir, true);
+    FileInputFormat.setInputPaths(job, workDir);
+
+    final int MAX_LENGTH = 500000;
+    FileInputFormat.setMaxInputSplitSize(job, MAX_LENGTH / 20);
+    // for a variety of lengths
+    for (int length = 0; length < MAX_LENGTH;
+         length += random.nextInt(MAX_LENGTH / 4) + 1) {
+
+      LOG.info("creating; entries = " + length);
+
+      // create a file with length entries
+      Writer writer =
+        new OutputStreamWriter(codec.createOutputStream(localFs.create(file)));
+      try {
+        for (int i = 0; i < length; i++) {
+          writer.write(Integer.toString(i * 2));
+          writer.write("\t");
+          writer.write(Integer.toString(i));
+          writer.write("\n");
+        }
+      } finally {
+        writer.close();
+      }
+
+      // try splitting the file in a variety of sizes
+      KeyValueTextInputFormat format = new KeyValueTextInputFormat();
+      assertTrue("KVTIF claims not splittable", format.isSplitable(job, file));
+      for (int i = 0; i < 3; i++) {
+        int numSplits = random.nextInt(MAX_LENGTH / 2000) + 1;
+        LOG.info("splitting: requesting = " + numSplits);
+        List<InputSplit> splits = format.getSplits(job);
+        LOG.info("splitting: got =        " + splits.size());
+
+        // check each split
+        BitSet bits = new BitSet(length);
+        for (int j = 0; j < splits.size(); j++) {
+          LOG.debug("split["+j+"]= " + splits.get(j));
+          TaskAttemptContext context = MapReduceTestUtil.
+            createDummyMapTaskAttemptContext(job.getConfiguration());
+          RecordReader<Text, Text> reader = format.createRecordReader(
+            splits.get(j), context);
+          Class<?> clazz = reader.getClass();
+          MapContext<Text, Text, Text, Text> mcontext =
+            new MapContextImpl<Text, Text, Text, Text>(job.getConfiguration(),
+            context.getTaskAttemptID(), reader, null, null,
+            MapReduceTestUtil.createDummyReporter(), splits.get(j));
+          reader.initialize(splits.get(j), mcontext);
+
+          Text key = null;
+          Text value = null;
+          try {
+            int count = 0;
+            while (reader.nextKeyValue()) {
+              key = reader.getCurrentKey();
+              value = reader.getCurrentValue();
+              final int k = Integer.parseInt(key.toString());
+              final int v = Integer.parseInt(value.toString());
+              assertEquals("Bad key", 0, k % 2);
+              assertEquals("Mismatched key/value", k / 2, v);
+              LOG.debug("read " + k + "," + v);
+              assertFalse(k + "," + v + " in multiple partitions.",bits.get(v));
+              bits.set(v);
+              count++;
+            }
+            if (count > 0) {
+              LOG.info("splits["+j+"]="+splits.get(j)+" count=" + count);
+            } else {
+              LOG.debug("splits["+j+"]="+splits.get(j)+" count=" + count);
+            }
+          } finally {
+            reader.close();
+          }
+        }
+        assertEquals("Some keys in no partition.", length, bits.cardinality());
+      }
+
+    }
+  }
+
   private LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream
                                            (str.getBytes("UTF-8")), 
                                            defaultConf);
   }
   
+  @Test
   public void testUTF8() throws Exception {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
@@ -154,6 +272,7 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
     assertEquals("split on fake newline", "abc\u200axyz", line.toString());
   }
 
+  @Test
   public void testNewLines() throws Exception {
     LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
     Text out = new Text();
@@ -194,7 +313,7 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
     RecordReader<Text, Text> reader = format.createRecordReader(split, 
       MapReduceTestUtil.createDummyMapTaskAttemptContext(conf));
     MapContext<Text, Text, Text, Text> mcontext = 
-      new MapContext<Text, Text, Text, Text>(conf, 
+      new MapContextImpl<Text, Text, Text, Text>(conf, 
       context.getTaskAttemptID(), reader, null, null,
       MapReduceTestUtil.createDummyReporter(), 
       split);
@@ -208,8 +327,9 @@ public class TestMRKeyValueTextInputFormat extends TestCase {
   /**
    * Test using the gzip codec for reading
    */
-  public static void testGzip() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
+  @Test
+  public void testGzip() throws IOException, InterruptedException {
+    Configuration conf = new Configuration(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, conf);
     localFs.delete(workDir, true);

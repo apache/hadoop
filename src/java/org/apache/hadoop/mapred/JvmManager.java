@@ -33,9 +33,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.hadoop.util.ProcessTree;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.mapreduce.util.ProcessTree;
 
 class JvmManager {
 
@@ -196,7 +196,7 @@ class JvmManager {
         context.task = task;
         // If we are returning the same task as which the JVM was launched
         // we don't initialize task once again.
-        if (!jvmRunner.env.conf.get("mapred.task.id").equals(
+        if (!jvmRunner.env.conf.get(JobContext.TASK_ATTEMPT_ID).equals(
             task.getTaskID().toString())) {
           try {
             tracker.getTaskController().initializeTask(context);
@@ -447,7 +447,7 @@ class JvmManager {
           if (initalContext != null && initalContext.env != null) {
             initalContext.pid = jvmIdToPid.get(jvmId);
             initalContext.sleeptimeBeforeSigkill = tracker.getJobConf()
-                .getLong("mapred.tasktracker.tasks.sleeptime-before-sigkill",
+                .getLong(TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL,
                     ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
 
             // Destroy the task jvm

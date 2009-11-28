@@ -22,12 +22,14 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.sqoop.hive.HiveImport;
 import org.apache.hadoop.sqoop.manager.ConnManager;
+import org.apache.hadoop.sqoop.manager.ImportJobContext;
 import org.apache.hadoop.sqoop.orm.ClassWriter;
 import org.apache.hadoop.sqoop.orm.CompilationManager;
 import org.apache.hadoop.sqoop.util.ImportError;
@@ -40,6 +42,16 @@ import org.apache.hadoop.sqoop.util.ImportError;
 public class Sqoop extends Configured implements Tool {
 
   public static final Log LOG = LogFactory.getLog(Sqoop.class.getName());
+
+  /** If this System property is set, always throw an exception, do not just
+      exit with status 1.
+    */
+  public static final String SQOOP_RETHROW_PROPERTY = "sqoop.throwOnError";
+
+  static {
+    Configuration.addDefaultResource("sqoop-default.xml");
+    Configuration.addDefaultResource("sqoop-site.xml");
+  }
 
   private ImportOptions options;
   private ConnManager manager;
@@ -77,7 +89,8 @@ public class Sqoop extends Configured implements Tool {
 
     if (options.getAction() == ImportOptions.ControlAction.FullImport) {
       // Proceed onward to do the import.
-      manager.importTable(tableName, jarFile, getConf());
+      ImportJobContext context = new ImportJobContext(tableName, jarFile, options);
+      manager.importTable(context);
 
       // If the user wants this table to be in Hive, perform that post-load.
       if (options.doHiveImport()) {
@@ -92,6 +105,7 @@ public class Sqoop extends Configured implements Tool {
    */
   public int run(String [] args) {
     options = new ImportOptions();
+    options.setConf(getConf());
     try {
       options.parse(args);
       options.validate();
@@ -103,10 +117,14 @@ public class Sqoop extends Configured implements Tool {
 
     // Get the connection to the database
     try {
-      manager = ConnFactory.getManager(options);
+      manager = new ConnFactory(getConf()).getManager(options);
     } catch (Exception e) {
       LOG.error("Got error creating database manager: " + e.toString());
-      return 1;
+      if (System.getProperty(SQOOP_RETHROW_PROPERTY) != null) {
+        throw new RuntimeException(e);
+      } else {
+        return 1;
+      }
     }
 
     if (options.doHiveImport()) {
@@ -161,10 +179,18 @@ public class Sqoop extends Configured implements Tool {
         }
       } catch (IOException ioe) {
         LOG.error("Encountered IOException running import job: " + ioe.toString());
-        return 1;
+        if (System.getProperty(SQOOP_RETHROW_PROPERTY) != null) {
+          throw new RuntimeException(ioe);
+        } else {
+          return 1;
+        }
       } catch (ImportError ie) {
         LOG.error("Error during import: " + ie.toString());
-        return 1;
+        if (System.getProperty(SQOOP_RETHROW_PROPERTY) != null) {
+          throw new RuntimeException(ie);
+        } else {
+          return 1;
+        }
       }
     }
 

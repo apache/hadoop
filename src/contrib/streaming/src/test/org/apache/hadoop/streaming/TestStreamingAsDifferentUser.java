@@ -61,7 +61,7 @@ public class TestStreamingAsDifferentUser extends
         new String[] { "-input", inputPath.makeQualified(inFs).toString(),
             "-output", outputPath.makeQualified(outFs).toString(), "-mapper",
             map, "-reducer", reduce, "-jobconf",
-            "keep.failed.task.files=true", "-jobconf",
+            "mapreduce.task.files.preserve.failedtasks=true", "-jobconf",
             "stream.tmpdir=" + System.getProperty("test.build.data", "/tmp") };
     StreamJob streamJob = new StreamJob(args, true);
     streamJob.setConf(myConf);

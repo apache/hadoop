@@ -27,7 +27,7 @@ import org.apache.hadoop.mapred.JvmTask;
  * parent is a daemon which which polls the central master for a new map or
  * reduce task and runs it as a child process.  All communication between child
  * and parent is via this protocol. */ 
-interface TaskUmbilicalProtocol extends VersionedProtocol {
+public interface TaskUmbilicalProtocol extends VersionedProtocol {
 
   /** 
    * Changed the version to 2, since we have a new method getMapOutputs 
@@ -56,9 +56,10 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 16 Change in signature of getTask() for HADOOP-5488
    * Version 17 Modified TaskID to be aware of the new TaskTypes
    * Version 18 Added numRequiredSlots to TaskStatus for MAPREDUCE-516
+   * Version 19 Added fatalError for child to communicate fatal errors to TT
    * */
 
-  public static final long versionID = 18L;
+  public static final long versionID = 19L;
   
   /**
    * Called when a child task process starts, to get its task.
@@ -132,13 +133,15 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
   /** Report that the task encounted a local filesystem error.*/
   void fsError(TaskAttemptID taskId, String message) throws IOException;
 
+  /** Report that the task encounted a fatal error.*/
+  void fatalError(TaskAttemptID taskId, String message) throws IOException;
+  
   /** Called by a reduce task to get the map output locations for finished maps.
    * Returns an update centered around the map-task-completion-events. 
    * The update also piggybacks the information whether the events copy at the 
    * task-tracker has changed or not. This will trigger some action at the 
    * child-process.
    *
-   * @param taskId the reduce task id
    * @param fromIndex the index starting from which the locations should be 
    * fetched
    * @param maxLocs the max number of locations to fetch

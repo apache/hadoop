@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -495,6 +496,16 @@ public class TestCopyFiles extends TestCase {
                         "file:///"+TEST_ROOT_DIR+"/dest2/"+fname});
       assertTrue("Source and destination directories do not match.",
           checkFiles(fs, TEST_ROOT_DIR+"/dest2", files));     
+      
+      // single file update should skip copy if destination has the file already
+      String[] args = {"-update", "file:///"+TEST_ROOT_DIR+"/srcdat/"+fname,
+          "file:///"+TEST_ROOT_DIR+"/dest2/"+fname};
+      Configuration conf = new Configuration();
+      JobConf job = new JobConf(conf, DistCp.class);
+      DistCp.Arguments distcpArgs = DistCp.Arguments.valueOf(args, conf);
+      assertFalse("Single file update failed to skip copying even though the " 
+          + "file exists at destination.", DistCp.setup(conf, job, distcpArgs));
+      
       //copy single file to existing dir
       deldir(fs, TEST_ROOT_DIR+"/dest2");
       fs.mkdirs(new Path(TEST_ROOT_DIR+"/dest2"));
@@ -691,9 +702,9 @@ public class TestCopyFiles extends TestCase {
                         namenode+"/destdat"});
 
       System.out.println(execCmd(shell, "-lsr", logdir));
-      logs = fs.listStatus(new Path(namenode+"/logs"));
+      logs = fs.globStatus(new Path(namenode+"/logs/part*"));
       assertTrue("Unexpected map count, logs.length=" + logs.length,
-          logs.length == 2);
+          logs.length == 1);
     } finally {
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown(); }

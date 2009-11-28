@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.mapred.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -42,11 +42,18 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   /** Construct output file names so that, when an output directory listing is
    * sorted lexicographically, positions correspond to output partitions.*/
   private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
+  protected static final String BASE_OUTPUT_NAME = "mapreduce.output.basename";
+  protected static final String PART = "part";
   static {
     NUMBER_FORMAT.setMinimumIntegerDigits(5);
     NUMBER_FORMAT.setGroupingUsed(false);
   }
   private FileOutputCommitter committer = null;
+public static final String COMPRESS ="mapreduce.output.fileoutputformat.compress";
+public static final String COMPRESS_CODEC = 
+"mapreduce.output.fileoutputformat.compress.codec";
+public static final String COMPRESS_TYPE = "mapreduce.output.fileoutputformat.compress.type";
+public static final String OUTDIR = "mapreduce.output.fileoutputformat.outputdir";
 
   /**
    * Set whether the output of the job is compressed.
@@ -54,7 +61,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * @param compress should the output of the job be compressed?
    */
   public static void setCompressOutput(Job job, boolean compress) {
-    job.getConfiguration().setBoolean("mapred.output.compress", compress);
+    job.getConfiguration().setBoolean(FileOutputFormat.COMPRESS, compress);
   }
   
   /**
@@ -64,7 +71,8 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    *         <code>false</code> otherwise
    */
   public static boolean getCompressOutput(JobContext job) {
-    return job.getConfiguration().getBoolean("mapred.output.compress", false);
+    return job.getConfiguration().getBoolean(
+      FileOutputFormat.COMPRESS, false);
   }
   
   /**
@@ -77,7 +85,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
   setOutputCompressorClass(Job job, 
                            Class<? extends CompressionCodec> codecClass) {
     setCompressOutput(job, true);
-    job.getConfiguration().setClass("mapred.output.compression.codec", 
+    job.getConfiguration().setClass(FileOutputFormat.COMPRESS_CODEC, 
                                     codecClass, 
                                     CompressionCodec.class);
   }
@@ -95,7 +103,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
 		                       Class<? extends CompressionCodec> defaultValue) {
     Class<? extends CompressionCodec> codecClass = defaultValue;
     Configuration conf = job.getConfiguration();
-    String name = conf.get("mapred.output.compression.codec");
+    String name = conf.get(FileOutputFormat.COMPRESS_CODEC);
     if (name != null) {
       try {
         codecClass = 
@@ -133,7 +141,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * the map-reduce job.
    */
   public static void setOutputPath(Job job, Path outputDir) {
-    job.getConfiguration().set("mapred.output.dir", outputDir.toString());
+    job.getConfiguration().set(FileOutputFormat.OUTDIR, outputDir.toString());
   }
 
   /**
@@ -143,7 +151,7 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * @see FileOutputFormat#getWorkOutputPath(TaskInputOutputContext)
    */
   public static Path getOutputPath(JobContext job) {
-    String name = job.getConfiguration().get("mapred.output.dir");
+    String name = job.getConfiguration().get(FileOutputFormat.OUTDIR);
     return name == null ? null: new Path(name);
   }
   
@@ -164,11 +172,11 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
    * 
    * <p>To get around this the Map-Reduce framework helps the application-writer 
    * out by maintaining a special 
-   * <tt>${mapred.output.dir}/_temporary/_${taskid}</tt> 
+   * <tt>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</tt> 
    * sub-directory for each task-attempt on HDFS where the output of the 
    * task-attempt goes. On successful completion of the task-attempt the files 
-   * in the <tt>${mapred.output.dir}/_temporary/_${taskid}</tt> (only) 
-   * are <i>promoted</i> to <tt>${mapred.output.dir}</tt>. Of course, the 
+   * in the <tt>${mapreduce.output.fileoutputformat.outputdir}/_temporary/_${taskid}</tt> (only) 
+   * are <i>promoted</i> to <tt>${mapreduce.output.fileoutputformat.outputdir}</tt>. Of course, the 
    * framework discards the sub-directory of unsuccessful task-attempts. This 
    * is completely transparent to the application.</p>
    * 
@@ -253,8 +261,22 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
                                  String extension) throws IOException{
     FileOutputCommitter committer = 
       (FileOutputCommitter) getOutputCommitter(context);
-    return new Path(committer.getWorkPath(), getUniqueFile(context, "part", 
-                                                           extension));
+    return new Path(committer.getWorkPath(), getUniqueFile(context, 
+      getOutputName(context), extension));
+  }
+
+  /**
+   * Get the base output name for the output file.
+   */
+  protected static String getOutputName(JobContext job) {
+    return job.getConfiguration().get(BASE_OUTPUT_NAME, PART);
+  }
+
+  /**
+   * Set the base output name for output file to be created.
+   */
+  protected static void setOutputName(JobContext job, String name) {
+    job.getConfiguration().set(BASE_OUTPUT_NAME, name);
   }
 
   public synchronized 

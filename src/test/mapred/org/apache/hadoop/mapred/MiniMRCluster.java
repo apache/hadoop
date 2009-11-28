@@ -28,7 +28,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -64,7 +67,7 @@ public class MiniMRCluster {
   /**
    * An inner class that runs a job tracker.
    */
-  class JobTrackerRunner implements Runnable {
+  public class JobTrackerRunner implements Runnable {
     private JobTracker tracker = null;
     private volatile boolean isActive = true;
     
@@ -107,7 +110,7 @@ public class MiniMRCluster {
       try {
         jc = (jc == null) ? createJobConf() : createJobConf(jc);
         File f = new File("build/test/mapred/local").getAbsoluteFile();
-        jc.set("mapred.local.dir",f.getAbsolutePath());
+        jc.set(MRConfig.LOCAL_DIR, f.getAbsolutePath());
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
         String id = 
@@ -160,13 +163,13 @@ public class MiniMRCluster {
         conf = createJobConf(cfg);
       }
       if (hostname != null) {
-        conf.set("slave.host.name", hostname);
+        conf.set(TTConfig.TT_HOST_NAME, hostname);
       }
-      conf.set("mapred.task.tracker.http.address", "0.0.0.0:0");
-      conf.set("mapred.task.tracker.report.address", 
+      conf.set(TTConfig.TT_HTTP_ADDRESS, "0.0.0.0:0");
+      conf.set(TTConfig.TT_REPORT_ADDRESS, 
                 "127.0.0.1:" + taskTrackerPort);
       File localDirBase = 
-        new File(conf.get("mapred.local.dir")).getAbsoluteFile();
+        new File(conf.get(MRConfig.LOCAL_DIR)).getAbsoluteFile();
       localDirBase.mkdirs();
       StringBuffer localPath = new StringBuffer();
       for(int i=0; i < numDir; ++i) {
@@ -183,8 +186,8 @@ public class MiniMRCluster {
         }
         localPath.append(localDirs[i]);
       }
-      conf.set("mapred.local.dir", localPath.toString());
-      LOG.info("mapred.local.dir is " +  localPath);
+      conf.set(MRConfig.LOCAL_DIR, localPath.toString());
+      LOG.info(MRConfig.LOCAL_DIR + " is " +  localPath);
       try {
         tt = new TaskTracker(conf);
         isInitialized = true;
@@ -337,11 +340,11 @@ public class MiniMRCluster {
                                   UnixUserGroupInformation ugi) {
     JobConf result = new JobConf(conf);
     FileSystem.setDefaultUri(result, namenode);
-    result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
-    result.set("mapred.job.tracker.http.address", 
+    result.set(JTConfig.JT_IPC_ADDRESS, "localhost:"+jobTrackerPort);
+    result.set(JTConfig.JT_HTTP_ADDRESS, 
                         "127.0.0.1:" + jobTrackerInfoPort);
     if (ugi != null) {
-      result.set("mapred.system.dir", "/mapred/system");
+      result.set(JTConfig.JT_SYSTEM_DIR, "/mapred/system");
       UnixUserGroupInformation.saveToConf(result,
           UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
     }
@@ -564,13 +567,7 @@ public class MiniMRCluster {
   public JobConf getJobTrackerConf() {
     return this.conf;
   }
-  
-  /**
-   * Get num events recovered
-   */
-  public int getNumEventsRecovered() {
-    return jobTracker.getJobTracker().recoveryManager.totalEventsRecovered();
-  }
+
 
   public int getFaultCount(String hostName) {
     return jobTracker.getJobTracker().getFaultCount(hostName);

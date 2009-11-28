@@ -30,7 +30,9 @@ import java.io.IOException;
  * progress etc.</p> 
  * 
  * @see JobClient
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.Job} instead
  */
+@Deprecated
 public interface RunningJob {
   /**
    * Get the job identifier.

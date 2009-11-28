@@ -28,9 +28,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +42,13 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -77,7 +83,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
  * 7) A mapred job integrates all the count files into a single one.
  *
  **********************************************************/
-public class TestMapRed extends TestCase {
+public class TestMapRed extends Configured implements Tool {
   /**
    * Modified to make it a junit test.
    * The RandomGen Job does the actual work of creating
@@ -248,6 +254,7 @@ public class TestMapRed extends TestCase {
      }
   **/
 
+  @Test
   public void testMapred() throws Exception {
     launch();
   }
@@ -312,6 +319,7 @@ public class TestMapRed extends TestCase {
     }
   }
 
+  @Test
   public void testPartitioner() throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
     conf.setPartitionerClass(BadPartitioner.class);
@@ -361,6 +369,7 @@ public class TestMapRed extends TestCase {
     public void close() { }
   }
 
+  @Test
   public void testNullKeys() throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
     FileSystem fs = FileSystem.getLocal(conf);
@@ -452,7 +461,8 @@ public class TestMapRed extends TestCase {
       fs.delete(testdir, true);
     }
   }
-    
+  
+  @Test 
   public void testCompression() throws Exception {
     EnumSet<SequenceFile.CompressionType> seq =
       EnumSet.allOf(SequenceFile.CompressionType.class);
@@ -468,11 +478,19 @@ public class TestMapRed extends TestCase {
   /**
    * 
    */
-  public static void launch() throws Exception {
+  public void launch() throws Exception {
     //
     // Generate distribution of ints.  This is the answer key.
     //
-    JobConf conf = new JobConf(TestMapRed.class);
+    JobConf conf = null;
+    //Check to get configuration and check if it is configured thro' Configured
+    //interface. This would happen when running testcase thro' command line.
+    if(getConf() == null) {
+      conf = new JobConf();
+    } else {
+      conf = new JobConf(getConf());
+    }
+    conf.setJarByClass(TestMapRed.class);
     int countsToGo = counts;
     int dist[] = new int[range];
     for (int i = 0; i < range; i++) {
@@ -734,23 +752,15 @@ public class TestMapRed extends TestCase {
    * Launches all the tasks in order.
    */
   public static void main(String[] argv) throws Exception {
-    if (argv.length < 2) {
-      System.err.println("Usage: TestMapRed <range> <counts>");
-      System.err.println();
-      System.err.println("Note: a good test will have a <counts> value that is substantially larger than the <range>");
-      return;
-    }
-
-    int i = 0;
-    range = Integer.parseInt(argv[i++]);
-    counts = Integer.parseInt(argv[i++]);
-    launch();
+    int res = ToolRunner.run(new TestMapRed(), argv);
+    System.exit(res);
   }
-    
+  @Test  
   public void testSmallInput(){
     runJob(100);
   }
-
+  
+  @Test
   public void testBiggerInput(){
     runJob(1000);
   }
@@ -763,7 +773,7 @@ public class TestMapRed extends TestCase {
       Path outDir = new Path(testdir, "out");
       FileSystem fs = FileSystem.get(conf);
       fs.delete(testdir, true);
-      conf.setInt("io.sort.mb", 1);
+      conf.setInt(JobContext.IO_SORT_MB, 1);
       conf.setInputFormat(SequenceFileInputFormat.class);
       FileInputFormat.setInputPaths(conf, inDir);
       FileOutputFormat.setOutputPath(conf, outDir);
@@ -797,7 +807,24 @@ public class TestMapRed extends TestCase {
 
       JobClient.runJob(conf);
     } catch (Exception e) {
-      fail("Threw exception:" + e);
+      assertTrue("Threw exception:" + e,false);
     }
+  }
+
+  @Override
+  public int run(String[] argv) throws Exception {
+    if (argv.length < 2) {
+      System.err.println("Usage: TestMapRed <range> <counts>");
+      System.err.println();
+      System.err.println("Note: a good test will have a " +
+      		"<counts> value that is substantially larger than the <range>");
+      return -1;
+    }
+
+    int i = 0;
+    range = Integer.parseInt(argv[i++]);
+    counts = Integer.parseInt(argv[i++]);
+    launch();
+    return 0;
   }
 }

@@ -26,9 +26,14 @@ import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.Job.RawSplit;
+import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
 
 /** 
  * Utilities used in unit test.
@@ -72,7 +77,7 @@ public class FakeObjectUtilities {
   }
 
   static class FakeJobInProgress extends JobInProgress {
-    JobClient.RawSplit[] rawSplits;
+    Job.RawSplit[] rawSplits;
     @SuppressWarnings("deprecation")
     FakeJobInProgress(JobConf jobConf, JobTracker tracker) throws IOException {
       super(new JobID(jtIdentifier, ++jobCounter), jobConf, tracker);
@@ -80,12 +85,13 @@ public class FakeObjectUtilities {
       this.profile = new JobProfile(jobConf.getUser(), getJobID(), 
           jobFile.toString(), null, jobConf.getJobName(),
           jobConf.getQueueName());
+      this.jobHistory = new FakeJobHistory();
     }
 
     @Override
     public synchronized void initTasks() throws IOException {
      
-      JobClient.RawSplit[] splits = createSplits();
+      Job.RawSplit[] splits = createSplits();
       numMapTasks = splits.length;
       createMapTasks(null, splits);
       nonRunningMapCache = createCache(splits, maxLevel);
@@ -95,17 +101,17 @@ public class FakeObjectUtilities {
     }
     
     @Override
-    JobClient.RawSplit[] createSplits(){
-      JobClient.RawSplit[] splits = new JobClient.RawSplit[numMapTasks];
+    Job.RawSplit[] createSplits(){
+      Job.RawSplit[] splits = new Job.RawSplit[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
-        splits[i] = new JobClient.RawSplit();
+        splits[i] = new Job.RawSplit();
         splits[i].setLocations(new String[0]);
       }
       return splits;
     }
     
     @Override
-    protected void createMapTasks(String ignored, JobClient.RawSplit[] splits) {
+    protected void createMapTasks(String ignored, Job.RawSplit[] splits) {
       maps = new TaskInProgress[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
         maps[i] = new TaskInProgress(getJobID(), "test", 
@@ -187,6 +193,7 @@ public class FakeObjectUtilities {
         String taskTracker) {
       addRunningTaskToTIP(tip, taskId, new TaskTrackerStatus(taskTracker,
           JobInProgress.convertTrackerNameToHostName(taskTracker)), true);
+
       TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
           0.0f, 1, TaskStatus.State.RUNNING, "", "", taskTracker,
           tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
@@ -220,7 +227,7 @@ public class FakeObjectUtilities {
   }
   
   static short sendHeartBeat(JobTracker jt, TaskTrackerStatus status, 
-                                             boolean initialContact, 
+		  boolean initialContact, boolean acceptNewTasks,
                                              String tracker, short responseId) 
     throws IOException {
     if (status == null) {
@@ -228,13 +235,61 @@ public class FakeObjectUtilities {
           JobInProgress.convertTrackerNameToHostName(tracker));
 
     }
-      jt.heartbeat(status, false, initialContact, false, responseId);
+      jt.heartbeat(status, false, initialContact, acceptNewTasks, responseId);
       return ++responseId ;
   }
   
   static void establishFirstContact(JobTracker jt, String tracker) 
     throws IOException {
-    sendHeartBeat(jt, null, true, tracker, (short) 0);
+    sendHeartBeat(jt, null, true, false, tracker, (short) 0);
   }
 
+  static class FakeTaskInProgress extends TaskInProgress {
+
+    public FakeTaskInProgress(JobID jobId, String jobFile, int numMaps,
+        int partition, JobTracker jobTracker, JobConf conf, JobInProgress job,
+        int numSlotsRequired) {
+      super(jobId, jobFile, numMaps, partition, jobTracker, conf, job,
+          numSlotsRequired);
+    }
+
+    public FakeTaskInProgress(JobID jobId, String jobFile, RawSplit emptySplit,
+        JobTracker jobTracker, JobConf jobConf,
+        JobInProgress job, int partition, int numSlotsRequired) {
+      super(jobId, jobFile, emptySplit, jobTracker, jobConf, job,
+            partition, numSlotsRequired);
+    }
+
+    @Override
+    synchronized boolean updateStatus(TaskStatus status) {
+      TaskAttemptID taskid = status.getTaskID();
+      taskStatuses.put(taskid, status);
+      return false;
+    }
+  }
+  
+  static class FakeJobHistory extends JobHistory {
+    @Override
+    public void init(JobTracker jt, 
+        JobConf conf,
+        String hostname, 
+        long jobTrackerStartTime) throws IOException { }
+    
+    @Override
+    public void initDone(JobConf conf, FileSystem fs) throws IOException { }
+    
+    @Override
+    public void markCompleted(org.apache.hadoop.mapreduce.JobID id)
+    throws IOException { }
+    
+    @Override
+    public void shutDown() { }
+
+    @Override
+    public void 
+    logEvent(HistoryEvent event, org.apache.hadoop.mapreduce.JobID id) { }
+    
+    @Override
+    public void closeWriter(org.apache.hadoop.mapreduce.JobID id) { }
+  }
 }

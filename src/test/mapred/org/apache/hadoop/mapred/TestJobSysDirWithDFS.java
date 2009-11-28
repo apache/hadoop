@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * A JUnit test to test Job System Directory with Mini-DFS.
@@ -82,11 +83,12 @@ public class TestJobSysDirWithDFS extends TestCase {
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
-    conf.set("mapred.system.dir", "/tmp/subru/mapred/system");
+    conf.set(JTConfig.JT_SYSTEM_DIR, "/tmp/subru/mapred/system");
     JobClient jobClient = new JobClient(conf);
     RunningJob job = jobClient.runJob(conf);
     // Checking that the Job Client system dir is not used
-    assertFalse(FileSystem.get(conf).exists(new Path(conf.get("mapred.system.dir")))); 
+    assertFalse(FileSystem.get(conf).exists(
+      new Path(conf.get(JTConfig.JT_SYSTEM_DIR)))); 
     // Check if the Job Tracker system dir is propogated to client
     String sysDir = jobClient.getSystemDir().toString();
     System.out.println("Job sys dir -->" + sysDir);
@@ -121,7 +123,7 @@ public class TestJobSysDirWithDFS extends TestCase {
       final int taskTrackers = 4;
 
       JobConf conf = new JobConf();
-      conf.set("mapred.system.dir", "/tmp/custom/mapred/system");
+      conf.set(JTConfig.JT_SYSTEM_DIR, "/tmp/custom/mapred/system");
       dfs = new MiniDFSCluster(conf, 4, true, null);
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1, null, null, conf);

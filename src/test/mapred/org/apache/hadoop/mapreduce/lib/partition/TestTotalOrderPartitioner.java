@@ -34,6 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.JobContext;
 
 public class TestTotalOrderPartitioner extends TestCase {
 
@@ -82,7 +83,7 @@ public class TestTotalOrderPartitioner extends TestCase {
                                  ).makeQualified(fs);
     Path p = new Path(testdir, testname + "/_partition.lst");
     TotalOrderPartitioner.setPartitionFile(conf, p);
-    conf.setInt("mapred.reduce.tasks", splits.length + 1);
+    conf.setInt(JobContext.NUM_REDUCES, splits.length + 1);
     SequenceFile.Writer w = null;
     try {
       w = SequenceFile.createWriter(fs, conf, p,
@@ -104,7 +105,7 @@ public class TestTotalOrderPartitioner extends TestCase {
     Configuration conf = new Configuration();
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
         "totalordermemcmp", conf, splitStrings);
-    conf.setClass("mapred.mapoutput.key.class", Text.class, Object.class);
+    conf.setClass(JobContext.MAP_OUTPUT_KEY_CLASS, Text.class, Object.class);
     try {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
@@ -123,8 +124,8 @@ public class TestTotalOrderPartitioner extends TestCase {
     Configuration conf = new Configuration();
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
         "totalorderbinarysearch", conf, splitStrings);
-    conf.setBoolean("total.order.partitioner.natural.order", false);
-    conf.setClass("mapred.mapoutput.key.class", Text.class, Object.class);
+    conf.setBoolean(TotalOrderPartitioner.NATURAL_ORDER, false);
+    conf.setClass(JobContext.MAP_OUTPUT_KEY_CLASS, Text.class, Object.class);
     try {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
@@ -157,9 +158,9 @@ public class TestTotalOrderPartitioner extends TestCase {
     Arrays.sort(revSplitStrings, new ReverseStringComparator());
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
         "totalordercustomcomparator", conf, revSplitStrings);
-    conf.setBoolean("total.order.partitioner.natural.order", false);
-    conf.setClass("mapred.mapoutput.key.class", Text.class, Object.class);
-    conf.setClass("mapred.output.key.comparator.class",
+    conf.setBoolean(TotalOrderPartitioner.NATURAL_ORDER, false);
+    conf.setClass(JobContext.MAP_OUTPUT_KEY_CLASS, Text.class, Object.class);
+    conf.setClass(JobContext.KEY_COMPARATOR,
       ReverseStringComparator.class, RawComparator.class);
     ArrayList<Check<Text>> revCheck = new ArrayList<Check<Text>>();
     revCheck.add(new Check<Text>(new Text("aaaaa"), 9));

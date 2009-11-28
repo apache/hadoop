@@ -96,7 +96,8 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
   public static class NotificationServlet extends HttpServlet {
     public static int counter = 0;
-
+    private static final long serialVersionUID = 1L;
+    
     protected void doGet(HttpServletRequest req, HttpServletResponse res)
       throws ServletException, IOException {
       switch (counter) {
@@ -140,8 +141,8 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   protected JobConf createJobConf() {
     JobConf conf = super.createJobConf();
     conf.setJobEndNotificationURI(getNotificationUrlTemplate());
-    conf.setInt("job.end.retry.attempts", 3);
-    conf.setInt("job.end.retry.interval", 200);
+    conf.setInt(JobContext.END_NOTIFICATION_RETRIES, 3);
+    conf.setInt(JobContext.END_NOTIFICATION_RETRIE_INTERVAL, 200);
     return conf;
   }
 

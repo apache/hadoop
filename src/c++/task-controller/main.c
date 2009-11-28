@@ -105,9 +105,15 @@ int main(int argc, char **argv) {
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
 
   switch (command) {
+  case INITIALIZE_USER:
+    exit_code = initialize_user(user_detail->pw_name);
+    break;
   case INITIALIZE_JOB:
     job_id = argv[optind++];
     exit_code = initialize_job(job_id, user_detail->pw_name);
+    break;
+  case INITIALIZE_DISTRIBUTEDCACHE:
+    exit_code = initialize_distributed_cache(user_detail->pw_name);
     break;
   case LAUNCH_TASK_JVM:
     tt_root = argv[optind++];
@@ -128,6 +134,13 @@ int main(int argc, char **argv) {
   case KILL_TASK_JVM:
     task_pid = argv[optind++];
     exit_code = kill_user_task(user_detail->pw_name, task_pid, SIGKILL);
+    break;
+  case RUN_DEBUG_SCRIPT:
+    tt_root = argv[optind++];
+    job_id = argv[optind++];
+    task_id = argv[optind++];
+    exit_code
+        = run_debug_script_as_user(user_detail->pw_name, job_id, task_id, tt_root);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;

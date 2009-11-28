@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mrunit.mock.MockOutputCollector;
 import org.apache.hadoop.mrunit.mock.MockReporter;
@@ -43,12 +44,33 @@ public class MapDriver<K1, V1, K2, V2> extends MapDriverBase<K1, V1, K2, V2> {
   public static final Log LOG = LogFactory.getLog(MapDriver.class);
 
   private Mapper<K1, V1, K2, V2> myMapper;
+  private Counters counters;
 
   public MapDriver(final Mapper<K1, V1, K2, V2> m) {
     myMapper = m;
+    counters = new Counters();
   }
 
   public MapDriver() {
+    counters = new Counters();
+  }
+
+  /** @return the counters used in this test */
+  public Counters getCounters() {
+    return counters;
+  }
+
+  /** Sets the counters object to use for this test.
+   * @param ctrs The counters object to use.
+   */
+  public void setCounters(final Counters ctrs) {
+    this.counters = ctrs;
+  }
+
+  /** Sets the counters to use and returns self for fluent style */
+  public MapDriver<K1, V1, K2, V2> withCounters(final Counters ctrs) {
+    setCounters(ctrs);
+    return this;
   }
 
   /**
@@ -165,7 +187,7 @@ public class MapDriver<K1, V1, K2, V2> extends MapDriverBase<K1, V1, K2, V2> {
   public List<Pair<K2, V2>> run() throws IOException {
     MockOutputCollector<K2, V2> outputCollector =
       new MockOutputCollector<K2, V2>();
-    MockReporter reporter = new MockReporter(MockReporter.ReporterType.Mapper);
+    MockReporter reporter = new MockReporter(MockReporter.ReporterType.Mapper, getCounters());
 
     myMapper.map(inputKey, inputVal, outputCollector, reporter);
 

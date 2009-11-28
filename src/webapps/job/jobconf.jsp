@@ -24,6 +24,7 @@
   import="java.io.*"
   import="java.net.URL"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapreduce.jobhistory.*"
   import="org.apache.hadoop.util.*"
 %>
 <%!	private static final long serialVersionUID = 1L;
@@ -47,7 +48,7 @@
 <h2>Job Configuration: JobId - <%= jobId %></h2><br>
 
 <%
-  String jobFilePath = JobTracker.getLocalJobFilePath(JobID.forName(jobId));
+  String jobFilePath = tracker.getLocalJobFilePath(JobID.forName(jobId));
   FileInputStream jobFile = null;
   try {
     jobFile = new FileInputStream(jobFilePath);

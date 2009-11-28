@@ -31,7 +31,11 @@ import org.apache.hadoop.io.WritableComparable;
 public class ValueAggregatorJobBase<K1 extends WritableComparable<?>,
                                              V1 extends Writable>
 {
-
+  public static final String DESCRIPTOR = "mapreduce.aggregate.descriptor";
+  public static final String DESCRIPTOR_NUM = 
+    "mapreduce.aggregate.descriptor.num";
+  public static final String USER_JAR = "mapreduce.aggregate.user.jar.file";
+  
   protected static ArrayList<ValueAggregatorDescriptor> aggregatorDescriptorList = null;
 
   public static void setup(Configuration job) {
@@ -54,12 +58,11 @@ public class ValueAggregatorJobBase<K1 extends WritableComparable<?>,
 
   protected static ArrayList<ValueAggregatorDescriptor> getAggregatorDescriptors(
       Configuration conf) {
-    String advn = "aggregator.descriptor";
-    int num = conf.getInt(advn + ".num", 0);
+    int num = conf.getInt(DESCRIPTOR_NUM, 0);
     ArrayList<ValueAggregatorDescriptor> retv = 
       new ArrayList<ValueAggregatorDescriptor>(num);
     for (int i = 0; i < num; i++) {
-      String spec = conf.get(advn + "." + i);
+      String spec = conf.get(DESCRIPTOR + "." + i);
       ValueAggregatorDescriptor ad = getValueAggregatorDescriptor(spec, conf);
       if (ad != null) {
         retv.add(ad);

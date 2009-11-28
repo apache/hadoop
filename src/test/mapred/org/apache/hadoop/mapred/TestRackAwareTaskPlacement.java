@@ -26,10 +26,13 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobHistory;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.Job.RawSplit;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.StaticMapping;
 
@@ -58,8 +61,8 @@ public class TestRackAwareTaskPlacement extends TestCase {
       new TestSetup(new TestSuite(TestRackAwareTaskPlacement.class)) {
       protected void setUp() throws Exception {
         JobConf conf = new JobConf();
-        conf.set("mapred.job.tracker", "localhost:0");
-        conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+        conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
+        conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
         conf.setClass("topology.node.switch.mapping.impl", 
           StaticMapping.class, DNSToSwitchMapping.class);
         jobTracker = new FakeJobTracker(conf, new FakeClock(), trackers);
@@ -85,11 +88,12 @@ public class TestRackAwareTaskPlacement extends TestCase {
       this.profile = new JobProfile(jc.getUser(), jobid, 
           jobFile.toString(), null, jc.getJobName(),
           jc.getQueueName());
+      this.jobHistory = new FakeJobHistory();
     }
 
     @Override
     public void initTasks() throws IOException {
-      JobClient.RawSplit[] splits = createSplits();
+      Job.RawSplit[] splits = createSplits();
       numMapTasks = splits.length;
       createMapTasks(null, splits);
       nonRunningMapCache = createCache(splits, maxLevel);
@@ -99,8 +103,8 @@ public class TestRackAwareTaskPlacement extends TestCase {
     }
   
 
-    protected JobClient.RawSplit[] createSplits() throws IOException {
-      RawSplit[] splits = new RawSplit[numMaps];
+    protected Job.RawSplit[] createSplits() throws IOException {
+      Job.RawSplit[] splits = new Job.RawSplit[numMaps];
       // Hand code for now. 
       // M0,2,3 reside in Host1
       // M1 resides in Host3
@@ -108,7 +112,7 @@ public class TestRackAwareTaskPlacement extends TestCase {
       String[] splitHosts0 = new String[] { allHosts[0] };
 
       for (int i = 0; i < numMaps; i++) {
-        splits[i] = new RawSplit();
+        splits[i] = new Job.RawSplit();
         splits[i].setDataLength(0);
       }
 

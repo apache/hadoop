@@ -44,6 +44,7 @@ import org.apache.hadoop.mapred.UtilsForTests.FailMapper;
 import org.apache.hadoop.mapred.UtilsForTests.KillMapper;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
 /** 
@@ -100,7 +101,7 @@ public class TestSeveral extends TestCase {
         // it with the MiniMRCluster
 
         myListener = new MyListener();
-        conf.set("mapred.job.tracker.handler.count", "1");
+        conf.set(JTConfig.JT_IPC_HANDLER_COUNT, "1");
         mrCluster =   new MiniMRCluster(0, 0,
             numTT, dfs.getFileSystem().getUri().toString(), 
             1, null, null, MR_UGI, new JobConf());
@@ -151,7 +152,7 @@ public class TestSeveral extends TestCase {
 
   private void verifyOutput(FileSystem fs, Path outDir) throws IOException {
     Path[] outputFiles = FileUtil.stat2Paths(
-        fs.listStatus(outDir, new OutputLogFilter()));
+        fs.listStatus(outDir, new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(numReduces, outputFiles.length);
     InputStream is = fs.open(outputFiles[0]);
     BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -208,7 +209,8 @@ public class TestSeveral extends TestCase {
 
     conf.set("mapred.reducer.class", "testjar.ExternalIdentityReducer");
 
-    conf.setLong("mapred.min.split.size", 1024*1024);
+    conf.setLong(org.apache.hadoop.mapreduce.lib.input.
+      FileInputFormat.SPLIT_MINSIZE, 1024*1024);
 
     conf.setNumReduceTasks(numReduces);
     conf.setJobPriority(JobPriority.HIGH);
@@ -257,9 +259,8 @@ public class TestSeveral extends TestCase {
     // Check Task directories
     TaskAttemptID taskid = new TaskAttemptID(
         new TaskID(jobId, TaskType.MAP, 1),0);
-    TestMiniMRWithDFS.checkTaskDirectories(
-        mrCluster, new String[]{jobId.toString()}, 
-        new String[]{taskid.toString()});
+    TestMiniMRWithDFS.checkTaskDirectories(mrCluster, TEST1_UGI.getUserName(),
+        new String[] { jobId.toString() }, new String[] { taskid.toString() });
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int exitCode = TestJobClient.runTool(conf, new JobClient(),
@@ -279,16 +280,19 @@ public class TestSeveral extends TestCase {
     verifyOutput(outDir.getFileSystem(conf), outDir);
 
     //TestJobHistory
-    TestJobHistory.validateJobHistoryFileFormat(jobId, conf, "SUCCESS", false);
+    TestJobHistory.validateJobHistoryFileFormat(
+        mrCluster.getJobTrackerRunner().getJobTracker().getJobHistory(),
+        jobId, conf, "SUCCEEDED", false);
+    
     TestJobHistory.validateJobHistoryFileContent(mrCluster, job, conf);
-    TestJobHistory.validateJobHistoryUserLogLocation(job.getID(), conf);
 
     // Since we keep setKeepTaskFilesPattern, these files should still be
     // present and will not be cleaned up.
     for(int i=0; i < numTT; ++i) {
-      String jobDirStr = mrCluster.getTaskTrackerLocalDir(i)+
-      "/taskTracker/jobcache";
-      boolean b = FileSystem.getLocal(conf).delete(new Path(jobDirStr), true);
+      Path jobDirPath =
+          new Path(mrCluster.getTaskTrackerLocalDir(i), TaskTracker
+              .getJobCacheSubdir(TEST1_UGI.getUserName()));
+      boolean b = FileSystem.getLocal(conf).delete(jobDirPath, true);
       assertTrue(b);
     }
   }
@@ -315,9 +319,9 @@ public class TestSeveral extends TestCase {
     conf.setOutputFormat(NullOutputFormat.class);
     conf.setJobPriority(JobPriority.HIGH);
 
-    conf.setLong("mapred.map.max.attempts", 1);
+    conf.setLong(JobContext.MAP_MAX_ATTEMPTS, 1);
 
-    conf.set("hadoop.job.history.user.location", "none");
+    conf.set(JobContext.HISTORY_LOCATION, "none");
 
     conf.setNumReduceTasks(0);
 
@@ -366,15 +370,13 @@ public class TestSeveral extends TestCase {
     conf.setOutputFormat(NullOutputFormat.class);
     conf.setNumReduceTasks(0);
 
-    conf.setLong("mapred.map.max.attempts", 2);
+    conf.setLong(JobContext.MAP_MAX_ATTEMPTS, 2);
 
     final Path inDir = new Path("./wc/input");
     final Path outDir = new Path("./wc/output");
     final Path histDir = new Path("./wc/history");
 
-    conf.set("hadoop.job.history.user.location", histDir.toString());
-
-    conf.setNumReduceTasks(numReduces);
+    conf.set(JobContext.HISTORY_LOCATION, histDir.toString());
 
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);

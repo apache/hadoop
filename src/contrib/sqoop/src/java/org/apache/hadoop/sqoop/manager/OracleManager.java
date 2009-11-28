@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.mapred.ImportJob;
 import org.apache.hadoop.sqoop.util.ImportError;
 
 /**
@@ -83,6 +84,32 @@ public class OracleManager extends GenericJdbcManager {
     connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 
     return connection;
+  }
+
+  /**
+   * This importTable() implementation continues to use the older DBInputFormat
+   * because DataDrivenDBInputFormat does not currently work with Oracle.
+   */
+  public void importTable(ImportJobContext context)
+      throws IOException, ImportError {
+
+    String tableName = context.getTableName();
+    String jarFile = context.getJarFile();
+    ImportOptions options = context.getOptions();
+    ImportJob importer = new ImportJob(options);
+    String splitCol = options.getSplitByCol();
+    if (null == splitCol) {
+      // If the user didn't specify a splitting column, try to infer one.
+      splitCol = getPrimaryKey(tableName);
+    }
+
+    if (null == splitCol) {
+      // Can't infer a primary key.
+      throw new ImportError("No primary key could be found for table " + tableName
+          + ". Please specify one with --split-by.");
+    }
+
+    importer.runImport(tableName, jarFile, splitCol, options.getConf());
   }
 }
 

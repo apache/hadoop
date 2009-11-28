@@ -60,7 +60,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
                                 + "ThreadedMapBenchmark"));
   private static Path INPUT_DIR = new Path(BASE_DIR, "input");
   private static Path OUTPUT_DIR = new Path(BASE_DIR, "output");
-  private static final float FACTOR = 2.3f; // io.sort.mb set to 
+  private static final float FACTOR = 2.3f; // mapreduce.task.io.sort.mb set to 
                                             // (FACTOR * data_size) should 
                                             // result in only 1 spill
 
@@ -247,9 +247,9 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
       job.setNumMapTasks(numMapsPerHost * cluster.getTaskTrackers());
       job.setNumReduceTasks(1);
       
-      // set io.sort.mb to avoid spill
+      // set mapreduce.task.io.sort.mb to avoid spill
       int ioSortMb = (int)Math.ceil(FACTOR * dataSizePerMap);
-      job.set("io.sort.mb", String.valueOf(ioSortMb));
+      job.set(JobContext.IO_SORT_MB, String.valueOf(ioSortMb));
       fs = FileSystem.get(job);
       
       LOG.info("Running sort with 1 spill per map");
@@ -261,12 +261,12 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
                + " millisec");
       fs.delete(OUTPUT_DIR, true);
       
-      // set io.sort.mb to have multiple spills
+      // set mapreduce.task.io.sort.mb to have multiple spills
       JobConf spilledJob = new JobConf(job, ThreadedMapBenchmark.class);
       ioSortMb = (int)Math.ceil(FACTOR 
                                 * Math.ceil((double)dataSizePerMap 
                                             / numSpillsPerMap));
-      spilledJob.set("io.sort.mb", String.valueOf(ioSortMb));
+      spilledJob.set(JobContext.IO_SORT_MB, String.valueOf(ioSortMb));
       spilledJob.setJobName("threaded-map-benchmark-spilled");
       spilledJob.setJarByClass(ThreadedMapBenchmark.class);
       

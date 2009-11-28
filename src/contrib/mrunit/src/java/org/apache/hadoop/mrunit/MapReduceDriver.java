@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mrunit.types.Pair;
@@ -55,11 +56,13 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
   private Mapper<K1, V1, K2, V2> myMapper;
   private Reducer<K2, V2, K3, V3> myReducer;
   private Reducer<K2, V2, K2, V2> myCombiner;
+  private Counters counters;
 
   public MapReduceDriver(final Mapper<K1, V1, K2, V2> m,
                          final Reducer<K2, V2, K3, V3> r) {
     myMapper = m;
     myReducer = r;
+    counters = new Counters();
   }
 
   public MapReduceDriver(final Mapper<K1, V1, K2, V2> m,
@@ -68,9 +71,29 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
     myMapper = m;
     myReducer = r;
     myCombiner = c;
+    counters = new Counters();
   }
 
   public MapReduceDriver() {
+    counters = new Counters();
+  }
+
+  /** @return the counters used in this test */
+  public Counters getCounters() {
+    return counters;
+  }
+
+  /** Sets the counters object to use for this test.
+   * @param ctrs The counters object to use.
+   */
+  public void setCounters(final Counters ctrs) {
+    this.counters = ctrs;
+  }
+
+  /** Sets the counters to use and returns self for fluent style */
+  public MapReduceDriver<K1, V1, K2, V2, K3, V3> withCounters(final Counters ctrs) {
+    setCounters(ctrs);
+    return this;
   }
 
   /** Set the Mapper instance to use with this test driver
@@ -227,7 +250,10 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
             + sb.toString() + ")");
 
         reduceOutputs.addAll(new ReduceDriver<K2, V2, OUTKEY, OUTVAL>(reducer)
-                .withInputKey(inputKey).withInputValues(inputValues).run());
+                .withCounters(getCounters())
+                .withInputKey(inputKey)
+                .withInputValues(inputValues)
+                .run());
       }
 
       return reduceOutputs;
@@ -243,7 +269,7 @@ public class MapReduceDriver<K1, V1, K2, V2, K3, V3>
       LOG.debug("Mapping input " + input.toString() + ")");
 
       mapOutputs.addAll(new MapDriver<K1, V1, K2, V2>(myMapper).withInput(
-              input).run());
+              input).withCounters(getCounters()).run());
     }
 
     if (myCombiner != null) {

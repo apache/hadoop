@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit 
                        implements InputSplit {
   org.apache.hadoop.mapreduce.lib.input.FileSplit fs; 
-  FileSplit() {
+  protected FileSplit() {
     fs = new org.apache.hadoop.mapreduce.lib.input.FileSplit();
   }
 

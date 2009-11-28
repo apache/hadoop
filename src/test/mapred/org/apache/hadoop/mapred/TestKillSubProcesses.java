@@ -33,13 +33,13 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.util.TestProcfsBasedProcessTree;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.hadoop.util.TestProcfsBasedProcessTree;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

@@ -44,9 +44,9 @@ import org.apache.hadoop.mapreduce.lib.fieldsel.*;
  * fields are from the value only. Otherwise, the fields are the union of those
  * from the key and those from the value.
  * 
- * The field separator is under attribute "mapred.data.field.separator"
+ * The field separator is under attribute "mapreduce.fieldsel.data.field.separator"
  * 
- * The map output field list spec is under attribute "map.output.key.value.fields.spec".
+ * The map output field list spec is under attribute "mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec".
  * The value is expected to be like "keyFieldsSpec:valueFieldsSpec"
  * key/valueFieldsSpec are comma (,) separated field spec: fieldSpec,fieldSpec,fieldSpec ...
  * Each field spec can be a simple number (e.g. 5) specifying a specific field, or a range
@@ -57,7 +57,7 @@ import org.apache.hadoop.mapreduce.lib.fieldsel.*;
  * Here is an example: "4,3,0,1:6,5,1-3,7-". It specifies to use fields 4,3,0 and 1 for keys,
  * and use fields 6,5,1,2,3,7 and above for values.
  * 
- * The reduce output field list spec is under attribute "reduce.output.key.value.fields.spec".
+ * The reduce output field list spec is under attribute "mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec".
  * 
  * The reducer extracts output key/value pairs in a similar manner, except that
  * the key is never ignored.
@@ -156,13 +156,13 @@ public class FieldSelectionMapReduce<K, V>
   }
 
   public void configure(JobConf job) {
-    this.fieldSeparator = job.get("mapred.data.field.separator", "\t");
-    this.mapOutputKeyValueSpec = job.get("map.output.key.value.fields.spec",
+    this.fieldSeparator = job.get("mapreduce.fieldsel.data.field.separator", "\t");
+    this.mapOutputKeyValueSpec = job.get("mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec",
         "0-:");
     this.ignoreInputKey = TextInputFormat.class.getCanonicalName().equals(
         job.getInputFormat().getClass().getCanonicalName());
     this.reduceOutputKeyValueSpec = job.get(
-        "reduce.output.key.value.fields.spec", "0-:");
+        "mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec", "0-:");
     parseOutputKeyValueSpec();
     LOG.info(specToString());
   }

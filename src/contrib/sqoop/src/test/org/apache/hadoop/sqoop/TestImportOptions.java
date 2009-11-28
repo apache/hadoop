@@ -184,4 +184,45 @@ public class TestImportOptions extends TestCase {
     assertEquals('*', opts.getInputFieldDelim());
     assertEquals('|', opts.getOutputFieldDelim());
   }
+
+  public void testBadNumMappers1() {
+    String [] args = {
+      "--num-mappers",
+      "x"
+    };
+
+    try {
+      ImportOptions opts = new ImportOptions();
+      opts.parse(args);
+      fail("Expected InvalidOptionsException");
+    } catch (ImportOptions.InvalidOptionsException ioe) {
+      // expected.
+    }
+  }
+
+  public void testBadNumMappers2() {
+    String [] args = {
+      "-m",
+      "x"
+    };
+
+    try {
+      ImportOptions opts = new ImportOptions();
+      opts.parse(args);
+      fail("Expected InvalidOptionsException");
+    } catch (ImportOptions.InvalidOptionsException ioe) {
+      // expected.
+    }
+  }
+
+  public void testGoodNumMappers() throws ImportOptions.InvalidOptionsException {
+    String [] args = {
+      "-m",
+      "4"
+    };
+
+    ImportOptions opts = new ImportOptions();
+    opts.parse(args);
+    assertEquals(4, opts.getNumMappers());
+  }
 }

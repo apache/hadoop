@@ -221,12 +221,12 @@
           <th>Notes</th>
         </tr>
         <tr>
-          <td>mapred.job.tracker</td>
+          <td>mapreduce.jobtracker.address</td>
           <td>Host or IP and port of <code>JobTracker</code>.</td>
           <td><em>host:port</em> pair.</td>
         </tr>
 		    <tr>
-		      <td>mapred.system.dir</td>
+		      <td>mapreduce.jobtracker.system.dir</td>
 		      <td>
 		        Path on the HDFS where where the Map/Reduce framework stores 
 		        system files e.g. <code>/hadoop/mapred/system/</code>.
@@ -237,7 +237,7 @@
 		      </td>
 		    </tr>
 		    <tr>
-		      <td>mapred.local.dir</td>
+		      <td>mapreduce.cluster.local.dir</td>
 		      <td>
 		        Comma-separated list of paths on the local filesystem where 
 		        temporary Map/Reduce data is written.
@@ -264,7 +264,7 @@
 		      </td>
 		    </tr>
 		    <tr>
-		      <td>mapred.hosts/mapred.hosts.exclude</td>
+		      <td>mapreduce.jobtracker.hosts.filename/mapreduce.jobtracker.hosts.exclude.filename</td>
 		      <td>List of permitted/excluded TaskTrackers.</td>
 		      <td>
 		        If necessary, use these files to control the list of allowable 
@@ -284,7 +284,7 @@
             being used, the list of configured queue names must be
             specified here. Once queues are defined, users can submit
             jobs to a queue using the property name 
-            <em>mapred.job.queue.name</em> in the job configuration.
+            <em>mapreduce.job.queuename</em> in the job configuration.
             There could be a separate 
             configuration file for configuring properties of these 
             queues that is managed by the scheduler. 
@@ -383,7 +383,7 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.reduce.parallel.copies</td>
+                    <td>mapreduce.reduce.shuffle.parallelcopies</td>
                     <td>20</td>
                     <td>
                       Higher number of parallel copies run by reduces to fetch
@@ -392,7 +392,7 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.map.child.java.opts</td>
+                    <td>mapreduce.map.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
                       Larger heap-size for child jvms of maps. 
@@ -400,7 +400,7 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.reduce.child.java.opts</td>
+                    <td>mapreduce.reduce.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
                       Larger heap-size for child jvms of reduces. 
@@ -417,13 +417,13 @@
                   </tr>
                   <tr>
                     <td>conf/core-site.xml</td>
-                    <td>io.sort.factor</td>
+                    <td>mapreduce.task.io.sort.factor</td>
                     <td>100</td>
                     <td>More streams merged at once while sorting files.</td>
                   </tr>
                   <tr>
                     <td>conf/core-site.xml</td>
-                    <td>io.sort.mb</td>
+                    <td>mapreduce.task.io.sort.mb</td>
                     <td>200</td>
                     <td>Higher memory-limit while sorting data.</td>
                   </tr>
@@ -448,7 +448,7 @@
 		          </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.job.tracker.handler.count</td>
+                    <td>mapreduce.jobtracker.handler.count</td>
                     <td>60</td>
                     <td>
                       More JobTracker server threads to handle RPCs from large 
@@ -457,13 +457,13 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.reduce.parallel.copies</td>
+                    <td>mapreduce.reduce.shuffle.parallelcopies</td>
                     <td>50</td>
                     <td></td>
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>tasktracker.http.threads</td>
+                    <td>mapreduce.tasktracker.http.threads</td>
                     <td>50</td>
                     <td>
                       More worker threads for the TaskTracker's http server. The
@@ -473,7 +473,7 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.map.child.java.opts</td>
+                    <td>mapreduce.map.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
                       Larger heap-size for child jvms of maps. 
@@ -481,7 +481,7 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.reduce.child.java.opts</td>
+                    <td>mapreduce.reduce.java.opts</td>
                     <td>-Xmx1024M</td>
                     <td>Larger heap-size for child jvms of reduces.</td>
                   </tr>
@@ -558,7 +558,7 @@
 
     <table>
           <tr><th>Name</th><th>Type</th><th>Description</th></tr>
-          <tr><td>mapred.tasktracker.taskmemorymanager.monitoring-interval</td>
+          <tr><td>mapreduce.tasktracker.taskmemorymanager.monitoringinterval</td>
             <td>long</td>
             <td>The time interval, in milliseconds, between which the TT 
             checks for any memory violation. The default value is 5000 msec
@@ -668,10 +668,11 @@
             the tasks. For maximum security, this task controller 
             sets up restricted permissions and user/group ownership of
             local files and directories used by the tasks such as the
-            job jar files, intermediate files and task log files. Currently
-            permissions on distributed cache files are opened up to be
-            accessible by all users. In future, it is expected that stricter
-            file permissions are set for these files too.
+            job jar files, intermediate files, task log files and distributed
+            cache files. Particularly note that, because of this, except the
+            job owner and tasktracker, no other user can access any of the
+            local files/directories including those localized as part of the
+            distributed cache.
             </td>
             </tr>
             </table>
@@ -684,7 +685,7 @@
             <th>Property</th><th>Value</th><th>Notes</th>
             </tr>
             <tr>
-            <td>mapred.task.tracker.task-controller</td>
+            <td>mapreduce.tasktracker.taskcontroller</td>
             <td>Fully qualified class name of the task controller class</td>
             <td>Currently there are two implementations of task controller
             in the Hadoop system, DefaultTaskController and LinuxTaskController.
@@ -747,8 +748,8 @@
             </p>
             <table><tr><th>Name</th><th>Description</th></tr>
             <tr>
-            <td>mapred.local.dir</td>
-            <td>Path to mapred local directories. Should be same as the value 
+            <td>mapreduce.cluster.local.dir</td>
+            <td>Path to mapreduce.cluster.local.directories. Should be same as the value 
             which was provided to key in mapred-site.xml. This is required to
             validate paths passed to the setuid executable in order to prevent
             arbitrary paths being passed to it.</td>
@@ -765,7 +766,7 @@
             <p>
             The LinuxTaskController requires that paths including and leading up to
             the directories specified in
-            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be set 755
+            <em>mapreduce.cluster.local.dir</em> and <em>hadoop.log.dir</em> to be set 755
             permissions.
             </p>
             </section>
@@ -800,7 +801,7 @@
             monitoring script in <em>mapred-site.xml</em>.</p>
             <table>
             <tr><th>Name</th><th>Description</th></tr>
-            <tr><td><code>mapred.healthChecker.script.path</code></td>
+            <tr><td><code>mapreduce.tasktracker.healthchecker.script.path</code></td>
             <td>Absolute path to the script which is periodically run by the 
             TaskTracker to determine if the node is 
             healthy or not. The file should be executable by the TaskTracker.
@@ -809,18 +810,18 @@
             is not started.</td>
             </tr>
             <tr>
-            <td><code>mapred.healthChecker.interval</code></td>
+            <td><code>mapreduce.tasktracker.healthchecker.interval</code></td>
             <td>Frequency at which the node health script is run, 
             in milliseconds</td>
             </tr>
             <tr>
-            <td><code>mapred.healthChecker.script.timeout</code></td>
+            <td><code>mapreduce.tasktracker.healthchecker.script.timeout</code></td>
             <td>Time after which the node health script will be killed by
             the TaskTracker if unresponsive.
             The node is marked unhealthy. if node health script times out.</td>
             </tr>
             <tr>
-            <td><code>mapred.healthChecker.script.args</code></td>
+            <td><code>mapreduce.tasktracker.healthchecker.script.args</code></td>
             <td>Extra arguments that can be passed to the node health script 
             when launched.
             These should be comma separated list of arguments. </td>
@@ -857,17 +858,17 @@
             <title>History Logging</title>
             
             <p> The job history files are stored in central location 
-            <code> hadoop.job.history.location </code> which can be on DFS also,
+            <code> mapreduce.jobtracker.jobhistory.location </code> which can be on DFS also,
             whose default value is <code>${HADOOP_LOG_DIR}/history</code>. 
             The history web UI is accessible from job tracker web UI.</p>
             
             <p> The history files are also logged to user specified directory
-            <code>hadoop.job.history.user.location</code> 
+            <code>mapreduce.job.userhistorylocation</code> 
             which defaults to job output directory. The files are stored in
             "_logs/history/" in the specified directory. Hence, by default 
-            they will be in "mapred.output.dir/_logs/history/". User can stop
+            they will be in "mapreduce.output.fileoutputformat.outputdir/_logs/history/". User can stop
             logging by giving the value <code>none</code> for 
-            <code>hadoop.job.history.user.location</code> </p>
+            <code>mapreduce.job.userhistorylocation</code> </p>
             
             <p> User can view the history logs summary in specified directory 
             using the following command <br/>
@@ -891,9 +892,9 @@
       <section>
         <title>Map/Reduce</title>
         <p>The job tracker restart can recover running jobs if 
-        <code>mapred.jobtracker.restart.recover</code> is set true and 
+        <code>mapreduce.jobtracker.restart.recover</code> is set true and 
         <a href="#Logging">JobHistory logging</a> is enabled. Also 
-        <code>mapred.jobtracker.job.history.block.size</code> value should be 
+        <code>mapreduce.jobtracker.jobhistory.block.size</code> value should be 
         set to an optimal value to dump job history to disk as soon as 
         possible, the typical value is 3145728(3MB).</p>
       </section>

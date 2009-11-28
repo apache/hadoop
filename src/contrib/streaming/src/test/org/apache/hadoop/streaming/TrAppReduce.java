@@ -41,17 +41,17 @@ public class TrAppReduce
     // test that some JobConf properties are exposed as expected     
     // Note the dots translated to underscore: 
     // property names have been escaped in PipeMapRed.safeEnvVarName()
-    expect("mapred_job_tracker", "local");
+    expect("mapreduce_jobtracker_address", "local");
     //expect("mapred_local_dir", "build/test/mapred/local");
-    expectDefined("mapred_local_dir");
+    expectDefined("mapreduce_cluster_local_dir");
     expect("mapred_output_format_class", "org.apache.hadoop.mapred.TextOutputFormat");
-    expect("mapred_output_key_class", "org.apache.hadoop.io.Text");
-    expect("mapred_output_value_class", "org.apache.hadoop.io.Text");
+    expect("mapreduce_job_output_key_class", "org.apache.hadoop.io.Text");
+    expect("mapreduce_job_output_value_class", "org.apache.hadoop.io.Text");
 
-    expect("mapred_task_is_map", "false");
-    expectDefined("mapred_task_id");
+    expect("mapreduce_task_ismap", "false");
+    expectDefined("mapreduce_task_attempt_id");
 
-    expectDefined("io_sort_factor");
+    expectDefined("mapreduce_task_io_sort_factor");
 
     // the FileSplit context properties are not available in local hadoop..
     // so can't check them in this test.

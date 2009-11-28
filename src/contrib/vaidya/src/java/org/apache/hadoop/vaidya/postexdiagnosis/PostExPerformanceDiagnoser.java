@@ -19,20 +19,21 @@
 package org.apache.hadoop.vaidya.postexdiagnosis;
 
 
-import java.net.URL;
-import java.io.InputStream;
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.URL;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobHistory.JobInfo;
-import org.apache.hadoop.mapred.DefaultJobHistoryParser;
-import org.apache.hadoop.vaidya.util.XMLUtils;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.vaidya.DiagnosticTest;
 import org.apache.hadoop.vaidya.JobDiagnoser;
 import org.apache.hadoop.vaidya.statistics.job.JobStatistics;
-import org.w3c.dom.NodeList;
+import org.apache.hadoop.vaidya.util.XMLUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 
 /**
@@ -108,15 +109,14 @@ public class PostExPerformanceDiagnoser extends JobDiagnoser {
      * Read the job information necessary for post performance analysis
      */
     JobConf jobConf = new JobConf();
-    JobInfo jobInfo = new JobInfo("");
-    readJobInformation(jobConf, jobInfo);
+    JobInfo jobInfo = readJobInformation(jobConf);
     this._jobExecutionStatistics = new JobStatistics(jobConf, jobInfo);
   }
 
   /**
    * read and populate job statistics information.
    */
-  private void readJobInformation(JobConf jobConf, JobInfo jobInfo) throws Exception {
+  private JobInfo readJobInformation(JobConf jobConf) throws Exception {
   
     /*
      * Convert the input strings to URL
@@ -132,13 +132,21 @@ public class PostExPerformanceDiagnoser extends JobDiagnoser {
     /* 
      * Read JobHistoryFile and build job counters to evaluate diagnostic rules
      */
+    JobHistoryParser parser;
+    JobInfo jobInfo;
     if (jobHistoryFileUrl.getProtocol().equals("hdfs")) {
-      DefaultJobHistoryParser.parseJobTasks (jobHistoryFileUrl.getPath(), jobInfo, FileSystem.get(jobConf));
+      parser = new JobHistoryParser(FileSystem.get(jobConf),
+                                    jobHistoryFileUrl.getPath());
+      jobInfo = parser.parse();
     } else if (jobHistoryFileUrl.getProtocol().equals("file")) {
-      DefaultJobHistoryParser.parseJobTasks (jobHistoryFileUrl.getPath(), jobInfo, FileSystem.getLocal(jobConf));
+      parser = new JobHistoryParser(FileSystem.getLocal(jobConf),
+                                    jobHistoryFileUrl.getPath());
+      jobInfo = parser.parse();
     } else {
-      throw new Exception("Malformed URL. Protocol: "+jobHistoryFileUrl.getProtocol());
+      throw new Exception("Malformed URL. Protocol: "+ 
+          jobHistoryFileUrl.getProtocol());
     }
+    return jobInfo;
   }
   
   /*

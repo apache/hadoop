@@ -125,6 +125,13 @@ public class JobSchedulable extends Schedulable {
       TaskTrackerManager ttm = scheduler.taskTrackerManager;
       ClusterStatus clusterStatus = ttm.getClusterStatus();
       int numTaskTrackers = clusterStatus.getTaskTrackers();
+
+      // check with the load manager whether it is safe to 
+      // launch this task on this taskTracker.
+      LoadManager loadMgr = scheduler.getLoadManager();
+      if (!loadMgr.canLaunchTask(tts, job, taskType)) {
+        return null;
+      }
       if (taskType == TaskType.MAP) {
         LocalityLevel localityLevel = scheduler.getAllowedLocalityLevel(
             job, currentTime);

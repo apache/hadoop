@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
@@ -69,7 +70,7 @@ public class TestMultipleArchiveFiles extends TestStreaming
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().getAuthority();
       mr  = new MiniMRCluster(1, namenode, 3);
-      strJobTracker = "mapred.job.tracker=" + "localhost:" + mr.getJobTrackerPort();
+      strJobTracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.getJobTrackerPort();
       strNamenode = "fs.default.name=" + namenode;
     } catch (Exception e) {
       e.printStackTrace();
@@ -116,7 +117,7 @@ public class TestMultipleArchiveFiles extends TestStreaming
       "-output", OUTPUT_DIR,
       "-mapper", "xargs cat", 
       "-reducer", "cat",
-      "-jobconf", "mapred.reduce.tasks=1",
+      "-jobconf", "mapreduce.job.reduces=1",
       "-cacheArchive", cacheArchiveString1, 
       "-cacheArchive", cacheArchiveString2,
       "-jobconf", strNamenode,

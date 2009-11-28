@@ -30,7 +30,7 @@ echo $Date >  $1_start.out
 
 export HADOOP_CLASSPATH=${APP_JAR}:${EXAMPLE_JAR}:${STREAMING_JAR}
 export LIBJARS=${APP_JAR},${EXAMPLE_JAR},${STREAMING_JAR}
-${HADOOP_HOME}/bin/hadoop jar gridmix.jar org.apache.hadoop.mapred.GridMixRunner -libjars ${LIBJARS}
+${HADOOP_HOME}/bin/hadoop jar gridmix.jar org.apache.hadoop.mapreduce.GridMixRunner -libjars ${LIBJARS}
 
 Date=`date +%F-%H-%M-%S-%N`
 echo $Date >  $1_end.out

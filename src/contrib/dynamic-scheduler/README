@@ -33,7 +33,7 @@ manages and bills for queue shares, and a scheduler that
 enforces the queue shares in the form of map and reduce slots of running jobs.
 
 Hadoop Configuration (e.g. hadoop-site.xml):
-mapred.jobtracker.taskScheduler      
+mapreduce.jobtracker.taskscheduler      
     This needs to be set to 
     org.apache.hadoop.mapred.DynamicPriorityScheduler
     to use the dynamic scheduler.
@@ -97,7 +97,8 @@ HMAC_SHA1("<query path>&user=<user>&timestamp=<timestamp>", key)
 For the servlet operations query path is everything that comes after /scheduler?
 in the url. For job submission the query path is just the empty string "".
 Job submissions also need to set the following job properties:
--Dmapred.job.timestamp=<ms epoch time> -Dmapred.job.signature=<signature as above> -Dmapred.job.queue.name=<queue>
+-Dmapred.job.timestamp=<ms epoch time> 
+-Dmapred.job.signature=<signature as above> -Dmapreduce.job.queue.name=<queue>
 Note queue must match the user submitting the job.
 
 Example python query 
@@ -161,6 +162,6 @@ else:
   params = ""
 timestamp = long(time.time()*1000)
 params = params + "&user=%s&timestamp=%d" % (USER,timestamp)
-print "-Dmapred.job.timestamp=%d -Dmapred.job.signature=%s -Dmapred.job.queue.name=%s" % (timestamp, hmac_sha1(params, KEY), USER)
+print "-Dmapred.job.timestamp=%d -Dmapred.job.signature=%s -Dmapreduce.job.queue.name=%s" % (timestamp, hmac_sha1(params, KEY), USER)
 
 

@@ -52,23 +52,23 @@ import org.apache.hadoop.util.ToolRunner;
  * <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
  * <configuration>
  *   <property>
- *     <name>test.randomwrite.min_key</name>
+ *     <name>mapreduce.randomwriter.minkey</name>
  *     <value>10</value>
  *   </property>
  *   <property>
- *     <name>test.randomwrite.max_key</name>
+ *     <name>mapreduce.randomwriter.maxkey</name>
  *     <value>10</value>
  *   </property>
  *   <property>
- *     <name>test.randomwrite.min_value</name>
+ *     <name>mapreduce.randomwriter.minvalue</name>
  *     <value>90</value>
  *   </property>
  *   <property>
- *     <name>test.randomwrite.max_value</name>
+ *     <name>mapreduce.randomwriter.maxvalue</name>
  *     <value>90</value>
  *   </property>
  *   <property>
- *     <name>test.randomwrite.total_bytes</name>
+ *     <name>mapreduce.randomwriter.totalbytes</name>
  *     <value>1099511627776</value>
  *   </property>
  * </configuration></xmp>
@@ -77,6 +77,15 @@ import org.apache.hadoop.util.ToolRunner;
  * and ones supported by {@link GenericOptionsParser} via the command-line.
  */
 public class RandomWriter extends Configured implements Tool {
+  public static final String TOTAL_BYTES = "mapreduce.randomwriter.totalbytes";
+  public static final String BYTES_PER_MAP = 
+    "mapreduce.randomwriter.bytespermap";
+  public static final String MAPS_PER_HOST = 
+    "mapreduce.randomwriter.mapsperhost";
+  public static final String MAX_VALUE = "mapreduce.randomwriter.maxvalue";
+  public static final String MIN_VALUE = "mapreduce.randomwriter.minvalue";
+  public static final String MIN_KEY = "mapreduce.randomwriter.minkey";
+  public static final String MAX_KEY = "mapreduce.randomwriter.maxkey";
   
   /**
    * User counters
@@ -97,7 +106,7 @@ public class RandomWriter extends Configured implements Tool {
       List<InputSplit> result = new ArrayList<InputSplit>();
       Path outDir = FileOutputFormat.getOutputPath(job);
       int numSplits = 
-            job.getConfiguration().getInt("mapred.map.tasks", 1);
+            job.getConfiguration().getInt(JobContext.NUM_MAPS, 1);
       for(int i=0; i < numSplits; ++i) {
         result.add(new FileSplit(new Path(outDir, "dummy-split-" + i), 0, 1, 
                                   (String[])null));
@@ -207,14 +216,14 @@ public class RandomWriter extends Configured implements Tool {
     @Override
     public void setup(Context context) {
       Configuration conf = context.getConfiguration();
-      numBytesToWrite = conf.getLong("test.randomwrite.bytes_per_map",
+      numBytesToWrite = conf.getLong(BYTES_PER_MAP,
                                     1*1024*1024*1024);
-      minKeySize = conf.getInt("test.randomwrite.min_key", 10);
+      minKeySize = conf.getInt(MIN_KEY, 10);
       keySizeRange = 
-        conf.getInt("test.randomwrite.max_key", 1000) - minKeySize;
-      minValueSize = conf.getInt("test.randomwrite.min_value", 0);
+        conf.getInt(MAX_KEY, 1000) - minKeySize;
+      minValueSize = conf.getInt(MIN_VALUE, 0);
       valueSizeRange = 
-        conf.getInt("test.randomwrite.max_value", 20000) - minValueSize;
+        conf.getInt(MAX_VALUE, 20000) - minValueSize;
     }
   }
   
@@ -236,21 +245,21 @@ public class RandomWriter extends Configured implements Tool {
     Configuration conf = getConf();
     JobClient client = new JobClient(conf);
     ClusterStatus cluster = client.getClusterStatus();
-    int numMapsPerHost = conf.getInt("test.randomwriter.maps_per_host", 10);
-    long numBytesToWritePerMap = conf.getLong("test.randomwrite.bytes_per_map",
+    int numMapsPerHost = conf.getInt(MAPS_PER_HOST, 10);
+    long numBytesToWritePerMap = conf.getLong(BYTES_PER_MAP,
                                              1*1024*1024*1024);
     if (numBytesToWritePerMap == 0) {
-      System.err.println("Cannot have test.randomwrite.bytes_per_map set to 0");
+      System.err.println("Cannot have" + BYTES_PER_MAP + " set to 0");
       return -2;
     }
-    long totalBytesToWrite = conf.getLong("test.randomwrite.total_bytes", 
+    long totalBytesToWrite = conf.getLong(TOTAL_BYTES, 
          numMapsPerHost*numBytesToWritePerMap*cluster.getTaskTrackers());
     int numMaps = (int) (totalBytesToWrite / numBytesToWritePerMap);
     if (numMaps == 0 && totalBytesToWrite > 0) {
       numMaps = 1;
-      conf.setLong("test.randomwrite.bytes_per_map", totalBytesToWrite);
+      conf.setLong(BYTES_PER_MAP, totalBytesToWrite);
     }
-    conf.setInt("mapred.map.tasks", numMaps);
+    conf.setInt(JobContext.NUM_MAPS, numMaps);
 
     Job job = new Job(conf);
     

@@ -21,10 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -41,7 +37,6 @@ class HeartbeatResponse implements Writable, Configurable {
   short responseId;
   int heartbeatInterval;
   TaskTrackerAction[] actions;
-  Set<JobID> recoveredJobs = new HashSet<JobID>();
 
   HeartbeatResponse() {}
   
@@ -58,15 +53,7 @@ class HeartbeatResponse implements Writable, Configurable {
   public short getResponseId() {
     return responseId;
   }
-  
-  public void setRecoveredJobs(Set<JobID> ids) {
-    recoveredJobs = ids; 
-  }
-  
-  public Set<JobID> getRecoveredJobs() {
-    return recoveredJobs;
-  }
-  
+
   public void setActions(TaskTrackerAction[] actions) {
     this.actions = actions;
   }
@@ -103,11 +90,6 @@ class HeartbeatResponse implements Writable, Configurable {
         action.write(out);
       }
     }
-    // Write the job ids of the jobs that were recovered
-    out.writeInt(recoveredJobs.size());
-    for (JobID id : recoveredJobs) {
-      id.write(out);
-    }
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -124,13 +106,6 @@ class HeartbeatResponse implements Writable, Configurable {
       }
     } else {
       actions = null;
-    }
-    // Read the job ids of the jobs that were recovered
-    int size = in.readInt();
-    for (int i = 0; i < size; ++i) {
-      JobID id = new JobID();
-      id.readFields(in);
-      recoveredJobs.add(id);
     }
   }
 }

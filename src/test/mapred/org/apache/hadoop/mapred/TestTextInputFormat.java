@@ -18,18 +18,34 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import java.util.*;
-import junit.framework.TestCase;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.BitSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
-import org.apache.commons.logging.*;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
-public class TestTextInputFormat extends TestCase {
+import org.junit.Test;
+import static junit.framework.Assert.*;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+public class TestTextInputFormat {
   private static final Log LOG =
     LogFactory.getLog(TestTextInputFormat.class.getName());
 
@@ -39,17 +55,19 @@ public class TestTextInputFormat extends TestCase {
   private static FileSystem localFs = null; 
   static {
     try {
+      defaultConf.set("fs.default.name", "file:///");
       localFs = FileSystem.getLocal(defaultConf);
     } catch (IOException e) {
       throw new RuntimeException("init failure", e);
     }
   }
-  private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
-             "TestTextInputFormat");
-  
+  private static Path workDir =
+    new Path(new Path(System.getProperty("test.build.data", "/tmp")),
+             "TestTextInputFormat").makeQualified(localFs);
+
+  @Test
   public void testFormat() throws Exception {
-    JobConf job = new JobConf();
+    JobConf job = new JobConf(defaultConf);
     Path file = new Path(workDir, "test.txt");
 
     // A reporter that does nothing
@@ -127,6 +145,100 @@ public class TestTextInputFormat extends TestCase {
     }
   }
 
+  @Test
+  public void testSplitableCodecs() throws IOException {
+    JobConf conf = new JobConf(defaultConf);
+    int seed = new Random().nextInt();
+    // Create the codec
+    CompressionCodec codec = null;
+    try {
+      codec = (CompressionCodec)
+      ReflectionUtils.newInstance(conf.getClassByName("org.apache.hadoop.io.compress.BZip2Codec"), conf);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException("Illegal codec!");
+    }
+    Path file = new Path(workDir, "test"+codec.getDefaultExtension());
+
+    // A reporter that does nothing
+    Reporter reporter = Reporter.NULL;
+    LOG.info("seed = "+seed);
+    Random random = new Random(seed);
+    FileSystem localFs = FileSystem.getLocal(conf);
+
+    localFs.delete(workDir, true);
+    FileInputFormat.setInputPaths(conf, workDir);
+
+    final int MAX_LENGTH = 500000;
+
+    // for a variety of lengths
+    for (int length = MAX_LENGTH / 2; length < MAX_LENGTH;
+        length += random.nextInt(MAX_LENGTH / 4)+1) {
+
+      LOG.info("creating; entries = " + length);
+
+
+      // create a file with length entries
+      Writer writer =
+        new OutputStreamWriter(codec.createOutputStream(localFs.create(file)));
+      try {
+        for (int i = 0; i < length; i++) {
+          writer.write(Integer.toString(i));
+          writer.write("\n");
+        }
+      } finally {
+        writer.close();
+      }
+
+      // try splitting the file in a variety of sizes
+      TextInputFormat format = new TextInputFormat();
+      format.configure(conf);
+      LongWritable key = new LongWritable();
+      Text value = new Text();
+      for (int i = 0; i < 3; i++) {
+        int numSplits = random.nextInt(MAX_LENGTH/2000)+1;
+        LOG.info("splitting: requesting = " + numSplits);
+        InputSplit[] splits = format.getSplits(conf, numSplits);
+        LOG.info("splitting: got =        " + splits.length);
+
+
+
+        // check each split
+        BitSet bits = new BitSet(length);
+        for (int j = 0; j < splits.length; j++) {
+          LOG.debug("split["+j+"]= " + splits[j]);
+          RecordReader<LongWritable, Text> reader =
+            format.getRecordReader(splits[j], conf, reporter);
+          try {
+            int counter = 0;
+            while (reader.next(key, value)) {
+              int v = Integer.parseInt(value.toString());
+              LOG.debug("read " + v);
+
+              if (bits.get(v)) {
+                LOG.warn("conflict with " + v +
+                    " in split " + j +
+                    " at position "+reader.getPos());
+              }
+              assertFalse("Key in multiple partitions.", bits.get(v));
+              bits.set(v);
+              counter++;
+            }
+            if (counter > 0) {
+              LOG.info("splits["+j+"]="+splits[j]+" count=" + counter);
+            } else {
+              LOG.debug("splits["+j+"]="+splits[j]+" count=" + counter);
+            }
+          } finally {
+            reader.close();
+          }
+        }
+        assertEquals("Some keys in no partition.", length, bits.cardinality());
+      }
+
+    }
+
+  }
+
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream
                                              (str.getBytes("UTF-8")), 
@@ -137,7 +249,8 @@ public class TestTextInputFormat extends TestCase {
                                              (str.getBytes("UTF-8")), 
                                            bufsz);
   }
-  
+
+  @Test
   public void testUTF8() throws Exception {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
@@ -156,6 +269,7 @@ public class TestTextInputFormat extends TestCase {
    *
    * @throws Exception
    */
+  @Test
   public void testNewLines() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\r\r\n\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
@@ -195,6 +309,7 @@ public class TestTextInputFormat extends TestCase {
    *
    * @throws Exception
    */
+  @Test
   public void testMaxLineLength() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
@@ -217,6 +332,38 @@ public class TestTextInputFormat extends TestCase {
       assertEquals("end of file, bufsz: " +bufsz, 0, in.readLine(out));
       assertEquals("total bytes, bufsz: "+bufsz, c, STRLENBYTES);
     }
+  }
+
+  @Test
+  public void testMRMaxLine() throws Exception {
+    final int MAXPOS = 1024 * 1024;
+    final int MAXLINE = 10 * 1024;
+    final int BUF = 64 * 1024;
+    final InputStream infNull = new InputStream() {
+      int position = 0;
+      final int MAXPOSBUF = 1024 * 1024 + BUF; // max LRR pos + LineReader buf
+      @Override
+      public int read() {
+        ++position;
+        return 0;
+      }
+      @Override
+      public int read(byte[] b) {
+        assertTrue("Read too many bytes from the stream", position < MAXPOSBUF);
+        Arrays.fill(b, (byte) 0);
+        position += b.length;
+        return b.length;
+      }
+    };
+    final LongWritable key = new LongWritable();
+    final Text val = new Text();
+    LOG.info("Reading a line from /dev/null");
+    final Configuration conf = new Configuration(false);
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+                LineRecordReader.MAX_LINE_LENGTH, MAXLINE);
+    conf.setInt("io.file.buffer.size", BUF); // used by LRR
+    final LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
+    assertFalse("Read a line from null", lrr.next(key, val));
   }
 
   private static void writeFile(FileSystem fs, Path name, 
@@ -244,7 +391,7 @@ public class TestTextInputFormat extends TestCase {
     Text value = reader.createValue();
     while (reader.next(key, value)) {
       result.add(value);
-      value = (Text) reader.createValue();
+      value = reader.createValue();
     }
     reader.close();
     return result;
@@ -253,8 +400,9 @@ public class TestTextInputFormat extends TestCase {
   /**
    * Test using the gzip codec for reading
    */
-  public static void testGzip() throws IOException {
-    JobConf job = new JobConf();
+  @Test
+  public void testGzip() throws IOException {
+    JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
     localFs.delete(workDir, true);
@@ -286,8 +434,9 @@ public class TestTextInputFormat extends TestCase {
   /**
    * Test using the gzip codec and an empty input file
    */
-  public static void testGzipEmpty() throws IOException {
-    JobConf job = new JobConf();
+  @Test
+  public void testGzipEmpty() throws IOException {
+    JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
     localFs.delete(workDir, true);

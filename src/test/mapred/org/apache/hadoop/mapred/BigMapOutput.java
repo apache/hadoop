@@ -42,7 +42,11 @@ public class BigMapOutput extends Configured implements Tool {
   public static final Log LOG =
     LogFactory.getLog(BigMapOutput.class.getName());
   private static Random random = new Random();
-  
+  public static String MIN_KEY = "mapreduce.bmo.minkey";
+  public static String MIN_VALUE = "mapreduce.bmo.minvalue";
+  public static String MAX_KEY = "mapreduce.bmo.maxkey";
+  public static String MAX_VALUE = "mapreduce.bmo.maxvalue";
+
   private static void randomizeBytes(byte[] data, int offset, int length) {
     for(int i=offset + length - 1; i >= offset; --i) {
       data[i] = (byte) random.nextInt(256);
@@ -66,12 +70,12 @@ public class BigMapOutput extends Configured implements Tool {
                                 BytesWritable.class, BytesWritable.class,
                                 CompressionType.NONE);
     long numBytesToWrite = fileSizeInMB * 1024 * 1024;
-    int minKeySize = conf.getInt("test.bmo.min_key", 10);;
+    int minKeySize = conf.getInt(MIN_KEY, 10);;
     int keySizeRange = 
-      conf.getInt("test.bmo.max_key", 1000) - minKeySize;
-    int minValueSize = conf.getInt("test.bmo.min_value", 0);
+      conf.getInt(MAX_KEY, 1000) - minKeySize;
+    int minValueSize = conf.getInt(MIN_VALUE, 0);
     int valueSizeRange = 
-      conf.getInt("test.bmo.max_value", 20000) - minValueSize;
+      conf.getInt(MAX_VALUE, 20000) - minValueSize;
     BytesWritable randomKey = new BytesWritable();
     BytesWritable randomValue = new BytesWritable();
 

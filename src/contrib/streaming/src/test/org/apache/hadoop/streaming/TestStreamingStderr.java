@@ -47,8 +47,8 @@ public class TestStreamingStderr extends TestCase
                                                          Integer.toString(duringLines),
                                                          Integer.toString(postLines)}),
       "-reducer", StreamJob.REDUCE_NONE,
-      "-jobconf", "keep.failed.task.files=true",
-      "-jobconf", "mapred.task.timeout=5000",
+      "-jobconf", "mapreduce.task.files.preserve.failedtasks=true",
+      "-jobconf", "mapreduce.task.timeout=5000",
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }

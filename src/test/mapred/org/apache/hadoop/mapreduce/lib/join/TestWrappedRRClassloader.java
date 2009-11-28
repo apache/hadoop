@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil.Fake_RR;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 public class TestWrappedRRClassloader extends TestCase {
   /**
@@ -52,9 +53,9 @@ public class TestWrappedRRClassloader extends TestCase {
       new CompositeInputFormat<NullWritable>();
     // create dummy TaskAttemptID
     TaskAttemptID tid = new TaskAttemptID("jt", 1, TaskType.MAP, 0, 0);
-    conf.set("mapred.task.id", tid.toString());
+    conf.set(JobContext.TASK_ATTEMPT_ID, tid.toString());
     inputFormat.createRecordReader(inputFormat.getSplits(new Job(conf)).get(0), 
-      new TaskAttemptContext(conf, tid));
+      new TaskAttemptContextImpl(conf, tid));
   }
 
   public static class Fake_ClassLoader extends ClassLoader {

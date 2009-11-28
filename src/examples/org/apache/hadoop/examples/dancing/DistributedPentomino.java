@@ -109,11 +109,11 @@ public class DistributedPentomino extends Configured implements Tool {
     public void setup(Context context) {
       this.context = context;
       Configuration conf = context.getConfiguration();
-      depth = conf.getInt("pent.depth", PENT_DEPTH);
-      width = conf.getInt("pent.width", PENT_WIDTH);
-      height = conf.getInt("pent.height", PENT_HEIGHT);
+      depth = conf.getInt(Pentomino.DEPTH, PENT_DEPTH);
+      width = conf.getInt(Pentomino.WIDTH, PENT_WIDTH);
+      height = conf.getInt(Pentomino.HEIGHT, PENT_HEIGHT);
       pent = (Pentomino) 
-        ReflectionUtils.newInstance(conf.getClass("pent.class", 
+        ReflectionUtils.newInstance(conf.getClass(Pentomino.CLASS, 
                                                   OneSidedPentomino.class), 
                                     conf);
       pent.initialize(width, height);
@@ -172,12 +172,12 @@ public class DistributedPentomino extends Configured implements Tool {
     }
 
     Configuration conf = getConf();
-    int width = conf.getInt("pent.width", PENT_WIDTH);
-    int height = conf.getInt("pent.height", PENT_HEIGHT);
-    int depth = conf.getInt("pent.depth", PENT_DEPTH);
-    Class<? extends Pentomino> pentClass = conf.getClass("pent.class", 
+    int width = conf.getInt(Pentomino.WIDTH, PENT_WIDTH);
+    int height = conf.getInt(Pentomino.HEIGHT, PENT_HEIGHT);
+    int depth = conf.getInt(Pentomino.DEPTH, PENT_DEPTH);
+    Class<? extends Pentomino> pentClass = conf.getClass(Pentomino.CLASS, 
       OneSidedPentomino.class, Pentomino.class);
-    int numMaps = conf.getInt("mapred.map.tasks", DEFAULT_MAPS);
+    int numMaps = conf.getInt(JobContext.NUM_MAPS, DEFAULT_MAPS);
     Path output = new Path(args[0]);
     Path input = new Path(output + "_input");
     FileSystem fileSys = FileSystem.get(conf);

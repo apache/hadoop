@@ -1,0 +1,65 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+include::intro.txt[]
+
+
+The Sqoop Command Line
+----------------------
+
+To execute Sqoop, run with Hadoop:
+----
+$ bin/hadoop jar contrib/sqoop/hadoop-$(version)-sqoop.jar (arguments)
+----
+
+NOTE:Throughput this document, we will use `sqoop` as shorthand for the
+above. i.e., `$ sqoop (arguments)`
+
+You pass this program options describing the
+import job you want to perform. If you need a hint, running Sqoop with
+`--help` will print out a list of all the command line
+options available. The +sqoop(1)+ manual page will also describe
+Sqoop's available arguments in greater detail. The manual page is built
+in `$HADOOP_HOME/build/contrib/sqoop/doc/sqoop.1.gz`.
+The following subsections will describe the most common modes of operation.
+
+include::connecting.txt[]
+
+include::listing-dbs.txt[]
+
+include::listing-tables.txt[]
+
+include::full-db-import.txt[]
+
+include::table-import.txt[]
+
+include::controlling-output-format.txt[]
+
+include::classnames.txt[]
+
+include::misc-args.txt[]
+
+include::direct.txt[]
+
+include::hive.txt[]
+
+include::supported-dbs.txt[]
+
+include::api-reference.txt[]
+

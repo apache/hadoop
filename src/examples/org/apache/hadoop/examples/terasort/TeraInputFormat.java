@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.examples.terasort;
 
+import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileSplit;
@@ -37,6 +37,7 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.QuickSort;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * An input format that reads the first 10 characters of each line as the key
@@ -46,9 +47,42 @@ import org.apache.hadoop.util.QuickSort;
 public class TeraInputFormat extends FileInputFormat<Text,Text> {
 
   static final String PARTITION_FILENAME = "_partition.lst";
-  static final String SAMPLE_SIZE = "terasort.partitions.sample";
+  private static final String NUM_PARTITIONS = "terasort.num.partitions";
+  private static final String SAMPLE_SIZE = "terasort.partitions.sample";
+  static final int KEY_LENGTH = 10;
+  static final int VALUE_LENGTH = 90;
+  static final int RECORD_LENGTH = KEY_LENGTH + VALUE_LENGTH;
   private static JobConf lastConf = null;
   private static InputSplit[] lastResult = null;
+
+  static class TeraFileSplit extends FileSplit {
+    private String[] locations;
+    public TeraFileSplit() {}
+    public TeraFileSplit(Path file, long start, long length, String[] hosts) {
+      super(file, start, length, hosts);
+      locations = hosts;
+    }
+    protected void setLocations(String[] hosts) {
+      locations = hosts;
+    }
+    @Override
+    public String[] getLocations() {
+      return locations;
+    }
+    public String toString() {
+      StringBuffer result = new StringBuffer();
+      result.append(getPath());
+      result.append(" from ");
+      result.append(getStart());
+      result.append(" length ");
+      result.append(getLength());
+      for(String host: getLocations()) {
+        result.append(" ");
+        result.append(host);
+      }
+      return result.toString();
+    }
+  }
 
   static class TextSampler implements IndexedSortable {
     private ArrayList<Text> records = new ArrayList<Text>();
@@ -67,7 +101,9 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     }
 
     public void addKey(Text key) {
-      records.add(new Text(key));
+      synchronized (this) {
+        records.add(new Text(key));
+      }
     }
 
     /**
@@ -80,7 +116,7 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     Text[] createPartitions(int numPartitions) {
       int numRecords = records.size();
       System.out.println("Making " + numPartitions + " from " + numRecords + 
-                         " records");
+                         " sampled records");
       if (numPartitions > numRecords) {
         throw new IllegalArgumentException
           ("Requested more partitions than input keys (" + numPartitions +
@@ -88,7 +124,6 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
       }
       new QuickSort().sort(this, 0, records.size());
       float stepSize = numRecords / (float) numPartitions;
-      System.out.println("Step size is " + stepSize);
       Text[] result = new Text[numPartitions-1];
       for(int i=1; i < numPartitions; ++i) {
         result[i-1] = records.get(Math.round(stepSize * i));
@@ -105,54 +140,86 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
    * @param partFile where to write the output file to
    * @throws IOException if something goes wrong
    */
-  public static void writePartitionFile(JobConf conf, 
+  public static void writePartitionFile(final JobConf conf, 
                                         Path partFile) throws IOException {
-    TeraInputFormat inFormat = new TeraInputFormat();
-    TextSampler sampler = new TextSampler();
-    Text key = new Text();
-    Text value = new Text();
+    long t1 = System.currentTimeMillis();
+    final TeraInputFormat inFormat = new TeraInputFormat();
+    final TextSampler sampler = new TextSampler();
     int partitions = conf.getNumReduceTasks();
     long sampleSize = conf.getLong(SAMPLE_SIZE, 100000);
-    InputSplit[] splits = inFormat.getSplits(conf, conf.getNumMapTasks());
-    int samples = Math.min(10, splits.length);
-    long recordsPerSample = sampleSize / samples;
-    int sampleStep = splits.length / samples;
-    long records = 0;
+    final InputSplit[] splits = inFormat.getSplits(conf, conf.getNumMapTasks());
+    long t2 = System.currentTimeMillis();
+    System.out.println("Computing input splits took " + (t2 - t1) + "ms");
+    int samples = Math.min(conf.getInt(NUM_PARTITIONS, 10), splits.length);
+    System.out.println("Sampling " + samples + " splits of " + splits.length);
+    final long recordsPerSample = sampleSize / samples;
+    final int sampleStep = splits.length / samples;
+    Thread[] samplerReader = new Thread[samples];
     // take N samples from different parts of the input
     for(int i=0; i < samples; ++i) {
-      RecordReader<Text,Text> reader = 
-        inFormat.getRecordReader(splits[sampleStep * i], conf, null);
-      while (reader.next(key, value)) {
-        sampler.addKey(key);
-        records += 1;
-        if ((i+1) * recordsPerSample <= records) {
-          break;
+      final int idx = i;
+      samplerReader[i] = 
+        new Thread ("Sampler Reader " + idx) {
+        {
+          setDaemon(true);
         }
-      }
+        public void run() {
+          Text key = new Text();
+          Text value = new Text();
+          long records = 0;
+          try {
+            RecordReader<Text,Text> reader = 
+              inFormat.getRecordReader(splits[sampleStep * idx], conf, null);
+            while (reader.next(key, value)) {
+              sampler.addKey(key);
+              records += 1;
+              if (recordsPerSample <= records) {
+                break;
+              }
+            }
+          } catch (IOException ie){
+            System.err.println("Got an exception while reading splits " +
+                StringUtils.stringifyException(ie));
+            System.exit(-1);
+          }
+        }
+      };
+      samplerReader[i].start();
     }
     FileSystem outFs = partFile.getFileSystem(conf);
-    if (outFs.exists(partFile)) {
-      outFs.delete(partFile, false);
+    DataOutputStream writer = outFs.create(partFile, true, 64*1024, (short) 10, 
+                                           outFs.getDefaultBlockSize());
+    for (int i = 0; i < samples; i++) {
+      try {
+        samplerReader[i].join();
+      } catch (InterruptedException e) {
+      }
     }
-    SequenceFile.Writer writer = 
-      SequenceFile.createWriter(outFs, conf, partFile, Text.class, 
-                                NullWritable.class);
-    NullWritable nullValue = NullWritable.get();
     for(Text split : sampler.createPartitions(partitions)) {
-      writer.append(split, nullValue);
+      split.write(writer);
     }
     writer.close();
+    long t3 = System.currentTimeMillis();
+    System.out.println("Computing parititions took " + (t3 - t2) + "ms");
   }
 
   static class TeraRecordReader implements RecordReader<Text,Text> {
-    private LineRecordReader in;
-    private LongWritable junk = new LongWritable();
-    private Text line = new Text();
-    private static int KEY_LENGTH = 10;
+    private FSDataInputStream in;
+    private long offset;
+    private long length;
+    private static final int RECORD_LENGTH = KEY_LENGTH + VALUE_LENGTH;
+    private byte[] buffer = new byte[RECORD_LENGTH];
 
     public TeraRecordReader(Configuration job, 
                             FileSplit split) throws IOException {
-      in = new LineRecordReader(job, split);
+      Path p = split.getPath();
+      FileSystem fs = p.getFileSystem(job);
+      in = fs.open(p);
+      long start = split.getStart();
+      // find the offset to start at a record boundary
+      offset = (RECORD_LENGTH - (start % RECORD_LENGTH)) % RECORD_LENGTH;
+      in.seek(start + offset);
+      length = split.getLength();
     }
 
     public void close() throws IOException {
@@ -172,23 +239,29 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     }
 
     public float getProgress() throws IOException {
-      return in.getProgress();
+      return (float) offset / length;
     }
 
     public boolean next(Text key, Text value) throws IOException {
-      if (in.next(junk, line)) {
-        if (line.getLength() < KEY_LENGTH) {
-          key.set(line);
-          value.clear();
-        } else {
-          byte[] bytes = line.getBytes();
-          key.set(bytes, 0, KEY_LENGTH);
-          value.set(bytes, KEY_LENGTH, line.getLength() - KEY_LENGTH);
-        }
-        return true;
-      } else {
+      if (offset >= length) {
         return false;
       }
+      int read = 0;
+      while (read < RECORD_LENGTH) {
+        long newRead = in.read(buffer, read, RECORD_LENGTH - read);
+        if (newRead == -1) {
+          if (read == 0) {
+            return false;
+          } else {
+            throw new EOFException("read past eof");
+          }
+        }
+        read += newRead;
+      }
+      key.set(buffer, 0, KEY_LENGTH);
+      value.set(buffer, KEY_LENGTH, VALUE_LENGTH);
+      offset += RECORD_LENGTH;
+      return true;
     }
   }
 
@@ -201,12 +274,28 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
   }
 
   @Override
+  protected FileSplit makeSplit(Path file, long start, long length, 
+                                String[] hosts) {
+    return new TeraFileSplit(file, start, length, hosts);
+  }
+
+  @Override
   public InputSplit[] getSplits(JobConf conf, int splits) throws IOException {
     if (conf == lastConf) {
       return lastResult;
     }
+    long t1, t2, t3;
+    t1 = System.currentTimeMillis();
     lastConf = conf;
     lastResult = super.getSplits(conf, splits);
+    t2 = System.currentTimeMillis();
+    System.out.println("Spent " + (t2 - t1) + "ms computing base-splits.");
+    if (conf.getBoolean("terasort.use.terascheduler", true)) {
+      TeraScheduler scheduler = new TeraScheduler((FileSplit[]) lastResult, conf);
+      lastResult = scheduler.getNewFileSplits();
+      t3 = System.currentTimeMillis(); 
+      System.out.println("Spent " + (t3 - t2) + "ms computing TeraScheduler splits.");
+    }
     return lastResult;
   }
 }

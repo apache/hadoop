@@ -19,14 +19,14 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
 	<header>
-		<title>Commands Guide</title>
+		<title>Hadoop Commands Guide</title>
 	</header>
 	
 	<body>
 		<section>
 			<title>Overview</title>
 			<p>
-				All hadoop commands are invoked by the bin/hadoop script. Running the hadoop
+				All Hadoop commands are invoked by the bin/hadoop script. Running the Hadoop
 				script without any arguments prints the description for all commands.
 			</p>
 			<p>
@@ -104,11 +104,11 @@
 		
 		<section>
 			<title> User Commands </title>
-			<p>Commands useful for users of a hadoop cluster.</p>
+			<p>Commands useful for users of a Hadoop cluster.</p>
 			<section>
 				<title> archive </title>
 				<p>
-					Creates a hadoop archive. More information can be found at <a href="hadoop_archives.html">Hadoop Archives</a>.
+					Creates a Hadoop archive. More information see the <a href="hadoop_archives.html">Hadoop Archives Guide</a>.
 				</p>
 				<p>
 					<code>Usage: hadoop archive -archiveName NAME &lt;src&gt;* &lt;dest&gt;</code>
@@ -133,7 +133,7 @@
 			<section>
 				<title> distcp </title>
 				<p>
-					Copy file or directories recursively. More information can be found at <a href="distcp.html">Hadoop DistCp Guide</a>.
+					Copy file or directories recursively. More information can be found at <a href="distcp.html">DistCp Guide</a>.
 				</p>
 				<p>
 					<code>Usage: hadoop distcp &lt;srcurl&gt; &lt;desturl&gt;</code>
@@ -155,21 +155,22 @@
 			<section>
 				<title> fs </title>
 				<p>
+					Runs a generic filesystem user client.
+				</p>
+				<p>
 					<code>Usage: hadoop fs [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] 
 					[COMMAND_OPTIONS]</code>
 				</p>
 				<p>
-					Runs a generic filesystem user client.
-				</p>
-				<p>
-					The various COMMAND_OPTIONS can be found at <a href="hdfs_shell.html">Hadoop FS Shell Guide</a>.
+					The various COMMAND_OPTIONS can be found at 
+					<a href="http://hadoop.apache.org/common/docs/current/file_system_shell.html">File System Shell Guide</a>.
 				</p>   
 			</section>
 			
 			<section>
 				<title> fsck </title>
 				<p>
-					Runs a HDFS filesystem checking utility. See <a href="hdfs_user_guide.html#Fsck">Fsck</a> for more info.
+					Runs a HDFS filesystem checking utility. See <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Fsck">Fsck</a> for more info.
 				</p> 
 				<p><code>Usage: hadoop fsck [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] 
 				&lt;path&gt; [-move | -delete | -openforwrite] [-files [-blocks 
@@ -220,12 +221,12 @@
 					<code>Usage: hadoop jar &lt;jar&gt; [mainClass] args...</code>
 				</p>
 				<p>
-					The streaming jobs are run via this command. Examples can be referred from 
-					<a href="streaming.html#More+usage+examples">Streaming examples</a>
+					The streaming jobs are run via this command. For examples, see 
+					<a href="streaming.html">Hadoop Streaming</a>.
 				</p>
 				<p>
-					Word count example is also run using jar command. It can be referred from
-					<a href="mapred_tutorial.html#Usage">Wordcount example</a>
+					The WordCount example is also run using jar command. For examples, see the
+					<a href="mapred_tutorial.html">MapReduce Tutorial</a>.
 				</p>
 			</section>
 			
@@ -238,7 +239,7 @@
 					<code>Usage: hadoop job [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] 
 					[-submit &lt;job-file&gt;] | [-status &lt;job-id&gt;] | 
 					[-counter &lt;job-id&gt; &lt;group-name&gt; &lt;counter-name&gt;] | [-kill &lt;job-id&gt;] | 
-					[-events &lt;job-id&gt; &lt;from-event-#&gt; &lt;#-of-events&gt;] | [-history [all] &lt;jobOutputDir&gt;] |
+					[-events &lt;job-id&gt; &lt;from-event-#&gt; &lt;#-of-events&gt;] | [-history [all] &lt;historyFile&gt;] |
 					[-list [all]] | [-kill-task &lt;task-id&gt;] | [-fail-task &lt;task-id&gt;] | 
           [-set-priority &lt;job-id&gt; &lt;priority&gt;]</code>
 				</p>
@@ -266,8 +267,8 @@
 			            <td>Prints the events' details received by jobtracker for the given range.</td>
 			           </tr>
 			           <tr>
-			          	<td><code>-history [all] &lt;jobOutputDir&gt;</code></td>
-			            <td>-history &lt;jobOutputDir&gt; prints job details, failed and killed tip details. More details 
+			          	<td><code>-history [all] &lt;historyFile&gt;</code></td>
+			            <td>-history &lt;historyFile&gt; prints job details, failed and killed tip details. More details 
 			            about the job such as successful tasks and task attempts made for each task can be viewed by 
 			            specifying the [all] option. </td>
 			           </tr>
@@ -401,24 +402,27 @@
 			<section>
 				<title> CLASSNAME </title>
 				<p>
-					 hadoop script can be used to invoke any class.
-				</p>
-				<p>
-					<code>Usage: hadoop CLASSNAME</code>
+					 Hadoop script can be used to invoke any class.
 				</p>
 				<p>
 					 Runs the class named CLASSNAME.
 				</p>
+
+				<p>
+					<code>Usage: hadoop CLASSNAME</code>
+				</p>
+
 			</section>
     </section>
 		<section>
 			<title> Administration Commands </title>
-			<p>Commands useful for administrators of a hadoop cluster.</p>
+			<p>Commands useful for administrators of a Hadoop cluster.</p>
 			<section>
 				<title> balancer </title>
 				<p>
 					Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the 
-					rebalancing process. See <a href="hdfs_user_guide.html#Rebalancer">Rebalancer</a> for more details.
+					rebalancing process. For more details see 
+					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Rebalancer">Rebalancer</a>.
 				</p>
 				<p>
 					<code>Usage: hadoop balancer [-threshold &lt;threshold&gt;]</code>
@@ -472,7 +476,7 @@
 			           <tr>
 			          	<td><code>-rollback</code></td>
 			            <td>Rollsback the datanode to the previous version. This should be used after stopping the datanode 
-			            and distributing the old hadoop version.</td>
+			            and distributing the old Hadoop version.</td>
 			           </tr>
 			     </table>
 			</section>
@@ -584,7 +588,7 @@
         </tr>
         <tr>
         <td><code>-refreshQueueAcls</code></td>
-        <td> Refresh the queue acls used by hadoop, to check access during submissions
+        <td> Refresh the queue acls used by Hadoop, to check access during submissions
         and administration of the job by the user. The properties present in
         <code>mapred-queue-acls.xml</code> is reloaded by the queue manager.</td>
         </tr>
@@ -615,11 +619,11 @@
 			<section>
 				<title> namenode </title>
 				<p>
-					Runs the namenode. More info about the upgrade, rollback and finalize is at 
-					<a href="hdfs_user_guide.html#Upgrade+and+Rollback">Upgrade Rollback</a>
+					Runs the namenode. For more information about upgrade, rollback and finalize see 
+					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Upgrade+and+Rollback">Upgrade and Rollback</a>.
 				</p>
 				<p>
-					<code>Usage: hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]</code>
+					<code>Usage: hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint] | [-checkpoint] | [-backup]</code>
 				</p>
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
@@ -642,12 +646,12 @@
 			           </tr>
 			           <tr>
 			          	<td><code>-upgrade</code></td>
-			            <td>Namenode should be started with upgrade option after the distribution of new hadoop version.</td>
+			            <td>Namenode should be started with upgrade option after the distribution of new Hadoop version.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-rollback</code></td>
 			            <td>Rollsback the namenode to the previous version. This should be used after stopping the cluster 
-			            and distributing the old hadoop version.</td>
+			            and distributing the old Hadoop version.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-finalize</code></td>
@@ -657,18 +661,33 @@
 			           <tr>
 			          	<td><code>-importCheckpoint</code></td>
 			            <td>Loads image from a checkpoint directory and saves it into the current one. Checkpoint directory 
-			            is read from property fs.checkpoint.dir</td>
+			            is read from property fs.checkpoint.dir
+			            (see <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Import+checkpoint">Import Checkpoint</a>).
+			            </td>
+			           </tr>
+			            <tr>
+			          	<td><code>-checkpoint</code></td>
+			            <td>Enables checkpointing 
+			            (see <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Checkpoint+Node">Checkpoint Node</a>).</td>
+			           </tr>
+			            <tr>
+			          	<td><code>-backup</code></td>
+			            <td>Enables checkpointing and maintains an in-memory, up-to-date copy of the file system namespace 
+			            (see <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Backup+Node">Backup Node</a>).</td>
 			           </tr>
 			     </table>
 			</section>
 			
 			<section>
 				<title> secondarynamenode </title>
-				<p>
-					Use of the Secondary NameNode has been deprecated. Instead, consider using a 
-					<a href="hdfs_user_guide.html#Checkpoint+node">Checkpoint node</a> or 
-					<a href="hdfs_user_guide.html#Backup+node">Backup node</a>. Runs the HDFS secondary 
-					namenode. See <a href="hdfs_user_guide.html#Secondary+NameNode">Secondary NameNode</a> 
+				<note>
+					The Secondary NameNode has been deprecated. Instead, consider using the
+					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Checkpoint+Node">Checkpoint Node</a> or 
+					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Backup+Node">Backup Node</a>. 
+				</note>
+				<p>	
+					Runs the HDFS secondary 
+					namenode. See <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Secondary+NameNode">Secondary NameNode</a> 
 					for more info.
 				</p>
 				<p>

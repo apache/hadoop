@@ -32,11 +32,11 @@ import org.apache.hadoop.mapreduce.Partitioner;
  * of the following properties:
  * <ul>
  *   <li>
- *     <i>mapred.binary.partitioner.left.offset</i>:
+ *     <i>mapreduce.partition.binarypartitioner.left.offset</i>:
  *     left offset in array (0 by default)
  *   </li>
  *   <li>
- *     <i>mapred.binary.partitioner.right.offset</i>: 
+ *     <i>mapreduce.partition.binarypartitioner.right.offset</i>: 
  *     right offset in array (-1 by default)
  *   </li>
  * </ul>
@@ -67,10 +67,10 @@ import org.apache.hadoop.mapreduce.Partitioner;
 public class BinaryPartitioner<V> extends Partitioner<BinaryComparable, V> 
   implements Configurable {
 
-  private static final String LEFT_OFFSET_PROPERTY_NAME = 
-    "mapred.binary.partitioner.left.offset";
-  private static final String RIGHT_OFFSET_PROPERTY_NAME = 
-    "mapred.binary.partitioner.right.offset";
+  public static final String LEFT_OFFSET_PROPERTY_NAME = 
+    "mapreduce.partition.binarypartitioner.left.offset";
+  public static final String RIGHT_OFFSET_PROPERTY_NAME = 
+    "mapreduce.partition.binarypartitioner.right.offset";
   
   /**
    * Set the subarray to be used for partitioning to 

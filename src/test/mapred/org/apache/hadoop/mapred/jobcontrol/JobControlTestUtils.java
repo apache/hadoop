@@ -145,7 +145,7 @@ public class JobControlTestUtils {
         throws IOException {
       Text dumbKey = new Text("");
       while (values.hasNext()) {
-        Text data = (Text) values.next();
+        Text data = values.next();
         output.collect(dumbKey, data);
       }
     }

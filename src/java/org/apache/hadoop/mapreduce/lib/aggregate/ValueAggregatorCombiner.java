@@ -45,7 +45,7 @@ public class ValueAggregatorCombiner<K1 extends WritableComparable<?>,
     int pos = keyStr.indexOf(ValueAggregatorDescriptor.TYPE_SEPARATOR);
     String type = keyStr.substring(0, pos);
     long uniqCount = context.getConfiguration().
-      getLong("aggregate.max.num.unique.values", Long.MAX_VALUE);
+      getLong(UniqValueCount.MAX_NUM_UNIQUE_VALUES, Long.MAX_VALUE);
     ValueAggregator aggregator = ValueAggregatorBaseDescriptor
       .generateValueAggregator(type, uniqCount);
     for (Text val : values) {

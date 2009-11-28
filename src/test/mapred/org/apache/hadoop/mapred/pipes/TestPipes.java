@@ -37,11 +37,12 @@ import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.OutputLogFilter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ToolRunner;
 
 import junit.framework.TestCase;
 
@@ -196,7 +197,8 @@ public class TestPipes extends TestCase {
 
     List<String> results = new ArrayList<String>();
     for (Path p:FileUtil.stat2Paths(dfs.getFileSystem().listStatus(outputPath,
-    		                        new OutputLogFilter()))) {
+    		                        new Utils.OutputFileUtils
+    		                                 .OutputFilesFilter()))) {
       results.add(TestMiniMRWithDFS.readOutput(p, job));
     }
     assertEquals("number of reduces is wrong", 
@@ -262,12 +264,14 @@ public class TestPipes extends TestCase {
                        " -program " + 
                        dfs.getFileSystem().makeQualified(wordExec));
     try {
-      Submitter.main(new String[]{"-conf", jobXml.toString(),
+      int ret = ToolRunner.run(new Submitter(),
+                               new String[]{"-conf", jobXml.toString(),
                                   "-input", inDir.toString(),
                                   "-output", nonPipedOutDir.toString(),
                                   "-program", 
                         dfs.getFileSystem().makeQualified(wordExec).toString(),
                                   "-reduces", "2"});
+      assertEquals(0, ret);
     } catch (Exception e) {
       assertTrue("got exception: " + StringUtils.stringifyException(e), false);
     }

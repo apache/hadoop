@@ -72,9 +72,9 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     job.setOutputFormat(TextOutputFormat.class);
     job.setNumReduceTasks(1);
 
-    job.set("mapred.data.field.separator", "-");
-    job.set("map.output.key.value.fields.spec", "6,5,1-3:0-");
-    job.set("reduce.output.key.value.fields.spec", ":4,3,2,1,0,0-");
+    job.set("mapreduce.fieldsel.data.field.separator", "-");
+    job.set("mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec", "6,5,1-3:0-");
+    job.set("mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec", ":4,3,2,1,0,0-");
 
     JobClient.runJob(job);
 

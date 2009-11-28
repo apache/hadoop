@@ -29,6 +29,7 @@ import java.util.Stack;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.examples.RandomTextWriter;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -89,15 +90,18 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
           job.setOutputValueClass(
             Class.forName(argv[++i]).asSubclass(Writable.class));
         } else if ("-keepmap".equals(argv[i])) {
-          job.set("hadoop.sort.map.keep.percent", argv[++i]);
+          job.set(org.apache.hadoop.mapreduce.
+           GenericMRLoadGenerator.MAP_PRESERVE_PERCENT, argv[++i]);
         } else if ("-keepred".equals(argv[i])) {
-          job.set("hadoop.sort.reduce.keep.percent", argv[++i]);
+          job.set(org.apache.hadoop.mapreduce.
+            GenericMRLoadGenerator.REDUCE_PRESERVE_PERCENT, argv[++i]);
         } else if ("-outdir".equals(argv[i])) {
           FileOutputFormat.setOutputPath(job, new Path(argv[++i]));
         } else if ("-indir".equals(argv[i])) {
           FileInputFormat.addInputPaths(job, argv[++i]);
         } else if ("-inFormatIndirect".equals(argv[i])) {
-          job.setClass("mapred.indirect.input.format",
+          job.setClass(org.apache.hadoop.mapreduce.
+              GenericMRLoadGenerator.INDIRECT_INPUT_FORMAT,
               Class.forName(argv[++i]).asSubclass(InputFormat.class),
               InputFormat.class);
           job.setInputFormat(IndirectInputFormat.class);
@@ -133,14 +137,18 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       // No input dir? Generate random data
       System.err.println("No input path; ignoring InputFormat");
       confRandom(job);
-    } else if (null != job.getClass("mapred.indirect.input.format", null)) {
+    } else if (null != job.getClass(
+       org.apache.hadoop.mapreduce.GenericMRLoadGenerator.INDIRECT_INPUT_FORMAT,
+       null)) {
       // specified IndirectInputFormat? Build src list
       JobClient jClient = new JobClient(job);  
       Path sysdir = jClient.getSystemDir();
       Random r = new Random();
       Path indirInputFile = new Path(sysdir,
           Integer.toString(r.nextInt(Integer.MAX_VALUE), 36) + "_files");
-      job.set("mapred.indirect.input.file", indirInputFile.toString());
+      job.set(
+        org.apache.hadoop.mapreduce.GenericMRLoadGenerator.INDIRECT_INPUT_FILE,
+        indirInputFile.toString());
       SequenceFile.Writer writer = SequenceFile.createWriter(
           sysdir.getFileSystem(job), job, indirInputFile,
           LongWritable.class, Text.class,
@@ -249,12 +257,12 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     }
 
     public void configure(JobConf job) {
-      bytesToWrite = job.getLong("test.randomtextwrite.bytes_per_map",
+      bytesToWrite = job.getLong(RandomTextWriter.BYTES_PER_MAP,
                                     1*1024*1024*1024);
-      keymin = job.getInt("test.randomtextwrite.min_words_key", 5);
-      keymax = job.getInt("test.randomtextwrite.max_words_key", 10);
-      valmin = job.getInt("test.randomtextwrite.min_words_value", 5);
-      valmax = job.getInt("test.randomtextwrite.max_words_value", 10);
+      keymin = job.getInt(RandomTextWriter.MIN_KEY, 5);
+      keymax = job.getInt(RandomTextWriter.MAX_KEY, 10);
+      valmin = job.getInt(RandomTextWriter.MIN_VALUE, 5);
+      valmax = job.getInt(RandomTextWriter.MAX_VALUE, 10);
     }
 
     public void map(Text key, Text val, OutputCollector<Text,Text> output,
@@ -291,19 +299,19 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     job.setMapperClass(RandomMapOutput.class);
 
     final ClusterStatus cluster = new JobClient(job).getClusterStatus();
-    int numMapsPerHost = job.getInt("test.randomtextwrite.maps_per_host", 10);
+    int numMapsPerHost = job.getInt(RandomTextWriter.MAPS_PER_HOST, 10);
     long numBytesToWritePerMap =
-      job.getLong("test.randomtextwrite.bytes_per_map", 1*1024*1024*1024);
+      job.getLong(RandomTextWriter.BYTES_PER_MAP, 1*1024*1024*1024);
     if (numBytesToWritePerMap == 0) {
       throw new IOException(
-          "Cannot have test.randomtextwrite.bytes_per_map set to 0");
+          "Cannot have " + RandomTextWriter.BYTES_PER_MAP + " set to 0");
     }
-    long totalBytesToWrite = job.getLong("test.randomtextwrite.total_bytes",
+    long totalBytesToWrite = job.getLong(RandomTextWriter.TOTAL_BYTES,
          numMapsPerHost * numBytesToWritePerMap * cluster.getTaskTrackers());
     int numMaps = (int)(totalBytesToWrite / numBytesToWritePerMap);
     if (numMaps == 0 && totalBytesToWrite > 0) {
       numMaps = 1;
-      job.setLong("test.randomtextwrite.bytes_per_map", totalBytesToWrite);
+      job.setLong(RandomTextWriter.BYTES_PER_MAP, totalBytesToWrite);
     }
     job.setNumMapTasks(numMaps);
   }
@@ -337,7 +345,9 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       extends SampleMapReduceBase<K,V> implements Mapper<K,V,K,V> {
 
     public void configure(JobConf job) {
-      setKeep(job.getFloat("hadoop.sort.map.keep.percent", (float)100.0) /
+      setKeep(job.getFloat(
+    	org.apache.hadoop.mapreduce.GenericMRLoadGenerator.MAP_PRESERVE_PERCENT,
+    	(float)100.0) /
         (float)100.0);
     }
 
@@ -353,7 +363,8 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       extends SampleMapReduceBase<K,V> implements Reducer<K,V,K,V> {
 
     public void configure(JobConf job) {
-      setKeep(job.getFloat("hadoop.sort.reduce.keep.percent", (float)100.0) /
+      setKeep(job.getFloat(org.apache.hadoop.mapreduce.
+        GenericMRLoadGenerator.REDUCE_PRESERVE_PERCENT, (float)100.0) /
         (float)100.0);
     }
 
@@ -401,7 +412,9 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     public InputSplit[] getSplits(JobConf job, int numSplits)
         throws IOException {
 
-      Path src = new Path(job.get("mapred.indirect.input.file", null));
+      Path src = new Path(job.get(
+        org.apache.hadoop.mapreduce.GenericMRLoadGenerator.INDIRECT_INPUT_FILE,
+        null));
       FileSystem fs = src.getFileSystem(job);
 
       ArrayList<IndirectSplit> splits = new ArrayList<IndirectSplit>(numSplits);
@@ -418,7 +431,8 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     public RecordReader getRecordReader(InputSplit split, JobConf job,
         Reporter reporter) throws IOException {
       InputFormat indirIF = (InputFormat)ReflectionUtils.newInstance(
-          job.getClass("mapred.indirect.input.format",
+          job.getClass(org.apache.hadoop.mapreduce.
+            GenericMRLoadGenerator.INDIRECT_INPUT_FORMAT, 
             SequenceFileInputFormat.class), job);
       IndirectSplit is = ((IndirectSplit)split);
       return indirIF.getRecordReader(new FileSplit(is.getPath(), 0,

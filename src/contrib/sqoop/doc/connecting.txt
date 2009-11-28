@@ -1,0 +1,85 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Connecting to a Database Server
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sqoop is designed to import tables from a database into HDFS. As such,
+it requires a _connect string_ that describes how to connect to the
+database. The _connect string_ looks like a URL, and is communicated to
+Sqoop with the +--connect+ argument. This describes the server and
+database to connect to; it may also specify the port. e.g.:
+
+----
+$ sqoop --connect jdbc:mysql://database.example.com/employees
+----
+
+This string will connect to a MySQL database named +employees+ on the
+host +database.example.com+. It's important that you *do not* use the URL
++localhost+ if you intend to use Sqoop with a distributed Hadoop
+cluster. The connect string you supply will be used on TaskTracker nodes
+throughout your MapReduce cluster; if they're told to connect to the
+literal name +localhost+, they'll each reach a different
+database (or more likely, no database at all)! Instead, you should use
+the full hostname or IP address of the database host that can be seen
+by all your remote nodes.
+
+You may need to authenticate against the database before you can
+access it. The +--username+ and +--password+ or +-P+ parameters can
+be used to supply a username and a password to the database. e.g.:
+
+----
+$ sqoop --connect jdbc:mysql://database.example.com/employees \
+    --username aaron --password 12345
+----
+
+.Password security
+WARNING: The +--password+ parameter is insecure, as other users may
+be able to read your password from the command-line arguments via
+the output of programs such as `ps`. The *+-P+* argument will read
+a password from a console prompt, and is the preferred method of
+entering credentials. Credentials may still be transferred between
+nodes of the MapReduce cluster using insecure means.
+
+Sqoop automatically supports several databases, including MySQL. Connect strings beginning
+with +jdbc:mysql://+ are handled automatically Sqoop, though you may need
+to install the driver yourself. (A full list of databases with
+built-in support is provided in the "Supported Databases" section, below.)
+
+You can use Sqoop with any other
+JDBC-compliant database as well. First, download the appropriate JDBC
+driver for the database you want to import from, and install the .jar
+file in the +/usr/hadoop/lib+ directory on all machines in your Hadoop
+cluster, or some other directory which is in the classpath
+on all nodes. Each driver jar also has a specific driver class which defines
+the entry-point to the driver. For example, MySQL's Connector/J library has
+a driver class of +com.mysql.jdbc.Driver+. Refer to your database
+vendor-specific documentation to determine the main driver class.
+This class must be provided as an argument to Sqoop with +--driver+.
+
+For example, to connect to a postgres database, first download the driver from
+link:http://jdbc.postgresql.org[http://jdbc.postgresql.org] and
+install it in your Hadoop lib path.
+Then run Sqoop with something like:
+
+----
+$ sqoop --connect jdbc:postgresql://postgres-server.example.com/employees \
+    --driver org.postgresql.Driver
+----
+

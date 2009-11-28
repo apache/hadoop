@@ -45,6 +45,12 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
 
   private Node partitions;
   public static final String DEFAULT_PATH = "_partition.lst";
+  public static final String PARTITIONER_PATH = 
+    "mapreduce.totalorderpartitioner.path";
+  public static final String MAX_TRIE_DEPTH = 
+    "mapreduce.totalorderpartitioner.trie.maxdepth"; 
+  public static final String NATURAL_ORDER = 
+    "mapreduce.totalorderpartitioner.naturalorder";
   Configuration conf;
 
   public TotalOrderPartitioner() { }
@@ -83,7 +89,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
         }
       }
       boolean natOrder =
-        conf.getBoolean("total.order.partitioner.natural.order", true);
+        conf.getBoolean(NATURAL_ORDER, true);
       if (natOrder && BinaryComparable.class.isAssignableFrom(keyClass)) {
         partitions = buildTrie((BinaryComparable[])splitPoints, 0,
             splitPoints.length, new byte[0],
@@ -94,7 +100,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
             // case where the split points are long and mostly look like bytes 
             // iii...iixii...iii   .  Therefore, we make the default depth
             // limit large but not huge.
-            conf.getInt("total.order.partitioner.max.trie.depth", 200));
+            conf.getInt(MAX_TRIE_DEPTH, 200));
       } else {
         partitions = new BinarySearchNode(splitPoints, comparator);
       }
@@ -119,7 +125,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
    * keys in the SequenceFile.
    */
   public static void setPartitionFile(Configuration conf, Path p) {
-    conf.set("total.order.partitioner.path", p.toString());
+    conf.set(PARTITIONER_PATH, p.toString());
   }
 
   /**
@@ -127,7 +133,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
    * @see #setPartitionFile(Configuration, Path)
    */
   public static String getPartitionFile(Configuration conf) {
-    return conf.get("total.order.partitioner.path", DEFAULT_PATH);
+    return conf.get(PARTITIONER_PATH, DEFAULT_PATH);
   }
 
   /**

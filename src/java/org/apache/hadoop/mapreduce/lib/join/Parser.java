@@ -42,6 +42,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -309,8 +311,9 @@ public abstract static class Node extends ComposableInputFormat {
     
     public List<InputSplit> getSplits(JobContext context)
         throws IOException, InterruptedException {
-      return inf.getSplits(new JobContext(
-        getConf(context.getConfiguration()), context.getJobID()));
+      return inf.getSplits(
+                 new JobContextImpl(getConf(context.getConfiguration()), 
+                                    context.getJobID()));
     }
 
     public ComposableRecordReader<?, ?> createRecordReader(InputSplit split, 
@@ -321,8 +324,10 @@ public abstract static class Node extends ComposableInputFormat {
           throw new IOException("No RecordReader for " + ident);
         }
         Configuration conf = getConf(taskContext.getConfiguration());
-        TaskAttemptContext context = new TaskAttemptContext(conf, 
-          TaskAttemptID.forName(conf.get("mapred.task.id")));
+        TaskAttemptContext context = 
+          new TaskAttemptContextImpl(conf, 
+                                     TaskAttemptID.forName(
+                                         conf.get(JobContext.TASK_ATTEMPT_ID)));
         return rrCstrMap.get(ident).newInstance(id,
             inf.createRecordReader(split, context), cmpcl);
       } catch (IllegalAccessException e) {

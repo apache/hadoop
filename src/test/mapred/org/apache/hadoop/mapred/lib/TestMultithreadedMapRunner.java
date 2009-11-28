@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.lib.map.MultithreadedMapper;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -92,7 +93,7 @@ public class TestMultithreadedMapRunner extends HadoopTestCase {
 
     conf.setMapRunnerClass(MultithreadedMapRunner.class);
     
-    conf.setInt("mapred.map.multithreadedrunner.threads", 2);
+    conf.setInt(MultithreadedMapper.NUM_THREADS, 2);
 
     if (ioEx) {
       conf.setBoolean("multithreaded.ioException", true);

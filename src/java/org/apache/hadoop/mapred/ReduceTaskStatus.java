@@ -105,7 +105,7 @@ class ReduceTaskStatus extends TaskStatus {
   }
   
   @Override
-  void addFetchFailedMap(TaskAttemptID mapTaskId) {
+  public void addFetchFailedMap(TaskAttemptID mapTaskId) {
     failedFetchTasks.add(mapTaskId);
   }
   

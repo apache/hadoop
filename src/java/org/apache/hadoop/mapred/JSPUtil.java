@@ -27,12 +27,15 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.jsp.JspWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapred.JobHistory.JobInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
 
@@ -46,7 +49,7 @@ class JSPUtil {
     new LinkedHashMap<String, JobInfo>(); 
 
   private static final int CACHE_SIZE = 
-    conf.getInt("mapred.job.tracker.jobhistory.lru.cache.size", 5);
+    conf.getInt(JTConfig.JT_JOBHISTORY_CACHE_SIZE, 5);
 
   private static final Log LOG = LogFactory.getLog(JSPUtil.class);
   /**
@@ -257,6 +260,43 @@ class JSPUtil {
     return sb.toString();
   }
 
+  @SuppressWarnings("unchecked")
+  public static void generateRetiredJobXml(JspWriter out, JobTracker tracker, int rowId)
+      throws IOException {
+
+    Iterator<JobStatus> iterator =
+      tracker.retireJobs.getAll().descendingIterator();
+
+    for (int i = 0; i < 100 && iterator.hasNext(); i++) {
+      JobStatus status = iterator.next();
+      StringBuilder sb = new StringBuilder();
+      sb.append("<retired_job rowid=\"" + rowId + "\" jobid=\"" + status.getJobId() + "\">");
+      sb.append("<jobid>" + status.getJobId() + "</jobid>");
+      sb.append("<history_url>jobdetailshistory.jsp?jobid=" + status.getJobId()
+          + "&amp;logFile="
+          + URLEncoder.encode(status.getHistoryFile().toString(), "UTF-8")
+          + "</history_url>");
+      sb.append("<priority>" + status.getJobPriority().toString()
+          + "</priority>");
+      sb.append("<user>" + status.getUsername() + "</user>");
+      sb.append("<name>" + status.getJobName() + "</name>");
+      sb.append("<run_state>" + JobStatus.getJobRunState(status.getRunState())
+          + "</run_state>");
+      sb.append("<start_time>" + new Date(status.getStartTime())
+          + "</start_time>");
+      sb.append("<finish_time>" + new Date(status.getFinishTime())
+          + "</finish_time>");
+      sb.append("<map_complete>" + StringUtils.formatPercent(
+          status.mapProgress(), 2) + "</map_complete>");
+      sb.append("<reduce_complete>" + StringUtils.formatPercent(
+          status.reduceProgress(), 2) + "</reduce_complete>");
+      sb.append("<scheduling_info>" + status.getSchedulingInfo() + "</scheduling_info>");
+      sb.append("</retired_job>\n");
+      out.write(sb.toString());
+      rowId++;
+    }
+  }
+
   static final boolean privateActionsAllowed() {
     return conf.getBoolean(PRIVATE_ACTIONS_KEY, false);
   }
@@ -268,10 +308,10 @@ class JSPUtil {
     synchronized(jobHistoryCache) {
       JobInfo jobInfo = jobHistoryCache.remove(jobid);
       if (jobInfo == null) {
-        jobInfo = new JobHistory.JobInfo(jobid);
+        JobHistoryParser parser = new JobHistoryParser(fs, logFile);
+        jobInfo = parser.parse();
         LOG.info("Loading Job History file "+jobid + ".   Cache size is " +
             jobHistoryCache.size());
-        DefaultJobHistoryParser.parseJobTasks( logFile, jobInfo, fs) ; 
       }
       jobHistoryCache.put(jobid, jobInfo);
       if (jobHistoryCache.size() > CACHE_SIZE) {

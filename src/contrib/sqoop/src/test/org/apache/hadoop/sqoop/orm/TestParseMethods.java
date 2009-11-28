@@ -31,12 +31,14 @@ import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.hadoop.sqoop.ImportOptions;
 import org.apache.hadoop.sqoop.ImportOptions.InvalidOptionsException;
 import org.apache.hadoop.sqoop.mapred.RawKeyTextOutputFormat;
 import org.apache.hadoop.sqoop.orm.CompilationManager;
+import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.HsqldbTestServer;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 import org.apache.hadoop.sqoop.testutil.ReparseMapper;
@@ -58,12 +60,7 @@ public class TestParseMethods extends ImportJobTestCase {
     ArrayList<String> args = new ArrayList<String>();
 
     if (includeHadoopFlags) {
-      args.add("-D");
-      args.add("mapred.job.tracker=local");
-      args.add("-D");
-      args.add("mapred.map.tasks=1");
-      args.add("-D");
-      args.add("fs.default.name=file:///");
+      CommonArgs.addHadoopFlags(args);
     }
 
     args.add("--table");
@@ -73,8 +70,8 @@ public class TestParseMethods extends ImportJobTestCase {
     args.add("--connect");
     args.add(HsqldbTestServer.getUrl());
     args.add("--as-textfile");
-    args.add("--order-by");
-    args.add("DATA_COL0"); // always order by first column.
+    args.add("--split-by");
+    args.add("DATA_COL0"); // always split by first column.
     args.add("--fields-terminated-by");
     args.add(fieldTerminator);
     args.add("--lines-terminated-by");
@@ -87,7 +84,8 @@ public class TestParseMethods extends ImportJobTestCase {
       args.add("--optionally-enclosed-by");
     }
     args.add(encloser);
-
+    args.add("--num-mappers");
+    args.add("1");
 
     return args.toArray(new String[0]);
   }
@@ -121,7 +119,7 @@ public class TestParseMethods extends ImportJobTestCase {
       job.set(ReparseMapper.USER_TYPE_NAME_KEY, tableClassName);
 
       // use local mode in the same JVM.
-      job.set("mapred.job.tracker", "local");
+      job.set(JTConfig.JT_IPC_ADDRESS, "local");
       job.set("fs.default.name", "file:///");
 
       String warehouseDir = getWarehouseDir();

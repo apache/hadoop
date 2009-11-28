@@ -179,9 +179,9 @@ public class Grep extends Configured implements Tool {
     grepJob.setCombinerClass(GrepReducer.class);
     grepJob.setReducerClass(GrepReducer.class);
 
-    grepJob.set("mapred.mapper.regex", args[2]);
+    grepJob.set("mapreduce.mapper.regex", args[2]);
     if (args.length == 4)
-      grepJob.set("mapred.mapper.regex.group", args[3]);
+      grepJob.set("mapreduce.mapper.regexmapper..group", args[3]);
 
     grepJob.setOutputFormat(SequenceFileOutputFormat.class);
     grepJob.setOutputKeyClass(Text.class);

@@ -29,6 +29,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.FloatWritable;
@@ -80,19 +81,24 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     Map<String, String> env = new HashMap<String,String>();
     // add TMPDIR environment variable with the value of java.io.tmpdir
     env.put("TMPDIR", System.getProperty("java.io.tmpdir"));
-    env.put("hadoop.pipes.command.port", 
+    env.put(Submitter.PORT, 
             Integer.toString(serverSocket.getLocalPort()));
     List<String> cmd = new ArrayList<String>();
-    String interpretor = conf.get("hadoop.pipes.executable.interpretor");
+    String interpretor = conf.get(Submitter.INTERPRETOR);
     if (interpretor != null) {
       cmd.add(interpretor);
     }
 
     String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
-    FileUtil.chmod(executable, "a+x");
+    if (!new File(executable).canExecute()) {
+      // LinuxTaskController sets +x permissions on all distcache files already.
+      // In case of DefaultTaskController, set permissions here.
+      FileUtil.chmod(executable, "u+x");
+    }
     cmd.add(executable);
     // wrap the command in a stdout/stderr capture
-    TaskAttemptID taskid = TaskAttemptID.forName(conf.get("mapred.task.id"));
+    TaskAttemptID taskid = 
+      TaskAttemptID.forName(conf.get(JobContext.TASK_ATTEMPT_ID));
     File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
     File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
     long logLength = TaskLog.getTaskLogLength(conf);

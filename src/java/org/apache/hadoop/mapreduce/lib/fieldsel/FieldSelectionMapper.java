@@ -39,10 +39,10 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
  * fields are from the value only. Otherwise, the fields are the union of those
  * from the key and those from the value.
  * 
- * The field separator is under attribute "mapred.data.field.separator"
+ * The field separator is under attribute "mapreduce.fieldsel.data.field.separator"
  * 
  * The map output field list spec is under attribute 
- * "map.output.key.value.fields.spec". The value is expected to be like
+ * "mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec". The value is expected to be like
  * "keyFieldsSpec:valueFieldsSpec" key/valueFieldsSpec are comma (,) separated
  * field spec: fieldSpec,fieldSpec,fieldSpec ... Each field spec can be a 
  * simple number (e.g. 5) specifying a specific field, or a range (like 2-5)
@@ -73,9 +73,10 @@ public class FieldSelectionMapper<K, V>
   public void setup(Context context) 
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
-    this.fieldSeparator = conf.get("mapred.data.field.separator", "\t");
+    this.fieldSeparator = 
+      conf.get(FieldSelectionHelper.DATA_FIELD_SEPERATOR, "\t");
     this.mapOutputKeyValueSpec = 
-      conf.get("map.output.key.value.fields.spec", "0-:");
+      conf.get(FieldSelectionHelper.MAP_OUTPUT_KEY_VALUE_SPEC, "0-:");
     try {
       this.ignoreInputKey = TextInputFormat.class.getCanonicalName().equals(
         context.getInputFormatClass().getCanonicalName());

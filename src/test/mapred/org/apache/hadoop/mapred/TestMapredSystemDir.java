@@ -24,12 +24,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.*;
 
 /**
- * Test if JobTracker is resilient to garbage in mapred.system.dir.
+ * Test if JobTracker is resilient to garbage in {@link JTConfig#JT_SYSTEM_DIR}
  */
 public class TestMapredSystemDir extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestMapredSystemDir.class);
@@ -55,7 +56,7 @@ public class TestMapredSystemDir extends TestCase {
       dfs = new MiniDFSCluster(conf, 1, true, null);
       FileSystem fs = dfs.getFileSystem();
       
-      // create mapred.system.dir
+      // create Configs.SYSTEM_DIR
       Path mapredSysDir = new Path("/mapred");
       fs.mkdirs(mapredSysDir);
       fs.setPermission(mapredSysDir, new FsPermission(SYSTEM_DIR_PERMISSION));
@@ -69,7 +70,7 @@ public class TestMapredSystemDir extends TestCase {
                              1, null, null, MR_UGI, new JobConf(mrConf));
       JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
       
-      // add garbage to mapred.system.dir
+      // add garbage to Configs.SYSTEM_DIR
       Path garbage = new Path(jobtracker.getSystemDir(), "garbage");
       fs.mkdirs(garbage);
       fs.setPermission(garbage, new FsPermission(SYSTEM_DIR_PERMISSION));
@@ -77,7 +78,7 @@ public class TestMapredSystemDir extends TestCase {
       
       // stop the jobtracker
       mr.stopJobTracker();
-      mr.getJobTrackerConf().setBoolean("mapred.jobtracker.restart.recover", 
+      mr.getJobTrackerConf().setBoolean(JTConfig.JT_RESTART_ENABLED, 
                                         false);
       // start jobtracker but dont wait for it to be up
       mr.startJobTracker(false);

@@ -31,7 +31,6 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -43,6 +42,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
  * Tests the use of the
@@ -80,8 +80,8 @@ public class TestMRWithDistributedCache extends TestCase {
     @Override
     public void setup(Context context) throws IOException {
       Configuration conf = context.getConfiguration();
-      Path[] files = DistributedCache.getLocalCacheFiles(conf);
-      Path[] archives = DistributedCache.getLocalCacheArchives(conf);
+      Path[] files = context.getLocalCacheFiles();
+      Path[] archives = context.getLocalCacheArchives();
       FileSystem fs = LocalFileSystem.get(conf);
 
       // Check that 2 files and 2 archives are present
@@ -113,7 +113,7 @@ public class TestMRWithDistributedCache extends TestCase {
       // (The symlinks exist in "localRunner/" for local Jobtrackers,
       // but the user has no way to get at them.
       if (!"local".equals(
-          context.getConfiguration().get("mapred.job.tracker"))) {
+          context.getConfiguration().get(JTConfig.JT_IPC_ADDRESS))) {
         File symlinkFile = new File("distributed.first.symlink");
         TestCase.assertTrue(symlinkFile.exists());
         TestCase.assertEquals(1, symlinkFile.length());
@@ -121,7 +121,7 @@ public class TestMRWithDistributedCache extends TestCase {
     }
   }
 
-  private void testWithConf(JobConf conf) throws IOException,
+  private void testWithConf(Configuration conf) throws IOException,
       InterruptedException, ClassNotFoundException, URISyntaxException {
     // Create a temporary file of length 1.
     Path first = createTempFile("distributed.first", "x");
@@ -133,20 +133,19 @@ public class TestMRWithDistributedCache extends TestCase {
     Path fourth =
         makeJar(new Path(TEST_ROOT_DIR, "distributed.fourth.jar"), 4);
 
-    // Creates the Job Configuration
-    DistributedCache.addCacheFile(
-        new URI(first.toUri().toString() + "#distributed.first.symlink"),
-        conf);
-    DistributedCache.addFileToClassPath(second, conf);
-    DistributedCache.addArchiveToClassPath(third, conf);
-    DistributedCache.addCacheArchive(fourth.toUri(), conf);
-    DistributedCache.createSymlink(conf);
 
-    conf.setMaxMapAttempts(1); // speed up failures
     Job job = new Job(conf);
     job.setMapperClass(DistributedCacheChecker.class);
     job.setOutputFormatClass(NullOutputFormat.class);
     FileInputFormat.setInputPaths(job, first);
+    // Creates the Job Configuration
+    job.addCacheFile(
+      new URI(first.toUri().toString() + "#distributed.first.symlink"));
+    job.addFileToClassPath(second);
+    job.addArchiveToClassPath(third);
+    job.addCacheArchive(fourth.toUri());
+    job.createSymlink();
+    job.setMaxMapAttempts(1); // speed up failures
 
     job.submit();
     assertTrue(job.waitForCompletion(false));
@@ -154,8 +153,8 @@ public class TestMRWithDistributedCache extends TestCase {
 
   /** Tests using the local job runner. */
   public void testLocalJobRunner() throws Exception {
-    JobConf c = new JobConf();
-    c.set("mapred.job.tracker", "local");
+    Configuration c = new Configuration();
+    c.set(JTConfig.JT_IPC_ADDRESS, "local");
     c.set("fs.default.name", "file:///");
     testWithConf(c);
   }

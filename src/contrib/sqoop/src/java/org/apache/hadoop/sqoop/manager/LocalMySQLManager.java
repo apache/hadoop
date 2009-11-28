@@ -27,25 +27,25 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.CharBuffer;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.io.SplittableBufferedWriter;
 import org.apache.hadoop.sqoop.lib.FieldFormatter;
 import org.apache.hadoop.sqoop.lib.RecordParser;
+import org.apache.hadoop.sqoop.util.AsyncSink;
+import org.apache.hadoop.sqoop.util.DirectImportUtils;
+import org.apache.hadoop.sqoop.util.ErrorableAsyncSink;
+import org.apache.hadoop.sqoop.util.ErrorableThread;
 import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.util.JdbcUrl;
+import org.apache.hadoop.sqoop.util.LoggingAsyncSink;
 import org.apache.hadoop.sqoop.util.PerfCounters;
-import org.apache.hadoop.sqoop.util.StreamHandlerFactory;
-import org.apache.hadoop.util.Shell;
 
 /**
  * Manages direct connections to MySQL databases
@@ -55,59 +55,45 @@ public class LocalMySQLManager extends MySQLManager {
 
   public static final Log LOG = LogFactory.getLog(LocalMySQLManager.class.getName());
 
-  // StreamHandlers used to import data from mysqldump directly into HDFS.
+  // AsyncSinks used to import data from mysqldump directly into HDFS.
 
   /**
    * Copies data directly from mysqldump into HDFS, after stripping some
    * header and footer characters that are attached to each line in mysqldump.
    */
-  static class CopyingStreamHandlerFactory implements StreamHandlerFactory {
-    private final BufferedWriter writer;
+  static class CopyingAsyncSink extends ErrorableAsyncSink {
+    private final SplittableBufferedWriter writer;
     private final PerfCounters counters;
 
-    CopyingStreamHandlerFactory(final BufferedWriter w, final PerfCounters ctrs) {
+    CopyingAsyncSink(final SplittableBufferedWriter w,
+        final PerfCounters ctrs) {
       this.writer = w;
       this.counters = ctrs;
     }
-
-    private CopyingStreamThread child;
 
     public void processStream(InputStream is) {
       child = new CopyingStreamThread(is, writer, counters);
       child.start();
     }
 
-    public int join() throws InterruptedException {
-      child.join();
-      if (child.isErrored()) {
-        return 1;
-      } else {
-        return 0;
-      }
-    }
+    private static class CopyingStreamThread extends ErrorableThread {
+      public static final Log LOG = LogFactory.getLog(
+          CopyingStreamThread.class.getName());
 
-    private static class CopyingStreamThread extends Thread {
-      public static final Log LOG = LogFactory.getLog(CopyingStreamThread.class.getName());
-
-      private final BufferedWriter writer;
+      private final SplittableBufferedWriter writer;
       private final InputStream stream;
       private final PerfCounters counters;
 
-      private boolean error;
-
-      CopyingStreamThread(final InputStream is, final BufferedWriter w, final PerfCounters ctrs) {
+      CopyingStreamThread(final InputStream is,
+          final SplittableBufferedWriter w, final PerfCounters ctrs) {
         this.writer = w;
         this.stream = is;
         this.counters = ctrs;
       }
 
-      public boolean isErrored() {
-        return error;
-      }
-
       public void run() {
         BufferedReader r = null;
-        BufferedWriter w = this.writer;
+        SplittableBufferedWriter w = this.writer;
 
         try {
           r = new BufferedReader(new InputStreamReader(this.stream));
@@ -139,7 +125,7 @@ public class LocalMySQLManager extends MySQLManager {
         } catch (IOException ioe) {
           LOG.error("IOException reading from mysqldump: " + ioe.toString());
           // flag this error so we get an error status back in the caller.
-          error = true;
+          setError();
         } finally {
           if (null != r) {
             try {
@@ -163,49 +149,38 @@ public class LocalMySQLManager extends MySQLManager {
 
 
   /**
-   * The ReparsingStreamHandler will instantiate a RecordParser to read mysqldump's
+   * The ReparsingAsyncSink will instantiate a RecordParser to read mysqldump's
    * output, and re-emit the text in the user's specified output format.
    */
-  static class ReparsingStreamHandlerFactory implements StreamHandlerFactory {
-    private final BufferedWriter writer;
+  static class ReparsingAsyncSink extends ErrorableAsyncSink {
+    private final SplittableBufferedWriter writer;
     private final ImportOptions options;
     private final PerfCounters counters;
 
-    ReparsingStreamHandlerFactory(final BufferedWriter w, final ImportOptions opts, 
-        final PerfCounters ctrs) {
+    ReparsingAsyncSink(final SplittableBufferedWriter w,
+        final ImportOptions opts, final PerfCounters ctrs) {
       this.writer = w;
       this.options = opts;
       this.counters = ctrs;
     }
-
-    private ReparsingStreamThread child;
 
     public void processStream(InputStream is) {
       child = new ReparsingStreamThread(is, writer, options, counters);
       child.start();
     }
 
-    public int join() throws InterruptedException {
-      child.join();
-      if (child.isErrored()) {
-        return 1;
-      } else {
-        return 0;
-      }
-    }
+    private static class ReparsingStreamThread extends ErrorableThread {
+      public static final Log LOG = LogFactory.getLog(
+          ReparsingStreamThread.class.getName());
 
-    private static class ReparsingStreamThread extends Thread {
-      public static final Log LOG = LogFactory.getLog(ReparsingStreamThread.class.getName());
-
-      private final BufferedWriter writer;
+      private final SplittableBufferedWriter writer;
       private final ImportOptions options;
       private final InputStream stream;
       private final PerfCounters counters;
 
-      private boolean error;
-
-      ReparsingStreamThread(final InputStream is, final BufferedWriter w,
-          final ImportOptions opts, final PerfCounters ctrs) {
+      ReparsingStreamThread(final InputStream is,
+          final SplittableBufferedWriter w, final ImportOptions opts,
+          final PerfCounters ctrs) {
         this.writer = w;
         this.options = opts;
         this.stream = is;
@@ -222,17 +197,14 @@ public class LocalMySQLManager extends MySQLManager {
 
       static {
         // build a record parser for mysqldump's format
-        MYSQLDUMP_PARSER = new RecordParser(MYSQL_FIELD_DELIM, MYSQL_RECORD_DELIM,
-            MYSQL_ENCLOSE_CHAR, MYSQL_ESCAPE_CHAR, MYSQL_ENCLOSE_REQUIRED);
-      }
-
-      public boolean isErrored() {
-        return error;
+        MYSQLDUMP_PARSER = new RecordParser(MYSQL_FIELD_DELIM,
+            MYSQL_RECORD_DELIM, MYSQL_ENCLOSE_CHAR, MYSQL_ESCAPE_CHAR,
+            MYSQL_ENCLOSE_REQUIRED);
       }
 
       public void run() {
         BufferedReader r = null;
-        BufferedWriter w = this.writer;
+        SplittableBufferedWriter w = this.writer;
 
         try {
           r = new BufferedReader(new InputStreamReader(this.stream));
@@ -290,12 +262,13 @@ public class LocalMySQLManager extends MySQLManager {
             }
 
             w.write(outputRecordDelim);
+            w.allowSplit();
             counters.addBytes(recordLen);
           }
         } catch (IOException ioe) {
           LOG.error("IOException reading from mysqldump: " + ioe.toString());
           // flag this error so the parent can handle it appropriately.
-          error = true;
+          setError();
         } finally {
           if (null != r) {
             try {
@@ -348,19 +321,8 @@ public class LocalMySQLManager extends MySQLManager {
     String tmpDir = options.getTempDir();
     File tempFile = File.createTempFile("mysql-cnf",".cnf", new File(tmpDir));
 
-    // Set this file to be 0600. Java doesn't have a built-in mechanism for this
-    // so we need to go out to the shell to execute chmod.
-    ArrayList<String> chmodArgs = new ArrayList<String>();
-    chmodArgs.add("chmod");
-    chmodArgs.add("0600");
-    chmodArgs.add(tempFile.toString());
-    try {
-      Shell.execCommand("chmod", "0600", tempFile.toString());
-    } catch (IOException ioe) {
-      // Shell.execCommand will throw IOException on exit code != 0.
-      LOG.error("Could not chmod 0600 " + tempFile.toString());
-      throw new IOException("Could not ensure password file security.", ioe);
-    }
+    // Make the password file only private readable.
+    DirectImportUtils.setFilePermissions(tempFile, "0600");
 
     // If we're here, the password file is believed to be ours alone.
     // The inability to set chmod 0600 inside Java is troublesome. We have to trust
@@ -380,8 +342,12 @@ public class LocalMySQLManager extends MySQLManager {
    * Import the table into HDFS by using mysqldump to pull out the data from
    * the database and upload the files directly to HDFS.
    */
-  public void importTable(String tableName, String jarFile, Configuration conf)
+  public void importTable(ImportJobContext context)
       throws IOException, ImportError {
+
+    String tableName = context.getTableName();
+    String jarFile = context.getJarFile();
+    ImportOptions options = context.getOptions();
 
     LOG.info("Beginning mysqldump fast path import");
 
@@ -399,32 +365,12 @@ public class LocalMySQLManager extends MySQLManager {
     // Java doesn't respect arbitrary JDBC-based schemes. So we chop off the scheme
     // (everything before '://') and replace it with 'http', which we know will work.
     String connectString = options.getConnectString();
-    String databaseName = null;
-    try {
-      String sanitizedString = null;
-      int schemeEndOffset = connectString.indexOf("://");
-      if (-1 == schemeEndOffset) {
-        // couldn't find one? try our best here.
-        sanitizedString = "http://" + connectString;
-        LOG.warn("Could not find database access scheme in connect string " + connectString);
-      } else {
-        sanitizedString = "http" + connectString.substring(schemeEndOffset);
-      }
-
-      URL connectUrl = new URL(sanitizedString);
-      databaseName = connectUrl.getPath();
-    } catch (MalformedURLException mue) {
-      LOG.error("Malformed connect string URL: " + connectString
-          + "; reason is " + mue.toString());
-    }
+    String databaseName = JdbcUrl.getDatabaseName(connectString);
+    String hostname = JdbcUrl.getHostName(connectString);
+    int port = JdbcUrl.getPort(connectString);
 
     if (null == databaseName) {
       throw new ImportError("Could not determine database name");
-    }
-
-    // database name was found from the 'path' part of the URL; trim leading '/'
-    while (databaseName.startsWith("/")) {
-      databaseName = databaseName.substring(1);
     }
 
     LOG.info("Performing import of table " + tableName + " from database " + databaseName);
@@ -433,9 +379,9 @@ public class LocalMySQLManager extends MySQLManager {
     String password = options.getPassword();
     String passwordFile = null;
 
-    
     Process p = null;
-    StreamHandlerFactory streamHandler = null;
+    AsyncSink sink = null;
+    AsyncSink errSink = null;
     PerfCounters counters = new PerfCounters();
     try {
       // --defaults-file must be the first argument.
@@ -452,18 +398,29 @@ public class LocalMySQLManager extends MySQLManager {
         args.add(whereClause);
       }
 
+      if (!DirectImportUtils.isLocalhost(hostname) || port != -1) {
+        args.add("--host=" + hostname);
+        args.add("--port=" + Integer.toString(port));
+      }
+
       args.add("--skip-opt");
       args.add("--compact");
       args.add("--no-create-db");
       args.add("--no-create-info");
       args.add("--quick"); // no buffering
-      // TODO(aaron): Add a flag to allow --lock-tables instead for MyISAM data
       args.add("--single-transaction"); 
-      // TODO(aaron): Add --host and --port arguments to support remote direct connects.
 
       String username = options.getUsername();
       if (null != username) {
         args.add("--user=" + username);
+      }
+
+      // If the user supplied extra args, add them here.
+      String [] extra = options.getExtraArgs();
+      if (null != extra) {
+        for (String arg : extra) {
+          args.add(arg);
+        }
       }
 
       args.add(databaseName);
@@ -475,28 +432,9 @@ public class LocalMySQLManager extends MySQLManager {
         LOG.debug("  " + arg);
       }
 
-      FileSystem fs = FileSystem.get(conf);
-      String warehouseDir = options.getWarehouseDir();
-      Path destDir = null;
-      if (null != warehouseDir) {
-        destDir = new Path(new Path(warehouseDir), tableName);
-      } else {
-        destDir = new Path(tableName);
-      }
-
-      LOG.debug("Writing to filesystem: " + conf.get("fs.default.name"));
-      LOG.debug("Creating destination directory " + destDir);
-      fs.mkdirs(destDir);
-      Path destFile = new Path(destDir, "data-00000");
-      LOG.debug("Opening output file: " + destFile);
-      if (fs.exists(destFile)) {
-        Path canonicalDest = destFile.makeQualified(fs);
-        throw new IOException("Destination file " + canonicalDest + " already exists");
-      }
-
-      // This writer will be closed by StreamHandlerFactory.
-      OutputStream os = fs.create(destFile);
-      BufferedWriter w = new BufferedWriter(new OutputStreamWriter(os));
+      // This writer will be closed by AsyncSink.
+      SplittableBufferedWriter w = DirectImportUtils.createHdfsSink(
+          options.getConf(), options, tableName);
 
       // Actually start the mysqldump.
       p = Runtime.getRuntime().exec(args.toArray(new String[0]));
@@ -506,19 +444,23 @@ public class LocalMySQLManager extends MySQLManager {
 
       if (outputDelimsAreMySQL()) {
         LOG.debug("Output delimiters conform to mysqldump; using straight copy"); 
-        streamHandler = new CopyingStreamHandlerFactory(w, counters);
+        sink = new CopyingAsyncSink(w, counters);
       } else {
         LOG.debug("User-specified delimiters; using reparsing import");
         LOG.info("Converting data to use specified delimiters.");
         LOG.info("(For the fastest possible import, use");
         LOG.info("--mysql-delimiters to specify the same field");
         LOG.info("delimiters as are used by mysqldump.)");
-        streamHandler = new ReparsingStreamHandlerFactory(w, options, counters);
+        sink = new ReparsingAsyncSink(w, options, counters);
       }
 
       // Start an async thread to read and upload the whole stream.
       counters.startClock();
-      streamHandler.processStream(is);
+      sink.processStream(is);
+
+      // Start an async thread to send stderr to log4j.
+      errSink = new LoggingAsyncSink(LOG);
+      errSink.processStream(p.getErrorStream());
     } finally {
 
       // block until the process is done.
@@ -544,18 +486,30 @@ public class LocalMySQLManager extends MySQLManager {
         }
       }
 
-      // block until the stream handler is done too.
+      // block until the stream sink is done too.
       int streamResult = 0;
-      if (null != streamHandler) {
+      if (null != sink) {
         while (true) {
           try {
-            streamResult = streamHandler.join();
+            streamResult = sink.join();
           } catch (InterruptedException ie) {
             // interrupted; loop around.
             continue;
           }
 
           break;
+        }
+      }
+
+      // Try to wait for stderr to finish, but regard any errors as advisory.
+      if (null != errSink) {
+        try {
+          if (0 != errSink.join()) {
+            LOG.info("Encountered exception reading stderr stream");
+          }
+        } catch (InterruptedException ie) {
+          LOG.info("Thread interrupted waiting for stderr to complete: "
+              + ie.toString());
         }
       }
 
@@ -567,7 +521,7 @@ public class LocalMySQLManager extends MySQLManager {
       }
 
       if (0 != streamResult) {
-        throw new IOException("Encountered exception in stream handler");
+        throw new IOException("Encountered exception in stream sink");
       }
 
       counters.stopClock();

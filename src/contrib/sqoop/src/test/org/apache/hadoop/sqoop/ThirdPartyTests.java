@@ -25,6 +25,7 @@ import junit.framework.TestSuite;
 import org.apache.hadoop.sqoop.manager.LocalMySQLTest;
 import org.apache.hadoop.sqoop.manager.MySQLAuthTest;
 import org.apache.hadoop.sqoop.manager.OracleManagerTest;
+import org.apache.hadoop.sqoop.manager.PostgresqlTest;
 
 /**
  * Test battery including all tests of vendor-specific ConnManager implementations.
@@ -41,7 +42,8 @@ public final class ThirdPartyTests extends TestCase {
     suite.addTestSuite(LocalMySQLTest.class);
     suite.addTestSuite(MySQLAuthTest.class);
     suite.addTestSuite(OracleManagerTest.class);
-    
+    suite.addTestSuite(PostgresqlTest.class);
+
     return suite;
   }
 

@@ -32,15 +32,18 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
+import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.TaskTracker.PermissionsHandler;
+import org.apache.hadoop.mapred.TaskController.InitializationContext;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
@@ -141,6 +144,7 @@ abstract class TaskRunner extends Thread {
    *             set via {@link JobConf#MAPRED_MAP_TASK_ENV} or
    *             {@link JobConf#MAPRED_REDUCE_TASK_ENV}
    */
+  @Deprecated
   public String getChildEnv(JobConf jobConf) {
     return jobConf.get(JobConf.MAPRED_TASK_ENV);
   }
@@ -160,20 +164,25 @@ abstract class TaskRunner extends Thread {
       //before preparing the job localize 
       //all the archives
       TaskAttemptID taskid = t.getTaskID();
-      LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+      LocalDirAllocator lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
       File workDir = formWorkDir(lDirAlloc, taskid, t.isTaskCleanupTask(), conf);
 
       // We don't create any symlinks yet, so presence/absence of workDir
       // actually on the file system doesn't matter.
       taskDistributedCacheManager = tracker.getTrackerDistributedCacheManager()
           .newTaskDistributedCacheManager(conf);
-      taskDistributedCacheManager.setup(
-          lDirAlloc, workDir, TaskTracker.getDistributedCacheDir());
+      taskDistributedCacheManager.setup(lDirAlloc, workDir, TaskTracker
+          .getDistributedCacheDir(conf.getUser()));
 
       // Set up the child task's configuration. After this call, no localization
       // of files should happen in the TaskTracker's process space. Any changes to
       // the conf object after this will NOT be reflected to the child.
       setupChildTaskConfiguration(lDirAlloc);
+
+      InitializationContext context = new InitializationContext();
+      context.user = conf.getUser();
+      context.workDir = new File(conf.get(TaskTracker.JOB_LOCAL_DIR));
+      tracker.getTaskController().initializeDistributedCache(context);
 
       if (!prepare()) {
         return;
@@ -202,7 +211,8 @@ abstract class TaskRunner extends Thread {
           stderr);
 
       Map<String, String> env = new HashMap<String, String>();
-      errorInfo = getVMEnvironment(errorInfo, workDir, conf, env);
+      errorInfo = getVMEnvironment(errorInfo, workDir, conf, env,
+                                   taskid, logSize);
 
       jvmManager.launchJvm(this, 
           jvmManager.constructJvmEnv(setup,vargs,stdout,stderr,logSize, 
@@ -246,7 +256,12 @@ abstract class TaskRunner extends Thread {
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
-      tip.reportTaskFinished();
+
+      // It is safe to call TaskTracker.TaskInProgress.reportTaskFinished with
+      // *false* since the task has either
+      // a) SUCCEEDED - which means commit has been done
+      // b) FAILED - which means we do not need to commit
+      tip.reportTaskFinished(false);
     }
   }
 
@@ -265,8 +280,8 @@ abstract class TaskRunner extends Thread {
     if (!b) {
       LOG.warn("mkdirs failed. Ignoring");
     } else {
-      PermissionsHandler.setPermissions(logDir,
-          PermissionsHandler.sevenZeroZero);
+      Localizer.PermissionsHandler.setPermissions(logDir,
+          Localizer.PermissionsHandler.sevenZeroZero);
     }
     return logFiles;
   }
@@ -282,9 +297,9 @@ abstract class TaskRunner extends Thread {
       throws IOException {
 
     Path localTaskFile =
-        lDirAlloc.getLocalPathForWrite(TaskTracker.getTaskConfFile(t
-            .getJobID().toString(), t.getTaskID().toString(), t
-            .isTaskCleanupTask()), conf);
+        lDirAlloc.getLocalPathForWrite(TaskTracker.getTaskConfFile(
+            t.getUser(), t.getJobID().toString(), t.getTaskID().toString(), t
+                .isTaskCleanupTask()), conf);
 
     // write the child's task configuration file to the local disk
     writeLocalTaskFile(localTaskFile.toString(), conf);
@@ -433,8 +448,8 @@ abstract class TaskRunner extends Thread {
       JobConf conf)
       throws IOException {
 
-    // add java.io.tmpdir given by mapred.child.tmp
-    String tmp = conf.get("mapred.child.tmp", "./tmp");
+    // add java.io.tmpdir given by mapreduce.task.tmp.dir
+    String tmp = conf.get(JobContext.TASK_TEMP_DIR, "./tmp");
     Path tmpDir = new Path(tmp);
 
     // if temp directory path is not absolute, prepend it with workDir.
@@ -471,6 +486,7 @@ abstract class TaskRunner extends Thread {
   }
 
   /**
+   * sets the environment variables needed for task jvm and its children.
    * @param errorInfo
    * @param workDir
    * @param env
@@ -478,7 +494,7 @@ abstract class TaskRunner extends Thread {
    * @throws Throwable
    */
   private String getVMEnvironment(String errorInfo, File workDir, JobConf conf,
-      Map<String, String> env)
+      Map<String, String> env, TaskAttemptID taskid, long logSize)
       throws Throwable {
     StringBuffer ldLibraryPath = new StringBuffer();
     ldLibraryPath.append(workDir.toString());
@@ -490,6 +506,23 @@ abstract class TaskRunner extends Thread {
     }
     env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
     
+    // put jobTokenFile name into env
+    String jobTokenFile = conf.get(JobContext.JOB_TOKEN_FILE);
+    LOG.debug("putting jobToken file name into environment fn=" + jobTokenFile);
+    env.put("JOB_TOKEN_FILE", jobTokenFile);
+    
+    // for the child of task jvm, set hadoop.root.logger
+    env.put("HADOOP_ROOT_LOGGER", "INFO,TLA");
+    String hadoopClientOpts = System.getenv("HADOOP_CLIENT_OPTS");
+    if (hadoopClientOpts == null) {
+      hadoopClientOpts = "";
+    } else {
+      hadoopClientOpts = hadoopClientOpts + " ";
+    }
+    hadoopClientOpts = hadoopClientOpts + "-Dhadoop.tasklog.taskid=" + taskid
+                       + " -Dhadoop.tasklog.totalLogFileSize=" + logSize;
+    env.put("HADOOP_CLIENT_OPTS", "\"" + hadoopClientOpts + "\"");
+
     // add the env variables passed by the user
     String mapredChildEnv = getChildEnv(conf);
     if (mapredChildEnv != null && mapredChildEnv.length() > 0) {
@@ -550,25 +583,26 @@ abstract class TaskRunner extends Thread {
   }
 
   /**
-   * Prepare the mapred.local.dir for the child. The child is sand-boxed now.
+   * Prepare the Configs.LOCAL_DIR for the child. The child is sand-boxed now.
    * Whenever it uses LocalDirAllocator from now on inside the child, it will
    * only see files inside the attempt-directory. This is done in the Child's
    * process space.
    */
   static void setupChildMapredLocalDirs(Task t, JobConf conf) {
-    String[] localDirs = conf.getStrings("mapred.local.dir");
+    String[] localDirs = conf.getStrings(MRConfig.LOCAL_DIR);
     String jobId = t.getJobID().toString();
     String taskId = t.getTaskID().toString();
     boolean isCleanup = t.isTaskCleanupTask();
+    String user = t.getUser();
     StringBuffer childMapredLocalDir =
         new StringBuffer(localDirs[0] + Path.SEPARATOR
-            + TaskTracker.getLocalTaskDir(jobId, taskId, isCleanup));
+            + TaskTracker.getLocalTaskDir(user, jobId, taskId, isCleanup));
     for (int i = 1; i < localDirs.length; i++) {
       childMapredLocalDir.append("," + localDirs[i] + Path.SEPARATOR
-          + TaskTracker.getLocalTaskDir(jobId, taskId, isCleanup));
+          + TaskTracker.getLocalTaskDir(user, jobId, taskId, isCleanup));
     }
-    LOG.debug("mapred.local.dir for child : " + childMapredLocalDir);
-    conf.set("mapred.local.dir", childMapredLocalDir.toString());
+    LOG.debug(MRConfig.LOCAL_DIR + " for child : " + childMapredLocalDir);
+    conf.set(MRConfig.LOCAL_DIR, childMapredLocalDir.toString());
   }
 
   /** Creates the working directory pathname for a task attempt. */ 
@@ -576,8 +610,9 @@ abstract class TaskRunner extends Thread {
       TaskAttemptID task, boolean isCleanup, JobConf conf) 
       throws IOException {
     Path workDir =
-        lDirAlloc.getLocalPathToRead(TaskTracker.getTaskWorkDir(task
-            .getJobID().toString(), task.toString(), isCleanup), conf);
+        lDirAlloc.getLocalPathToRead(TaskTracker.getTaskWorkDir(
+            conf.getUser(), task.getJobID().toString(), task.toString(),
+            isCleanup), conf);
 
     return new File(workDir.toString());
   }

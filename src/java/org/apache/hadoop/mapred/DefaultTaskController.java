@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 package org.apache.hadoop.mapred;
 
@@ -22,12 +22,13 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * The default implementation for controlling tasks.
@@ -35,8 +36,12 @@ import org.apache.commons.logging.LogFactory;
  * This class provides an implementation for launching and killing 
  * tasks that need to be run as the tasktracker itself. Hence,
  * many of the initializing or cleanup methods are not required here.
+ * 
+ * <br/>
+ * 
  */
-class DefaultTaskController extends TaskController {
+@InterfaceAudience.Private
+public class DefaultTaskController extends TaskController {
 
   private static final Log LOG = 
       LogFactory.getLog(DefaultTaskController.class);
@@ -127,5 +132,29 @@ class DefaultTaskController extends TaskController {
       }
     }
   }
+
+  @Override
+  public void initializeDistributedCache(InitializationContext context) {
+    // Do nothing.
+  }
+
+  @Override
+  public void initializeUser(InitializationContext context) {
+    // Do nothing.
+  }
   
+  @Override
+  void runDebugScript(DebugScriptContext context) throws IOException {
+    List<String>  wrappedCommand = TaskLog.captureDebugOut(context.args, 
+        context.stdout);
+    // run the script.
+    ShellCommandExecutor shexec = 
+      new ShellCommandExecutor(wrappedCommand.toArray(new String[0]), context.workDir);
+    shexec.execute();
+    int exitCode = shexec.getExitCode();
+    if (exitCode != 0) {
+      throw new IOException("Task debug script exit with nonzero status of " 
+          + exitCode + ".");
+    }
+  }
 }

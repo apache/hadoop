@@ -68,6 +68,10 @@ import org.apache.hadoop.net.NetworkTopology;
 public abstract class CombineFileInputFormat<K, V>
   extends FileInputFormat<K, V> {
 
+  public static final String SPLIT_MINSIZE_PERNODE = 
+    "mapreduce.input.fileinputformat.split.minsize.per.node";
+  public static final String SPLIT_MINSIZE_PERRACK = 
+    "mapreduce.input.fileinputformat.split.minsize.per.rack";
   // ability to limit the size of a single split
   private long maxSplitSize = 0;
   private long minSplitSizeNode = 0;
@@ -151,17 +155,17 @@ public abstract class CombineFileInputFormat<K, V>
     if (minSplitSizeNode != 0) {
       minSizeNode = minSplitSizeNode;
     } else {
-      minSizeNode = conf.getLong("mapred.min.split.size.per.node", 0);
+      minSizeNode = conf.getLong(SPLIT_MINSIZE_PERNODE, 0);
     }
     if (minSplitSizeRack != 0) {
       minSizeRack = minSplitSizeRack;
     } else {
-      minSizeRack = conf.getLong("mapred.min.split.size.per.rack", 0);
+      minSizeRack = conf.getLong(SPLIT_MINSIZE_PERRACK, 0);
     }
     if (maxSplitSize != 0) {
       maxSize = maxSplitSize;
     } else {
-      maxSize = conf.getLong("mapred.max.split.size", 0);
+      maxSize = conf.getLong("mapreduce.input.fileinputformat.split.maxsize", 0);
     }
     if (minSizeNode != 0 && maxSize != 0 && minSizeNode > maxSize) {
       throw new IOException("Minimum split size pernode " + minSizeNode +

@@ -100,8 +100,8 @@ public class JobEndNotifier {
     String uri = conf.getJobEndNotificationURI();
     if (uri != null) {
       // +1 to make logic for first notification identical to a retry
-      int retryAttempts = conf.getInt("job.end.retry.attempts", 0) + 1;
-      long retryInterval = conf.getInt("job.end.retry.interval", 30000);
+      int retryAttempts = conf.getInt(JobContext.END_NOTIFICATION_RETRIES, 0) + 1;
+      long retryInterval = conf.getInt(JobContext.END_NOTIFICATION_RETRIE_INTERVAL, 30000);
       if (uri.contains("$jobId")) {
         uri = uri.replace("$jobId", status.getJobID().toString());
       }

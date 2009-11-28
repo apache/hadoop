@@ -21,8 +21,6 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -48,10 +46,15 @@ import org.apache.hadoop.io.serializer.Serializer;
  * 
  * There is a <code>Writer</code> to write out map-outputs in this format and 
  * a <code>Reader</code> to read files of this format.
+ *
+ * <FRAMEWORK-USE-ONLY>
+ * This method is intended only for use by the Map/Reduce framework and not
+ * for external users
+ *
  */
-class IFile {
+public class IFile {
 
-  static final int EOF_MARKER = -1;
+  public static final int EOF_MARKER = -1; // End of File Marker
   
   /**
    * <code>IFile.Writer</code> to write out intermediate map-outputs. 
@@ -91,6 +94,10 @@ class IFile {
       ownOutputStream = true;
     }
     
+    protected Writer(Counters.Counter writesCounter) {
+      writtenRecordsCounter = writesCounter;
+    }
+
     public Writer(Configuration conf, FSDataOutputStream out, 
         Class<K> keyClass, Class<V> valueClass,
         CompressionCodec codec, Counters.Counter writesCounter)
@@ -273,18 +280,18 @@ class IFile {
 
     final InputStream in;        // Possibly decompressed stream that we read
     Decompressor decompressor;
-    long bytesRead = 0;
-    final long fileLength;
-    boolean eof = false;
+    public long bytesRead = 0;
+    protected final long fileLength;
+    protected boolean eof = false;
     final IFileInputStream checksumIn;
-    DataInputStream dataIn;
     
-    byte[] buffer = null;
-    int bufferSize = DEFAULT_BUFFER_SIZE;
+    protected byte[] buffer = null;
+    protected int bufferSize = DEFAULT_BUFFER_SIZE;
+    protected DataInputStream dataIn;
 
-    int recNo = 1;
-    int currentKeyLength;
-    int currentValueLength;
+    protected int recNo = 1;
+    protected int currentKeyLength;
+    protected int currentValueLength;
     byte keyBytes[] = new byte[0];
     
     
@@ -458,119 +465,4 @@ class IFile {
     }
 
   }    
-  
-  /**
-   * <code>IFile.InMemoryReader</code> to read map-outputs present in-memory.
-   */
-  public static class InMemoryReader<K, V> extends Reader<K, V> {
-    RamManager ramManager;
-    TaskAttemptID taskAttemptId;
-    DataInputBuffer memDataIn = new DataInputBuffer();
-    private int start;
-    private int length;
-    public InMemoryReader(RamManager ramManager, TaskAttemptID taskAttemptId,
-                          byte[] data, int start, int length)
-                          throws IOException {
-      super(null, null, length - start, null, null);
-      this.ramManager = ramManager;
-      this.taskAttemptId = taskAttemptId;
-      
-      buffer = data;
-      bufferSize = (int)fileLength;
-      memDataIn.reset(buffer, start, length);
-      this.start = start;
-      this.length = length;
-    }
-
-    @Override
-    public void reset(int offset) {
-      memDataIn.reset(buffer, start + offset, length);
-      bytesRead = offset;
-      eof = false;
-    }
-    
-    @Override
-    public long getPosition() throws IOException {
-      // InMemoryReader does not initialize streams like Reader, so in.getPos()
-      // would not work. Instead, return the number of uncompressed bytes read,
-      // which will be correct since in-memory data is not compressed.
-      return bytesRead;
-    }
-    
-    @Override
-    public long getLength() { 
-      return fileLength;
-    }
-    
-    private void dumpOnError() {
-      File dumpFile = new File("../output/" + taskAttemptId + ".dump");
-      System.err.println("Dumping corrupt map-output of " + taskAttemptId + 
-                         " to " + dumpFile.getAbsolutePath());
-      try {
-        FileOutputStream fos = new FileOutputStream(dumpFile);
-        fos.write(buffer, 0, bufferSize);
-        fos.close();
-      } catch (IOException ioe) {
-        System.err.println("Failed to dump map-output of " + taskAttemptId);
-      }
-    }
-    
-    public boolean nextRawKey(DataInputBuffer key) throws IOException {
-      try {
-        if (!positionToNextRecord(memDataIn)) {
-          return false;
-        }
-        // Setup the key
-        int pos = memDataIn.getPosition();
-        byte[] data = memDataIn.getData();
-        key.reset(data, pos, currentKeyLength);
-        // Position for the next value
-        long skipped = memDataIn.skip(currentKeyLength);
-        if (skipped != currentKeyLength) {
-          throw new IOException("Rec# " + recNo + 
-              ": Failed to skip past key of length: " + 
-              currentKeyLength);
-        }
-
-        // Record the byte
-        bytesRead += currentKeyLength;
-        return true;
-      } catch (IOException ioe) {
-        dumpOnError();
-        throw ioe;
-      }
-    }
-    
-    public void nextRawValue(DataInputBuffer value) throws IOException {
-      try {
-        int pos = memDataIn.getPosition();
-        byte[] data = memDataIn.getData();
-        value.reset(data, pos, currentValueLength);
-
-        // Position for the next record
-        long skipped = memDataIn.skip(currentValueLength);
-        if (skipped != currentValueLength) {
-          throw new IOException("Rec# " + recNo + 
-              ": Failed to skip past value of length: " + 
-              currentValueLength);
-        }
-        // Record the byte
-        bytesRead += currentValueLength;
-
-        ++recNo;
-      } catch (IOException ioe) {
-        dumpOnError();
-        throw ioe;
-      }
-    }
-      
-    public void close() {
-      // Release
-      memDataIn = null;
-      buffer = null;
-      
-      // Inform the RamManager
-      ramManager.unreserve(bufferSize);
-    }
-  }
 }

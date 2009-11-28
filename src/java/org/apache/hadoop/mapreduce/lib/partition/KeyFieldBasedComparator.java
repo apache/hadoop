@@ -25,6 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.partition.KeyFieldHelper.KeyDescription;
 
 
@@ -41,12 +43,13 @@ import org.apache.hadoop.mapreduce.lib.partition.KeyFieldHelper.KeyDescription;
  *  of the field); if omitted from pos2, it defaults to 0 (the end of the
  *  field). opts are ordering options (any of 'nr' as described above). 
  * We assume that the fields in the key are separated by 
- * map.output.key.field.separator.
+ * {@link JobContext#MAP_OUTPUT_KEY_FIELD_SEPERATOR}.
  */
 
 public class KeyFieldBasedComparator<K, V> extends WritableComparator 
     implements Configurable {
   private KeyFieldHelper keyFieldHelper = new KeyFieldHelper();
+  public static String COMPARATOR_OPTIONS = "mapreduce.partition.keycomparator.options";
   private static final byte NEGATIVE = (byte)'-';
   private static final byte ZERO = (byte)'0';
   private static final byte DECIMAL = (byte)'.';
@@ -54,8 +57,8 @@ public class KeyFieldBasedComparator<K, V> extends WritableComparator
 
   public void setConf(Configuration conf) {
     this.conf = conf;
-    String option = conf.get("mapred.text.key.comparator.options");
-    String keyFieldSeparator = conf.get("map.output.key.field.separator","\t");
+    String option = conf.get(COMPARATOR_OPTIONS);
+    String keyFieldSeparator = conf.get(JobContext.MAP_OUTPUT_KEY_FIELD_SEPERATOR,"\t");
     keyFieldHelper.setKeyFieldSeparator(keyFieldSeparator);
     keyFieldHelper.parseOption(option);
   }
@@ -338,4 +341,31 @@ public class KeyFieldBasedComparator<K, V> extends WritableComparator
     }
     return true;
   }
+  /**
+   * Set the {@link KeyFieldBasedComparator} options used to compare keys.
+   * 
+   * @param keySpec the key specification of the form -k pos1[,pos2], where,
+   *  pos is of the form f[.c][opts], where f is the number
+   *  of the key field to use, and c is the number of the first character from
+   *  the beginning of the field. Fields and character posns are numbered 
+   *  starting with 1; a character position of zero in pos2 indicates the
+   *  field's last character. If '.c' is omitted from pos1, it defaults to 1
+   *  (the beginning of the field); if omitted from pos2, it defaults to 0 
+   *  (the end of the field). opts are ordering options. The supported options
+   *  are:
+   *    -n, (Sort numerically)
+   *    -r, (Reverse the result of comparison)                 
+   */
+  public static void setKeyFieldComparatorOptions(Job job, String keySpec) {
+    job.getConfiguration().set(COMPARATOR_OPTIONS, keySpec);
+  }
+  
+  /**
+   * Get the {@link KeyFieldBasedComparator} options
+   */
+  public static String getKeyFieldComparatorOption(JobContext job) {
+    return job.getConfiguration().get(COMPARATOR_OPTIONS);
+  }
+
+
 }

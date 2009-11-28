@@ -18,23 +18,19 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 
-import javax.security.auth.login.LoginException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.mapreduce.QueueState;
+import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 import junit.framework.TestCase;
@@ -88,9 +84,9 @@ public class TestJobQueueInformation extends TestCase {
     dfsCluster = new MiniDFSCluster(conf, 4, true, null);
 
     jc = new JobConf();
-    jc.setClass("mapred.jobtracker.taskScheduler", TestTaskScheduler.class,
+    jc.setClass(JTConfig.JT_TASK_SCHEDULER, TestTaskScheduler.class,
         TaskScheduler.class);
-    jc.setLong("mapred.jobtracker.taskScheduler.maxRunningTasksPerJob", 10L);
+    jc.setLong(JTConfig.JT_RUNNINGTASKS_PER_JOB, 10L);
     mrCluster = new MiniMRCluster(0, 0, taskTrackers, dfsCluster
         .getFileSystem().getUri().toString(), 1, null, null, null, jc);
   }
@@ -109,7 +105,7 @@ public class TestJobQueueInformation extends TestCase {
     assertNotNull(queueInfos);
     assertEquals(1, queueInfos.length);
     assertEquals("default", queueInfos[0].getQueueName());
-    assertEquals(Queue.QueueState.RUNNING.getStateName(),
+    assertEquals(QueueState.RUNNING.getStateName(),
                   queueInfos[0].getQueueState());
     JobConf conf = mrCluster.createJobConf();
     FileSystem fileSys = dfsCluster.getFileSystem();

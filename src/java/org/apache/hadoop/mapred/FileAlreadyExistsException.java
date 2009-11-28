@@ -24,6 +24,7 @@ import java.io.IOException;
  * Used when target file already exists for any operation and 
  * is not configured to be overwritten.  
  */
+@Deprecated // may be removed after 0.23
 public class FileAlreadyExistsException
     extends IOException {
 

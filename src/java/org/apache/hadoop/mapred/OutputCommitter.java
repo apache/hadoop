@@ -71,9 +71,37 @@ public abstract class OutputCommitter
    * 
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException
+   * @deprecated Use {@link #commitJob(JobContext)} or 
+   *                 {@link #abortJob(JobContext, int)} instead.
    */
-  public abstract void cleanupJob(JobContext jobContext) throws IOException;
+  @Deprecated
+  public void cleanupJob(JobContext jobContext) throws IOException { }
 
+  /**
+   * For committing job's output after successful job completion. Note that this
+   * is invoked for jobs with final runstate as SUCCESSFUL.	
+   * 
+   * @param jobContext Context of the job whose output is being written.
+   * @throws IOException 
+   */
+  public void commitJob(JobContext jobContext) throws IOException {
+    cleanupJob(jobContext);
+  }
+  
+  /**
+   * For aborting an unsuccessful job's output. Note that this is invoked for 
+   * jobs with final runstate as {@link JobStatus#FAILED} or 
+   * {@link JobStatus#KILLED}
+   * 
+   * @param jobContext Context of the job whose output is being written.
+   * @param status final runstate of the job
+   * @throws IOException
+   */
+  public void abortJob(JobContext jobContext, int status) 
+  throws IOException {
+    cleanupJob(jobContext);
+  }
+  
   /**
    * Sets up output for the task.
    * 
@@ -128,13 +156,44 @@ public abstract class OutputCommitter
    * This method implements the new interface by calling the old method. Note
    * that the input types are different between the new and old apis and this
    * is a bridge between the two.
+   * @deprecated Use {@link #commitJob(org.apache.hadoop.mapreduce.JobContext)}
+   *             or {@link #abortJob(org.apache.hadoop.mapreduce.JobContext, org.apache.hadoop.mapreduce.JobStatus.State)}
+   *             instead.
    */
   @Override
+  @Deprecated
   public final void cleanupJob(org.apache.hadoop.mapreduce.JobContext context
                                ) throws IOException {
     cleanupJob((JobContext) context);
   }
 
+  /**
+   * This method implements the new interface by calling the old method. Note
+   * that the input types are different between the new and old apis and this
+   * is a bridge between the two.
+   */
+  @Override
+  public final void commitJob(org.apache.hadoop.mapreduce.JobContext context
+                             ) throws IOException {
+    commitJob((JobContext) context);
+  }
+  
+  /**
+   * This method implements the new interface by calling the old method. Note
+   * that the input types are different between the new and old apis and this
+   * is a bridge between the two.
+   */
+  @Override
+  public final void abortJob(org.apache.hadoop.mapreduce.JobContext context, 
+		                   org.apache.hadoop.mapreduce.JobStatus.State runState) 
+  throws IOException {
+    int state = JobStatus.getOldNewJobRunState(runState);
+    if (state != JobStatus.FAILED && state != JobStatus.KILLED) {
+      throw new IOException ("Invalid job run state : " + runState.name());
+    }
+    abortJob((JobContext) context, state);
+  }
+  
   /**
    * This method implements the new interface by calling the old method. Note
    * that the input types are different between the new and old apis and this

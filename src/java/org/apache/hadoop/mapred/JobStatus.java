@@ -17,41 +17,32 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.io.WritableUtils;
-
 /**************************************************
  * Describes the current status of a job.  This is
  * not intended to be a comprehensive piece of data.
  * For that, look at JobProfile.
- **************************************************/
-public class JobStatus implements Writable, Cloneable {
+ *************************************************
+ *@deprecated Use {@link org.apache.hadoop.mapreduce.JobStatus} instead
+ **/
+@Deprecated
+public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
 
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (JobStatus.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new JobStatus(); }
-       });
-  }
-
-  public static final int RUNNING = 1;
-  public static final int SUCCEEDED = 2;
-  public static final int FAILED = 3;
-  public static final int PREP = 4;
-  public static final int KILLED = 5;
+  public static final int RUNNING = 
+    org.apache.hadoop.mapreduce.JobStatus.State.RUNNING.getValue();
+  public static final int SUCCEEDED = 
+    org.apache.hadoop.mapreduce.JobStatus.State.SUCCEEDED.getValue();
+  public static final int FAILED = 
+    org.apache.hadoop.mapreduce.JobStatus.State.FAILED.getValue();
+  public static final int PREP = 
+    org.apache.hadoop.mapreduce.JobStatus.State.PREP.getValue();
+  public static final int KILLED = 
+    org.apache.hadoop.mapreduce.JobStatus.State.KILLED.getValue();
 
   private static final String UNKNOWN = "UNKNOWN";
-  private static final String[] runStates =
-      {UNKNOWN, "RUNNING", "SUCCEEDED", "FAILED", "PREP", "KILLED"};
   
+  private static final String[] runStates =
+    {UNKNOWN, "RUNNING", "SUCCEEDED", "FAILED", "PREP", "KILLED"};
+
   /**
    * Helper method to get human-readable state of the job.
    * @param state job state
@@ -64,25 +55,17 @@ public class JobStatus implements Writable, Cloneable {
     return runStates[state];
   }
   
-  private JobID jobid;
-  private float mapProgress;
-  private float reduceProgress;
-  private float cleanupProgress;
-  private float setupProgress;
-  private int runState;
-  private long startTime;
-  private String user;
-  private JobPriority priority;
-  private String schedulingInfo="NA";
-
-  private String jobName;
-  private String jobFile;
-  private long finishTime;
-  private boolean isRetired;
-  private String historyFile = "";
-  private String trackingUrl ="";
-
-    
+  static org.apache.hadoop.mapreduce.JobStatus.State getEnum(int state) {
+    switch (state) {
+      case 1: return org.apache.hadoop.mapreduce.JobStatus.State.RUNNING;
+      case 2: return org.apache.hadoop.mapreduce.JobStatus.State.SUCCEEDED;
+      case 3: return org.apache.hadoop.mapreduce.JobStatus.State.FAILED;
+      case 4: return org.apache.hadoop.mapreduce.JobStatus.State.PREP;
+      case 5: return org.apache.hadoop.mapreduce.JobStatus.State.KILLED;
+    }
+    return null;
+  }
+  
   /**
    */
   public JobStatus() {
@@ -164,295 +147,179 @@ public class JobStatus implements Writable, Cloneable {
                     float reduceProgress, float cleanupProgress, 
                     int runState, JobPriority jp, String user, String jobName, 
                     String jobFile, String trackingUrl) {
-     this.jobid = jobid;
-     this.setupProgress = setupProgress;
-     this.mapProgress = mapProgress;
-     this.reduceProgress = reduceProgress;
-     this.cleanupProgress = cleanupProgress;
-     this.runState = runState;
-     this.user = user;
-     if (jp == null) {
-       throw new IllegalArgumentException("Job Priority cannot be null.");
-     }
-     priority = jp;
-     this.jobName = jobName;
-     this.jobFile = jobFile;
-     this.trackingUrl = trackingUrl;
+     super(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
+       getEnum(runState), org.apache.hadoop.mapreduce.JobPriority.valueOf(jp.name()),
+       user, jobName, jobFile, trackingUrl);
    }
    
+  public static JobStatus downgrade(org.apache.hadoop.mapreduce.JobStatus stat){
+    JobStatus old = new JobStatus(JobID.downgrade(stat.getJobID()),
+      stat.getSetupProgress(), stat.getMapProgress(), stat.getReduceProgress(),
+      stat.getCleanupProgress(), stat.getState().getValue(), 
+      JobPriority.valueOf(stat.getPriority().name()),
+      stat.getUsername(), stat.getJobName(), stat.getJobFile(),
+      stat.getTrackingUrl());
+    old.setStartTime(stat.getStartTime());
+    old.setFinishTime(stat.getFinishTime());
+    old.setSchedulingInfo(stat.getSchedulingInfo());
+    old.setHistoryFile(stat.getHistoryFile());
+    return old;
+  }
   /**
    * @deprecated use getJobID instead
    */
   @Deprecated
-  public String getJobId() { return jobid.toString(); }
+  public String getJobId() { return getJobID().toString(); }
   
   /**
    * @return The jobid of the Job
    */
-  public JobID getJobID() { return jobid; }
-    
-  /**
-   * @return Percentage of progress in maps 
-   */
-  public synchronized float mapProgress() { return mapProgress; }
-    
-  /**
-   * Sets the map progress of this job
-   * @param p The value of map progress to set to
-   */
-  synchronized void setMapProgress(float p) { 
-    this.mapProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
-  }
-
-  /**
-   * @return Percentage of progress in cleanup 
-   */
-  public synchronized float cleanupProgress() { return cleanupProgress; }
-    
-  /**
-   * Sets the cleanup progress of this job
-   * @param p The value of cleanup progress to set to
-   */
-  synchronized void setCleanupProgress(float p) { 
-    this.cleanupProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
-  }
-
-  /**
-   * @return Percentage of progress in setup 
-   */
-  public synchronized float setupProgress() { return setupProgress; }
-    
-  /**
-   * Sets the setup progress of this job
-   * @param p The value of setup progress to set to
-   */
-  synchronized void setSetupProgress(float p) { 
-    this.setupProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
-  }
-
-  /**
-   * @return Percentage of progress in reduce 
-   */
-  public synchronized float reduceProgress() { return reduceProgress; }
-    
-  /**
-   * Sets the reduce progress of this Job
-   * @param p The value of reduce progress to set to
-   */
-  synchronized void setReduceProgress(float p) { 
-    this.reduceProgress = (float) Math.min(1.0, Math.max(0.0, p)); 
-  }
-    
-  /**
-   * @return running state of the job
-   */
-  public synchronized int getRunState() { return runState; }
-    
-  /**
-   * Change the current run state of the job.
-   */
-  public synchronized void setRunState(int state) {
-    this.runState = state;
-  }
-
-  /** 
-   * Set the start time of the job
-   * @param startTime The startTime of the job
-   */
-  synchronized void setStartTime(long startTime) { this.startTime = startTime;}
-    
-  /**
-   * @return start time of the job
-   */
-  synchronized public long getStartTime() { return startTime;}
-
-  @Override
-  public Object clone() {
-    try {
-      return super.clone();
-    } catch (CloneNotSupportedException cnse) {
-      // Shouldn't happen since we do implement Clonable
-      throw new InternalError(cnse.toString());
-    }
-  }
-  
-  /**
-   * @param user The username of the job
-   */
-  synchronized void setUsername(String userName) { this.user = userName;}
-
-  /**
-   * @return the username of the job
-   */
-  public synchronized String getUsername() { return this.user;}
-  
-  /**
-   * Gets the Scheduling information associated to a particular Job.
-   * @return the scheduling information of the job
-   */
-  public synchronized String getSchedulingInfo() {
-   return schedulingInfo;
-  }
-
-  /**
-   * Used to set the scheduling information associated to a particular Job.
-   * 
-   * @param schedulingInfo Scheduling information of the job
-   */
-  public synchronized void setSchedulingInfo(String schedulingInfo) {
-    this.schedulingInfo = schedulingInfo;
-  }
+  public JobID getJobID() { return JobID.downgrade(super.getJobID()); }
   
   /**
    * Return the priority of the job
    * @return job priority
    */
-   public synchronized JobPriority getJobPriority() { return priority; }
-  
+   public synchronized JobPriority getJobPriority() { 
+     return JobPriority.valueOf(super.getPriority().name());
+   }
+
+   /**
+    * Sets the map progress of this job
+    * @param p The value of map progress to set to
+    */
+   protected synchronized void setMapProgress(float p) { 
+     super.setMapProgress(p); 
+   }
+
+   /**
+    * Sets the cleanup progress of this job
+    * @param p The value of cleanup progress to set to
+    */
+   protected synchronized void setCleanupProgress(float p) { 
+     super.setCleanupProgress(p); 
+   }
+
+   /**
+    * Sets the setup progress of this job
+    * @param p The value of setup progress to set to
+    */
+   protected synchronized void setSetupProgress(float p) { 
+     super.setSetupProgress(p); 
+   }
+
+   /**
+    * Sets the reduce progress of this Job
+    * @param p The value of reduce progress to set to
+    */
+   protected synchronized void setReduceProgress(float p) { 
+     super.setReduceProgress(p); 
+   }
+     
+   /** 
+    * Set the finish time of the job
+    * @param finishTime The finishTime of the job
+    */
+   protected synchronized void setFinishTime(long finishTime) {
+     super.setFinishTime(finishTime);
+   }
+
+   /**
+    * Set the job history file url for a completed job
+    */
+   protected synchronized void setHistoryFile(String historyFile) {
+     super.setHistoryFile(historyFile);
+   }
+
+   /**
+    * Set the link to the web-ui for details of the job.
+    */
+   protected synchronized void setTrackingUrl(String trackingUrl) {
+     super.setTrackingUrl(trackingUrl);
+   }
+
+   /**
+    * Set the job retire flag to true.
+    */
+   protected synchronized void setRetired() {
+     super.setRetired();
+   }
+
+   /**
+    * Change the current run state of the job.
+    */
+   protected synchronized void setRunState(int state) {
+     super.setState(getEnum(state));
+   }
+
+   /**
+    * @return running state of the job
+    */
+   public synchronized int getRunState() { return super.getState().getValue(); }
+     
+
+   /** 
+    * Set the start time of the job
+    * @param startTime The startTime of the job
+    */
+   protected synchronized void setStartTime(long startTime) { 
+     super.setStartTime(startTime);
+   }
+     
+   /**
+    * @param userName The username of the job
+    */
+   protected synchronized void setUsername(String userName) { 
+     super.setUsername(userName);
+   }
+
+   /**
+    * Used to set the scheduling information associated to a particular Job.
+    * 
+    * @param schedulingInfo Scheduling information of the job
+    */
+   protected synchronized void setSchedulingInfo(String schedulingInfo) {
+     super.setSchedulingInfo(schedulingInfo);
+   }
+   
   /**
    * Set the priority of the job, defaulting to NORMAL.
    * @param jp new job priority
    */
    public synchronized void setJobPriority(JobPriority jp) {
-     if (jp == null) {
-       throw new IllegalArgumentException("Job priority cannot be null.");
-     }
-     priority = jp;
+     super.setPriority(
+       org.apache.hadoop.mapreduce.JobPriority.valueOf(jp.name()));
    }
   
    /**
-    * Returns true if the status is for a completed job.
+    * @return Percentage of progress in maps 
     */
-   public synchronized boolean isJobComplete() {
-     return (runState == JobStatus.SUCCEEDED || runState == JobStatus.FAILED 
-             || runState == JobStatus.KILLED);
+   public synchronized float mapProgress() { return super.getMapProgress(); }
+     
+   /**
+    * @return Percentage of progress in cleanup 
+    */
+   public synchronized float cleanupProgress() { 
+     return super.getCleanupProgress(); 
+   }
+     
+   /**
+    * @return Percentage of progress in setup 
+    */
+   public synchronized float setupProgress() { 
+     return super.getSetupProgress(); 
+   }
+     
+   /**
+    * @return Percentage of progress in reduce 
+    */
+   public synchronized float reduceProgress() { 
+     return super.getReduceProgress(); 
    }
 
-  ///////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////
-  public synchronized void write(DataOutput out) throws IOException {
-    jobid.write(out);
-    out.writeFloat(setupProgress);
-    out.writeFloat(mapProgress);
-    out.writeFloat(reduceProgress);
-    out.writeFloat(cleanupProgress);
-    out.writeInt(runState);
-    out.writeLong(startTime);
-    Text.writeString(out, user);
-    WritableUtils.writeEnum(out, priority);
-    Text.writeString(out, schedulingInfo);
-    out.writeLong(finishTime);
-    out.writeBoolean(isRetired);
-    Text.writeString(out, historyFile);
-    Text.writeString(out, jobName);
-    Text.writeString(out, trackingUrl);
-    Text.writeString(out, jobFile);
-  }
-
-  public synchronized void readFields(DataInput in) throws IOException {
-    this.jobid = JobID.read(in);
-    this.setupProgress = in.readFloat();
-    this.mapProgress = in.readFloat();
-    this.reduceProgress = in.readFloat();
-    this.cleanupProgress = in.readFloat();
-    this.runState = in.readInt();
-    this.startTime = in.readLong();
-    this.user = Text.readString(in);
-    this.priority = WritableUtils.readEnum(in, JobPriority.class);
-    this.schedulingInfo = Text.readString(in);
-    this.finishTime = in.readLong();
-    this.isRetired = in.readBoolean();
-    this.historyFile = Text.readString(in);
-    this.jobName = Text.readString(in);
-    this.trackingUrl = Text.readString(in);
-    this.jobFile = Text.readString(in);
-  }
-
-  /**
-   * Get the user-specified job name.
-   */
-  public String getJobName() {
-    return jobName;
-  }
-
-  /**
-   * Get the configuration file for the job.
-   */
-  public String getJobFile() {
-    return jobFile;
-  }
-
-  /**
-   * Get the link to the web-ui for details of the job.
-   */
-  public synchronized String getTrackingUrl() {
-    return trackingUrl;
-  }
-
-  /**
-   * Get the finish time of the job.
-   */
-  public synchronized long getFinishTime() { 
-    return finishTime;
-  }
-
-  /**
-   * Check whether the job has retired.
-   */
-  public synchronized boolean isRetired() {
-    return isRetired;
-  }
-
-  /**
-   * @return the job history file name for a completed job. If job is not 
-   * completed or history file not available then return null.
-   */
-  public synchronized String getHistoryFile() {
-    return historyFile;
-  }
-
- /** 
-   * Set the finish time of the job
-   * @param finishTime The finishTime of the job
-   */
-  synchronized void setFinishTime(long finishTime) {
-    this.finishTime = finishTime;
-  }
-
-  /**
-   * Set the job history file url for a completed job
-   */
-  synchronized void setHistoryFile(String historyFile) {
-    this.historyFile = historyFile;
-  }
-
-  /**
-   * Set the link to the web-ui for details of the job.
-   */
-  synchronized void setTrackingUrl(String trackingUrl) {
-    this.trackingUrl = trackingUrl;
-  }
-
-  /**
-   * Set the job retire flag to true.
-   */
-  synchronized void setRetired() {
-    this.isRetired = true;
-  }
-
-  public String toString() {
-    StringBuffer buffer = new StringBuffer();
-    buffer.append("job-id : " + jobid);
-    buffer.append("map-progress : " + mapProgress);
-    buffer.append("reduce-progress : " + reduceProgress);
-    buffer.append("cleanup-progress : " + cleanupProgress);
-    buffer.append("setup-progress : " + setupProgress);
-    buffer.append("runstate : " + runState);
-    buffer.append("start-time : " + startTime);
-    buffer.append("user-name : " + user);
-    buffer.append("priority : " + priority);
-    buffer.append("scheduling-info : " + schedulingInfo);
-    return buffer.toString();
-  }
+   // A utility to convert new job runstates to the old ones.
+   static int getOldNewJobRunState(
+     org.apache.hadoop.mapreduce.JobStatus.State state) {
+     return state.getValue();
+   }
 }

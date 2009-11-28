@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mrunit.types.Pair;
@@ -56,15 +57,18 @@ public class PipelineMapReduceDriver<K1, V1, K2, V2>
 
   private List<Pair<Mapper, Reducer>> mapReducePipeline;
   private List<Pair<K1, V1>> inputList;
+  private Counters counters;
 
   public PipelineMapReduceDriver(final List<Pair<Mapper, Reducer>> pipeline) {
     this.mapReducePipeline = copyMapReduceList(pipeline);
     this.inputList = new ArrayList<Pair<K1, V1>>();
+    this.counters = new Counters();
   }
 
   public PipelineMapReduceDriver() {
     this.mapReducePipeline = new ArrayList<Pair<Mapper, Reducer>>();
     this.inputList = new ArrayList<Pair<K1, V1>>();
+    this.counters = new Counters();
   }
 
   private List<Pair<Mapper, Reducer>> copyMapReduceList(List<Pair<Mapper, Reducer>> lst) {
@@ -76,6 +80,25 @@ public class PipelineMapReduceDriver<K1, V1, K2, V2>
 
     return outList;
   }
+
+  /** @return the counters used in this test */
+  public Counters getCounters() {
+    return counters;
+  }
+
+  /** Sets the counters object to use for this test.
+   * @param ctrs The counters object to use.
+   */
+  public void setCounters(final Counters ctrs) {
+    this.counters = ctrs;
+  }
+
+  /** Sets the counters to use and returns self for fluent style */
+  public PipelineMapReduceDriver<K1, V1, K2, V2> withCounters(final Counters ctrs) {
+    setCounters(ctrs);
+    return this;
+  }
+
 
   /** Add a Mapper and Reducer instance to the pipeline to use with this test driver
    * @param m The Mapper instance to add to the pipeline
@@ -281,6 +304,8 @@ public class PipelineMapReduceDriver<K1, V1, K2, V2>
     for (Pair<Mapper, Reducer> job : mapReducePipeline) {
       // Create a MapReduceDriver to run this phase of the pipeline.
       MapReduceDriver mrDriver = new MapReduceDriver(job.getFirst(), job.getSecond());
+
+      mrDriver.setCounters(getCounters());
 
       // Add the inputs from the user, or from the previous stage of the pipeline.
       for (Object input : inputs) {

@@ -24,13 +24,8 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
-    <dependency org="commons-logging"
-      name="commons-logging"
-      rev="${commons-logging.version}"
-      conf="common->default"/>
-    <dependency org="log4j"
-      name="log4j"
-      rev="${log4j.version}"
-      conf="common->master"/>
-    </dependencies>
+    <dependency org="org.apache.hadoop" name="hadoop-core" rev="${hadoop-core.version}" conf="common->default"/>
+    <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="common->default"/>
+    <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
+  </dependencies>
 </ivy-module>
