@@ -44,13 +44,13 @@ import junit.framework.TestCase;
 public class TestGetBlocks extends TestCase {
   /** test getBlocks */
   public void testGetBlocks() throws Exception {
-    final Configuration CONF = new Configuration();
+    final Configuration CONF = new HdfsConfiguration();
 
     final short REPLICATION_FACTOR = (short)2;
     final int DEFAULT_BLOCK_SIZE = 1024;
     final Random r = new Random();
     
-    CONF.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster(
           CONF, REPLICATION_FACTOR, true, null );
     try {
@@ -145,7 +145,7 @@ public class TestGetBlocks extends TestCase {
     assertTrue(getException);
   }
  
-  public void testGenerationStampWildCard() {
+  public void testBlockKey() {
     Map<Block, Long> map = new HashMap<Block, Long>();
     final Random RAN = new Random();
     final long seed = RAN.nextLong();
@@ -160,7 +160,7 @@ public class TestGetBlocks extends TestCase {
     System.out.println("map=" + map.toString().replace(",", "\n  "));
     
     for(int i = 0; i < blkids.length; i++) {
-      Block b = new Block(blkids[i], 0, GenerationStamp.WILDCARD_STAMP);
+      Block b = new Block(blkids[i], 0, GenerationStamp.GRANDFATHER_GENERATION_STAMP);
       Long v = map.get(b);
       System.out.println(b + " => " + v);
       assertEquals(blkids[i], v.longValue());

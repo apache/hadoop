@@ -29,11 +29,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -211,8 +212,8 @@ class DataBlockScanner implements Runnable {
   private void init() {
     
     // get the list of blocks and arrange them in random order
-    Block arr[] = dataset.getBlockReport();
-    Collections.shuffle(Arrays.asList(arr));
+    List<Block> arr = dataset.getFinalizedBlocks();
+    Collections.shuffle(arr);
     
     blockInfoSet = new TreeSet<BlockScanInfo>();
     blockMap = new HashMap<Block, BlockScanInfo>();
@@ -373,7 +374,7 @@ class DataBlockScanner implements Runnable {
   static private class LogEntry {
     long blockId = -1;
     long verificationTime = -1;
-    long genStamp = Block.GRANDFATHER_GENERATION_STAMP;
+    long genStamp = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     
     /**
      * The format consists of single line with multiple entries. each 
@@ -450,7 +451,6 @@ class DataBlockScanner implements Runnable {
         return;
       } catch (IOException e) {
 
-        totalScanErrors++;
         updateScanStatus(block, ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
@@ -466,6 +466,7 @@ class DataBlockScanner implements Runnable {
                  StringUtils.stringifyException(e));
         
         if (second) {
+          totalScanErrors++;
           datanode.getMetrics().blockVerificationFailures.inc(); 
           handleScanFailure(block);
           return;

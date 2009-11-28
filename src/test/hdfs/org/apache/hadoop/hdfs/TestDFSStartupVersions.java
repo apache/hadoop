@@ -169,10 +169,10 @@ public class TestDFSStartupVersions extends TestCase {
   public void testVersions() throws Exception {
     UpgradeUtilities.initialize();
     Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 
-                                                      new Configuration());
+                                                      new HdfsConfiguration());
     StorageInfo[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
-                                       NAME_NODE, conf.getStrings("dfs.name.dir"), "current");
+                                       NAME_NODE, conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY), "current");
     cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
     StorageInfo nameNodeVersion = new StorageInfo(
                                                   UpgradeUtilities.getCurrentLayoutVersion(),
@@ -181,7 +181,7 @@ public class TestDFSStartupVersions extends TestCase {
     log("NameNode version info", NAME_NODE, null, nameNodeVersion);
     for (int i = 0; i < versions.length; i++) {
       File[] storage = UpgradeUtilities.createStorageDirs(
-                                                          DATA_NODE, conf.getStrings("dfs.data.dir"), "current");
+                                                          DATA_NODE, conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY), "current");
       log("DataNode version info", DATA_NODE, i, versions[i]);
       UpgradeUtilities.createVersionFile(DATA_NODE, storage, versions[i]);
       try {

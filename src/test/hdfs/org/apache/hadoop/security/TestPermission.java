@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
@@ -65,9 +67,9 @@ public class TestPermission extends TestCase {
   }
 
   public void testCreate() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean("dfs.permissions", true);
-    conf.setInt(FsPermission.UMASK_LABEL, 0);
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
+    conf.set(FsPermission.UMASK_LABEL, "000");
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
 
@@ -95,7 +97,7 @@ public class TestPermission extends TestCase {
       checkPermission(fs, "/b1/b2", inheritPerm);
       checkPermission(fs, "/b1/b2/b3.txt", filePerm);
       
-      conf.setInt(FsPermission.UMASK_LABEL, 0022);
+      conf.set(FsPermission.UMASK_LABEL, "022");
       FsPermission permission = 
         FsPermission.createImmutable((short)0666);
       FileSystem.mkdirs(fs, new Path("/c1"), new FsPermission(permission));
@@ -118,8 +120,8 @@ public class TestPermission extends TestCase {
   }
 
   public void testFilePermision() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean("dfs.permissions", true);
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
 

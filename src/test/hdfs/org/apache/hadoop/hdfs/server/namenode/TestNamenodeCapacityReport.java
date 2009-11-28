@@ -23,6 +23,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -44,7 +45,7 @@ public class TestNamenodeCapacityReport extends TestCase {
    * Then, it updates the block with new information and verifies again. 
    */
   public void testVolumeSize() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     // Set aside fifth of the total capacity as reserved

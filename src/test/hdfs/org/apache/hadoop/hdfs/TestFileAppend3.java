@@ -24,6 +24,7 @@ import junit.extensions.TestSetup;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -33,10 +34,23 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
-import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.log4j.Level;
 
 /** This class implements some of tests posted in HADOOP-2658. */
 public class TestFileAppend3 extends junit.framework.TestCase {
+  {
+    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)InterDatanodeProtocol.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   static final long BLOCK_SIZE = 64 * 1024;
   static final short REPLICATION = 3;
   static final int DATANODE_NUM = 5;
@@ -50,8 +64,8 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     return new TestSetup(new TestSuite(TestFileAppend3.class)) {
       protected void setUp() throws java.lang.Exception {
         AppendTestUtil.LOG.info("setUp()");
-        conf = new Configuration();
-        conf.setInt("io.bytes.per.checksum", 512);
+        conf = new HdfsConfiguration();
+        conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
         conf.setBoolean("dfs.support.append", true);
         buffersize = conf.getInt("io.file.buffer.size", 4096);
         cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
@@ -109,6 +123,8 @@ public class TestFileAppend3 extends junit.framework.TestCase {
       AppendTestUtil.write(out, 0, len1);
       out.close();
     }
+
+    AppendTestUtil.check(fs, p, len1);
 
     //   Reopen file to append quarter block of data. Close file.
     final int len2 = (int)BLOCK_SIZE/4; 
@@ -220,6 +236,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     FSDataOutputStream out = fs.append(p);
     final int len2 = (int)BLOCK_SIZE/2; 
     AppendTestUtil.write(out, len1, len2);
+    out.hflush();
     
     //c. Rename file to file.new.
     final Path pnew = new Path(p + ".new");
@@ -250,7 +267,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
       }
       for(DatanodeInfo datanodeinfo : lb.getLocations()) {
         final DataNode dn = cluster.getDataNode(datanodeinfo.getIpcPort());
-        final BlockMetaDataInfo metainfo = dn.getBlockMetaDataInfo(blk);
+        final Block metainfo = dn.data.getStoredBlock(blk.getBlockId());
         assertEquals(size, metainfo.getNumBytes());
       }
     }
@@ -284,5 +301,60 @@ public class TestFileAppend3 extends junit.framework.TestCase {
 
     //c. Reopen file and read 25687+5877 bytes of data from file. Close file.
     AppendTestUtil.check(fs, p, len1 + len2);
+  }
+  
+  /** Append to a partial CRC chunk and 
+   * the first write does not fill up the partial CRC trunk
+   * *
+   * @throws IOException
+   */
+  public void testAppendToPartialChunk() throws IOException {
+    final Path p = new Path("/partialChunk/foo");
+    final int fileLen = 513;
+    System.out.println("p=" + p);
+    
+    byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
+
+    // create a new file.
+    FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, 1);
+
+    // create 1 byte file
+    stm.write(fileContents, 0, 1);
+    stm.close();
+    System.out.println("Wrote 1 byte and closed the file " + p);
+
+    // append to file
+    stm = fs.append(p);
+    // Append to a partial CRC trunk
+    stm.write(fileContents, 1, 1);
+    stm.hflush();
+    // The partial CRC trunk is not full yet and close the file
+    stm.close();
+    System.out.println("Append 1 byte and closed the file " + p);
+
+    // write the remainder of the file
+    stm = fs.append(p);
+
+    // ensure getPos is set to reflect existing size of the file
+    assertEquals(2, stm.getPos());
+
+    // append to a partial CRC trunk
+    stm.write(fileContents, 2, 1);
+    // The partial chunk is not full yet, force to send a packet to DN
+    stm.hflush();
+    System.out.println("Append and flush 1 byte");
+    // The partial chunk is not full yet, force to send another packet to DN
+    stm.write(fileContents, 3, 2);
+    stm.hflush();
+    System.out.println("Append and flush 2 byte");
+
+    // fill up the partial chunk and close the file
+    stm.write(fileContents, 5, fileLen-5);
+    stm.close();
+    System.out.println("Flush 508 byte and closed the file " + p);
+
+    // verify that entire file is good
+    AppendTestUtil.checkFullFile(fs, p, fileLen,
+        fileContents, "Failed to append to a partial chunk");
   }
 }

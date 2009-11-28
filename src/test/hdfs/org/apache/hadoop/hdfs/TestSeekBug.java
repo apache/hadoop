@@ -123,7 +123,7 @@ public class TestSeekBug extends TestCase {
    * Test if the seek bug exists in FSDataInputStream in DFS.
    */
   public void testSeekBugDFS() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -142,7 +142,7 @@ public class TestSeekBug extends TestCase {
    * Tests if the seek bug exists in FSDataInputStream in LocalFS.
    */
   public void testSeekBugLocalFS() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path("build/test/data", "seektest.dat");

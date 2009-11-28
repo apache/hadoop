@@ -74,7 +74,7 @@ public class TestModTime extends TestCase {
    * Tests modification time in DFS.
    */
   public void testModTime() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();

@@ -102,7 +102,7 @@ public class TestFileAppend extends TestCase {
    * @throws IOException an exception might be thrown
    */
   public void testCopyOnWrite() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -148,7 +148,7 @@ public class TestFileAppend extends TestCase {
         Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
-            dataset.detachBlock(b, 1));
+            dataset.unlinkBlock(b, 1));
       }
 
       // Since the blocks were already detached earlier, these calls should
@@ -158,7 +158,7 @@ public class TestFileAppend extends TestCase {
         Block b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
-            !dataset.detachBlock(b, 1));
+            !dataset.unlinkBlock(b, 1));
       }
 
     } finally {
@@ -172,7 +172,7 @@ public class TestFileAppend extends TestCase {
    * @throws IOException an exception might be thrown
    */
   public void testSimpleFlush() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -189,14 +189,14 @@ public class TestFileAppend extends TestCase {
       // write to file
       int mid = AppendTestUtil.FILE_SIZE /2;
       stm.write(fileContents, 0, mid);
-      stm.sync();
+      stm.hflush();
       System.out.println("Wrote and Flushed first part of file.");
 
       // write the remainder of the file
       stm.write(fileContents, mid, AppendTestUtil.FILE_SIZE - mid);
       System.out.println("Written second part of file");
-      stm.sync();
-      stm.sync();
+      stm.hflush();
+      stm.hflush();
       System.out.println("Wrote and Flushed second part of file.");
 
       // verify that full blocks are sane
@@ -227,7 +227,7 @@ public class TestFileAppend extends TestCase {
    * @throws IOException an exception might be thrown
    */
   public void testComplexFlush() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -244,7 +244,7 @@ public class TestFileAppend extends TestCase {
       int start = 0;
       for (start = 0; (start + 29) < AppendTestUtil.FILE_SIZE; ) {
         stm.write(fileContents, start, 29);
-        stm.sync();
+        stm.hflush();
         start += 29;
       }
       stm.write(fileContents, start, AppendTestUtil.FILE_SIZE -start);

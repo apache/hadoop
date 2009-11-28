@@ -35,11 +35,9 @@ public aspect FSDatasetAspects {
   // the following will inject faults inside of the method in question 		
     execution (* FSDataset.getBlockFile(..)) && !within(FSDatasetAspects +);
 
-  // the following will inject faults before the actual call of the method
-  // call (* FSDataset.getBlockFile(..)) && !within(FSDatasetAspects +);
-
-  pointcut callCreateBlockWriteStream() : 
-    call (BlockWriteStreams FSDataset.createBlockWriteStreams(..)) 
+  pointcut callCreateBlockWriteStream(ReplicaInPipeline repl) : 
+    call (BlockWriteStreams createStreams(..))
+    && target (repl)
       && !within(FSDatasetAspects +);
 
   // This aspect specifies the logic of our fault point.
@@ -54,7 +52,7 @@ public aspect FSDatasetAspects {
     }
   }
 
-  before() throws DiskOutOfSpaceException : callCreateBlockWriteStream() {
+  before(ReplicaInPipeline repl) throws DiskOutOfSpaceException : callCreateBlockWriteStream(repl) {
     if (ProbabilityModel.injectCriteria(FSDataset.class.getSimpleName())) {
       LOG.info("Before the injection point");
       Thread.dumpStack();

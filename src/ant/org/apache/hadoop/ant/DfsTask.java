@@ -34,6 +34,8 @@ import org.apache.tools.ant.Project;
 import org.apache.tools.ant.types.Path;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+
 /**
  * {@link org.apache.hadoop.fs.FsShell FsShell} wrapper for ant Task.
  */
@@ -180,7 +182,7 @@ public class DfsTask extends Task {
     try {
       pushContext();
 
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       conf.setClassLoader(confloader);
       exit_code = ToolRunner.run(conf, shell,
           argv.toArray(new String[argv.size()]));

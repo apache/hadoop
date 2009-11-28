@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 
 /**
@@ -113,12 +114,12 @@ public class DirectoryScanner {
 
     @Override // Object
     public int hashCode() {
-      return 37 * 17 + (int) (blockId^(blockId>>>32));
+      return (int)(blockId^(blockId>>>32));
     }
 
     public long getGenStamp() {
       return metaFile != null ? Block.getGenerationStamp(metaFile.getName()) :
-        Block.GRANDFATHER_GENERATION_STAMP;
+        GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     }
   }
 

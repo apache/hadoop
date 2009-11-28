@@ -53,7 +53,7 @@ public class TestBlockMissingException extends TestCase {
     LOG.info("Test testBlockMissingException started.");
     long blockSize = 1024L;
     int numBlocks = 4;
-    conf = new Configuration();
+    conf = new HdfsConfiguration();
     try {
       dfs = new MiniDFSCluster(conf, NUM_DATANODES, true, null);
       dfs.waitActive();
@@ -123,14 +123,14 @@ public class TestBlockMissingException extends TestCase {
    * The Data directories for a datanode
    */
   private File[] getDataNodeDirs(int i) throws IOException {
-    File base_dir = new File(System.getProperty("test.build.data"), "dfs/");
+    String base_dir = MiniDFSCluster.getBaseDirectory();
     File data_dir = new File(base_dir, "data");
     File dir1 = new File(data_dir, "data"+(2*i+1));
     File dir2 = new File(data_dir, "data"+(2*i+2));
     if (dir1.isDirectory() && dir2.isDirectory()) {
       File[] dir = new File[2];
-      dir[0] = new File(dir1, "current");
-      dir[1] = new File(dir2, "current"); 
+      dir[0] = new File(dir1, MiniDFSCluster.FINALIZED_DIR_NAME);
+      dir[1] = new File(dir2, MiniDFSCluster.FINALIZED_DIR_NAME); 
       return dir;
     }
     return new File[0];

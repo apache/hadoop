@@ -20,8 +20,10 @@ package org.apache.hadoop.hdfs;
 import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 
 /**
@@ -41,7 +43,7 @@ public class TestDFSMkdirs extends TestCase {
    * not create a subdirectory off a file.
    */
   public void testDFSMkdirs() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -70,6 +72,48 @@ public class TestDFSMkdirs extends TestCase {
     	
     } finally {
       fileSys.close();
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Tests mkdir will not create directory when parent is missing.
+   */
+  public void testMkdir() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    try {
+      // Create a dir in root dir, should succeed
+      assertTrue(dfs.mkdir(new Path("/mkdir-" + System.currentTimeMillis()),
+          FsPermission.getDefault()));
+      // Create a dir when parent dir exists as a file, should fail
+      IOException expectedException = null;
+      String filePath = "/mkdir-file-" + System.currentTimeMillis();
+      writeFile(dfs, new Path(filePath));
+      try {
+        dfs.mkdir(new Path(filePath + "/mkdir"), FsPermission.getDefault());
+      } catch (IOException e) {
+        expectedException = e;
+      }
+      assertTrue("Create a directory when parent dir exists as file using"
+          + " mkdir() should throw FileAlreadyExistsException ",
+          expectedException != null
+              && expectedException instanceof FileAlreadyExistsException);
+      // Create a dir in a non-exist directory, should fail
+      expectedException = null;
+      try {
+        dfs.mkdir(new Path("/non-exist/mkdir-" + System.currentTimeMillis()),
+            FsPermission.getDefault());
+      } catch (IOException e) {
+        expectedException = e;
+      }
+      assertTrue("Create a directory in a non-exist parent dir using"
+          + " mkdir() should throw FileNotFoundException ",
+          expectedException != null
+              && expectedException instanceof FileNotFoundException);
+    } finally {
+      dfs.close();
       cluster.shutdown();
     }
   }

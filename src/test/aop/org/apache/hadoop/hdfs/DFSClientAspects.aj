@@ -22,12 +22,15 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.PipelineTest;
+import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
+import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream.DataStreamer;
-
+import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
 import org.junit.Assert;
 
 /** Aspects for DFSClient */
-public aspect DFSClientAspects {
+privileged public aspect DFSClientAspects {
   public static final Log LOG = LogFactory.getLog(DFSClientAspects.class);
 
   pointcut callCreateBlockOutputStream(DataStreamer datastreamer):
@@ -35,7 +38,7 @@ public aspect DFSClientAspects {
 
   before(DataStreamer datastreamer) : callCreateBlockOutputStream(datastreamer) {
     Assert.assertFalse(datastreamer.hasError);
-    Assert.assertEquals(0, datastreamer.errorIndex);
+    Assert.assertEquals(-1, datastreamer.errorIndex);
   }
 
   pointcut pipelineInitNonAppend(DataStreamer datastreamer):
@@ -48,8 +51,9 @@ public aspect DFSClientAspects {
         + datastreamer.hasError + " errorIndex=" + datastreamer.errorIndex);
     try {
       if (datastreamer.hasError) {
-        DataTransferTestUtil.getDataTransferTest().fiPipelineInitErrorNonAppend
-            .run(datastreamer.errorIndex);
+        DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+        if (dtTest != null )
+          dtTest.fiPipelineInitErrorNonAppend.run(datastreamer.errorIndex);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -66,22 +70,44 @@ public aspect DFSClientAspects {
         + " errorIndex=" + datastreamer.errorIndex);
   }
 
-  pointcut pipelineErrorAfterInit(boolean onError, boolean isAppend,
-      DataStreamer datastreamer):
-    call(* processDatanodeError(boolean, boolean))
-    && args(onError, isAppend)
-    && target(datastreamer)
-    && if(onError && !isAppend);
+  pointcut pipelineErrorAfterInit(DataStreamer datastreamer):
+    call(* processDatanodeError())
+    && within (DFSClient.DFSOutputStream.DataStreamer)
+    && target(datastreamer);
 
-  before(DataStreamer datastreamer) : pipelineErrorAfterInit(boolean, boolean, datastreamer) {
+  before(DataStreamer datastreamer) : pipelineErrorAfterInit(datastreamer) {
     LOG.info("FI: before pipelineErrorAfterInit: errorIndex="
         + datastreamer.errorIndex);
     try {
-      DataTransferTestUtil.getDataTransferTest().fiPipelineErrorAfterInit
-          .run(datastreamer.errorIndex);
+      DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+      if (dtTest != null )
+        dtTest.fiPipelineErrorAfterInit.run(datastreamer.errorIndex);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
+  pointcut pipelineClose(DFSOutputStream out):
+    call(void flushInternal())
+    && withincode (void DFSOutputStream.close())
+    && this(out);
+
+  before(DFSOutputStream out) : pipelineClose(out) {
+    LOG.info("FI: before pipelineClose:");
+  }
+
+  pointcut checkAckQueue(DFSClient.DFSOutputStream.Packet cp):
+    call (void DFSClient.DFSOutputStream.waitAndQueuePacket(
+            DFSClient.DFSOutputStream.Packet))
+    && withincode (void DFSClient.DFSOutputStream.writeChunk(..))
+    && args(cp);
+
+  after(DFSClient.DFSOutputStream.Packet cp) : checkAckQueue (cp) {
+    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
+    if (pTest != null && pTest instanceof PipelinesTest) {
+      LOG.debug("FI: Recording packet # " + cp.seqno
+          + " where queuing has occurred");
+      ((PipelinesTest) pTest).setVerified(cp.seqno);
+    }
+  }
 }

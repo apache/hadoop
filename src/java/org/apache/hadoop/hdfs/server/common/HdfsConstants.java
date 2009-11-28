@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /************************************
  * Some handy internal HDFS constants
  *
@@ -79,6 +83,78 @@ public interface HdfsConstants {
     public String toString() {
       return description;
     }
+  }
+
+  /**
+   * Block replica states, which it can go through while being constructed.
+   */
+  static public enum ReplicaState {
+    /** Replica is finalized. The state when replica is not modified. */
+    FINALIZED(0),
+    /** Replica is being written to. */
+    RBW(1),
+    /** Replica is waiting to be recovered. */
+    RWR(2),
+    /** Replica is under recovery. */
+    RUR(3),
+    /** Temporary replica: created for replication and relocation only. */
+    TEMPORARY(4);
+
+    private int value;
+
+    private ReplicaState(int v) {
+      value = v;
+    }
+
+    public int getValue() {
+      return value;
+    }
+
+    public static ReplicaState getState(int v) {
+      return ReplicaState.values()[v];
+    }
+
+    /** Read from in */
+    public static ReplicaState read(DataInput in) throws IOException {
+      return values()[in.readByte()];
+    }
+
+    /** Write to out */
+    public void write(DataOutput out) throws IOException {
+      out.writeByte(ordinal());
+    }
+  }
+
+  /**
+   * States, which a block can go through while it is under construction.
+   */
+  static public enum BlockUCState {
+    /**
+     * Block construction completed.<br>
+     * The block has at least one {@link ReplicaState#FINALIZED} replica,
+     * and is not going to be modified.
+     */
+    COMPLETE,
+    /**
+     * The block is under construction.<br>
+     * It has been recently allocated for write or append.
+     */
+    UNDER_CONSTRUCTION,
+    /**
+     * The block is under recovery.<br>
+     * When a file lease expires its last block may not be {@link #COMPLETE}
+     * and needs to go through a recovery procedure, 
+     * which synchronizes the existing replicas contents.
+     */
+    UNDER_RECOVERY,
+    /**
+     * The block is committed.<br>
+     * The client reported that all bytes are written to data-nodes
+     * with the given generation stamp and block length, but no 
+     * {@link ReplicaState#FINALIZED} 
+     * replicas has yet been reported by data-nodes themselves.
+     */
+    COMMITTED;
   }
 }
 

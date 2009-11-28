@@ -111,8 +111,8 @@ public class TestDFSStorageStateRecovery extends TestCase {
    */
   String[] createStorageState(NodeType nodeType, boolean[] state) throws Exception {
     String[] baseDirs = (nodeType == NAME_NODE ?
-                         conf.getStrings("dfs.name.dir") :
-                         conf.getStrings("dfs.data.dir"));
+                         conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY) :
+                         conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
     UpgradeUtilities.createEmptyDirs(baseDirs);
     if (state[0])  // current
       UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "current");
@@ -179,7 +179,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
     UpgradeUtilities.initialize();
 
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.scan.period.hours", -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < testCases.length; i++) {

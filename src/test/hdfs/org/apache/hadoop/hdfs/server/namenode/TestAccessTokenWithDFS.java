@@ -28,10 +28,15 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.AccessTokenHandler;
+import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
+import org.apache.hadoop.hdfs.security.SecurityTestUtil;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.net.NetUtils;
@@ -39,11 +44,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.AccessToken;
-import org.apache.hadoop.security.AccessTokenHandler;
-import org.apache.hadoop.security.InvalidAccessTokenException;
-import org.apache.hadoop.security.SecurityTestUtil;
 import org.apache.log4j.Level;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import junit.framework.TestCase;
 
@@ -162,10 +164,10 @@ public class TestAccessTokenWithDFS extends TestCase {
 
   // get a conf for testing
   private static Configuration getConf(int numDataNodes) throws IOException {
-    Configuration conf = new Configuration();
-    conf.setBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, true);
-    conf.setLong("dfs.block.size", BLOCK_SIZE);
-    conf.setInt("io.bytes.per.checksum", BLOCK_SIZE);
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BLOCK_SIZE);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.replication", numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
@@ -201,12 +203,12 @@ public class TestAccessTokenWithDFS extends TestCase {
       stm = fs.append(fileToAppend);
       int mid = rawData.length - 1;
       stm.write(rawData, 1, mid - 1);
-      stm.sync();
+      stm.hflush();
 
       /*
        * wait till token used in stm expires
        */
-      AccessToken token = DFSTestUtil.getAccessToken(stm);
+      BlockAccessToken token = DFSTestUtil.getAccessToken(stm);
       while (!SecurityTestUtil.isAccessTokenExpired(token)) {
         try {
           Thread.sleep(10);
@@ -253,12 +255,12 @@ public class TestAccessTokenWithDFS extends TestCase {
       // write a partial block
       int mid = rawData.length - 1;
       stm.write(rawData, 0, mid);
-      stm.sync();
+      stm.hflush();
 
       /*
        * wait till token used in stm expires
        */
-      AccessToken token = DFSTestUtil.getAccessToken(stm);
+      BlockAccessToken token = DFSTestUtil.getAccessToken(stm);
       while (!SecurityTestUtil.isAccessTokenExpired(token)) {
         try {
           Thread.sleep(10);
@@ -320,7 +322,7 @@ public class TestAccessTokenWithDFS extends TestCase {
       List<LocatedBlock> locatedBlocks = dfsclient.getNamenode().getBlockLocations(
           FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();
       LocatedBlock lblock = locatedBlocks.get(0); // first block
-      AccessToken myToken = lblock.getAccessToken();
+      BlockAccessToken myToken = lblock.getAccessToken();
       // verify token is not expired
       assertFalse(SecurityTestUtil.isAccessTokenExpired(myToken));
       // read with valid token, should succeed
@@ -524,8 +526,8 @@ public class TestAccessTokenWithDFS extends TestCase {
    * Integration testing of access token, involving NN, DN, and Balancer
    */
   public void testEnd2End() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, true);
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     new TestBalancer().integrationTest(conf);
   }
 }

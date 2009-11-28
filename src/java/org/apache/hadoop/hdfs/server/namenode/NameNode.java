@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -32,8 +33,10 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -62,14 +66,16 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.ExportedAccessKeys;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -175,7 +181,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */
-  public FSNamesystem getNamesystem() {
+  FSNamesystem getNamesystem() {
     return namesystem;
   }
 
@@ -244,11 +250,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
-        conf.get("dfs.http.address", "0.0.0.0:50070"));
+        conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50070"));
   }
 
   protected void setHttpServerAddress(Configuration conf){
-    conf.set("dfs.http.address", getHostPortString(httpAddress));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, getHostPortString(httpAddress));
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -337,10 +343,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     this.httpServer = new HttpServer("hdfs", infoHost, infoPort, 
         infoPort == 0, conf);
     if (conf.getBoolean("dfs.https.enable", false)) {
-      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
+      boolean needClientAuth = conf.getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+                                               DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
       InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
-          "dfs.https.address", infoHost + ":" + 0));
-      Configuration sslConf = new Configuration(false);
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 0));
+      Configuration sslConf = new HdfsConfiguration(false);
       sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
           "ssl-server.xml"));
       this.httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
@@ -638,10 +645,16 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   }
 
   /** {@inheritDoc} */
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return namesystem.getServerDefaults();
+  }
+
+  /** {@inheritDoc} */
   public void create(String src, 
                      FsPermission masked,
                              String clientName, 
                              EnumSetWritable<CreateFlag> flag,
+                             boolean createParent,
                              short replication,
                              long blockSize
                              ) throws IOException {
@@ -657,7 +670,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     namesystem.startFile(src,
         new PermissionStatus(UserGroupInformation.getCurrentUGI().getUserName(),
             null, masked),
-        clientName, clientMachine, flag.get(), replication, blockSize);
+        clientName, clientMachine, flag.get(), createParent, replication, blockSize);
     myMetrics.numFilesCreated.inc();
     myMetrics.numCreateFileOps.inc();
   }
@@ -693,13 +706,30 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     namesystem.setOwner(src, username, groupname);
   }
 
-  /**
-   */
-  public LocatedBlock addBlock(String src, 
-                               String clientName) throws IOException {
+
+  @Override
+  public LocatedBlock addBlock(String src, String clientName,
+                               Block previous) throws IOException {
+    return addBlock(src, clientName, previous, null);
+  }
+
+  @Override
+  public LocatedBlock addBlock(String src,
+                               String clientName,
+                               Block previous,
+                               DatanodeInfo[] excludedNodes
+                               ) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
-    LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, clientName);
+    HashMap<Node, Node> excludedNodesSet = null;
+    if (excludedNodes != null) {
+      excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
+      for (Node node:excludedNodes) {
+        excludedNodesSet.put(node, node);
+      }
+    }
+    LocatedBlock locatedBlock = 
+      namesystem.getAdditionalBlock(src, clientName, previous, excludedNodesSet);
     if (locatedBlock != null)
       myMetrics.numAddBlockOps.inc();
     return locatedBlock;
@@ -718,9 +748,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   }
 
   /** {@inheritDoc} */
-  public boolean complete(String src, String clientName) throws IOException {
+  public boolean complete(String src, String clientName,
+                          Block last) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
-    CompleteFileStatus returnCode = namesystem.completeFile(src, clientName);
+    CompleteFileStatus returnCode =
+      namesystem.completeFile(src, clientName, last);
     if (returnCode == CompleteFileStatus.STILL_WAITING) {
       return false;
     } else if (returnCode == CompleteFileStatus.COMPLETE_SUCCESS) {
@@ -749,10 +781,20 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   }
 
   /** {@inheritDoc} */
-  public long nextGenerationStamp(Block block) throws IOException{
-    return namesystem.nextGenerationStampForBlock(block);
+  @Override
+  public LocatedBlock updateBlockForPipeline(Block block, String clientName)
+  throws IOException {
+    return namesystem.updateBlockForPipeline(block, clientName);
   }
 
+
+  @Override
+  public void updatePipeline(String clientName, Block oldBlock,
+      Block newBlock, DatanodeID[] newNodes)
+      throws IOException {
+    namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes);
+  }
+  
   /** {@inheritDoc} */
   public void commitBlockSynchronization(Block block,
       long newgenerationstamp, long newlength,
@@ -766,8 +808,9 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     return namesystem.getPreferredBlockSize(filename);
   }
     
-  /**
-   */
+  /** {@inheritDoc} */
+  @Deprecated
+  @Override
   public boolean rename(String src, String dst) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     if (!checkPathLength(dst)) {
@@ -779,6 +822,25 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
       myMetrics.numFilesRenamed.inc();
     }
     return ret;
+  }
+  
+  /** 
+   * {@inheritDoc}
+   */
+  public void concat(String trg, String[] src) throws IOException {
+    namesystem.concat(trg, src);
+  }
+  
+  /** {@inheritDoc} */
+  @Override
+  public void rename(String src, String dst, Options.Rename... options) throws IOException {
+    stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    if (!checkPathLength(dst)) {
+      throw new IOException("rename: Pathname too long.  Limit " 
+                            + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
+    }
+    namesystem.renameTo(src, dst, options);
+    myMetrics.numFilesRenamed.inc();
   }
 
   /**
@@ -813,7 +875,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   }
     
   /** {@inheritDoc} */
-  public boolean mkdirs(String src, FsPermission masked) throws IOException {
+  public boolean mkdirs(String src, FsPermission masked, boolean createParent) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
@@ -821,7 +883,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     }
     return namesystem.mkdirs(src,
         new PermissionStatus(UserGroupInformation.getCurrentUGI().getUserName(),
-            null, masked));
+            null, masked), createParent);
   }
 
   /**
@@ -900,11 +962,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
 
   /**
    * Refresh the list of datanodes that the namenode should allow to  
-   * connect.  Re-reads conf by creating new Configuration object and 
+   * connect.  Re-reads conf by creating new HdfsConfiguration object and 
    * uses the files list in the configuration to update the list. 
    */
   public void refreshNodes() throws IOException {
-    namesystem.refreshNodes(new Configuration());
+    namesystem.refreshNodes(new HdfsConfiguration());
   }
 
   /**
@@ -1235,7 +1297,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   public static NameNode createNameNode(String argv[], 
                                  Configuration conf) throws IOException {
     if (conf == null)
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage();

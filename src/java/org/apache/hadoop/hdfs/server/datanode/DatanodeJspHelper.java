@@ -32,12 +32,12 @@ import javax.servlet.jsp.JspWriter;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessToken;
-import org.apache.hadoop.security.AccessTokenHandler;
 import org.apache.hadoop.util.StringUtils;
 
 class DatanodeJspHelper {
@@ -258,6 +258,10 @@ class DatanodeJspHelper {
     out.print("<B>Total number of blocks: " + blocks.size() + "</B><br>");
     // generate a table and dump the info
     out.println("\n<table>");
+    
+    String namenodeHost = datanode.getNameNodeAddr().getHostName();
+    String namenodeHostName = InetAddress.getByName(namenodeHost).getCanonicalHostName();
+    
     for (LocatedBlock cur : blocks) {
       out.print("<tr>");
       final String blockidstring = Long.toString(cur.getBlock().getBlockId());
@@ -277,14 +281,18 @@ class DatanodeJspHelper {
             + "&genstamp=" + cur.getBlock().getGenerationStamp()
             + "&namenodeInfoPort=" + namenodeInfoPort
             + "&chunkSizeToView=" + chunkSizeToView;
+
+        String blockInfoUrl = "http://" + namenodeHostName + ":"
+            + namenodeInfoPort
+            + "/block_info_xml.jsp?blockId=" + blockidstring;
         out.print("<td>&nbsp</td><td><a href=\"" + blockUrl + "\">"
-            + datanodeAddr + "</a></td>");
+            + datanodeAddr + "</a></td><td>"
+            + "<a href=\"" + blockInfoUrl + "\">View Block Info</a></td>");
       }
       out.println("</tr>");
     }
     out.println("</table>");
     out.print("<hr>");
-    String namenodeHost = datanode.getNameNodeAddr().getHostName();
     out.print("<br><a href=\"http://"
         + InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
@@ -317,9 +325,10 @@ class DatanodeJspHelper {
     final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(),
         JspHelper.conf);
 
-    AccessToken accessToken = AccessToken.DUMMY_TOKEN;
+    BlockAccessToken accessToken = BlockAccessToken.DUMMY_TOKEN;
     if (JspHelper.conf.getBoolean(
-        AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false)) {
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
+        DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT)) {
       List<LocatedBlock> blks = dfs.getNamenode().getBlockLocations(filename, 0,
           Long.MAX_VALUE).getLocatedBlocks();
       if (blks == null || blks.size() == 0) {
@@ -556,7 +565,7 @@ class DatanodeJspHelper {
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     long blockSize = lastBlk.getBlock().getNumBytes();
     long blockId = lastBlk.getBlock().getBlockId();
-    AccessToken accessToken = lastBlk.getAccessToken();
+    BlockAccessToken accessToken = lastBlk.getAccessToken();
     long genStamp = lastBlk.getBlock().getGenerationStamp();
     DatanodeInfo chosenNode;
     try {

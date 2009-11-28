@@ -27,9 +27,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Random;
+import java.util.TimeZone;
 
 import javax.security.auth.login.LoginException;
 
@@ -37,15 +39,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.common.ThreadLocalDateFormat;
-import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -58,6 +57,8 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
+
+
 
 /** An implementation of a protocol for accessing filesystems over HTTP.
  * The following implementation provides a limited, read-only interface
@@ -74,7 +75,21 @@ public class HftpFileSystem extends FileSystem {
   protected UserGroupInformation ugi; 
   protected final Random ran = new Random();
 
-  protected static final ThreadLocalDateFormat df = ListPathsServlet.df;
+  public static final String HFTP_TIMEZONE = "UTC";
+  public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+
+  public static final SimpleDateFormat getDateFormat() {
+    final SimpleDateFormat df = new SimpleDateFormat(HFTP_DATE_FORMAT);
+    df.setTimeZone(TimeZone.getTimeZone(HFTP_TIMEZONE));
+    return df;
+  }
+
+  protected static final ThreadLocal<SimpleDateFormat> df =
+    new ThreadLocal<SimpleDateFormat>() {
+      protected SimpleDateFormat initialValue() {
+        return getDateFormat();
+      }
+    };
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
@@ -100,6 +115,30 @@ public class HftpFileSystem extends FileSystem {
     } 
   }
 
+
+  /* 
+    Construct URL pointing to file on namenode
+  */
+  URL getNamenodeFileURL(Path f) throws IOException {
+    return getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi);
+  }
+
+  /* 
+    Construct URL pointing to namenode. 
+  */
+  URL getNamenodeURL(String path, String query) throws IOException {
+    try {
+      final URL url = new URI("http", null, nnAddr.getHostName(),
+          nnAddr.getPort(), path, query, null).toURL();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("url=" + url);
+      }
+      return url;
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
   /**
    * Open an HTTP connection to the namenode to read file data and metadata.
    * @param path The path component of the URL
@@ -107,48 +146,17 @@ public class HftpFileSystem extends FileSystem {
    */
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
-    try {
-      final URL url = new URI("http", null, nnAddr.getHostName(),
-          nnAddr.getPort(), path, query, null).toURL();
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("url=" + url);
-      }
-      HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.connect();
-      return connection;
-    } catch (URISyntaxException e) {
-      throw (IOException)new IOException().initCause(e);
-    }
+    final URL url = getNamenodeURL(path, query);
+    HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+    connection.setRequestMethod("GET");
+    connection.connect();
+    return connection;
   }
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
-    HttpURLConnection connection = null;
-    connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi);
-    final InputStream in = connection.getInputStream();
-    return new FSDataInputStream(new FSInputStream() {
-        public int read() throws IOException {
-          return in.read();
-        }
-        public int read(byte[] b, int off, int len) throws IOException {
-          return in.read(b, off, len);
-        }
-
-        public void close() throws IOException {
-          in.close();
-        }
-
-        public void seek(long pos) throws IOException {
-          throw new IOException("Can't seek!");
-        }
-        public long getPos() throws IOException {
-          throw new IOException("Position unknown!");
-        }
-        public boolean seekToNewSource(long targetPos) throws IOException {
-          return false;
-        }
-      });
+    URL u = getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi);
+    return new FSDataInputStream(new ByteRangeInputStream(u));
   }
 
   /** Class to parse and store a listing reply from the server. */
@@ -168,10 +176,11 @@ public class HftpFileSystem extends FileSystem {
       long modif;
       long atime = 0;
       try {
-        modif = df.parse(attrs.getValue("modified")).getTime();
+        final SimpleDateFormat ldf = df.get();
+        modif = ldf.parse(attrs.getValue("modified")).getTime();
         String astr = attrs.getValue("accesstime");
         if (astr != null) {
-          atime = df.parse(astr).getTime();
+          atime = ldf.parse(astr).getTime();
         }
       } catch (ParseException e) { throw new SAXException(e); }
       FileStatus fs = "file".equals(qname)
@@ -286,7 +295,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public Path getWorkingDirectory() {
-    return new Path("/").makeQualified(this);
+    return new Path("/").makeQualified(getUri(), null);
   }
 
   @Override

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.Shell;
 
@@ -37,7 +38,7 @@ public class ProxyUgiManager {
   static final int CLEANUP_THRESHOLD = 1000;
 
   static {
-    Configuration conf = new Configuration(false);
+    Configuration conf = new HdfsConfiguration(false);
     conf.addResource("hdfsproxy-default.xml");
     ugiLifetime = conf.getLong("hdfsproxy.ugi.cache.ugi.lifetime", 15) * 60 * 1000L;
   }

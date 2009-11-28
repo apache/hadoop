@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -81,8 +83,8 @@ public class FileChecksumServlets {
       final XMLOutputter xml = new XMLOutputter(out, "UTF-8");
       xml.declaration();
 
-      final Configuration conf = new Configuration(DataNode.getDataNode().getConf());
-      final int socketTimeout = conf.getInt("dfs.socket.timeout", HdfsConstants.READ_TIMEOUT);
+      final Configuration conf = new HdfsConfiguration(DataNode.getDataNode().getConf());
+      final int socketTimeout = conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, HdfsConstants.READ_TIMEOUT);
       final SocketFactory socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
       UnixUserGroupInformation.saveToConf(conf,
           UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);

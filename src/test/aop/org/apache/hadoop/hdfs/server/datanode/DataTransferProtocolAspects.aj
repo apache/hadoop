@@ -60,8 +60,9 @@ public aspect DataTransferProtocolAspects {
     final DataNode d = dataxceiver.getDataNode();
     LOG.info("FI: statusRead " + status + ", datanode="
         + d.getDatanodeRegistration().getName());    
-    DataTransferTestUtil.getDataTransferTest().fiStatusRead.run(
-        d.getDatanodeRegistration());
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null) 
+      dtTest.fiStatusRead.run(d.getDatanodeRegistration());
   }
 
   pointcut receiverOpWriteBlock(DataXceiver dataxceiver):

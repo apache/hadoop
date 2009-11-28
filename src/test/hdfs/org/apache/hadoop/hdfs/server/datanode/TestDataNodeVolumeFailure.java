@@ -31,18 +31,18 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -69,8 +69,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
   public void setUp() throws Exception {
     
     // bring up a cluster of 2
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", block_size);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, block_size);
     cluster = new MiniDFSCluster(conf, dn_num, true, null);
     cluster.waitActive();
   }
@@ -98,7 +98,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     // fail the volume
     // delete/make non-writable one of the directories (failed volume)
     data_fail = new File(dataDir, "data3");
-    failedDir = new File(data_fail, "current");
+    failedDir = new File(data_fail, MiniDFSCluster.FINALIZED_DIR_NAME);
     if (failedDir.exists() &&
         //!FileUtil.fullyDelete(failedDir)
         !deteteBlocks(failedDir)
@@ -116,8 +116,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
     
     // make sure a block report is sent 
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
-    cluster.getNameNode().blockReport(dn.dnRegistration,
-        BlockListAsLongs.convertToArrayLongs(cluster.getBlockReport(1)));
+    long[] bReport = dn.getFSDataset().getBlockReport().getBlockListAsLongs();
+    cluster.getNameNode().blockReport(dn.dnRegistration, bReport);
 
     // verify number of blocks and files...
     verify(filename, filesize);
@@ -302,7 +302,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     int total = 0;
     for(int i=0; i<dn_num; i++) {
       for(int j=1; j<=2; j++) {
-        File dir = new File(new File(dataDir, "data"+(2*i+j)), "current");
+        File dir = new File(dataDir, "data"+(2*i+j)+MiniDFSCluster.FINALIZED_DIR_NAME);
         if(dir == null) {
           System.out.println("dir is null for dn=" + i + " and data_dir=" + j);
           continue;

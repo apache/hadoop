@@ -62,8 +62,8 @@
         an fsimage that does not contain any of these fields, the field's column will be included,
         but no data recorded. The default record delimiter is a tab, but this may be changed
         via the <code>-delimiter</code> command line argument. This processor is designed to
-        create output that is easily analyzed by other tools, such as <a href="http://hadoop.apache.org/pig/">Pig</a>. 
-        See the <a href="#analysis">Analysis</a> section
+        create output that is easily analyzed by other tools, such as <a href="http://hadoop.apache.org/pig/">Apache Pig</a>. 
+        See the <a href="#analysis">Analyzing Results</a> section
         for further information on using this processor to analyze the contents of fsimage files.</li>
         <li><strong>XML</strong> creates an XML document of the fsimage and includes all of the
           information within the fsimage, similar to the <code>lsr </code> processor. The output
@@ -125,53 +125,103 @@
       <section id="Example">
         <title>Example</title>
 
-          <p>Consider the following contrived namespace:</p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:17&nbsp;/anotherDir</code></p>
-          <p><code>-rw-r--r--&nbsp;&nbsp;&nbsp;3&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;286631664&nbsp;2009-03-16&nbsp;21:15&nbsp;/anotherDir/biggerfile</code></p>
-          <p><code>-rw-r--r--&nbsp;&nbsp;&nbsp;3&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8754&nbsp;2009-03-16&nbsp;21:17&nbsp;/anotherDir/smallFile</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem/theuser</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem/theuser/mapredsystem</code></p>
-          <p><code>drwx-wx-wx&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:11&nbsp;/mapredsystem/theuser/mapredsystem/ip.redacted.com</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:12&nbsp;/one</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:12&nbsp;/one/two</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:16&nbsp;/user</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;&nbsp;-&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;21:19&nbsp;/user/theuser</code></p>
-          <p>Applying the Offline Image Processor against this file with default options would result in the following output:</p>
-          <p><code>machine:hadoop-0.21.0-dev&nbsp;theuser$&nbsp;bin/hdfs&nbsp;oiv&nbsp;-i&nbsp;fsimagedemo&nbsp;-o&nbsp;fsimage.txt</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:16&nbsp;/</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:17&nbsp;/anotherDir</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:12&nbsp;/one</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:16&nbsp;/user</code></p>
-          <p><code>-rw-r--r--&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;286631664&nbsp;2009-03-16&nbsp;14:15&nbsp;/anotherDir/biggerfile</code></p>
-          <p><code>-rw-r--r--&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8754&nbsp;2009-03-16&nbsp;14:17&nbsp;/anotherDir/smallFile</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem/theuser</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem/theuser/mapredsystem</code></p>
-          <p><code>drwx-wx-wx&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:11&nbsp;/mapredsystem/theuser/mapredsystem/ip.redacted.com</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:12&nbsp;/one/two</code></p>
-          <p><code>drwxr-xr-x&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;theuser&nbsp;supergroup&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;2009-03-16&nbsp;14:19&nbsp;/user/theuser</code></p>
-          <p>Similarly, applying the Indented processor would generate output that begins with:</p>
-          <p><code>machine:hadoop-0.21.0-dev&nbsp;theuser$&nbsp;bin/hdfs&nbsp;oiv&nbsp;-i&nbsp;fsimagedemo&nbsp;-p&nbsp;Indented&nbsp;-o&nbsp;fsimage.txt</code></p>
-          <p><code>FSImage</code></p>
-          <p><code>&nbsp;&nbsp;ImageVersion&nbsp;=&nbsp;-19</code></p>
-          <p><code>&nbsp;&nbsp;NamespaceID&nbsp;=&nbsp;2109123098</code></p>
-          <p><code>&nbsp;&nbsp;GenerationStamp&nbsp;=&nbsp;1003</code></p>
-          <p><code>&nbsp;&nbsp;INodes&nbsp;[NumInodes&nbsp;=&nbsp;12]</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;Inode</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;INodePath&nbsp;=&nbsp;</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Replication&nbsp;=&nbsp;0</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ModificationTime&nbsp;=&nbsp;2009-03-16&nbsp;14:16</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AccessTime&nbsp;=&nbsp;1969-12-31&nbsp;16:00</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BlockSize&nbsp;=&nbsp;0</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Blocks&nbsp;[NumBlocks&nbsp;=&nbsp;-1]</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NSQuota&nbsp;=&nbsp;2147483647</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DSQuota&nbsp;=&nbsp;-1</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Permissions</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Username&nbsp;=&nbsp;theuser</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GroupName&nbsp;=&nbsp;supergroup</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PermString&nbsp;=&nbsp;rwxr-xr-x</code></p>
-          <p><code>&hellip;remaining output omitted&hellip;</code></p>
+<p>Consider the following contrived namespace:</p>
+<source>
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:17 /anotherDir 
+
+-rw-r--r--   3 theuser supergroup  286631664 2009-03-16 21:15 /anotherDir/biggerfile 
+
+-rw-r--r--   3 theuser supergroup       8754 2009-03-16 21:17 /anotherDir/smallFile 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:11 /mapredsystem 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:11 /mapredsystem/theuser 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:11 /mapredsystem/theuser/mapredsystem 
+
+drwx-wx-wx   - theuser supergroup          0 2009-03-16 21:11 /mapredsystem/theuser/mapredsystem/ip.redacted.com 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:12 /one 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:12 /one/two 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:16 /user 
+
+drwxr-xr-x   - theuser supergroup          0 2009-03-16 21:19 /user/theuser 
+</source>          
+
+<p>Applying the Offline Image Processor against this file with default options would result in the following output:</p>
+<source>
+machine:hadoop-0.21.0-dev theuser$ bin/hdfs oiv -i fsimagedemo -o fsimage.txt 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:16 / 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:17 /anotherDir 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:11 /mapredsystem 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:12 /one 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:16 /user 
+
+-rw-r--r--  3   theuser supergroup    286631664 2009-03-16 14:15 /anotherDir/biggerfile 
+
+-rw-r--r--  3   theuser supergroup         8754 2009-03-16 14:17 /anotherDir/smallFile 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:11 /mapredsystem/theuser 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:11 /mapredsystem/theuser/mapredsystem 
+
+drwx-wx-wx  -   theuser supergroup            0 2009-03-16 14:11 /mapredsystem/theuser/mapredsystem/ip.redacted.com 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:12 /one/two 
+
+drwxr-xr-x  -   theuser supergroup            0 2009-03-16 14:19 /user/theuser 
+</source>
+
+<p>Similarly, applying the Indented processor would generate output that begins with:</p>
+<source>
+machine:hadoop-0.21.0-dev theuser$ bin/hdfs oiv -i fsimagedemo -p Indented -o fsimage.txt 
+
+FSImage 
+
+  ImageVersion = -19 
+
+  NamespaceID = 2109123098 
+
+  GenerationStamp = 1003 
+
+  INodes [NumInodes = 12] 
+
+    Inode 
+
+      INodePath =  
+
+      Replication = 0 
+
+      ModificationTime = 2009-03-16 14:16 
+
+      AccessTime = 1969-12-31 16:00 
+
+      BlockSize = 0 
+
+      Blocks [NumBlocks = -1] 
+
+      NSQuota = 2147483647 
+
+      DSQuota = -1 
+
+      Permissions 
+
+        Username = theuser 
+
+        GroupName = supergroup 
+
+        PermString = rwxr-xr-x 
+
+���remaining output omitted���
+</source>          
+          
       </section> <!-- example-->
 
     </section>
@@ -210,7 +260,7 @@
     </section>
    
     <section id="analysis">
-      <title>Analyzing results of Offline Image Viewer</title>
+      <title>Analyzing Results</title>
       <p>The Offline Image Viewer makes it easy to gather large amounts of data about the hdfs namespace.
          This information can then be used to explore file system usage patterns or find
         specific files that match arbitrary criteria, along with other types of namespace analysis. The Delimited 
@@ -227,7 +277,7 @@
       <p>Each of the following scripts assumes you have generated an output file using the Delimited processor named
         <code>foo</code> and will be storing the results of the Pig analysis in a file named <code>results</code>.</p>
       <section>
-      <title>Total number of files for each user</title>
+      <title>Total Number of Files for Each User</title>
       <p>This script processes each path within the namespace, groups them by the file owner and determines the total
       number of files each user owns.</p>
       <p><strong>numFilesOfEachUser.pig:</strong></p>
@@ -270,7 +320,8 @@ STORE C INTO '$outputFile';
         <code>marge 2456</code><br/>
       </p>
       </section>
-      <section><title>Files that have never been accessed</title>
+      
+      <section><title>Files That Have Never Been Accessed</title>
       <p>This script finds files that were created but whose access times were never changed, meaning they were never opened or viewed.</p>
             <p><strong>neverAccessed.pig:</strong></p>
       <source>
@@ -306,7 +357,7 @@ STORE D INTO '$outputFile';
       <p>This script can be run against pig with the following command and its output file's content will be a list of files that were created but never viewed afterwards.</p>
       <p><code>bin/pig -x local -param inputFile=../foo -param outputFile=../results ../neverAccessed.pig</code><br/></p>
       </section>
-      <section><title>Probable duplicated files based on file size</title>
+      <section><title>Probable Duplicated Files Based on File Size</title>
       <p>This script groups files together based on their size, drops any that are of less than 100mb and returns a list of the file size, number of files found and a tuple of the file paths.  This can be used to find likely duplicates within the filesystem namespace.</p>
       
             <p><strong>probableDuplicates.pig:</strong></p>
@@ -357,14 +408,16 @@ STORE G INTO '$outputFile';
       <p>This script can be run against pig with the following command:</p>
       <p><code>bin/pig -x local -param inputFile=../foo -param outputFile=../results ../probableDuplicates.pig</code><br/></p>
       <p> The output file's content will be similar to that below:</p>
-      <p>
-        <code>1077288632  2 {(/user/tennant/work1/part-00501),(/user/tennant/work1/part-00993)}</code><br/>
-        <code>1077288664  4 {(/user/tennant/work0/part-00567),(/user/tennant/work0/part-03980),(/user/tennant/work1/part-00725),(/user/eccelston/output/part-03395)}</code><br/>
-        <code>1077288668  3 {(/user/tennant/work0/part-03705),(/user/tennant/work0/part-04242),(/user/tennant/work1/part-03839)}</code><br/>
-        <code>1077288698  2 {(/user/tennant/work0/part-00435),(/user/eccelston/output/part-01382)}</code><br/>
-        <code>1077288702  2 {(/user/tennant/work0/part-03864),(/user/eccelston/output/part-03234)}</code><br/>
-      </p>
-      <p>Each line includes the file size in bytes that was found to be duplicated, the number of duplicates found, and a list of the duplicated paths. Files less than 100MB are ignored, providing a reasonable likelihood that files of these exact sizes may be duplicates.</p>
+      
+<source>
+1077288632 2 {(/user/tennant/work1/part-00501),(/user/tennant/work1/part-00993)} 
+1077288664 4 {(/user/tennant/work0/part-00567),(/user/tennant/work0/part-03980),(/user/tennant/work1/part-00725),(/user/eccelston/output/part-03395)} 
+1077288668 3 {(/user/tennant/work0/part-03705),(/user/tennant/work0/part-04242),(/user/tennant/work1/part-03839)} 
+1077288698 2 {(/user/tennant/work0/part-00435),(/user/eccelston/output/part-01382)} 
+1077288702 2 {(/user/tennant/work0/part-03864),(/user/eccelston/output/part-03234)} 
+</source>      
+      <p>Each line includes the file size in bytes that was found to be duplicated, the number of duplicates found, and a list of the duplicated paths. 
+      Files less than 100MB are ignored, providing a reasonable likelihood that files of these exact sizes may be duplicates.</p>
       </section>
     </section>
 

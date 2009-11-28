@@ -29,7 +29,7 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
 
   @Override
   protected void setUp() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster(conf, 2, true, null);
     fs = cluster.getFileSystem();
     defaultWorkingDirectory = "/user/" + 

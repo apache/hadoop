@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /************************************
  * Some handy constants
@@ -27,7 +28,7 @@ public interface FSConstants {
   public static int MIN_BLOCKS_FOR_WRITE = 5;
 
   // Chunk the block Invalidate message
-  public static final int BLOCK_INVALIDATE_CHUNK = 100;
+  public static final int BLOCK_INVALIDATE_CHUNK = 1000;
 
   // Long that indicates "leave current quota unchanged"
   public static final long QUOTA_DONT_SET = Long.MAX_VALUE;
@@ -48,11 +49,15 @@ public interface FSConstants {
   public static int MAX_PATH_LENGTH = 8000;
   public static int MAX_PATH_DEPTH = 1000;
     
-  public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
+  public static final int BUFFER_SIZE = new HdfsConfiguration().getInt("io.file.buffer.size", 4096);
   //Used for writing header etc.
   public static final int SMALL_BUFFER_SIZE = Math.min(BUFFER_SIZE/2, 512);
   //TODO mb@media-style.com: should be conf injected?
   public static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
+  public static final int DEFAULT_BYTES_PER_CHECKSUM = 512;
+  public static final int DEFAULT_WRITE_PACKET_SIZE = 64 * 1024;
+  public static final short DEFAULT_REPLICATION_FACTOR = 3;
+  public static final int DEFAULT_FILE_BUFFER_SIZE = 4096;
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
 
   public static final int SIZE_OF_INTEGER = Integer.SIZE / Byte.SIZE;
@@ -86,7 +91,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -19;
+  public static final int LAYOUT_VERSION = -22;
   // Current version: 
-  // -19: Sticky bit
+  // -22: added new OP_CONCAT_DELETE 
 }

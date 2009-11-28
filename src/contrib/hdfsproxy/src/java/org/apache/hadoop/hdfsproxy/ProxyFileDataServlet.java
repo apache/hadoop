@@ -31,6 +31,8 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+
 /** {@inheritDoc} */
 public class ProxyFileDataServlet extends FileDataServlet {
   /** For java.io.Serializable */
@@ -41,7 +43,7 @@ public class ProxyFileDataServlet extends FileDataServlet {
   public void init() throws ServletException {
     ServletContext context = getServletContext();
     if (context.getAttribute("name.conf") == null) {
-      context.setAttribute("name.conf", new Configuration());
+      context.setAttribute("name.conf", new HdfsConfiguration());
     }
   }
 

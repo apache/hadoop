@@ -50,6 +50,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.net.NetUtils;
 
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+
 public class ProxyFilter implements Filter {
   public static final Log LOG = LogFactory.getLog(ProxyFilter.class);
 
@@ -73,7 +75,7 @@ public class ProxyFilter implements Filter {
   private static volatile Map<String, Set<Path>> permsMap;
   private static volatile Map<String, Set<BigInteger>> certsMap;
   static {
-    Configuration conf = new Configuration(false);
+    Configuration conf = new HdfsConfiguration(false);
     conf.addResource("hdfsproxy-default.xml");
     Map<String, Set<Path>> pMap = getPermMap(conf);
     permsMap = pMap != null ? pMap : new HashMap<String, Set<Path>>();
@@ -85,7 +87,7 @@ public class ProxyFilter implements Filter {
   /** {@inheritDoc} */
   public void init(FilterConfig filterConfig) throws ServletException {
     ServletContext context = filterConfig.getServletContext();
-    Configuration conf = new Configuration(false);
+    Configuration conf = new HdfsConfiguration(false);
     conf.addResource("hdfsproxy-default.xml");
     conf.addResource("ssl-server.xml");
     conf.addResource("hdfsproxy-site.xml");
@@ -95,7 +97,7 @@ public class ProxyFilter implements Filter {
     }
     InetSocketAddress nAddr = NetUtils.createSocketAddr(nn);
     context.setAttribute("name.node.address", nAddr);
-    context.setAttribute("name.conf", new Configuration());   
+    context.setAttribute("name.conf", new HdfsConfiguration());   
     
     context.setAttribute("org.apache.hadoop.hdfsproxy.conf", conf);
     LOG.info("proxyFilter initialization success: " + nn);
@@ -108,7 +110,7 @@ public class ProxyFilter implements Filter {
       LOG.warn("HdfsProxy user permissions file not found");
       return null;
     }
-    Configuration permConf = new Configuration(false);
+    Configuration permConf = new HdfsConfiguration(false);
     permConf.addResource(permLoc);
     Map<String, Set<Path>> map = new HashMap<String, Set<Path>>();
     for (Map.Entry<String, String> e : permConf) {
@@ -135,7 +137,7 @@ public class ProxyFilter implements Filter {
       LOG.warn("HdfsProxy user certs file not found");
       return null;
     }
-    Configuration certsConf = new Configuration(false);
+    Configuration certsConf = new HdfsConfiguration(false);
     certsConf.addResource(certsLoc);
     Map<String, Set<BigInteger>> map = new HashMap<String, Set<BigInteger>>();
     for (Map.Entry<String, String> e : certsConf) {
@@ -284,7 +286,7 @@ public class ProxyFilter implements Filter {
         }
       } else if (RELOAD_PATTERN.matcher(servletPath).matches()
           && checkUser("Admin", certs[0])) {
-        Configuration conf = new Configuration(false);
+        Configuration conf = new HdfsConfiguration(false);
         conf.addResource("hdfsproxy-default.xml");
         Map<String, Set<Path>> permsMap = getPermMap(conf);
         Map<String, Set<BigInteger>> certsMap = getCertsMap(conf);

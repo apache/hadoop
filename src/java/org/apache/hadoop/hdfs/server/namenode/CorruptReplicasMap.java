@@ -33,7 +33,7 @@ import java.util.*;
 
 public class CorruptReplicasMap{
 
-  private Map<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =
+  private SortedMap<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =
     new TreeMap<Block, Collection<DatanodeDescriptor>>();
   
   /**
@@ -126,4 +126,59 @@ public class CorruptReplicasMap{
   public int size() {
     return corruptReplicasMap.size();
   }
+
+  /**
+   * Return a range of corrupt replica block ids. Up to numExpectedBlocks 
+   * blocks starting at the next block after startingBlockId are returned
+   * (fewer if numExpectedBlocks blocks are unavailable). If startingBlockId 
+   * is null, up to numExpectedBlocks blocks are returned from the beginning.
+   * If startingBlockId cannot be found, null is returned.
+   *
+   * @param numExpectedBlocks Number of block ids to return.
+   *  0 <= numExpectedBlocks <= 100
+   * @param startingBlockId Block id from which to start. If null, start at
+   *  beginning.
+   * @return Up to numExpectedBlocks blocks from startingBlockId if it exists
+   *
+   */
+  long[] getCorruptReplicaBlockIds(int numExpectedBlocks,
+                                   Long startingBlockId) {
+    if (numExpectedBlocks < 0 || numExpectedBlocks > 100) {
+      return null;
+    }
+    
+    Iterator<Block> blockIt = corruptReplicasMap.keySet().iterator();
+    
+    // if the starting block id was specified, iterate over keys until
+    // we find the matching block. If we find a matching block, break
+    // to leave the iterator on the next block after the specified block. 
+    if (startingBlockId != null) {
+      boolean isBlockFound = false;
+      while (blockIt.hasNext()) {
+        Block b = blockIt.next();
+        if (b.getBlockId() == startingBlockId) {
+          isBlockFound = true;
+          break; 
+        }
+      }
+      
+      if (!isBlockFound) {
+        return null;
+      }
+    }
+
+    ArrayList<Long> corruptReplicaBlockIds = new ArrayList<Long>();
+
+    // append up to numExpectedBlocks blockIds to our list
+    for(int i=0; i<numExpectedBlocks && blockIt.hasNext(); i++) {
+      corruptReplicaBlockIds.add(blockIt.next().getBlockId());
+    }
+    
+    long[] ret = new long[corruptReplicaBlockIds.size()];
+    for(int i=0; i<ret.length; i++) {
+      ret[i] = corruptReplicaBlockIds.get(i);
+    }
+    
+    return ret;
+  }  
 }

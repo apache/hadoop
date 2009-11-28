@@ -25,7 +25,11 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
@@ -43,6 +47,11 @@ import org.apache.hadoop.io.WritableUtils;
 
  **************************************************/
 public class DatanodeDescriptor extends DatanodeInfo {
+  
+  // Stores status of decommissioning.
+  // If node is not decommissioning, do not use this object for anything.
+  DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
+  
   /** Block and targets pair */
   public static class BlockTargetPair {
     public final Block block;
@@ -55,28 +64,35 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /** A BlockTargetPair queue. */
-  private static class BlockQueue {
-    private final Queue<BlockTargetPair> blockq = new LinkedList<BlockTargetPair>();
+  private static class BlockQueue<E> {
+    private final Queue<E> blockq = new LinkedList<E>();
 
     /** Size of the queue */
     synchronized int size() {return blockq.size();}
 
     /** Enqueue */
-    synchronized boolean offer(Block block, DatanodeDescriptor[] targets) { 
-      return blockq.offer(new BlockTargetPair(block, targets));
+    synchronized boolean offer(E e) { 
+      return blockq.offer(e);
     }
 
     /** Dequeue */
-    synchronized List<BlockTargetPair> poll(int numBlocks) {
+    synchronized List<E> poll(int numBlocks) {
       if (numBlocks <= 0 || blockq.isEmpty()) {
         return null;
       }
 
-      List<BlockTargetPair> results = new ArrayList<BlockTargetPair>();
+      List<E> results = new ArrayList<E>();
       for(; !blockq.isEmpty() && numBlocks > 0; numBlocks--) {
         results.add(blockq.poll());
       }
       return results;
+    }
+
+    /**
+     * Returns <tt>true</tt> if the queue contains the specified element.
+     */
+    boolean contains(E e) {
+      return blockq.contains(e);
     }
   }
 
@@ -87,9 +103,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   protected boolean needKeyUpdate = false;
 
   /** A queue of blocks to be replicated by this datanode */
-  private BlockQueue replicateBlocks = new BlockQueue();
+  private BlockQueue<BlockTargetPair> replicateBlocks = new BlockQueue<BlockTargetPair>();
   /** A queue of blocks to be recovered by this datanode */
-  private BlockQueue recoverBlocks = new BlockQueue();
+  private BlockQueue<BlockInfoUnderConstruction> recoverBlocks =
+                                new BlockQueue<BlockInfoUnderConstruction>();
   /** A set of blocks to be invalidated by this datanode */
   private Set<Block> invalidateBlocks = new TreeSet<Block>();
 
@@ -201,6 +218,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
     blockList = b.listInsert(blockList, this);
   }
 
+  /**
+   * Replace specified old block with a new one in the DataNodeDescriptor.
+   * 
+   * @param oldBlock - block to be replaced
+   * @param newBlock - a replacement block
+   * @return the new block
+   */
+  BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
+    boolean done = removeBlock(oldBlock);
+    assert done : "Old block should belong to the data-node when replacing";
+    done = addBlock(newBlock);
+    assert done : "New block should not belong to the data-node when replacing";
+    return newBlock;
+  }
+
   void resetBlocks() {
     this.capacity = 0;
     this.remaining = 0;
@@ -262,15 +294,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
     assert(block != null && targets != null && targets.length > 0);
-    replicateBlocks.offer(block, targets);
+    replicateBlocks.offer(new BlockTargetPair(block, targets));
   }
 
   /**
    * Store block recovery work.
    */
-  void addBlockToBeRecovered(Block block, DatanodeDescriptor[] targets) {
-    assert(block != null && targets != null && targets.length > 0);
-    recoverBlocks.offer(block, targets);
+  void addBlockToBeRecovered(BlockInfoUnderConstruction block) {
+    if(recoverBlocks.contains(block)) {
+      // this prevents adding the same block twice to the recovery queue
+      FSNamesystem.LOG.info("Block " + block +
+                            " is already in the recovery queue.");
+      return;
+    }
+    recoverBlocks.offer(block);
   }
 
   /**
@@ -308,10 +345,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
         new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blocktargetlist);
   }
 
-  BlockCommand getLeaseRecoveryCommand(int maxTransfers) {
-    List<BlockTargetPair> blocktargetlist = recoverBlocks.poll(maxTransfers);
-    return blocktargetlist == null? null:
-        new BlockCommand(DatanodeProtocol.DNA_RECOVERBLOCK, blocktargetlist);
+  BlockRecoveryCommand getLeaseRecoveryCommand(int maxTransfers) {
+    List<BlockInfoUnderConstruction> blocks = recoverBlocks.poll(maxTransfers);
+    if(blocks == null)
+      return null;
+    BlockRecoveryCommand brCommand = new BlockRecoveryCommand(blocks.size());
+    for(BlockInfoUnderConstruction b : blocks) {
+      brCommand.add(new RecoveringBlock(
+          b, b.getExpectedLocations(), b.getBlockRecoveryId()));
+    }
+    return brCommand;
   }
 
   /**
@@ -361,44 +404,29 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return blockarray;
   }
 
-  void reportDiff(BlocksMap blocksMap,
+  void reportDiff(BlockManager blockManager,
                   BlockListAsLongs newReport,
                   Collection<Block> toAdd,    // add to DatanodeDescriptor
                   Collection<Block> toRemove, // remove from DatanodeDescriptor
-                  Collection<Block> toInvalidate) { // should be removed from DN
-    // place a deilimiter in the list which separates blocks 
+                  Collection<Block> toInvalidate, // should be removed from DN
+                  Collection<BlockInfo> toCorrupt) {// add to corrupt replicas
+    // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
     BlockInfo delimiter = new BlockInfo(new Block(), 1);
     boolean added = this.addBlock(delimiter);
     assert added : "Delimiting block cannot be present in the node";
     if(newReport == null)
-      newReport = new BlockListAsLongs( new long[0]);
-    // scan the report and collect newly reported blocks
-    // Note we are taking special precaution to limit tmp blocks allocated
-    // as part this block report - which why block list is stored as longs
-    Block iblk = new Block(); // a fixed new'ed block to be reused with index i
-    for (int i = 0; i < newReport.getNumberOfBlocks(); ++i) {
-      iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i), 
-               newReport.getBlockGenStamp(i));
-      BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
-      if(storedBlock == null) {
-        // If block is not in blocksMap it does not belong to any file
-        toInvalidate.add(new Block(iblk));
-        continue;
-      }
-      if(storedBlock.findDatanode(this) < 0) {// Known block, but not on the DN
-        // if the size differs from what is in the blockmap, then return
-        // the new block. addStoredBlock will then pick up the right size of this
-        // block and will update the block object in the BlocksMap
-        if (storedBlock.getNumBytes() != iblk.getNumBytes()) {
-          toAdd.add(new Block(iblk));
-        } else {
-          toAdd.add(storedBlock);
-        }
-        continue;
-      }
+      newReport = new BlockListAsLongs();
+    // scan the report and process newly reported blocks
+    BlockReportIterator itBR = newReport.getBlockReportIterator();
+    while(itBR.hasNext()) {
+      Block iblk = itBR.next();
+      ReplicaState iState = itBR.getCurrentReplicaState();
+      BlockInfo storedBlock = processReportedBlock(blockManager, iblk, iState,
+                                               toAdd, toInvalidate, toCorrupt);
       // move block to the head of the list
-      this.moveBlockToHead(storedBlock);
+      if(storedBlock != null && storedBlock.findDatanode(this) >= 0)
+        this.moveBlockToHead(storedBlock);
     }
     // collect blocks that have not been reported
     // all of them are next to the delimiter
@@ -406,6 +434,97 @@ public class DatanodeDescriptor extends DatanodeInfo {
     while(it.hasNext())
       toRemove.add(it.next());
     this.removeBlock(delimiter);
+  }
+
+  /**
+   * Process a block replica reported by the data-node.
+   * 
+   * <ol>
+   * <li>If the block is not known to the system (not in blocksMap) then the
+   * data-node should be notified to invalidate this block.</li>
+   * <li>If the reported replica is valid that is has the same generation stamp
+   * and length as recorded on the name-node, then the replica location is
+   * added to the name-node.</li>
+   * <li>If the reported replica is not valid, then it is marked as corrupt,
+   * which triggers replication of the existing valid replicas.
+   * Corrupt replicas are removed from the system when the block
+   * is fully replicated.</li>
+   * </ol>
+   * 
+   * @param blockManager
+   * @param block reported block replica
+   * @param rState reported replica state
+   * @param toAdd add to DatanodeDescriptor
+   * @param toInvalidate missing blocks (not in the blocks map)
+   *        should be removed from the data-node
+   * @param toCorrupt replicas with unexpected length or generation stamp;
+   *        add to corrupt replicas
+   * @return
+   */
+  BlockInfo processReportedBlock(
+                  BlockManager blockManager,
+                  Block block,                // reported block replica
+                  ReplicaState rState,        // reported replica state
+                  Collection<Block> toAdd,    // add to DatanodeDescriptor
+                  Collection<Block> toInvalidate, // should be removed from DN
+                  Collection<BlockInfo> toCorrupt) {// add to corrupt replicas
+    FSNamesystem.LOG.debug("Reported block " + block
+        + " on " + getName() + " size " + block.getNumBytes()
+        + " replicaState = " + rState);
+
+    // find block by blockId
+    BlockInfo storedBlock = blockManager.blocksMap.getStoredBlock(block);
+    if(storedBlock == null) {
+      // If blocksMap does not contain reported block id,
+      // the replica should be removed from the data-node.
+      toInvalidate.add(new Block(block));
+      return null;
+    }
+
+    FSNamesystem.LOG.debug("In memory blockUCState = " + storedBlock.getBlockUCState());
+
+    // Block is on the DN
+    boolean isCorrupt = false;
+    switch(rState) {
+    case FINALIZED:
+      switch(storedBlock.getBlockUCState()) {
+      case COMPLETE:
+      case COMMITTED:
+        if(storedBlock.getGenerationStamp() != block.getGenerationStamp()
+            || storedBlock.getNumBytes() != block.getNumBytes())
+          isCorrupt = true;
+        break;
+      case UNDER_CONSTRUCTION:
+      case UNDER_RECOVERY:
+        ((BlockInfoUnderConstruction)storedBlock).addReplicaIfNotPresent(
+            this, block, rState);
+      }
+      if(!isCorrupt && storedBlock.findDatanode(this) < 0)
+        if (storedBlock.getNumBytes() != block.getNumBytes()) {
+          toAdd.add(new Block(block));
+        } else {
+          toAdd.add(storedBlock);
+        }
+      break;
+    case RBW:
+    case RWR:
+      if(!storedBlock.isComplete())
+        ((BlockInfoUnderConstruction)storedBlock).addReplicaIfNotPresent(
+                                                      this, block, rState);
+      else
+        isCorrupt = true;
+      break;
+    case RUR:       // should not be reported
+    case TEMPORARY: // should not be reported
+    default:
+      FSNamesystem.LOG.warn("Unexpected replica state " + rState
+          + " for block: " + storedBlock + 
+          " on " + getName() + " size " + storedBlock.getNumBytes());
+      break;
+    }
+    if(isCorrupt)
+        toCorrupt.add(storedBlock);
+    return storedBlock;
   }
 
   /** Serialization for FSEditLog */
@@ -475,4 +594,53 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // by DatanodeID
     return (this == obj) || super.equals(obj);
   }
+  
+  class DecommissioningStatus {
+    int underReplicatedBlocks;
+    int decommissionOnlyReplicas;
+    int underReplicatedInOpenFiles;
+    long startTime;
+    
+    synchronized void set(int underRep,
+        int onlyRep, int underConstruction) {
+      if (isDecommissionInProgress() == false) {
+        return;
+      }
+      underReplicatedBlocks = underRep;
+      decommissionOnlyReplicas = onlyRep;
+      underReplicatedInOpenFiles = underConstruction;
+    }
+    
+    synchronized int getUnderReplicatedBlocks() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return underReplicatedBlocks;
+    }
+    synchronized int getDecommissionOnlyReplicas() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return decommissionOnlyReplicas;
+    }
+
+    synchronized int getUnderReplicatedInOpenFiles() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return underReplicatedInOpenFiles;
+    }
+
+    synchronized void setStartTime(long time) {
+      startTime = time;
+    }
+    
+    synchronized long getStartTime() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return startTime;
+    }
+  }  // End of class DecommissioningStatus
+  
 }

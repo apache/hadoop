@@ -54,6 +54,11 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class DFSAdmin extends FsShell {
 
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
+
   /**
    * An abstract class for the execution of a file system command
    */

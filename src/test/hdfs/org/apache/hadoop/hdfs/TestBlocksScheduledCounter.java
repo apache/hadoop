@@ -38,7 +38,7 @@ public class TestBlocksScheduledCounter extends TestCase {
 
   public void testBlocksScheduledCounter() throws IOException {
     
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 1, 
+    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 1, 
                                                 true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -49,7 +49,7 @@ public class TestBlocksScheduledCounter extends TestCase {
       out.write(i);
     }
     // flush to make sure a block is allocated.
-    ((DFSOutputStream)(out.getWrappedStream())).sync();
+    ((DFSOutputStream)(out.getWrappedStream())).hflush();
     
     ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
     cluster.getNamesystem().DFSNodesStatus(dnList, dnList);

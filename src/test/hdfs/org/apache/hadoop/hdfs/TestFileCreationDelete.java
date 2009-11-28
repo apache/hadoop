@@ -37,10 +37,10 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
   }
 
   public void testFileCreationDeleteParent() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
-    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setBoolean("dfs.support.append", true);
 
@@ -59,7 +59,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file1);
       TestFileCreation.writeFile(stm1, 1000);
-      stm1.sync();
+      stm1.hflush();
 
       // create file2.
       Path file2 = new Path("/file2");
@@ -67,7 +67,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
       System.out.println("testFileCreationDeleteParent: "
           + "Created file " + file2);
       TestFileCreation.writeFile(stm2, 1000);
-      stm2.sync();
+      stm2.hflush();
 
       // rm dir
       fs.delete(dir, true);

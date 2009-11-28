@@ -43,8 +43,8 @@ import org.apache.hadoop.fs.FileSystem;
  *  5. Swaps two meta files, i.e the format of the meta files 
  *     are valid but their CRCs do not match with their corresponding 
  *     data blocks
- * The above tests are run for varied values of io.bytes.per.checksum 
- * and dfs.block.size. It tests for the case when the meta file is 
+ * The above tests are run for varied values of dfs.bytes-per-checksum 
+ * and dfs.blocksize. It tests for the case when the meta file is 
  * multiple blocks.
  *
  * Another portion of the test is commented out till HADOOP-1557 
@@ -90,7 +90,7 @@ public class TestCrcCorruption extends TestCase {
       // However, a client is alowed access to this block.
       //
       File data_dir = new File(System.getProperty("test.build.data"),
-                               "dfs/data/data1/current");
+                               "dfs/data/data1" + MiniDFSCluster.FINALIZED_DIR_NAME);
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
@@ -147,7 +147,7 @@ public class TestCrcCorruption extends TestCase {
       // directory of the first datanode
       //
       data_dir = new File(System.getProperty("test.build.data"),
-                               "dfs/data/data2/current");
+                               "dfs/data/data2" + MiniDFSCluster.FINALIZED_DIR_NAME);
       assertTrue("data directory does not exist", data_dir.exists());
       blocks = data_dir.listFiles();
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
@@ -207,7 +207,7 @@ public class TestCrcCorruption extends TestCase {
     // default parameters
     //
     System.out.println("TestCrcCorruption with default parameters");
-    Configuration conf1 = new Configuration();
+    Configuration conf1 = new HdfsConfiguration();
     conf1.setInt("dfs.blockreport.intervalMsec", 3 * 1000);
     DFSTestUtil util1 = new DFSTestUtil("TestCrcCorruption", 40, 3, 8*1024);
     thistest(conf1, util1);
@@ -216,9 +216,9 @@ public class TestCrcCorruption extends TestCase {
     // specific parameters
     //
     System.out.println("TestCrcCorruption with specific parameters");
-    Configuration conf2 = new Configuration();
-    conf2.setInt("io.bytes.per.checksum", 17);
-    conf2.setInt("dfs.block.size", 34);
+    Configuration conf2 = new HdfsConfiguration();
+    conf2.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 17);
+    conf2.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 34);
     DFSTestUtil util2 = new DFSTestUtil("TestCrcCorruption", 40, 3, 400);
     thistest(conf2, util2);
   }

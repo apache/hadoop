@@ -32,10 +32,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Sender;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.AccessToken;
 
 /** Test if a datanode can correctly handle errors during block read/write*/
 public class TestDiskError extends TestCase {
@@ -50,15 +56,15 @@ public class TestDiskError extends TestCase {
       return;
     }
     // bring up a cluster of 3
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", 512L);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     final int dnIndex = 0;
     String dataDir = cluster.getDataDirectory();
-    File dir1 = new File(new File(dataDir, "data"+(2*dnIndex+1)), "tmp");
-    File dir2 = new File(new File(dataDir, "data"+(2*dnIndex+2)), "tmp");
+    File dir1 = new File(new File(dataDir, "data"+(2*dnIndex+1)), "current/rbw");
+    File dir2 = new File(new File(dataDir, "data"+(2*dnIndex+2)), "current/rbw");
     try {
       // make the data directory of the first datanode to be readonly
       assertTrue(dir1.setReadOnly());
@@ -82,7 +88,7 @@ public class TestDiskError extends TestCase {
   
   public void testReplicationError() throws Exception {
     // bring up a cluster of 1
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -95,8 +101,8 @@ public class TestDiskError extends TestCase {
       DFSTestUtil.waitReplication(fs, fileName, (short)1);
 
       // get the block belonged to the created file
-      LocatedBlocks blocks = cluster.getNamesystem().getBlockLocations(
-          fileName.toString(), 0, (long)fileLen);
+      LocatedBlocks blocks = NameNodeAdapter.getBlockLocations(
+          cluster.getNameNode(), fileName.toString(), 0, (long)fileLen);
       assertEquals(blocks.locatedBlockCount(), 1);
       LocatedBlock block = blocks.get(0);
       
@@ -113,17 +119,12 @@ public class TestDiskError extends TestCase {
       DataOutputStream out = new DataOutputStream(
           s.getOutputStream());
 
-      out.writeShort( DataTransferProtocol.DATA_TRANSFER_VERSION );
-      WRITE_BLOCK.write(out);
-      out.writeLong( block.getBlock().getBlockId());
-      out.writeLong( block.getBlock().getGenerationStamp() );
-      out.writeInt(1);
-      out.writeBoolean( false );       // recovery flag
-      Text.writeString( out, "" );
-      out.writeBoolean(false); // Not sending src node information
-      out.writeInt(0);
-      AccessToken.DUMMY_TOKEN.write(out);
-      
+      Sender.opWriteBlock(out, block.getBlock().getBlockId(), 
+          block.getBlock().getGenerationStamp(), 1, 
+          BlockConstructionStage.PIPELINE_SETUP_CREATE, 
+          0L, 0L, 0L, "", null, new DatanodeInfo[0], 
+          BlockAccessToken.DUMMY_TOKEN);
+
       // write check header
       out.writeByte( 1 );
       out.writeInt( 512 );
@@ -135,8 +136,8 @@ public class TestDiskError extends TestCase {
       
       // the temporary block & meta files should be deleted
       String dataDir = cluster.getDataDirectory();
-      File dir1 = new File(new File(dataDir, "data"+(2*sndNode+1)), "tmp");
-      File dir2 = new File(new File(dataDir, "data"+(2*sndNode+2)), "tmp");
+      File dir1 = new File(new File(dataDir, "data"+(2*sndNode+1)), "current/rbw");
+      File dir2 = new File(new File(dataDir, "data"+(2*sndNode+2)), "current/rbw");
       while (dir1.listFiles().length != 0 || dir2.listFiles().length != 0) {
         Thread.sleep(100);
       }

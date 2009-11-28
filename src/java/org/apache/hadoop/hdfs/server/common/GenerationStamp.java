@@ -17,35 +17,36 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-import java.io.*;
-import org.apache.hadoop.io.*;
-
 /****************************************************************
  * A GenerationStamp is a Hadoop FS primitive, identified by a long.
  ****************************************************************/
-public class GenerationStamp implements WritableComparable<GenerationStamp> {
-  public static final long WILDCARD_STAMP = 1;
+public class GenerationStamp implements Comparable<GenerationStamp> {
+  /**
+   * The first valid generation stamp.
+   */
   public static final long FIRST_VALID_STAMP = 1000L;
 
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (GenerationStamp.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new GenerationStamp(0); }
-       });
-  }
+  /**
+   * Generation stamp of blocks that pre-date the introduction
+   * of a generation stamp.
+   */
+  public static final long GRANDFATHER_GENERATION_STAMP = 0;
 
-  long genstamp;
+  private volatile long genstamp;
 
   /**
    * Create a new instance, initialized to FIRST_VALID_STAMP.
    */
-  public GenerationStamp() {this(GenerationStamp.FIRST_VALID_STAMP);}
+  public GenerationStamp() {
+    this(GenerationStamp.FIRST_VALID_STAMP);
+  }
 
   /**
    * Create a new instance, initialized to the specified value.
    */
-  GenerationStamp(long stamp) {this.genstamp = stamp;}
+  GenerationStamp(long stamp) {
+    this.genstamp = stamp;
+  }
 
   /**
    * Returns the current generation stamp
@@ -69,46 +70,22 @@ public class GenerationStamp implements WritableComparable<GenerationStamp> {
     return this.genstamp;
   }
 
-  /////////////////////////////////////
-  // Writable
-  /////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    out.writeLong(genstamp);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    this.genstamp = in.readLong();
-    if (this.genstamp < 0) {
-      throw new IOException("Bad Generation Stamp: " + this.genstamp);
-    }
-  }
-
-  /////////////////////////////////////
-  // Comparable
-  /////////////////////////////////////
-  public static int compare(long x, long y) {
-    return x < y? -1: x == y? 0: 1;
-  }
-
-  /** {@inheritDoc} */
+  @Override // Comparable
   public int compareTo(GenerationStamp that) {
-    return compare(this.genstamp, that.genstamp);
+    return this.genstamp < that.genstamp ? -1 :
+           this.genstamp > that.genstamp ? 1 : 0;
   }
 
-  /** {@inheritDoc} */
+  @Override // Object
   public boolean equals(Object o) {
     if (!(o instanceof GenerationStamp)) {
       return false;
     }
-    return genstamp == ((GenerationStamp)o).genstamp;
+    return compareTo((GenerationStamp)o) == 0;
   }
 
-  public static boolean equalsWithWildcard(long x, long y) {
-    return x == y || x == WILDCARD_STAMP || y == WILDCARD_STAMP;  
-  }
-
-  /** {@inheritDoc} */
+  @Override // Object
   public int hashCode() {
-    return 37 * 17 + (int) (genstamp^(genstamp>>>32));
+    return (int) (genstamp^(genstamp>>>32));
   }
 }

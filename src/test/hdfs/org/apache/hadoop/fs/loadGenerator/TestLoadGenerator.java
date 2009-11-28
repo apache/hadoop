@@ -23,6 +23,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import junit.framework.TestCase;
@@ -30,7 +32,7 @@ import junit.framework.TestCase;
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestLoadGenerator extends TestCase {
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
   private static final String OUT_DIR = 
     System.getProperty("test.build.data","build/test/data");
@@ -47,8 +49,8 @@ public class TestLoadGenerator extends TestCase {
   
 
   static {
-    CONF.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    CONF.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
     CONF.setLong("dfs.heartbeat.interval", 1L);
   }
 

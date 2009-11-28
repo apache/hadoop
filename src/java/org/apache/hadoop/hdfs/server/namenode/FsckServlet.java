@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -48,7 +49,7 @@ public class FsckServlet extends DfsServlet {
     UserGroupInformation.setCurrentUser(ugi);
 
     final ServletContext context = getServletContext();
-    final Configuration conf = new Configuration((Configuration) context.getAttribute("name.conf"));
+    final Configuration conf = new HdfsConfiguration((Configuration) context.getAttribute("name.conf"));
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
 

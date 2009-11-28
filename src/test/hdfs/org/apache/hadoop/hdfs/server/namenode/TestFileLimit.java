@@ -26,8 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 
 /**
@@ -73,9 +75,9 @@ public class TestFileLimit extends TestCase {
    * Test that file data becomes available before file is closed.
    */
   public void testFileLimit() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     int maxObjects = 5;
-    conf.setLong("dfs.max.objects", maxObjects);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, maxObjects);
     conf.setLong("dfs.blockreport.intervalMsec", 1000L);
     conf.setInt("dfs.heartbeat.interval", 1);
     int currentNodes = 0;

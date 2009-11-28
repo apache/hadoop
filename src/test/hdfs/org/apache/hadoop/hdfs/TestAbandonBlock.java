@@ -31,7 +31,7 @@ import org.apache.hadoop.util.StringUtils;
 public class TestAbandonBlock extends junit.framework.TestCase {
   public static final Log LOG = LogFactory.getLog(TestAbandonBlock.class);
   
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   static final String FILE_NAME_PREFIX
       = "/" + TestAbandonBlock.class.getSimpleName() + "_"; 
 
@@ -47,7 +47,7 @@ public class TestAbandonBlock extends junit.framework.TestCase {
       for(int i = 0; i < 1024; i++) {
         fout.write(123);
       }
-      fout.sync();
+      fout.hflush();
   
       //try reading the block by someone
       final DFSClient dfsclient = new DFSClient(NameNode.getAddress(CONF), CONF);

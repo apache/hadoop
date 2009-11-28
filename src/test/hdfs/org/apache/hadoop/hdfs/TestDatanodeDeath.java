@@ -283,11 +283,11 @@ public class TestDatanodeDeath extends TestCase {
    * dies.
    */
   private void complexTest() throws IOException {
-    Configuration conf = new Configuration();
-    conf.setInt("heartbeat.recheck.interval", 2000);
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt("dfs.heartbeat.interval", 2);
-    conf.setInt("dfs.replication.pending.timeout.sec", 2);
-    conf.setInt("dfs.socket.timeout", 5000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 2);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -338,11 +338,11 @@ public class TestDatanodeDeath extends TestCase {
    * close the file.
    */
   private void simpleTest(int datanodeToKill) throws IOException {
-    Configuration conf = new Configuration();
-    conf.setInt("heartbeat.recheck.interval", 2000);
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setInt("dfs.replication.pending.timeout.sec", 2);
-    conf.setInt("dfs.socket.timeout", 5000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 2);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 5000);
     int myMaxNodes = 5;
     System.out.println("SimpleTest starting with DataNode to Kill " + 
                        datanodeToKill);

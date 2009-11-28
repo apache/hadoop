@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -27,16 +26,15 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.BlockMetaDataInfo;
-import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 1024;
   static final short REPLICATION_NUM = (short)3;
+  private static final long LEASE_PERIOD = 300L;
 
-  static void checkMetaInfo(Block b, InterDatanodeProtocol idp
+  static void checkMetaInfo(Block b, DataNode dn
       ) throws IOException {
-    TestInterDatanodeProtocol.checkMetaInfo(b, idp, null);
+    TestInterDatanodeProtocol.checkMetaInfo(b, dn);
   }
   
   static int min(Integer... x) {
@@ -49,6 +47,15 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
     return m;
   }
 
+  void waitLeaseRecovery(MiniDFSCluster cluster) {
+    cluster.setLeasePeriod(LEASE_PERIOD, LEASE_PERIOD);
+    // wait for the lease to expire
+    try {
+      Thread.sleep(2 * 3000);  // 2 heartbeat intervals
+    } catch (InterruptedException e) {
+    }
+  }
+
   /**
    * The following test first creates a file with a few blocks.
    * It randomly truncates the replica of the last block stored in each datanode.
@@ -56,8 +63,8 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
    */
   public void testBlockSynchronization() throws Exception {
     final int ORG_FILE_SIZE = 3000; 
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", BLOCK_SIZE);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = null;
 
@@ -80,56 +87,36 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       assertEquals(REPLICATION_NUM, datanodeinfos.length);
 
       //connect to data nodes
-      InterDatanodeProtocol[] idps = new InterDatanodeProtocol[REPLICATION_NUM];
       DataNode[] datanodes = new DataNode[REPLICATION_NUM];
       for(int i = 0; i < REPLICATION_NUM; i++) {
-        idps[i] = DataNode.createInterDataNodeProtocolProxy(datanodeinfos[i], conf);
         datanodes[i] = cluster.getDataNode(datanodeinfos[i].getIpcPort());
         assertTrue(datanodes[i] != null);
       }
       
-      //verify BlockMetaDataInfo
+      //verify Block Info
       Block lastblock = locatedblock.getBlock();
       DataNode.LOG.info("newblocks=" + lastblock);
       for(int i = 0; i < REPLICATION_NUM; i++) {
-        checkMetaInfo(lastblock, idps[i]);
+        checkMetaInfo(lastblock, datanodes[i]);
       }
 
-      //setup random block sizes 
-      int lastblocksize = ORG_FILE_SIZE % BLOCK_SIZE;
-      Integer[] newblocksizes = new Integer[REPLICATION_NUM];
-      for(int i = 0; i < REPLICATION_NUM; i++) {
-        newblocksizes[i] = AppendTestUtil.nextInt(lastblocksize);
-      }
-      DataNode.LOG.info("newblocksizes = " + Arrays.asList(newblocksizes)); 
-
-      //update blocks with random block sizes
-      Block[] newblocks = new Block[REPLICATION_NUM];
-      for(int i = 0; i < REPLICATION_NUM; i++) {
-        newblocks[i] = new Block(lastblock.getBlockId(), newblocksizes[i],
-            lastblock.getGenerationStamp());
-        idps[i].updateBlock(lastblock, newblocks[i], false);
-        checkMetaInfo(newblocks[i], idps[i]);
-      }
 
       DataNode.LOG.info("dfs.dfs.clientName=" + dfs.dfs.clientName);
       cluster.getNameNode().append(filestr, dfs.dfs.clientName);
 
-      //block synchronization
-      final int primarydatanodeindex = AppendTestUtil.nextInt(datanodes.length);
-      DataNode.LOG.info("primarydatanodeindex  =" + primarydatanodeindex);
-      DataNode primary = datanodes[primarydatanodeindex];
-      DataNode.LOG.info("primary.dnRegistration=" + primary.dnRegistration);
-      primary.recoverBlocks(new Block[]{lastblock}, new DatanodeInfo[][]{datanodeinfos}).join();
+      // expire lease to trigger block recovery.
+      waitLeaseRecovery(cluster);
 
-      BlockMetaDataInfo[] updatedmetainfo = new BlockMetaDataInfo[REPLICATION_NUM];
-      int minsize = min(newblocksizes);
-      long currentGS = cluster.getNamesystem().getGenerationStamp();
-      lastblock.setGenerationStamp(currentGS);
+      Block[] updatedmetainfo = new Block[REPLICATION_NUM];
+      long oldSize = lastblock.getNumBytes();
+      lastblock = TestInterDatanodeProtocol.getLastLocatedBlock(
+          dfs.dfs.getNamenode(), filestr).getBlock();
+      long currentGS = lastblock.getGenerationStamp();
       for(int i = 0; i < REPLICATION_NUM; i++) {
-        updatedmetainfo[i] = idps[i].getBlockMetaDataInfo(lastblock);
+        updatedmetainfo[i] =
+          datanodes[i].data.getStoredBlock(lastblock.getBlockId());
         assertEquals(lastblock.getBlockId(), updatedmetainfo[i].getBlockId());
-        assertEquals(minsize, updatedmetainfo[i].getNumBytes());
+        assertEquals(oldSize, updatedmetainfo[i].getNumBytes());
         assertEquals(currentGS, updatedmetainfo[i].getGenerationStamp());
       }
     }

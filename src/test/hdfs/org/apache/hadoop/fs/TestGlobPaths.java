@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import junit.framework.TestCase;
@@ -48,7 +49,7 @@ public class TestGlobPaths extends TestCase {
   
   protected void setUp() throws Exception {
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       dfsCluster = new MiniDFSCluster(conf, 1, true, null);
       fs = FileSystem.get(conf);
     } catch (IOException e) {

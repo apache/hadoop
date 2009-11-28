@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.Path;
 public class TestRestartDFS extends TestCase {
   /** check if DFS remains in proper condition after a restart */
   public void testRestartDFS() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
     DFSTestUtil files = new DFSTestUtil("TestRestartDFS", 20, 3, 8*1024);
 

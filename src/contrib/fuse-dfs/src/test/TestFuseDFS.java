@@ -113,8 +113,8 @@ public class TestFuseDFS extends TestCase {
 
   static public void startStuff() {
     try {
-      Configuration conf = new Configuration();
-      conf.setBoolean("dfs.permissions",false);
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,false);
       cluster = new MiniDFSCluster(conf, 1, true, null);
       fileSys = (DistributedFileSystem)cluster.getFileSystem();
       assertTrue(fileSys.getFileStatus(new Path("/")).isDir());

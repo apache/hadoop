@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
@@ -49,13 +50,14 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
     final long softLease = 1000;
     final long hardLease = 60 * 60 *1000;
     final short repl = 3;
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     final int bufferSize = conf.getInt("io.file.buffer.size", 4096);
-    conf.setLong("dfs.block.size", BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("dfs.heartbeat.interval", 1);
-  //  conf.setInt("io.bytes.per.checksum", 16);
+  //  conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 16);
 
     MiniDFSCluster cluster = null;
+    DistributedFileSystem dfs = null;
     byte[] actual = new byte[FILE_SIZE];
 
     try {
@@ -63,7 +65,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       cluster.waitActive();
 
       //create a file
-      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
       // create a random file name
       String filestr = "/foo" + AppendTestUtil.nextInt();
       System.out.println("filestr=" + filestr);
@@ -77,9 +79,9 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       System.out.println("size=" + size);
       stm.write(buffer, 0, size);
 
-      // sync file
-      AppendTestUtil.LOG.info("sync");
-      stm.sync();
+      // hflush file
+      AppendTestUtil.LOG.info("hflush");
+      stm.hflush();
       AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
       dfs.dfs.leasechecker.interruptAndJoin();
 
@@ -90,7 +92,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       // try to re-open the file before closing the previous handle. This
       // should fail but will trigger lease recovery.
       {
-        Configuration conf2 = new Configuration(conf);
+        Configuration conf2 = new HdfsConfiguration(conf);
         String username = UserGroupInformation.getCurrentUGI().getUserName()+"_1";
         UnixUserGroupInformation.saveToConf(conf2,
             UnixUserGroupInformation.UGI_PROPERTY_NAME,
@@ -129,10 +131,9 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
           + "Validating its contents now...");
 
       // verify that file-size matches
+      long fileSize = dfs.getFileStatus(filepath).getLen();
       assertTrue("File should be " + size + " bytes, but is actually " +
-                 " found to be " + dfs.getFileStatus(filepath).getLen() +
-                 " bytes",
-                 dfs.getFileStatus(filepath).getLen() == size);
+                 " found to be " + fileSize + " bytes", fileSize == size);
 
       // verify that there is enough data to read.
       System.out.println("File size is good. Now validating sizes from datanodes...");
@@ -142,6 +143,7 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
     }
     finally {
       try {
+        if(dfs != null) dfs.close();
         if (cluster != null) {cluster.shutdown();}
       } catch (Exception e) {
         // ignore

@@ -45,9 +45,9 @@ public class TestMissingBlocksAlert extends TestCase {
     MiniDFSCluster cluster = null;
     
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       //minimize test delay
-      conf.setInt("dfs.replication.interval", 0);
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 0);
       int fileLen = 10*1024;
 
       //start a cluster with single datanode
@@ -86,7 +86,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
 
       // Now verify that it shows up on webui
-      URL url = new URL("http://" + conf.get("dfs.http.address") + 
+      URL url = new URL("http://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY) + 
                         "/dfshealth.jsp");
       String dfsFrontPage = DFSTestUtil.urlGet(url);
       String warnStr = "WARNING : There are about ";

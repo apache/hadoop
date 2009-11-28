@@ -23,6 +23,7 @@ import org.apache.hadoop.cli.util.CLITestData.TestCmd;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -53,7 +54,7 @@ public class TestHDFSCLI extends TestCLI{
                        "host5", "host6", "host7", "host8" };
     dfsCluster = new MiniDFSCluster(conf, 8, true, racks, hosts);
     
-    namenode = conf.get("fs.default.name", "file:///");
+    namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
     
     username = System.getProperty("user.name");
     dfsAdmCmdExecutor = new DFSAdminCmdExecutor(namenode);

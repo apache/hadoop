@@ -2,18 +2,14 @@
 <classpath>
 	<classpathentry kind="src" path="src/java"/>
 	<classpathentry kind="src" path="src/test/hdfs"/>
-	<classpathentry kind="src" path="src/test/hdfs-with-mr"/>
 	<classpathentry kind="src" path="src/ant"/>
 	<classpathentry kind="src" path="src/contrib/hdfsproxy/src/java"/>
 	<classpathentry kind="src" path="src/contrib/hdfsproxy/src/test"/>
 	<classpathentry kind="src" path="src/contrib/thriftfs/src/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="var" path="ANT_HOME/lib/ant.jar"/>
-	<classpathentry kind="lib" path="lib/hadoop-core-0.21.0-dev.jar"/>
-	<classpathentry kind="lib" path="lib/hadoop-core-test-0.21.0-dev.jar"/>
-	<classpathentry kind="lib" path="lib/hadoop-mapred-0.21.0-dev.jar"/>
-	<classpathentry kind="lib" path="lib/hadoop-mapred-examples-0.21.0-dev.jar"/>
-	<classpathentry kind="lib" path="lib/hadoop-mapred-test-0.21.0-dev.jar"/>
+	<classpathentry kind="lib" path="lib/hadoop-core-0.22.0-dev.jar"/>
+	<classpathentry kind="lib" path="lib/hadoop-core-test-0.22.0-dev.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-cli-1.2.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-codec-1.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-el-1.0.jar"/>
@@ -38,9 +34,6 @@
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/slf4j-api-1.4.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/slf4j-log4j12-1.4.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/xmlenc-0.52.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/test/ftplet-api-1.0.2.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/test/ftpserver-core-1.0.2.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/test/mina-core-2.0.0-M6.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/hdfsproxy/common/aspectjrt-1.5.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/hdfsproxy/common/cactus.core.framework.uberjar.javaEE.14-1.8.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/hdfsproxy/common/cactus.integration.ant-1.8.0.jar"/>

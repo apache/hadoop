@@ -22,7 +22,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Random;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,8 +29,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 
 import junit.framework.TestCase;
@@ -42,7 +44,7 @@ import junit.framework.TestCase;
  */
 public class TestDirectoryScanner extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestDirectoryScanner.class);
-  private static final Configuration CONF = new Configuration();
+  private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_GEN_STAMP = 9999;
 
   private MiniDFSCluster cluster;
@@ -52,8 +54,8 @@ public class TestDirectoryScanner extends TestCase {
   private Random r = new Random();
 
   static {
-    CONF.setLong("dfs.block.size", 100);
-    CONF.setInt("io.bytes.per.checksum", 1);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
+    CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong("dfs.heartbeat.interval", 1L);
   }
 
@@ -67,17 +69,16 @@ public class TestDirectoryScanner extends TestCase {
   /** Truncate a block file */
   private long truncateBlockFile() throws IOException {
     synchronized (fds) {
-      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
-        Block b = entry.getKey();
-        File f = entry.getValue().getFile();
-        File mf = FSDataset.getMetaFile(f, b);
+      for (ReplicaInfo b : fds.volumeMap.replicas()) {
+        File f = b.getBlockFile();
+        File mf = b.getMetaFile();
         // Truncate a block file that has a corresponding metadata file
         if (f.exists() && f.length() != 0 && mf.exists()) {
           FileOutputStream s = new FileOutputStream(f);
           FileChannel channel = s.getChannel();
           channel.truncate(0);
           LOG.info("Truncated block file " + f.getAbsolutePath());
-          return entry.getKey().getBlockId();
+          return b.getBlockId();
         }
       }
     }
@@ -87,14 +88,13 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete a block file */
   private long deleteBlockFile() {
     synchronized(fds) {
-      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
-        Block b = entry.getKey();
-        File f = entry.getValue().getFile();
-        File mf = FSDataset.getMetaFile(f, b);
+      for (ReplicaInfo b : fds.volumeMap.replicas()) {
+        File f = b.getBlockFile();
+        File mf = b.getMetaFile();
         // Delete a block file that has corresponding metadata file
         if (f.exists() && mf.exists() && f.delete()) {
           LOG.info("Deleting block file " + f.getAbsolutePath());
-          return entry.getKey().getBlockId();
+          return b.getBlockId();
         }
       }
     }
@@ -104,16 +104,12 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete block meta file */
   private long deleteMetaFile() {
     synchronized(fds) {
-      for (Entry<Block, ReplicaInfo> entry : fds.volumeMap.entrySet()) {
-        Block b = entry.getKey();
-        String blkfile = entry.getValue().getFile().getAbsolutePath();
-        long genStamp = b.getGenerationStamp();
-        String metafile = FSDataset.getMetaFileName(blkfile, genStamp);
-        File file = new File(metafile);
+      for (ReplicaInfo b : fds.volumeMap.replicas()) {
+        File file = b.getMetaFile();
         // Delete a metadata file
         if (file.exists() && file.delete()) {
           LOG.info("Deleting metadata file " + file.getAbsolutePath());
-          return entry.getKey().getBlockId();
+          return b.getBlockId();
         }
       }
     }
@@ -125,12 +121,7 @@ public class TestDirectoryScanner extends TestCase {
     long id = rand.nextLong();
     while (true) {
       id = rand.nextLong();
-      Block b = new Block(id);
-      ReplicaInfo info = null;
-      synchronized(fds) {
-        info = fds.volumeMap.get(b);
-      }
-      if (info == null) {
+      if (fds.fetchReplicaInfo(id) == null) {
         break;
       }
     }
@@ -230,7 +221,7 @@ public class TestDirectoryScanner extends TestCase {
       // Test2: block metafile is missing
       long blockId = deleteMetaFile();
       scan(totalBlocks, 1, 1, 0, 0, 1);
-      verifyGenStamp(blockId, Block.GRANDFATHER_GENERATION_STAMP);
+      verifyGenStamp(blockId, GenerationStamp.GRANDFATHER_GENERATION_STAMP);
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test3: block file is missing
@@ -245,7 +236,7 @@ public class TestDirectoryScanner extends TestCase {
       blockId = createBlockFile();
       totalBlocks++;
       scan(totalBlocks, 1, 1, 0, 1, 0);
-      verifyAddition(blockId, Block.GRANDFATHER_GENERATION_STAMP, 0);
+      verifyAddition(blockId, GenerationStamp.GRANDFATHER_GENERATION_STAMP, 0);
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test5: A metafile exists for which there is no block file and
@@ -324,37 +315,29 @@ public class TestDirectoryScanner extends TestCase {
   }
 
   private void verifyAddition(long blockId, long genStamp, long size) {
-    Block memBlock = fds.getBlockKey(blockId);
-    assertNotNull(memBlock);
-    ReplicaInfo blockInfo;
-    synchronized(fds) {
-      blockInfo = fds.volumeMap.get(memBlock);
-    }
-    assertNotNull(blockInfo);
+    final ReplicaInfo replicainfo;
+    replicainfo = fds.fetchReplicaInfo(blockId);
+    assertNotNull(replicainfo);
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(), blockInfo.getFile().getName());
+    assertEquals(file.getName(), fds.findBlockFile(blockId).getName());
 
     // Generation stamp is same as that of created file
-    assertEquals(genStamp, memBlock.getGenerationStamp());
+    assertEquals(genStamp, replicainfo.getGenerationStamp());
 
     // File size matches
-    assertEquals(size, memBlock.getNumBytes());
+    assertEquals(size, replicainfo.getNumBytes());
   }
 
   private void verifyDeletion(long blockId) {
     // Ensure block does not exist in memory
-    synchronized(fds) {
-      assertEquals(null, fds.volumeMap.get(new Block(blockId)));
-    }
+    assertNull(fds.fetchReplicaInfo(blockId));
   }
 
   private void verifyGenStamp(long blockId, long genStamp) {
-    Block memBlock;
-    synchronized(fds) {
-      memBlock = fds.getBlockKey(blockId);
-    }
+    final ReplicaInfo memBlock;
+    memBlock = fds.fetchReplicaInfo(blockId);
     assertNotNull(memBlock);
     assertEquals(genStamp, memBlock.getGenerationStamp());
   }

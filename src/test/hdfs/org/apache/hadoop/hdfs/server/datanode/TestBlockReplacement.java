@@ -39,17 +39,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessToken;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
@@ -59,7 +61,7 @@ public class TestBlockReplacement extends TestCase {
 
   MiniDFSCluster cluster;
   public void testThrottler() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     long bandwidthPerSec = 1024*1024L;
     final long TOTAL_BYTES =6*bandwidthPerSec; 
@@ -82,7 +84,7 @@ public class TestBlockReplacement extends TestCase {
   }
   
   public void testBlockReplacement() throws IOException {
-    final Configuration CONF = new Configuration();
+    final Configuration CONF = new HdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};
 
@@ -90,8 +92,8 @@ public class TestBlockReplacement extends TestCase {
     final int DEFAULT_BLOCK_SIZE = 1024;
     final Random r = new Random();
     
-    CONF.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    CONF.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE/2);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE/2);
     CONF.setLong("dfs.blockreport.intervalMsec",500);
     cluster = new MiniDFSCluster(
           CONF, REPLICATION_FACTOR, true, INITIAL_RACKS );
@@ -234,7 +236,7 @@ public class TestBlockReplacement extends TestCase {
     out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
     sourceProxy.write(out);
-    AccessToken.DUMMY_TOKEN.write(out);
+    BlockAccessToken.DUMMY_TOKEN.write(out);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());

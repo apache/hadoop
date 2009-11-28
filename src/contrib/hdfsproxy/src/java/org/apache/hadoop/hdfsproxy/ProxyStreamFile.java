@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
@@ -39,7 +40,7 @@ public class ProxyStreamFile extends StreamFile {
   public void init() throws ServletException {
     ServletContext context = getServletContext();
     if (context.getAttribute("name.conf") == null) {
-      context.setAttribute("name.conf", new Configuration());
+      context.setAttribute("name.conf", new HdfsConfiguration());
     }
   }
 
@@ -48,7 +49,7 @@ public class ProxyStreamFile extends StreamFile {
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException {
     ServletContext context = getServletContext();
-    Configuration conf = new Configuration((Configuration) context
+    Configuration conf = new HdfsConfiguration((Configuration) context
         .getAttribute("name.conf"));
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));

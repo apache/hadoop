@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.security.AccessToken;
 
 import java.io.*;
 
@@ -44,7 +44,7 @@ public class LocatedBlock implements Writable {
   // else false. If block has few corrupt replicas, they are filtered and 
   // their locations are not part of this object
   private boolean corrupt;
-  private AccessToken accessToken = new AccessToken();
+  private BlockAccessToken accessToken = new BlockAccessToken();
 
   /**
    */
@@ -78,11 +78,11 @@ public class LocatedBlock implements Writable {
     }
   }
 
-  public AccessToken getAccessToken() {
+  public BlockAccessToken getAccessToken() {
     return accessToken;
   }
 
-  public void setAccessToken(AccessToken token) {
+  public void setAccessToken(BlockAccessToken token) {
     this.accessToken = token;
   }
 
@@ -144,5 +144,22 @@ public class LocatedBlock implements Writable {
       locs[i] = new DatanodeInfo();
       locs[i].readFields(in);
     }
+  }
+
+  /** Read LocatedBlock from in. */
+  public static LocatedBlock read(DataInput in) throws IOException {
+    final LocatedBlock lb = new LocatedBlock();
+    lb.readFields(in);
+    return lb;
+  }
+
+  /** {@inheritDoc} */
+  public String toString() {
+    return getClass().getSimpleName() + "{" + b
+        + "; getBlockSize()=" + getBlockSize()
+        + "; corrupt=" + corrupt
+        + "; offset=" + offset
+        + "; locs=" + java.util.Arrays.asList(locs)
+        + "}";
   }
 }

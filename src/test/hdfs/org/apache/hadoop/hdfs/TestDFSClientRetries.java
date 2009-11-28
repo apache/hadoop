@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -61,14 +62,14 @@ public class TestDFSClientRetries extends TestCase {
    */
   public void testWriteTimeoutAtDataNode() throws IOException,
                                                   InterruptedException { 
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     
     final int writeTimeout = 100; //milliseconds.
     // set a very short write timeout for datanode, so that tests runs fast.
     conf.setInt("dfs.datanode.socket.write.timeout", writeTimeout); 
     // set a smaller block size
     final int blockSize = 10*1024*1024;
-    conf.setInt("dfs.block.size", blockSize);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt("dfs.client.max.block.acquire.failures", 1);
     // set a small buffer size
     final int bufferSize = 4096;
@@ -136,8 +137,17 @@ public class TestDFSClientRetries extends TestCase {
       return versionID;
     }
 
-    public LocatedBlock addBlock(String src, String clientName)
-    throws IOException
+    public LocatedBlock addBlock(String src, String clientName,
+                                 Block previous) throws IOException {
+
+      return addBlock(src, clientName, previous, null);
+    }
+
+    public LocatedBlock addBlock(String src,
+                                 String clientName,
+                                 Block previous,
+                                 DatanodeInfo[] excludedNode
+                                 ) throws IOException
     {
       num_calls++;
       if (num_calls > num_calls_allowed) { 
@@ -155,7 +165,9 @@ public class TestDFSClientRetries extends TestCase {
     
     public LocatedBlocks  getBlockLocations(String src, long offset, long length) throws IOException { return null; }
     
-    public void create(String src, FsPermission masked, String clientName, EnumSetWritable<CreateFlag> flag, short replication, long blockSize) throws IOException {}
+    public FsServerDefaults getServerDefaults() throws IOException { return null; }
+    
+    public void create(String src, FsPermission masked, String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent, short replication, long blockSize) throws IOException {}
     
     public LocatedBlock append(String src, String clientName) throws IOException { return null; }
 
@@ -167,17 +179,22 @@ public class TestDFSClientRetries extends TestCase {
 
     public void abandonBlock(Block b, String src, String holder) throws IOException {}
 
-    public boolean complete(String src, String clientName) throws IOException { return false; }
+    public boolean complete(String src, String clientName, Block last) throws IOException { return false; }
 
     public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
 
+    @Deprecated
     public boolean rename(String src, String dst) throws IOException { return false; }
+    
+    public void concat(String trg, String[] srcs) throws IOException {  }
+
+    public void rename(String src, String dst, Rename... options) throws IOException { }
 
     public boolean delete(String src) throws IOException { return false; }
 
     public boolean delete(String src, boolean recursive) throws IOException { return false; }
 
-    public boolean mkdirs(String src, FsPermission masked) throws IOException { return false; }
+    public boolean mkdirs(String src, FsPermission masked, boolean createParent) throws IOException { return false; }
 
     public FileStatus[] getListing(String src) throws IOException { return null; }
 
@@ -213,11 +230,17 @@ public class TestDFSClientRetries extends TestCase {
 
     public void setTimes(String src, long mtime, long atime) throws IOException {}
 
+    @Override public LocatedBlock updateBlockForPipeline(Block block, 
+        String clientName) throws IOException { return null; }
+
+    @Override public void updatePipeline(String clientName, Block oldblock,
+        Block newBlock, DatanodeID[] newNodes)
+        throws IOException {}
   }
   
   public void testNotYetReplicatedErrors() throws IOException
   {   
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     
     // allow 1 retry (2 total calls)
     conf.setInt("dfs.client.block.write.locateFollowingBlock.retries", 1);

@@ -18,6 +18,7 @@
 package org.apache.hadoop.fi;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
  * This class wraps the logic around fault injection configuration file
@@ -37,7 +38,7 @@ public class FiConfig {
   
   protected static void init () {
     if (conf == null) {
-      conf = new Configuration(false);
+      conf = new HdfsConfiguration(false);
       String configName = System.getProperty(CONFIG_PARAMETER, DEFAULT_CONFIG);
       conf.addResource(configName);
     }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 
 /**
  * Internal class for block metadata.
@@ -35,10 +36,20 @@ class BlockInfo extends Block {
    */
   private Object[] triplets;
 
-  BlockInfo(Block blk, int replication) {
+  protected BlockInfo(Block blk, int replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.inode = null;
+  }
+
+  /**
+   * Copy construction.
+   * This is used to convert BlockInfoUnderConstruction
+   * @param from BlockInfo to copy from.
+   */
+  protected BlockInfo(BlockInfo from) {
+    this(from, from.inode.getReplication());
+    this.inode = from.inode;
   }
 
   INodeFile getINode() {
@@ -64,7 +75,7 @@ class BlockInfo extends Block {
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+1];
     assert info == null || 
-        BlockInfo.class.getName().equals(info.getClass().getName()) : 
+        info.getClass().getName().startsWith(BlockInfo.class.getName()) : 
               "BlockInfo is expected at " + index*3;
     return info;
   }
@@ -74,7 +85,7 @@ class BlockInfo extends Block {
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+2];
     assert info == null || 
-        BlockInfo.class.getName().equals(info.getClass().getName()) : 
+        info.getClass().getName().startsWith(BlockInfo.class.getName()) : 
               "BlockInfo is expected at " + index*3;
     return info;
   }
@@ -260,6 +271,43 @@ class BlockInfo extends Block {
       count++;
     }
     return true;
+  }
+
+  /**
+   * BlockInfo represents a block that is not being constructed.
+   * In order to start modifying the block, the BlockInfo should be converted
+   * to {@link BlockInfoUnderConstruction}.
+   * @return {@link BlockUCState#COMPLETE}
+   */
+  BlockUCState getBlockUCState() {
+    return BlockUCState.COMPLETE;
+  }
+
+  /**
+   * Is this block complete?
+   * 
+   * @return true if the state of the block is {@link BlockUCState#COMPLETE}
+   */
+  boolean isComplete() {
+    return getBlockUCState().equals(BlockUCState.COMPLETE);
+  }
+
+  /**
+   * Convert a complete block to an under construction block.
+   * 
+   * @return BlockInfoUnderConstruction -  an under construction block.
+   */
+  BlockInfoUnderConstruction convertToBlockUnderConstruction(
+      BlockUCState s, DatanodeDescriptor[] targets) {
+    if(isComplete()) {
+      return new BlockInfoUnderConstruction(
+          this, getINode().getReplication(), s, targets);
+    }
+    // the block is already under construction
+    BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
+    ucBlock.setBlockUCState(s);
+    ucBlock.setExpectedLocations(targets);
+    return ucBlock;
   }
 
   @Override

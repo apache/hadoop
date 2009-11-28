@@ -37,7 +37,7 @@ public class TestHDFSTrash extends TestTrash {
   public static Test suite() {
     TestSetup setup = new TestSetup(new TestSuite(TestHDFSTrash.class)) {
       protected void setUp() throws Exception {
-        Configuration conf = new Configuration();
+        Configuration conf = new HdfsConfiguration();
         cluster = new MiniDFSCluster(conf, 2, true, null);
       }
       protected void tearDown() throws Exception {
@@ -57,7 +57,7 @@ public class TestHDFSTrash extends TestTrash {
   public void testNonDefaultFS() throws IOException {
     FileSystem fs = cluster.getFileSystem();
     Configuration conf = fs.getConf();
-    conf.set("fs.default.name", fs.getUri().toString());
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, fs.getUri().toString());
     trashNonDefaultFS(conf);
   }
 

@@ -110,9 +110,9 @@ public class TestFSOutputSummer extends TestCase {
    * Test write opeation for output stream in DFS.
    */
   public void testFSOutputSummer() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setLong("dfs.block.size", BLOCK_SIZE);
-    conf.setInt("io.bytes.per.checksum", BYTES_PER_CHECKSUM);
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BYTES_PER_CHECKSUM);
     MiniDFSCluster cluster = new MiniDFSCluster(
         conf, NUM_OF_DATANODES, true, null);
     fileSys = cluster.getFileSystem();

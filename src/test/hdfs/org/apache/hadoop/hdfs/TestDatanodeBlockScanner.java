@@ -91,7 +91,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     
     long startTime = System.currentTimeMillis();
     
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();
     
@@ -131,11 +131,11 @@ public class TestDatanodeBlockScanner extends TestCase {
 
   public static boolean corruptReplica(String blockName, int replica) throws IOException {
     Random random = new Random();
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     boolean corrupted = false;
     for (int i=replica*2; i<replica*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
-                               blockName);
+      File blockFile = new File(baseDir, "data" + (i+1) + 
+          MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
       if (blockFile.exists()) {
         // Corrupt replica by writing random bytes into replica
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
@@ -152,7 +152,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
 
   public void testBlockCorruptionPolicy() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 1000L);
     Random random = new Random();
     FileSystem fs = null;
@@ -175,7 +175,7 @@ public class TestDatanodeBlockScanner extends TestCase {
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
-        LOG.info("Looping until expected blockCount of 3 is received");
+        LOG.info("Looping until expected blockCount of 3 is received: " + blockCount);
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
@@ -183,7 +183,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     assertTrue(blocks.get(0).isCorrupt() == false);
 
     // Corrupt random replica of block 
-    corruptReplica(block, rand);
+    assertTrue(corruptReplica(block, rand));
 
     // Restart the datanode hoping the corrupt block to be reported
     cluster.restartDataNode(rand);
@@ -194,7 +194,7 @@ public class TestDatanodeBlockScanner extends TestCase {
                    getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
       blockCount = blocks.get(0).getLocations().length;
       try {
-        LOG.info("Looping until expected blockCount of 2 is received");
+        LOG.info("Looping until expected blockCount of 2 is received: " + blockCount);
         Thread.sleep(1000);
       } catch (InterruptedException ignore) {
       }
@@ -203,9 +203,9 @@ public class TestDatanodeBlockScanner extends TestCase {
   
     // Corrupt all replicas. Now, block should be marked as corrupt
     // and we should get all the replicas 
-    corruptReplica(block, 0);
-    corruptReplica(block, 1);
-    corruptReplica(block, 2);
+    assertTrue(corruptReplica(block, 0));
+    assertTrue(corruptReplica(block, 1));
+    assertTrue(corruptReplica(block, 2));
 
     // Read the file to trigger reportBadBlocks by client
     try {
@@ -262,11 +262,11 @@ public class TestDatanodeBlockScanner extends TestCase {
                                              short numReplicas,
                                              int numCorruptReplicas) 
                                              throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 30L);
-    conf.setLong("dfs.replication.interval", 30);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 30);
     conf.setLong("dfs.heartbeat.interval", 30L);
-    conf.setBoolean("dfs.replication.considerLoad", false);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
@@ -371,7 +371,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   
   /** Test if NameNode handles truncated blocks in block report */
   public void testTruncatedBlockReport() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);
@@ -410,10 +410,10 @@ public class TestDatanodeBlockScanner extends TestCase {
    * Change the length of a block at datanode dnIndex
    */
   static boolean changeReplicaLength(String blockName, int dnIndex, int lenDelta) throws IOException {
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
-                               blockName);
+      File blockFile = new File(baseDir, "data" + (i+1) + 
+          MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
       if (blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
         raFile.setLength(raFile.length()+lenDelta);
@@ -426,11 +426,11 @@ public class TestDatanodeBlockScanner extends TestCase {
   
   private static void waitForBlockDeleted(String blockName, int dnIndex) 
   throws IOException, InterruptedException {
-    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
-    File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1)+ "/current/" + 
-        blockName);
-    File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2)+ "/current/" + 
-        blockName);
+    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
+    File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1) + 
+        MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
+    File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2) + 
+        MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
     while (blockFile1.exists() || blockFile2.exists()) {
       Thread.sleep(100);
     }

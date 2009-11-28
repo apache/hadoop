@@ -65,9 +65,9 @@ public class HsftpFileSystem extends HftpFileSystem {
    * @throws IOException
    */
   private static void setupSsl(Configuration conf) throws IOException {
-    Configuration sslConf = new Configuration(false);
-    sslConf.addResource(conf.get("dfs.https.client.keystore.resource",
-        "ssl-client.xml"));
+    Configuration sslConf = new HdfsConfiguration(false);
+    sslConf.addResource(conf.get(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
+                             DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
     FileInputStream fis = null;
     try {
       SSLContext sc = SSLContext.getInstance("SSL");

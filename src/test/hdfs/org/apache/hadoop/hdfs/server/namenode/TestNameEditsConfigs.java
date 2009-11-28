@@ -21,11 +21,13 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
  * This class tests various combinations of dfs.name.dir 
@@ -93,7 +95,7 @@ public class TestNameEditsConfigs extends TestCase {
   @SuppressWarnings("deprecation")
   SecondaryNameNode startSecondaryNameNode(Configuration conf
                                           ) throws IOException {
-    conf.set("dfs.secondary.http.address", "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     return new SecondaryNameNode(conf);
   }
 
@@ -126,11 +128,11 @@ public class TestNameEditsConfigs extends TestCase {
     File checkpointNameAndEdits = new File(base_dir, "second_name_and_edits");
     
     // Start namenode with same dfs.name.dir and dfs.name.edits.dir
-    conf = new Configuration();
-    conf.set("dfs.name.dir", nameAndEdits.getPath());
-    conf.set("dfs.name.edits.dir", nameAndEdits.getPath());
-    conf.set("fs.checkpoint.dir", checkpointNameAndEdits.getPath());
-    conf.set("fs.checkpoint.edits.dir", checkpointNameAndEdits.getPath());
+    conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameAndEdits.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories
     cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, true, false, true, null,
@@ -151,17 +153,17 @@ public class TestNameEditsConfigs extends TestCase {
     }
 
     // Start namenode with additional dfs.name.dir and dfs.name.edits.dir
-    conf =  new Configuration();
+    conf =  new HdfsConfiguration();
     assertTrue(newNameDir.mkdir());
     assertTrue(newEditsDir.mkdir());
 
-    conf.set("dfs.name.dir", nameAndEdits.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath() +
               "," + newNameDir.getPath());
-    conf.set("dfs.name.edits.dir", nameAndEdits.getPath() + 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath() + 
              "," + newEditsDir.getPath());
-    conf.set("fs.checkpoint.dir", checkpointNameDir.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameDir.getPath() +
              "," + checkpointNameAndEdits.getPath());
-    conf.set("fs.checkpoint.edits.dir", checkpointEditsDir.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointEditsDir.getPath() +
              "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories. Do not format.
@@ -201,11 +203,11 @@ public class TestNameEditsConfigs extends TestCase {
         new File(checkpointNameDir, FILE_EDITS));
     new File(checkpointNameAndEdits, FILE_IMAGE).renameTo(
         new File(checkpointEditsDir, FILE_IMAGE));
-    conf =  new Configuration();
-    conf.set("dfs.name.dir", newNameDir.getPath());
-    conf.set("dfs.name.edits.dir", newEditsDir.getPath());
-    conf.set("fs.checkpoint.dir", checkpointNameDir.getPath());
-    conf.set("fs.checkpoint.edits.dir", checkpointEditsDir.getPath());
+    conf =  new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameDir.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                   null, null, null, null);
@@ -236,14 +238,14 @@ public class TestNameEditsConfigs extends TestCase {
     // from old dir
     assertTrue(FileUtil.fullyDelete(new File(nameAndEdits, "current")));
     assertTrue(FileUtil.fullyDelete(new File(checkpointNameAndEdits, "current")));
-    conf = new Configuration();
-    conf.set("dfs.name.dir", nameAndEdits.getPath() +
+    conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath() +
               "," + newNameDir.getPath());
-    conf.set("dfs.name.edits.dir", nameAndEdits +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits +
               "," + newEditsDir.getPath());
-    conf.set("fs.checkpoint.dir", checkpointNameDir.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameDir.getPath() +
         "," + checkpointNameAndEdits.getPath());
-    conf.set("fs.checkpoint.edits.dir", checkpointEditsDir.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointEditsDir.getPath() +
         "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
@@ -290,9 +292,9 @@ public class TestNameEditsConfigs extends TestCase {
     File nameAndEdits = new File(base_dir, "name_and_edits");
     
     // Start namenode with same dfs.name.dir and dfs.name.edits.dir
-    conf = new Configuration();
-    conf.set("dfs.name.dir", nameAndEdits.getPath());
-    conf.set("dfs.name.edits.dir", nameAndEdits.getPath());
+    conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories
     cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, true, false, true, null,
@@ -310,13 +312,13 @@ public class TestNameEditsConfigs extends TestCase {
     }
 
     // Start namenode with additional dfs.name.dir and dfs.name.edits.dir
-    conf =  new Configuration();
+    conf =  new HdfsConfiguration();
     assertTrue(newNameDir.mkdir());
     assertTrue(newEditsDir.mkdir());
 
-    conf.set("dfs.name.dir", nameAndEdits.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath() +
               "," + newNameDir.getPath());
-    conf.set("dfs.name.edits.dir", nameAndEdits.getPath() +
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath() +
               "," + newEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories. Do not format.
@@ -338,9 +340,9 @@ public class TestNameEditsConfigs extends TestCase {
     
     // Now remove common directory both have and start namenode with 
     // separate name and edits dirs
-    conf =  new Configuration();
-    conf.set("dfs.name.dir", newNameDir.getPath());
-    conf.set("dfs.name.edits.dir", newEditsDir.getPath());
+    conf =  new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
                                   null, null, null, null);
@@ -360,10 +362,10 @@ public class TestNameEditsConfigs extends TestCase {
     }
 
     // Add old shared directory for name and edits along with latest name
-    conf = new Configuration();
-    conf.set("dfs.name.dir", newNameDir.getPath() + "," + 
+    conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath() + "," + 
              nameAndEdits.getPath());
-    conf.set("dfs.name.edits.dir", nameAndEdits.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     try {
       cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
@@ -377,9 +379,9 @@ public class TestNameEditsConfigs extends TestCase {
     }
 
     // Add old shared directory for name and edits along with latest edits
-    conf = new Configuration();
-    conf.set("dfs.name.dir", nameAndEdits.getPath());
-    conf.set("dfs.name.edits.dir", newEditsDir.getPath() +
+    conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath() +
              "," + nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     try {

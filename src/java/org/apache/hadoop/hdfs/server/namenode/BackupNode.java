@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.DNS;
@@ -52,10 +53,10 @@ import org.apache.hadoop.util.Daemon;
  * </ol>
  */
 public class BackupNode extends NameNode {
-  private static final String BN_ADDRESS_NAME_KEY = "dfs.backup.address";
-  private static final String BN_ADDRESS_DEFAULT = "localhost:50100";
-  private static final String BN_HTTP_ADDRESS_NAME_KEY = "dfs.backup.http.address";
-  private static final String BN_HTTP_ADDRESS_DEFAULT = "0.0.0.0:50105";
+  private static final String BN_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
+  private static final String BN_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT;
+  private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
+  private static final String BN_HTTP_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
 
   /** Name-node proxy */
   NamenodeProtocol namenode;

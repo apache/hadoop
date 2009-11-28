@@ -18,6 +18,7 @@
 package org.apache.hadoop.fi;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,9 +28,46 @@ public class FiTestUtil {
   /** Logging */
   public static final Log LOG = LogFactory.getLog(FiTestUtil.class);
 
+  /** Random source */
+  public static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
+    protected Random initialValue() {
+      final Random r = new Random();
+      final long seed = r.nextLong();
+      LOG.info(Thread.currentThread() + ": seed=" + seed);
+      r.setSeed(seed);
+      return r;
+    }
+  };
+
+  /**
+   * Return a random integer uniformly distributed over the interval [min,max).
+   */
+  public static int nextRandomInt(final int min, final int max) {
+    final int d = max - min;
+    if (d <= 0) {
+      throw new IllegalArgumentException("d <= 0, min=" + min + ", max=" + max);
+    }
+    return d == 1? min: min + RANDOM.get().nextInt(d);
+  }
+
+  /**
+   * Return a random integer, with type long,
+   * uniformly distributed over the interval [min,max).
+   * Assume max - min <= Integer.MAX_VALUE.
+   */
+  public static long nextRandomLong(final long min, final long max) {
+    final long d = max - min;
+    if (d <= 0 || d > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException(
+          "d <= 0 || d > Integer.MAX_VALUE, min=" + min + ", max=" + max);
+    }
+    return d == 1? min: min + RANDOM.get().nextInt((int)d);
+  }
+
   /** Return the method name of the callee. */
   public static String getMethodName() {
-    return Thread.currentThread().getStackTrace()[2].getMethodName();
+    final StackTraceElement[] s = Thread.currentThread().getStackTrace();
+    return s[s.length > 2? 2: s.length - 1].getMethodName();
   }
 
   /**
@@ -41,6 +79,18 @@ public class FiTestUtil {
       Thread.sleep(ms);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Sleep a random number of milliseconds over the interval [min, max).
+   * If there is an InterruptedException, re-throw it as a RuntimeException.
+   */
+  public static void sleep(final long min, final long max) {
+    final long n = nextRandomLong(min, max);
+    LOG.info(Thread.currentThread().getName() + " sleeps for " + n  +"ms");
+    if (n > 0) {
+      sleep(n);
     }
   }
 
@@ -65,6 +115,91 @@ public class FiTestUtil {
       if (action != null) {
         action.run(obj);
       }
+    }
+  }
+
+  /** Constraint interface */
+  public static interface Constraint {
+    /** Is this constraint satisfied? */
+    public boolean isSatisfied();
+  }
+
+  /** Counting down, the constraint is satisfied if the count is zero. */
+  public static class CountdownConstraint implements Constraint {
+    private int count;
+
+    /** Initialize the count. */
+    public CountdownConstraint(int count) {
+      if (count < 0) {
+        throw new IllegalArgumentException(count + " = count < 0");
+      }
+      this.count = count;
+    }
+
+    /** Counting down, the constraint is satisfied if the count is zero. */
+    public boolean isSatisfied() {
+      if (count > 0) {
+        count--;
+        return false;
+      }
+      return true;
+    }
+  }
+  
+  /** An action is fired if all the constraints are satisfied. */
+  public static class ConstraintSatisfactionAction<T> implements Action<T> {
+    private final Action<T> action;
+    private final Constraint[] constraints;
+    
+    /** Constructor */
+    public ConstraintSatisfactionAction(
+        Action<T> action, Constraint... constraints) {
+      this.action = action;
+      this.constraints = constraints;
+    }
+
+    /**
+     * Fire the action if all the constraints are satisfied.
+     * Short-circuit-and is used. 
+     */
+    @Override
+    public final void run(T parameter) throws IOException {
+      for(Constraint c : constraints) {
+        if (!c.isSatisfied()) {
+          return;
+        }
+      }
+
+      //all constraints are satisfied, fire the action
+      action.run(parameter);
+    }
+  }
+
+  /** A MarkerConstraint is satisfied if it is marked. */
+  public static class MarkerConstraint implements Constraint {
+    private final String name;
+    private boolean marked = false;
+
+    /** Construct an object. */
+    public MarkerConstraint(String name) {
+      this.name = name;
+    }
+
+    /** Set marker to be marked. */
+    public void mark() {
+      marked = true;
+      LOG.info("Marking this " + this);
+    }
+
+    /** Is the marker marked? */
+    @Override
+    public boolean isSatisfied() {
+      return marked;
+    }
+
+    /** {@inheritDoc} */
+    public String toString() {
+      return getClass().getSimpleName() + "[" + name + ": " + marked + "]";
     }
   }
 }

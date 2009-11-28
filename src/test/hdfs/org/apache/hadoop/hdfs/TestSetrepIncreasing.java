@@ -26,13 +26,13 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 
 public class TestSetrepIncreasing extends TestCase {
   static void setrep(int fromREP, int toREP, boolean simulatedStorage) throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     conf.set("dfs.replication", "" + fromREP);
     conf.setLong("dfs.blockreport.intervalMsec", 1000L);
-    conf.set("dfs.replication.pending.timeout.sec", Integer.toString(2));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 10, true, null);
     FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(), fs instanceof DistributedFileSystem);

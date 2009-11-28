@@ -47,7 +47,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
   /** Test lease recovery Triggered by DFSClient. */
   public void testClientTriggeredLeaseRecovery() throws Exception {
     final int REPLICATION = 3;
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     conf.setInt("dfs.datanode.handler.count", 1);
     conf.setInt("dfs.replication", REPLICATION);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION, true, null);
@@ -129,7 +129,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
         for(; running; i++) {
           System.out.println(getName() + " writes " + i);
           out.write(i);
-          out.sync();
+          out.hflush();
           sleep(100);
         }
       }

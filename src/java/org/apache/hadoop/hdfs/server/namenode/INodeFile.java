@@ -88,6 +88,26 @@ class INodeFile extends INode {
   }
 
   /**
+   * append array of blocks to this.blocks
+   */
+  void appendBlocks(INodeFile [] inodes, int totalAddedBlocks) {
+    int size = this.blocks.length;
+    
+    BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
+    System.arraycopy(this.blocks, 0, newlist, 0, size);
+    
+    for(INodeFile in: inodes) {
+      System.arraycopy(in.blocks, 0, newlist, size, in.blocks.length);
+      size += in.blocks.length;
+    }
+    
+    for(BlockInfo bi: this.blocks) {
+      bi.setINode(this);
+    }
+    this.blocks = newlist;
+  }
+  
+  /**
    * add a block to the block list
    */
   void addBlock(BlockInfo newblock) {
@@ -112,8 +132,11 @@ class INodeFile extends INode {
 
   int collectSubtreeBlocksAndClear(List<Block> v) {
     parent = null;
-    for (Block blk : blocks) {
-      v.add(blk);
+    if(blocks != null && v != null) {
+      for (BlockInfo blk : blocks) {
+        v.add(blk);
+        blk.setINode(null);
+      }
     }
     blocks = null;
     return 1;
@@ -121,16 +144,29 @@ class INodeFile extends INode {
 
   /** {@inheritDoc} */
   long[] computeContentSummary(long[] summary) {
-    long bytes = 0;
-    for(Block blk : blocks) {
-      bytes += blk.getNumBytes();
-    }
-    summary[0] += bytes;
+    summary[0] += computeFileSize(true);
     summary[1]++;
     summary[3] += diskspaceConsumed();
     return summary;
   }
 
+  /** Compute file size.
+   * May or may not include BlockInfoUnderConstruction.
+   */
+  long computeFileSize(boolean includesBlockInfoUnderConstruction) {
+    if (blocks == null || blocks.length == 0) {
+      return 0;
+    }
+    final int last = blocks.length - 1;
+    //check if the last block is BlockInfoUnderConstruction
+    long bytes = blocks[last] instanceof BlockInfoUnderConstruction
+                 && !includesBlockInfoUnderConstruction?
+                     0: blocks[last].getNumBytes();
+    for(int i = 0; i < last; i++) {
+      bytes += blocks[i].getNumBytes();
+    }
+    return bytes;
+  }
   
 
   @Override
@@ -146,6 +182,9 @@ class INodeFile extends INode {
   
   long diskspaceConsumed(Block[] blkArr) {
     long size = 0;
+    if(blkArr == null) 
+      return 0;
+    
     for (Block blk : blkArr) {
       if (blk != null) {
         size += blk.getNumBytes();
@@ -172,22 +211,33 @@ class INodeFile extends INode {
   /**
    * Return the penultimate allocated block for this file.
    */
-  Block getPenultimateBlock() {
+  BlockInfo getPenultimateBlock() {
     if (blocks == null || blocks.length <= 1) {
       return null;
     }
     return blocks[blocks.length - 2];
   }
 
-  INodeFileUnderConstruction toINodeFileUnderConstruction(
-      String clientName, String clientMachine, DatanodeDescriptor clientNode
-      ) throws IOException {
-    if (isUnderConstruction()) {
-      return (INodeFileUnderConstruction)this;
+  /**
+   * Get the last block of the file.
+   * Make sure it has the right type.
+   */
+  <T extends BlockInfo> T getLastBlock() throws IOException {
+    if (blocks == null || blocks.length == 0)
+      return null;
+    T returnBlock = null;
+    try {
+      @SuppressWarnings("unchecked")  // ClassCastException is caught below
+      T tBlock = (T)blocks[blocks.length - 1];
+      returnBlock = tBlock;
+    } catch(ClassCastException cce) {
+      throw new IOException("Unexpected last block type: " 
+          + blocks[blocks.length - 1].getClass().getSimpleName());
     }
-    return new INodeFileUnderConstruction(name,
-        blockReplication, modificationTime, preferredBlockSize,
-        blocks, getPermissionStatus(),
-        clientName, clientMachine, clientNode);
+    return returnBlock;
+  }
+
+  int numBlocks() {
+    return blocks == null ? 0 : blocks.length;
   }
 }

@@ -22,6 +22,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
@@ -35,7 +36,7 @@ public class ProxyListPathsServlet extends ListPathsServlet {
   public void init() throws ServletException {
     ServletContext context = getServletContext();
     if (context.getAttribute("name.conf") == null) {
-      context.setAttribute("name.conf", new Configuration());
+      context.setAttribute("name.conf", new HdfsConfiguration());
     }
   }
 

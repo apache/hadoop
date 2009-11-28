@@ -27,6 +27,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -407,10 +409,10 @@ public class TestCheckpoint extends TestCase {
   @SuppressWarnings("deprecation")
   void testStartup(Configuration conf) throws IOException {
     System.out.println("Startup of the name-node in the checkpoint directory.");
-    String primaryDirs = conf.get("dfs.name.dir");
-    String primaryEditsDirs = conf.get("dfs.name.edits.dir");
-    String checkpointDirs = conf.get("fs.checkpoint.dir");
-    String checkpointEditsDirs = conf.get("fs.checkpoint.edits.dir");
+    String primaryDirs = conf.get(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+    String primaryEditsDirs = conf.get(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY);
+    String checkpointDirs = conf.get(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
+    String checkpointEditsDirs = conf.get(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
     NameNode nn = startNameNode(conf, checkpointDirs, checkpointEditsDirs,
                                  StartupOption.REGULAR);
 
@@ -555,10 +557,10 @@ public class TestCheckpoint extends TestCase {
                           String imageDirs,
                           String editsDirs,
                           StartupOption start) throws IOException {
-    conf.set("fs.default.name", "hdfs://localhost:0");
-    conf.set("dfs.http.address", "0.0.0.0:0");  
-    conf.set("dfs.name.dir", imageDirs);
-    conf.set("dfs.name.edits.dir", editsDirs);
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");  
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, imageDirs);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, editsDirs);
     String[] args = new String[]{start.getName()};
     NameNode nn = NameNode.createNameNode(args, conf);
     assertTrue(nn.isInSafeMode());
@@ -570,7 +572,7 @@ public class TestCheckpoint extends TestCase {
   @SuppressWarnings("deprecation")
   SecondaryNameNode startSecondaryNameNode(Configuration conf
                                           ) throws IOException {
-    conf.set("dfs.secondary.http.address", "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     return new SecondaryNameNode(conf);
   }
 
@@ -583,8 +585,8 @@ public class TestCheckpoint extends TestCase {
     Path file2 = new Path("checkpoint2.dat");
     Collection<URI> namedirs = null;
 
-    Configuration conf = new Configuration();
-    conf.set("dfs.secondary.http.address", "0.0.0.0:0");
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     replication = (short)conf.getInt("dfs.replication", 3);  
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();
@@ -677,7 +679,7 @@ public class TestCheckpoint extends TestCase {
     MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
       cluster.waitActive();
       fs = (DistributedFileSystem)(cluster.getFileSystem());

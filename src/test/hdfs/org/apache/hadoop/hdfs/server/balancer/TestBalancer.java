@@ -19,12 +19,14 @@ package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -59,8 +62,8 @@ public class TestBalancer extends TestCase {
   }
 
   private void initConf(Configuration conf) {
-    conf.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    conf.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
     conf.setLong("dfs.heartbeat.interval", 1L);
     conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     conf.setLong("dfs.balancer.movedWinWidth", 2000L);
@@ -163,13 +166,14 @@ public class TestBalancer extends TestCase {
         blocks, (short)(numDatanodes-1), distribution);
 
     // restart the cluster: do NOT format the cluster
-    conf.set("dfs.safemode.threshold.pct", "0.0f"); 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f"); 
     cluster = new MiniDFSCluster(0, conf, numDatanodes,
         false, true, null, racks, capacities);
     cluster.waitActive();
     client = DFSClient.createNamenode(conf);
 
-    cluster.injectBlocks(blocksDN);
+    for(int i = 0; i < blocksDN.length; i++)
+      cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
 
     long totalCapacity = 0L;
     for(long capacity:capacities) {
@@ -279,7 +283,7 @@ public class TestBalancer extends TestCase {
   /** Test a cluster with even distribution, 
    * then a new empty node is added to the cluster*/
   public void testBalancer0() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     initConf(conf);
     oneNodeTest(conf);
     twoNodeTest(conf);
@@ -287,7 +291,7 @@ public class TestBalancer extends TestCase {
 
   /** Test unevenly distributed cluster */
   public void testBalancer1() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     initConf(conf);
     testUnevenDistribution(conf,
         new long[] {50*CAPACITY/100, 10*CAPACITY/100},

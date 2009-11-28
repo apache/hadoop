@@ -44,7 +44,7 @@ public class TestFileCorruption extends TestCase {
     MiniDFSCluster cluster = null;
     DFSTestUtil util = new DFSTestUtil("TestFileCorruption", 20, 3, 8*1024);
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 3, true, null);
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
@@ -71,7 +71,7 @@ public class TestFileCorruption extends TestCase {
 
   /** check if local FS can handle corrupted blocks properly */
   public void testLocalFileCorruption() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     Path file = new Path(System.getProperty("test.build.data"), "corruptFile");
     FileSystem fs = FileSystem.getLocal(conf);
     DataOutputStream dos = fs.create(file);
@@ -99,7 +99,7 @@ public class TestFileCorruption extends TestCase {
   public void testArrayOutOfBoundsException() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
       cluster.waitActive();
       
@@ -110,11 +110,11 @@ public class TestFileCorruption extends TestCase {
       
       // get the block
       File dataDir = new File(cluster.getDataDirectory(),
-          "data1/current");
+          "data1" + MiniDFSCluster.FINALIZED_DIR_NAME);
       Block blk = getBlock(dataDir);
       if (blk == null) {
         blk = getBlock(new File(cluster.getDataDirectory(),
-          "dfs/data/data2/current"));
+          "dfs/data/data2" + MiniDFSCluster.FINALIZED_DIR_NAME));
       }
       assertFalse(blk==null);
 
@@ -156,7 +156,7 @@ public class TestFileCorruption extends TestCase {
       return null;
     }
     long blockId = Long.parseLong(blockFileName.substring("blk_".length()));
-    long blockTimeStamp = GenerationStamp.WILDCARD_STAMP;
+    long blockTimeStamp = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     for (idx=0; idx < blocks.length; idx++) {
       String fileName = blocks[idx].getName();
       if (fileName.startsWith(blockFileName) && fileName.endsWith(".meta")) {

@@ -35,7 +35,7 @@ public class TestThriftfs extends TestCase
 
   public void testServer() throws IOException
   {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();
     DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();

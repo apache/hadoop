@@ -37,8 +37,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -110,7 +111,7 @@ public class DFSTestUtil {
   /** create nFiles with random names and directory hierarchies
    *  with random (but reproducible) data in them.
    */
-  void createFiles(FileSystem fs, String topdir,
+  public void createFiles(FileSystem fs, String topdir,
                    short replicationFactor) throws IOException {
     files = new MyFile[nFiles];
     
@@ -155,7 +156,7 @@ public class DFSTestUtil {
   /** check if the files have been copied correctly. */
   public boolean checkFiles(FileSystem fs, String topdir) throws IOException {
     
-    //Configuration conf = new Configuration();
+    //Configuration conf = new HdfsConfiguration();
     Path root = new Path(topdir);
     
     for (int idx = 0; idx < nFiles; idx++) {
@@ -257,7 +258,7 @@ public class DFSTestUtil {
     return ((DFSClient.DFSDataInputStream) in).getAllBlocks();
   }
 
-  public static AccessToken getAccessToken(FSDataOutputStream out) {
+  public static BlockAccessToken getAccessToken(FSDataOutputStream out) {
     return ((DFSClient.DFSOutputStream) out.getWrappedStream()).getAccessToken();
   }
 
@@ -284,7 +285,7 @@ public class DFSTestUtil {
 
   static public Configuration getConfigurationWithDifferentUsername(Configuration conf
       ) throws IOException {
-    final Configuration c = new Configuration(conf);
+    final Configuration c = new HdfsConfiguration(conf);
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
     final String username = ugi.getUserName()+"_XXX";
     final String[] groups = {ugi.getGroupNames()[0] + "_XXX"};

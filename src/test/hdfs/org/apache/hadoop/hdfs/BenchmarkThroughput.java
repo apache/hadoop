@@ -226,7 +226,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new Configuration(),
+    int res = ToolRunner.run(new HdfsConfiguration(),
         new BenchmarkThroughput(), args);
     System.exit(res);
   }

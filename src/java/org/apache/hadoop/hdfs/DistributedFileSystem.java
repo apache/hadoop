@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.fs.Options;
 
 
 /****************************************************************
@@ -177,12 +178,20 @@ public class DistributedFileSystem extends FileSystem {
     }
     return dfs.getBlockLocations(getPathName(file.getPath()), start, len);
   }
+  
+  @Override
+  public BlockLocation[] getFileBlockLocations(Path p, 
+      long start, long len) throws IOException {
+    return dfs.getBlockLocations(getPathName(p), start, len);
+
+  }
 
   @Override
   public void setVerifyChecksum(boolean verifyChecksum) {
     this.verifyChecksum = verifyChecksum;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     return new DFSClient.DFSDataInputStream(
@@ -203,10 +212,32 @@ public class DistributedFileSystem extends FileSystem {
     EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
-    return new FSDataOutputStream
-       (dfs.create(getPathName(f), permission,
+    return new FSDataOutputStream(dfs.create(getPathName(f), permission,
                    flag, replication, blockSize, progress, bufferSize),
         statistics);
+  }
+  
+  @SuppressWarnings("deprecation")
+  @Override
+  protected FSDataOutputStream primitiveCreate(Path f,
+    FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
+    short replication, long blockSize, Progressable progress,
+    int bytesPerChecksum) throws IOException {
+    return new FSDataOutputStream(dfs.primitiveCreate(getPathName(f),
+        absolutePermission, flag, true, replication, blockSize,
+        progress, bufferSize, bytesPerChecksum),statistics);
+   } 
+
+  /**
+   * Same as create(), except fails if parent directory doesn't already exist.
+   * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable)
+   */
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flag, int bufferSize, short replication,
+      long blockSize, Progressable progress) throws IOException {
+
+    return new FSDataOutputStream(dfs.create(getPathName(f), permission, flag,
+        false, replication, blockSize, progress, bufferSize), statistics);
   }
 
   @Override
@@ -215,19 +246,41 @@ public class DistributedFileSystem extends FileSystem {
                                ) throws IOException {
     return dfs.setReplication(getPathName(src), replication);
   }
-
+  
   /**
-   * Rename files/dirs
+   * THIS IS DFS only operations, it is not part of FileSystem
+   * move blocks from srcs to trg
+   * and delete srcs afterwards
+   * all blocks should be the same size
+   * @param trg existing file to append to
+   * @param psrcs list of files (same block size, same replication)
+   * @throws IOException
    */
+  public void concat(Path trg, Path [] psrcs) throws IOException {
+    String [] srcs = new String [psrcs.length];
+    for(int i=0; i<psrcs.length; i++) {
+      srcs[i] = getPathName(psrcs[i]);
+    }
+    dfs.concat(getPathName(trg), srcs);
+  }
+
+  /** {@inheritDoc} */
+  @SuppressWarnings("deprecation")
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
     return dfs.rename(getPathName(src), getPathName(dst));
   }
 
-  /**
-   * requires a boolean check to delete a non 
-   * empty directory recursively.
+  /** 
+   * {@inheritDoc}
+   * This rename operation is guaranteed to be atomic.
    */
+  @SuppressWarnings("deprecation")
+  @Override
+  public void rename(Path src, Path dst, Options.Rename... options) throws IOException {
+    dfs.rename(getPathName(src), getPathName(dst), options);
+  }
+  
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
    return dfs.delete(getPathName(f), recursive);
@@ -268,9 +321,24 @@ public class DistributedFileSystem extends FileSystem {
     return stats;
   }
 
+  /**
+   * Create a directory with given name and permission, only when
+   * parent directory exists.
+   */
+  public boolean mkdir(Path f, FsPermission permission) throws IOException {
+    return dfs.mkdirs(getPathName(f), permission, false);
+  }
+
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-    return dfs.mkdirs(getPathName(f), permission);
+    return dfs.mkdirs(getPathName(f), permission, true);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  protected boolean primitiveMkdir(Path f, FsPermission absolutePermission)
+    throws IOException {
+    return dfs.primitiveMkdir(getPathName(f), absolutePermission);
   }
 
   /** {@inheritDoc} */
@@ -432,6 +500,12 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void metaSave(String pathname) throws IOException {
     dfs.metaSave(pathname);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return dfs.getServerDefaults();
   }
 
   /**

@@ -24,8 +24,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.AccessToken;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Transfer data to/from datanode using a streaming protocol.
@@ -38,12 +39,12 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 16:
-   *    Datanode now needs to send back a status code together 
-   *    with firstBadLink during pipeline setup for dfs write
-   *    (only for DFSClients, not for other datanodes).
+   * Version 17:
+   *    Change the block write protocol to support pipeline recovery.
+   *    Additional fields, like recovery flags, new GS, minBytesRcvd, 
+   *    and maxBytesRcvd are included.
    */
-  public static final int DATA_TRANSFER_VERSION = 16;
+  public static final int DATA_TRANSFER_VERSION = 17;
 
   /** Operation */
   public enum Op {
@@ -119,6 +120,55 @@ public interface DataTransferProtocol {
     }
   };
   
+  public enum BlockConstructionStage {
+    /** The enumerates are always listed as regular stage followed by the
+     * recovery stage. 
+     * Changing this order will make getRecoveryStage not working.
+     */
+    // pipeline set up for block append
+    PIPELINE_SETUP_APPEND,
+    // pipeline set up for failed PIPELINE_SETUP_APPEND recovery
+    PIPELINE_SETUP_APPEND_RECOVERY,
+    // data streaming
+    DATA_STREAMING,
+    // pipeline setup for failed data streaming recovery
+    PIPELINE_SETUP_STREAMING_RECOVERY,
+    // close the block and pipeline
+    PIPELINE_CLOSE,
+    // Recover a failed PIPELINE_CLOSE
+    PIPELINE_CLOSE_RECOVERY,
+    // pipeline set up for block creation
+    PIPELINE_SETUP_CREATE;
+    
+    final static private byte RECOVERY_BIT = (byte)1;
+    
+    /**
+     * get the recovery stage of this stage
+     */
+    public BlockConstructionStage getRecoveryStage() {
+      if (this == PIPELINE_SETUP_CREATE) {
+        throw new IllegalArgumentException( "Unexpected blockStage " + this);
+      } else {
+        return values()[ordinal()|RECOVERY_BIT];
+      }
+    }
+    
+    private static BlockConstructionStage valueOf(byte code) {
+      return code < 0 || code >= values().length? null: values()[code];
+    }
+    
+    /** Read from in */
+    private static BlockConstructionStage readFields(DataInput in)
+    throws IOException {
+      return valueOf(in.readByte());
+    }
+
+    /** write to out */
+    private void write(DataOutput out) throws IOException {
+      out.writeByte(ordinal());
+    }
+  }    
+
   /** @deprecated Deprecated at 0.21.  Use Op.WRITE_BLOCK instead. */
   @Deprecated
   public static final byte OP_WRITE_BLOCK = Op.WRITE_BLOCK.code;
@@ -173,7 +223,7 @@ public interface DataTransferProtocol {
     /** Send OP_READ_BLOCK */
     public static void opReadBlock(DataOutputStream out,
         long blockId, long blockGs, long blockOffset, long blockLen,
-        String clientName, AccessToken accessToken) throws IOException {
+        String clientName, BlockAccessToken accessToken) throws IOException {
       op(out, Op.READ_BLOCK);
 
       out.writeLong(blockId);
@@ -187,15 +237,19 @@ public interface DataTransferProtocol {
     
     /** Send OP_WRITE_BLOCK */
     public static void opWriteBlock(DataOutputStream out,
-        long blockId, long blockGs, int pipelineSize, boolean isRecovery,
-        String client, DatanodeInfo src, DatanodeInfo[] targets,
-        AccessToken accesstoken) throws IOException {
+        long blockId, long blockGs, int pipelineSize, 
+        BlockConstructionStage stage, long newGs, long minBytesRcvd,
+        long maxBytesRcvd, String client, DatanodeInfo src, 
+        DatanodeInfo[] targets, BlockAccessToken accesstoken) throws IOException {
       op(out, Op.WRITE_BLOCK);
 
       out.writeLong(blockId);
       out.writeLong(blockGs);
       out.writeInt(pipelineSize);
-      out.writeBoolean(isRecovery);
+      stage.write(out);
+      WritableUtils.writeVLong(out, newGs);
+      WritableUtils.writeVLong(out, minBytesRcvd);
+      WritableUtils.writeVLong(out, maxBytesRcvd);
       Text.writeString(out, client);
 
       out.writeBoolean(src != null);
@@ -213,7 +267,7 @@ public interface DataTransferProtocol {
     /** Send OP_REPLACE_BLOCK */
     public static void opReplaceBlock(DataOutputStream out,
         long blockId, long blockGs, String storageId, DatanodeInfo src,
-        AccessToken accesstoken) throws IOException {
+        BlockAccessToken accesstoken) throws IOException {
       op(out, Op.REPLACE_BLOCK);
 
       out.writeLong(blockId);
@@ -226,7 +280,7 @@ public interface DataTransferProtocol {
 
     /** Send OP_COPY_BLOCK */
     public static void opCopyBlock(DataOutputStream out,
-        long blockId, long blockGs, AccessToken accesstoken) throws IOException {
+        long blockId, long blockGs, BlockAccessToken accesstoken) throws IOException {
       op(out, Op.COPY_BLOCK);
 
       out.writeLong(blockId);
@@ -237,7 +291,7 @@ public interface DataTransferProtocol {
 
     /** Send OP_BLOCK_CHECKSUM */
     public static void opBlockChecksum(DataOutputStream out,
-        long blockId, long blockGs, AccessToken accesstoken) throws IOException {
+        long blockId, long blockGs, BlockAccessToken accesstoken) throws IOException {
       op(out, Op.BLOCK_CHECKSUM);
 
       out.writeLong(blockId);
@@ -289,7 +343,7 @@ public interface DataTransferProtocol {
       final long offset = in.readLong();
       final long length = in.readLong();
       final String client = Text.readString(in);
-      final AccessToken accesstoken = readAccessToken(in);
+      final BlockAccessToken accesstoken = readAccessToken(in);
 
       opReadBlock(in, blockId, blockGs, offset, length, client, accesstoken);
     }
@@ -300,14 +354,18 @@ public interface DataTransferProtocol {
      */
     protected abstract void opReadBlock(DataInputStream in,
         long blockId, long blockGs, long offset, long length,
-        String client, AccessToken accesstoken) throws IOException;
+        String client, BlockAccessToken accesstoken) throws IOException;
     
     /** Receive OP_WRITE_BLOCK */
     private void opWriteBlock(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
       final int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
-      final boolean isRecovery = in.readBoolean(); // is this part of recovery?
+      final BlockConstructionStage stage = 
+        BlockConstructionStage.readFields(in);
+      final long newGs = WritableUtils.readVLong(in);
+      final long minBytesRcvd = WritableUtils.readVLong(in);
+      final long maxBytesRcvd = WritableUtils.readVLong(in);
       final String client = Text.readString(in); // working on behalf of this client
       final DatanodeInfo src = in.readBoolean()? DatanodeInfo.read(in): null;
 
@@ -319,10 +377,10 @@ public interface DataTransferProtocol {
       for (int i = 0; i < targets.length; i++) {
         targets[i] = DatanodeInfo.read(in);
       }
-      final AccessToken accesstoken = readAccessToken(in);
+      final BlockAccessToken accesstoken = readAccessToken(in);
 
-      opWriteBlock(in, blockId, blockGs, pipelineSize, isRecovery,
-          client, src, targets, accesstoken);
+      opWriteBlock(in, blockId, blockGs, pipelineSize, stage,
+          newGs, minBytesRcvd, maxBytesRcvd, client, src, targets, accesstoken);
     }
 
     /**
@@ -330,9 +388,11 @@ public interface DataTransferProtocol {
      * Write a block.
      */
     protected abstract void opWriteBlock(DataInputStream in,
-        long blockId, long blockGs, int pipelineSize, boolean isRecovery,
+        long blockId, long blockGs,
+        int pipelineSize, BlockConstructionStage stage,
+        long newGs, long minBytesRcvd, long maxBytesRcvd,
         String client, DatanodeInfo src, DatanodeInfo[] targets,
-        AccessToken accesstoken) throws IOException;
+        BlockAccessToken accesstoken) throws IOException;
 
     /** Receive OP_REPLACE_BLOCK */
     private void opReplaceBlock(DataInputStream in) throws IOException {
@@ -340,7 +400,7 @@ public interface DataTransferProtocol {
       final long blockGs = in.readLong();
       final String sourceId = Text.readString(in); // read del hint
       final DatanodeInfo src = DatanodeInfo.read(in); // read proxy source
-      final AccessToken accesstoken = readAccessToken(in);
+      final BlockAccessToken accesstoken = readAccessToken(in);
 
       opReplaceBlock(in, blockId, blockGs, sourceId, src, accesstoken);
     }
@@ -351,13 +411,13 @@ public interface DataTransferProtocol {
      */
     protected abstract void opReplaceBlock(DataInputStream in,
         long blockId, long blockGs, String sourceId, DatanodeInfo src,
-        AccessToken accesstoken) throws IOException;
+        BlockAccessToken accesstoken) throws IOException;
 
     /** Receive OP_COPY_BLOCK */
     private void opCopyBlock(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
-      final AccessToken accesstoken = readAccessToken(in);
+      final BlockAccessToken accesstoken = readAccessToken(in);
 
       opCopyBlock(in, blockId, blockGs, accesstoken);
     }
@@ -367,13 +427,13 @@ public interface DataTransferProtocol {
      * It is used for balancing purpose; send to a proxy source.
      */
     protected abstract void opCopyBlock(DataInputStream in,
-        long blockId, long blockGs, AccessToken accesstoken) throws IOException;
+        long blockId, long blockGs, BlockAccessToken accesstoken) throws IOException;
 
     /** Receive OP_BLOCK_CHECKSUM */
     private void opBlockChecksum(DataInputStream in) throws IOException {
       final long blockId = in.readLong();          
       final long blockGs = in.readLong();
-      final AccessToken accesstoken = readAccessToken(in);
+      final BlockAccessToken accesstoken = readAccessToken(in);
 
       opBlockChecksum(in, blockId, blockGs, accesstoken);
     }
@@ -383,12 +443,12 @@ public interface DataTransferProtocol {
      * Get the checksum of a block 
      */
     protected abstract void opBlockChecksum(DataInputStream in,
-        long blockId, long blockGs, AccessToken accesstoken) throws IOException;
+        long blockId, long blockGs, BlockAccessToken accesstoken) throws IOException;
 
     /** Read an AccessToken */
-    static private AccessToken readAccessToken(DataInputStream in
+    static private BlockAccessToken readAccessToken(DataInputStream in
         ) throws IOException {
-      final AccessToken t = new AccessToken();
+      final BlockAccessToken t = new BlockAccessToken();
       t.readFields(in);
       return t; 
     }

@@ -24,9 +24,12 @@ import java.io.OutputStream;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
 import org.apache.hadoop.util.DataChecksum;
 
 /**
@@ -45,7 +48,7 @@ public class TestSimulatedFSDataset extends TestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-      conf = new Configuration();
+      conf = new HdfsConfiguration();
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
  
   }
@@ -62,14 +65,19 @@ public class TestSimulatedFSDataset extends TestCase {
     int bytesAdded = 0;
     for (int i = startingBlockId; i < startingBlockId+NUMBLOCKS; ++i) {
       Block b = new Block(i, 0, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
-      OutputStream dataOut  = fsdataset.writeToBlock(b, false).dataOut;
-      assertEquals(0, fsdataset.getLength(b));
-      for (int j=1; j <= blockIdToLen(i); ++j) {
-        dataOut.write(j);
-        assertEquals(j, fsdataset.getLength(b)); // correct length even as we write
-        bytesAdded++;
+      ReplicaInPipelineInterface bInfo = fsdataset.createRbw(b);
+      BlockWriteStreams out = bInfo.createStreams(true, 512, 4);
+      try {
+        OutputStream dataOut  = out.dataOut;
+        assertEquals(0, fsdataset.getLength(b));
+        for (int j=1; j <= blockIdToLen(i); ++j) {
+          dataOut.write(j);
+          assertEquals(j, bInfo.getBytesOnDisk()); // correct length even as we write
+          bytesAdded++;
+        }
+      } finally {
+        out.close();
       }
-      dataOut.close();
       b.setNumBytes(blockIdToLen(i));
       fsdataset.finalizeBlock(b);
       assertEquals(blockIdToLen(i), fsdataset.getLength(b));
@@ -139,24 +147,24 @@ public class TestSimulatedFSDataset extends TestCase {
 
 
   public void testGetBlockReport() throws IOException {
-    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
-    Block[] blockReport = fsdataset.getBlockReport();
-    assertEquals(0, blockReport.length);
+    SimulatedFSDataset fsdataset = new SimulatedFSDataset(conf); 
+    BlockListAsLongs blockReport = fsdataset.getBlockReport();
+    assertEquals(0, blockReport.getNumberOfBlocks());
     int bytesAdded = addSomeBlocks(fsdataset);
     blockReport = fsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS, blockReport.length);
+    assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     for (Block b: blockReport) {
       assertNotNull(b);
       assertEquals(blockIdToLen(b.getBlockId()), b.getNumBytes());
     }
   }
   public void testInjectionEmpty() throws IOException {
-    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
-    Block[] blockReport = fsdataset.getBlockReport();
-    assertEquals(0, blockReport.length);
+    SimulatedFSDataset fsdataset = new SimulatedFSDataset(conf); 
+    BlockListAsLongs blockReport = fsdataset.getBlockReport();
+    assertEquals(0, blockReport.getNumberOfBlocks());
     int bytesAdded = addSomeBlocks(fsdataset);
     blockReport = fsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS, blockReport.length);
+    assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     for (Block b: blockReport) {
       assertNotNull(b);
       assertEquals(blockIdToLen(b.getBlockId()), b.getNumBytes());
@@ -169,7 +177,7 @@ public class TestSimulatedFSDataset extends TestCase {
     SimulatedFSDataset sfsdataset = new SimulatedFSDataset(conf);
     sfsdataset.injectBlocks(blockReport);
     blockReport = sfsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS, blockReport.length);
+    assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     for (Block b: blockReport) {
       assertNotNull(b);
       assertEquals(blockIdToLen(b.getBlockId()), b.getNumBytes());
@@ -180,13 +188,13 @@ public class TestSimulatedFSDataset extends TestCase {
   }
 
   public void testInjectionNonEmpty() throws IOException {
-    FSDatasetInterface fsdataset = new SimulatedFSDataset(conf); 
+    SimulatedFSDataset fsdataset = new SimulatedFSDataset(conf); 
     
-    Block[] blockReport = fsdataset.getBlockReport();
-    assertEquals(0, blockReport.length);
+    BlockListAsLongs blockReport = fsdataset.getBlockReport();
+    assertEquals(0, blockReport.getNumberOfBlocks());
     int bytesAdded = addSomeBlocks(fsdataset);
     blockReport = fsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS, blockReport.length);
+    assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     for (Block b: blockReport) {
       assertNotNull(b);
       assertEquals(blockIdToLen(b.getBlockId()), b.getNumBytes());
@@ -201,13 +209,13 @@ public class TestSimulatedFSDataset extends TestCase {
     // Add come blocks whose block ids do not conflict with
     // the ones we are going to inject.
     bytesAdded += addSomeBlocks(sfsdataset, NUMBLOCKS+1);
-    Block[] blockReport2 = sfsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS, blockReport.length);
+    BlockListAsLongs blockReport2 = sfsdataset.getBlockReport();
+    assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     blockReport2 = sfsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS, blockReport.length);
+    assertEquals(NUMBLOCKS, blockReport.getNumberOfBlocks());
     sfsdataset.injectBlocks(blockReport);
     blockReport = sfsdataset.getBlockReport();
-    assertEquals(NUMBLOCKS*2, blockReport.length);
+    assertEquals(NUMBLOCKS*2, blockReport.getNumberOfBlocks());
     for (Block b: blockReport) {
       assertNotNull(b);
       assertEquals(blockIdToLen(b.getBlockId()), b.getNumBytes());

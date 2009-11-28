@@ -16,9 +16,11 @@
 *~
 .classpath
 .project
+.launches/
 .settings
 .svn
 build/
+build.properties
 conf/masters
 conf/slaves
 conf/hadoop-env.sh
@@ -26,6 +28,10 @@ conf/hadoop-site.xml
 conf/hdfs-site.xml
 conf/hadoop-policy.xml
 docs/api/
+ivy/ant-*.jar
+ivy/hadoop-hdfs.xml
+ivy/hadoop-hdfs-test.xml
+ivy/maven-ant-tasks-*.jar
 logs/
 src/docs/build
 src/docs/cn/build

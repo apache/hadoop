@@ -38,8 +38,14 @@ public class TestDFSRename extends junit.framework.TestCase {
     }
   }
 
+  static void createFile(FileSystem fs, Path f) throws IOException {
+    DataOutputStream a_out = fs.create(f);
+    a_out.writeBytes("something");
+    a_out.close();
+  }
+  
   public void testRename() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     try {
       FileSystem fs = cluster.getFileSystem();
@@ -50,9 +56,7 @@ public class TestDFSRename extends junit.framework.TestCase {
         Path aa = new Path(dir, "aa");
         Path b = new Path(dir, "b");
   
-        DataOutputStream a_out = fs.create(a);
-        a_out.writeBytes("something");
-        a_out.close();
+        createFile(fs, a);
         
         //should not have any lease
         assertEquals(0, countLease(cluster)); 
@@ -78,18 +82,37 @@ public class TestDFSRename extends junit.framework.TestCase {
         assertFalse(fs.exists(dstPath));
         assertFalse(fs.rename(dir, dstPath));
       }
-
-      { // test rename /a/b to /a/b/c
+      
+      { // dst cannot be a file or directory under src
+        // test rename /a/b/foo to /a/b/c
         Path src = new Path("/a/b");
         Path dst = new Path("/a/b/c");
 
-        DataOutputStream a_out = fs.create(new Path(src, "foo"));
-        a_out.writeBytes("something");
-        a_out.close();
+        createFile(fs, new Path(src, "foo"));
         
-        assertFalse(fs.rename(src, dst));
+        // dst cannot be a file under src
+        assertFalse(fs.rename(src, dst)); 
+        
+        // dst cannot be a directory under src
+        assertFalse(fs.rename(src.getParent(), dst.getParent())); 
       }
       
+      { // dst can start with src, if it is not a directory or file under src
+        // test rename /test /testfile
+        Path src = new Path("/testPrefix");
+        Path dst = new Path("/testPrefixfile");
+
+        createFile(fs, src);
+        assertTrue(fs.rename(src, dst));
+      }
+      
+      { // dst should not be same as src test rename /a/b/c to /a/b/c
+        Path src = new Path("/a/b/c");
+        createFile(fs, src);
+        assertTrue(fs.rename(src, src));
+        assertFalse(fs.rename(new Path("/a/b"), new Path("/a/b/")));
+        assertTrue(fs.rename(src, new Path("/a/b/c/")));
+      }
       fs.delete(dir, true);
     } finally {
       if (cluster != null) {cluster.shutdown();}

@@ -21,17 +21,19 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
-
+import java.util.Enumeration;
+import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.mortbay.jetty.InclusiveByteRange;
 
 public class StreamFile extends DfsServlet {
   /** for java.io.Serializable */
@@ -39,7 +41,7 @@ public class StreamFile extends DfsServlet {
 
   static InetSocketAddress nameNodeAddr;
   static DataNode datanode = null;
-  private static final Configuration masterConf = new Configuration();
+  private static final Configuration masterConf = new HdfsConfiguration();
   static {
     if ((datanode = DataNode.getDataNode()) != null) {
       nameNodeAddr = datanode.getNameNodeAddr();
@@ -49,7 +51,7 @@ public class StreamFile extends DfsServlet {
   /** getting a client for connecting to dfs */
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException {
-    Configuration conf = new Configuration(masterConf);
+    Configuration conf = new HdfsConfiguration(masterConf);
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
     return new DFSClient(nameNodeAddr, conf);
@@ -65,22 +67,104 @@ public class StreamFile extends DfsServlet {
       out.print("Invalid input");
       return;
     }
-    DFSClient dfs = getDFSClient(request);
+    
+    Enumeration reqRanges = request.getHeaders("Range");
+    if (reqRanges != null && !reqRanges.hasMoreElements())
+      reqRanges = null;
+
+    DFSClient dfs = getDFSClient(request);  
+    long fileLen = dfs.getFileInfo(filename).getLen();
     FSInputStream in = dfs.open(filename);
     OutputStream os = response.getOutputStream();
-    response.setHeader("Content-Disposition", "attachment; filename=\"" + 
-                       filename + "\"");
-    response.setContentType("application/octet-stream");
-    byte buf[] = new byte[4096];
+
     try {
-      int bytesRead;
-      while ((bytesRead = in.read(buf)) != -1) {
-        os.write(buf, 0, bytesRead);
+      if (reqRanges != null) {
+        List ranges = InclusiveByteRange.satisfiableRanges(reqRanges,
+                                                           fileLen);
+        StreamFile.sendPartialData(in, os, response, fileLen, ranges);
+      } else {
+        // No ranges, so send entire file
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + 
+                           filename + "\"");
+        response.setContentType("application/octet-stream");
+        StreamFile.writeTo(in, os, 0L, fileLen);
       }
     } finally {
       in.close();
       os.close();
       dfs.close();
+    }      
+  }
+  
+  static void sendPartialData(FSInputStream in,
+                              OutputStream os,
+                              HttpServletResponse response,
+                              long contentLength,
+                              List ranges)
+  throws IOException {
+
+    if (ranges == null || ranges.size() != 1) {
+      //  if there are no satisfiable ranges, or if multiple ranges are
+      // requested (we don't support multiple range requests), send 416 response
+      response.setContentLength(0);
+      int status = HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE;
+      response.setStatus(status);
+      response.setHeader("Content-Range", 
+                InclusiveByteRange.to416HeaderRangeString(contentLength));
+    } else {
+      //  if there is only a single valid range (must be satisfiable 
+      //  since were here now), send that range with a 206 response
+      InclusiveByteRange singleSatisfiableRange =
+        (InclusiveByteRange)ranges.get(0);
+      long singleLength = singleSatisfiableRange.getSize(contentLength);
+      response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+      response.setHeader("Content-Range", 
+        singleSatisfiableRange.toHeaderRangeString(contentLength));
+      System.out.println("first: "+singleSatisfiableRange.getFirst(contentLength));
+      System.out.println("singleLength: "+singleLength);
+      
+      StreamFile.writeTo(in,
+                         os,
+                         singleSatisfiableRange.getFirst(contentLength),
+                         singleLength);
     }
+  }
+  
+  static void writeTo(FSInputStream in,
+                      OutputStream os,
+                      long start,
+                      long count) 
+  throws IOException {
+    byte buf[] = new byte[4096];
+    long bytesRemaining = count;
+    int bytesRead;
+    int bytesToRead;
+
+    in.seek(start);
+
+    while (true) {
+      // number of bytes to read this iteration
+      bytesToRead = (int)(bytesRemaining<buf.length ? 
+                                                      bytesRemaining:
+                                                      buf.length);
+      
+      // number of bytes actually read this iteration
+      bytesRead = in.read(buf, 0, bytesToRead);
+
+      // if we can't read anymore, break
+      if (bytesRead == -1) {
+        break;
+      } 
+      
+      os.write(buf, 0, bytesRead);
+
+      bytesRemaining -= bytesRead;
+
+      // if we don't need to read anymore, break
+      if (bytesRemaining <= 0) {
+        break;
+      }
+
+    } 
   }
 }

@@ -56,10 +56,10 @@ public class TestQuota extends TestCase {
    *    setQuota, clrQuota, setSpaceQuota, clrSpaceQuota, and count 
    */
   public void testQuotaCommands() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     // set a smaller block size so that we can test with smaller 
     // Space quotas
-    conf.set("dfs.block.size", "512");
+    conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "512");
     conf.setBoolean("dfs.support.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();
@@ -262,7 +262,7 @@ public class TestQuota extends TestCase {
   /** Test commands that change the size of the name space:
    *  mkdirs, rename, and delete */
   public void testNamespaceCommands() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
@@ -430,10 +430,10 @@ public class TestQuota extends TestCase {
    * This is based on testNamespaceCommands() above.
    */
   public void testSpaceCommands() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new HdfsConfiguration();
     // set a smaller block size so that we can test with smaller 
     // diskspace quotas
-    conf.set("dfs.block.size", "512");
+    conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "512");
     conf.setBoolean("dfs.support.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();

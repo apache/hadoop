@@ -60,7 +60,7 @@ public class TestLocalDFS extends TestCase {
    * Tests get/set working directory in DFS.
    */
   public void testWorkingDirectory() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {

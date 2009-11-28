@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 
 /**
@@ -90,14 +91,14 @@ public class DataNodeMetrics implements Updater {
                     new MetricsTimeVaryingRate("blockReports", registry);
 
     
-  public DataNodeMetrics(Configuration conf, String storageId) {
-    String sessionId = conf.get("session.id"); 
+  public DataNodeMetrics(Configuration conf, String datanodeName) {
+    String sessionId = conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY); 
     // Initiate reporting of Java VM metrics
     JvmMetrics.init("DataNode", sessionId);
     
 
     // Now the MBean for the data node
-    datanodeActivityMBean = new DataNodeActivityMBean(registry, storageId);
+    datanodeActivityMBean = new DataNodeActivityMBean(registry, datanodeName);
     
     // Create record for DataNode metrics
     MetricsContext context = MetricsUtil.getContext("dfs");
