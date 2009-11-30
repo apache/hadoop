@@ -138,7 +138,7 @@
   </property>
   <property>
     <name>hbase.client.keyvalue.maxsize</name>
-    <value>-1</value>
+    <value>10485760</value>
     <description>Specifies the combined maximum allowed size of a KeyValue
     instance. This is to set an upper boundary for a single entry saved in a
     storage file. Since they cannot be split it helps avoiding that a region
