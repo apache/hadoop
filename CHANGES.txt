@@ -79,6 +79,8 @@ Trunk (unreleased changes)
     HDFS-785. Add Apache license to several namenode unit tests. 
     (Ravi Phulari via jghoman)
 
+    HDFS-791. Build is broken after HDFS-787 patch has been applied (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -18,7 +18,7 @@
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
   <property name="hadoop-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
   <property name="compile-inject.output" value="${build-fi.dir}/compile-fi.log"/>
-  <property name="aspectversion" value="1.6.4"/>
+  <property name="aspectversion" value="1.6.5"/>
   <property file="${basedir}/build.properties"/>
 
   <!--All Fault Injection (FI) related targets are located in this session -->
