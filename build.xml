@@ -1020,7 +1020,6 @@
   </target>
 
  <target name="test-c++-libhdfs" depends="compile-c++-libhdfs, compile-core" if="islibhdfs" unless="clover.enabled">
-    <echo message="Blah-blah" if="clover.enabled" />
     <delete dir="${test.libhdfs.dir}"/>
     <mkdir dir="${test.libhdfs.dir}"/>
     <mkdir dir="${test.libhdfs.dir}/logs"/>
@@ -1121,6 +1120,7 @@
    <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
      <fileset dir="src" includes="java/**/*"/>
    </clover-setup>
+   <echo message="HDFS-783: test-libhdfs is disabled for Clover'ed builds" />
 </target>
 
 <target name="clover.info" unless="clover.present">
