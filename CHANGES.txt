@@ -616,6 +616,8 @@ Trunk (unreleased changes)
     HADOOP-6395. Upgrade some libraries to be consistent across common, hdfs,
     and mapreduce. (omalley)
 
+    HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
