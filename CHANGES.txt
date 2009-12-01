@@ -48,6 +48,8 @@ Trunk (unreleased changes)
     HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
     szetszwo)
 
+    HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
