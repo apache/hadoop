@@ -636,6 +636,9 @@ Trunk (unreleased changes)
     HADOOP-6271. Add recursive and non recursive create and mkdir to 
     FileContext. (Sanjay Radia via suresh)
 
+    HADOOP-6307. Add a new SequenceFile.Reader constructor in order to support
+    reading on un-closed file.  (szetszwo)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
