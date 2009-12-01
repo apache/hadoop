@@ -684,6 +684,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6261. Add URI based tests for FileContext. 
     (Ravi Pulari via suresh).
 
+    HADOOP-6307. Add a new SequenceFile.Reader constructor in order to support
+    reading on un-closed file.  (szetszwo)
+
   BUG FIXES
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
