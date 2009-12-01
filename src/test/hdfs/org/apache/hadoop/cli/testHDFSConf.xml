@@ -15187,27 +15187,43 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-du &lt;path>:( |\t)*Show the amount of space, in bytes, used by the files that( )*</expected-output>
+          <expected-output>^-du \[-s\] \[-h\] &lt;path&gt;:\s+Show the amount of space, in bytes, used by the files that\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*match the specified file pattern.( )*Equivalent to the unix( )*</expected-output>
+          <expected-output>^\s*match the specified file pattern. The following flags are optional:</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*command "du -sb &lt;path&gt;/\*" in case of a directory,( )*</expected-output>
+          <expected-output>^\s*-s\s*Rather than showing the size of each individual file that</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*and to "du -b &lt;path&gt;" in case of a file.( )*</expected-output>
+          <expected-output>^\s*matches the pattern, shows the total \(summary\) size.</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*The output is in the form( )*</expected-output>
+          <expected-output>^\s*-h\s*Formats the sizes of files in a human-readable fashion</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*name\(full path\) size \(in bytes\)( )*</expected-output>
+          <expected-output>\s*rather than a number of bytes.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*Note that, even without the -s option, this only shows size summaries</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*one level deep into a directory.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*The output is in the form </expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*size\s+name\(full path\)\s*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15226,15 +15242,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*match the specified file pattern.  Equivalent to the unix( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*command "du -sb"  The output is in the form( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*name\(full path\) size \(in bytes\)( )*</expected-output>
+          <expected-output>^( |\t)*match the specified file pattern. This is equivalent to -du -s above.</expected-output>
         </comparator>
       </comparators>
     </test>

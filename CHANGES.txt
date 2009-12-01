@@ -83,6 +83,8 @@ Trunk (unreleased changes)
 
     HDFS-791. Build is broken after HDFS-787 patch has been applied (cos)
 
+    HDFS-792. TestHDFSCLI is failing. (Todd Lipcon via cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
