@@ -1200,6 +1200,7 @@
         <exclude name="**/native/*"/>
         <exclude name="**/native/config/*"/>
         <exclude name="**/VERSION"/>
+        <exclude name="**/*.json"/>
         <exclude name="**/hod/*.txt"/>
       </fileset>
     </rat:report>

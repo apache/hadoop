@@ -14,6 +14,8 @@ Trunk (unreleased changes)
     and the init of the class is made to take a Configuration argument.
     (Jakob Homan via ddas)
 
+    HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
