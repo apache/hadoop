@@ -97,6 +97,9 @@ public class DistCp implements Tool {
     "\n-m <num_maps>          Maximum number of simultaneous copies" +
     "\n-overwrite             Overwrite destination" +
     "\n-update                Overwrite if src size different from dst size" +
+    "\n-skipcrccheck          Do not use CRC check to determine if src is " +
+    "\n                       different from dest. Relevant only if -update" +
+    "\n                       is specified" +
     "\n-f <urilist_uri>       Use list at <urilist_uri> as src list" +
     "\n-filelimit <n>         Limit the total number of files to be <= n" +
     "\n-sizelimit <n>         Limit the total size to be <= n bytes" +
@@ -134,7 +137,8 @@ public class DistCp implements Tool {
     IGNORE_READ_FAILURES("-i", NAME + ".ignore.read.failures"),
     PRESERVE_STATUS("-p", NAME + ".preserve.status"),
     OVERWRITE("-overwrite", NAME + ".overwrite.always"),
-    UPDATE("-update", NAME + ".overwrite.ifnewer");
+    UPDATE("-update", NAME + ".overwrite.ifnewer"),
+    SKIPCRC("-skipcrccheck", NAME + ".skip.crc.check");
 
     final String cmd, propertyname;
 
@@ -327,7 +331,8 @@ public class DistCp implements Tool {
     private Path destPath = null;
     private byte[] buffer = null;
     private JobConf job;
-
+    private boolean skipCRCCheck = false;
+    
     // stats
     private int failcount = 0;
     private int skipcount = 0;
@@ -351,7 +356,7 @@ public class DistCp implements Tool {
     private boolean needsUpdate(FileStatus srcstatus,
         FileSystem dstfs, Path dstpath) throws IOException {
       return update && !sameFile(srcstatus.getPath().getFileSystem(job),
-          srcstatus, dstfs, dstpath);
+          srcstatus, dstfs, dstpath, skipCRCCheck);
     }
     
     private FSDataOutputStream create(Path f, Reporter reporter,
@@ -384,7 +389,7 @@ public class DistCp implements Tool {
             throws IOException {
       if (destFileSys.exists(absdst)) {
         if (sameFile(srcstat.getPath().getFileSystem(job), srcstat,
-            destFileSys, absdst)) {
+            destFileSys, absdst, skipCRCCheck)) {
           return true;
         }
       }
@@ -622,6 +627,7 @@ public class DistCp implements Tool {
       }
       update = job.getBoolean(Options.UPDATE.propertyname, false);
       overwrite = !update && job.getBoolean(Options.OVERWRITE.propertyname, false);
+      skipCRCCheck = job.getBoolean(Options.SKIPCRC.propertyname, false);
       this.job = job;
     }
 
@@ -965,8 +971,14 @@ public class DistCp implements Tool {
       final boolean isOverwrite = flags.contains(Options.OVERWRITE);
       final boolean isUpdate = flags.contains(Options.UPDATE);
       final boolean isDelete = flags.contains(Options.DELETE);
+      final boolean skipCRC = flags.contains(Options.SKIPCRC);
       if (isOverwrite && isUpdate) {
         throw new IllegalArgumentException("Conflicting overwrite policies");
+      }
+      if (!isUpdate && skipCRC) {
+        throw new IllegalArgumentException(
+            Options.SKIPCRC.cmd + " is relevant only with the " +
+            Options.UPDATE.cmd + " option");
       }
       if (isDelete && !isOverwrite && !isUpdate) {
         throw new IllegalArgumentException(Options.DELETE.cmd
@@ -1171,9 +1183,11 @@ public class DistCp implements Tool {
 
     //set boolean values
     final boolean update = args.flags.contains(Options.UPDATE);
+    final boolean skipCRCCheck = args.flags.contains(Options.SKIPCRC);
     final boolean overwrite = !update && args.flags.contains(Options.OVERWRITE)
                               && !args.dryrun;
     jobConf.setBoolean(Options.UPDATE.propertyname, update);
+    jobConf.setBoolean(Options.SKIPCRC.propertyname, skipCRCCheck);
     jobConf.setBoolean(Options.OVERWRITE.propertyname, overwrite);
     jobConf.setBoolean(Options.IGNORE_READ_FAILURES.propertyname,
         args.flags.contains(Options.IGNORE_READ_FAILURES));
@@ -1335,7 +1349,8 @@ public class DistCp implements Tool {
                 }
               }
               //skip path if the src and the dst files are the same.
-              skipPath = update && sameFile(srcfs, child, dstfs, destPath);
+              skipPath = update && 
+              	sameFile(srcfs, child, dstfs, destPath, skipCRCCheck);
               //skip path if it exceed file limit or size limit
               skipPath |= fileCount == args.filelimit
                           || byteCount + child.getLen() > args.sizelimit; 
@@ -1460,7 +1475,7 @@ public class DistCp implements Tool {
    * two files are considered as the same if they have the same size.
    */
   static private boolean sameFile(FileSystem srcfs, FileStatus srcstatus,
-      FileSystem dstfs, Path dstpath) throws IOException {
+      FileSystem dstfs, Path dstpath, boolean skipCRCCheck) throws IOException {
     FileStatus dststatus;
     try {
       dststatus = dstfs.getFileStatus(dstpath);
@@ -1473,6 +1488,11 @@ public class DistCp implements Tool {
       return false;
     }
 
+    if (skipCRCCheck) {
+      LOG.debug("Skipping the CRC check");
+      return true;
+    }
+    
     //get src checksum
     final FileChecksum srccs;
     try {

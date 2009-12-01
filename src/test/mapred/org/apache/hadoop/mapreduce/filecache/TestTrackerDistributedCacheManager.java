@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Random;
 
 import javax.security.auth.login.LoginException;
@@ -34,6 +36,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskController.InitializationContext;
+import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +49,7 @@ import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.mortbay.log.Log;
 
 public class TestTrackerDistributedCacheManager extends TestCase {
 
@@ -94,12 +99,24 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   }
 
   /**
+   * Whether the test can run on the machine
+   * 
+   * @return true if test can run on the machine, false otherwise
+   */
+  protected boolean canRun() {
+    return true;
+  }
+  
+  /**
    * This is the typical flow for using the DistributedCache classes.
    * 
    * @throws IOException
    * @throws LoginException
    */
   public void testManagerFlow() throws IOException, LoginException {
+    if (!canRun()) {
+      return;
+    }
 
     // ****** Imitate JobClient code
     // Configures a task/job with both a regular file and a "classpath" file.
@@ -153,6 +170,99 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   }
 
   /**
+   * This DistributedCacheManager fails in localizing firstCacheFile.
+   */
+  public class FakeTrackerDistributedCacheManager extends
+      TrackerDistributedCacheManager {
+    public FakeTrackerDistributedCacheManager(Configuration conf)
+        throws IOException {
+      super(conf);
+    }
+
+    @Override
+    Path localizeCache(Configuration conf, URI cache, long confFileStamp,
+        CacheStatus cacheStatus, FileStatus fileStatus, boolean isArchive)
+        throws IOException {
+      if (cache.equals(firstCacheFile.toUri())) {
+        throw new IOException("fake fail");
+      }
+      return super.localizeCache(conf, cache, confFileStamp, cacheStatus,
+          fileStatus, isArchive);
+    }
+  }
+
+  public void testReferenceCount() throws IOException, LoginException,
+      URISyntaxException {
+    if (!canRun()) {
+      return;
+    }
+    Configuration conf = new Configuration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
+    TrackerDistributedCacheManager manager = 
+      new FakeTrackerDistributedCacheManager(conf);
+    Cluster cluster = new Cluster(conf);
+    String userName = getJobOwnerName();
+    File workDir = new File(new Path(TEST_ROOT_DIR, "workdir").toString());
+
+    // Configures a job with a regular file
+    Job job1 = Job.getInstance(cluster, conf);
+    job1.addCacheFile(secondCacheFile.toUri());
+    Configuration conf1 = job1.getConfiguration();
+    TrackerDistributedCacheManager.determineTimestamps(conf1);
+
+    // Task localizing for first job
+    TaskDistributedCacheManager handle = manager
+        .newTaskDistributedCacheManager(conf1);
+    handle.setup(localDirAllocator, workDir, TaskTracker
+          .getDistributedCacheDir(userName));
+    handle.release();
+    for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
+      assertEquals(0, manager.getReferenceCount(c.uri, conf1, c.timestamp));
+    }
+    
+    Path thirdCacheFile = new Path(TEST_ROOT_DIR, "thirdcachefile");
+    createTempFile(thirdCacheFile);
+    
+    // Configures another job with three regular files.
+    Job job2 = Job.getInstance(cluster, conf);
+    // add a file that would get failed to localize
+    job2.addCacheFile(firstCacheFile.toUri());
+    // add a file that is already localized by different job
+    job2.addCacheFile(secondCacheFile.toUri());
+    // add a file that is never localized
+    job2.addCacheFile(thirdCacheFile.toUri());
+    Configuration conf2 = job2.getConfiguration();
+    TrackerDistributedCacheManager.determineTimestamps(conf2);
+
+    // Task localizing for second job
+    // localization for the "firstCacheFile" will fail.
+    handle = manager.newTaskDistributedCacheManager(conf2);
+    Throwable th = null;
+    try {
+      handle.setup(localDirAllocator, workDir, TaskTracker
+          .getDistributedCacheDir(userName));
+    } catch (IOException e) {
+      th = e;
+      Log.info("Exception during setup", e);
+    }
+    assertNotNull(th);
+    assertTrue(th.getMessage().contains("fake fail"));
+    handle.release();
+    th = null;
+    for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
+      try {
+        assertEquals(0, manager.getReferenceCount(c.uri, conf2, c.timestamp));
+      } catch (IOException ie) {
+        th = ie;
+        Log.info("Exception getting reference count for " + c.uri, ie);
+      }
+    }
+    assertNotNull(th);
+    assertTrue(th.getMessage().contains(thirdCacheFile.getName()));
+    fs.delete(thirdCacheFile, false);
+  }
+
+  /**
    * Check proper permissions on the cache files
    * 
    * @param localCacheFiles
@@ -180,6 +290,9 @@ public class TestTrackerDistributedCacheManager extends TestCase {
 
   /** test delete cache */
   public void testDeleteCache() throws Exception {
+    if (!canRun()) {
+      return;
+    }
     TrackerDistributedCacheManager manager = 
         new TrackerDistributedCacheManager(conf);
     FileSystem localfs = FileSystem.getLocal(conf);
@@ -204,6 +317,9 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   }
   
   public void testFileSystemOtherThanDefault() throws Exception {
+    if (!canRun()) {
+      return;
+    }
     TrackerDistributedCacheManager manager =
       new TrackerDistributedCacheManager(conf);
     conf.set("fs.fakefile.impl", conf.get("fs.file.impl"));
@@ -262,6 +378,9 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   }
   
   public void testFreshness() throws Exception {
+    if (!canRun()) {
+      return;
+    }
     Configuration myConf = new Configuration(conf);
     myConf.set("fs.default.name", "refresh:///");
     myConf.setClass("fs.refresh.impl", FakeFileSystem.class, FileSystem.class);

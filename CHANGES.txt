@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     MAPREDUCE-1169. Improvements to mysqldump use in Sqoop.
     (Aaron Kimball via tomwhite)
 
+    MAPREDUCE-1231. Added a new DistCp option, -skipcrccheck, so that the CRC
+    check during setup can be skipped.  (Jothi Padmanabhan via szetszwo)
+
   OPTIMIZATIONS
 
     MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
@@ -93,6 +96,10 @@ Trunk (unreleased changes)
     api correctly. (acmurthy)
    
     MAPREDUCE-1244. Fix eclipse-plugin's build dependencies. (gkesavan)
+
+    MAPREDUCE-1140. Fix DistributedCache to not decrement reference counts for
+    unreferenced files in error conditions.
+    (Amareshwari Sriramadasu via yhemanth)
 
 Release 0.21.0 - Unreleased
 
