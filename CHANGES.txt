@@ -32,6 +32,8 @@ Trunk (unreleased changes)
               exclude specific datanodes when locating the next block
               (Cosmin Lehene via Stack)
 
+    HDFS-519. Create new tests for lease recovery (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -78,6 +80,8 @@ Trunk (unreleased changes)
 
     HDFS-785. Add Apache license to several namenode unit tests. 
     (Ravi Phulari via jghoman)
+
+    HDFS-791. Build is broken after HDFS-787 patch has been applied (cos)
 
 Release 0.21.0 - Unreleased
 

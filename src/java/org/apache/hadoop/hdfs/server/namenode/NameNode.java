@@ -185,7 +185,7 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     return namesystem;
   }
 
-  private static void initMetrics(Configuration conf, NamenodeRole role) {
+  static void initMetrics(Configuration conf, NamenodeRole role) {
     myMetrics = new NameNodeMetrics(conf, role);
   }
 
