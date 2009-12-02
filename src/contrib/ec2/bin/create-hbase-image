@@ -64,6 +64,10 @@ echo "Copying scripts."
 
 # Copy setup scripts
 scp $SSH_OPTS "$bin"/hbase-ec2-env.sh "root@$HOSTNAME:/mnt"
+scp $SSH_OPTS "$bin"/functions.sh "root@$HOSTNAME:/mnt"
+if [ -f "$bin"/credentials.sh ] ; then
+  scp $SSH_OPTS "$bin"/credentials.sh "root@$HOSTNAME:/mnt"
+fi
 scp $SSH_OPTS "$bin"/image/create-hbase-image-remote "root@$HOSTNAME:/mnt"
 scp $SSH_OPTS "$bin"/image/ec2-run-user-data "root@$HOSTNAME:/etc/init.d"
 

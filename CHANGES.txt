@@ -212,6 +212,7 @@ Release 0.21.0 - Unreleased
    HBASE-1995  Add configurable max value size check (Lars George via Andrew
                Purtell)
    HBASE-2017  Set configurable max value size check to 10MB
+   HBASE-2019  [EC2] remember credentials if not configured
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

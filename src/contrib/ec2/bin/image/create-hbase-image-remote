@@ -30,8 +30,9 @@ arch=$ARCH
 echo "Remote: INSTANCE_TYPE is $type"
 echo "Remote: ARCH is $arch"
 
-# Remove environment script since it contains sensitive information
+# Remove sensitive information
 rm -f "$bin"/hbase-ec2-env.sh
+rm -f "$bin"/credentials.sh
 
 # Install Java
 echo "Downloading and installing java binary."
