@@ -85,6 +85,9 @@ Trunk (unreleased changes)
 
     HDFS-792. TestHDFSCLI is failing. (Todd Lipcon via cos)
 
+    HDFS-802. Update Eclipse configuration to match changes to Ivy
+    configuration (Edwin Chan via cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
