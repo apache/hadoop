@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
     HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
 
+    HADOOP-6405. Update Eclipse configuration to match changes to Ivy
+    configuration (Edwin Chan via cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
