@@ -38,6 +38,8 @@ Trunk (unreleased changes)
 
     HADOOP-6366. Reduce ivy console output to ovservable level (cos)
 
+    HADOOP-6400. Log errors getting Unix UGI. (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
