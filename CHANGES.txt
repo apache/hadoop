@@ -57,6 +57,8 @@ Trunk (unreleased changes)
     HADOOP-6405. Update Eclipse configuration to match changes to Ivy
     configuration (Edwin Chan via cos)
 
+    HADOOP-6411. Remove deprecated file src/test/hadoop-site.xml. (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
