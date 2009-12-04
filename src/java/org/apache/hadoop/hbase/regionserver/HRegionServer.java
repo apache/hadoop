@@ -1654,7 +1654,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
       region.put(put, getLockFromId(put.getLockId()));
 
       this.syncWal(region);
@@ -1671,7 +1673,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     HRegion region = null;
     try {
       region = getRegion(regionName);
-      this.cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
       Integer[] locks = new Integer[puts.length];
       for (i = 0; i < puts.length; i++) {
         this.requestCount.incrementAndGet();
@@ -1715,10 +1719,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      cacheFlusher.reclaimMemStoreMemory();
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
       boolean retval = region.checkAndPut(row, family, qualifier, value, put,
-          getLockFromId(put.getLockId()), true);
-
+        getLockFromId(put.getLockId()), true);
       this.syncWal(region);
       return retval;
     } catch (Throwable t) {
@@ -1862,12 +1867,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
     checkOpen();
     try {
       boolean writeToWAL = true;
-      this.cacheFlusher.reclaimMemStoreMemory();
       this.requestCount.incrementAndGet();
-      Integer lid = getLockFromId(delete.getLockId());
       HRegion region = getRegion(regionName);
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      Integer lid = getLockFromId(delete.getLockId());
       region.delete(delete, lid, writeToWAL);
-
       this.syncWal(region);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -1882,10 +1888,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
     HRegion region = null;
     try {
       boolean writeToWAL = true;
-      this.cacheFlusher.reclaimMemStoreMemory();
-      Integer[] locks = new Integer[deletes.length];
       region = getRegion(regionName);
-
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      Integer[] locks = new Integer[deletes.length];
       for (i = 0; i < deletes.length; i++) {
         this.requestCount.incrementAndGet();
         locks[i] = getLockFromId(deletes[i].getLockId());

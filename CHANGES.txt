@@ -118,6 +118,7 @@ Release 0.21.0 - Unreleased
                something...
    HBASE-1997  zk tick time bounds maximum zk session time
    HBASE-2003  [shell] deleteall ignores column if specified
+   HBASE-2018  Updates to .META. blocked under high MemStore load
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
