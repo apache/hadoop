@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.mortbay.log.Log;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -1614,6 +1613,7 @@ public class BlockManager {
         NameNode.stateChangeLog.info("BLOCK* ask " + dn.getName()
             + " to delete " + blockList);
       }
+      pendingDeletionBlocksCount -= blocksToInvalidate.size();
       return blocksToInvalidate.size();
     }
   }

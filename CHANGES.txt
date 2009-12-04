@@ -545,6 +545,9 @@ Release 0.21.0 - Unreleased
     HDFS-691. Fix an overflow error in DFSClient.DFSInputStream.available().
     (szetszwo)
 
+    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented.
+    (Suresh)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
