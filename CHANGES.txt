@@ -119,6 +119,8 @@ Release 0.21.0 - Unreleased
    HBASE-1997  zk tick time bounds maximum zk session time
    HBASE-2003  [shell] deleteall ignores column if specified
    HBASE-2018  Updates to .META. blocked under high MemStore load
+   HBASE-1994  Master will lose hlog entries while splitting if region has
+               empty oldlogfile.log (Lars George via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

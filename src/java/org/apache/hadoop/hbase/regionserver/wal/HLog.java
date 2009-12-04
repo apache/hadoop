@@ -1158,11 +1158,18 @@ public class HLog implements HConstants, Syncable {
                     Path oldlogfile = null;
                     SequenceFile.Reader old = null;
                     if (fs.exists(logfile)) {
-                      LOG.warn("Old hlog file " + logfile
-                        + " already exists. Copying existing file to new file");
-                      oldlogfile = new Path(logfile.toString() + ".old");
-                      fs.rename(logfile, oldlogfile);
-                      old = new SequenceFile.Reader(fs, oldlogfile, conf);
+                      FileStatus stat = fs.getFileStatus(logfile);
+                      if (stat.getLen() <= 0) {
+                        LOG.warn("Old hlog file " + logfile + " is zero " +
+                          "length. Deleting existing file");
+                        fs.delete(logfile, false);
+                      } else {
+                        LOG.warn("Old hlog file " + logfile + " already " +
+                          "exists. Copying existing file to new file");
+                        oldlogfile = new Path(logfile.toString() + ".old");
+                        fs.rename(logfile, oldlogfile);
+                        old = new SequenceFile.Reader(fs, oldlogfile, conf);
+                      }
                     }
                     SequenceFile.Writer w =
                       SequenceFile.createWriter(fs, conf, logfile,
