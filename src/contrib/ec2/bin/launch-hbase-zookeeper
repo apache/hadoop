@@ -68,7 +68,7 @@ while [ $inst -lt $NO_INSTANCES ] ; do
   public=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $4}'`
   echo "    Public DNS name is $public."
   public_names="$public_names $public"
-  inst=$(($inst + 1)
+  inst=$(($inst + 1))
 done
 
 ZOOKEEPER_QUORUM=`echo $peers | sed -e 's/ /,/g'`
