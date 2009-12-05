@@ -21,8 +21,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
@@ -33,8 +31,6 @@ import org.apache.hadoop.io.WritableFactory;
  * A class for file/directory permissions.
  */
 public class FsPermission implements Writable {
-  private static final Log LOG = LogFactory.getLog(FsPermission.class);
-  
   static final WritableFactory FACTORY = new WritableFactory() {
     public Writable newInstance() { return new FsPermission(); }
   };
@@ -182,7 +178,8 @@ public class FsPermission implements Writable {
         otheraction.and(umask.otheraction.not()));
   }
 
-  /** umask property label Deprecated key may be removed in version .23 */
+  /** umask property label deprecated key and code in getUMask method
+   *  to accommodate it may be removed in version .23 */
   public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
   public static final String UMASK_LABEL = 
                   CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
@@ -198,10 +195,19 @@ public class FsPermission implements Writable {
     if(conf != null) {
       String confUmask = conf.get(UMASK_LABEL);
       if(confUmask != null) { // UMASK_LABEL is set
-        if(conf.deprecatedKeyWasSet(DEPRECATED_UMASK_LABEL)) 
-          umask = Integer.parseInt(confUmask); // Evaluate as decimal value
-        else
-          umask = new UmaskParser(confUmask).getUMask();
+        try {
+          if(conf.deprecatedKeyWasSet(DEPRECATED_UMASK_LABEL)) 
+            umask = Integer.parseInt(confUmask); // Evaluate as decimal value
+          else
+            umask = new UmaskParser(confUmask).getUMask();
+        } catch(IllegalArgumentException iae) {
+          // Provide more explanation for user-facing message
+          String type = iae instanceof NumberFormatException ? "decimal" 
+                                                          : "octal or symbolic";
+          
+          throw new IllegalArgumentException("Unable to parse " + confUmask + 
+                                              " as " + type + " umask.");
+        }
       } 
     }
     
