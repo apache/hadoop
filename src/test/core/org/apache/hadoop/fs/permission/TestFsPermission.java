@@ -157,9 +157,16 @@ public class TestFsPermission extends TestCase {
         FsPermission.getUMask(conf);
         fail("Shouldn't have been able to parse bad umask");
       } catch(IllegalArgumentException iae) {
-        assertEquals(iae.getMessage(), b);
+        assertTrue("Exception should specify parsing error and invalid umask: " 
+            + iae.getMessage(), isCorrectExceptionMessage(iae.getMessage(), b));
       }
     }
+  }
+  
+  private boolean isCorrectExceptionMessage(String msg, String umask) {
+    return msg.contains("Unable to parse") &&
+           msg.contains(umask) &&
+           msg.contains("octal or symbolic");
   }
   
   // Ensure that when the deprecated decimal umask key is used, it is correctly
