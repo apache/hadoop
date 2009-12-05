@@ -49,7 +49,7 @@ echo "Starting ZooKeeper quorum ensemble."
 
 peers=""
 public_names=""
-for inst in `seq 1 $NO_INSTANCES` ; do 
+for inst in {1..$NO_INSTANCES} ; do
   echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
   INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
   echo -n "Waiting for instance $INSTANCE to start: "
