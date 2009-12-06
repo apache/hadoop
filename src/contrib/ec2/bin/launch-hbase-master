@@ -88,7 +88,7 @@ while true; do
   sleep 5
 done
 
-scp $SSH_OPTS $PRIVATE_KEY_PATH "root@$MASTER_EC2_HOST:/root/.ssh/id_rsa"
+scp $SSH_OPTS $EC2_ROOT_SSH_KEY "root@$MASTER_EC2_HOST:/root/.ssh/id_rsa"
 ssh $SSH_OPTS "root@$MASTER_EC2_HOST" "chmod 600 /root/.ssh/id_rsa"
 
 MASTER_IP=`dig +short $MASTER_EC2_HOST`

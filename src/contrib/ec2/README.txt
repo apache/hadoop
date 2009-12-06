@@ -42,7 +42,9 @@ Quick Start:
    with 'cert' and end with '.pem'.
 
    Make sure the private part of your AWS SSH keypair exists in the same
-   directory as EC2_PRIVATE_KEY with the name id_rsa_root.
+   directory as EC2_PRIVATE_KEY with the name id_rsa_root. Also, insure that
+   the permissions on the private key file are 600 (ONLY owner readable/
+   writable).
 
 4) ./bin/hbase-ec2 launch-cluster <name> <nr-zoos> <nr-slaves>, e.g
 
