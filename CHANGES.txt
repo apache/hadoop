@@ -34,6 +34,8 @@ Trunk (unreleased changes)
 
     HDFS-519. Create new tests for lease recovery (cos)
 
+    HDFS-804. New unit tests for concurrent lease recovery (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
