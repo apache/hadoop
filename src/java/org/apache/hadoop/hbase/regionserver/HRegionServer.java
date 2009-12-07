@@ -1122,9 +1122,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (this.toDo.isEmpty()) {
       return;
     }
-    // This iterator is 'safe'.  We are guaranteed a view on state of the
-    // queue at time iterator was taken out.  Apparently goes from oldest.
+    // This iterator isn't safe if elements are gone and HRS.Worker could
+    // remove them (it already checks for null there). Goes from oldest.
     for (ToDoEntry e: this.toDo) {
+      if(e == null) {
+        LOG.warn("toDo gave a null entry during iteration");
+        break;
+      }
       HMsg msg = e.msg;
       if (msg != null) {
         if (msg.isType(HMsg.Type.MSG_REGION_OPEN)) {

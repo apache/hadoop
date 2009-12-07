@@ -121,6 +121,7 @@ Release 0.21.0 - Unreleased
    HBASE-2018  Updates to .META. blocked under high MemStore load
    HBASE-1994  Master will lose hlog entries while splitting if region has
                empty oldlogfile.log (Lars George via Stack)
+   HBASE-2022  NPE in housekeeping kills RS
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
