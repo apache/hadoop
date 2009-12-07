@@ -196,8 +196,10 @@ public class HConnectionManager implements HConstants {
      */
     public void process(WatchedEvent event) {
       KeeperState state = event.getState();
-      LOG.debug("Got ZooKeeper event, state: " + state + ", type: "
-          + event.getType() + ", path: " + event.getPath());
+      if(!state.equals(KeeperState.SyncConnected)) {
+        LOG.debug("Got ZooKeeper event, state: " + state + ", type: "
+            + event.getType() + ", path: " + event.getPath());
+      }
       if (state == KeeperState.Expired) {
         resetZooKeeper();
       }
@@ -698,7 +700,7 @@ public class HConnectionManager implements HConstants {
             if (LOG.isDebugEnabled()) {
               LOG.debug("locateRegionInMeta attempt " + tries + " of " +
                 this.numRetries + " failed; retrying after sleep of " +
-                getPauseTime(tries), e);
+                getPauseTime(tries) + " because: " + e.getMessage());
             }
             relocateRegion(parentTable, metaKey);
           } else {
@@ -862,7 +864,9 @@ public class HConnectionManager implements HConstants {
       SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
       if (tableLocations.put(startKey, location) == null) {
-        LOG.debug("Cached location " + location);
+        LOG.debug("Cached location for " +
+            location.getRegionInfo().getRegionNameAsString() +
+            " is " + location.getServerAddress());
       }
     }
     

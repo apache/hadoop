@@ -18,17 +18,11 @@ include Java
 # Some goodies for hirb. Should these be left up to the user's discretion?
 require 'irb/completion'
 
-# Hack to turn down zk logging so it don't spew over the shell
-# log4j.logger.org.apache.zookeeper=INFO
-logger = org.apache.log4j.Logger.getLogger("org.apache.zookeeper")
-logger.setLevel(org.apache.log4j.Level::WARN);
-
 # Add the $HBASE_HOME/bin directory, the location of this script, to the ruby
 # load path so I can load up my HBase ruby modules
 $LOAD_PATH.unshift File.dirname($PROGRAM_NAME)
-# Require formatter and hbase
+# Require formatter
 require 'Formatter'
-require 'HBase'
 
 # See if there are args for this shell. If any, read and then strip from ARGV
 # so they don't go through to irb.  Output shell 'usage' if user types '--help'
@@ -36,11 +30,13 @@ cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
  format        Formatter for outputting results: console | html. Default: console
  format-width  Width of table outputs. Default: 110 characters.
+ -d | --debug  Set DEBUG log levels.
 HERE
 found = []
 format = 'console'
 format_width = 110
 script2run = nil
+logLevel = org.apache.log4j.Level::ERROR  
 for arg in ARGV
   if arg =~ /^--format=(.+)/i
     format = $1
@@ -58,6 +54,10 @@ for arg in ARGV
   elsif arg == '-h' || arg == '--help'
     puts cmdline_help
     exit
+  elsif arg == '-d' || arg == '--debug'
+    logLevel = org.apache.log4j.Level::DEBUG
+    $fullBackTrace = true
+    puts "Setting DEBUG log level..."  
   else
     # Presume it a script. Save it off for running later below
     # after we've set up some environment.
@@ -70,10 +70,19 @@ end
 for arg in found
   ARGV.delete(arg)
 end
+
 # Presume console format.
 # Formatter takes an :output_stream parameter, if you don't want STDOUT.
 @formatter = Formatter::Console.new(:format_width => format_width)
 # TODO, etc.  @formatter = Formatter::XHTML.new(STDOUT)
+
+# Set logging level to avoid verboseness
+logger = org.apache.log4j.Logger.getLogger("org.apache.zookeeper")
+logger.setLevel(logLevel);
+logger = org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase")
+logger.setLevel(logLevel);
+# Require HBase now after setting log levels
+require 'HBase'
 
 # Setup the HBase module.  Create a configuration.
 # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
@@ -478,6 +487,7 @@ module IRB
     IRB.setup(ap_path)
     @CONF[:IRB_NAME] = 'hbase'
     @CONF[:AP_NAME] = 'hbase'
+    @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
     
     if @CONF[:SCRIPT]
       hirb = HIRB.new(nil, @CONF[:SCRIPT])
