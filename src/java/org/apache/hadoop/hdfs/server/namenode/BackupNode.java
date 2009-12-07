@@ -37,7 +37,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.Daemon;
 
 /**
  * BackupNode.
@@ -66,8 +65,6 @@ public class BackupNode extends NameNode {
   String nnHttpAddress;
   /** Checkpoint manager */
   Checkpointer checkpointManager;
-  /** Checkpoint daemon */
-  private Daemon cpDaemon;
 
   BackupNode(Configuration conf, NamenodeRole role) throws IOException {
     super(conf, role);
@@ -133,9 +130,17 @@ public class BackupNode extends NameNode {
 
   @Override // NameNode
   public void stop() {
-    if(checkpointManager != null) checkpointManager.shouldRun = false;
-    if(cpDaemon != null) cpDaemon.interrupt();
+    if(checkpointManager != null) {
+      // Prevent from starting a new checkpoint.
+      // Checkpoints that has already been started may proceed until 
+      // the error reporting to the name-node is complete.
+      // Checkpoint manager should not be interrupted yet because it will
+      // close storage file channels and the checkpoint may fail with 
+      // ClosedByInterruptException.
+      checkpointManager.shouldRun = false;
+    }
     if(namenode != null && getRegistration() != null) {
+      // Exclude this node from the list of backup streams on the name-node
       try {
         namenode.errorReport(getRegistration(), NamenodeProtocol.FATAL,
             "Shutting down.");
@@ -143,7 +148,15 @@ public class BackupNode extends NameNode {
         LOG.error("Failed to report to name-node.", e);
       }
     }
-    RPC.stopProxy(namenode); // stop the RPC threads
+    // Stop the RPC client
+    RPC.stopProxy(namenode);
+    namenode = null;
+    // Stop the checkpoint manager
+    if(checkpointManager != null) {
+      checkpointManager.interrupt();
+      checkpointManager = null;
+    }
+    // Stop name-node threads
     super.stop();
   }
 
@@ -224,7 +237,7 @@ public class BackupNode extends NameNode {
     this.nnHttpAddress = getHostPortString(super.getHttpServerAddress(conf));
     // get version and id info from the name-node
     NamespaceInfo nsInfo = null;
-    while(!stopRequested) {
+    while(!isStopRequested()) {
       try {
         nsInfo = handshake(namenode);
         break;
@@ -243,8 +256,7 @@ public class BackupNode extends NameNode {
    */
   private void runCheckpointDaemon(Configuration conf) throws IOException {
     checkpointManager = new Checkpointer(conf, this);
-    cpDaemon = new Daemon(checkpointManager);
-    cpDaemon.start();
+    checkpointManager.start();
   }
 
   /**
@@ -281,7 +293,7 @@ public class BackupNode extends NameNode {
 
     setRegistration();
     NamenodeRegistration nnReg = null;
-    while(!stopRequested) {
+    while(!isStopRequested()) {
       try {
         nnReg = namenode.register(getRegistration());
         break;

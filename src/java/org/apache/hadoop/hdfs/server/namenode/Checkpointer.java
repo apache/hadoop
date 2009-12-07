@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.util.Daemon;
 
 /**
  * The Checkpointer is responsible for supporting periodic checkpoints 
@@ -49,7 +50,7 @@ import org.apache.hadoop.http.HttpServer;
  * The start of a checkpoint is triggered by one of the two factors:
  * (1) time or (2) the size of the edits file.
  */
-class Checkpointer implements Runnable {
+class Checkpointer extends Daemon {
   public static final Log LOG = 
     LogFactory.getLog(Checkpointer.class.getName());
 
@@ -144,7 +145,8 @@ class Checkpointer implements Runnable {
         LOG.error("Exception in doCheckpoint: ", e);
       } catch(Throwable e) {
         LOG.error("Throwable Exception in doCheckpoint: ", e);
-        Runtime.getRuntime().exit(-1);
+        shutdown();
+        break;
       }
       try {
         Thread.sleep(periodMSec);

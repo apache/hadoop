@@ -431,9 +431,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * Stop all NameNode threads and wait for all to finish.
    */
   public void stop() {
-    if (stopRequested)
-      return;
-    stopRequested = true;
+    synchronized(this) {
+      if (stopRequested)
+        return;
+      stopRequested = true;
+    }
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {
@@ -458,7 +460,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       namesystem.shutdown();
     }
   }
-  
+
+  synchronized boolean isStopRequested() {
+    return stopRequested;
+  }
+
   /////////////////////////////////////////////////////
   // NamenodeProtocol
   /////////////////////////////////////////////////////

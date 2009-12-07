@@ -3814,14 +3814,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     getFSImage().rollFSImage();
   }
 
-  NamenodeCommand startCheckpoint(NamenodeRegistration bnReg, // backup node
-                                  NamenodeRegistration nnReg) // active name-node
+  synchronized NamenodeCommand startCheckpoint(
+                                NamenodeRegistration bnReg, // backup node
+                                NamenodeRegistration nnReg) // active name-node
   throws IOException {
-    NamenodeCommand cmd;
-    synchronized(this) {
-      cmd = getFSImage().startCheckpoint(bnReg, nnReg);
-    }
     LOG.info("Start checkpoint for " + bnReg.getAddress());
+    NamenodeCommand cmd = getFSImage().startCheckpoint(bnReg, nnReg);
     getEditLog().logSync();
     return cmd;
   }

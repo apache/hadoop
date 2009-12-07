@@ -1708,7 +1708,7 @@ public class FSImage extends Storage {
     ckptState = CheckpointStates.UPLOAD_DONE;
   }
 
-  void close() throws IOException {
+  synchronized void close() throws IOException {
     getEditLog().close();
     unlockAll();
   }
@@ -1919,8 +1919,7 @@ public class FSImage extends Storage {
         checkSchemeConsistency(u);
         dirs.add(u);
       } catch (Exception e) {
-        LOG.error("Error while processing URI: " + name + 
-            ". The error message was: " + e.getMessage());
+        LOG.error("Error while processing URI: " + name, e);
       }
     }
     return dirs;
