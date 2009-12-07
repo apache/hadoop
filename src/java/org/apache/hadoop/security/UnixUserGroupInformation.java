@@ -244,6 +244,7 @@ public class UnixUserGroupInformation extends UserGroupInformation {
       try {
         userName =  getUnixUserName();
       } catch (Exception e) {
+        LOG.warn("Couldn't get unix username, using " + DEFAULT_USERNAME, e);
         userName = DEFAULT_USERNAME;
       }
 
@@ -263,6 +264,7 @@ public class UnixUserGroupInformation extends UserGroupInformation {
       try {
         groupNames = getUnixGroups();
       } catch (Exception e) {
+        LOG.warn("Couldn't get unix groups, using " + DEFAULT_GROUP, e);
         groupNames = new String[1];
         groupNames[0] = DEFAULT_GROUP;
       }

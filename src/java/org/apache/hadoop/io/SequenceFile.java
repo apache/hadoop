@@ -1435,32 +1435,71 @@ public class SequenceFile {
     private DeserializerBase keyDeserializer;
     private DeserializerBase valDeserializer;
 
-    /** Open the named file. */
+    /**
+     * Construct a reader by opening a file from the given file system.
+     * @param fs The file system used to open the file.
+     * @param file The file being read.
+     * @param conf Configuration
+     * @throws IOException
+     */
     public Reader(FileSystem fs, Path file, Configuration conf)
       throws IOException {
       this(fs, file, conf.getInt("io.file.buffer.size", 4096), conf, false);
     }
 
+    /**
+     * Construct a reader by the given input stream.
+     * @param in An input stream.
+     * @param buffersize The buffer size used to read the file.
+     * @param start The starting position.
+     * @param length The length being read.
+     * @param conf Configuration
+     * @throws IOException
+     */
+    public Reader(FSDataInputStream in, int buffersize,
+        long start, long length, Configuration conf) throws IOException {
+      this(null, null, in, buffersize, start, length, conf, false);
+    }
+
     private Reader(FileSystem fs, Path file, int bufferSize,
                    Configuration conf, boolean tempReader) throws IOException {
-      this(fs, file, bufferSize, 0, fs.getFileStatus(file).getLen(), conf, tempReader);
+      this(fs, file, null, bufferSize, 0, fs.getFileStatus(file).getLen(),
+          conf, tempReader);
     }
-    
-    private Reader(FileSystem fs, Path file, int bufferSize, long start,
-                   long length, Configuration conf, boolean tempReader) 
-    throws IOException {
+
+    /**
+     * Private constructor.
+     * @param fs The file system used to open the file.
+     *           It is not used if the given input stream is not null.  
+     * @param file The file being read.
+     * @param in An input stream of the file.  If it is null,
+     *           the file will be opened from the given file system.
+     * @param bufferSize The buffer size used to read the file.
+     * @param start The starting position.
+     * @param length The length being read.
+     * @param conf Configuration
+     * @param tempReader Is this temporary? 
+     * @throws IOException
+     */
+    private Reader(FileSystem fs, Path file, FSDataInputStream in,
+        int bufferSize, long start, long length, Configuration conf,
+        boolean tempReader) throws IOException {
+      if (fs == null && in == null) {
+        throw new IllegalArgumentException("fs == null && in == null");
+      }
+
       this.file = file;
-      this.in = openFile(fs, file, bufferSize, length);
+      this.in = in != null? in: openFile(fs, file, bufferSize, length);
       this.conf = conf;
       boolean succeeded = false;
       try {
         seek(start);
-        this.end = in.getPos() + length;
+        this.end = this.in.getPos() + length;
         init(tempReader);
         succeeded = true;
       } finally {
         if (!succeeded) {
-          IOUtils.cleanup(LOG, in);
+          IOUtils.cleanup(LOG, this.in);
         }
       }
     }
@@ -1468,6 +1507,13 @@ public class SequenceFile {
     /**
      * Override this method to specialize the type of
      * {@link FSDataInputStream} returned.
+     * @param fs The file system used to open the file.
+     * @param file The file being read.
+     * @param bufferSize The buffer size used to read the file.
+     * @param length The length being read if it is >= 0.  Otherwise,
+     *               the length is not available.
+     * @return The opened stream.
+     * @throws IOException
      */
     protected FSDataInputStream openFile(FileSystem fs, Path file,
         int bufferSize, long length) throws IOException {
@@ -1489,7 +1535,7 @@ public class SequenceFile {
       if ((versionBlock[0] != VERSION[0]) ||
           (versionBlock[1] != VERSION[1]) ||
           (versionBlock[2] != VERSION[2]))
-        throw new IOException(file + " not a SequenceFile");
+        throw new IOException(this + " not a SequenceFile");
 
       // Set 'version'
       version = versionBlock[3];
@@ -2251,7 +2297,7 @@ public class SequenceFile {
 
     /** Returns the name of the file. */
     public String toString() {
-      return file.toString();
+      return file == null? "<unknown>": file.toString();
     }
 
   }
@@ -3132,7 +3178,7 @@ public class SequenceFile {
           if (fs.getUri().getScheme().startsWith("ramfs")) {
             bufferSize = conf.getInt("io.bytes.per.checksum", 512);
           }
-          Reader reader = new Reader(fs, segmentPathName, 
+          Reader reader = new Reader(fs, segmentPathName, null, 
                                      bufferSize, segmentOffset, 
                                      segmentLength, conf, false);
         

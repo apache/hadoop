@@ -18,21 +18,16 @@
 
 package org.apache.hadoop.io;
 
-import java.io.File;
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.Random;
-import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import static org.junit.Assert.*;
 
 public class TestSequenceFileSync {
   private static final int NUMRECORDS = 2000;
@@ -66,8 +61,18 @@ public class TestSequenceFileSync {
     try {
       writeSequenceFile(writer, NUMRECORDS);
       for (int i = 0; i < 5 ; i++) {
-       final SequenceFile.Reader reader =
-         new SequenceFile.Reader(fs, path, conf);
+       final SequenceFile.Reader reader;
+       
+       //try different SequenceFile.Reader constructors
+       if (i % 2 == 0) {
+         reader = new SequenceFile.Reader(fs, path, conf);
+       } else {
+         final FSDataInputStream in = fs.open(path);
+         final long length = fs.getFileStatus(path).getLen();
+         final int buffersize = conf.getInt("io.file.buffer.size", 4096);
+         reader = new SequenceFile.Reader(in, buffersize, 0L, length, conf);
+       }
+
        try {
           forOffset(reader, input, val, i, 0, 0);
           forOffset(reader, input, val, i, 65, 0);

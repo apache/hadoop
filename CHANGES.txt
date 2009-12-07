@@ -14,6 +14,8 @@ Trunk (unreleased changes)
     and the init of the class is made to take a Configuration argument.
     (Jakob Homan via ddas)
 
+    HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
@@ -36,6 +38,8 @@ Trunk (unreleased changes)
 
     HADOOP-6366. Reduce ivy console output to ovservable level (cos)
 
+    HADOOP-6400. Log errors getting Unix UGI. (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -49,6 +53,11 @@ Trunk (unreleased changes)
     szetszwo)
 
     HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
+
+    HADOOP-6405. Update Eclipse configuration to match changes to Ivy
+    configuration (Edwin Chan via cos)
+
+    HADOOP-6411. Remove deprecated file src/test/hadoop-site.xml. (cos)
 
 Release 0.21.0 - Unreleased
 
@@ -137,6 +146,9 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6303. Eclipse .classpath template has outdated jar files and is
     missing some new ones.  (cos)
+
+    HADOOP-6396. Fix uninformative exception message when unable to parse
+    umask. (jghoman)
 
   NEW FEATURES
 
@@ -681,6 +693,9 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6261. Add URI based tests for FileContext. 
     (Ravi Pulari via suresh).
+
+    HADOOP-6307. Add a new SequenceFile.Reader constructor in order to support
+    reading on un-closed file.  (szetszwo)
 
   BUG FIXES
     
