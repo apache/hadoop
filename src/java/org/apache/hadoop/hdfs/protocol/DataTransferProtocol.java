@@ -26,6 +26,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -39,12 +40,11 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 17:
-   *    Change the block write protocol to support pipeline recovery.
-   *    Additional fields, like recovery flags, new GS, minBytesRcvd, 
-   *    and maxBytesRcvd are included.
+   * Version 18:
+   *    Change the block packet ack protocol to include seqno,
+   *    numberOfReplies, reply0, reply1, ...
    */
-  public static final int DATA_TRANSFER_VERSION = 17;
+  public static final int DATA_TRANSFER_VERSION = 18;
 
   /** Operation */
   public enum Op {
@@ -451,6 +451,96 @@ public interface DataTransferProtocol {
       final BlockAccessToken t = new BlockAccessToken();
       t.readFields(in);
       return t; 
+    }
+  }
+  
+  /** reply **/
+  public static class PipelineAck implements Writable {
+    private long seqno;
+    private Status replies[];
+    final public static PipelineAck HEART_BEAT = new PipelineAck(-1, new Status[0]);
+
+    /** default constructor **/
+    public PipelineAck() {
+    }
+    
+    /**
+     * Constructor
+     * @param seqno sequence number
+     * @param replies an array of replies
+     */
+    public PipelineAck(long seqno, Status[] replies) {
+      this.seqno = seqno;
+      this.replies = replies;
+    }
+    
+    /**
+     * Get the sequence number
+     * @return the sequence number
+     */
+    public long getSeqno() {
+      return seqno;
+    }
+    
+    /**
+     * Get the number of replies
+     * @return the number of replies
+     */
+    public short getNumOfReplies() {
+      return (short)replies.length;
+    }
+    
+    /**
+     * get the ith reply
+     * @return the the ith reply
+     */
+    public Status getReply(int i) {
+      return replies[i];
+    }
+    
+    /**
+     * Check if this ack contains error status
+     * @return true if all statuses are SUCCESS
+     */
+    public boolean isSuccess() {
+      for (Status reply : replies) {
+        if (reply != Status.SUCCESS) {
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    /**** Writable interface ****/
+    @Override // Writable
+    public void readFields(DataInput in) throws IOException {
+      seqno = in.readLong();
+      short numOfReplies = in.readShort();
+      replies = new Status[numOfReplies];
+      for (int i=0; i<numOfReplies; i++) {
+        replies[i] = Status.read(in);
+      }
+    }
+
+    @Override // Writable
+    public void write(DataOutput out) throws IOException {
+      //WritableUtils.writeVLong(out, seqno);
+      out.writeLong(seqno);
+      out.writeShort((short)replies.length);
+      for(Status reply : replies) {
+        reply.write(out);
+      }
+    }
+    
+    @Override //Object
+    public String toString() {
+      StringBuilder ack = new StringBuilder("Replies for seqno ");
+      ack.append( seqno ).append( " are" );
+      for(Status reply : replies) {
+        ack.append(" ");
+        ack.append(reply);
+      }
+      return ack.toString();
     }
   }
 }

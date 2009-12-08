@@ -87,6 +87,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -2894,15 +2895,20 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         public void run() {
 
           this.setName("ResponseProcessor for block " + block);
+          PipelineAck ack = new PipelineAck();
 
           while (!responderClosed && clientRunning && !isLastPacketInBlock) {
             // process responses from datanodes.
             try {
-              // verify seqno from datanode
-              long seqno = blockReplyStream.readLong();
-              LOG.debug("DFSClient received ack for seqno " + seqno);
+              // read an ack from the pipeline
+              ack.readFields(blockReplyStream);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("DFSClient " + ack);
+              }
+              
+              long seqno = ack.getSeqno();
               Packet one = null;
-              if (seqno == -1) {
+              if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
                 continue;
               } else if (seqno == -2) {
                 // no nothing
@@ -2919,20 +2925,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               }
 
               // processes response status from all datanodes.
-              String replies = null;
-              if (LOG.isDebugEnabled()) {
-                replies = "DFSClient Replies for seqno " + seqno + " are";
-              }
-              for (int i = 0; i < targets.length && clientRunning; i++) {
-                final DataTransferProtocol.Status reply
-                    = DataTransferProtocol.Status.read(blockReplyStream);
-                if (LOG.isDebugEnabled()) {
-                  replies += " " + reply;
-                }
+              for (int i = ack.getNumOfReplies()-1; i >=0  && clientRunning; i--) {
+                final DataTransferProtocol.Status reply = ack.getReply(i);
                 if (reply != SUCCESS) {
-                  if (LOG.isDebugEnabled()) {
-                    LOG.debug(replies);
-                  }
                   errorIndex = i; // first bad datanode
                   throw new IOException("Bad response " + reply +
                       " for block " + block +
@@ -2941,10 +2936,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 }
               }
 
-              if (LOG.isDebugEnabled()) {
-                LOG.debug(replies);
-              }
-              
               if (one == null) {
                 throw new IOException("Panic: responder did not receive " +
                     "an ack for a packet: " + seqno);
