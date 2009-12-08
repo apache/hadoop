@@ -59,6 +59,9 @@ Trunk (unreleased changes)
 
     HADOOP-6411. Remove deprecated file src/test/hadoop-site.xml. (cos)
 
+    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
+    IllegalArgumentException is thrown (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
