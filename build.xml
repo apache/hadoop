@@ -1086,6 +1086,8 @@
       <env key="JVM_ARCH" value="${jvm.arch}"/>
       <arg value="install"/>
     </exec>
+    <!-- Create a build platform-agnostic link to c++ libs -->
+    <symlink overwrite="true" link="${build.dir}/c++/lib" resource="${install.c++}/lib"/>
   </target>
 
   <target name="compile-ant-tasks" depends="compile-core">
