@@ -122,6 +122,7 @@ Release 0.21.0 - Unreleased
    HBASE-1994  Master will lose hlog entries while splitting if region has
                empty oldlogfile.log (Lars George via Stack)
    HBASE-2022  NPE in housekeeping kills RS
+   HBASE-2033  Shell scan 'limit' is off by one
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

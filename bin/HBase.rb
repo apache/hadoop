@@ -426,7 +426,6 @@ module HBase
       while i.hasNext()
         r = i.next()
         row = String.from_java_bytes r.getRow()
-        count += 1
         if limit != -1 and count >= limit
           break
         end
@@ -437,6 +436,7 @@ module HBase
           cell = toString(column, kv, maxlength)
           @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
+        count += 1
       end
       @formatter.footer(now, count)
     end
