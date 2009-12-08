@@ -90,7 +90,7 @@ Trunk (unreleased changes)
     HDFS-802. Update Eclipse configuration to match changes to Ivy
     configuration (Edwin Chan via cos)
 
-    HDFS-423. Unbreak FUSE build and fuse_dfs_wrapper.sh (Todd Lipcon via cos)
+    HDFS-423. Unbreak FUSE build and fuse_dfs_wrapper.sh (Eli Collins via cos)
 
 Release 0.21.0 - Unreleased
 
