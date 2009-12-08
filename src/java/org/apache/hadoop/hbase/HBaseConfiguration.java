@@ -52,7 +52,7 @@ public class HBaseConfiguration extends Configuration {
   
   /**
    * Returns the hash code value for this HBaseConfiguration. The hash code of a
-   * HBaseConfiguration is defined by the sum of the hash codes of its entries.
+   * HBaseConfiguration is defined by the xor of the hash codes of its entries.
    * 
    * @see Configuration#iterator() How the entries are obtained.
    */
@@ -66,5 +66,32 @@ public class HBaseConfiguration extends Configuration {
     }
     return hash;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (!(obj instanceof HBaseConfiguration))
+      return false;
+    
+    HBaseConfiguration otherConf = (HBaseConfiguration) obj;
+    if (size() != otherConf.size()) {
+      return false;
+    }
+    Iterator<Entry<String, String>> propertyIterator = this.iterator();
+    while (propertyIterator.hasNext()) {
+      Entry<String, String> entry = propertyIterator.next();
+      String key = entry.getKey();
+      String value = entry.getValue();
+      if (!value.equals(otherConf.getRaw(key))) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
   
 }

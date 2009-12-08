@@ -24,10 +24,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -85,12 +85,20 @@ public class HConnectionManager implements HConstants {
     super();
   }
   
-  // A Map of master HBaseConfiguration -> connection information for that 
-  // instance. Note that although the Map is synchronized, the objects it 
-  // contains are mutable and hence require synchronized access to them
+  private static final int MAX_CACHED_HBASE_INSTANCES=31;
+  // A LRU Map of master HBaseConfiguration -> connection information for that 
+  // instance. The objects it contains are mutable and hence require
+  // synchronized access to them.  We set instances to 31.  The zk default max
+  // connections is 30 so should run into zk issues before hit this value of 31.
   private static 
   final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES =
-    new WeakHashMap<HBaseConfiguration, TableServers>();
+    new LinkedHashMap<HBaseConfiguration, TableServers>
+      ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<HBaseConfiguration, TableServers> eldest) {
+        return size() > MAX_CACHED_HBASE_INSTANCES;
+      }
+  };
   
   private static final Map<String, ClientZKWatcher> ZK_WRAPPERS = 
     new HashMap<String, ClientZKWatcher>();
