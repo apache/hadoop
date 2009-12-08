@@ -40,11 +40,11 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 18:
+   * Version 19:
    *    Change the block packet ack protocol to include seqno,
    *    numberOfReplies, reply0, reply1, ...
    */
-  public static final int DATA_TRANSFER_VERSION = 18;
+  public static final int DATA_TRANSFER_VERSION = 19;
 
   /** Operation */
   public enum Op {
