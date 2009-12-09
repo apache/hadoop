@@ -92,6 +92,8 @@ Trunk (unreleased changes)
 
     HDFS-423. Unbreak FUSE build and fuse_dfs_wrapper.sh (Eli Collins via cos)
 
+    HDFS-797. TestHDFSCLI much slower after HDFS-265 merge. (Todd Lipcon via cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

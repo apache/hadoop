@@ -2842,6 +2842,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
        */
       void close(boolean force) {
         streamerClosed = true;
+        synchronized (dataQueue) {
+          dataQueue.notifyAll();
+        }
         if (force) {
           this.interrupt();
         }
