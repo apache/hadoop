@@ -16,17 +16,20 @@
 from __future__ import with_statement
 
 import ConfigParser
-import hadoop.cloud.commands as commands
 from hadoop.cloud.cluster import get_cluster
-from hadoop.cloud.cluster import TimeoutException
-from hadoop.cloud.providers.ec2 import Ec2Storage
+from hadoop.cloud.service import InstanceTemplate
+from hadoop.cloud.service import HadoopService
+from hadoop.cloud.service import NAMENODE
+from hadoop.cloud.service import SECONDARY_NAMENODE
+from hadoop.cloud.service import JOBTRACKER
+from hadoop.cloud.service import DATANODE
+from hadoop.cloud.service import TASKTRACKER
 from hadoop.cloud.util import merge_config_with_options
 from hadoop.cloud.util import xstr
 import logging
 from optparse import OptionParser
 from optparse import make_option
 import os
-import subprocess
 import sys
 
 version_file = os.path.join(sys.path[0], "VERSION")
@@ -125,8 +128,8 @@ where COMMAND and [OPTIONS] may be one of:
                                         or instances in CLUSTER
   launch-master CLUSTER               launch or find a master in CLUSTER
   launch-slaves CLUSTER NUM_SLAVES    launch NUM_SLAVES slaves in CLUSTER
-  launch-cluster CLUSTER NUM_SLAVES   launch a master and NUM_SLAVES slaves
-                                        in CLUSTER
+  launch-cluster CLUSTER (NUM_SLAVES| launch a master and NUM_SLAVES slaves or
+    N ROLE [N ROLE ...])                N instances in ROLE in CLUSTER
   create-formatted-snapshot CLUSTER   create an empty, formatted snapshot of
     SIZE                                size SIZE GiB
   list-storage CLUSTER                list storage volumes for CLUSTER
@@ -146,6 +149,9 @@ where COMMAND and [OPTIONS] may be one of:
 
 Use %(script)s COMMAND --help to see additional options for specific commands.
 """ % locals()
+
+def print_deprecation(script, replacement):
+  print "Deprecated. Use '%(script)s %(replacement)s'." % locals()
 
 def parse_options_and_config(command, option_list=[], extra_arguments=(),
                              unbounded_args=False):
@@ -176,8 +182,9 @@ def parse_options_and_config(command, option_list=[], extra_arguments=(),
   cluster_name = args[0]
   opt = merge_config_with_options(cluster_name, config, options_dict)
   logging.debug("Options: %s", str(opt))
-  return (opt, args, get_cluster(get_cloud_provider(opt))(cluster_name,
-                                                          config_dir))
+  cluster = get_cluster(get_cloud_provider(opt))(cluster_name, config_dir)
+  service = get_service(cluster)
+  return (opt, args, service)
 
 def parse_options(command, option_list=[], expected_arguments=(),
                   unbounded_args=False):
@@ -221,6 +228,9 @@ def get_cloud_provider(options_dict):
     provider = DEFAULT_CLOUD_PROVIDER
   return provider
 
+def get_service(cluster):
+  return HadoopService(cluster)
+
 def check_options_set(options, option_names):
   for option_name in option_names:
     if options.get(option_name) is None:
@@ -242,10 +252,6 @@ def get_image_id(cluster, options):
   else:
     return options.get('image_id')
 
-def _prompt(prompt):
-  """ Returns true if user responds "yes" to prompt. """
-  return raw_input("%s [yes or no]: " % prompt).lower() == "yes"
-
 def main():
   # Use HADOOP_CLOUD_LOGGING_LEVEL=DEBUG to enable debugging output.
   logging.basicConfig(level=getattr(logging,
@@ -261,194 +267,148 @@ def main():
   if command == 'list':
     (opt, args) = parse_options(command, BASIC_OPTIONS, unbounded_args=True)
     if len(args) == 0:
-      commands.list_all(get_cloud_provider(opt))
+      service = get_service(None)
+      service.list_all(get_cloud_provider(opt))
     else:
-      (opt, args, cluster) = parse_options_and_config(command, BASIC_OPTIONS)
-      commands.list_cluster(cluster)
+      (opt, args, service) = parse_options_and_config(command, BASIC_OPTIONS)
+      service.list()
 
   elif command == 'launch-master':
-    (opt, args, cluster) = parse_options_and_config(command, LAUNCH_OPTIONS)
-    check_launch_options_set(cluster, opt)
+    (opt, args, service) = parse_options_and_config(command, LAUNCH_OPTIONS)
+    check_launch_options_set(service.cluster, opt)
     config_dir = get_config_dir(opt)
-    commands.launch_master(cluster, config_dir, get_image_id(cluster, opt),
-      opt.get('instance_type'),
-      opt.get('key_name'), opt.get('public_key'), opt.get('user_data_file'),
-      opt.get('availability_zone'), opt.get('user_packages'),
-      opt.get('auto_shutdown'), opt.get('env'), opt.get('client_cidr'))
-    commands.attach_storage(cluster, (commands.MASTER,))
-    try:
-      commands.wait_for_hadoop(cluster, 0)
-    except TimeoutException:
-      print "Timeout while waiting for Hadoop to start. Please check logs on" +\
-        " master."
-    commands.print_master_url(cluster)
+    template = InstanceTemplate((NAMENODE, SECONDARY_NAMENODE, JOBTRACKER), 1,
+                         get_image_id(service.cluster, opt),
+                         opt.get('instance_type'), opt.get('key_name'),
+                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('availability_zone'), opt.get('user_packages'),
+                         opt.get('auto_shutdown'), opt.get('env'))
+    service.launch_master(template, config_dir, opt.get('client_cidr'))
 
   elif command == 'launch-slaves':
-    (opt, args, cluster) = parse_options_and_config(command, LAUNCH_OPTIONS,
+    (opt, args, service) = parse_options_and_config(command, LAUNCH_OPTIONS,
                                                     ("NUM_SLAVES",))
     number_of_slaves = int(args[1])
-    check_launch_options_set(cluster, opt)
-    config_dir = get_config_dir(opt)
-    commands.launch_slaves(cluster, number_of_slaves, get_image_id(cluster, opt),
-      opt.get('instance_type'),
-      opt.get('key_name'), opt.get('public_key'), opt.get('user_data_file'),
-      opt.get('availability_zone'), opt.get('user_packages'),
-      opt.get('auto_shutdown'), opt.get('env'))
-    commands.attach_storage(cluster, (commands.SLAVE,))
-    commands.print_master_url(cluster)
+    check_launch_options_set(service.cluster, opt)
+    template = InstanceTemplate((DATANODE, TASKTRACKER), number_of_slaves,
+                         get_image_id(service.cluster, opt),
+                         opt.get('instance_type'), opt.get('key_name'),
+                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('availability_zone'), opt.get('user_packages'),
+                         opt.get('auto_shutdown'), opt.get('env'))
+    service.launch_slaves(template)
 
   elif command == 'launch-cluster':
-    (opt, args, cluster) = parse_options_and_config(command, LAUNCH_OPTIONS,
-                                                    ("NUM_SLAVES",))
-    number_of_slaves = int(args[1])
-    check_launch_options_set(cluster, opt)
+    (opt, args, service) = parse_options_and_config(command, LAUNCH_OPTIONS,
+                                                    ("NUM_SLAVES",),
+                                                    unbounded_args=True)
+    check_launch_options_set(service.cluster, opt)
     config_dir = get_config_dir(opt)
-    commands.launch_master(cluster, config_dir, get_image_id(cluster, opt),
-      opt.get('instance_type'),
-      opt.get('key_name'), opt.get('public_key'), opt.get('user_data_file'),
-      opt.get('availability_zone'), opt.get('user_packages'),
-      opt.get('auto_shutdown'), opt.get('env'), opt.get('client_cidr'))
-    commands.launch_slaves(cluster, number_of_slaves, get_image_id(cluster, opt),
-      opt.get('instance_type'),
-      opt.get('key_name'), opt.get('public_key'), opt.get('user_data_file'),
-      opt.get('availability_zone'), opt.get('user_packages'),
-      opt.get('auto_shutdown'), opt.get('env'))
-    commands.attach_storage(cluster, commands.ROLES)
-    try:
-      commands.wait_for_hadoop(cluster, number_of_slaves)
-    except TimeoutException:
-      print "Timeout while waiting for Hadoop to start. Please check logs on" +\
-        " cluster."
-    commands.print_master_url(cluster)
+    instance_templates = []
+    if len(args) == 2:
+      number_of_slaves = int(args[1])
+      print_deprecation(sys.argv[0], 'launch-cluster %s 1 nn,snn,jt %s dn,tt' %
+                        (service.cluster.name, number_of_slaves))
+      instance_templates = [
+        InstanceTemplate((NAMENODE, SECONDARY_NAMENODE, JOBTRACKER), 1,
+                         get_image_id(service.cluster, opt),
+                         opt.get('instance_type'), opt.get('key_name'),
+                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('availability_zone'), opt.get('user_packages'),
+                         opt.get('auto_shutdown'), opt.get('env')),
+        InstanceTemplate((DATANODE, TASKTRACKER), number_of_slaves,
+                         get_image_id(service.cluster, opt),
+                         opt.get('instance_type'), opt.get('key_name'),
+                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('availability_zone'), opt.get('user_packages'),
+                         opt.get('auto_shutdown'), opt.get('env')),
+                         ]
+    elif len(args) > 2 and len(args) % 2 == 0:
+      print_usage(sys.argv[0])
+      sys.exit(1)
+    else:
+      for i in range(len(args) / 2):
+        number = int(args[2 * i + 1])
+        roles = args[2 * i + 2].split(",")
+        instance_templates.append(
+          InstanceTemplate(roles, number, get_image_id(service.cluster, opt),
+                           opt.get('instance_type'), opt.get('key_name'),
+                           opt.get('public_key'), opt.get('user_data_file'),
+                           opt.get('availability_zone'),
+                           opt.get('user_packages'),
+                           opt.get('auto_shutdown'), opt.get('env')))
+
+    service.launch_cluster(instance_templates, config_dir,
+                           opt.get('client_cidr'))
 
   elif command == 'login':
-    (opt, args, cluster) = parse_options_and_config(command, SSH_OPTIONS)
-    instances = cluster.check_running(commands.MASTER, 1)
-    if not instances:
-      sys.exit(1)
-    subprocess.call('ssh %s root@%s' % \
-                    (xstr(opt.get('ssh_options')), instances[0].public_ip),
-                    shell=True)
+    (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS)
+    service.login(opt.get('ssh_options'))
 
   elif command == 'proxy':
-    (opt, args, cluster) = parse_options_and_config(command, SSH_OPTIONS)
-    instances = cluster.check_running(commands.MASTER, 1)
-    if not instances:
-      sys.exit(1)
-    options = '-o "ConnectTimeout 10" -o "ServerAliveInterval 60" ' \
-              '-N -D 6666'
-    process = subprocess.Popen('ssh %s %s root@%s' %
-      (xstr(opt.get('ssh_options')), options, instances[0].public_ip),
-      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-      shell=True)
-    print """export HADOOP_CLOUD_PROXY_PID=%s;
-echo Proxy pid %s;""" % (process.pid, process.pid)
+    (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS)
+    service.proxy(opt.get('ssh_options'))
 
   elif command == 'push':
-    (opt, args, cluster) = parse_options_and_config(command, SSH_OPTIONS,
+    (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS,
                                                     ("FILE",))
-    instances = cluster.check_running(commands.MASTER, 1)
-    if not instances:
-      sys.exit(1)
-    subprocess.call('scp %s -r %s root@%s:' % (xstr(opt.get('ssh_options')),
-                                               args[1], instances[0].public_ip),
-                                               shell=True)
+    service.proxy(opt.get('ssh_options'), args[1])
 
   elif command == 'exec':
-    (opt, args, cluster) = parse_options_and_config(command, SSH_OPTIONS,
+    (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS,
                                                     ("CMD",), True)
-    instances = cluster.check_running(commands.MASTER, 1)
-    if not instances:
-      sys.exit(1)
-    subprocess.call("ssh %s root@%s '%s'" % (xstr(opt.get('ssh_options')),
-                                             instances[0].public_ip,
-                                             " ".join(args[1:])), shell=True)
+    service.execute(opt.get('ssh_options'), args[1:])
 
   elif command == 'terminate-cluster':
-    (opt, args, cluster) = parse_options_and_config(command, FORCE_OPTIONS)
-    cluster.print_status(commands.ROLES)
-    if not opt["force"] and not _prompt("Terminate all instances?"):
-      print "Not terminating cluster."
-    else:
-      print "Terminating cluster"
-      cluster.terminate()
+    (opt, args, service) = parse_options_and_config(command, FORCE_OPTIONS)
+    service.terminate_cluster(opt["force"])
 
   elif command == 'delete-cluster':
-    (opt, args, cluster) = parse_options_and_config(command, BASIC_OPTIONS)
-    cluster.delete()
+    (opt, args, service) = parse_options_and_config(command, BASIC_OPTIONS)
+    service.delete_cluster()
 
   elif command == 'create-formatted-snapshot':
-    (opt, args, cluster) = parse_options_and_config(command, SNAPSHOT_OPTIONS,
+    (opt, args, service) = parse_options_and_config(command, SNAPSHOT_OPTIONS,
                                                     ("SIZE",))
     size = int(args[1])
     check_options_set(opt, ['availability_zone', 'key_name'])
     ami_ubuntu_intrepid_x86 = 'ami-ec48af85' # use a general AMI
-    Ec2Storage.create_formatted_snapshot(cluster, size,
+    service.create_formatted_snapshot(size,
                                          opt.get('availability_zone'),
                                          ami_ubuntu_intrepid_x86,
                                          opt.get('key_name'),
                                          xstr(opt.get('ssh_options')))
 
   elif command == 'list-storage':
-    (opt, args, cluster) = parse_options_and_config(command, BASIC_OPTIONS)
-    storage = cluster.get_storage()
-    storage.print_status(commands.ROLES)
+    (opt, args, service) = parse_options_and_config(command, BASIC_OPTIONS)
+    service.list_storage()
 
   elif command == 'create-storage':
-    (opt, args, cluster) = parse_options_and_config(command, PLACEMENT_OPTIONS,
+    (opt, args, service) = parse_options_and_config(command, PLACEMENT_OPTIONS,
                                                     ("ROLE", "NUM_INSTANCES",
                                                      "SPEC_FILE"))
-    storage = cluster.get_storage()
     role = args[1]
     number_of_instances = int(args[2])
     spec_file = args[3]
     check_options_set(opt, ['availability_zone'])
-    storage.create(role, number_of_instances, opt.get('availability_zone'),
-                   spec_file)
-    storage.print_status(commands.ROLES)
+    service.create_storage(role, number_of_instances,
+                           opt.get('availability_zone'), spec_file)
 
   elif command == 'attach-storage':
-    (opt, args, cluster) = parse_options_and_config(command, BASIC_OPTIONS,
+    (opt, args, service) = parse_options_and_config(command, BASIC_OPTIONS,
                                                     ("ROLE",))
-    storage = cluster.get_storage()
-    role = args[1]
-    storage.attach(role, cluster.get_instances_in_role(role, 'running'))
-    storage.print_status(commands.ROLES)
+    service.attach_storage(args[1])
 
   elif command == 'delete-storage':
-    (opt, args, cluster) = parse_options_and_config(command, FORCE_OPTIONS)
-    storage = cluster.get_storage()
-    storage.print_status(commands.ROLES)
-    if not opt["force"] and not _prompt("Delete all storage volumes? THIS WILL \
-      PERMANENTLY DELETE ALL DATA"):
-      print "Not deleting storage volumes."
-    else:
-      print "Deleting storage"
-      for role in commands.ROLES:
-        storage.delete(role)
+    (opt, args, service) = parse_options_and_config(command, FORCE_OPTIONS)
+    service.delete_storage(opt["force"])
 
   elif command == 'update-slaves-file':
-    (opt, args, cluster) = parse_options_and_config(command, SSH_OPTIONS)
+    (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS)
     check_options_set(opt, ['private_key'])
     ssh_options = xstr(opt.get('ssh_options'))
-    instances = cluster.check_running(commands.MASTER, 1)
-    if not instances:
-      sys.exit(1)
-    master = instances[0]
-    slaves = cluster.get_instances_in_role(commands.SLAVE)
-    with open('slaves', 'w') as f:
-      for slave in slaves:
-        f.write(slave.public_ip + "\n")
-    subprocess.call('scp %s -r %s root@%s:/etc/hadoop/conf' % \
-                    (ssh_options, 'slaves', master.public_ip), shell=True)
-
-    # Copy private key
-    private_key = opt.get('private_key')
-    subprocess.call('scp %s -r %s root@%s:/root/.ssh/id_rsa' % \
-                    (ssh_options, private_key, master.public_ip), shell=True)
-    for slave in slaves:
-      subprocess.call('scp %s -r %s root@%s:/root/.ssh/id_rsa' % \
-                      (ssh_options, private_key, slave.public_ip), shell=True)
+    config_dir = get_config_dir(opt)
+    service.update_slaves_file(config_dir, ssh_options, opt.get('private_key'))
 
   else:
     print "Unrecognized command '%s'" % command

@@ -27,7 +27,7 @@ class TestCluster(unittest.TestCase):
   def test_check_role_name_valid(self):
     cluster = Ec2Cluster("test-cluster", None)
     cluster._check_role_name(
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+")
 
   def test_check_role_name_dash_is_invalid(self):
     cluster = Ec2Cluster("test-cluster", None)

@@ -70,7 +70,7 @@ class Cluster(object):
     """
     raise Exception("Unimplemented")
 
-  def print_status(self, roles, state_filter="running"):
+  def print_status(self, roles=None, state_filter="running"):
     """
     Print the status of instances in the given roles, filtered by state.
     """
@@ -88,10 +88,10 @@ class Cluster(object):
     else:
       return instances
 
-  def launch_instances(self, role, number, image_id, size_id,
+  def launch_instances(self, roles, number, image_id, size_id,
                        instance_user_data, **kwargs):
     """
-    Launch instances (of the given role) in the cluster.
+    Launch instances (having the given roles) in the cluster.
     Returns a list of IDs for the instances started.
     """
     pass

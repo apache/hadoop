@@ -61,8 +61,18 @@ type:
 
 % hadoop-ec2 launch-cluster my-hadoop-cluster 10
 
-This will boot the master node and 10 worker nodes. When the nodes have started
-and the Hadoop cluster has come up, the console will display a message like
+This will boot the master node and 10 worker nodes. The master node runs the
+namenode, secondary namenode, and jobtracker, and each worker node runs a
+datanode and a tasktracker. Equivalently the cluster could be launched as:
+
+% hadoop-ec2 launch-cluster my-hadoop-cluster 1 nn,snn,jt 10 dn,tt
+
+Note that using this notation you can launch a split namenode/jobtracker cluster
+
+% hadoop-ec2 launch-cluster my-hadoop-cluster 1 nn,snn 1 jt 10 dn,tt
+
+When the nodes have started and the Hadoop cluster has come up, the console will
+display a message like
 
   Browse the cluster at http://ec2-xxx-xxx-xxx-xxx.compute-1.amazonaws.com/
 
@@ -70,7 +80,8 @@ You can access Hadoop's web UI by visiting this URL. By default, port 80 is
 opened for access from your client machine. You may change the firewall settings
 (to allow access from a network, rather than just a single machine, for example)
 by using the Amazon EC2 command line tools, or by using a tool like Elastic Fox.
-The security group to change is the one named <cluster-name>-master.
+There is a security group for each node's role. The one for the namenode
+is <cluster-name>-nn, for example.
 
 For security reasons, traffic from the network your client is running on is
 proxied through the master node of the cluster using an SSH tunnel (a SOCKS
@@ -109,13 +120,13 @@ have to do the formatting once.
 
 % hadoop-ec2 create-formatted-snapshot my-ebs-cluster 100
 
-We create storage for a single master and for two slaves. The volumes to create
-are described in a JSON spec file, which references the snapshot we just
+We create storage for a single namenode and for two datanodes. The volumes to
+create are described in a JSON spec file, which references the snapshot we just
 created. Here is the contents of a JSON file, called
 my-ebs-cluster-storage-spec.json:
 
 {
-  "master": [
+  "nn": [
     {
       "device": "/dev/sdj",
       "mount_point": "/ebs1",
@@ -129,7 +140,7 @@ my-ebs-cluster-storage-spec.json:
       "snapshot_id": "snap-268e704f"
     }
   ],
-  "slave": [
+  "dn": [
     {
       "device": "/dev/sdj",
       "mount_point": "/ebs1",
@@ -146,7 +157,7 @@ my-ebs-cluster-storage-spec.json:
 }
 
 
-Each role (here "master" and "slave") is the key to an array of volume
+Each role (here "nn" and "dn") is the key to an array of volume
 specifications. In this example, the "slave" role has two devices ("/dev/sdj"
 and "/dev/sdk") with different mount points, sizes, and generated from an EBS
 snapshot. The snapshot is the formatted snapshot created earlier, so that the
@@ -155,9 +166,9 @@ of the snapshot created earlier.
 
 Let's create actual volumes using this file.
 
-% hadoop-ec2 create-storage my-ebs-cluster master 1 \
+% hadoop-ec2 create-storage my-ebs-cluster nn 1 \
     my-ebs-cluster-storage-spec.json
-% hadoop-ec2 create-storage my-ebs-cluster slave 2 \
+% hadoop-ec2 create-storage my-ebs-cluster dn 2 \
     my-ebs-cluster-storage-spec.json
 
 Now let's start the cluster with 2 slave nodes:
@@ -214,7 +225,7 @@ Running a job is straightforward:
 
 Of course, these examples assume that you have installed Hadoop on your local
 machine. It is also possible to launch jobs from within the cluster. First log
-into the master node:
+into the namenode:
 
 % hadoop-ec2 login my-hadoop-cluster
 

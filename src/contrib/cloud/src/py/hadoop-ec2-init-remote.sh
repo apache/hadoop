@@ -30,16 +30,20 @@
 # Substitute environment variables passed by the client
 export %ENV%
 
-if [ -z "$MASTER_HOST" ]; then
-  IS_MASTER=true
-  MASTER_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/public-hostname`
-else
-  IS_MASTER=false
-fi
-
 HADOOP_VERSION=${HADOOP_VERSION:-0.20.1}
 HADOOP_HOME=/usr/local/hadoop-$HADOOP_VERSION
 HADOOP_CONF_DIR=$HADOOP_HOME/conf
+SELF_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/public-hostname`
+for role in $(echo "$ROLES" | tr "," "\n"); do
+  case $role in
+  nn)
+    NN_HOST=$SELF_HOST
+    ;;
+  jt)
+    JT_HOST=$SELF_HOST
+    ;;
+  esac
+done
 
 function register_auto_shutdown() {
   if [ ! -z "$AUTO_SHUTDOWN" ]; then
@@ -237,6 +241,9 @@ function configure_hadoop() {
   # Create tmp directory
   mkdir /mnt/tmp
   chmod a+rwxt /mnt/tmp
+  
+  mkdir /etc/hadoop
+  ln -s $HADOOP_CONF_DIR /etc/hadoop/conf
 
   ##############################################################################
   # Modify this section to customize your Hadoop cluster.
@@ -301,7 +308,7 @@ function configure_hadoop() {
 </property>
 <property>
   <name>fs.default.name</name>
-  <value>hdfs://$MASTER_HOST:8020/</value>
+  <value>hdfs://$NN_HOST:8020/</value>
 </property>
 <property>
   <name>fs.trash.interval</name>
@@ -328,7 +335,7 @@ function configure_hadoop() {
 </property>
 <property>
   <name>mapred.job.tracker</name>
-  <value>$MASTER_HOST:8021</value>
+  <value>$JT_HOST:8021</value>
 </property>
 <property>
   <name>mapred.job.tracker.handler.count</name>
@@ -473,8 +480,8 @@ Auto-Configuration (PAC)</a> file.  To manage multiple proxy configurations,
 you may wish to use
 <a href="https://addons.mozilla.org/en-US/firefox/addon/2464">FoxyProxy</a>.
 <ul>
-<li><a href="http://$MASTER_HOST:50070/">NameNode</a>
-<li><a href="http://$MASTER_HOST:50030/">JobTracker</a>
+<li><a href="http://$NN_HOST:50070/">NameNode</a>
+<li><a href="http://$JT_HOST:50030/">JobTracker</a>
 </ul>
 </body>
 </html>
@@ -484,7 +491,7 @@ END
 
 }
 
-function start_hadoop_master() {
+function start_namenode() {
   if which dpkg &> /dev/null; then
     AS_HADOOP="su -s /bin/bash - hadoop -c"
   elif which rpm &> /dev/null; then
@@ -495,8 +502,6 @@ function start_hadoop_master() {
   [ ! -e $FIRST_MOUNT/hadoop/hdfs ] && $AS_HADOOP "$HADOOP_HOME/bin/hadoop namenode -format"
 
   $AS_HADOOP "$HADOOP_HOME/bin/hadoop-daemon.sh start namenode"
-  $AS_HADOOP "$HADOOP_HOME/bin/hadoop-daemon.sh start secondarynamenode"
-  $AS_HADOOP "$HADOOP_HOME/bin/hadoop-daemon.sh start jobtracker"
 
   $AS_HADOOP "$HADOOP_HOME/bin/hadoop dfsadmin -safemode wait"
   $AS_HADOOP "$HADOOP_HOME/bin/hadoop fs -mkdir /user"
@@ -506,15 +511,13 @@ function start_hadoop_master() {
 
 }
 
-function start_hadoop_slave() {
+function start_daemon() {
   if which dpkg &> /dev/null; then
     AS_HADOOP="su -s /bin/bash - hadoop -c"
   elif which rpm &> /dev/null; then
     AS_HADOOP="/sbin/runuser -s /bin/bash - hadoop -c"
   fi
-
-  $AS_HADOOP "$HADOOP_HOME/bin/hadoop-daemon.sh start datanode"
-  $AS_HADOOP "$HADOOP_HOME/bin/hadoop-daemon.sh start tasktracker"
+  $AS_HADOOP "$HADOOP_HOME/bin/hadoop-daemon.sh start $1"
 }
 
 register_auto_shutdown
@@ -522,9 +525,24 @@ install_user_packages
 install_hadoop
 configure_hadoop
 
-if $IS_MASTER ; then
-  setup_web
-  start_hadoop_master
-else
-  start_hadoop_slave
-fi
+for role in $(echo "$ROLES" | tr "," "\n"); do
+  case $role in
+  nn)
+    setup_web
+    start_namenode
+    ;;
+  snn)
+    start_daemon secondarynamenode
+    ;;
+  jt)
+    start_daemon jobtracker
+    ;;
+  dn)
+    start_daemon datanode
+    ;;
+  tt)
+    start_daemon tasktracker
+    ;;
+  esac
+done
+

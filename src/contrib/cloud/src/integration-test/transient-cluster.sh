@@ -41,6 +41,7 @@ HADOOP_CLOUD_HOME=${HADOOP_CLOUD_HOME:-$bin/../py}
 HADOOP_CLOUD_PROVIDER=${HADOOP_CLOUD_PROVIDER:-ec2}
 SSH_OPTIONS=${SSH_OPTIONS:-"-i ~/.$HADOOP_CLOUD_PROVIDER/id_rsa-$KEY_NAME \
   -o StrictHostKeyChecking=no"}
+LAUNCH_ARGS=${LAUNCH_ARGS:-1} # Try LAUNCH_ARGS="1 nn,snn 1 jt 1 dn,tt"
 
 HADOOP_CLOUD_SCRIPT=$HADOOP_CLOUD_HOME/hadoop-$HADOOP_CLOUD_PROVIDER
 export HADOOP_CONF_DIR=$CONFIG_DIR/$CLUSTER
@@ -56,7 +57,12 @@ fi
 # Launch a cluster
 $HADOOP_CLOUD_SCRIPT launch-cluster --config-dir=$CONFIG_DIR \
   --image-id=$IMAGE_ID --key-name=$KEY_NAME --auto-shutdown=$AUTO_SHUTDOWN \
-  --availability-zone=$AVAILABILITY_ZONE $CLIENT_CIDRS $ENVS $CLUSTER 1
+  --availability-zone=$AVAILABILITY_ZONE $CLIENT_CIDRS $ENVS $CLUSTER \
+  $LAUNCH_ARGS
+  
+# List clusters
+$HADOOP_CLOUD_SCRIPT list --config-dir=$CONFIG_DIR
+$HADOOP_CLOUD_SCRIPT list --config-dir=$CONFIG_DIR $CLUSTER
 
 # Run a proxy and save its pid in HADOOP_CLOUD_PROXY_PID
 eval `$HADOOP_CLOUD_SCRIPT proxy --config-dir=$CONFIG_DIR \

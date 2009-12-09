@@ -85,6 +85,7 @@ class TestJsonVolumeManager(unittest.TestCase):
     volume_manager = JsonVolumeManager("volumemanagertest.json")
     self.assertEqual(0,
       len(volume_manager.get_instance_storage_for_role("master")))
+    self.assertEqual(0, len(volume_manager.get_roles))
 
     volume_manager.add_instance_storage_for_role("master",
                                                  [MountableVolume("vol_1", "/",
@@ -131,6 +132,11 @@ class TestJsonVolumeManager(unittest.TestCase):
     self.assertEqual("vol_4", slave_storage_instance1_vol1.volume_id)
     self.assertEqual("/data1", slave_storage_instance1_vol1.mount_point)
     self.assertEqual("/dev/sdk", slave_storage_instance1_vol1.device)
+    
+    roles = volume_manager.get_roles
+    self.assertEqual(2, len(roles))
+    self.assertTrue("slave" in roles)
+    self.assertTrue("master" in roles)
 
 
 if __name__ == '__main__':
