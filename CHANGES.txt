@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
     IllegalArgumentException is thrown (cos)
 
+    HADOOP-6254. Slow reads cause s3n to fail with SocketTimeoutException.
+    (Andrew Hitchcock via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
