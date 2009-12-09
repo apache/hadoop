@@ -402,6 +402,8 @@ Release 0.21.0 - Unreleased
     HDFS-787. Upgrade some libraries to be consistent with common and 
     mapreduce. (omalley)
 
+    HDFS-813. Enable the append test in TestReadWhileWriting.  (szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
