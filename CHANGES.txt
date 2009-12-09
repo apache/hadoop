@@ -43,6 +43,9 @@ Trunk (unreleased changes)
 
     HADOOP-6400. Log errors getting Unix UGI. (Todd Lipcon via tomwhite)
 
+    HADOOP-6346. Add support for specifying unpack pattern regex to
+    RunJar.unJar. (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

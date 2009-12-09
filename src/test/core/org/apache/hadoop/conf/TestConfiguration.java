@@ -25,6 +25,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
@@ -362,6 +363,33 @@ public class TestConfiguration extends TestCase {
       fail = true;
     }
     assertTrue(fail);
+  }
+
+  public void testPattern() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.pattern1", "");
+    appendProperty("test.pattern2", "(");
+    appendProperty("test.pattern3", "a+b");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+
+    Pattern defaultPattern = Pattern.compile("x+");
+    // Return default if missing
+    assertEquals(defaultPattern.pattern(),
+                 conf.getPattern("xxxxx", defaultPattern).pattern());
+    // Return null if empty and default is null
+    assertNull(conf.getPattern("test.pattern1", null));
+    // Return default for empty
+    assertEquals(defaultPattern.pattern(),
+                 conf.getPattern("test.pattern1", defaultPattern).pattern());
+    // Return default for malformed
+    assertEquals(defaultPattern.pattern(),
+                 conf.getPattern("test.pattern2", defaultPattern).pattern());
+    // Works for correct patterns
+    assertEquals("a+b",
+                 conf.getPattern("test.pattern3", defaultPattern).pattern());
   }
 
   public void testReload() throws IOException {

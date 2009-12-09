@@ -47,6 +47,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -829,6 +830,45 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return null == val
       ? defaultValue
       : Enum.valueOf(defaultValue.getDeclaringClass(), val);
+  }
+
+  /**
+   * Get the value of the <code>name</code> property as a <code>Pattern</code>.
+   * If no such property is specified, or if the specified value is not a valid
+   * <code>Pattern</code>, then <code>DefaultValue</code> is returned.
+   *
+   * @param name property name
+   * @param defaultValue default value
+   * @return property value as a compiled Pattern, or defaultValue
+   */
+  public Pattern getPattern(String name, Pattern defaultValue) {
+    String valString = get(name);
+    if (null == valString || "".equals(valString)) {
+      return defaultValue;
+    }
+    try {
+      return Pattern.compile(valString);
+    } catch (PatternSyntaxException pse) {
+      LOG.warn("Regular expression '" + valString + "' for property '" +
+               name + "' not valid. Using default", pse);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Set the given property to <code>Pattern</code>.
+   * If the pattern is passed as null, sets the empty pattern which results in
+   * further calls to getPattern(...) returning the default value.
+   *
+   * @param name property name
+   * @param pattern new value
+   */
+  public void setPattern(String name, Pattern pattern) {
+    if (null == pattern) {
+      set(name, null);
+    } else {
+      set(name, pattern.pattern());
+    }
   }
 
   /**

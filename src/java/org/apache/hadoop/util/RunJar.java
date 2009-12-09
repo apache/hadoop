@@ -18,43 +18,66 @@
 
 package org.apache.hadoop.util;
 
-import java.util.jar.*;
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.io.*;
-import java.util.*;
-
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.File;
+import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.jar.JarFile;
+import java.util.jar.JarEntry;
+import java.util.jar.Manifest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.io.IOUtils;
 
 /** Run a Hadoop job jar. */
 public class RunJar {
 
-  /** Unpack a jar file into a directory. */
+  /** Pattern that matches any string */
+  public static final Pattern MATCH_ANY = Pattern.compile(".*");
+
+  /**
+   * Unpack a jar file into a directory.
+   *
+   * This version unpacks all files inside the jar regardless of filename.
+   */
   public static void unJar(File jarFile, File toDir) throws IOException {
+    unJar(jarFile, toDir, MATCH_ANY);
+  }
+
+  /**
+   * Unpack matching files from a jar. Entries inside the jar that do
+   * not match the given pattern will be skipped.
+   *
+   * @param jarFile the .jar file to unpack
+   * @param toDir the destination directory into which to unpack the jar
+   * @param unpackRegex the pattern to match jar entries against
+   */
+  public static void unJar(File jarFile, File toDir, Pattern unpackRegex)
+    throws IOException {
     JarFile jar = new JarFile(jarFile);
     try {
-      Enumeration entries = jar.entries();
+      Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = (JarEntry)entries.nextElement();
-        if (!entry.isDirectory()) {
+        if (!entry.isDirectory() &&
+            unpackRegex.matcher(entry.getName()).matches()) {
           InputStream in = jar.getInputStream(entry);
           try {
             File file = new File(toDir, entry.getName());
-            if (!file.getParentFile().mkdirs()) {
-              if (!file.getParentFile().isDirectory()) {
-                throw new IOException("Mkdirs failed to create " + 
-                                      file.getParentFile().toString());
-              }
-            }
+            ensureDirectory(file.getParentFile());
             OutputStream out = new FileOutputStream(file);
             try {
-              byte[] buffer = new byte[8192];
-              int i;
-              while ((i = in.read(buffer)) != -1) {
-                out.write(buffer, 0, i);
-              }
+              IOUtils.copyBytes(in, out, 8192);
             } finally {
               out.close();
             }
@@ -65,6 +88,18 @@ public class RunJar {
       }
     } finally {
       jar.close();
+    }
+  }
+
+  /**
+   * Ensure the existence of a given directory.
+   *
+   * @throws IOException if it cannot be created and does not already exist
+   */
+  private static void ensureDirectory(File dir) throws IOException {
+    if (!dir.mkdirs() && !dir.isDirectory()) {
+      throw new IOException("Mkdirs failed to create " +
+                            dir.toString());
     }
   }
 
@@ -107,22 +142,14 @@ public class RunJar {
     mainClassName = mainClassName.replaceAll("/", ".");
 
     File tmpDir = new File(new Configuration().get("hadoop.tmp.dir"));
-    boolean b = tmpDir.mkdirs();
-    if (!b && !tmpDir.isDirectory()) { 
-      System.err.println("Mkdirs failed to create " + tmpDir);
-      System.exit(-1);
-    }
+    ensureDirectory(tmpDir);
+
     final File workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
-    b = workDir.delete();
-    if (!b) {
+    if (!workDir.delete()) {
       System.err.println("Delete failed for " + workDir);
       System.exit(-1);
     }
-    b = workDir.mkdirs();
-    if (!b && !workDir.isDirectory()) {
-      System.err.println("Mkdirs failed to create " + workDir);
-      System.exit(-1);
-    }
+    ensureDirectory(workDir);
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
         public void run() {
@@ -134,15 +161,15 @@ public class RunJar {
       });
 
     unJar(file, workDir);
-    
+
     ArrayList<URL> classPath = new ArrayList<URL>();
-    classPath.add(new File(workDir+"/").toURL());
-    classPath.add(file.toURL());
-    classPath.add(new File(workDir, "classes/").toURL());
+    classPath.add(new File(workDir+"/").toURI().toURL());
+    classPath.add(file.toURI().toURL());
+    classPath.add(new File(workDir, "classes/").toURI().toURL());
     File[] libs = new File(workDir, "lib").listFiles();
     if (libs != null) {
       for (int i = 0; i < libs.length; i++) {
-        classPath.add(libs[i].toURL());
+        classPath.add(libs[i].toURI().toURL());
       }
     }
     
