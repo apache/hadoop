@@ -224,6 +224,7 @@ Release 0.21.0 - Unreleased
                (Dave Latham via Stack)
    HBASE-2013  Add useful helpers to HBaseTestingUtility.java (Lars George
                via J-D)
+   HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

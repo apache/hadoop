@@ -24,7 +24,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.net.UnknownHostException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.Properties;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
@@ -90,22 +95,32 @@ public class HQuorumPeer implements HConstants {
     return address.equals("localhost") || address.equals("127.0.0.1");
   }
 
-  private static boolean hostEquals(String addrA, String addrB) {
-    if (addrA.contains(".") && addrB.contains(".")) {
-      return addrA.equals(addrB);
-    }
-    String hostA = StringUtils.simpleHostname(addrA);
-    String hostB = StringUtils.simpleHostname(addrB);
-    return hostA.equals(hostB);
-  }
+  private static void writeMyID(Properties properties) throws IOException {
+    long myId = -1;
 
-  private static void writeMyID(Properties properties) throws UnknownHostException, IOException {
     HBaseConfiguration conf = new HBaseConfiguration();
     String myAddress = DNS.getDefaultHost(
         conf.get("hbase.zookeeper.dns.interface","default"),
         conf.get("hbase.zookeeper.dns.nameserver","default"));
 
-    long myId = -1;
+    List<String> ips = new ArrayList<String>();
+
+    // Add what could be the best (configured) match
+    ips.add(myAddress.contains(".") ?
+        myAddress :
+        StringUtils.simpleHostname(myAddress));
+
+    // For all nics get all hostnames and IPs
+    Enumeration<?> nics = NetworkInterface.getNetworkInterfaces();
+    while(nics.hasMoreElements()) {
+      Enumeration<?> rawAdrs =
+          ((NetworkInterface)nics.nextElement()).getInetAddresses();
+      while(rawAdrs.hasMoreElements()) {
+        InetAddress inet = (InetAddress) rawAdrs.nextElement();
+        ips.add(StringUtils.simpleHostname(inet.getHostName()));
+        ips.add(inet.getHostAddress());
+      }
+    }
 
     for (Entry<Object, Object> entry : properties.entrySet()) {
       String key = entry.getKey().toString().trim();
@@ -115,9 +130,7 @@ public class HQuorumPeer implements HConstants {
         long id = Long.parseLong(key.substring(dot + 1));
         String[] parts = value.split(":");
         String address = parts[0];
-        if (addressIsLocalHost(address) || hostEquals(myAddress, address)) {
-          LOG.debug("found my address: " + myAddress + ", in list: " + address +
-                    ", setting myId to " + id);
+        if (addressIsLocalHost(address) || ips.contains(address)) {
           myId = id;
           break;
         }
