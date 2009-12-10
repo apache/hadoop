@@ -182,7 +182,7 @@ class FsShellPermissions {
                                 new FsPermission((short)newperms));
         } catch (IOException e) {
           System.err.println(getName() + ": changing permissions of '" + 
-                             file.getPath() + "':" + e.getMessage());
+                             file.getPath() + "':" + e.getMessage().split("\n")[0]);
         }
       }
     }
@@ -223,7 +223,7 @@ class FsShellPermissions {
       }
       if (owner == null && group == null) {
         throw new IOException("'" + ownerStr + "' does not specify " +
-                              " onwer or group.");
+                              " owner or group.");
       }
     }
 
@@ -240,7 +240,7 @@ class FsShellPermissions {
           srcFs.setOwner(file.getPath(), newOwner, newGroup);
         } catch (IOException e) {
           System.err.println(getName() + ": changing ownership of '" + 
-                             file.getPath() + "':" + e.getMessage());
+                             file.getPath() + "':" + e.getMessage().split("\n")[0]);
 
         }
       }

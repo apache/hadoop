@@ -81,6 +81,9 @@ Release 0.20.2 - Unreleased
     HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
     IllegalArgumentException is thrown. (cos)
 
+    HDFS-185. Disallow chown, chgrp, chmod, setQuota, and setSpaceQuota when
+    name-node is in safemode. (Ravi Phulari via shv)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
