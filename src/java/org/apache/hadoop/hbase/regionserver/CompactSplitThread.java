@@ -56,8 +56,6 @@ class CompactSplitThread extends Thread implements HConstants {
   
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
-  private volatile int limit = 1;
-
   /** @param server */
   public CompactSplitThread(HRegionServer server) {
     super();
@@ -74,14 +72,6 @@ class CompactSplitThread extends Thread implements HConstants {
     while (!this.server.isStopRequested()) {
       HRegion r = null;
       try {
-        if ((limit > 0) && (++count > limit)) {
-          try {
-            Thread.sleep(this.frequency);
-          } catch (InterruptedException ex) {
-            continue;
-          }
-          count = 0;
-        }
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
         if (r != null && !this.server.isStopRequested()) {
           synchronized (regionsInQueue) {
@@ -217,18 +207,6 @@ class CompactSplitThread extends Thread implements HConstants {
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     
     // Do not serve the new regions. Let the Master assign them.
-  }
-
-  /**
-   * Sets the number of compactions allowed per cycle.
-   * @param limit the number of compactions allowed, or -1 to unlimit
-   */
-  void setLimit(int limit) {
-    this.limit = limit;
-  }
-
-  int getLimit() {
-    return this.limit;
   }
 
   /**
