@@ -59,7 +59,7 @@ public class TestZooKeeper {
   @Before
   public void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    cluster = TEST_UTIL.getHbaseCluster();
+    cluster = TEST_UTIL.getHBaseCluster();
   }
 
   /**

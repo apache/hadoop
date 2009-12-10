@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -70,7 +69,8 @@ public class HBaseTestingUtility {
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
   private File clusterTestBuildDir = null;
-
+  private HBaseAdmin hbaseAdmin = null;
+  
   /** System property key to get test directory value.
    */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
@@ -511,10 +511,68 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Get the HBase cluster
+   * Get the HBase cluster.
+   * 
    * @return hbase cluster
    */
-  public MiniHBaseCluster getHbaseCluster() {
+  public MiniHBaseCluster getHBaseCluster() {
     return hbaseCluster;
+  }
+  
+  /**
+   * Returns a HBaseAdmin instance.
+   *
+   * @return The HBaseAdmin instance.
+   * @throws MasterNotRunningException
+   */
+  public HBaseAdmin getHBaseAdmin() throws MasterNotRunningException {
+    if (hbaseAdmin == null) {
+      hbaseAdmin = new HBaseAdmin(getConfiguration());
+    }
+    return hbaseAdmin;
+  }
+  
+  /**
+   * Closes the named region. 
+   *
+   * @param regionName  The region to close.
+   * @throws IOException
+   */
+  public void closeRegion(String regionName) throws IOException {
+    closeRegion(Bytes.toBytes(regionName));
+  }
+  
+  /**
+   * Closes the named region. 
+   *
+   * @param regionName  The region to close.
+   * @throws IOException
+   */
+  public void closeRegion(byte[] regionName) throws IOException {
+    HBaseAdmin admin = getHBaseAdmin();
+    admin.closeRegion(regionName, (Object[]) null);
+  }
+  
+  /**
+   * Closes the region containing the given row. 
+   *
+   * @param row  The row to find the containing region.
+   * @param table  The table to find the region.
+   * @throws IOException
+   */
+  public void closeRegionByRow(String row, HTable table) throws IOException {
+    closeRegionByRow(Bytes.toBytes(row), table);
+  }
+
+  /**
+   * Closes the region containing the given row. 
+   *
+   * @param row  The row to find the containing region.
+   * @param table  The table to find the region.
+   * @throws IOException
+   */
+  public void closeRegionByRow(byte[] row, HTable table) throws IOException {
+    HRegionLocation hrl = table.getRegionLocation(row);
+    closeRegion(hrl.getRegionInfo().getRegionName());
   }
 }
