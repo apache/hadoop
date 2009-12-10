@@ -560,6 +560,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-824. Stop lease checker in TestReadWhileWriting.  (szetszwo)
 
+    HDFS-823. CheckPointer should use addInternalServlet for image-fetching
+    servlet (jghoman)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS

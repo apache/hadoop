@@ -96,7 +96,7 @@ class Checkpointer extends Daemon {
     HttpServer httpServer = backupNode.httpServer;
     httpServer.setAttribute("name.system.image", getFSImage());
     httpServer.setAttribute("name.conf", conf);
-    httpServer.addServlet("getimage", "/getimage", GetImageServlet.class);
+    httpServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
 
     LOG.info("Checkpoint Period : " + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");
