@@ -83,6 +83,8 @@ public class TestReadWhileWriting {
       //b. On another machine M2, open file and verify that the half-block
       //   of data can be read successfully.
       checkFile(p, half, conf);
+      AppendTestUtil.LOG.info("leasechecker.interruptAndJoin()");
+      ((DistributedFileSystem)fs).dfs.leasechecker.interruptAndJoin();
 
       //c. On M1, append another half block of data.  Close file on M1.
       {
