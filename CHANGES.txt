@@ -1132,6 +1132,8 @@ Trunk (unreleased changes)
     HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
     IllegalArgumentException is thrown (cos)
 
+    HADOOP-6428. HttpServer sleeps with negative values. (cos)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
