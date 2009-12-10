@@ -71,6 +71,8 @@ Trunk (unreleased changes)
     HADOOP-6254. Slow reads cause s3n to fail with SocketTimeoutException.
     (Andrew Hitchcock via tomwhite)
 
+    HADOOP-6428. HttpServer sleeps with negative values. (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
