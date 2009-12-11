@@ -132,8 +132,8 @@ public class TestStorageRestore extends TestCase {
     Iterator<StorageDirectory> it = fi.dirIterator();
     while(it.hasNext()) {
       StorageDirectory sd = it.next();
-      if(sd.getRoot().getAbsolutePath().equals(path2.getAbsolutePath()) ||
-          sd.getRoot().getAbsolutePath().equals(path3.getAbsolutePath())) {
+      if(sd.getRoot().getCanonicalPath().equals(path2.getCanonicalPath()) ||
+          sd.getRoot().getCanonicalPath().equals(path3.getCanonicalPath())) {
         al.add(sd);
       }
     }
@@ -164,7 +164,7 @@ public class TestStorageRestore extends TestCase {
   /**
    * This function returns a md5 hash of a file.
    * 
-   * @param FileToMd5
+   * @param file input file
    * @return The md5 string
    */
   public String getFileMD5(File file) throws Exception {
@@ -189,7 +189,7 @@ public class TestStorageRestore extends TestCase {
   /**
    * read currentCheckpointTime directly from the file
    * @param currDir
-   * @return
+   * @return the checkpoint time
    * @throws IOException
    */
   long readCheckpointTime(File currDir) throws IOException {

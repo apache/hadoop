@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
@@ -258,10 +259,12 @@ public class MiniDFSCluster {
     FileSystem.setDefaultUri(conf, "hdfs://localhost:"+ Integer.toString(nameNodePort));
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");  
     if (manageNameDfsDirs) {
-      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(base_dir, "name1").getPath()+","+
-               new File(base_dir, "name2").getPath());
-      conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, new File(base_dir, "namesecondary1").
-                getPath()+"," + new File(base_dir, "namesecondary2").getPath());
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          fileAsURI(new File(base_dir, "name1"))+","+
+          fileAsURI(new File(base_dir, "name2")));
+      conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+          fileAsURI(new File(base_dir, "namesecondary1"))+","+
+          fileAsURI(new File(base_dir, "namesecondary2")));
     }
     
     int replication = conf.getInt("dfs.replication", 3);
@@ -716,8 +719,8 @@ public class MiniDFSCluster {
 
   /**
    * Restart a datanode, on the same port if requested
-   * @param dnprop, the datanode to restart
-   * @param keepPort, whether to use the same port 
+   * @param dnprop the datanode to restart
+   * @param keepPort whether to use the same port 
    * @return true if restarting is successful
    * @throws IOException
    */
@@ -957,7 +960,6 @@ public class MiniDFSCluster {
 
   /**
    * Access to the data directory used for Datanodes
-   * @throws IOException 
    */
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();

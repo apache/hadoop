@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 import org.apache.hadoop.security.AccessControlException;
@@ -339,26 +340,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
           "of the file system meta-data.");
     } else if (dirNames.isEmpty())
-      dirNames.add("/tmp/hadoop/dfs/name");
-    Collection<URI> dirs = new ArrayList<URI>(dirNames.size());
-    for(String name : dirNames) {
-      try {
-        URI u = new URI(name);
-        // If the scheme was not declared, default to file://
-        // and use the absolute path of the file, then warn the user 
-        if(u.getScheme() == null) {
-          u = new URI("file://" + new File(name).getAbsolutePath());
-          LOG.warn("Scheme is undefined for " + name);
-          LOG.warn("Please check your file system configuration in " +
-          		"hdfs-site.xml");
-        }
-        dirs.add(u);
-      } catch (Exception e) {
-        LOG.error("Error while processing URI: " + name + 
-            ". The error message was: " + e.getMessage());
-      }
-    }
-    return dirs;
+      dirNames.add("file:///tmp/hadoop/dfs/name");
+    return Util.stringCollectionAsURIs(dirNames);
   }
 
   public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {

@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.BackupNode;
@@ -92,7 +93,8 @@ public class TestHDFSServerPorts extends TestCase {
       throw new IOException("Could not delete hdfs directory '" + hdfsDir + "'");
     }
     config = new HdfsConfiguration();
-    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name1").getPath());
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        fileAsURI(new File(hdfsDir, "name1")).toString());
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
     config.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
     NameNode.format(config);
@@ -120,7 +122,8 @@ public class TestHDFSServerPorts extends TestCase {
     assertTrue(currDir2.mkdirs());
     assertTrue(currDir3.mkdirs());
     
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name2").getPath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        fileAsURI(new File(hdfsDir, "name2")).toString());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, "${dfs.name.dir}");
     
     // Start BackupNode
@@ -246,7 +249,8 @@ public class TestHDFSServerPorts extends TestCase {
 
       // start another namenode on the same port
       Configuration conf2 = new HdfsConfiguration(config);
-      conf2.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(hdfsDir, "name2").getPath());
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          fileAsURI(new File(hdfsDir, "name2")).toString());
       NameNode.format(conf2);
       boolean started = canStartNameNode(conf2);
       assertFalse(started); // should fail

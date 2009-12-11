@@ -169,7 +169,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.namenode.name.dir</name>
-  <value>${hadoop.tmp.dir}/dfs/name</value>
+  <value>file://${hadoop.tmp.dir}/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
       should store the name table(fsimage).  If this is a comma-delimited list
       of directories then the name table is replicated in all of the
@@ -447,7 +447,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.namenode.checkpoint.dir</name>
-  <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <value>file://${hadoop.tmp.dir}/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
       name node should store the temporary images to merge.
       If this is a comma-delimited list of directories then the image is

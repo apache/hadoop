@@ -563,6 +563,8 @@ Release 0.21.0 - Unreleased
     HDFS-823. CheckPointer should use addInternalServlet for image-fetching
     servlet (jghoman)
 
+    HDFS-456. Fix URI generation for windows file paths. (shv)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
