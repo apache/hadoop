@@ -123,6 +123,7 @@ Release 0.21.0 - Unreleased
                empty oldlogfile.log (Lars George via Stack)
    HBASE-2022  NPE in housekeeping kills RS
    HBASE-2033  Shell scan 'limit' is off by one
+   HBASE-2040  Fixes to group commit
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -237,7 +237,7 @@ public class HLog implements HConstants, Syncable {
       ", flushlogentries=" + this.flushlogentries +
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
     rollWriter();
-    logSyncerThread = new LogSyncer(this.flushlogentries);
+    logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread,
         Thread.currentThread().getName() + ".logSyncer");
   }
@@ -726,9 +726,9 @@ public class HLog implements HConstants, Syncable {
     // Condition used to signal that the sync is done
     private final Condition syncDone = lock.newCondition();
 
-    private final int optionalFlushInterval;
+    private final long optionalFlushInterval;
 
-    LogSyncer(int optionalFlushInterval) {
+    LogSyncer(long optionalFlushInterval) {
       this.optionalFlushInterval = optionalFlushInterval;
     }
 
@@ -739,7 +739,12 @@ public class HLog implements HConstants, Syncable {
 
           // Wait until something has to be synced or do it if we waited enough
           // time (useful if something appends but does not sync).
-          queueEmpty.await(this.optionalFlushInterval, TimeUnit.MILLISECONDS);
+          if (!queueEmpty.await(this.optionalFlushInterval,
+                TimeUnit.MILLISECONDS)) {
+            forceSync = true;
+          }
+
+
 
           // We got the signal, let's syncFS. We currently own the lock so new
           // writes are waiting to acquire it in addToSyncQueue while the ones
