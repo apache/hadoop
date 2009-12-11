@@ -13,7 +13,9 @@ if [ "$IS_MASTER" = "true" ]; then
  MASTER_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/local-hostname`
 fi
 HADOOP_HOME=`ls -d /usr/local/hadoop-*`
+HADOOP_VERSION=`echo $HADOOP_HOME | cut -d '-' -f 2`
 HBASE_HOME=`ls -d /usr/local/hbase-*`
+HBASE_VERSION=`echo $HBASE_HOME | cut -d '-' -f 2`
 
 ###############################################################################
 # Hadoop configuration
