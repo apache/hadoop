@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.RawComparator;
 
 /**
  * <p>
@@ -88,4 +89,16 @@ public abstract class SerializationBase<T> extends Configured
       throw new IllegalArgumentException(e);
     }
   }
+
+  /** Provide a raw comparator for the specified serializable class.
+   * Requires a serialization-specific metadata entry to name the class
+   * to compare (e.g., "Serialized-Class" for JavaSerialization and
+   * WritableSerialization).
+   * @param metadata a set of string mappings providing serialization-specific
+   * arguments that parameterize the data being serialized/compared.
+   * @return a {@link RawComparator} for the given metadata.
+   * @throws UnsupportedOperationException if it cannot instantiate a RawComparator
+   * for this given metadata.
+   */
+  public abstract RawComparator<T> getRawComparator(Map<String,String> metadata);
 }

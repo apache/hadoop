@@ -50,9 +50,8 @@ public class AvroGenericSerialization extends AvroSerialization<Object> {
   }
 
   @Override
-  protected Schema getSchema(Object t, Map<String, String> metadata) {
-    String jsonSchema = metadata.get(AVRO_SCHEMA_KEY);
-    return jsonSchema != null ? Schema.parse(jsonSchema) : GenericData.get().induce(t);
+  protected Schema getSchema(Map<String, String> metadata) {
+    return Schema.parse(metadata.get(AVRO_SCHEMA_KEY));
   }
 
   @Override

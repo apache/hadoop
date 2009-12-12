@@ -21,6 +21,7 @@ package org.apache.hadoop.io.serializer;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.RawComparator;
 
 /**
  * <p>
@@ -80,6 +81,16 @@ class LegacySerialization<T> extends SerializationBase<T> {
   public DeserializerBase<T> getDeserializer(Map<String, String> metadata) {
     Class<T> c = (Class<T>) getClassFromMetadata(metadata);
     return new LegacyDeserializer<T>(getDeserializer(c));
+  }
+
+  @Override
+  public RawComparator<T> getRawComparator(Map<String, String> metadata) {
+    // Since this method is being added to an API meant to provide legacy
+    // compatability with deprecated serializers, leaving this as an incomplete
+    // stub.
+
+    throw new UnsupportedOperationException(
+        "LegacySerialization does not provide raw comparators");
   }
 
 }

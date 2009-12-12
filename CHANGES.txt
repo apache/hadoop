@@ -19,6 +19,9 @@ Trunk (unreleased changes)
     HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
     (tomwhite)
 
+    HADOOP-6323. Add comparators to the serialization API.
+    (Aaron Kimball via cutting)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
