@@ -61,14 +61,16 @@ public class TestAvroRpc extends TestCase {
 
   public void testCalls() throws Exception {
     Configuration conf = new Configuration();
-    Server server = AvroRpc.getServer(new TestImpl(), ADDRESS, 0, conf);
+    RPC.setProtocolEngine(conf, AvroTestProtocol.class, AvroRpcEngine.class);
+    Server server = RPC.getServer(AvroTestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, conf);
     AvroTestProtocol proxy = null;
     try {
       server.start();
 
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       proxy =
-        (AvroTestProtocol)AvroRpc.getProxy(AvroTestProtocol.class, addr, conf);
+        (AvroTestProtocol)RPC.getProxy(AvroTestProtocol.class, 0, addr, conf);
       
       proxy.ping();
 

@@ -49,6 +49,9 @@ Trunk (unreleased changes)
     HADOOP-6346. Add support for specifying unpack pattern regex to
     RunJar.unJar. (Todd Lipcon via tomwhite)
 
+    HADOOP-6422. Make RPC backend plugable, protocol-by-protocol, to
+    ease evolution towards Avro.  (cutting)
+
   OPTIMIZATIONS
 
   BUG FIXES
