@@ -226,6 +226,7 @@ Release 0.21.0 - Unreleased
    HBASE-2013  Add useful helpers to HBaseTestingUtility.java (Lars George
                via J-D)
    HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
+   HBASE-2043  Shell's scan broken
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
@@ -233,6 +234,7 @@ Release 0.21.0 - Unreleased
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
+   HBASE-2041  Change WAL default configuration values
 
 
 Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
