@@ -22,6 +22,10 @@ Trunk (unreleased changes)
     HADOOP-6323. Add comparators to the serialization API.
     (Aaron Kimball via cutting)
 
+    HADOOP-6433. Introduce asychronous deletion of files via a pool of
+    threads. This can be used to delete files in the Distributed
+    Cache. (Zheng Shao via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
