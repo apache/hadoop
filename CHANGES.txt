@@ -83,6 +83,9 @@ Trunk (unreleased changes)
 
     HADOOP-6428. HttpServer sleeps with negative values. (cos)
 
+    HADOOP-6414. Add command line help for -expunge command.
+    (Ravi Phulari via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

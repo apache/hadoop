@@ -1505,6 +1505,8 @@ public class FsShell extends Configured implements Tool {
     
     String chgrp = FsShellPermissions.CHGRP_USAGE + "\n" +
       "\t\tThis is equivalent to -chown ... :GROUP ...\n";
+
+    String expunge = "-expunge: Empty the Trash.\n";
     
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -1527,6 +1529,8 @@ public class FsShell extends Configured implements Tool {
       System.out.println(dus);
     } else if ("rm".equals(cmd)) {
       System.out.println(rm);
+    } else if ("expunge".equals(cmd)) {
+      System.out.println(expunge);
     } else if ("rmr".equals(cmd)) {
       System.out.println(rmr);
     } else if ("mkdir".equals(cmd)) {
