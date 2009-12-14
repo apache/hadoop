@@ -86,6 +86,9 @@ Trunk (unreleased changes)
     HADOOP-6414. Add command line help for -expunge command.
     (Ravi Phulari via tomwhite)
 
+    HADOOP-6391. Classpath should not be part of command line arguments.
+    (Cristian Ivascu via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
