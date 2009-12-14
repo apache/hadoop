@@ -94,6 +94,8 @@ Trunk (unreleased changes)
 
     HDFS-797. TestHDFSCLI much slower after HDFS-265 merge. (Todd Lipcon via cos)
 
+    HDFS-825. Build fails to pull latest hadoop-core-* artifacts (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
