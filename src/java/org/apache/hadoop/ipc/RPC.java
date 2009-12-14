@@ -88,7 +88,6 @@ public class RPC {
     if (engine == null) {
       Class<?> impl = conf.getClass(ENGINE_PROP+"."+protocol.getName(),
                                     WritableRpcEngine.class);
-      LOG.info("Using "+impl.getName()+" for "+protocol.getName());
       engine = (RpcEngine)ReflectionUtils.newInstance(impl, conf);
       if (protocol.isInterface())
         PROXY_ENGINES.put(Proxy.getProxyClass(protocol.getClassLoader(),
