@@ -95,7 +95,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   
   public static final int DEFAULT_MAX_FILESIZE = 1024*1024*256;
 
-  public static final boolean DEFAULT_DEFERRED_LOG_FLUSH = false;
+  public static final boolean DEFAULT_DEFERRED_LOG_FLUSH = true;
     
   private volatile Boolean meta = null;
   private volatile Boolean root = null;

@@ -215,7 +215,7 @@ public class HLog implements HConstants, Syncable {
     this.conf = conf;
     this.listener = listener;
     this.flushlogentries =
-      conf.getInt("hbase.regionserver.flushlogentries", 100);
+      conf.getInt("hbase.regionserver.flushlogentries", 1);
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
       this.fs.getDefaultBlockSize());
     this.replicationLevel = (short) conf.getInt("hbase.regionserver.hlog.replication",
@@ -224,7 +224,7 @@ public class HLog implements HConstants, Syncable {
     float multi = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f);
     this.logrollsize = (long)(this.blocksize * multi);
     this.optionalFlushInterval =
-      conf.getLong("hbase.regionserver.optionallogflushinterval", 10 * 1000);
+      conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
     if (fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }

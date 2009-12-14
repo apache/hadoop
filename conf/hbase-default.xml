@@ -171,16 +171,16 @@
   </property>
   <property>
     <name>hbase.regionserver.flushlogentries</name>
-    <value>100</value>
+    <value>1</value>
     <description>Sync the HLog to the HDFS when it has accumulated this many
-    entries. Default 100. Value is checked on every HLog.append
+    entries. Default 1. Value is checked on every HLog.hflush
     </description>
   </property>
   <property>
     <name>hbase.regionserver.optionallogflushinterval</name>
-    <value>10000</value>
+    <value>1000</value>
     <description>Sync the HLog to the HDFS after this interval if it has not
-    accumulated enough entries to trigger a sync. Default 10 seconds. Units:
+    accumulated enough entries to trigger a sync. Default 1 second. Units:
     milliseconds.
     </description>
   </property>
