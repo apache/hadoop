@@ -603,6 +603,9 @@ Release 0.20.2 - Unreleased
     HDFS-185. Disallow chown, chgrp, chmod, setQuota, and setSpaceQuota when
     name-node is in safemode. (Ravi Phulari via shv)
 
+    HDFS-724. Pipeline hangs if one of the block receiver is not responsive.
+    (hairong)
+
 Release 0.20.1 - 2009-09-01
 
   IMPROVEMENTS

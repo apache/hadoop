@@ -458,7 +458,7 @@ public interface DataTransferProtocol {
   public static class PipelineAck implements Writable {
     private long seqno;
     private Status replies[];
-    final public static PipelineAck HEART_BEAT = new PipelineAck(-1, new Status[0]);
+    public final static long UNKOWN_SEQNO = -2;
 
     /** default constructor **/
     public PipelineAck() {
@@ -495,6 +495,10 @@ public interface DataTransferProtocol {
      * @return the the ith reply
      */
     public Status getReply(int i) {
+      if (i<0 || i>=replies.length) {
+        throw new IllegalArgumentException("The input parameter " + i + 
+            " should in the range of [0, " + replies.length);
+      }
       return replies[i];
     }
     

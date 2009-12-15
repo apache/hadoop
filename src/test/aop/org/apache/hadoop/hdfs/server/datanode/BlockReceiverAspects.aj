@@ -99,12 +99,6 @@ privileged public aspect BlockReceiverAspects {
     && args(acked) 
     && this(pr);
 
-  pointcut callSetBytesAckedLastDN(PacketResponder pr, long acked) : 
-    call (void ReplicaInPipelineInterface.setBytesAcked(long)) 
-    && withincode (void PacketResponder.lastDataNodeRun())
-    && args(acked) 
-    && this(pr);
-  
   after (PacketResponder pr, long acked) : callSetBytesAcked (pr, acked) {
     PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
     if (pTest == null) {
@@ -117,19 +111,7 @@ privileged public aspect BlockReceiverAspects {
       bytesAckedService((PipelinesTest)pTest, pr, acked);
     }
   }
-  after (PacketResponder pr, long acked) : callSetBytesAckedLastDN (pr, acked) {
-    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
-    if (pTest == null) {
-      LOG.debug("FI: no pipeline has been found in acking");
-      return;
-    }
-    LOG.debug("FI: Acked total bytes from (last DN): " + 
-        pr.receiver.datanode.dnRegistration.getStorageID() + ": " + acked);
-    if (pTest instanceof PipelinesTest) {
-      bytesAckedService((PipelinesTest)pTest, pr, acked); 
-    }
-  }
-  
+
   private void bytesAckedService 
       (final PipelinesTest pTest, final PacketResponder pr, final long acked) {
     NodeBytes nb = new NodeBytes(pr.receiver.datanode.dnRegistration, acked);

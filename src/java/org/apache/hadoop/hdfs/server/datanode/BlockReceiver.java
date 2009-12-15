@@ -560,7 +560,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       throttler.throttle(len);
     }
     
-    return len;
+    return lastPacketInBlock?-1:len;
   }
 
   void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
@@ -589,9 +589,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
       /* 
-       * Receive until packet has zero bytes of data.
+       * Receive until the last packet.
        */
-      while (receivePacket() > 0) {}
+      while (receivePacket() >= 0) {}
 
       // wait for all outstanding packet responses. And then
       // indicate responder to gracefully shutdown.
@@ -775,118 +775,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       notifyAll();
     }
 
-    private synchronized void lastDataNodeRun() {
-      long lastHeartbeat = System.currentTimeMillis();
-      boolean lastPacket = false;
-      final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
-
-      while (running && datanode.shouldRun && !lastPacket) {
-        long now = System.currentTimeMillis();
-        try {
-
-            // wait for a packet to be sent to downstream datanode
-            while (running && datanode.shouldRun && ackQueue.size() == 0) {
-              long idle = now - lastHeartbeat;
-              long timeout = (datanode.socketTimeout/2) - idle;
-              if (timeout <= 0) {
-                timeout = 1000;
-              }
-              try {
-                wait(timeout);
-              } catch (InterruptedException e) {
-                if (running) {
-                  LOG.info("PacketResponder " + numTargets +
-                           " for block " + block + " Interrupted.");
-                  running = false;
-                }
-                break;
-              }
-          
-              // send a heartbeat if it is time.
-              now = System.currentTimeMillis();
-              if (now - lastHeartbeat > datanode.socketTimeout/2) {
-                PipelineAck.HEART_BEAT.write(replyOut);  // send heart beat
-                replyOut.flush();
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("PacketResponder " + numTargets +
-                            " for block " + block + 
-                            " sent a heartbeat");
-                }
-                lastHeartbeat = now;
-              }
-            }
-
-            if (!running || !datanode.shouldRun) {
-              break;
-            }
-            Packet pkt = ackQueue.getFirst();
-            long expected = pkt.seqno;
-            LOG.debug("PacketResponder " + numTargets +
-                      " for block " + block + 
-                      " acking for packet " + expected);
-
-            // If this is the last packet in block, then close block
-            // file and finalize the block before responding success
-            if (pkt.lastPacketInBlock) {
-              receiver.close();
-              final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
-              block.setNumBytes(replicaInfo.getNumBytes());
-              datanode.data.finalizeBlock(block);
-              datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
-              if (ClientTraceLog.isInfoEnabled() &&
-                  receiver.clientName.length() > 0) {
-                long offset = 0;
-                ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
-                    receiver.inAddr, receiver.myAddr, block.getNumBytes(),
-                    "HDFS_WRITE", receiver.clientName, offset,
-                    datanode.dnRegistration.getStorageID(), block, endTime-startTime));
-              } else {
-                LOG.info("Received block " + block + 
-                    " of size " + block.getNumBytes() + 
-                    " from " + receiver.inAddr);
-              }
-              lastPacket = true;
-            }
-
-            new PipelineAck(expected, new Status[]{SUCCESS}).write(replyOut);
-            replyOut.flush();
-            // remove the packet from the ack queue
-            removeAckHead();
-            // update the bytes acked
-            if (pkt.lastByteInBlock>replicaInfo.getBytesAcked()) {
-              replicaInfo.setBytesAcked(pkt.lastByteInBlock);
-            }
-        } catch (Exception e) {
-          LOG.warn("IOException in BlockReceiver.lastNodeRun: ", e);
-          if (running) {
-            try {
-              datanode.checkDiskError(e); // may throw an exception here
-            } catch (IOException ioe) {
-              LOG.warn("DataNode.chekDiskError failed in lastDataNodeRun with: ",
-                  ioe);
-            }
-            LOG.info("PacketResponder " + block + " " + numTargets + 
-                     " Exception " + StringUtils.stringifyException(e));
-            running = false;
-          }
-        }
-      }
-      LOG.info("PacketResponder " + numTargets + 
-               " for block " + block + " terminating");
-    }
-
     /**
      * Thread to process incoming acks.
      * @see java.lang.Runnable#run()
      */
     public void run() {
-
-      // If this is the last datanode in pipeline, then handle differently
-      if (numTargets == 0) {
-        lastDataNodeRun();
-        return;
-      }
-
       boolean lastPacketInBlock = false;
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (running && datanode.shouldRun && !lastPacketInBlock) {
@@ -897,19 +790,18 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             Packet pkt = null;
             long expected = -2;
             PipelineAck ack = new PipelineAck();
-            try { 
-              // read an ack from downstream datanode
-              ack.readFields(mirrorIn);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("PacketResponder " + numTargets + " got " + ack);
+            long seqno = PipelineAck.UNKOWN_SEQNO;
+            try {
+              if (numTargets != 0) {// not the last DN
+                // read an ack from downstream datanode
+                ack.readFields(mirrorIn);
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("PacketResponder " + numTargets + " got " + ack);
+                }
+                seqno = ack.getSeqno();
+                didRead = true;
               }
-              long seqno = ack.getSeqno();
-              didRead = true;
-              if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
-                ack.write(replyOut);
-                replyOut.flush();
-                continue;
-              } else if (seqno >= 0) {
+              if (seqno != PipelineAck.UNKOWN_SEQNO || numTargets == 0) {
                 synchronized (this) {
                   while (running && datanode.shouldRun && ackQueue.size() == 0) {
                     if (LOG.isDebugEnabled()) {
@@ -925,9 +817,12 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                       throw e;
                     }
                   }
+                  if (!running || !datanode.shouldRun) {
+                    break;
+                  }
                   pkt = ackQueue.getFirst();
                   expected = pkt.seqno;
-                  if (seqno != expected) {
+                  if (numTargets > 0 && seqno != expected) {
                     throw new IOException("PacketResponder " + numTargets +
                                           " for block " + block +
                                           " expected seqno:" + expected +
@@ -983,14 +878,15 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
             // construct my ack message
             Status[] replies = null;
-            if (!didRead) { // no ack is read
+            if (!didRead && numTargets != 0) { // ack read error
               replies = new Status[2];
               replies[0] = SUCCESS;
               replies[1] = ERROR;
             } else {
-              replies = new Status[1+ack.getNumOfReplies()];
+              short ackLen = numTargets == 0 ? 0 : ack.getNumOfReplies();
+              replies = new Status[1+ackLen];
               replies[0] = SUCCESS;
-              for (int i=0; i<ack.getNumOfReplies(); i++) {
+              for (int i=0; i<ackLen; i++) {
                 replies[i+1] = ack.getReply(i);
               }
             }
