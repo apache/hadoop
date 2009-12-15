@@ -293,7 +293,8 @@ doesn't take ZooKeeper with it.</p>
 
 <p>For more information about setting up a ZooKeeper cluster on your own, see
 the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting Started Guide</a>.
-HBase currently uses ZooKeeper version 3.2.0, so any cluster setup with a 3.x.x version of ZooKeeper should work.</p>
+HBase currently uses ZooKeeper version 3.2.0, so any cluster setup with a
+3.x.x version of ZooKeeper should work.</p>
 
 <p>Of note, if you have made <em>HDFS client configuration</em> on your Hadoop cluster, HBase will not
 see this configuration unless you do one of the following:</p>
@@ -338,10 +339,10 @@ hbase&gt; # To create a table named "mylittletable" with a column family of "myl
 hbase&gt; create "mylittletable", "mylittlecolumnfamily"
 hbase&gt; # To see the schema for you just created "mylittletable" table and its single "mylittlecolumnfamily", type
 hbase&gt; describe "mylittletable"
-hbase&gt; # To add a row whose id is "x", to the column "mylittlecolumnfamily:x" with a value of 'x', do
-hbase&gt; put "mylittletable", "x"
+hbase&gt; # To add a row whose id is "myrow", to the column "mylittlecolumnfamily:x" with a value of 'v', do
+hbase&gt; put "mylittletable", "myrow", "mylittlecolumnfamily:x", "v"
 hbase&gt; # To get the cell just added, do
-hbase&gt; get "mylittletable", "x"
+hbase&gt; get "mylittletable", "myrow"
 hbase&gt; # To scan you new table, do
 hbase&gt; scan "mylittletable"
 </pre>

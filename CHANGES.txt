@@ -124,6 +124,8 @@ Release 0.21.0 - Unreleased
    HBASE-2022  NPE in housekeeping kills RS
    HBASE-2033  Shell scan 'limit' is off by one
    HBASE-2040  Fixes to group commit
+   HBASE-2047  Example command in the "Getting Started" 
+               documentation doesn't work (Benoit Sigoure via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -227,6 +229,7 @@ Release 0.21.0 - Unreleased
                via J-D)
    HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
    HBASE-2043  Shell's scan broken
+   HBASE-2044  HBASE-1822 removed not-deprecated APIs
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
