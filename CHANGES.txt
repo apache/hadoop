@@ -84,6 +84,8 @@ Release 0.20.2 - Unreleased
     HDFS-185. Disallow chown, chgrp, chmod, setQuota, and setSpaceQuota when
     name-node is in safemode. (Ravi Phulari via shv)
 
+    HADOOP-6428. HttpServer sleeps with negative values (cos)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
