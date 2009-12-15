@@ -51,10 +51,6 @@ public class TestDFVariations extends TestCase {
   public void testOSParsing() throws Exception {
     for (DF.OSType ost : EnumSet.allOf(DF.OSType.class)) {
       XXDF df = new XXDF(ost.getId());
-      assertEquals(ost.getId() + " total", 453115160 * 1024L, df.getCapacity());
-      assertEquals(ost.getId() + " used", 53037920 * 1024L, df.getUsed());
-      assertEquals(ost.getId() + " avail", 400077240 * 1024L, df.getAvailable());
-      assertEquals(ost.getId() + " pcnt used", 11, df.getPercentUsed());
       assertEquals(ost.getId() + " mount", "/foo/bar", df.getMount());
     }
   }
