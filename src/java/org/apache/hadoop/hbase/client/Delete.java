@@ -343,4 +343,32 @@ public class Delete implements Writable, Row, Comparable<Row> {
       }
     }
   }
+
+  /**
+   * Delete all versions of the specified column, given in
+   * <code>family:qualifier</code> notation, and with a timestamp less than
+   * or equal to the specified timestamp.
+   * @param column colon-delimited family and qualifier
+   * @param timestamp maximum version timestamp
+   * @deprecated use {@link #deleteColumn(byte[], byte[], long)} instead
+   */
+  public Delete deleteColumns(byte [] column, long timestamp) {
+    byte [][] parts = KeyValue.parseColumn(column);
+    this.deleteColumns(parts[0], parts[1], timestamp);
+    return this;
+  }
+
+  /**
+   * Delete the latest version of the specified column, given in
+   * <code>family:qualifier</code> notation.
+   * @param column colon-delimited family and qualifier
+   * @deprecated use {@link #deleteColumn(byte[], byte[])} instead
+   */
+  public Delete deleteColumn(byte [] column) {
+    byte [][] parts = KeyValue.parseColumn(column);
+    this.deleteColumn(parts[0], parts[1], HConstants.LATEST_TIMESTAMP);
+    return this;
+  }
+
+
 }

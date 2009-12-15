@@ -131,7 +131,7 @@ public class Get implements Writable {
     familyMap.put(family, set);
     return this;
   }
-  
+
   /**
    * Get versions of columns only within the specified timestamp range,
    * [minStamp, maxStamp).
@@ -396,5 +396,39 @@ public class Get implements Writable {
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("Can't find class " + className);
     }    
+  }
+
+    /**
+   * Adds an array of columns specified the old format, family:qualifier.
+   * <p>
+   * Overrides previous calls to addFamily for any families in the input.
+   * @param columns array of columns, formatted as <pre>family:qualifier</pre>
+   * @deprecated issue multiple {@link #addColumn(byte[], byte[])} instead
+   */
+  public Get addColumns(byte [][] columns) {
+    if (columns == null) return this;
+    for(int i = 0; i < columns.length; i++) {
+      try {
+        addColumn(columns[i]);
+      } catch(Exception e) {}
+    }
+    return this;
+  }
+
+  /**
+   *
+   * @param column Old format column.
+   * @return This.
+   * @deprecated use {@link #addColumn(byte[], byte[])} instead
+   */
+  public Get addColumn(final byte [] column) {
+    if (column == null) return this;
+    byte [][] split = KeyValue.parseColumn(column);
+    if (split.length > 1 && split[1] != null && split[1].length > 0) {
+      addColumn(split[0], split[1]);
+    } else {
+      addFamily(split[0]);
+    }
+    return this;
   }
 }

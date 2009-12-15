@@ -222,13 +222,18 @@ module HBase
       if method == "delete"
         @admin.deleteColumn(tableName, args[NAME])
       elsif method == "table_att"
-        args[MAX_FILESIZE]? htd.setMaxFileSize(JLong.valueOf(args[MAX_FILESIZE])) :  
-          htd.setMaxFileSize(HTableDescriptor::DEFAULT_MAX_FILESIZE);
-        args[READONLY]? htd.setReadOnly(JBoolean.valueOf(args[READONLY])) : 
-          htd.setReadOnly(HTableDescriptor::DEFAULT_READONLY);
-        args[MEMSTORE_FLUSHSIZE]? 
-          htd.setMemStoreFlushSize(JLong.valueOf(args[MEMSTORE_FLUSHSIZE])) :
-          htd.setMemStoreFlushSize(HTableDescriptor::DEFAULT_MEMSTORE_FLUSH_SIZE);
+        if args[MAX_FILESIZE]
+          htd.setMaxFileSize(JLong.valueOf(args[MAX_FILESIZE])) 
+        end
+        if args[READONLY] 
+          htd.setReadOnly(JBoolean.valueOf(args[READONLY])) 
+        end  
+        if args[MEMSTORE_FLUSHSIZE]
+          htd.setMemStoreFlushSize(JLong.valueOf(args[MEMSTORE_FLUSHSIZE]))
+        end
+        if args[DEFERRED_LOG_FLUSH]
+          htd.setDeferredLogFlush(JBoolean.valueOf(args[DEFERRED_LOG_FLUSH]))
+        end
         @admin.modifyTable(tableName.to_java_bytes, htd)
       else
         descriptor = hcd(args) 

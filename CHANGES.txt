@@ -128,6 +128,7 @@ Release 0.21.0 - Unreleased
                documentation doesn't work (Benoit Sigoure via JD)
    HBASE-2048  Small inconsistency in the "Example API Usage"
                (Benoit Sigoure via JD)
+   HBASE-2044  HBASE-1822 removed not-deprecated APIs
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

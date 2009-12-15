@@ -735,23 +735,24 @@ public class HLog implements HConstants, Syncable {
     public void run() {
       try {
         lock.lock();
-        while(!closed) {
+        // awaiting with a timeout doesn't always
+        // throw exceptions on interrupt
+        while(!this.isInterrupted()) {
 
-          // Wait until something has to be synced or do it if we waited enough
-          // time (useful if something appends but does not sync).
-          if (!queueEmpty.await(this.optionalFlushInterval,
-                TimeUnit.MILLISECONDS)) {
+          // Wait until something has to be hflushed or do it if we waited
+          // enough time (useful if something appends but does not hflush).
+          // 0 or less means that it timed out and maybe waited a bit more.
+          if (!(queueEmpty.awaitNanos(
+              this.optionalFlushInterval*1000000) <= 0)) {
             forceSync = true;
           }
 
-
-
-          // We got the signal, let's syncFS. We currently own the lock so new
+          // We got the signal, let's hflush. We currently own the lock so new
           // writes are waiting to acquire it in addToSyncQueue while the ones
-          // we sync are waiting on await()
+          // we hflush are waiting on await()
           hflush();
 
-          // Release all the clients waiting on the sync. Notice that we still
+          // Release all the clients waiting on the hflush. Notice that we still
           // own the lock until we get back to await at which point all the
           // other threads waiting will first acquire and release locks
           syncDone.signalAll();
@@ -774,7 +775,7 @@ public class HLog implements HConstants, Syncable {
      */
     public void addToSyncQueue(boolean force) {
 
-      // Don't bother if somehow our append was already synced
+      // Don't bother if somehow our append was already hflushed
       if (unflushedEntries.get() == 0) {
         return;
       }
@@ -786,7 +787,7 @@ public class HLog implements HConstants, Syncable {
         // Wake the thread
         queueEmpty.signal();
 
-        // Wait for it to syncFs
+        // Wait for it to hflush
         syncDone.await();
       } catch (InterruptedException e) {
         LOG.debug(getName() + " was interrupted while waiting for sync", e);

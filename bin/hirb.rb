@@ -176,7 +176,7 @@ HBASE SHELL COMMANDS:
            hbase> alter 't1', {NAME => 'f1', METHOD => 'delete'}
 
            You can also change table-scope attributes like MAX_FILESIZE
-           MEMSTORE_FLUSHSIZE and READONLY.
+           MEMSTORE_FLUSHSIZE, READONLY, and DEFERRED_LOG_FLUSH.
 
            For example, to change the max size of a family to 128MB, do:
            hbase> alter 't1', {METHOD => 'table_att', MAX_FILESIZE => '134217728'}

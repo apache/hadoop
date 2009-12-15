@@ -30,6 +30,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -528,5 +529,92 @@ public class Scan implements Writable {
         out.writeInt(0);
       }
     }
+  }
+
+   /**
+   * Parses a combined family and qualifier and adds either both or just the
+   * family in case there is not qualifier. This assumes the older colon
+   * divided notation, e.g. "data:contents" or "meta:".
+   * <p>
+   * Note: It will through an error when the colon is missing.
+   *
+   * @param familyAndQualifier
+   * @return A reference to this instance.
+   * @throws IllegalArgumentException When the colon is missing.
+   * @deprecated use {@link #addColumn(byte[], byte[])} instead
+   */
+  public Scan addColumn(byte[] familyAndQualifier) {
+    byte [][] fq = KeyValue.parseColumn(familyAndQualifier);
+    if (fq.length > 1 && fq[1] != null && fq[1].length > 0) {
+      addColumn(fq[0], fq[1]);
+    } else {
+      addFamily(fq[0]);
+    }
+    return this;
+  }
+
+  /**
+   * Adds an array of columns specified using old format, family:qualifier.
+   * <p>
+   * Overrides previous calls to addFamily for any families in the input.
+   *
+   * @param columns array of columns, formatted as <pre>family:qualifier</pre>
+   * @deprecated issue multiple {@link #addColumn(byte[], byte[])} instead
+   */
+  public Scan addColumns(byte [][] columns) {
+    for (int i = 0; i < columns.length; i++) {
+      addColumn(columns[i]);
+    }
+    return this;
+  }
+
+  /**
+   * Convenience method to help parse old style (or rather user entry on the
+   * command line) column definitions, e.g. "data:contents mime:". The columns
+   * must be space delimited and always have a colon (":") to denote family
+   * and qualifier.
+   *
+   * @param columns  The columns to parse.
+   * @return A reference to this instance.
+   * @deprecated use {@link #addColumn(byte[], byte[])} instead
+   */
+  public Scan addColumns(String columns) {
+    String[] cols = columns.split(" ");
+    for (String col : cols) {
+      addColumn(Bytes.toBytes(col));
+    }
+    return this;
+  }
+
+  /**
+   * Helps to convert the binary column families and qualifiers to a text
+   * representation, e.g. "data:mimetype data:contents meta:". Binary values
+   * are properly encoded using {@link Bytes#toBytesBinary(String)}.
+   *
+   * @return The columns in an old style string format.
+   * @deprecated
+   */
+  public String getInputColumns() {
+    String cols = "";
+    for (Map.Entry<byte[], NavigableSet<byte[]>> e :
+      familyMap.entrySet()) {
+      byte[] fam = e.getKey();
+      if (cols.length() > 0) cols += " ";
+      NavigableSet<byte[]> quals = e.getValue();
+      // check if this family has qualifiers
+      if (quals != null && quals.size() > 0) {
+        String cs = "";
+        for (byte[] qual : quals) {
+          if (cs.length() > 0) cs += " ";
+          // encode values to make parsing easier later
+          cs += Bytes.toStringBinary(fam) + ":" + Bytes.toStringBinary(qual);
+        }
+        cols += cs;
+      } else {
+        // only add the family but with old style delimiter
+        cols += Bytes.toStringBinary(fam) + ":";
+      }
+    }
+    return cols;
   }
 }
