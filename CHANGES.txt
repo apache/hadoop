@@ -61,6 +61,8 @@ Trunk (unreleased changes)
 
     HADOOP-6413. Move TestReflectionUtils to Common. (Todd Lipcon via tomwhite)
 
+    HADOOP-6222. Core doesn't have TestCommonCLI facility. (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
