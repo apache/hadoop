@@ -126,6 +126,8 @@ Release 0.21.0 - Unreleased
    HBASE-2040  Fixes to group commit
    HBASE-2047  Example command in the "Getting Started" 
                documentation doesn't work (Benoit Sigoure via JD)
+   HBASE-2048  Small inconsistency in the "Example API Usage"
+               (Benoit Sigoure via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

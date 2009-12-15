@@ -27,7 +27,7 @@ Provides HBase Client
 </ul>
 
  <h2><a name="overview">Overview</a></h2>
- <p>To administer HBase, create and drop tables, list and alter tables, 
+ <p>To administer HBase, create and drop tables, list and alter tables,
  use {@link org.apache.hadoop.hbase.client.HBaseAdmin}.  Once created, table access is via an instance
  of {@link org.apache.hadoop.hbase.client.HTable}.  You add content to a table a row at a time.  To insert,
  create an instance of a {@link org.apache.hadoop.hbase.client.Put} object.  Specify value, target column
@@ -53,11 +53,11 @@ in different formats.
  This means that the ZooKeeper quorum to use must be on the client CLASSPATH.
  Usually this means make sure the client can find your <code>hbase-site.xml</code>.
  </p>
- 
+
 <h2><a name="client_example">Example API Usage</a></h2>
 
-<p>Once you have a running HBase, you probably want a way to hook your application up to it. 
-  If your application is in Java, then you should use the Java API. Here's an example of what 
+<p>Once you have a running HBase, you probably want a way to hook your application up to it.
+  If your application is in Java, then you should use the Java API. Here's an example of what
   a simple client might look like.  This example assumes that you've created a table called
   "myTable" with a column family called "myColumnFamily".
 </p>
@@ -87,7 +87,7 @@ public class MyLittleHBaseClient {
     HBaseConfiguration config = new HBaseConfiguration();
 
     // This instantiates an HTable object that connects you to
-    // the "myLittleHBaseTable" table. 
+    // the "myLittleHBaseTable" table.
     HTable table = new HTable(config, "myLittleHBaseTable");
 
     // To add to a row, use Put.  A Put constructor takes the name of the row
@@ -100,11 +100,11 @@ public class MyLittleHBaseClient {
     // applies current time to the edits.
     Put p = new Put(Bytes.toBytes("myLittleRow"));
 
-    // To set the value you'd like to update in the row 'myRow', specify the
-    // column family, column qualifier, and value of the table cell you'd like
-    // to update.  The column family must already exist in your table schema.
-    // The qualifier can be anything.  All must be specified as byte arrays as
-    // hbase is all about byte arrays.  Lets pretend the table
+    // To set the value you'd like to update in the row 'myLittleRow', specify
+    // the column family, column qualifier, and value of the table cell you'd
+    // like to update.  The column family must already exist in your table
+    // schema.  The qualifier can be anything.  All must be specified as byte
+    // arrays as hbase is all about byte arrays.  Lets pretend the table
     // 'myLittleHBaseTable' was created with a family 'myLittleFamily'.
     p.add(Bytes.toBytes("myLittleFamily"), Bytes.toBytes("someQualifier"),
       Bytes.toBytes("Some Value"));
@@ -156,12 +156,12 @@ public class MyLittleHBaseClient {
 </pre></blockquote>
 </div>
 
-<p>There are many other methods for putting data into and getting data out of 
+<p>There are many other methods for putting data into and getting data out of
   HBase, but these examples should get you started. See the HTable javadoc for
-  more methods. Additionally, there are methods for managing tables in the 
+  more methods. Additionally, there are methods for managing tables in the
   HBaseAdmin class.</p>
 
-<p>If your client is NOT Java, then you should consider the Thrift or REST 
+<p>If your client is NOT Java, then you should consider the Thrift or REST
   libraries.</p>
 
 <h2><a name="related" >Related Documentation</a></h2>
@@ -173,9 +173,9 @@ public class MyLittleHBaseClient {
 </pre></code>
 </div>
 
-<p>There are many other methods for putting data into and getting data out of 
+<p>There are many other methods for putting data into and getting data out of
   HBase, but these examples should get you started. See the HTable javadoc for
-  more methods. Additionally, there are methods for managing tables in the 
+  more methods. Additionally, there are methods for managing tables in the
   HBaseAdmin class.</p>
 
 </body>
