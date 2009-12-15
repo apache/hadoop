@@ -94,9 +94,6 @@ Trunk (unreleased changes)
     HADOOP-6391. Classpath should not be part of command line arguments.
     (Cristian Ivascu via tomwhite)
 
-    HADOOP-5901. FileSystem.fixName() has unexpected behaviour.
-    (Aaron Kimball via tomwhite)
-
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

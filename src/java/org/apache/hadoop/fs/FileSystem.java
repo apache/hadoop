@@ -21,7 +21,6 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -109,15 +108,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
-    try {
-      String uri = conf.get(FS_DEFAULT_NAME_KEY, null);
-      checkName(uri);
-      return new URI(uri);
-    } catch (Exception e) {
-      // fs.default.name not set, or set to an invalid value. Create
-      // one based on a known-good URI
-      return URI.create(DEFAULT_FS);
-    }
+    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
   }
 
   /** Set the default filesystem URI in a configuration.
@@ -131,12 +122,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Set the default filesystem URI in a configuration.
    * @param conf the configuration to alter
    * @param uri the new default filesystem uri
-   * @throws IOException if the URI is invalid.
    */
-  public static void setDefaultUri(Configuration conf, String uri)
-      throws IOException {
-    checkName(uri);
-    setDefaultUri(conf, URI.create(uri));
+  public static void setDefaultUri(Configuration conf, String uri) {
+    setDefaultUri(conf, URI.create(fixName(uri)));
   }
 
   /** Called after a new FileSystem instance is constructed.
@@ -150,52 +138,22 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
-
-  /** Checks that a FileSystem name is given in an understandable format.
-   * The old "local" alias for "file:///" is unsupported, as are any
-   * URIs without a scheme component.
-   * @throws IOException if a name is in an unsupported format
-   */
-  private static void checkName(String name) throws IOException {
-    if (null == name) {
-      throw new IOException("Null FS name provided to checkName()");
-    } else if ("local".equals(name)) {
-      throw new IOException ("FileSystem 'local' is not supported; use 'file:///'");
-    } else {
-      // Try parsing this into a URI
-      try {
-        URI uri = new URI(name);
-
-        // No scheme; don't know how to parse this.
-        if (null == uri.getScheme()) {
-          throw new IOException("FileSystem name '" + name
-              + "' is provided in an unsupported format. (Try 'hdfs://"
-              + name + "' instead?)");
-        }
-
-        // This may have been a misparse. java.net.URI specifies that
-        // a URI is of the form:
-        // URI ::= [SCHEME-PART:]SCHEME-SPECIFIC-PART
-        //
-        // The scheme-specific-part may be parsed in numerous ways, but if
-        // it starts with a '/' character, that makes it a "hierarchical URI",
-        // subject to the following parsing:
-        // SCHEME-SPECIFIC-PART ::= "//" AUTHORITY-PART
-        // AUTHORITY-PART ::= [USER-INFO-PART] HOSTNAME [ ":" PORT ]
-        //
-        // In Hadoop, we require a host-based authority as well.
-        // java.net.URI parses left-to-right, so deprecated hostnames of the
-        // form 'foo:8020' will have 'foo' as their scheme and '8020' as their
-        // scheme-specific-part. We don't want this behavior.
-        if (null == uri.getAuthority()) {
-          throw new IOException("FileSystem name '" + name
-              + "' is provided in an unsupported format. (Try 'hdfs://"
-              + name + "' instead?)");
-        }
-      } catch (URISyntaxException use) {
-        throw new IOException("FileSystem name cannot be understood as a URI", use);
-      }
+  
+  /** Update old-format filesystem names, for back-compatibility.  This should
+   * eventually be replaced with a checkName() method that throws an exception
+   * for old-format names. */ 
+  private static String fixName(String name) {
+    // convert old-format name to new-format name
+    if (name.equals("local")) {         // "local" is now "file:///".
+      LOG.warn("\"local\" is a deprecated filesystem name."
+               +" Use \"file:///\" instead.");
+      name = "file:///";
+    } else if (name.indexOf('/')==-1) {   // unqualified is "hdfs://"
+      LOG.warn("\""+name+"\" is a deprecated filesystem name."
+               +" Use \"hdfs://"+name+"/\" instead.");
+      name = "hdfs://"+name;
     }
+    return name;
   }
 
   /**
