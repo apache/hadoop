@@ -59,6 +59,8 @@ Trunk (unreleased changes)
     HADOOP-5958. Use JDK 1.6 File APIs in DF.java wherever possible.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-6413. Move TestReflectionUtils to Common. (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
