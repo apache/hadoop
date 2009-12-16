@@ -1222,6 +1222,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6375. Sync documentation for FsShell du with its implementation.
     (Todd Lipcon via cdouglas)
 
+    HADOOP-6441. Protect web ui from cross site scripting attacks (XSS) on
+    the host http header and using encoded utf-7. (omalley)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
