@@ -852,7 +852,11 @@ public class HLog implements HConstants, Syncable {
     }
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
-      if (this.numEntries.get() % this.flushlogentries == 0) LOG.info("edit=" + this.numEntries.get() + ", write=" + logKey.toString());
+      if (LOG.isDebugEnabled() && 
+          (this.numEntries.get() % this.flushlogentries == 0)) {
+        LOG.debug("edit=" + this.numEntries.get() + ", write=" +
+          logKey.toString());
+      }
       this.writer.append(logKey, logEdit);
       long took = System.currentTimeMillis() - now;
       if (took > 1000) {
