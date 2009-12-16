@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Trunk (unreleased changes)
+Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 
@@ -1135,6 +1135,9 @@ Trunk (unreleased changes)
     IllegalArgumentException is thrown (cos)
 
     HADOOP-6428. HttpServer sleeps with negative values. (cos)
+
+    HADOOP-6441. Protect web ui from cross site scripting attacks (XSS) on
+    the host http header and using encoded utf-7. (omalley)
 
 Release 0.20.2 - Unreleased
 

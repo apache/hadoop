@@ -624,6 +624,25 @@ public class HttpServer implements FilterContainer {
         }
         return result;
       }
+      
+      /**
+       * Quote the url so that users specifying the HOST HTTP header
+       * can't inject attacks.
+       */
+      @Override
+      public StringBuffer getRequestURL(){
+        String url = rawRequest.getRequestURL().toString();
+        return new StringBuffer(HtmlQuoting.quoteHtmlChars(url));
+      }
+      
+      /**
+       * Quote the server name so that users specifying the HOST HTTP header
+       * can't inject attacks.
+       */
+      @Override
+      public String getServerName() {
+        return HtmlQuoting.quoteHtmlChars(rawRequest.getServerName());
+      }
     }
 
     @Override
@@ -641,6 +660,10 @@ public class HttpServer implements FilterContainer {
                          ) throws IOException, ServletException {
       HttpServletRequestWrapper quoted = 
         new RequestQuoter((HttpServletRequest) request);
+      final HttpServletResponse httpResponse = (HttpServletResponse) response;
+      // set the default to UTF-8 so that we don't need to worry about IE7
+      // choosing to interpret the special characters as UTF-7
+      httpResponse.setContentType("text/html;charset=utf-8");
       chain.doFilter(quoted, response);
     }
 
