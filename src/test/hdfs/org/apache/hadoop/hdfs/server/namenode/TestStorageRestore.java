@@ -33,7 +33,8 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.cli.TestHDFSCLI;
+import org.apache.hadoop.cli.CmdFactoryDFS;
+import org.apache.hadoop.cli.util.CLITestData;
 import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -132,8 +133,8 @@ public class TestStorageRestore extends TestCase {
     Iterator<StorageDirectory> it = fi.dirIterator();
     while(it.hasNext()) {
       StorageDirectory sd = it.next();
-      if(sd.getRoot().getCanonicalPath().equals(path2.getCanonicalPath()) ||
-          sd.getRoot().getCanonicalPath().equals(path3.getCanonicalPath())) {
+      if(sd.getRoot().getAbsolutePath().equals(path2.getAbsolutePath()) ||
+          sd.getRoot().getAbsolutePath().equals(path3.getAbsolutePath())) {
         al.add(sd);
       }
     }
@@ -351,25 +352,25 @@ public class TestStorageRestore extends TestCase {
 
       String cmd = "-fs NAMENODE -restoreFailedStorage false";
       String namenode = config.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
-      CommandExecutor executor = new TestHDFSCLI.DFSAdminCmdExecutor(namenode);
+      CommandExecutor executor = 
+        CmdFactoryDFS.getCommandExecutor(
+          new CLITestData.TestCmd(cmd, CLITestData.TestCmd.CommandType.DFSADMIN),
+          namenode);
       executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();
-      LOG.info("After set true call restore is " + restore);
-      assertEquals(restore, false);
+      assertFalse("After set true call restore is " + restore, restore);
 
       // run one more time - to set it to true again
       cmd = "-fs NAMENODE -restoreFailedStorage true";
       executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();
-      LOG.info("After set false call restore is " + restore);
-      assertEquals(restore, true);
+      assertTrue("After set false call restore is " + restore, restore);
       
    // run one more time - no change in value
       cmd = "-fs NAMENODE -restoreFailedStorage check";
       CommandExecutor.Result cmdResult = executor.executeCommand(cmd);
       restore = fsi.getRestoreFailedStorage();
-      LOG.info("After check call restore is " + restore);
-      assertEquals(restore, true);
+      assertTrue("After check call restore is " + restore, restore);
       String commandOutput = cmdResult.getCommandOutput();
       commandOutput.trim();
       assertTrue(commandOutput.contains("restoreFailedStorage is set to true"));

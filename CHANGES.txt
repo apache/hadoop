@@ -36,6 +36,8 @@ Trunk (unreleased changes)
 
     HDFS-804. New unit tests for concurrent lease recovery (cos)
 
+    HDFS-832. HDFS side of HADOOP-6222. (cos)
+
   OPTIMIZATIONS
 
   BUG FIXES

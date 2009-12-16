@@ -16688,7 +16688,7 @@
         <!-- No cleanup -->
       </cleanup-commands>
       <comparators>
-        <!-- miniDFS cluster started in TestCLI is set to match this output -->
+        <!-- miniDFS cluster started in CLITestHelper is set to match this output -->
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
           <expected-output>^Rack: \/rack1\s*127\.0\.0\.1:\d+\s\(localhost.*\)\s*127\.0\.0\.1:\d+\s\(localhost.*\)</expected-output>

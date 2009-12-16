@@ -18,27 +18,27 @@
 
 package org.apache.hadoop.cli;
 
-import org.apache.hadoop.cli.util.CommandExecutor;
 import org.apache.hadoop.cli.util.CLITestData.TestCmd;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.authorize.PolicyProvider;
-import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
+import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.Test;
 
-public class TestHDFSCLI extends TestCLI{
+public class TestHDFSCLI extends CLITestHelper {
 
   protected MiniDFSCluster dfsCluster = null;
   protected DistributedFileSystem dfs = null;
   protected String namenode = null;
-  protected DFSAdminCmdExecutor dfsAdmCmdExecutor = null;
-  protected FSCmdExecutor fsCmdExecutor = null;
   
+  @Before
+  @Override
   public void setUp() throws Exception {
     super.setUp();
     conf.setClass(PolicyProvider.POLICY_PROVIDER_CONFIG,
@@ -57,8 +57,6 @@ public class TestHDFSCLI extends TestCLI{
     namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
     
     username = System.getProperty("user.name");
-    dfsAdmCmdExecutor = new DFSAdminCmdExecutor(namenode);
-    fsCmdExecutor =  new FSCmdExecutor(namenode);
 
     FileSystem fs = dfsCluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
@@ -66,10 +64,13 @@ public class TestHDFSCLI extends TestCLI{
     dfs = (DistributedFileSystem) fs;
   }
 
+  @Override
   protected String getTestFile() {
     return "testHDFSConf.xml";
   }
   
+  @After
+  @Override
   public void tearDown() throws Exception {
     dfs.close();
     dfsCluster.shutdown();
@@ -77,6 +78,7 @@ public class TestHDFSCLI extends TestCLI{
     super.tearDown();
   }
 
+  @Override
   protected String expandCommand(final String cmd) {
     String expCmd = cmd;
     expCmd = expCmd.replaceAll("NAMENODE", namenode);
@@ -84,43 +86,14 @@ public class TestHDFSCLI extends TestCLI{
     return expCmd;
   }
   
+  @Override
   protected Result execute(TestCmd cmd) throws Exception {
-    CommandExecutor executor = null;
-    switch(cmd.getType()) {
-    case DFSADMIN:
-      executor = dfsAdmCmdExecutor;
-      break;
-    case FS:
-      executor = fsCmdExecutor;
-      break;
-    default:
-      throw new Exception("Unknow type of Test command:"+ cmd.getType());
-    }
-    return executor.executeCommand(cmd.getCmd());
+    return CmdFactoryDFS.getCommandExecutor(cmd, namenode).executeCommand(cmd.getCmd());
   }
-  
-  public static class DFSAdminCmdExecutor extends CommandExecutor {
-    private String namenode = null;
-    public DFSAdminCmdExecutor(String namenode) {
-      this.namenode = namenode;
-    }
-    
-    protected void execute(final String cmd) throws Exception{
-      DFSAdmin shell = new DFSAdmin();
-      String[] args = getCommandAsArgs(cmd, "NAMENODE", this.namenode);
-      ToolRunner.run(shell, args);
-    }
-  }
-  
-  public static class FSCmdExecutor extends CommandExecutor {
-    private String namenode = null;
-    public FSCmdExecutor(String namenode) {
-      this.namenode = namenode;
-    }
-    protected void execute(final String cmd) throws Exception{
-      FsShell shell = new FsShell();
-      String[] args = getCommandAsArgs(cmd, "NAMENODE", this.namenode);
-      ToolRunner.run(shell, args);
-    }
+
+  @Test
+  @Override
+  public void testAll () {
+    super.testAll();
   }
 }
