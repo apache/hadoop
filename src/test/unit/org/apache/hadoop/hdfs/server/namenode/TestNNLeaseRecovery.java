@@ -157,6 +157,27 @@ public class TestNNLeaseRecovery {
     assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
       "AlreadyBeingCreatedException here", false);
   }
+
+  /**
+   * Mocks FSNamesystem instance, adds an empty file with 0 blocks
+   * and invokes lease recovery method. 
+   * 
+   */
+  @Test
+  public void testInternalReleaseLease_0blocks () throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+
+    mockFileBlocks(0, null, null, file, dnd, ps, false);
+
+    assertTrue("True has to be returned in this case",
+      fsn.internalReleaseLease(lm, file.toString(), null));
+  }
   
   /**
    * Mocks FSNamesystem instance, adds an empty file with 1 block
@@ -346,16 +367,6 @@ public class TestNNLeaseRecovery {
     when(b.getBlockUCState()).thenReturn(penUltState);
     when(b1.getBlockUCState()).thenReturn(lastState);
     BlockInfo[] blocks;
-    switch (fileBlocksNumber) {
-      case 0:
-        blocks = new BlockInfo[0];
-        break;
-      case 1:
-        blocks = new BlockInfo[]{b1};
-        break;
-      default:
-        blocks = new BlockInfo[]{b, b1};
-    }
 
     FSDirectory fsDir = mock(FSDirectory.class);
     INodeFileUnderConstruction iNFmock = mock(INodeFileUnderConstruction.class);
@@ -368,14 +379,29 @@ public class TestNNLeaseRecovery {
     when(fsn.getFSImage().getEditLog()).thenReturn(editLog);
     fsn.getFSImage().setFSNamesystem(fsn);
     
+    switch (fileBlocksNumber) {
+      case 0:
+        blocks = new BlockInfo[0];
+        break;
+      case 1:
+        blocks = new BlockInfo[]{b1};
+        when(iNFmock.getLastBlock()).thenReturn(b1);
+        break;
+      default:
+        when(iNFmock.getPenultimateBlock()).thenReturn(b);
+        when(iNFmock.getLastBlock()).thenReturn(b1);
+        blocks = new BlockInfo[]{b, b1};
+    }
+    
     when(iNFmock.getBlocks()).thenReturn(blocks);
-    when(iNFmock.numBlocks()).thenReturn(2);
-    when(iNFmock.getPenultimateBlock()).thenReturn(b);
-    when(iNFmock.getLastBlock()).thenReturn(b1);
+    when(iNFmock.numBlocks()).thenReturn(blocks.length);
     when(iNFmock.isUnderConstruction()).thenReturn(true);
+    when(iNFmock.convertToInodeFile()).thenReturn(iNFmock);    
     fsDir.addFile(file.toString(), ps, (short)3, 1l, "test", 
       "test-machine", dnd, 1001l);
 
+    fsn.leaseManager = mock(LeaseManager.class);
+    fsn.leaseManager.addLease("mock-lease", file.toString());
     if (setStoredBlock) {
       when(b1.getINode()).thenReturn(iNFmock);
       fsn.blockManager.blocksMap.addINode(b1, iNFmock);

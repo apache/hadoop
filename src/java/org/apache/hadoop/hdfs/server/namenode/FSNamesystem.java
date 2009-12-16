@@ -1953,8 +1953,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     BlockInfoUnderConstruction lastBlock = pendingFile.getLastBlock();
     BlockUCState lastBlockState = lastBlock.getBlockUCState();
     BlockInfo penultimateBlock = pendingFile.getPenultimateBlock();
-    BlockUCState penultimateBlockState = (penultimateBlock == null ?
-        BlockUCState.COMPLETE : penultimateBlock.getBlockUCState());
+    boolean penultimateBlockMinReplication;
+    BlockUCState penultimateBlockState;
+    if (penultimateBlock == null) {
+      penultimateBlockState = BlockUCState.COMPLETE;
+      // If penultimate block doesn't exist then its minReplication is met
+      penultimateBlockMinReplication = true;
+    } else {
+      penultimateBlockState = BlockUCState.COMMITTED;
+      penultimateBlockMinReplication = 
+        blockManager.checkMinReplication(penultimateBlock);
+    }
     assert penultimateBlockState == BlockUCState.COMPLETE ||
            penultimateBlockState == BlockUCState.COMMITTED :
            "Unexpected state of penultimate block in " + src;
@@ -1965,7 +1974,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       break;
     case COMMITTED:
       // Close file if committed blocks are minimally replicated
-      if(blockManager.checkMinReplication(penultimateBlock) &&
+      if(penultimateBlockMinReplication &&
           blockManager.checkMinReplication(lastBlock)) {
         finalizeINodeFileUnderConstruction(src, pendingFile);
         NameNode.stateChangeLog.warn("BLOCK*"

@@ -96,6 +96,9 @@ Trunk (unreleased changes)
 
     HDFS-825. Build fails to pull latest hadoop-core-* artifacts (cos)
 
+    HDFS-812. FSNamesystem#internalReleaseLease throws NullPointerException on
+    a single-block file's lease recovery. (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
