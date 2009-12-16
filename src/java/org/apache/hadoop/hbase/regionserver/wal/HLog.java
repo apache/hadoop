@@ -582,7 +582,7 @@ public class HLog implements HConstants, Syncable {
     try {
       logSyncerThread.interrupt();
       // Make sure we synced everything
-      logSyncerThread.join();
+      logSyncerThread.join(this.optionalFlushInterval*2);
     } catch (InterruptedException e) {
       LOG.error("Exception while waiting for syncer thread to die", e);
     }
