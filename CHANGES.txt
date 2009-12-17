@@ -63,6 +63,8 @@ Trunk (unreleased changes)
 
     HADOOP-6222. Core doesn't have TestCommonCLI facility. (cos)
 
+    HADOOP-6426. Create ant build for running EC2 unit tests. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
