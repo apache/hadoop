@@ -18,29 +18,21 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.Set;
 
 import junit.framework.Assert;
-
-import org.apache.hadoop.fs.Options.CreateOpts;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 /**
  * Tests {@link FileContext.#deleteOnExit(Path)} functionality.
  */
 public class TestFileContextDeleteOnExit {
-  private static String TEST_ROOT_DIR =
-    System.getProperty("test.build.data", "/tmp") + "/test";
-  
-  private static byte[] data = new byte[1024 * 2]; // two blocks of data
-  {
-    for (int i = 0; i < data.length; i++) {
-      data[i] = (byte) (i % 10);
-    }
-  }
+  private static int blockSize = 1024;
+  private static int numBlocks = 2;
   
   private FileContext fc;
   
@@ -51,23 +43,9 @@ public class TestFileContextDeleteOnExit {
   
   @After
   public void tearDown() throws IOException {
-    fc.delete(getTestRootPath(), true);
+    fc.delete(getTestRootPath(fc), true);
   }
   
-  private Path getTestRootPath() {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR));
-  }
-  
-  private Path getTestPath(String pathString) {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
-  }
-  
-  private void createFile(FileContext fc, Path path) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
-        CreateOpts.createParent());
-    out.write(data, 0, data.length);
-    out.close();
-  }
   
   private void checkDeleteOnExitData(int size, FileContext fc, Path... paths) {
     Assert.assertEquals(size, FileContext.DELETE_ON_EXIT.size());
@@ -81,21 +59,21 @@ public class TestFileContextDeleteOnExit {
   @Test
   public void testDeleteOnExit() throws Exception {
     // Create deleteOnExit entries
-    Path file1 = getTestPath("file1");
-    createFile(fc, file1);
+    Path file1 = getTestRootPath(fc, "file1");
+    createFile(fc, file1, numBlocks, blockSize);
     fc.deleteOnExit(file1);
     checkDeleteOnExitData(1, fc, file1);
     
     // Ensure shutdown hook is added
     Assert.assertTrue(Runtime.getRuntime().removeShutdownHook(FileContext.FINALIZER));
     
-    Path file2 = getTestPath("dir1/file2");
-    createFile(fc, file2);
+    Path file2 = getTestRootPath(fc, "dir1/file2");
+    createFile(fc, file2, numBlocks, blockSize);
     fc.deleteOnExit(file2);
     checkDeleteOnExitData(1, fc, file1, file2);
     
-    Path dir = getTestPath("dir3/dir4/dir5/dir6");
-    createFile(fc, dir);
+    Path dir = getTestRootPath(fc, "dir3/dir4/dir5/dir6");
+    createFile(fc, dir, numBlocks, blockSize);
     fc.deleteOnExit(dir);
     checkDeleteOnExitData(1, fc, file1, file2, dir);
     

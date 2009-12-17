@@ -20,13 +20,15 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.EnumSet;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 /**
  * <p>
@@ -49,32 +51,18 @@ import org.junit.Test;
  */
 public abstract class FileContextURIBase {
   private static final String basePath = System.getProperty("test.build.data",
-      "build/test/data") + "/testContextURI";
+  "build/test/data") + "/testContextURI";
   private static final Path BASE = new Path(basePath);
   protected FileContext fc1;
   protected FileContext fc2;
-
-  private static int BLOCK_SIZE = 1024;
-
-  private static byte[] data = new byte[BLOCK_SIZE * 2]; // two blocks of data
-  {
-    for (int i = 0; i < data.length; i++) {
-      data[i] = (byte) (i % 10);
-    }
-  }
 
   //Helper method to make path qualified
   protected Path qualifiedPath(String path, FileContext fc) {
     return fc.makeQualified(new Path(BASE, path));
   }
 
-  // Helper method to create file and write data to file
-  protected void createFile(Path path, FileContext fc) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
-        Options.CreateOpts.createParent());
-    out.write(data, 0, data.length);
-    out.close();
-  }
+  @Before
+  public void setUp() throws Exception { }
 
   @After
   public void tearDown() throws Exception {
@@ -100,7 +88,7 @@ public abstract class FileContextURIBase {
       Assert.assertFalse(fc2.exists(testPath));
 
       // Now create file
-      createFile(testPath, fc1);
+      createFile(fc1, testPath);
       // Ensure fc2 has the created file
       Assert.assertTrue(fc2.exists(testPath));
     }
@@ -117,7 +105,7 @@ public abstract class FileContextURIBase {
       Assert.assertFalse(fc2.exists(testPath));
 
       // Create a file on fc2's file system using fc1
-      createFile(testPath, fc1);
+      createFile(fc1, testPath);
       Assert.fail("Create file with null name should throw IllegalArgumentException.");
     } catch (IllegalArgumentException e) {
       // expected
@@ -134,11 +122,11 @@ public abstract class FileContextURIBase {
     Assert.assertFalse(fc2.exists(testPath));
 
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
 
     // Create same file with fc1
     try {
-      createFile(testPath, fc2);
+      createFile(fc2, testPath);
       Assert.fail("Create existing file should throw an IOException.");
     } catch (IOException e) {
       // expected
@@ -158,7 +146,7 @@ public abstract class FileContextURIBase {
     Assert.assertFalse(fc2.exists(testPath));
 
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
 
     // Ensure using fc2 that file is created
     Assert.assertTrue(fc2.isDirectory(testPath.getParent()));
@@ -240,7 +228,7 @@ public abstract class FileContextURIBase {
     Assert.assertTrue(fc2.exists(testDir));
 
     // Create file on fc1 using fc2 context
-    createFile(qualifiedPath("test/hadoop/file", fc2), fc1);
+    createFile(fc1, qualifiedPath("test/hadoop/file", fc2));
 
     Path testSubDir = qualifiedPath("test/hadoop/file/subdir", fc2);
     try {
@@ -292,7 +280,7 @@ public abstract class FileContextURIBase {
     Assert.assertFalse(fc2.exists(testPath));
 
     // First create a file on file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
 
     // Ensure file exist
     Assert.assertTrue(fc2.exists(testPath));
@@ -319,7 +307,7 @@ public abstract class FileContextURIBase {
 
     // TestCase2 : Create , Delete , Delete file
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
     // Ensure file exist
     Assert.assertTrue(fc2.exists(testPath));
 
@@ -346,7 +334,7 @@ public abstract class FileContextURIBase {
 
     // TestCase2 : Create , Delete , Delete file
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
     // Ensure file exist
     Assert.assertTrue(fc2.exists(testPath));
 
@@ -440,7 +428,7 @@ public abstract class FileContextURIBase {
     Path testPath = qualifiedPath(testFile, fc2);
 
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
     // Get modification time using fc2 and fc1
     fc1ModificationTime = fc1.getFileStatus(testPath).getModificationTime();
     fc2ModificationTime = fc2.getFileStatus(testPath).getModificationTime();
@@ -454,7 +442,7 @@ public abstract class FileContextURIBase {
     Path path2 = fc2.makeQualified(new Path(BASE, fileName));
 
     // Create a file on fc2's file system using fc1
-    createFile(path2, fc1);
+    createFile(fc1, path2);
     FsStatus fc2Status = fc2.getFsStatus(path2);
 
     // FsStatus , used, free and capacity are non-negative longs
