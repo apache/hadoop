@@ -38,6 +38,9 @@ Trunk (unreleased changes)
 
     HDFS-832. HDFS side of HADOOP-6222. (cos)
 
+    HDFS-840. Change tests to use FileContext test helper introduced in
+    HADOOP-6394. (Jitendra Nath Pandey via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
