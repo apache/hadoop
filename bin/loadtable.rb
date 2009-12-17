@@ -108,7 +108,7 @@ htd = HTableDescriptor.new(tableName)
 htd.addFamily(hcd)
 previouslastkey = HConstants::EMPTY_START_ROW
 count = map.size()
-for i in map.descendingIterator()
+for i in map.descendingKeySet().iterator()
   tuple = map.get(i)
   startkey = i
   count = count - 1

@@ -122,6 +122,8 @@ Release 0.21.0 - Unreleased
    HBASE-1994  Master will lose hlog entries while splitting if region has
                empty oldlogfile.log (Lars George via Stack)
    HBASE-2022  NPE in housekeeping kills RS
+   HBASE-2034  [Bulk load tools] loadtable.rb calls an undefined method
+               'descendingIterator' (Ching-Shen Chen via Stack)
    HBASE-2033  Shell scan 'limit' is off by one
    HBASE-2040  Fixes to group commit
    HBASE-2047  Example command in the "Getting Started" 
