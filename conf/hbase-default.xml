@@ -114,7 +114,7 @@
   </property>
   <property>
     <name>hbase.client.pause</name>
-    <value>2000</value>
+    <value>1000</value>
     <description>General client pause value.  Used mostly as value to wait
     before running a retry of a failed get, region lookup, etc.</description>
   </property>
@@ -164,9 +164,10 @@
   </property>
   <property>
     <name>hbase.regionserver.msginterval</name>
-    <value>3000</value>
+    <value>1000</value>
     <description>Interval between messages from the RegionServer to HMaster
-    in milliseconds.  Default is 3 seconds.
+    in milliseconds. Use a high value like 3000 for clusters with more than 10
+    nodes. Default is 1 second so that HBase seems more 'live'.
     </description>
   </property>
   <property>

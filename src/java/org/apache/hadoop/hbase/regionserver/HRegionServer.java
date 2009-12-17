@@ -252,7 +252,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     // Config'ed params
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
+    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 1 * 1000);
 
     sleeper = new Sleeper(this.msgInterval, this.stopRequested);
 

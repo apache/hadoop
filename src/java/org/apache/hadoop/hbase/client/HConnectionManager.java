@@ -288,7 +288,7 @@ public class HConnectionManager implements HConstants {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 2 * 1000);
+      this.pause = conf.getLong("hbase.client.pause", 1 * 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
