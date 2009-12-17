@@ -480,7 +480,7 @@ public class HLog implements HConstants, Syncable {
       LOG.debug("Found " + sequenceNumbers.size() + " hlogs to remove " +
         " out of total " + this.outputfiles.size() + "; " +
         "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
-        " from region " + Bytes.toString(oldestRegion));
+        " from region " + Bytes.toStringBinary(oldestRegion));
     }
     if (sequenceNumbers.size() > 0) {
       for (Long seq : sequenceNumbers) {
@@ -493,7 +493,7 @@ public class HLog implements HConstants, Syncable {
         oldestRegion: getOldestRegion(oldestOutstandingSeqNum);
       LOG.info("Too many hlogs: logs=" + countOfLogs + ", maxlogs=" +
         this.maxLogs + "; forcing flush of region with oldest edits: " +
-        Bytes.toString(regionToFlush));
+        Bytes.toStringBinary(regionToFlush));
     }
     return regionToFlush;
   }
@@ -1098,7 +1098,7 @@ public class HLog implements HConstants, Syncable {
                 LinkedList<HLogEntry> queue = logEntries.get(regionName);
                 if (queue == null) {
                   queue = new LinkedList<HLogEntry>();
-                  LOG.debug("Adding queue for " + Bytes.toString(regionName));
+                  LOG.debug("Adding queue for " + Bytes.toStringBinary(regionName));
                   logEntries.put(regionName, queue);
                 }
                 HLogEntry hle = new HLogEntry(val, key);
@@ -1145,7 +1145,7 @@ public class HLog implements HConstants, Syncable {
         ExecutorService threadPool =
           Executors.newFixedThreadPool(logWriterThreads);
         for (final byte[] key : logEntries.keySet()) {
-          Thread thread = new Thread(Bytes.toString(key)) {
+          Thread thread = new Thread(Bytes.toStringBinary(key)) {
             @Override
             public void run() {
               LinkedList<HLogEntry> entries = logEntries.get(key);
@@ -1188,7 +1188,7 @@ public class HLog implements HConstants, Syncable {
                     logWriters.put(key, wap);
                     if (LOG.isDebugEnabled()) {
                       LOG.debug("Creating new hlog file writer for path "
-                          + logfile + " and region " + Bytes.toString(key));
+                          + logfile + " and region " + Bytes.toStringBinary(key));
                     }
 
                     if (old != null) {
@@ -1211,12 +1211,12 @@ public class HLog implements HConstants, Syncable {
                 }
                 if (LOG.isDebugEnabled()) {
                   LOG.debug("Applied " + count + " total edits to "
-                      + Bytes.toString(key) + " in "
+                      + Bytes.toStringBinary(key) + " in "
                       + (System.currentTimeMillis() - threadTime) + "ms");
                 }
               } catch (IOException e) {
                 e = RemoteExceptionHandler.checkIOException(e);
-                LOG.warn("Got while writing region " + Bytes.toString(key)
+                LOG.warn("Got while writing region " + Bytes.toStringBinary(key)
                     + " log " + e);
                 e.printStackTrace();
               }

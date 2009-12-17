@@ -235,6 +235,7 @@ Release 0.21.0 - Unreleased
    HBASE-2031  When starting HQuorumPeer, try to match on more than 1 address
    HBASE-2043  Shell's scan broken
    HBASE-2044  HBASE-1822 removed not-deprecated APIs
+   HBASE-2049  Cleanup HLog binary log output (Dave Latham via Stack)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
