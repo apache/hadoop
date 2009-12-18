@@ -26,6 +26,9 @@ Trunk (unreleased changes)
     threads. This can be used to delete files in the Distributed
     Cache. (Zheng Shao via dhruba)
 
+    HADOOP-6415. Adds a common token interface for both job token and 
+    delegation token. (Kan Zhang via ddas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
