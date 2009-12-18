@@ -50,6 +50,7 @@ ZOOKEEPER_QUORUM=`cat $ZOOKEEPER_QUORUM_PATH`
 # Substituting master hostname and zookeeper quorum
 sed -e "s|%MASTER_HOST%|$MASTER_HOST|" \
     -e "s|%ZOOKEEPER_QUORUM%|$ZOOKEEPER_QUORUM|" \
+    -e "s|%EXTRA_PACKAGES%|$EXTRA_PACKAGES|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.slave
 
 # Start slaves

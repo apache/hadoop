@@ -48,6 +48,12 @@ S3_BUCKET=iridiant-bundles
 # Enable public access web interfaces
 ENABLE_WEB_PORTS=false
 
+# Extra packages
+# Allows you to add a private Yum repo and pull packages from it as your
+# instances boot up. Format is <repo-descriptor-URL> <pkg1> ... <pkgN>
+# The repository descriptor will be fetched into /etc/yum/repos.d.
+EXTRA_PACKAGES=
+
 # Use only c1.xlarge unless you know what you are doing
 MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-c1.xlarge}
 

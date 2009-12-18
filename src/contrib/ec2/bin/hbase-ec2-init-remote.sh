@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-###############################################################################
 # Script that is run on each EC2 instance on boot. It is passed in the EC2 user
 # data, so should not exceed 16K in size.
-###############################################################################
 
-MASTER_HOST=%MASTER_HOST%
-ZOOKEEPER_QUORUM=%ZOOKEEPER_QUORUM%
+MASTER_HOST="%MASTER_HOST%"
+ZOOKEEPER_QUORUM="%ZOOKEEPER_QUORUM%"
+EXTRA_PACKAGES="%EXTRA_PACKAGES%"
 SECURITY_GROUPS=`wget -q -O - http://169.254.169.254/latest/meta-data/security-groups`
 IS_MASTER=`echo $SECURITY_GROUPS | awk '{ a = match ($0, "-master$"); if (a) print "true"; else print "false"; }'`
 if [ "$IS_MASTER" = "true" ]; then
@@ -17,9 +16,7 @@ HADOOP_VERSION=`echo $HADOOP_HOME | cut -d '-' -f 2`
 HBASE_HOME=`ls -d /usr/local/hbase-*`
 HBASE_VERSION=`echo $HBASE_HOME | cut -d '-' -f 2`
 
-###############################################################################
 # Hadoop configuration
-###############################################################################
 
 cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 <?xml version="1.0"?>
@@ -76,7 +73,6 @@ HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJS
 EOF
 
 # Configure Hadoop for Ganglia
-# overwrite hadoop-metrics.properties
 cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
 dfs.period=10
@@ -89,9 +85,7 @@ mapred.period=10
 mapred.servers=$MASTER_HOST:8649
 EOF
 
-###############################################################################
 # HBase configuration
-###############################################################################
 
 cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <?xml version="1.0"?>
@@ -147,7 +141,6 @@ export HBASE_REGIONSERVER_OPTS="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupan
 EOF
 
 # Configure HBase for Ganglia
-# overwrite hadoop-metrics.properties
 cat > $HBASE_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
 dfs.period=10
@@ -160,25 +153,27 @@ jvm.period=10
 jvm.servers=$MASTER_HOST:8649
 EOF
 
-###############################################################################
-# Start services
-###############################################################################
-
 # up open file descriptor limits
 echo "root soft nofile 32768" >> /etc/security/limits.conf
 echo "root hard nofile 32768" >> /etc/security/limits.conf
 
-# up epoll limits
-# ok if this fails, only valid for kernels 2.6.27+
+# up epoll limits; ok if this fails, only valid for kernels 2.6.27+
 sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
 
-mkdir -p /mnt/hadoop/logs
-mkdir -p /mnt/hbase/logs
+mkdir -p /mnt/hadoop/logs /mnt/hbase/logs
 
 [ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
 
-# not set on boot
 export USER="root"
+
+if [ "$EXTRA_PACKAGES" != "" ] ; then
+  # format should be <repo-descriptor-URL> <package1> ... <packageN>
+    # this will only work with bash
+  pkg=( $EXTRA_PACKAGES )
+  wget -nv -O /etc/yum.repos.d/user.repo ${pkg[0]}
+  yum -y update yum
+  yum -y install ${pkg[@]:1}
+fi
 
 if [ "$IS_MASTER" = "true" ]; then
   # MASTER
@@ -199,13 +194,9 @@ if [ "$IS_MASTER" = "true" ]; then
   [ ! -e /mnt/hadoop/dfs ] && "$HADOOP_HOME"/bin/hadoop namenode -format
 
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
-
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
-
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
-
   sleep 10
-
   "$HBASE_HOME"/bin/hbase-daemon.sh start master
 
 else
@@ -218,11 +209,8 @@ else
          -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
          /etc/gmond.conf
   service gmond start
-
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
-
   "$HBASE_HOME"/bin/hbase-daemon.sh start regionserver
-
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
 
 fi

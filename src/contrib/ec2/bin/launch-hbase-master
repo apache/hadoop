@@ -59,6 +59,7 @@ echo "Starting master with AMI $AMI_IMAGE (arch $arch)"
 # Substituting zookeeper quorum
 ZOOKEEPER_QUORUM=`cat $ZOOKEEPER_QUORUM_PATH`
 sed -e "s|%ZOOKEEPER_QUORUM%|$ZOOKEEPER_QUORUM|" \
+    -e "s|%EXTRA_PACKAGES%|$EXTRA_PACKAGES|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.master
 INSTANCE=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k root -f "$bin"/$USER_DATA_FILE.master -t $type | grep INSTANCE | awk '{print $2}'`
 echo -n "Waiting for instance $INSTANCE to start"
