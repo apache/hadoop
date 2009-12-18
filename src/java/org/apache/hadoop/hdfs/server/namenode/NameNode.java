@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -123,7 +124,8 @@ import org.apache.hadoop.util.StringUtils;
  **********************************************************/
 public class NameNode implements ClientProtocol, DatanodeProtocol,
                                  NamenodeProtocol, FSConstants,
-                                 RefreshAuthorizationPolicyProtocol {
+                                 RefreshAuthorizationPolicyProtocol,
+                                 RefreshUserToGroupMappingsProtocol {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
@@ -139,6 +141,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       return NamenodeProtocol.versionID;
     } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
       return RefreshAuthorizationPolicyProtocol.versionID;
+    } else if (protocol.equals(RefreshUserToGroupMappingsProtocol.class.getName())){
+      return RefreshUserToGroupMappingsProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }
@@ -1158,6 +1162,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
 
     SecurityUtil.getPolicy().refresh();
+  }
+
+  @Override
+  public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
+    LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
+             UserGroupInformation.getCurrentUGI().getUserName());
+    SecurityUtil.getUserToGroupsMappingService(conf).refresh();
   }
 
   private static void printUsage() {

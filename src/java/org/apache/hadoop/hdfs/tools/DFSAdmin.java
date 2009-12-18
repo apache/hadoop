@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
@@ -473,6 +474,7 @@ public class DFSAdmin extends FsShell {
       "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
       "\t[-refreshServiceAcl]\n" +
+      "\t[-refreshUserToGroupsMappings]\n" +
       "\t[-printTopology]\n" +
       "\t[-help [cmd]]\n";
 
@@ -527,6 +529,9 @@ public class DFSAdmin extends FsShell {
     String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
       "\t\tNamenode will reload the authorization policy file.\n";
     
+    String refreshUserToGroupsMappings = 
+      "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
+    
     String printTopology = "-printTopology: Print a tree of the racks and their\n" +
                            "\t\tnodes as reported by the Namenode\n";
     
@@ -559,6 +564,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
     } else if ("refreshServiceAcl".equals(cmd)) {
       System.out.println(refreshServiceAcl);
+    } else if ("refreshUserToGroupsMappings".equals(cmd)) {
+      System.out.println(refreshUserToGroupsMappings);
     } else if ("printTopology".equals(cmd)) {
       System.out.println(printTopology);
     } else if ("help".equals(cmd)) {
@@ -746,6 +753,30 @@ public class DFSAdmin extends FsShell {
   }
   
   /**
+   * Refresh the user-to-groups mappings on the {@link NameNode}.
+   * @return exitcode 0 on success, non-zero on failure
+   * @throws IOException
+   */
+  public int refreshUserToGroupsMappings() throws IOException {
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // Create the client
+    RefreshUserToGroupMappingsProtocol refreshProtocol = 
+      (RefreshUserToGroupMappingsProtocol) 
+      RPC.getProxy(RefreshUserToGroupMappingsProtocol.class, 
+                   RefreshUserToGroupMappingsProtocol.versionID, 
+                   NameNode.getAddress(conf), getUGI(conf), conf,
+                   NetUtils.getSocketFactory(conf, 
+                                             RefreshUserToGroupMappingsProtocol.class));
+    
+    // Refresh the user-to-groups mappings
+    refreshProtocol.refreshUserToGroupsMappings(conf);
+    
+    return 0;
+  }
+  
+  /**
    * Displays format of commands.
    * @param cmd The command that is being executed.
    */
@@ -789,6 +820,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-refreshServiceAcl".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshServiceAcl]");
+    } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-refreshUserToGroupsMappings]");
     } else if ("-printTopology".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-printTopology]");
@@ -803,6 +837,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-refreshServiceAcl]");
+      System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-printTopology]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
@@ -879,11 +914,15 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
-      else if ("-printTopology".equals(cmd)) {
-        if(argv.length != 1) {
-          printUsage(cmd);
-          return exitCode;
-        }
+    } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-printTopology".equals(cmd)) {
+      if(argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
       }
     }
     
@@ -927,6 +966,8 @@ public class DFSAdmin extends FsShell {
         exitCode = new SetSpaceQuotaCommand(argv, i, fs).runAll();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcl();
+      } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+        exitCode = refreshUserToGroupsMappings();
       } else if ("-printTopology".equals(cmd)) {
         exitCode = printTopology();
       } else if ("-help".equals(cmd)) {

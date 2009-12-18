@@ -41,6 +41,8 @@ Trunk (unreleased changes)
     HDFS-840. Change tests to use FileContext test helper introduced in
     HADOOP-6394. (Jitendra Nath Pandey via suresh)
 
+    HDFS-685. Use the user-to-groups mapping service in the NameNode. (boryas, acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES
