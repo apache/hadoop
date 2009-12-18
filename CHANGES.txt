@@ -68,6 +68,8 @@ Trunk (unreleased changes)
 
     HADOOP-6426. Create ant build for running EC2 unit tests. (tomwhite)
 
+    HADOOP-4656. Add a user to groups mapping service. (boryas, acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -95,10 +95,13 @@ public class UnixUserGroupInformation extends UserGroupInformation {
    * @exception IllegalArgumentException if any argument is null
    */
   private void setUserGroupNames(String userName, String[] groupNames) {
-    if (userName==null || userName.length()==0 ||
-        groupNames== null || groupNames.length==0) {
+    if (userName==null || userName.length()==0) {
       throw new IllegalArgumentException(
-          "Parameters should not be null or an empty string/array");
+          "username should not be null nor empty");
+    }
+    if(groupNames == null) {
+      throw new IllegalArgumentException(
+      "group names array should not be null");
     }
     for (int i=0; i<groupNames.length; i++) {
       if(groupNames[i] == null || groupNames[i].length() == 0) {

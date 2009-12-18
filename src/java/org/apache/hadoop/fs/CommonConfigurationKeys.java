@@ -126,5 +126,7 @@ public class CommonConfigurationKeys {
   public static final String  HADOOP_JOB_UGI_KEY = "hadoop.job.ugi";
   public static final String  HADOOP_UTIL_HASH_TYPE_KEY = "hadoop.util.hash.type";
   public static final String  HADOOP_UTIL_HASH_TYPE_DEFAULT = "murmur";
+  public static final String  HADOOP_SECURITY_GROUP_MAPPING = "hadoop.security.group.mapping";
+  public static final String  HADOOP_SECURITY_GROUPS_CACHE_SECS = "hadoop.security.groups.cache.secs";
 }
 
