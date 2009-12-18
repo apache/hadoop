@@ -182,10 +182,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   private volatile WriteState writestate = new WriteState();
 
-  final int memstoreFlushSize;
+  final long memstoreFlushSize;
   private volatile long lastFlushTime;
   final FlushRequester flushListener;
-  private final int blockingMemStoreSize;
+  private final long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard splits and closes
   private final ReentrantReadWriteLock splitsAndClosesLock =
@@ -216,11 +216,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   public HRegion(){
     this.basedir = null;
-    this.blockingMemStoreSize = 0;
+    this.blockingMemStoreSize = 0L;
     this.conf = null;
     this.flushListener = null;
     this.fs = null;
-    this.memstoreFlushSize = 0;
+    this.memstoreFlushSize = 0L;
     this.log = null;
     this.regionCompactionDir = null;
     this.regiondir = null;
@@ -267,14 +267,14 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     }
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), encodedNameStr);
-    int flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
+    long flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
-      flushSize = conf.getInt("hbase.hregion.memstore.flush.size",
+      flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
                       HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *
-      conf.getInt("hbase.hregion.memstore.block.multiplier", 1);
+      conf.getLong("hbase.hregion.memstore.block.multiplier", 2);
   }
 
   /**
@@ -2398,7 +2398,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (3 * Bytes.SIZEOF_LONG) + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
+      (5 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
       (19 * ClassSize.REFERENCE) + ClassSize.OBJECT);
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +

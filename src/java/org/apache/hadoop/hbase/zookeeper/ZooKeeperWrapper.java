@@ -340,7 +340,11 @@ public class ZooKeeperWrapper implements HConstants {
     } catch (InterruptedException e) {
       LOG.warn("Failed to set state node in ZooKeeper", e);
     } catch (KeeperException e) {
-      LOG.warn("Failed to set state node in ZooKeeper", e);
+      if(e.code() == KeeperException.Code.NODEEXISTS) {
+        LOG.debug("State node exists.");
+      } else {
+        LOG.warn("Failed to set state node in ZooKeeper", e);
+      }
     }
 
     return false;

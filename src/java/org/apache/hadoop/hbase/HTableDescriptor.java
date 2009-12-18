@@ -91,9 +91,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   public static final boolean DEFAULT_READONLY = false;
 
-  public static final int DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64;
+  public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64L;
   
-  public static final int DEFAULT_MAX_FILESIZE = 1024*1024*256;
+  public static final long DEFAULT_MAX_FILESIZE = 1024*1024*256L;
 
   public static final boolean DEFAULT_DEFERRED_LOG_FLUSH = true;
     
@@ -421,7 +421,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * @return memory cache flush size for each hregion
    */
-  public int getMemStoreFlushSize() {
+  public long getMemStoreFlushSize() {
     byte [] value = getValue(MEMSTORE_FLUSHSIZE_KEY);
     if (value != null)
       return Integer.valueOf(Bytes.toString(value)).intValue();
