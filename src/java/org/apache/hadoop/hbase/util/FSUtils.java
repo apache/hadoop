@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.DataInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -249,10 +248,20 @@ public class FSUtils {
     FileSystem fs = FileSystem.get(conf);
     if (!(fs instanceof DistributedFileSystem)) return;
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    // Are there any data nodes up yet?
+    // Currently the safe mode check falls through if the namenode is up but no
+    // datanodes have reported in yet.
+    while (dfs.getDataNodeStats().length == 0) {
+      LOG.info("Waiting for dfs to come up...");
+      try {
+        Thread.sleep(wait);
+      } catch (InterruptedException e) {
+        //continue
+      }
+    }
     // Make sure dfs is not in safe mode
-    String message = "Waiting for dfs to exit safe mode...";
     while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
-      LOG.info(message);
+      LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);
       } catch (InterruptedException e) {

@@ -131,6 +131,8 @@ Release 0.21.0 - Unreleased
    HBASE-2048  Small inconsistency in the "Example API Usage"
                (Benoit Sigoure via JD)
    HBASE-2044  HBASE-1822 removed not-deprecated APIs
+   HBASE-1960  Master should wait for DFS to come up when creating
+               hbase.version
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
