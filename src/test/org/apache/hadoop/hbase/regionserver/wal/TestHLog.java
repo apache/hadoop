@@ -33,9 +33,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.Reader;
-
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -139,10 +136,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     wal.sync();
     // Open a Reader.
     Path walPath = wal.computeFilename(wal.getFilenum());
-    SequenceFile.Reader reader = HLog.getReader(this.fs, walPath, this.conf);
+    HLog.Reader reader = HLog.getReader(fs, walPath, conf);
     int count = 0;
-    HLogKey key = new HLogKey();
-    while(reader.next(key)) count++;
+    HLog.Entry entry = new HLog.Entry();
+    while ((entry = reader.next(entry)) != null) count++;
     assertEquals(total, count);
     reader.close();
     // Add test that checks to see that an open of a Reader works on a file
@@ -152,16 +149,16 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
       wal.append(bytes, bytes, kvs, System.currentTimeMillis());
     }
-    reader = HLog.getReader(this.fs, walPath, this.conf);
+    reader = HLog.getReader(fs, walPath, conf);
     count = 0;
-    while(reader.next(key)) count++;
+    while((entry = reader.next(entry)) != null) count++;
     assertTrue(count >= total);
     reader.close();
     // If I sync, should see double the edits.
     wal.sync();
-    reader = HLog.getReader(this.fs, walPath, this.conf);
+    reader = HLog.getReader(fs, walPath, conf);
     count = 0;
-    while(reader.next(key)) count++;
+    while((entry = reader.next(entry)) != null) count++;
     assertEquals(total * 2, count);
     // Now do a test that ensures stuff works when we go over block boundary,
     // especially that we return good length on file.
@@ -173,16 +170,16 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     }
     // Now I should have written out lots of blocks.  Sync then read.
     wal.sync();
-    reader = HLog.getReader(this.fs, walPath, this.conf);
+    reader = HLog.getReader(fs, walPath, conf);
     count = 0;
-    while(reader.next(key)) count++;
+    while((entry = reader.next(entry)) != null) count++;
     assertEquals(total * 3, count);
     reader.close();
     // Close it and ensure that closed, Reader gets right length also.
     wal.close();
-    reader = HLog.getReader(this.fs, walPath, this.conf);
+    reader = HLog.getReader(fs, walPath, conf);
     count = 0;
-    while(reader.next(key)) count++;
+    while((entry = reader.next(entry)) != null) count++;
     assertEquals(total * 3, count);
     reader.close();
   }
@@ -191,14 +188,15 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   throws IOException {
     assertEquals(howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
-      SequenceFile.Reader r = HLog.getReader(this.fs, splits.get(i), this.conf);
+      HLog.Reader reader = HLog.getReader(this.fs, splits.get(i), conf);
       try {
-        HLogKey key = new HLogKey();
-        KeyValue kv = new KeyValue();
         int count = 0;
         String previousRegion = null;
         long seqno = -1;
-        while(r.next(key, kv)) {
+        HLog.Entry entry = new HLog.Entry();
+        while((entry = reader.next(entry)) != null) {
+          HLogKey key = entry.getKey();
+          KeyValue kv = entry.getEdit();
           String region = Bytes.toString(key.getRegionName());
           // Assert that all edits are for same region.
           if (previousRegion != null) {
@@ -212,7 +210,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         }
         assertEquals(howmany * howmany, count);
       } finally {
-        r.close();
+        reader.close();
       }
     }
   }
@@ -226,7 +224,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     final byte [] regionName = Bytes.toBytes("regionname");
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
-    Reader reader = null;
+    HLog.Reader reader = null;
     HLog log = new HLog(fs, dir, this.conf, null);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
@@ -246,17 +244,20 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);
-      HLogKey key = new HLogKey();
-      KeyValue val = new KeyValue();
+      HLog.Entry entry = new HLog.Entry();
       for (int i = 0; i < COL_COUNT; i++) {
-        reader.next(key, val);
+        reader.next(entry);
+        HLogKey key = entry.getKey();
+        KeyValue val = entry.getEdit();
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         assertTrue(Bytes.equals(row, val.getRow()));
         assertEquals((byte)(i + '0'), val.getValue()[0]);
         System.out.println(key + " " + val);
       }
-      while (reader.next(key, val)) {
+      while ((entry = reader.next(null)) != null) {
+        HLogKey key = entry.getKey();
+        KeyValue val = entry.getEdit();
         // Assert only one more row... the meta flushed row.
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));

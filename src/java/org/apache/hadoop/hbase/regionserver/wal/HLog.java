@@ -23,7 +23,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -46,8 +45,6 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,12 +61,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.SequenceFile.Metadata;
-import org.apache.hadoop.io.SequenceFile.Reader;
-import org.apache.hadoop.io.compress.DefaultCodec;
-import org.apache.hadoop.util.Progressable;
 
 /**
  * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
@@ -123,7 +114,30 @@ public class HLog implements HConstants, Syncable {
   private final long blocksize;
   private final int flushlogentries;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
-  private final short replicationLevel;
+
+  public interface Reader {
+
+    void init(FileSystem fs, Path path, Configuration c) throws IOException;
+
+    void close() throws IOException;
+
+    Entry next() throws IOException;
+
+    Entry next(Entry reuse) throws IOException;
+
+  }
+
+  public interface Writer {
+
+    void init(FileSystem fs, Path path, Configuration c) throws IOException;
+
+    void close() throws IOException;
+
+    void sync() throws IOException;
+
+    void append(Entry entry) throws IOException;
+
+  }
 
   // used to indirectly tell syncFs to force the sync
   private boolean forceSync = false;
@@ -131,10 +145,7 @@ public class HLog implements HConstants, Syncable {
   /*
    * Current log file.
    */
-  SequenceFile.Writer writer;
-  // This is the above writer's output stream. Its private but we use reflection
-  // to expose it so we can call sync on it.
-  FSDataOutputStream writer_out;
+  Writer writer;
 
   /*
    * Map of all log files but the current one. 
@@ -218,8 +229,6 @@ public class HLog implements HConstants, Syncable {
       conf.getInt("hbase.regionserver.flushlogentries", 1);
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
       this.fs.getDefaultBlockSize());
-    this.replicationLevel = (short) conf.getInt("hbase.regionserver.hlog.replication",
-        this.fs.getDefaultReplication());
     // Roll at 95% of block size.
     float multi = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f);
     this.logrollsize = (long)(this.blocksize * multi);
@@ -247,16 +256,6 @@ public class HLog implements HConstants, Syncable {
    */
   public long getFilenum() {
     return this.filenum;
-  }
-
-  /**
-   * Get the compression type for the hlog files
-   * @param c Configuration to use.
-   * @return the kind of compression to use
-   */
-  static CompressionType getCompressionType(final Configuration c) {
-    // Compression makes no sense for commit log.  Always return NONE.
-    return CompressionType.NONE;
   }
 
   /**
@@ -318,7 +317,7 @@ public class HLog implements HConstants, Syncable {
         Path oldFile = cleanupCurrentWriter(this.filenum);
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
-        this.writer = createWriter(newPath);
+        this.writer = createWriter(fs, newPath, new HBaseConfiguration(conf));
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
             this.numEntries.get() +
@@ -349,113 +348,54 @@ public class HLog implements HConstants, Syncable {
     return regionToFlush;
   }
 
-  protected SequenceFile.Writer createWriter(Path path) throws IOException {
-    return createWriter(path, HLogKey.class, KeyValue.class);
-  }
-  
   /**
-   * Hack just to set the correct file length up in SequenceFile.Reader.
-   * See HADOOP-6307.  The below is all about setting the right length on the
-   * file we are reading.  fs.getFileStatus(file).getLen() is passed down to
-   * a private SequenceFile.Reader constructor.  This won't work.  Need to do
-   * the available on the stream.  The below is ugly.  It makes getPos, the
-   * first time its called, return length of the file -- i.e. tell a lie -- just
-   * so this line up in SF.Reader's constructor ends up with right answer:
-   * 
-   *         this.end = in.getPos() + length;
-   */
-  private static class WALReader extends SequenceFile.Reader {
-    
-    WALReader(final FileSystem fs, final Path p, final Configuration c)
-    throws IOException {
-      super(fs, p, c);
-      
-    }
-
-    @Override
-    protected FSDataInputStream openFile(FileSystem fs, Path file,
-      int bufferSize, long length)
-    throws IOException {
-      return new WALReaderFSDataInputStream(super.openFile(fs, file, bufferSize,
-        length), length);
-    }
-
-    /**
-     * Override just so can intercept first call to getPos.
-     */
-    static class WALReaderFSDataInputStream extends FSDataInputStream {
-      private boolean firstGetPosInvocation = true;
-      private long length;
-
-      WALReaderFSDataInputStream(final FSDataInputStream is, final long l)
-      throws IOException {
-        super(is);
-        this.length = l;
-      }
-
-      @Override
-      public long getPos() throws IOException {
-        if (this.firstGetPosInvocation) {
-          this.firstGetPosInvocation = false;
-          // Tell a lie.  We're doing this just so that this line up in
-          // SequenceFile.Reader constructor comes out with the correct length
-          // on the file:
-          //         this.end = in.getPos() + length;
-          // 
-          long available = this.in.available();
-          // Length gets added up in the SF.Reader constructor so subtract the
-          // difference.  If available < this.length, then return this.length.
-          // I ain't sure what else to do.
-          return available >= this.length? available - this.length: this.length;
-        }
-        return super.getPos();
-      }
-    }
-  }
-
-  /**
-   * Get a Reader for WAL.
-   * Reader is a subclass of SequenceFile.Reader.  The subclass has amendments
-   * to make it so we see edits up to the last sync (HDFS-265).  Of note, we
-   * can only see up to the sync that happened before this file was opened.
-   * Will require us doing up our own WAL Reader if we want to keep up with
-   * a syncing Writer.
-   * @param p
-   * @return A WAL Reader.  Close when done with it.
+   * Get a reader for the WAL.
+   * @param fs
+   * @param path
+   * @param keyClass
+   * @param valueClass
+   * @return A WAL reader.  Close when done with it.
    * @throws IOException
    */
-  public static SequenceFile.Reader getReader(final FileSystem fs,
-    final Path p, final Configuration c)
+  @SuppressWarnings("unchecked")
+  public static Reader getReader(final FileSystem fs,
+    final Path path, HBaseConfiguration conf)
   throws IOException {
-    return new WALReader(fs, p, c);
+    try {
+      Class c = Class.forName(conf.get("hbase.regionserver.hlog.reader.impl",
+        SequenceFileLogReader.class.getCanonicalName()));
+      HLog.Reader reader = (HLog.Reader) c.newInstance();
+      reader.init(fs, path, conf);
+      return reader;
+    } catch (Exception e) {
+      IOException ie = new IOException("cannot get log reader");
+      ie.initCause(e);
+      throw ie;
+    }
   }
 
-  protected SequenceFile.Writer createWriter(Path path,
-    Class<? extends HLogKey> keyClass, Class<? extends KeyValue> valueClass)
-  throws IOException {
-    SequenceFile.Writer writer =
-      SequenceFile.createWriter(this.fs, this.conf, path, keyClass,
-      valueClass, fs.getConf().getInt("io.file.buffer.size", 4096),
-      this.replicationLevel, this.blocksize,
-      SequenceFile.CompressionType.NONE, new DefaultCodec(), null,
-      new Metadata());
-    // Get at the private FSDataOutputStream inside in SequenceFile so we can
-    // call sync on it.  Make it accessible.  Stash it aside for call up in
-    // the sync method above.
-    final Field fields[] = writer.getClass().getDeclaredFields();
-    final String fieldName = "out";
-    for (int i = 0; i < fields.length; ++i) {
-      if (fieldName.equals(fields[i].getName())) {
-        try {
-          fields[i].setAccessible(true);
-          this.writer_out = (FSDataOutputStream)fields[i].get(writer);
-          break;
-        } catch (IllegalAccessException ex) {
-          throw new IOException("Accessing " + fieldName, ex);
-        }
-      }
+  /**
+   * Get a writer for the WAL.
+   * @param path
+   * @param keyClass
+   * @param valueClass
+   * @return A WAL writer.  Close when done with it.
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static Writer createWriter(final FileSystem fs,
+      final Path path, HBaseConfiguration conf) throws IOException {
+    try {
+      Class c = Class.forName(conf.get("hbase.regionserver.hlog.writer.impl",
+        SequenceFileLogWriter.class.getCanonicalName()));
+      HLog.Writer writer = (HLog.Writer) c.newInstance();
+      writer.init(fs, path, conf);
+      return writer;
+    } catch (Exception e) {
+      IOException ie = new IOException("cannot get log writer");
+      ie.initCause(e);
+      throw ie;
     }
-    return writer;
   }
   
   /*
@@ -820,9 +760,6 @@ public class HLog implements HConstants, Syncable {
           this.unflushedEntries.get() >= this.flushlogentries) {
         try {
           this.writer.sync();
-          if (this.writer_out != null) {
-            this.writer_out.sync();
-          }
           this.forceSync = false;
           this.unflushedEntries.set(0);
         } catch (IOException e) {
@@ -857,7 +794,7 @@ public class HLog implements HConstants, Syncable {
         LOG.debug("edit=" + this.numEntries.get() + ", write=" +
           logKey.toString());
       }
-      this.writer.append(logKey, logEdit);
+      this.writer.append(new HLog.Entry(logKey, logEdit));
       long took = System.currentTimeMillis() - now;
       if (took > 1000) {
         LOG.warn(Thread.currentThread().getName() + " took " + took +
@@ -936,8 +873,9 @@ public class HLog implements HConstants, Syncable {
         return;
       }
       synchronized (updateLock) {
-        this.writer.append(makeKey(regionName, tableName, logSeqId, System.currentTimeMillis()), 
-            completeCacheFlushLogEdit());
+        this.writer.append(new HLog.Entry(
+          makeKey(regionName, tableName, logSeqId, System.currentTimeMillis()),
+          completeCacheFlushLogEdit()));
         this.numEntries.incrementAndGet();
         Long seq = this.lastSeqWritten.get(regionName);
         if (seq != null && logSeqId >= seq.longValue()) {
@@ -1018,20 +956,20 @@ public class HLog implements HConstants, Syncable {
   // Private immutable datastructure to hold Writer and its Path.
   private final static class WriterAndPath {
     final Path p;
-    final SequenceFile.Writer w;
-    WriterAndPath(final Path p, final SequenceFile.Writer w) {
+    final Writer w;
+    WriterAndPath(final Path p, final Writer w) {
       this.p = p;
       this.w = w;
     }
   }
   
   @SuppressWarnings("unchecked")
-  static Class<? extends HLogKey> getKeyClass(HBaseConfiguration conf) {
+  public static Class<? extends HLogKey> getKeyClass(Configuration conf) {
      return (Class<? extends HLogKey>) 
        conf.getClass("hbase.regionserver.hlog.keyclass", HLogKey.class);
   }
   
-  public static HLogKey newKey(HBaseConfiguration conf) throws IOException {
+  public static HLogKey newKey(Configuration conf) throws IOException {
     Class<? extends HLogKey> keyClass = getKeyClass(conf);
     try {
       return keyClass.newInstance();
@@ -1072,8 +1010,8 @@ public class HLog implements HConstants, Syncable {
       int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) / 
           concurrentLogReads)).intValue();
       for (int step = 0; step < maxSteps; step++) {
-        final Map<byte[], LinkedList<HLogEntry>> logEntries = 
-          new TreeMap<byte[], LinkedList<HLogEntry>>(Bytes.BYTES_COMPARATOR);
+        final Map<byte[], LinkedList<HLog.Entry>> logEntries = 
+          new TreeMap<byte[], LinkedList<HLog.Entry>>(Bytes.BYTES_COMPARATOR);
         // Stop at logfiles.length when it's the last step
         int endIndex = step == maxSteps - 1? logfiles.length: 
           step * concurrentLogReads + concurrentLogReads;
@@ -1086,28 +1024,22 @@ public class HLog implements HConstants, Syncable {
             LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length +
               ": " + logfiles[i].getPath() + ", length=" + logfiles[i].getLen());
           }
-          SequenceFile.Reader in = null;
+          Reader in = null;
           int count = 0;
           try {
             in = HLog.getReader(fs, logfiles[i].getPath(), conf);
             try {
-              HLogKey key = newKey(conf);
-              KeyValue val = new KeyValue();
-              while (in.next(key, val)) {
-                byte [] regionName = key.getRegionName();
-                LinkedList<HLogEntry> queue = logEntries.get(regionName);
+              HLog.Entry entry;
+              while ((entry = in.next()) != null) {
+                byte [] regionName = entry.getKey().getRegionName();
+                LinkedList<HLog.Entry> queue = logEntries.get(regionName);
                 if (queue == null) {
-                  queue = new LinkedList<HLogEntry>();
+                  queue = new LinkedList<HLog.Entry>();
                   LOG.debug("Adding queue for " + Bytes.toStringBinary(regionName));
                   logEntries.put(regionName, queue);
                 }
-                HLogEntry hle = new HLogEntry(val, key);
-                queue.push(hle);
+                queue.push(entry);
                 count++;
-                // Make the key and value new each time; otherwise same instance
-                // is used over and over.
-                key = newKey(conf);
-                val = new KeyValue();
               }
               LOG.debug("Pushed=" + count + " entries from " +
                 logfiles[i].getPath());
@@ -1148,17 +1080,17 @@ public class HLog implements HConstants, Syncable {
           Thread thread = new Thread(Bytes.toStringBinary(key)) {
             @Override
             public void run() {
-              LinkedList<HLogEntry> entries = logEntries.get(key);
+              LinkedList<HLog.Entry> entries = logEntries.get(key);
               LOG.debug("Thread got " + entries.size() + " to process");
               long threadTime = System.currentTimeMillis();
               try {
                 int count = 0;
                 // Items were added to the linkedlist oldest first. Pull them
                 // out in that order.
-                for (ListIterator<HLogEntry> i =
+                for (ListIterator<HLog.Entry> i =
                   entries.listIterator(entries.size());
                     i.hasPrevious();) {
-                  HLogEntry logEntry = i.previous();
+                  HLog.Entry logEntry = i.previous();
                   WriterAndPath wap = logWriters.get(key);
                   if (wap == null) {
                     Path logfile = new Path(HRegion.getRegionDir(HTableDescriptor
@@ -1166,7 +1098,7 @@ public class HLog implements HConstants, Syncable {
                         HRegionInfo.encodeRegionName(key)),
                         HREGION_OLDLOGFILE_NAME);
                     Path oldlogfile = null;
-                    SequenceFile.Reader old = null;
+                    Reader old = null;
                     if (fs.exists(logfile)) {
                       FileStatus stat = fs.getFileStatus(logfile);
                       if (stat.getLen() <= 0) {
@@ -1178,12 +1110,10 @@ public class HLog implements HConstants, Syncable {
                           "exists. Copying existing file to new file");
                         oldlogfile = new Path(logfile.toString() + ".old");
                         fs.rename(logfile, oldlogfile);
-                        old = new SequenceFile.Reader(fs, oldlogfile, conf);
+                        old = getReader(fs, oldlogfile, conf);
                       }
                     }
-                    SequenceFile.Writer w =
-                      SequenceFile.createWriter(fs, conf, logfile,
-                        getKeyClass(conf), KeyValue.class, getCompressionType(conf));
+                    Writer w = createWriter(fs, logfile, conf);
                     wap = new WriterAndPath(logfile, w);
                     logWriters.put(key, wap);
                     if (LOG.isDebugEnabled()) {
@@ -1193,20 +1123,19 @@ public class HLog implements HConstants, Syncable {
 
                     if (old != null) {
                       // Copy from existing log file
-                      HLogKey oldkey = newKey(conf);
-                      KeyValue oldval = new KeyValue();
-                      for (; old.next(oldkey, oldval); count++) {
+                      HLog.Entry entry;
+                      for (; (entry = old.next()) != null; count++) {
                         if (LOG.isDebugEnabled() && count > 0
                             && count % 10000 == 0) {
                           LOG.debug("Copied " + count + " edits");
                         }
-                        w.append(oldkey, oldval);
+                        w.append(entry);
                       }
                       old.close();
                       fs.delete(oldlogfile, true);
                     }
                   }
-                  wap.w.append(logEntry.getKey(), logEntry.getEdit());
+                  wap.w.append(logEntry);
                   count++;
                 }
                 if (LOG.isDebugEnabled()) {
@@ -1249,18 +1178,24 @@ public class HLog implements HConstants, Syncable {
    * Utility class that lets us keep track of the edit with it's key
    * Only used when splitting logs
    */
-  public static class HLogEntry {
+  public static class Entry {
     private KeyValue edit;
     private HLogKey key;
+
+    public Entry() {
+      edit = new KeyValue();
+      key = new HLogKey();
+    }
+
     /**
      * Constructor for both params
      * @param edit log's edit
      * @param key log's key
      */
-    public HLogEntry(KeyValue edit, HLogKey key) {
+    public Entry(HLogKey key, KeyValue edit) {
       super();
-      this.edit = edit;
       this.key = key;
+      this.edit = edit;
     }
     /**
      * Gets the edit
@@ -1360,12 +1295,11 @@ public class HLog implements HConstants, Syncable {
         if (!fs.isFile(logPath)) {
           throw new IOException(args[i] + " is not a file");
         }
-        Reader log = new SequenceFile.Reader(fs, logPath, conf);
+        Reader log = getReader(fs, logPath, conf);
         try {
-          HLogKey key = new HLogKey();
-          KeyValue val = new KeyValue();
-          while (log.next(key, val)) {
-            System.out.println(key.toString() + " " + val.toString());
+          HLog.Entry entry;
+          while ((entry = log.next()) != null) {
+            System.out.println(entry.toString());
           }
         } finally {
           log.close();
@@ -1382,16 +1316,5 @@ public class HLog implements HConstants, Syncable {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
       ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
-  
-  static class HLogWriter extends SequenceFile.Writer {
-    public HLogWriter(FileSystem arg0, Configuration arg1, Path arg2,
-        Class<?> arg3, Class<?> arg4, int arg5, short arg6, long arg7,
-        Progressable arg8, Metadata arg9) throws IOException {
-      super(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-    }
-    
-    void flush() {
-      
-    }
-  }
+
 }

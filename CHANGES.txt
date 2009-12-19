@@ -242,6 +242,7 @@ Release 0.21.0 - Unreleased
    HBASE-2049  Cleanup HLog binary log output (Dave Latham via Stack)
    HBASE-2052  Make hbase more 'live' when comes to noticing table creation,
                splits, etc., for 0.20.3
+   HBASE-2059  Break out WAL reader and writer impl from HLog
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

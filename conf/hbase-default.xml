@@ -191,6 +191,16 @@
     <description>Period at which we will roll the commit log.</description>
   </property>
   <property>
+    <name>hbase.regionserver.hlog.reader.impl</name>
+    <value>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader</value>
+    <description>The HLog file reader implementation.</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.hlog.writer.impl</name>
+    <value>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogWriter</value>
+    <description>The HLog file writer implementation.</description>
+  </property>
+  <property>
     <name>hbase.regionserver.thread.splitcompactcheckfrequency</name>
     <value>20000</value>
     <description>How often a region server runs the split/compaction check.

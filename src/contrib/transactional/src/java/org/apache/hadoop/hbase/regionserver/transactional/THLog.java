@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
-import org.apache.hadoop.io.SequenceFile;
 
 /**
  * Add support for transactional operations to the regionserver's
@@ -45,11 +44,6 @@ class THLog extends HLog {
   public THLog(FileSystem fs, Path dir, HBaseConfiguration conf,
       LogRollListener listener) throws IOException {
     super(fs, dir, conf, listener);
-  }
-
-  @Override
-  protected SequenceFile.Writer createWriter(Path path) throws IOException {
-    return super.createWriter(path, THLogKey.class, KeyValue.class);
   }
 
   @Override

@@ -58,6 +58,8 @@ public class TestTHLog extends HBaseTestCase implements
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR, this.cluster.getFileSystem()
         .getHomeDirectory().toString());
+    this.conf.set("hbase.regionserver.hlog.keyclass",
+        THLogKey.class.getCanonicalName());
     super.setUp();
     this.dir = new Path("/hbase", getName());
     if (fs.exists(dir)) {

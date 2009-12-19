@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -317,17 +316,17 @@ public class Store implements HConstants, HeapSize {
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
     long firstSeqIdInLog = -1;
-    SequenceFile.Reader logReader = HLog.getReader(this.fs, reconstructionLog,
-      this.conf);
+    HLog.Reader logReader = HLog.getReader(this.fs, reconstructionLog, conf);
     try {
-      HLogKey key = HLog.newKey(conf);
-      KeyValue val = new KeyValue();
       long skippedEdits = 0;
       long editsCount = 0;
       // How many edits to apply before we send a progress report.
       int reportInterval =
         this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
-      while (logReader.next(key, val)) {
+      HLog.Entry entry;
+      while ((entry = logReader.next()) != null) {
+        HLogKey key = entry.getKey();
+        KeyValue val = entry.getEdit();
         if (firstSeqIdInLog == -1) {
           firstSeqIdInLog = key.getLogSeqNum();
         }
