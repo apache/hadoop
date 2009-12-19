@@ -70,3 +70,35 @@ Quick Start:
          domU-12-31-39-01-B0-91.compute-1.internal:60020 1258653706411
            requests=0, regions=0, usedHeap=27, maxHeap=987
        0 dead servers
+
+
+Extra Packages:
+
+It is possible to specify that extra packages be downloaded and installed on
+demand when the master and slave instances start. 
+
+   1. Set up a YUM repository. See: http://yum.baseurl.org/wiki/RepoCreate
+
+   2. Host the repository somewhere public. For example, build the
+      repository locally and then copy it up to an S3 bucket.
+
+   3. Create a YUM repository descriptor (.repo file). See:
+      http://yum.baseurl.org/wiki/RepoCreate
+
+        [myrepo]
+        name = MyRepo
+        baseurl = http://mybucket.s3.amazonaws.com/myrepo
+        enabled = 1
+
+      Upload the .repo file somewhere public, for example, in the root
+      directory of the repository,
+      mybucket.s3.amazonaws.com/myrepo/myrepo.repo
+
+   4. Configure hbase-ec2-env.sh thus:
+
+      EXTRA_PACKAGES="http://mybucket.s3.amazonaws.com/myrepo/myrepo.repo \
+        pkg1 pkg2 pkg3"
+
+When the master and slave instances start, the .repo file will be added to
+the Yum repository list and then Yum will be invoked to pull the packages
+listed after the URL. 
