@@ -234,6 +234,14 @@ HBASE SHELL COMMANDS:
            hbase> get 't1', 'r1', {COLUMN => 'c1', TIMESTAMP => ts1, \\
              VERSIONS => 4}
 
+ incr      Increments a cell 'value' at specified table/row/column coordinates.
+           To increment a cell value in table 't1' at row 'r1' under column
+           'c1' by 1 (can be omitted) or 10 do:
+
+           hbase> incr 't1', 'r1', 'c1'
+           hbase> incr 't1', 'r1', 'c1', 1
+           hbase> incr 't1', 'r1', 'c1', 10
+
  list      List all tables in hbase
 
  put       Put a cell 'value' at specified table/row/column and optionally
@@ -401,6 +409,10 @@ def put(table, row, column, value, timestamp = nil)
   table(table).put(row, column, value, timestamp)
 end
   
+def incr(table, row, column, value = nil)
+  table(table).incr(row, column, value)
+end
+
 def scan(table, args = {})
   table(table).scan(args)
 end

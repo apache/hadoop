@@ -460,6 +460,22 @@ module HBase
       @formatter.footer(now)
     end
 
+    def incr(row, column, value = nil)
+      now = Time.now 
+      split = KeyValue.parseColumn(column.to_java_bytes)
+      family = split[0]
+      qualifier = nil
+      if split.length > 1
+        qualifier = split[1]
+      end
+      if value == nil
+        value = 1
+      end
+      @table.incrementColumnValue(row.to_java_bytes, family, qualifier, value)
+      @formatter.header()
+      @formatter.footer(now)
+    end
+
     def isMetaTable()
       tn = @table.getTableName()
       return Bytes.equals(tn, HConstants::META_TABLE_NAME) ||
@@ -620,6 +636,12 @@ module HBase
     table.scan({COLUMNS => ['x:'], STARTROW => 'x5', ENDROW => 'x8'})
     if formatter.rowCount() != 3
       raise IOError.new("Failed endrow test")
+    end
+    # Verify that incr works
+    table.incr('incr1', 'c:1');
+    table.scan({COLUMNS => ['c:1']})
+    if formatter.rowCount() != 1
+      raise IOError.new("Failed incr test")
     end
     # Verify that delete works
     table.delete('x1', 'x:1');
