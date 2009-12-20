@@ -42,7 +42,7 @@ adding hbase dependencies here.  For example, here is how you would amend
 <code>hadoop-env.sh</code> adding the
 built hbase jar, zookeeper (needed by hbase client), hbase conf, and the
 <code>PerformanceEvaluation</code> class from the built hbase test jar to the
-hadoop <code>CLASSPATH<code>:
+hadoop <code>CLASSPATH</code>:
 
 <blockquote><pre># Extra Java CLASSPATH elements. Optional.
 # export HADOOP_CLASSPATH=
