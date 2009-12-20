@@ -424,7 +424,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public long getMemStoreFlushSize() {
     byte [] value = getValue(MEMSTORE_FLUSHSIZE_KEY);
     if (value != null)
-      return Integer.valueOf(Bytes.toString(value)).intValue();
+      return Long.valueOf(Bytes.toString(value)).longValue();
     return DEFAULT_MEMSTORE_FLUSH_SIZE;
   }
   
