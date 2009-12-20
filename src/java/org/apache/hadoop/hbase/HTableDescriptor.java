@@ -431,9 +431,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
-  public void setMemStoreFlushSize(int memstoreFlushSize) {
+  public void setMemStoreFlushSize(long memstoreFlushSize) {
     setValue(MEMSTORE_FLUSHSIZE_KEY,
-      Bytes.toBytes(Integer.toString(memstoreFlushSize)));
+      Bytes.toBytes(Long.toString(memstoreFlushSize)));
   }
 
   /**
