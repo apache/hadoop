@@ -86,6 +86,9 @@ Release 0.20.2 - Unreleased
 
     HADOOP-6428. HttpServer sleeps with negative values (cos)
 
+    HDFS-101. DFS write pipeline: DFSClient sometimes does not detect second
+    datanode failure. (hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
