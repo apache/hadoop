@@ -137,17 +137,8 @@ public class TestDFSClientRetries extends TestCase {
       return versionID;
     }
 
-    public LocatedBlock addBlock(String src, String clientName,
-                                 Block previous) throws IOException {
-
-      return addBlock(src, clientName, previous, null);
-    }
-
-    public LocatedBlock addBlock(String src,
-                                 String clientName,
-                                 Block previous,
-                                 DatanodeInfo[] excludedNode
-                                 ) throws IOException
+    public LocatedBlock addBlock(String src, String clientName, Block previous)
+    throws IOException
     {
       num_calls++;
       if (num_calls > num_calls_allowed) { 

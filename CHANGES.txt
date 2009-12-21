@@ -28,10 +28,6 @@ Trunk (unreleased changes)
 
     HDFS-699. Add unit tests framework (Mockito) (cos, Eli Collins)
 
-    HDFS-630  In DFSOutputStream.nextBlockOutputStream(), the client can
-              exclude specific datanodes when locating the next block
-              (Cosmin Lehene via Stack)
-
     HDFS-519. Create new tests for lease recovery (cos)
 
     HDFS-804. New unit tests for concurrent lease recovery (cos)
