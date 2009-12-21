@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 public class MiniHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   private HBaseConfiguration conf;
-  private LocalHBaseCluster hbaseCluster;
+  public LocalHBaseCluster hbaseCluster;
 
   /**
    * Start a MiniHBaseCluster. 

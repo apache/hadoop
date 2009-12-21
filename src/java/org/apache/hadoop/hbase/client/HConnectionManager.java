@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -461,6 +462,29 @@ public class HConnectionManager implements HConstants {
     
     public boolean isTableDisabled(byte[] tableName) throws IOException {
       return testTableOnlineState(tableName, false);
+    }
+
+    public boolean isTableAvailable(final byte[] tableName) throws IOException {
+      final AtomicBoolean available = new AtomicBoolean(true);
+      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result row) throws IOException {
+          byte[] value = row.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+          HRegionInfo info = Writables.getHRegionInfoOrNull(value);
+          if (info != null) {
+            if (Bytes.equals(tableName, info.getTableDesc().getName())) {
+              value = row.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+              if (value == null) {
+                available.set(false);
+                return false;
+              }
+            }
+          }
+          return true;
+        }        
+      };
+      MetaScanner.metaScan(conf, visitor);
+      return available.get();
     }
 
     /*

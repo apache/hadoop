@@ -77,7 +77,14 @@ public interface HConnection {
    * @throws IOException
    */
   public boolean isTableDisabled(byte[] tableName) throws IOException;
-  
+
+  /**
+   * @param tableName
+   * @return true if all regions of the table are available, false otherwise
+   * @throws IOException
+   */
+  public boolean isTableAvailable(byte[] tableName) throws IOException;
+
   /**
    * List all the userspace tables.  In other words, scan the META table.
    *

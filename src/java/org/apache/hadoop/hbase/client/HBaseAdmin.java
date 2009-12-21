@@ -441,6 +441,24 @@ public class HBaseAdmin {
   }
 
   /**
+   * @param tableName name of table to check
+   * @return true if all regions of the table are available
+   * @throws IOException
+   */
+  public boolean isTableAvailable(byte[] tableName) throws IOException {
+    return connection.isTableAvailable(tableName);
+  }
+
+  /**
+   * @param tableName name of table to check
+   * @return true if all regions of the table are available
+   * @throws IOException
+   */
+  public boolean isTableAvailable(String tableName) throws IOException {
+    return connection.isTableAvailable(Bytes.toBytes(tableName));
+  }
+
+  /**
    * Add a column to an existing table.
    * Asynchronous operation.
    * 

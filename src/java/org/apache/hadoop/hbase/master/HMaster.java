@@ -752,6 +752,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         if (!this.regionManager.areAllMetaRegionsOnline()) {
           throw new NotAllMetaRegionsOnlineException();
         }
+        if (!this.serverManager.canAssignUserRegions()) {
+          throw new IOException("not enough servers to create table yet");
+        }
         createTable(newRegion);
         LOG.info("created table " + desc.getNameAsString());
         break;
@@ -1155,9 +1158,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   private static void printUsageAndExit() {
-    System.err.println("Usage: Master start|stop");
+    System.err.println("Usage: Master [opts] start|stop");
     System.err.println(" start  Start Master. If local mode, start Master and RegionServer in same JVM");
     System.err.println(" stop   Start cluster shutdown; Master signals RegionServer shutdown");
+    System.err.println(" where [opts] are:");
+    System.err.println("   --minServers=<servers>    Minimum RegionServers needed to host user tables.");
     System.exit(0);
   }
 
@@ -1168,6 +1173,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     HBaseConfiguration conf = new HBaseConfiguration();
     // Process command-line args.
     for (String cmd: args) {
+
+      if (cmd.startsWith("--minServers=")) {
+        conf.setInt("hbase.regions.server.count.min",
+          Integer.valueOf(cmd.substring(13)));
+        continue;
+      }
+
       if (cmd.equalsIgnoreCase("start")) {
         try {
           // Print out vm stats before starting up.

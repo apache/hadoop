@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -412,6 +411,12 @@ public class RegionManager implements HConstants {
             !i.isMetaRegion()) {
           // Can't assign user regions until all meta regions have been assigned
           // and are on-line
+          continue;
+        }
+        if (!i.isMetaRegion() && 
+            !master.getServerManager().canAssignUserRegions()) {
+          LOG.debug("user region " + i.getRegionNameAsString() +
+            " is in transition but not enough servers yet");
           continue;
         }
         if (s.isUnassigned()) {

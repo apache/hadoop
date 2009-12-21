@@ -93,6 +93,8 @@ public class ServerManager implements HConstants {
 
   private final ServerMonitor serverMonitorThread;
 
+  private int minimumServerCount;
+
   /*
    * Dumps into log current stats on dead servers and number of servers
    * TODO: Make this a metric; dump metrics into log.
@@ -136,6 +138,7 @@ public class ServerManager implements HConstants {
     this.nobalancingCount = c.getInt("hbase.regions.nobalancing.count", 4);
     int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
       60 * 1000);
+    this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 0);
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval,
       this.master.getShutdownRequested());
     this.serverMonitorThread.start();
@@ -844,4 +847,16 @@ public class ServerManager implements HConstants {
       m.putAll(this.loadToServers.headMap(l));
     }
   }
+
+  public boolean canAssignUserRegions() {
+    if (minimumServerCount == 0) {
+      return true;
+    }
+    return (numServers() >= minimumServerCount);
+  }
+
+  public void setMinimumServerCount(int minimumServerCount) {
+    this.minimumServerCount = minimumServerCount;
+  }
+
 }
