@@ -51,7 +51,8 @@ class InstanceTemplate(object):
   def __init__(self, roles, number, image_id, size_id,
                      key_name, public_key,
                      user_data_file_template=None, placement=None,
-                     user_packages=None, auto_shutdown=None, env_strings=[]):
+                     user_packages=None, auto_shutdown=None, env_strings=[],
+                     security_groups=[]):
     self.roles = roles
     self.number = number
     self.image_id = image_id
@@ -63,6 +64,7 @@ class InstanceTemplate(object):
     self.user_packages = user_packages
     self.auto_shutdown = auto_shutdown
     self.env_strings = env_strings
+    self.security_groups = security_groups
 
   def add_env_strings(self, env_strings):
     new_env_strings = list(self.env_strings or [])
@@ -307,7 +309,8 @@ echo Proxy pid %s;""" % (process.pid, process.pid)
                                             instance_user_data,
                                             key_name=it.key_name,
                                             public_key=it.public_key,
-                                            placement=it.placement)
+                                            placement=it.placement,
+                                            security_groups=it.security_groups)
     print "Waiting for %s instances in role %s to start" % \
       (it.number, ",".join(it.roles))
     try:

@@ -221,10 +221,11 @@ class Ec2Cluster(Cluster):
       self._create_groups(role)
       
     user_data = instance_user_data.read_as_gzip_stream()
+    security_groups = self._get_group_names(roles) + kwargs.get('security_groups', [])
 
     reservation = self.ec2Connection.run_instances(image_id, min_count=number,
       max_count=number, key_name=kwargs.get('key_name', None),
-      security_groups=self._get_group_names(roles), user_data=user_data,
+      security_groups=security_groups, user_data=user_data,
       instance_type=size_id, placement=kwargs.get('placement', None))
     return [instance.id for instance in reservation.instances]
 

@@ -73,6 +73,9 @@ Trunk (unreleased changes)
 
     HADOOP-4656. Add a user to groups mapping service. (boryas, acmurthy)
 
+    HADOOP-6444. Support additional security group option in hadoop-ec2 script.
+    (Paul Egan via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -84,6 +84,9 @@ automatically shut down."),
   make_option("--client-cidr", metavar="CIDR", action="append",
     help="The CIDR of the client, which is used to allow access through the \
 firewall to the master node. (May be specified multiple times.)"),
+  make_option("--security-group", metavar="SECURITY_GROUP", action="append",
+    default=[], help="Additional security groups within which the instances \
+should be run. (Amazon EC2 only.) (May be specified multiple times.)"),
   make_option("--public-key", metavar="FILE",
     help="The public key to authorize on launching instances. (Non-EC2 \
 providers only.)"),
@@ -282,7 +285,8 @@ def main():
                          opt.get('instance_type'), opt.get('key_name'),
                          opt.get('public_key'), opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
-                         opt.get('auto_shutdown'), opt.get('env'))
+                         opt.get('auto_shutdown'), opt.get('env'),
+                         opt.get('security_group'))
     service.launch_master(template, config_dir, opt.get('client_cidr'))
 
   elif command == 'launch-slaves':
@@ -295,7 +299,8 @@ def main():
                          opt.get('instance_type'), opt.get('key_name'),
                          opt.get('public_key'), opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
-                         opt.get('auto_shutdown'), opt.get('env'))
+                         opt.get('auto_shutdown'), opt.get('env'),
+                         opt.get('security_group'))
     service.launch_slaves(template)
 
   elif command == 'launch-cluster':
@@ -315,13 +320,15 @@ def main():
                          opt.get('instance_type'), opt.get('key_name'),
                          opt.get('public_key'), opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
-                         opt.get('auto_shutdown'), opt.get('env')),
+                         opt.get('auto_shutdown'), opt.get('env'),
+                         opt.get('security_group')),
         InstanceTemplate((DATANODE, TASKTRACKER), number_of_slaves,
                          get_image_id(service.cluster, opt),
                          opt.get('instance_type'), opt.get('key_name'),
                          opt.get('public_key'), opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
-                         opt.get('auto_shutdown'), opt.get('env')),
+                         opt.get('auto_shutdown'), opt.get('env'),
+                         opt.get('security_group')),
                          ]
     elif len(args) > 2 and len(args) % 2 == 0:
       print_usage(sys.argv[0])
@@ -336,7 +343,8 @@ def main():
                            opt.get('public_key'), opt.get('user_data_file'),
                            opt.get('availability_zone'),
                            opt.get('user_packages'),
-                           opt.get('auto_shutdown'), opt.get('env')))
+                           opt.get('auto_shutdown'), opt.get('env'),
+                           opt.get('security_group')))
 
     service.launch_cluster(instance_templates, config_dir,
                            opt.get('client_cidr'))
