@@ -209,7 +209,7 @@ Release 0.21.0 - Unreleased
     HADOOP-6240. Add new FileContext rename operation that posix compliant
     that allows overwriting existing destination. (suresh)
 
-    HADOOP-6205. Implementing aspects development and fault injeciton
+    HADOOP-6204. Implementing aspects development and fault injeciton
     framework for Hadoop (cos)
 
     HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
