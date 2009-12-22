@@ -39,7 +39,7 @@ public class PipelinesTestUtil extends DataTransferTestUtil {
   /**
    * Storing acknowleged bytes num. action for fault injection tests
    */
-  public static class ReceivedCheckAction implements FiTestUtil.Action<NodeBytes> {
+  public static class ReceivedCheckAction implements FiTestUtil.Action<NodeBytes, IOException> {
     String name;
     LinkedList<NodeBytes> rcv = ((PipelinesTest) getPipelineTest()).received;
     LinkedList<NodeBytes> ack = ((PipelinesTest) getPipelineTest()).acked;
@@ -77,7 +77,7 @@ public class PipelinesTestUtil extends DataTransferTestUtil {
   /**
    * Storing acknowleged bytes num. action for fault injection tests
    */
-  public static class AckedCheckAction implements FiTestUtil.Action<NodeBytes> {
+  public static class AckedCheckAction implements FiTestUtil.Action<NodeBytes, IOException> {
     String name;
     LinkedList<NodeBytes> rcv = ((PipelinesTest) getPipelineTest()).received;
     LinkedList<NodeBytes> ack = ((PipelinesTest) getPipelineTest()).acked;
@@ -118,10 +118,10 @@ public class PipelinesTestUtil extends DataTransferTestUtil {
     LinkedList<NodeBytes> received = new LinkedList<NodeBytes>();
     LinkedList<NodeBytes> acked = new LinkedList<NodeBytes>();
 
-    public final ActionContainer<NodeBytes> fiCallSetNumBytes =
-      new ActionContainer<NodeBytes>();
-    public final ActionContainer<NodeBytes> fiCallSetBytesAcked =
-      new ActionContainer<NodeBytes>();
+    public final ActionContainer<NodeBytes, IOException> fiCallSetNumBytes =
+      new ActionContainer<NodeBytes, IOException>();
+    public final ActionContainer<NodeBytes, IOException> fiCallSetBytesAcked =
+      new ActionContainer<NodeBytes, IOException>();
     
     private static boolean suspend = false;
     private static long lastQueuedPacket = -1;

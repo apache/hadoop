@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.FiTestUtil;
@@ -101,7 +102,7 @@ public class TestFiDataTransferProtocol {
   }
   
   private static void runReceiverOpWriteBlockTest(String methodName,
-      int errorIndex, Action<DatanodeID> a) throws IOException {
+      int errorIndex, Action<DatanodeID, IOException> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
     final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
         .initTest();
@@ -113,7 +114,7 @@ public class TestFiDataTransferProtocol {
   }
   
   private static void runStatusReadTest(String methodName, int errorIndex,
-      Action<DatanodeID> a) throws IOException {
+      Action<DatanodeID, IOException> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
     final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
         .initTest();
@@ -124,11 +125,11 @@ public class TestFiDataTransferProtocol {
     Assert.assertTrue(t.isSuccess());
   }
 
-  private static void runCallReceivePacketTest(String methodName,
-      int errorIndex, Action<DatanodeID> a) throws IOException {
+  private static void runCallWritePacketToDisk(String methodName,
+      int errorIndex, Action<DatanodeID, IOException> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
     final DataTransferTest t = (DataTransferTest)DataTransferTestUtil.initTest();
-    t.fiCallReceivePacket.set(a);
+    t.fiCallWritePacketToDisk.set(a);
     t.fiPipelineErrorAfterInit.set(new VerificationAction(methodName, errorIndex));
     write1byte(methodName);
     Assert.assertTrue(t.isSuccess());
@@ -280,7 +281,7 @@ public class TestFiDataTransferProtocol {
   @Test
   public void pipeline_Fi_14() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    runCallReceivePacketTest(methodName, 0, new DoosAction(methodName, 0));
+    runCallWritePacketToDisk(methodName, 0, new DoosAction(methodName, 0));
   }
 
   /**
@@ -291,7 +292,7 @@ public class TestFiDataTransferProtocol {
   @Test
   public void pipeline_Fi_15() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    runCallReceivePacketTest(methodName, 1, new DoosAction(methodName, 1));
+    runCallWritePacketToDisk(methodName, 1, new DoosAction(methodName, 1));
   }
   
   /**
@@ -302,11 +303,11 @@ public class TestFiDataTransferProtocol {
   @Test
   public void pipeline_Fi_16() throws IOException {
     final String methodName = FiTestUtil.getMethodName();
-    runCallReceivePacketTest(methodName, 2, new DoosAction(methodName, 2));
+    runCallWritePacketToDisk(methodName, 2, new DoosAction(methodName, 2));
   }
 
   private static void runPipelineCloseTest(String methodName,
-      Action<DatanodeID> a) throws IOException {
+      Action<DatanodeID, IOException> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
     final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
         .initTest();
@@ -324,7 +325,7 @@ public class TestFiDataTransferProtocol {
     final DataTransferTest t = (DataTransferTest)DataTransferTestUtil.initTest();
     final MarkerConstraint marker = new MarkerConstraint(name);
     t.fiPipelineClose.set(new DatanodeMarkingAction(name, i, marker));
-    t.fiPipelineAck.set(new ConstraintSatisfactionAction<DatanodeID>(a, marker));
+    t.fiPipelineAck.set(new ConstraintSatisfactionAction<DatanodeID, IOException>(a, marker));
     write1byte(name);
   }
 
@@ -442,7 +443,7 @@ public class TestFiDataTransferProtocol {
   }
 
   private static void runBlockFileCloseTest(String methodName,
-      Action<DatanodeID> a) throws IOException {
+      Action<DatanodeID, IOException> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
     final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
         .initTest();

@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.Pipeline;
 import org.apache.hadoop.fi.PipelineTest;
 import org.apache.hadoop.fi.ProbabilityModel;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
@@ -44,12 +45,7 @@ privileged public aspect BlockReceiverAspects {
   public static final Log LOG = LogFactory.getLog(BlockReceiverAspects.class);
 
   pointcut callReceivePacket(BlockReceiver blockreceiver) :
-    call (* OutputStream.write(..))
-      && withincode (* BlockReceiver.receivePacket(..))
-// to further limit the application of this aspect a very narrow 'target' can be used as follows
-//  && target(DataOutputStream)
-      && !within(BlockReceiverAspects +)
-      && this(blockreceiver);
+    call(* receivePacket(..)) && target(blockreceiver);
 	
   before(BlockReceiver blockreceiver
       ) throws IOException : callReceivePacket(blockreceiver) {
@@ -67,7 +63,30 @@ privileged public aspect BlockReceiverAspects {
     }
   }
   
-  // Pointcuts and advises for TestFiPipelines  
+  pointcut callWritePacketToDisk(BlockReceiver blockreceiver) :
+    call(* writePacketToDisk(..)) && target(blockreceiver);
+
+  before(BlockReceiver blockreceiver
+      ) throws IOException : callWritePacketToDisk(blockreceiver) {
+    LOG.info("FI: callWritePacketToDisk");
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null)
+      dtTest.fiCallWritePacketToDisk.run(
+          blockreceiver.getDataNode().getDatanodeRegistration());
+  }
+
+  pointcut afterDownstreamStatusRead(BlockReceiver.PacketResponder responder):
+    call(void PipelineAck.readFields(DataInput)) && this(responder);
+
+  after(BlockReceiver.PacketResponder responder)
+      throws IOException: afterDownstreamStatusRead(responder) {
+    final DataNode d = responder.receiver.getDataNode();
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null)
+      dtTest.fiAfterDownstreamStatusRead.run(d.getDatanodeRegistration());
+  }
+
+    // Pointcuts and advises for TestFiPipelines  
   pointcut callSetNumBytes(BlockReceiver br, long offset) : 
     call (void ReplicaInPipelineInterface.setNumBytes(long)) 
     && withincode (int BlockReceiver.receivePacket(long, long, boolean, int, int))

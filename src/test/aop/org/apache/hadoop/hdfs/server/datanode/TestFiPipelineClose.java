@@ -83,7 +83,7 @@ public class TestFiPipelineClose {
   }
 
    private static void runPipelineCloseTest(String methodName,
-      Action<DatanodeID> a) throws IOException {
+      Action<DatanodeID, IOException> a) throws IOException {
     FiTestUtil.LOG.info("Running " + methodName + " ...");
     final DataTransferTest t = (DataTransferTest) DataTransferTestUtil
         .initTest();

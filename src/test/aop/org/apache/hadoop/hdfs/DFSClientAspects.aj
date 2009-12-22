@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
@@ -49,14 +47,10 @@ privileged public aspect DFSClientAspects {
   after(DataStreamer datastreamer) returning : pipelineInitNonAppend(datastreamer) {
     LOG.info("FI: after pipelineInitNonAppend: hasError="
         + datastreamer.hasError + " errorIndex=" + datastreamer.errorIndex);
-    try {
-      if (datastreamer.hasError) {
-        DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
-        if (dtTest != null )
-          dtTest.fiPipelineInitErrorNonAppend.run(datastreamer.errorIndex);
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    if (datastreamer.hasError) {
+      DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+      if (dtTest != null)
+        dtTest.fiPipelineInitErrorNonAppend.run(datastreamer.errorIndex);
     }
   }
 
@@ -78,13 +72,9 @@ privileged public aspect DFSClientAspects {
   before(DataStreamer datastreamer) : pipelineErrorAfterInit(datastreamer) {
     LOG.info("FI: before pipelineErrorAfterInit: errorIndex="
         + datastreamer.errorIndex);
-    try {
-      DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
-      if (dtTest != null )
-        dtTest.fiPipelineErrorAfterInit.run(datastreamer.errorIndex);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null )
+      dtTest.fiPipelineErrorAfterInit.run(datastreamer.errorIndex);
   }
 
   pointcut pipelineClose(DFSOutputStream out):

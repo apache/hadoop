@@ -432,6 +432,14 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     return receivePacket(offsetInBlock, seqno, lastPacketInBlock, len, endOfHeader);
   }
 
+  /**
+   * Write the received packet to disk (data only)
+   */
+  private void writePacketToDisk(byte[] pktBuf, int startByteToDisk, 
+      int numBytesToDisk) throws IOException {
+    out.write(pktBuf, startByteToDisk, numBytesToDisk);
+  }
+  
   /** 
    * Receives and processes a packet. It can contain many chunks.
    * returns the number of data bytes that the packet has.
@@ -524,7 +532,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
           int startByteToDisk = dataOff+(int)(onDiskLen-firstByteInBlock);
           int numBytesToDisk = (int)(offsetInBlock-onDiskLen);
-          out.write(pktBuf, startByteToDisk, numBytesToDisk);
+          writePacketToDisk(pktBuf, startByteToDisk, numBytesToDisk);
 
           // If this is a partial chunk, then verify that this is the only
           // chunk in the packet. Calculate new crc for this chunk.
