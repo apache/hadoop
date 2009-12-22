@@ -38,4 +38,8 @@
       </fileset>
     </py-test>
   </target>
+  <target name="compile"/>
+  <target name="package"/>
+  <target name="test" depends="test-py"/>
+  <target name="clean"/>
 </project>

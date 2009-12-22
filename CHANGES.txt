@@ -106,6 +106,8 @@ Trunk (unreleased changes)
     HADOOP-6391. Classpath should not be part of command line arguments.
     (Cristian Ivascu via tomwhite)
 
+    HADOOP-6462. Target "compile" does not exist in contrib/cloud. (tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
