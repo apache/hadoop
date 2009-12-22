@@ -16,6 +16,10 @@ Trunk (unreleased changes)
 
     HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
 
+    Hadoop-6223. Add new file system interface AbstractFileSystem with
+    implementation of some file systems that delegate to old FileSystem.
+    (Sanjay Radia via suresh)
+
     HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
     (tomwhite)
 
@@ -40,14 +44,8 @@ Trunk (unreleased changes)
     HADOOP-6305. Unify build property names to facilitate cross-projects
     modifications (cos)
 
-    HADOOP-6204. Implementing aspects development and fault injeciton
-    framework for Hadoop (cos)
-
     HADOOP-6312. Remove unnecessary debug logging in Configuration constructor.
     (Aaron Kimball via cdouglas)
-
-    HADOOP-6326. Hundson runs should check for AspectJ warnings and report
-    failure if any is present (cos)
 
     HADOOP-6366. Reduce ivy console output to ovservable level (cos)
 
@@ -61,8 +59,6 @@ Trunk (unreleased changes)
 
     HADOOP-5958. Use JDK 1.6 File APIs in DF.java wherever possible.
     (Aaron Kimball via tomwhite)
-
-    HADOOP-6413. Move TestReflectionUtils to Common. (Todd Lipcon via tomwhite)
 
     HADOOP-6222. Core doesn't have TestCommonCLI facility. (cos)
 
@@ -89,8 +85,6 @@ Trunk (unreleased changes)
 
     HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
     szetszwo)
-
-    HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
 
     HADOOP-6405. Update Eclipse configuration to match changes to Ivy
     configuration (Edwin Chan via cos)
@@ -325,12 +319,11 @@ Release 0.21.0 - Unreleased
     HADOOP-6240. Add new FileContext rename operation that posix compliant
     that allows overwriting existing destination. (suresh)
 
+    HADOOP-6204. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
     HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
     flush APIs to application users. (Hairong Kuang via suresh)
-
-    Hadoop-6223. Add new file system interface AbstractFileSystem with
-    implementation of some file systems that delegate to old FileSystem.
-    (Sanjay Radia via suresh)
 
   IMPROVEMENTS
 
@@ -713,6 +706,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6309. Change build.xml to run tests with java asserts.  (Eli
     Collins via szetszwo)
 
+    HADOOP-6326. Hundson runs should check for AspectJ warnings and report
+    failure if any is present (cos)
+
     HADOOP-6329. Add build-fi directory to the ignore lists.  (szetszwo)
 
     HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
@@ -726,6 +722,10 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6395. Upgrade some libraries to be consistent across common, hdfs,
     and mapreduce. (omalley)
+
+    HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
+
+    HADOOP-6413. Move TestReflectionUtils to Common. (Todd Lipcon via tomwhite)
 
   OPTIMIZATIONS
 
