@@ -76,6 +76,8 @@ Trunk (unreleased changes)
     HADOOP-6444. Support additional security group option in hadoop-ec2 script.
     (Paul Egan via tomwhite)
 
+    HADOOP-6454. Create setup.py for EC2 cloud scripts. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

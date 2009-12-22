@@ -12,4 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-VERSION="0.22.0"
+
+from distutils.core import setup
+
+version = __import__('hadoop.cloud').cloud.VERSION
+
+setup(name='hadoop-cloud',
+      version=version,
+      description='Scripts for running Hadoop on cloud providers',
+      license = 'Apache License (2.0)',
+      url = 'http://hadoop.apache.org/common/',
+      packages=['hadoop', 'hadoop.cloud','hadoop.cloud.providers'],
+      package_data={'hadoop.cloud': ['data/*.sh']},
+      scripts=['hadoop-ec2'],
+      author = 'Apache Hadoop Contributors',
+      author_email = 'common-dev@hadoop.apache.org',
+)

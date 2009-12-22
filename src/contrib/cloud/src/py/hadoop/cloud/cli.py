@@ -16,6 +16,7 @@
 from __future__ import with_statement
 
 import ConfigParser
+from hadoop.cloud import VERSION
 from hadoop.cloud.cluster import get_cluster
 from hadoop.cloud.service import InstanceTemplate
 from hadoop.cloud.service import HadoopService
@@ -31,9 +32,6 @@ from optparse import OptionParser
 from optparse import make_option
 import os
 import sys
-
-version_file = os.path.join(sys.path[0], "VERSION")
-VERSION = open(version_file, "r").read().strip()
 
 DEFAULT_CLOUD_PROVIDER = 'ec2'
 

@@ -247,7 +247,8 @@ echo Proxy pid %s;""" % (process.pid, process.pid)
   
 
   def _get_default_user_data_file_template(self):
-    return os.path.join(sys.path[0], 'hadoop-%s-init-remote.sh' %
+    data_path = os.path.join(os.path.dirname(__file__), 'data')
+    return os.path.join(data_path, 'hadoop-%s-init-remote.sh' %
                  self.cluster.get_provider_code())
   
   def _get_master(self):
