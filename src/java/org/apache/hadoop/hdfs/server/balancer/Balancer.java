@@ -789,7 +789,6 @@ public class Balancer implements Tool {
   
   /** Default constructor */
   Balancer() throws UnsupportedActionException {
-    checkReplicationPolicyCompatibility(getConf());
   }
   
   /** Construct a balancer from the given configuration */

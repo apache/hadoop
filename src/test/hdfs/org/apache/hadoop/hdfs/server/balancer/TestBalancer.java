@@ -180,6 +180,7 @@ public class TestBalancer extends TestCase {
       totalCapacity += capacity;
     }
     runBalancer(conf, totalUsedSpace, totalCapacity);
+    cluster.shutdown();
   }
 
   /* wait for one heartbeat */
@@ -261,6 +262,38 @@ public class TestBalancer extends TestCase {
     } while(!balanced);
 
   }
+
+  private void runBalancerDefaultConstructor(Configuration conf,
+      long totalUsedSpace, long totalCapacity) throws Exception {
+    waitForHeartBeat(totalUsedSpace, totalCapacity);
+
+    // start rebalancing
+    balancer = new Balancer();
+    balancer.setConf(conf);
+    balancer.run(new String[0]);
+
+    waitForHeartBeat(totalUsedSpace, totalCapacity);
+    boolean balanced;
+    do {
+      DatanodeInfo[] datanodeReport = client
+          .getDatanodeReport(DatanodeReportType.ALL);
+      assertEquals(datanodeReport.length, cluster.getDataNodes().size());
+      balanced = true;
+      double avgUtilization = ((double) totalUsedSpace) / totalCapacity * 100;
+      for (DatanodeInfo datanode : datanodeReport) {
+        if (Math.abs(avgUtilization - ((double) datanode.getDfsUsed())
+            / datanode.getCapacity() * 100) > 10) {
+          balanced = false;
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException ignored) {
+          }
+          break;
+        }
+      }
+    } while (!balanced);
+
+  }
   
   /** one-node cluster test*/
   private void oneNodeTest(Configuration conf) throws Exception {
@@ -298,6 +331,44 @@ public class TestBalancer extends TestCase {
         new long[]{CAPACITY, CAPACITY},
         new String[] {RACK0, RACK1});
   }
+  
+  public void testBalancer2() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    testBalancerDefaultConstructor(conf, new long[] { CAPACITY, CAPACITY },
+        new String[] { RACK0, RACK1 }, CAPACITY, RACK2);
+  }
+
+  private void testBalancerDefaultConstructor(Configuration conf,
+      long[] capacities, String[] racks, long newCapacity, String newRack)
+      throws Exception {
+    int numOfDatanodes = capacities.length;
+    assertEquals(numOfDatanodes, racks.length);
+    cluster = new MiniDFSCluster(0, conf, capacities.length, true, true, null,
+        racks, capacities);
+    try {
+      cluster.waitActive();
+      client = DFSClient.createNamenode(conf);
+
+      long totalCapacity = 0L;
+      for (long capacity : capacities) {
+        totalCapacity += capacity;
+      }
+      // fill up the cluster to be 30% full
+      long totalUsedSpace = totalCapacity * 3 / 10;
+      createFile(totalUsedSpace / numOfDatanodes, (short) numOfDatanodes);
+      // start up an empty node with the same capacity and on the same rack
+      cluster.startDataNodes(conf, 1, true, null, new String[] { newRack },
+          new long[] { newCapacity });
+
+      totalCapacity += newCapacity;
+
+      // run balancer and validate results
+      runBalancerDefaultConstructor(conf, totalUsedSpace, totalCapacity);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 
   /**
    * @param args
@@ -306,5 +377,6 @@ public class TestBalancer extends TestCase {
     TestBalancer balancerTest = new TestBalancer();
     balancerTest.testBalancer0();
     balancerTest.testBalancer1();
+    balancerTest.testBalancer2();
   }
 }

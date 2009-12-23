@@ -584,6 +584,9 @@ Release 0.21.0 - Unreleased
     HDFS-849. TestFiDataTransferProtocol2#pipeline_Fi_18 sometimes fails.
     (hairong)
 
+    HDFS-762. Balancer causes Null Pointer Exception. 
+    (Cristian Ivascu via dhruba)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
