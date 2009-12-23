@@ -124,21 +124,21 @@ public class FiTestUtil {
     public boolean isSatisfied();
   }
 
-  /** Counting down, the constraint is satisfied if the count is zero. */
+  /** Counting down, the constraint is satisfied if the count is one. */
   public static class CountdownConstraint implements Constraint {
     private int count;
 
     /** Initialize the count. */
     public CountdownConstraint(int count) {
-      if (count < 0) {
-        throw new IllegalArgumentException(count + " = count < 0");
+      if (count < 1) {
+        throw new IllegalArgumentException(count + " = count < 1");
       }
       this.count = count;
     }
 
     /** Counting down, the constraint is satisfied if the count is zero. */
     public boolean isSatisfied() {
-      if (count > 0) {
+      if (count > 1) {
         count--;
         return false;
       }

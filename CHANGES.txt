@@ -581,6 +581,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-564. Adding pipeline tests 17-35. (hairong)
 
+    HDFS-849. TestFiDataTransferProtocol2#pipeline_Fi_18 sometimes fails.
+    (hairong)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
