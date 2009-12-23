@@ -185,6 +185,9 @@ Release 0.21.0 - Unreleased
     HDFS-758. Add decommissioning status page to Namenode Web UI.
     (Jitendra Nath Pandey via suresh)
 
+    HDFS-814. Add an api to get the visible length of a DFSDataInputStream.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-381. Remove blocks from DataNode maps when corresponding file
