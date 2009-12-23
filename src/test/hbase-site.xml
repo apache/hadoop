@@ -99,7 +99,7 @@
   </property>
   <property>
     <name>hbase.regionserver.optionalcacheflushinterval</name>
-    <value>10000</value>
+    <value>1000</value>
     <description>
     Amount of time to wait since the last time a region was flushed before
     invoking an optional cache flush. Default 60,000.

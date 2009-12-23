@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Map;
@@ -44,6 +45,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+
 /**
  * Class to test HBaseAdmin.
  * Spins up the minicluster once at test start and then takes it down afterward.
@@ -56,6 +58,9 @@ public class TestAdmin {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
+    TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
+    TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -103,7 +108,7 @@ public class TestAdmin {
     }
     assertEquals(true, ok);
     this.admin.enableTable(table);
-    
+
     //Test that table is enabled
     try {
       ht.get(get);
@@ -112,7 +117,7 @@ public class TestAdmin {
     }
     assertEquals(true, ok);
   }
-  
+
   @Test
   public void testTableExist() throws IOException {
     final byte [] table = Bytes.toBytes("testTableExist");
@@ -126,7 +131,7 @@ public class TestAdmin {
 
   /**
    * Tests forcing split from client and having scanners successfully ride over split.
-   * @throws Exception 
+   * @throws Exception
    * @throws IOException
    */
   @Test
@@ -164,7 +169,7 @@ public class TestAdmin {
     }
     scanner.close();
     assertEquals(rowCount, rows);
-    
+
     // Have an outstanding scan going on to make sure we can scan over splits.
     scan = new Scan();
     scanner = table.getScanner(scan);
@@ -337,7 +342,7 @@ public class TestAdmin {
   /**
    * Test that user table names can contain '-' and '.' so long as they do not
    * start with same. HBASE-771
-   * @throws IOException 
+   * @throws IOException
    */
   @Test
   public void testTableNames() throws IOException {
@@ -368,7 +373,7 @@ public class TestAdmin {
 
   /**
    * For HADOOP-2579
-   * @throws IOException 
+   * @throws IOException
    */
   @Test (expected=TableExistsException.class)
   public void testTableNotFoundExceptionWithATable() throws IOException {
@@ -379,11 +384,34 @@ public class TestAdmin {
 
   /**
    * For HADOOP-2579
-   * @throws IOException 
+   * @throws IOException
    */
   @Test (expected=TableNotFoundException.class)
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
     new HTable(TEST_UTIL.getConfiguration(),
         "testTableNotFoundExceptionWithoutAnyTables");
+  }
+
+  @Test
+  public void testHundredsOfTable() throws IOException{
+    final int times = 100;
+    byte [] name = Bytes.toBytes("testHundredsOfTable");
+    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
+    HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
+    HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
+
+    for(int i = 0; i < times; i++) {
+      HTableDescriptor htd = new HTableDescriptor("table"+i);
+      htd.addFamily(fam1);
+      htd.addFamily(fam2);
+      htd.addFamily(fam3);
+      this.admin.createTable(htd);
+    }
+
+    for(int i = 0; i < times; i++) {
+      String tableName = "table"+i;
+      this.admin.disableTable(tableName);
+      this.admin.deleteTable(tableName);
+    }
   }
 }

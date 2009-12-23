@@ -135,6 +135,10 @@ Release 0.21.0 - Unreleased
                hbase.version
    HBASE-2054  memstore size 0 is >= than blocking -2.0g size
    HBASE-2057  Cluster won't stop
+   HBASE-2064  Cannot disable a table if at the same the Master is moving 
+               its regions around
+   HBASE-2065  Cannot disable a table if any of its region is opening 
+               at the same time
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
