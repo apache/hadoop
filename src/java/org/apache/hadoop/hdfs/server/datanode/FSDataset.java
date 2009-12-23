@@ -355,12 +355,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return dfsUsage.getUsed();
     }
     
+    /**
+     * Calculate the capacity of the filesystem, after removing any
+     * reserved capacity.
+     * @return the unreserved number of bytes left in this filesystem. May be zero.
+     */
     long getCapacity() throws IOException {
-      if (reserved > usage.getCapacity()) {
-        return 0;
-      }
-
-      return usage.getCapacity()-reserved;
+      long remaining = usage.getCapacity() - reserved;
+      return remaining > 0 ? remaining : 0;
     }
       
     long getAvailable() throws IOException {
