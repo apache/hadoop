@@ -72,6 +72,9 @@ Trunk (unreleased changes)
 
     HDFS-825. Build fails to pull latest hadoop-core-* artifacts (cos)
 
+    HDFS-94. The Heap Size printed in the NameNode WebUI is accurate.
+    (Dmytro Molkov via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
