@@ -74,6 +74,9 @@ Trunk (unreleased changes)
 
     HADOOP-6454. Create setup.py for EC2 cloud scripts. (tomwhite)
 
+    HADOOP-6435. Make RPC.waitForProxy with timeout public. (Steve Loughran
+    via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

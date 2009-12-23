@@ -171,7 +171,7 @@ public class RPC {
    * @return the proxy
    * @throws IOException if the far end through a RemoteException
    */
-  static Object waitForProxy(Class protocol, long clientVersion,
+  public static Object waitForProxy(Class protocol, long clientVersion,
                              InetSocketAddress addr, Configuration conf,
                              long timeout) throws IOException { 
     long startTime = System.currentTimeMillis();
