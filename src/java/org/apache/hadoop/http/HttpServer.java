@@ -85,6 +85,8 @@ public class HttpServer implements FilterContainer {
       new HashMap<Context, Boolean>();
   protected final List<String> filterNames = new ArrayList<String>();
   private static final int MAX_RETRIES = 10;
+  static final String STATE_DESCRIPTION_ALIVE = " - alive";
+  static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
 
   /** Same as this(name, bindAddress, port, findPort, null); */
   public HttpServer(String name, String bindAddress, int port, boolean findPort
@@ -502,7 +504,11 @@ public class HttpServer implements FilterContainer {
           // then try the next port number.
           if (ex instanceof BindException) {
             if (!findPort) {
-              throw (BindException) ex;
+              BindException be = new BindException(
+                      "Port in use: " + listener.getHost()
+                              + ":" + listener.getPort());
+              be.initCause(ex);
+              throw be;
             }
           } else {
             LOG.info("HttpServer.start() threw a non Bind IOException"); 
@@ -531,6 +537,26 @@ public class HttpServer implements FilterContainer {
 
   public void join() throws InterruptedException {
     webServer.join();
+  }
+
+  /**
+   * Test for the availability of the web server
+   * @return true if the web server is started, false otherwise
+   */
+  public boolean isAlive() {
+    return webServer != null && webServer.isStarted();
+  }
+
+  /**
+   * Return the host and port of the HttpServer, if live
+   * @return the classname and any HTTP URL
+   */
+  @Override
+  public String toString() {
+    return listener != null ?
+        ("HttpServer at http://" + listener.getHost() + ":" + listener.getLocalPort() + "/"
+            + (isAlive() ? STATE_DESCRIPTION_ALIVE : STATE_DESCRIPTION_NOT_LIVE))
+        : "Inactive HttpServer";
   }
 
   /**
