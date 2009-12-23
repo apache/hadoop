@@ -22,6 +22,8 @@ import java.security.PermissionCollection;
 import java.security.Policy;
 import java.security.Principal;
 import java.security.ProtectionDomain;
+import java.security.CodeSource;
+import java.security.Permissions;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -77,6 +79,19 @@ public class ConfiguredPolicy extends Policy implements Configurable {
     return super.implies(domain, permission);
   }
 
+  /**
+   * {@inheritDoc}
+   * @return a writable permission collection
+   */
+  @Override
+  public PermissionCollection getPermissions(CodeSource codesource) {
+    return new Permissions();
+  }
+
+  /**
+   * {@inheritDoc}
+   * @return a writable permission collection
+   */
   @Override
   public PermissionCollection getPermissions(ProtectionDomain domain) {
     PermissionCollection permissionCollection = super.getPermissions(domain);
@@ -152,5 +167,15 @@ public class ConfiguredPolicy extends Policy implements Configurable {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Policy - Adding  " + permission + " to " + principal);
     }
+  }
+
+  /**
+   * For debugging: identify ourselves and the policyproviders 
+   *
+   * @return a string representation of the object.
+   */
+  @Override
+  public String toString() {
+    return "Hadoop ConfiguredPolicy " + super.toString() + " Policy provider "+ policyProvider;
   }
 }
