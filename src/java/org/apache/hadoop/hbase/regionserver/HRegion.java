@@ -1925,9 +1925,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   /**
    * Delete a region's meta information from the passed
-   * <code>meta</code> region.  Removes content in the 'info' column family.
-   * Does not remove region historian info.
-   * 
+   * <code>meta</code> region.  Deletes the row.
    * @param srvr META server to be updated
    * @param metaRegionName Meta region name
    * @param regionName HRegion to remove from <code>meta</code>
@@ -1938,7 +1936,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     final byte [] metaRegionName, final byte [] regionName)
   throws IOException {
     Delete delete = new Delete(regionName);
-    delete.deleteFamily(HConstants.CATALOG_FAMILY);
     srvr.delete(metaRegionName, delete);
   }
 
@@ -1961,10 +1958,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     info.setOffline(true);
     put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
     srvr.put(metaRegionName, put);
-    Delete del = new Delete(row);
-    del.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
-    del.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
-    srvr.delete(metaRegionName, del);
+    cleanRegionInMETA(srvr, metaRegionName, info);
   }
   
   /**

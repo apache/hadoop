@@ -395,7 +395,6 @@ public class TestAdmin {
   @Test
   public void testHundredsOfTable() throws IOException{
     final int times = 100;
-    byte [] name = Bytes.toBytes("testHundredsOfTable");
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
     HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
@@ -410,6 +409,8 @@ public class TestAdmin {
 
     for(int i = 0; i < times; i++) {
       String tableName = "table"+i;
+      this.admin.disableTable(tableName);
+      this.admin.enableTable(tableName);
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
     }

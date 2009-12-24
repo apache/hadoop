@@ -59,11 +59,11 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   @Override
   protected boolean process() throws IOException {
     Boolean result = null;
-    if (offlineRegion) {
+    if (offlineRegion || reassignRegion) {
       result =
         new RetryableMetaOperation<Boolean>(getMetaRegion(), this.master) {
           public Boolean call() throws IOException {
-            LOG.info("region closed: " + regionInfo.getRegionNameAsString());
+
 
             // We can't proceed unless the meta region we are going to update
             // is online. metaRegionAvailable() will put this operation on the
@@ -71,21 +71,27 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
             // back on the toDoQueue
 
             if (metaRegionAvailable()) {
-              // offline the region in meta and then remove it from the
-              // set of regions in transition
-              HRegion.offlineRegionInMETA(server, metaRegionName,
-                  regionInfo);
-              master.getRegionManager().removeRegion(regionInfo);
+              if(offlineRegion) {
+                // offline the region in meta and then remove it from the
+                // set of regions in transition
+                HRegion.offlineRegionInMETA(server, metaRegionName,
+                    regionInfo);
+                master.getRegionManager().removeRegion(regionInfo);
+                LOG.info("region closed: " + regionInfo.getRegionNameAsString());
+              } else {
+                // we are reassigning the region eventually, so set it unassigned
+                // and remove the server info
+                HRegion.cleanRegionInMETA(server, metaRegionName,
+                    regionInfo);
+                master.getRegionManager().setUnassigned(regionInfo, false);
+                LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
+              }
             }
             return true;
           }
         }.doWithRetries();
         result = result == null ? true : result;
 
-    } else if (reassignRegion) {
-      LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
-      // we are reassigning the region eventually, so set it unassigned
-      master.getRegionManager().setUnassigned(regionInfo, false);
     } else {
       LOG.info("Region was neither offlined, or asked to be reassigned, what gives: " +
       regionInfo.getRegionNameAsString());

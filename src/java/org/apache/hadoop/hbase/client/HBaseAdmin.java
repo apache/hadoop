@@ -326,15 +326,16 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    try {
-      this.master.enableTable(tableName);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
 
     // Wait until all regions are enabled
     boolean enabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
+
+      try {
+        this.master.enableTable(tableName);
+      } catch (RemoteException e) {
+        throw RemoteExceptionHandler.decodeRemoteException(e);
+      }
       enabled = isTableEnabled(tableName);
       if (enabled) break;
       long sleep = getPauseTime(tries);
@@ -382,15 +383,15 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    try {
-      this.master.disableTable(tableName);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
 
     // Wait until all regions are disabled
     boolean disabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
+      try {
+        this.master.disableTable(tableName);
+      } catch (RemoteException e) {
+        throw RemoteExceptionHandler.decodeRemoteException(e);
+      }
       disabled = isTableDisabled(tableName);
       if (disabled) break;
       if (LOG.isDebugEnabled()) {
