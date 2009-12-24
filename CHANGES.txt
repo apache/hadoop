@@ -1161,6 +1161,10 @@ Release 0.20.2 - Unreleased
     HADOOP-6269. Fix threading issue with defaultResource in Configuration.
     (Sreekanth Ramakrishnan via cdouglas)
 
+    HADOOP-6460. Reinitializes buffers used for serializing responses in ipc
+    server on exceeding maximum response size to free up Java heap. (suresh)
+    
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
