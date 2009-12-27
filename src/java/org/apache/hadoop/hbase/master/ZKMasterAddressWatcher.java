@@ -110,6 +110,7 @@ class ZKMasterAddressWatcher implements Watcher {
       }
       if(this.zookeeper.writeMasterAddress(address)) {
         this.zookeeper.setClusterState(true);
+        this.zookeeper.setClusterStateWatch(this);
         // Watch our own node
         this.zookeeper.readMasterAddress(this);
         return true;
