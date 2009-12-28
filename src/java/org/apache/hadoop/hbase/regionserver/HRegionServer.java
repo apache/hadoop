@@ -706,13 +706,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
       this.conf.set("fs.defaultFS", this.conf.get("hbase.rootdir"));
+      this.conf.setBoolean("fs.automatic.close", false);
       this.fs = FileSystem.get(this.conf);
 
       // Register shutdown hook for HRegionServer, runs an orderly shutdown
       // when a kill signal is recieved.  Shuts down hdfs too if its supposed.
       Runtime.getRuntime().addShutdownHook(new ShutdownThread(this,
         Thread.currentThread(), this.shutdownHDFS));
-      this.conf.setBoolean("fs.automatic.close", false);
 
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.hlog = setupHLog();
