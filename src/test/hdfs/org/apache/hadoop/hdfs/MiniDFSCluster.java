@@ -811,6 +811,16 @@ public class MiniDFSCluster {
   public FileSystem getFileSystem() throws IOException {
     return FileSystem.get(conf);
   }
+  
+
+  /**
+   * Get another FileSystem instance that is different from FileSystem.get(conf).
+   * This simulating different threads working on different FileSystem instances.
+   */
+  public FileSystem getNewFileSystemInstance() throws IOException {
+    return FileSystem.newInstance(conf);
+  }
+  
 
   /**
    * Get the directories where the namenode stores its image.

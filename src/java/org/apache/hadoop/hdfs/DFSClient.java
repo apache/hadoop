@@ -1669,6 +1669,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private long pos = 0;
     private long blockEnd = -1;
     private int failures = 0;
+    private int timeWindow = 3000; // wait time window (in msec) if BlockMissingException is caught
 
     /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
      * parallel accesses to DFSInputStream (through ptreads) properly */
@@ -1688,6 +1689,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       this.buffersize = buffersize;
       this.src = src;
       prefetchSize = conf.getLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, prefetchSize);
+      timeWindow = conf.getInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, timeWindow);
       openInfo();
     }
 
@@ -2140,7 +2142,19 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               + " from any node: " + ie
               + ". Will get new block locations from namenode and retry...");
           try {
-            Thread.sleep(3000);
+            // Introducing a random factor to the wait time before another retry.
+            // The wait time is dependent on # of failures and a random factor.
+            // At the first time of getting a BlockMissingException, the wait time
+            // is a random number between 0..3000 ms. If the first retry
+            // still fails, we will wait 3000 ms grace period before the 2nd retry.
+            // Also at the second retry, the waiting window is expanded to 6000 ms
+            // alleviating the request rate from the server. Similarly the 3rd retry
+            // will wait 6000ms grace period before retry and the waiting window is
+            // expanded to 9000ms. 
+            double waitTime = timeWindow * failures +       // grace period for the last round of attempt
+              timeWindow * (failures + 1) * r.nextDouble(); // expanding time window for each failure
+            LOG.warn("DFS chooseDataNode: got # " + (failures + 1) + " IOException, will wait for " + waitTime + " msec.");
+            Thread.sleep((long)waitTime);
           } catch (InterruptedException iex) {
           }
           deadNodes.clear(); //2nd option is to remove only nodes[blockId]

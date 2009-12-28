@@ -75,6 +75,9 @@ Trunk (unreleased changes)
     HDFS-94. The Heap Size printed in the NameNode WebUI is accurate.
     (Dmytro Molkov via dhruba)
 
+    HDFS-767. An improved retry policy when the DFSClient is unable to fetch a
+    block from the datanode.  (Ning Zhang via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
