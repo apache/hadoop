@@ -253,6 +253,7 @@ Release 0.21.0 - Unreleased
                via Andrew Purtell)
    HBASE-1982  [EC2] Handle potentially large and uneven instance startup
                times
+   HBASE-2062  Metrics documentation outdated
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
