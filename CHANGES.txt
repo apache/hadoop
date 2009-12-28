@@ -139,6 +139,7 @@ Release 0.21.0 - Unreleased
                its regions around
    HBASE-2065  Cannot disable a table if any of its region is opening 
                at the same time
+   HBASE-2026  NPE in StoreScanner on compaction
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

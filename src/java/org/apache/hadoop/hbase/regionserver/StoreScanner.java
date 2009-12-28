@@ -255,6 +255,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 
     // Reset the state of the Query Matcher and set to top row
     matcher.reset();
-    matcher.setRow(heap.peek().getRow());
+    KeyValue kv = heap.peek();
+    matcher.setRow((kv == null ? topKey : kv).getRow());
   }
 }
