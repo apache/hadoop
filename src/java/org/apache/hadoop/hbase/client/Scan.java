@@ -186,8 +186,8 @@ public class Scan implements Writable {
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
-   * @see {@link #setMaxVersions()}
-   * @see {@link #setMaxVersions(int)}
+   * @see #setMaxVersions()
+   * @see #setMaxVersions(int)
    */
   public Scan setTimeRange(long minStamp, long maxStamp)
   throws IOException {
@@ -201,8 +201,8 @@ public class Scan implements Writable {
    * and you want all versions returned, up the number of versions beyond the
    * defaut.
    * @param timestamp version timestamp
-   * @see {@link #setMaxVersions()}
-   * @see {@link #setMaxVersions(int)}
+   * @see #setMaxVersions()
+   * @see #setMaxVersions(int)
    */
   public Scan setTimeStamp(long timestamp) {
     try {

@@ -138,12 +138,13 @@ To achieve total ordering, you will likely need to write a Partitioner
 that is intimate with your tables key namespace and that knows how
 to distribute keys among the reducers so a total order is maintained.  If your
 keys are distributed with some regularity across a defined key space -- i.e.
-you know the start and end keys -- then the {@link SimpleTotalOrderPartitioner} 
+you know the start and end keys -- then the
+ {@link org.apache.hadoop.hbase.mapreduce.SimpleTotalOrderPartitioner} 
 may be all you need.
 </p>
 <p>See org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat for an example
 that puts together {@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer},
-{@link SimpleTotalOrderPartitioner}, and
+{@link org.apache.hadoop.hbase.mapreduce.SimpleTotalOrderPartitioner}, and
 {@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.</p>
 
 <p>HFileOutputFormat writes HFiles.  When your MapReduce file finishes, in your

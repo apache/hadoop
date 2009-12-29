@@ -51,7 +51,7 @@ public interface InternalScanner extends Closeable {
   /**
    * Grab the next row's worth of values with a limit on the number of values
    * to return. 
-   * @param results
+   * @param result
    * @param limit
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException

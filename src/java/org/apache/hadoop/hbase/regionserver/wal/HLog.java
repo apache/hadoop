@@ -98,7 +98,7 @@ import org.apache.hadoop.hbase.util.Threads;
  * separate reentrant lock is used.
  * 
  * <p>To read an HLog, call {@link #getReader(org.apache.hadoop.fs.FileSystem,
- * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
+ * org.apache.hadoop.fs.Path, org.apache.hadoop.hbase.HBaseConfiguration)}.
  *
  */
 public class HLog implements HConstants, Syncable {
@@ -352,8 +352,7 @@ public class HLog implements HConstants, Syncable {
    * Get a reader for the WAL.
    * @param fs
    * @param path
-   * @param keyClass
-   * @param valueClass
+   * @param conf
    * @return A WAL reader.  Close when done with it.
    * @throws IOException
    */
@@ -377,8 +376,7 @@ public class HLog implements HConstants, Syncable {
   /**
    * Get a writer for the WAL.
    * @param path
-   * @param keyClass
-   * @param valueClass
+   * @param conf
    * @return A WAL writer.  Close when done with it.
    * @throws IOException
    */

@@ -54,10 +54,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * loss of data due to region server failure can be tolerated (for example,
  * because it is easy to rerun a bulk import).
  * </p>
- * 
- * <p>
- * See also the {@link IndexBuilder} example.
- * </p>
  */
 public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Writable> {
   /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (HLog) */
