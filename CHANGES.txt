@@ -110,6 +110,9 @@ Trunk (unreleased changes)
 
     HADOOP-6462. Target "compile" does not exist in contrib/cloud. (tomwhite)
 
+    HADOOP-6402. testConf.xsl is not well-formed XML. (Steve Loughran
+    via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
