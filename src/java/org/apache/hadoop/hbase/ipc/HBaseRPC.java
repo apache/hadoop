@@ -639,6 +639,10 @@ public class HBaseRPC {
     public Writable call(Writable param, long receivedTime) throws IOException {
       try {
         Invocation call = (Invocation)param;
+        if(call.getMethodName() == null) {
+          throw new IOException("Could not find requested method, the usual " +
+              "cause is a version mismatch between client and server.");
+        }
         if (verbose) log("Call: " + call);
         Method method =
           implementation.getMethod(call.getMethodName(),

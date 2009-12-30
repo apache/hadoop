@@ -265,6 +265,8 @@ Release 0.21.0 - Unreleased
    HBASE-2074  Improvements to the hadoop-config script (Bassam Tabbara via Stack)
    HBASE-2076  Many javadoc warnings
    HBASE-2068  MetricsRate is missing "registry" parameter (Lars George via JD)
+   HBASE-2025  0.20.2 accessed from older client throws 
+               UndeclaredThrowableException; frustrates rolling upgrade
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
