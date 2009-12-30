@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.master.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
-import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 
@@ -43,8 +43,8 @@ public class MasterMetrics implements Updater {
   /*
    * Count of requests to the cluster since last call to metrics update
    */
-  private final MetricsIntValue cluster_requests =
-    new MetricsIntValue("cluster_requests", registry);
+  private final MetricsRate cluster_requests = 
+    new MetricsRate("cluster_requests", registry);
 
   public MasterMetrics(final String name) {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -71,11 +71,7 @@ public class MasterMetrics implements Updater {
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
-      synchronized(this.cluster_requests) {
-        this.cluster_requests.pushMetric(metricsRecord);
-        // Set requests down to zero again.
-        this.cluster_requests.set(0);
-      }
+      this.cluster_requests.pushMetric(metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -87,16 +83,14 @@ public class MasterMetrics implements Updater {
   /**
    * @return Count of requests.
    */
-  public int getRequests() {
-    return this.cluster_requests.get();
+  public float getRequests() {
+    return this.cluster_requests.getPreviousIntervalValue();
   }
   
   /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final int inc) {
-    synchronized(this.cluster_requests) {
-      this.cluster_requests.set(this.cluster_requests.get() + inc);
-    }
+    this.cluster_requests.inc(inc);
   }
 }

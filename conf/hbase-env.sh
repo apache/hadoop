@@ -37,7 +37,16 @@
 export HBASE_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode"
 
 # Uncomment below to enable java garbage collection logging.
-#export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
+# export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
+
+# Uncomment and adjust/create "jmxremote.*" to enable JMX exporting
+# export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=false"
+# export HBASE_JMX_BASE="$HBASE_JMX_BASE -Dcom.sun.management.jmxremote.password.file=$HBASE_HOME/conf/jmxremote.password"
+# export HBASE_JMX_BASE="$HBASE_JMX_BASE -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
+# export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10101"
+# export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10102"
+# export HBASE_THRIFT_OPTS="$HBASE_THRIFT_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10103"
+# export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10104"
 
 # File naming hosts on which HRegionServers will run.  $HBASE_HOME/conf/regionservers by default.
 # export HBASE_REGIONSERVERS=${HBASE_HOME}/conf/regionservers

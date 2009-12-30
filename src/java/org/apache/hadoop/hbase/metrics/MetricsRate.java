@@ -20,25 +20,32 @@ package org.apache.hadoop.hbase.metrics;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.util.MetricsBase;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.util.StringUtils;
 
 /**
  * Publishes a rate based on a counter - you increment the counter each
  * time an event occurs (eg: an RPC call) and this publishes a rate.
  */
-public class MetricsRate {
+public class MetricsRate extends MetricsBase {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.hbase.metrics");
   
-  private String name;
   private int value;
   private float prevRate;
   private long ts;
   
-  public MetricsRate(final String name) {
-    this.name = name;
+  public MetricsRate(final String name, final MetricsRegistry registry, 
+      final String description) {
+    super(name, description);
     this.value = 0;
     this.prevRate = 0;
     this.ts = System.currentTimeMillis();
+    registry.add(name, this);
+  }
+  
+  public MetricsRate(final String name, final MetricsRegistry registry) {
+    this(name, registry, NO_DESCRIPTION);
   }
   
   public synchronized void inc(final int incr) {
@@ -58,15 +65,17 @@ public class MetricsRate {
     this.ts = now;
   }
   
+  @Override
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
     try {
-      mr.setMetric(name, getPreviousIntervalValue());
+      mr.setMetric(getName(), getPreviousIntervalValue());
     } catch (Exception e) {
-      LOG.info("pushMetric failed for " + name + "\n" + 
+      LOG.info("pushMetric failed for " + getName() + "\n" + 
           StringUtils.stringifyException(e));
     }
   }
+  
   public synchronized float getPreviousIntervalValue() {
     return this.prevRate;
   }
