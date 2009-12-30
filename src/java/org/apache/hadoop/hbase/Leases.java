@@ -183,11 +183,13 @@ public class Leases extends Thread {
   public void renewLease(final String leaseName) throws LeaseException {
     synchronized (leaseQueue) {
       Lease lease = leases.get(leaseName);
-      if (lease == null) {
+      // We need to check to see if the remove is successful as the poll in the run()
+      // method could have completed between the get and the remove which will result
+      // in a corrupt leaseQueue.
+      if (lease == null || !leaseQueue.remove(lease)) {
         throw new LeaseException("lease '" + leaseName +
-            "' does not exist");
+                "' does not exist or has already expired");
       }
-      leaseQueue.remove(lease);
       lease.setExpirationTime(System.currentTimeMillis() + leasePeriod);
       leaseQueue.add(lease);
     }
