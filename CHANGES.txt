@@ -141,6 +141,7 @@ Release 0.21.0 - Unreleased
                at the same time
    HBASE-2026  NPE in StoreScanner on compaction
    HBASE-2072  fs.automatic.close isn't passed to FileSystem
+   HBASE-2075  Master requires HDFS superuser privileges due to waitOnSafeMode
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

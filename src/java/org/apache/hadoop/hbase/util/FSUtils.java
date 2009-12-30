@@ -251,13 +251,18 @@ public class FSUtils {
     // Are there any data nodes up yet?
     // Currently the safe mode check falls through if the namenode is up but no
     // datanodes have reported in yet.
-    while (dfs.getDataNodeStats().length == 0) {
-      LOG.info("Waiting for dfs to come up...");
-      try {
-        Thread.sleep(wait);
-      } catch (InterruptedException e) {
-        //continue
+    try {
+      while (dfs.getDataNodeStats().length == 0) {
+        LOG.info("Waiting for dfs to come up...");
+        try {
+          Thread.sleep(wait);
+        } catch (InterruptedException e) {
+          //continue
+        }
       }
+    } catch (IOException e) {
+      // getDataNodeStats can fail if superuser privilege is required to run
+      // the datanode report, just ignore it
     }
     // Make sure dfs is not in safe mode
     while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
