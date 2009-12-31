@@ -71,22 +71,6 @@ fi
 COMMAND=$1
 shift
 
-# Source the hbase-env.sh.  Will have JAVA_HOME defined.
-if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
-  . "${HBASE_CONF_DIR}/hbase-env.sh"
-fi
-
-# some Java parameters
-if [ "$JAVA_HOME" != "" ]; then
-  #echo "run java in $JAVA_HOME"
-  JAVA_HOME=$JAVA_HOME
-fi
-  
-if [ "$JAVA_HOME" = "" ]; then
-  echo "Error: JAVA_HOME is not set."
-  exit 1
-fi
-
 JAVA=$JAVA_HOME/bin/java
 JAVA_HEAP_MAX=-Xmx1000m 
 

@@ -51,10 +51,6 @@ bin=`cd "$bin"; pwd`
 # hbase-env.sh. Save it here.
 HOSTLIST=$HBASE_REGIONSERVERS
 
-if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
-  . "${HBASE_CONF_DIR}/hbase-env.sh"
-fi
-
 if [ "$HOSTLIST" = "" ]; then
   if [ "$HBASE_REGIONSERVERS" = "" ]; then
     export HOSTLIST="${HBASE_CONF_DIR}/regionservers"

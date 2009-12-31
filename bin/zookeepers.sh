@@ -43,10 +43,6 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/hbase-config.sh
 
-if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
-  . "${HBASE_CONF_DIR}/hbase-env.sh"
-fi
-
 if [ "$HBASE_MANAGES_ZK" = "" ]; then
   HBASE_MANAGES_ZK=true
 fi

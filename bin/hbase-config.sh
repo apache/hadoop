@@ -74,6 +74,11 @@ HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
 # List of hbase regions servers.
 HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
 
+# Source the hbase-env.sh.  Will have JAVA_HOME defined.
+if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
+  . "${HBASE_CONF_DIR}/hbase-env.sh"
+fi
+
 if [ -z "$JAVA_HOME" ]; then
   for candidate in \
     /usr/lib/jvm/java-6-sun \

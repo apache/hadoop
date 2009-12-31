@@ -71,10 +71,6 @@ hbase_rotate_log ()
     fi
 }
 
-if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
-  . "${HBASE_CONF_DIR}/hbase-env.sh"
-fi
-
 # get log directory
 if [ "$HBASE_LOG_DIR" = "" ]; then
   export HBASE_LOG_DIR="$HBASE_HOME/logs"
