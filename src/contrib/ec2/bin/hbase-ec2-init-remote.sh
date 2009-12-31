@@ -223,7 +223,6 @@ if [ "$IS_MASTER" = "true" ]; then
   # only format on first boot
   [ ! -e /mnt/hadoop/dfs/name ] && "$HADOOP_HOME"/bin/hadoop namenode -format
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
-  "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
   "$HBASE_HOME"/bin/hbase-daemon.sh start master
 else

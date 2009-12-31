@@ -148,7 +148,6 @@ Release 0.21.0 - Unreleased
                (Lars George via JD)
    HBASE-2082  TableInputFormat is ignoring input scan's stop row setting
                (Scott Wang via Andrew Purtell)
-   HBASE-2080  [EC2] Support multivolume local instance storage
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -265,13 +264,16 @@ Release 0.21.0 - Unreleased
                times
    HBASE-2062  Metrics documentation outdated (Lars George via JD)
    HBASE-2045  Update trunk and branch zk to just-release 3.2.2.
-   HBASE-2074  Improvements to the hadoop-config script (Bassam Tabbara via Stack)
+   HBASE-2074  Improvements to the hadoop-config script (Bassam Tabbara via
+               Stack)
    HBASE-2076  Many javadoc warnings
    HBASE-2068  MetricsRate is missing "registry" parameter (Lars George via JD)
    HBASE-2025  0.20.2 accessed from older client throws 
                UndeclaredThrowableException; frustrates rolling upgrade
    HBASE-2081  Set the retries higher in shell since client pause is lower
    HBASE-1956  Export HDFS read and write latency as a metric
+   HBASE-2080  [EC2] Support multivolume local instance storage
+   HBASE-2083  [EC2] HDFS DataNode no longer required on master
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
