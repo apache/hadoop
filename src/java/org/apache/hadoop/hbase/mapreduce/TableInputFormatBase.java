@@ -293,8 +293,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         byte[] splitStart = startRow.length == 0 || 
           Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ? 
             keys.getFirst()[i] : startRow;
-        byte[] splitStop = stopRow.length == 0 || 
-          Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0 ? 
+        byte[] splitStop = (stopRow.length == 0 || 
+          Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
+          keys.getSecond()[i].length > 0 ? 
             keys.getSecond()[i] : stopRow;
         InputSplit split = new TableSplit(table.getTableName(),
           splitStart, splitStop, regionLocation);

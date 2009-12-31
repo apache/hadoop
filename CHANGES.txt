@@ -146,6 +146,8 @@ Release 0.21.0 - Unreleased
                an immediate region server shutdown (Sam Pullara via JD)
    HBASE-2078  Add JMX settings as commented out lines to hbase-env.sh
                (Lars George via JD)
+   HBASE-2082  TableInputFormat is ignoring input scan's stop row setting
+               (Scott Wang via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
