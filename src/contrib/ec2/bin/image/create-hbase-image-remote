@@ -73,7 +73,7 @@ rm -f hbase-$HBASE_VERSION.tar.gz
 # Configure HBase
 sed -i \
   -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|" \
-  -e 's|# export HBASE_OPTS=.*|export HBASE_OPTS="$HBASE_OPTS -server -XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=90 -XX:NewSize=64m -XX:MaxNewSize=64m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts"|' \
+  -e 's|# export HBASE_OPTS=.*|export HBASE_OPTS="$HBASE_OPTS -server -XX:+HeapDumpOnOutOfMemoryError"|' \
   -e 's|# export HBASE_LOG_DIR=.*|export HBASE_LOG_DIR=/mnt/hbase/logs|' \
   -e 's|# export HBASE_SLAVE_SLEEP=.*|export HBASE_SLAVE_SLEEP=1|' \
   /usr/local/hbase-$HBASE_VERSION/conf/hbase-env.sh
@@ -83,7 +83,8 @@ chmod +x /etc/init.d/ec2-run-user-data
 echo "/etc/init.d/ec2-run-user-data" >> /etc/rc.d/rc.local
 
 # Setup root user bash environment
-echo "export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}" >> /root/.bash_profile
+
+  echo "export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}" >> /root/.bash_profile
 echo "export HADOOP_HOME=/usr/local/hadoop-${HADOOP_VERSION}" >> /root/.bash_profile
 echo "export HBASE_HOME=/usr/local/hbase-${HBASE_VERSION}" >> /root/.bash_profile
 echo 'export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HBASE_HOME/bin:$PATH' >> /root/.bash_profile
