@@ -148,6 +148,7 @@ Release 0.21.0 - Unreleased
                (Lars George via JD)
    HBASE-2082  TableInputFormat is ignoring input scan's stop row setting
                (Scott Wang via Andrew Purtell)
+   HBASE-2080  [EC2] Support multivolume local instance storage
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

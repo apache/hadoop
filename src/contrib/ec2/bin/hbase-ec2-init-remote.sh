@@ -16,6 +16,68 @@ HADOOP_VERSION=`echo $HADOOP_HOME | cut -d '-' -f 2`
 HBASE_HOME=`ls -d /usr/local/hbase-*`
 HBASE_VERSION=`echo $HBASE_HOME | cut -d '-' -f 2`
 
+export USER="root"
+
+# up open file descriptor limits
+echo "root soft nofile 32768" >> /etc/security/limits.conf
+echo "root hard nofile 32768" >> /etc/security/limits.conf
+
+# up epoll limits; ok if this fails, only valid for kernels 2.6.27+
+sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
+
+[ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
+
+# Extra packages
+
+if [ "$EXTRA_PACKAGES" != "" ] ; then
+  # format should be <repo-descriptor-URL> <package1> ... <packageN>
+  pkg=( $EXTRA_PACKAGES )
+  wget -nv -O /etc/yum.repos.d/user.repo ${pkg[0]}
+  yum -y update yum
+  yum -y install ${pkg[@]:1}
+fi
+
+# Ganglia
+
+if [ "$IS_MASTER" = "true" ]; then
+  sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
+         -e "s|\( *bind *=.*\)|#\1|" \
+         -e "s|\( *mute *=.*\)|  mute = yes|" \
+         -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
+         /etc/gmond.conf
+  mkdir -p /mnt/ganglia/rrds
+  chown -R ganglia:ganglia /mnt/ganglia/rrds
+  rm -rf /var/lib/ganglia; cd /var/lib; ln -s /mnt/ganglia ganglia; cd
+  service gmond start
+  service gmetad start
+  apachectl start
+else
+  sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
+         -e "s|\( *bind *=.*\)|#\1|" \
+         -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
+         /etc/gmond.conf
+  service gmond start
+fi
+
+# Probe for instance volumes
+
+# /dev/sdb as /mnt is always set up by base image
+DFS_NAME_DIR="/mnt/hadoop/dfs/name"
+DFS_DATA_DIR="/mnt/hadoop/dfs/data"
+i=2
+for d in c d e f g h i j k l m n o p q r s t u v w x y z; do
+  m="/mnt${i}"
+  mkdir -p $m
+  mount /dev/sd${d} $m > /dev/null 2>&1
+  if [ $? -eq 0 ] ; then
+    if [ $i -lt 3 ] ; then # no more than two namedirs
+      DFS_NAME_DIR="${DFS_NAME_DIR},${m}/hadoop/dfs/name"
+    fi
+    DFS_DATA_DIR="${DFS_DATA_DIR},${m}/hadoop/dfs/data"
+    i=$(( i + 1 ))
+  fi
+done
+
 # Hadoop configuration
 
 cat > $HADOOP_HOME/conf/core-site.xml <<EOF
@@ -32,7 +94,6 @@ cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 </property>
 </configuration>
 EOF
-
 cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -41,9 +102,16 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
   <name>fs.default.name</name>
   <value>hdfs://$MASTER_HOST:8020</value>
 </property>
+<property>
+  <name>dfs.name.dir</name>
+  <value>$DFS_NAME_DIR</value>
+</property>
+<property>
+  <name>dfs.data.dir</name>
+  <value>$DFS_DATA_DIR</value>
+</property>
 </configuration>
 EOF
-
 cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -66,12 +134,10 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
 </property>
 </configuration>
 EOF
-
 # Update classpath to include HBase jars and config
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
 HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.2.1.jar:$HBASE_HOME/conf"
 EOF
-
 # Configure Hadoop for Ganglia
 cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
@@ -133,13 +199,11 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 </property>
 </configuration>
 EOF
-
 # Override JVM options
 cat >> $HBASE_HOME/conf/hbase-env.sh <<EOF
 export HBASE_MASTER_OPTS="-XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
 export HBASE_REGIONSERVER_OPTS="-XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
-
 # Configure HBase for Ganglia
 cat > $HBASE_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
@@ -153,67 +217,19 @@ jvm.period=10
 jvm.servers=$MASTER_HOST:8649
 EOF
 
-# up open file descriptor limits
-echo "root soft nofile 32768" >> /etc/security/limits.conf
-echo "root hard nofile 32768" >> /etc/security/limits.conf
-
-# up epoll limits; ok if this fails, only valid for kernels 2.6.27+
-sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
-
 mkdir -p /mnt/hadoop/logs /mnt/hbase/logs
 
-[ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
-
-export USER="root"
-
-if [ "$EXTRA_PACKAGES" != "" ] ; then
-  # format should be <repo-descriptor-URL> <package1> ... <packageN>
-    # this will only work with bash
-  pkg=( $EXTRA_PACKAGES )
-  wget -nv -O /etc/yum.repos.d/user.repo ${pkg[0]}
-  yum -y update yum
-  yum -y install ${pkg[@]:1}
-fi
-
 if [ "$IS_MASTER" = "true" ]; then
-  # MASTER
-  # Prep Ganglia
-  sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
-         -e "s|\( *bind *=.*\)|#\1|" \
-         -e "s|\( *mute *=.*\)|  mute = yes|" \
-         -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
-         /etc/gmond.conf
-  mkdir -p /mnt/ganglia/rrds
-  chown -R ganglia:ganglia /mnt/ganglia/rrds
-  rm -rf /var/lib/ganglia; cd /var/lib; ln -s /mnt/ganglia ganglia; cd
-  service gmond start
-  service gmetad start
-  apachectl start
-
   # only format on first boot
-  [ ! -e /mnt/hadoop/dfs ] && "$HADOOP_HOME"/bin/hadoop namenode -format
-
+  [ ! -e /mnt/hadoop/dfs/name ] && "$HADOOP_HOME"/bin/hadoop namenode -format
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
-  sleep 10
   "$HBASE_HOME"/bin/hbase-daemon.sh start master
-
 else
-
-  # SLAVE
-
-  # Prep Ganglia
-  sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
-         -e "s|\( *bind *=.*\)|#\1|" \
-         -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
-         /etc/gmond.conf
-  service gmond start
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
   "$HBASE_HOME"/bin/hbase-daemon.sh start regionserver
   "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
-
 fi
 
-# Run this script on next boot
 rm -f /var/ec2/ec2-run-user-data.*
