@@ -32,15 +32,15 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -248,7 +248,7 @@ public class HLog implements HConstants, Syncable {
    * @param listener
    * @throws IOException
    */
-  public HLog(final FileSystem fs, final Path dir, final HBaseConfiguration conf,
+  public HLog(final FileSystem fs, final Path dir, final Configuration conf,
     final LogRollListener listener)
   throws IOException {
     super();
@@ -389,7 +389,7 @@ public class HLog implements HConstants, Syncable {
    */
   @SuppressWarnings("unchecked")
   public static Reader getReader(final FileSystem fs,
-    final Path path, HBaseConfiguration conf)
+    final Path path, Configuration conf)
   throws IOException {
     try {
       Class c = Class.forName(conf.get("hbase.regionserver.hlog.reader.impl",
@@ -413,7 +413,7 @@ public class HLog implements HConstants, Syncable {
    */
   @SuppressWarnings("unchecked")
   public static Writer createWriter(final FileSystem fs,
-      final Path path, HBaseConfiguration conf) throws IOException {
+      final Path path, Configuration conf) throws IOException {
     try {
       Class c = Class.forName(conf.get("hbase.regionserver.hlog.writer.impl",
         SequenceFileLogWriter.class.getCanonicalName()));
@@ -701,6 +701,7 @@ public class HLog implements HConstants, Syncable {
       this.optionalFlushInterval = optionalFlushInterval;
     }
 
+    @Override
     public void run() {
       try {
         lock.lock();
@@ -955,7 +956,7 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
-      final FileSystem fs, final HBaseConfiguration conf)
+      final FileSystem fs, final Configuration conf)
   throws IOException {
     long millis = System.currentTimeMillis();
     List<Path> splits = null;
@@ -1022,7 +1023,7 @@ public class HLog implements HConstants, Syncable {
    */
   private static List<Path> splitLog(final Path rootDir,
     final FileStatus [] logfiles, final FileSystem fs,
-    final HBaseConfiguration conf)
+    final Configuration conf)
   throws IOException {
     final Map<byte [], WriterAndPath> logWriters =
       new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR);
@@ -1244,6 +1245,7 @@ public class HLog implements HConstants, Syncable {
       return key;
     }
 
+    @Override
     public String toString() {
       return this.key + "=" + this.edit;
     }
@@ -1315,7 +1317,7 @@ public class HLog implements HConstants, Syncable {
         System.exit(-1);
       }
     }
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     Path baseDir = new Path(conf.get(HBASE_DIR));
     for (int i = 1; i < args.length; i++) {

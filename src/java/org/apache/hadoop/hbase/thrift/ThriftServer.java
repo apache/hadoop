@@ -27,6 +27,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -76,7 +77,7 @@ public class ThriftServer {
    * HBase client API primarily defined in the HBaseAdmin and HTable objects.
    */
   public static class HBaseHandler implements Hbase.Iface {
-    protected HBaseConfiguration conf = new HBaseConfiguration();
+    protected Configuration conf;
     protected HBaseAdmin admin = null;
     protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
@@ -155,7 +156,7 @@ public class ThriftServer {
      * @throws MasterNotRunningException
      */
     HBaseHandler() throws MasterNotRunningException {
-      conf = new HBaseConfiguration();
+      conf = HBaseConfiguration.create();
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();
     }

@@ -38,10 +38,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -128,7 +128,7 @@ public class RegionManager implements HConstants {
   private final int zooKeeperPause;
 
   RegionManager(HMaster master) {
-    HBaseConfiguration conf = master.getConfiguration();
+    Configuration conf = master.getConfiguration();
 
     this.master = master;
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
@@ -1320,7 +1320,7 @@ public class RegionManager implements HConstants {
     private float slop;                 // hbase.regions.slop
     private final int maxRegToClose;    // hbase.regions.close.max
     
-    LoadBalancer(HBaseConfiguration conf) {
+    LoadBalancer(Configuration conf) {
       this.slop = conf.getFloat("hbase.regions.slop", (float)0.1);
       if (this.slop <= 0) this.slop = 1;
       //maxRegToClose to constrain balance closing per one iteration

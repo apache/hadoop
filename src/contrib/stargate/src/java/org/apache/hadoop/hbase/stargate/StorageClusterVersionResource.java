@@ -34,6 +34,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterVersionModel;
@@ -59,7 +60,7 @@ public class StorageClusterVersionResource implements Constants {
     }
     try {
       RESTServlet server = RESTServlet.getInstance();
-      HBaseConfiguration hconf = server.getConfiguration();
+      Configuration hconf = server.getConfiguration();
       HBaseAdmin admin = new HBaseAdmin(hconf);
       StorageClusterVersionModel model = new StorageClusterVersionModel();
       model.setVersion(admin.getClusterStatus().getHBaseVersion());

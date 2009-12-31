@@ -37,9 +37,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LeaseException;
@@ -55,12 +55,12 @@ import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger
 import org.apache.hadoop.hbase.client.transactional.UnknownTransactionException;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionState.Status;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -116,7 +116,7 @@ public class TransactionalRegion extends HRegion {
    * @param flushListener
    */
   public TransactionalRegion(final Path basedir, final HLog log,
-      final FileSystem fs, final HBaseConfiguration conf,
+      final FileSystem fs, final Configuration conf,
       final HRegionInfo regionInfo, final FlushRequester flushListener,
       final Leases transactionalLeases) {
     super(basedir, log, fs, conf, regionInfo, flushListener);

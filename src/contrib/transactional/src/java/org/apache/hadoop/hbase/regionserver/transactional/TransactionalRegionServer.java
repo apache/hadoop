@@ -25,7 +25,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Leases;
@@ -71,7 +71,7 @@ public class TransactionalRegionServer extends HRegionServer implements
    * @param conf
    * @throws IOException
    */
-  public TransactionalRegionServer(final HBaseConfiguration conf)
+  public TransactionalRegionServer(final Configuration conf)
       throws IOException {
     super(conf);
     cleanOldTransactionsThread = new CleanOldTransactionsChore(this,

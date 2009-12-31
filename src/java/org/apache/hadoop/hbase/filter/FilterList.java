@@ -203,7 +203,7 @@ public class FilterList implements Filter {
   }
 
   public void readFields(final DataInput in) throws IOException {
-    Configuration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     byte opByte = in.readByte();
     operator = Operator.values()[opByte];
     int size = in.readInt();
@@ -217,7 +217,7 @@ public class FilterList implements Filter {
   }
 
   public void write(final DataOutput out) throws IOException {
-    Configuration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());
     for (Filter filter : filters) {

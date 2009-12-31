@@ -4,6 +4,7 @@
   import="java.net.URLEncoder" 
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.io.Writable"
+  import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
@@ -19,7 +20,7 @@
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  HBaseConfiguration conf = master.getConfiguration();
+  Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);

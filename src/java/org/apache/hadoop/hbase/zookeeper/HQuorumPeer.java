@@ -23,17 +23,18 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.net.UnknownHostException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.util.Properties;
-import java.util.List;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.Properties;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.net.DNS;
@@ -66,7 +67,7 @@ public class HQuorumPeer implements HConstants {
    * @param args String[] of command line arguments. Not used.
    */
   public static void main(String[] args) {
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     try {
       Properties zkProperties = makeZKProps(conf);
       writeMyID(zkProperties);
@@ -98,7 +99,7 @@ public class HQuorumPeer implements HConstants {
   private static void writeMyID(Properties properties) throws IOException {
     long myId = -1;
 
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     String myAddress = DNS.getDefaultHost(
         conf.get("hbase.zookeeper.dns.interface","default"),
         conf.get("hbase.zookeeper.dns.nameserver","default"));
@@ -161,10 +162,10 @@ public class HQuorumPeer implements HConstants {
    * If there is a zoo.cfg in the classpath, simply read it in. Otherwise parse
    * the corresponding config options from the HBase XML configs and generate
    * the appropriate ZooKeeper properties.
-   * @param conf HBaseConfiguration to read from.
+   * @param conf Configuration to read from.
    * @return Properties holding mappings representing ZooKeeper zoo.cfg file.
    */
-  public static Properties makeZKProps(HBaseConfiguration conf) {
+  public static Properties makeZKProps(Configuration conf) {
     // First check if there is a zoo.cfg in the CLASSPATH. If so, simply read
     // it and grab its configuration properties.
     ClassLoader cl = HQuorumPeer.class.getClassLoader();
@@ -218,7 +219,7 @@ public class HQuorumPeer implements HConstants {
    * @return Properties parsed from config stream with variables substituted.
    * @throws IOException if anything goes wrong parsing config
    */
-  public static Properties parseZooCfg(HBaseConfiguration conf,
+  public static Properties parseZooCfg(Configuration conf,
       InputStream inputStream) throws IOException {
     Properties properties = new Properties();
     try {

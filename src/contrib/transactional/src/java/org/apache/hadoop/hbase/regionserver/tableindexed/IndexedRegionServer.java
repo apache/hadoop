@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.tableindexed;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,7 +38,7 @@ import org.apache.hadoop.util.Progressable;
 public class IndexedRegionServer extends TransactionalRegionServer implements
     IndexedRegionInterface {
 
-  public IndexedRegionServer(HBaseConfiguration conf) throws IOException {
+  public IndexedRegionServer(Configuration conf) throws IOException {
     super(conf);
   }
 

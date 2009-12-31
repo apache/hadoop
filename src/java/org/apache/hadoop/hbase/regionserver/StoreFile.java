@@ -31,9 +31,9 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HalfHFileReader;
@@ -102,7 +102,7 @@ public class StoreFile implements HConstants {
 
   // Used making file ids.
   private final static Random rand = new Random();
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a 
@@ -115,7 +115,7 @@ public class StoreFile implements HConstants {
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs, final Path p, final boolean blockcache, 
-      final HBaseConfiguration conf, final boolean inMemory) 
+      final Configuration conf, final boolean inMemory) 
   throws IOException {
     this.conf = conf;
     this.fs = fs;
@@ -224,7 +224,7 @@ public class StoreFile implements HConstants {
    * @param conf  The current configuration.
    * @return The block cache or <code>null</code>.
    */
-  public static synchronized BlockCache getBlockCache(HBaseConfiguration conf) {
+  public static synchronized BlockCache getBlockCache(Configuration conf) {
     if (hfileBlockCache != null) return hfileBlockCache;
 
     float cachePercentage = conf.getFloat(HFILE_CACHE_SIZE_KEY, 0.0f);

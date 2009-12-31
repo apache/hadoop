@@ -129,9 +129,9 @@ public class TableMapReduceUtil {
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
+      HBaseConfiguration.addHbaseResources(job.getConfiguration());
       job.setPartitionerClass(HRegionPartitioner.class);
-      HTable outputTable = new HTable(new HBaseConfiguration(
-        job.getConfiguration()), table);
+      HTable outputTable = new HTable(job.getConfiguration(), table);
       int regions = outputTable.getRegionsInfo().size();
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(outputTable.getRegionsInfo().size());
@@ -151,8 +151,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, Job job) 
   throws IOException { 
-    HTable outputTable = new HTable(new HBaseConfiguration(
-      job.getConfiguration()), table);
+    HTable outputTable = new HTable(job.getConfiguration(), table);
     int regions = outputTable.getRegionsInfo().size();
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
@@ -168,8 +167,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, Job job) 
   throws IOException { 
-    HTable outputTable = new HTable(new HBaseConfiguration(
-      job.getConfiguration()), table);
+    HTable outputTable = new HTable(job.getConfiguration(), table);
     int regions = outputTable.getRegionsInfo().size();
     job.setNumReduceTasks(regions);
   }

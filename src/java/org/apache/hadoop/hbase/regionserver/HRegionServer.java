@@ -134,7 +134,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   protected volatile boolean fsOk;
   
   protected HServerInfo serverInfo;
-  protected final HBaseConfiguration conf;
+  protected final Configuration conf;
 
   private final ServerConnection connection;
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
@@ -233,7 +233,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * @param conf
    * @throws IOException
    */
-  public HRegionServer(HBaseConfiguration conf) throws IOException {
+  public HRegionServer(Configuration conf) throws IOException {
     machineName = DNS.getDefaultHost(
         conf.get("hbase.regionserver.dns.interface","default"),
         conf.get("hbase.regionserver.dns.nameserver","default"));
@@ -2044,7 +2044,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * 
    * @return the configuration
    */
-  public HBaseConfiguration getConfiguration() {
+  public Configuration getConfiguration() {
     return conf;
   }
 
@@ -2293,7 +2293,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if (args.length < 1) {
       printUsageAndExit();
     }
-    Configuration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
@@ -2386,7 +2386,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * @param args
    */
   public static void main(String [] args) {
-    Configuration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     @SuppressWarnings("unchecked")
     Class<? extends HRegionServer> regionServerClass =
       (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,

@@ -22,32 +22,71 @@ package org.apache.hadoop.hbase;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * Adds HBase configuration files to a Configuration
  */
 public class HBaseConfiguration extends Configuration {
-  /** constructor */
+  
+  private static final Log LOG = LogFactory.getLog(HBaseConfiguration.class);
+  
+  /**
+   * Instantinating HBaseConfiguration() is deprecated. Please use 
+   * HBaseConfiguration#create() to construct a plain Configuration
+   */
+  @Deprecated
   public HBaseConfiguration() {
+    //TODO:replace with private constructor, HBaseConfiguration should not extend Configuration
     super();
-    addHbaseResources();
+    addHbaseResources(this);
+    LOG.warn("instantinating HBaseConfiguration() is deprecated. Please use" +
+    		" HBaseConfiguration#create() to construct a plain Configuration");
   }
   
   /**
-   * Create a clone of passed configuration.
-   * @param c Configuration to clone.
+   * Instantinating HBaseConfiguration() is deprecated. Please use 
+   * HBaseConfiguration#create(conf) to construct a plain Configuration
    */
+  @Deprecated
   public HBaseConfiguration(final Configuration c) {
-    this();
+    //TODO:replace with private constructor
     for (Entry<String, String>e: c) {
       set(e.getKey(), e.getValue());
     }
+    LOG.warn("instantinating HBaseConfiguration() is deprecated. Please use " +
+    		"HBaseConfiguration#create(conf) to construct a plain Configuration");
   }
   
-  private void addHbaseResources() {
-    addResource("hbase-default.xml");
-    addResource("hbase-site.xml");
+  public static Configuration addHbaseResources(Configuration conf) {
+    conf.addResource("hbase-default.xml");
+    conf.addResource("hbase-site.xml");
+    return conf;
+  }
+  
+  /**
+   * Creates a Configuration with HBase resources
+   * @return a Configuration with HBase resources
+   */
+  public static Configuration create() {
+    Configuration conf = new Configuration();
+    return addHbaseResources(conf);
+  }
+  
+  /**
+   * Creates a clone of passed configuration.
+   * @param that Configuration to clone.
+   * @return a Configuration created with the hbase-*.xml files plus 
+   * the given configuration.
+   */
+  public static Configuration create(final Configuration that) {
+    Configuration conf = create();
+    for (Entry<String, String>e: that) {
+      conf.set(e.getKey(), e.getValue());
+    }
+    return conf;
   }
   
   /**
@@ -57,10 +96,21 @@ public class HBaseConfiguration extends Configuration {
    * @see Configuration#iterator() How the entries are obtained.
    */
   @Override
+  @Deprecated
   public int hashCode() {
+    return hashCode(this);
+  }
+
+  /**
+   * Returns the hash code value for this HBaseConfiguration. The hash code of a
+   * Configuration is defined by the xor of the hash codes of its entries.
+   * 
+   * @see Configuration#iterator() How the entries are obtained.
+   */
+  public static int hashCode(Configuration conf) {
     int hash = 0;
 
-    Iterator<Entry<String, String>> propertyIterator = this.iterator();
+    Iterator<Entry<String, String>> propertyIterator = conf.iterator();
     while (propertyIterator.hasNext()) {
       hash ^= propertyIterator.next().hashCode();
     }
@@ -75,7 +125,6 @@ public class HBaseConfiguration extends Configuration {
       return false;
     if (!(obj instanceof HBaseConfiguration))
       return false;
-    
     HBaseConfiguration otherConf = (HBaseConfiguration) obj;
     if (size() != otherConf.size()) {
       return false;
@@ -89,9 +138,7 @@ public class HBaseConfiguration extends Configuration {
         return false;
       }
     }
-    
+
     return true;
   }
-  
-  
 }

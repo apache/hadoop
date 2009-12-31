@@ -114,7 +114,7 @@ public class Import {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
     if (otherArgs.length < 2) {
       usage("Wrong number of arguments: " + otherArgs.length);

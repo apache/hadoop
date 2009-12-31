@@ -28,7 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -49,7 +49,7 @@ class CompactSplitThread extends Thread implements HConstants {
   private final ReentrantLock lock = new ReentrantLock();
   
   private final HRegionServer server;
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
   
   private final BlockingQueue<HRegion> compactionQueue =
     new LinkedBlockingQueue<HRegion>();

@@ -112,7 +112,8 @@ public class TestMergeTool extends HBaseTestCase {
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     this.fs = this.dfsCluster.getFileSystem();
-    conf.set("fs.defaultFS", fs.getUri().toString());
+    System.out.println("fs=" + this.fs);
+    this.conf.set("fs.defaultFS", fs.getUri().toString());
     Path parentdir = fs.getHomeDirectory();
     conf.set(HConstants.HBASE_DIR, parentdir.toString());
     fs.mkdirs(parentdir);
@@ -171,7 +172,8 @@ public class TestMergeTool extends HBaseTestCase {
   throws Exception {
     Merge merger = new Merge(this.conf);
     LOG.info(msg);
-    int errCode = ToolRunner.run(merger,
+    System.out.println("fs2=" + this.conf.get("fs.defaultFS"));
+    int errCode = ToolRunner.run(this.conf, merger,
       new String[] {this.desc.getNameAsString(), regionName1, regionName2}
     );
     assertTrue("'" + msg + "' failed", errCode == 0);

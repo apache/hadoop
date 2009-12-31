@@ -20,7 +20,8 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
+
 
 /**
  * Used by server processes to expose HServerConnection method
@@ -38,7 +39,7 @@ public class ServerConnectionManager extends HConnectionManager {
    * @param conf
    * @return HConnection object for the instance specified by the configuration
    */
-  public static ServerConnection getConnection(HBaseConfiguration conf) {
+  public static ServerConnection getConnection(Configuration conf) {
     return (ServerConnection) HConnectionManager.getConnection(conf);
   }
 }

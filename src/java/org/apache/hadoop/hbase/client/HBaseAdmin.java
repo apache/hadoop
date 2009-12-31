@@ -25,6 +25,7 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,7 +54,7 @@ public class HBaseAdmin {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 //  private final HConnection connection;
   final HConnection connection;
-  private volatile HBaseConfiguration conf;
+  private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
   private volatile HMasterInterface master;
@@ -64,7 +65,7 @@ public class HBaseAdmin {
    * @param conf Configuration object
    * @throws MasterNotRunningException
    */
-  public HBaseAdmin(HBaseConfiguration conf) throws MasterNotRunningException {
+  public HBaseAdmin(Configuration conf) throws MasterNotRunningException {
     this.connection = HConnectionManager.getConnection(conf);
     this.conf = conf;
     this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
@@ -852,9 +853,9 @@ public class HBaseAdmin {
    * @param conf
    * @throws MasterNotRunningException
    */
-  public static void checkHBaseAvailable(HBaseConfiguration conf)
+  public static void checkHBaseAvailable(Configuration conf)
   throws MasterNotRunningException {
-    HBaseConfiguration copyOfConf = new HBaseConfiguration(conf);
+    Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
     new HBaseAdmin(copyOfConf);
   }

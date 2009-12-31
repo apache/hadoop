@@ -29,6 +29,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,7 +58,7 @@ public class HTable implements HTableInterface {
   private final HConnection connection;
   private final byte [] tableName;
   protected final int scannerTimeout;
-  private volatile HBaseConfiguration configuration;
+  private volatile Configuration configuration;
   private final ArrayList<Put> writeBuffer = new ArrayList<Put>();
   private long writeBufferSize;
   private boolean autoFlush;
@@ -73,7 +74,7 @@ public class HTable implements HTableInterface {
    */
   public HTable(final String tableName)
   throws IOException {
-    this(new HBaseConfiguration(), Bytes.toBytes(tableName));
+    this(HBaseConfiguration.create(), Bytes.toBytes(tableName));
   }
 
   /**
@@ -84,7 +85,7 @@ public class HTable implements HTableInterface {
    */
   public HTable(final byte [] tableName)
   throws IOException {
-    this(new HBaseConfiguration(), tableName);
+    this(HBaseConfiguration.create(), tableName);
   }
 
   /**
@@ -94,7 +95,7 @@ public class HTable implements HTableInterface {
    * @param tableName name of the table
    * @throws IOException
    */
-  public HTable(HBaseConfiguration conf, final String tableName)
+  public HTable(Configuration conf, final String tableName)
   throws IOException {
     this(conf, Bytes.toBytes(tableName));
   }
@@ -106,7 +107,7 @@ public class HTable implements HTableInterface {
    * @param tableName name of the table
    * @throws IOException
    */
-  public HTable(HBaseConfiguration conf, final byte [] tableName)
+  public HTable(Configuration conf, final byte [] tableName)
   throws IOException {
     this.tableName = tableName;
     if (conf == null) {
@@ -140,7 +141,7 @@ public class HTable implements HTableInterface {
    * @throws IOException
    */
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
-    return isTableEnabled(new HBaseConfiguration(), tableName);
+    return isTableEnabled(HBaseConfiguration.create(), tableName);
   }
 
   /**
@@ -149,7 +150,7 @@ public class HTable implements HTableInterface {
    * @return true if table is on-line
    * @throws IOException
    */
-  public static boolean isTableEnabled(HBaseConfiguration conf, String tableName)
+  public static boolean isTableEnabled(Configuration conf, String tableName)
   throws IOException {
     return isTableEnabled(conf, Bytes.toBytes(tableName));
   }
@@ -160,7 +161,7 @@ public class HTable implements HTableInterface {
    * @return true if table is on-line
    * @throws IOException
    */
-  public static boolean isTableEnabled(HBaseConfiguration conf, byte[] tableName)
+  public static boolean isTableEnabled(Configuration conf, byte[] tableName)
   throws IOException {
     return HConnectionManager.getConnection(conf).isTableEnabled(tableName);
   }

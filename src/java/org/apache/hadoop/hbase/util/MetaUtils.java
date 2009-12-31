@@ -29,6 +29,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -42,10 +43,10 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -56,7 +57,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
  */
 public class MetaUtils {
   private static final Log LOG = LogFactory.getLog(MetaUtils.class);
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
   private FileSystem fs;
   private Path rootdir;
   private HLog log;
@@ -67,12 +68,12 @@ public class MetaUtils {
   /** Default constructor 
    * @throws IOException */
   public MetaUtils() throws IOException {
-    this(new HBaseConfiguration());
+    this(HBaseConfiguration.create());
   }
   
-  /** @param conf HBaseConfiguration 
+  /** @param conf Configuration 
    * @throws IOException */
-  public MetaUtils(HBaseConfiguration conf) throws IOException {
+  public MetaUtils(Configuration conf) throws IOException {
     this.conf = conf;
     conf.setInt("hbase.client.retries.number", 1);
     this.rootRegion = null;
@@ -284,7 +285,7 @@ public class MetaUtils {
    * @param onlineOffline Pass <code>true</code> to OFFLINE the region.
    * @throws IOException
    */
-  public static void changeOnlineStatus (final HBaseConfiguration c,
+  public static void changeOnlineStatus (final Configuration c,
       final byte [] row, final boolean onlineOffline)
   throws IOException {
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);

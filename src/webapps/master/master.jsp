@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="java.net.URLEncoder" 
+  import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.master.HMaster"
@@ -14,7 +15,7 @@
   import="org.apache.hadoop.hbase.HColumnDescriptor" 
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  HBaseConfiguration conf = master.getConfiguration();
+  Configuration conf = master.getConfiguration();
   HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
   Map<byte [], MetaRegion> onlineRegions = master.getRegionManager().getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =

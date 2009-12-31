@@ -27,6 +27,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Delete;
@@ -35,11 +36,11 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -71,7 +72,7 @@ class HMerge implements HConstants {
    * @param tableName   - Table to be compacted
    * @throws IOException
    */
-  public static void merge(HBaseConfiguration conf, FileSystem fs,
+  public static void merge(Configuration conf, FileSystem fs,
     final byte [] tableName)
   throws IOException {
     HConnection connection = HConnectionManager.getConnection(conf);
@@ -93,14 +94,14 @@ class HMerge implements HConstants {
   }
 
   private static abstract class Merger {
-    protected final HBaseConfiguration conf;
+    protected final Configuration conf;
     protected final FileSystem fs;
     protected final Path tabledir;
     protected final HLog hlog;
     private final long maxFilesize;
 
     
-    protected Merger(HBaseConfiguration conf, FileSystem fs,
+    protected Merger(Configuration conf, FileSystem fs,
       final byte [] tableName)
     throws IOException {
       this.conf = conf;
@@ -197,7 +198,7 @@ class HMerge implements HConstants {
     private final ResultScanner metaScanner;
     private HRegionInfo latestRegion;
     
-    OnlineMerger(HBaseConfiguration conf, FileSystem fs,
+    OnlineMerger(Configuration conf, FileSystem fs,
       final byte [] tableName)
     throws IOException {
       super(conf, fs, tableName);
@@ -313,7 +314,7 @@ class HMerge implements HConstants {
     private final List<HRegionInfo> metaRegions = new ArrayList<HRegionInfo>();
     private final HRegion root;
     
-    OfflineMerger(HBaseConfiguration conf, FileSystem fs)
+    OfflineMerger(Configuration conf, FileSystem fs)
         throws IOException {
       
       super(conf, fs, META_TABLE_NAME);

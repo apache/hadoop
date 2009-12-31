@@ -33,8 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -104,6 +104,7 @@ public class ServerManager implements HConstants {
       super(period, stop);
     }
 
+    @Override
     protected void chore() {
       int numServers = serverAddressToServerInfo.size();
       int numDeadServers = deadServers.size();
@@ -134,7 +135,7 @@ public class ServerManager implements HConstants {
    */
   public ServerManager(HMaster master) {
     this.master = master;
-    HBaseConfiguration c = master.getConfiguration();
+    Configuration c = master.getConfiguration();
     this.nobalancingCount = c.getInt("hbase.regions.nobalancing.count", 4);
     int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
       60 * 1000);

@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -43,7 +44,7 @@ public class RESTServlet extends ServletAdaptor {
 
   private static RESTServlet instance;
 
-  private transient final HBaseConfiguration conf;
+  private transient final Configuration conf;
   private transient final HTablePool pool;
   protected Map<String,Integer> maxAgeMap =
     Collections.synchronizedMap(new HashMap<String,Integer>());
@@ -64,7 +65,7 @@ public class RESTServlet extends ServletAdaptor {
    * @throws IOException
    */
   public RESTServlet() throws IOException {
-    this.conf = new HBaseConfiguration();
+    this.conf = HBaseConfiguration.create();
     this.pool = new HTablePool(conf, 10);
   }
 
@@ -80,7 +81,7 @@ public class RESTServlet extends ServletAdaptor {
   /**
    * @return the servlet's global HBase configuration
    */
-  protected HBaseConfiguration getConfiguration() {
+  protected Configuration getConfiguration() {
     return conf;
   }
 

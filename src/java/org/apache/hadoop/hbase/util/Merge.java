@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,8 +37,8 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -49,7 +50,6 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class Merge extends Configured implements Tool {
   static final Log LOG = LogFactory.getLog(Merge.class);
-  private final HBaseConfiguration conf;
   private Path rootdir;
   private volatile MetaUtils utils;
   private byte [] tableName;               // Name of table
@@ -60,25 +60,24 @@ public class Merge extends Configured implements Tool {
 
   /** default constructor */
   public Merge() {
-    this(new HBaseConfiguration());
+    super();
   }
 
   /**
    * @param conf
    */
-  public Merge(HBaseConfiguration conf) {
-    super(conf);
-    this.conf = conf;
+  public Merge(Configuration conf) {
     this.mergeInfo = null;
+    setConf(conf);
   }
-  
+
   public int run(String[] args) throws Exception {
     if (parseArgs(args) != 0) {
       return -1;
     }
 
     // Verify file system is up.
-    FileSystem fs = FileSystem.get(this.conf);              // get DFS handle
+    FileSystem fs = FileSystem.get(getConf());              // get DFS handle
     LOG.info("Verifying that file system is available...");
     try {
       FSUtils.checkFileSystemAvailable(fs);
@@ -90,7 +89,7 @@ public class Merge extends Configured implements Tool {
     // Verify HBase is down
     LOG.info("Verifying that HBase is not running...");
     try {
-      HBaseAdmin.checkHBaseAvailable(conf);
+      HBaseAdmin.checkHBaseAvailable(getConf());
       LOG.fatal("HBase cluster must be off-line.");
       return -1;
     } catch (MasterNotRunningException e) {
@@ -99,8 +98,8 @@ public class Merge extends Configured implements Tool {
     
     // Initialize MetaUtils and and get the root of the HBase installation
     
-    this.utils = new MetaUtils(conf);
-    this.rootdir = FSUtils.getRootDir(this.conf);
+    this.utils = new MetaUtils(getConf());
+    this.rootdir = FSUtils.getRootDir(getConf());
     try {
       if (isMetaTable) {
         mergeTwoMetaRegions();
@@ -278,9 +277,9 @@ public class Merge extends Configured implements Tool {
     }
     HRegion merged = null;
     HLog log = utils.getLog();
-    HRegion r1 = HRegion.openHRegion(info1, this.rootdir, log, this.conf);
+    HRegion r1 = HRegion.openHRegion(info1, this.rootdir, log, getConf());
     try {
-      HRegion r2 = HRegion.openHRegion(info2, this.rootdir, log, this.conf);
+      HRegion r2 = HRegion.openHRegion(info2, this.rootdir, log, getConf());
       try {
         merged = HRegion.merge(r1, r2);
       } finally {
@@ -335,7 +334,7 @@ public class Merge extends Configured implements Tool {
    */
   private int parseArgs(String[] args) throws IOException {
     GenericOptionsParser parser =
-      new GenericOptionsParser(this.getConf(), args);
+      new GenericOptionsParser(getConf(), args);
     
     String[] remainingArgs = parser.getRemainingArgs();
     if (remainingArgs.length != 3) {
@@ -379,7 +378,7 @@ public class Merge extends Configured implements Tool {
   public static void main(String[] args) {
     int status = 0;
     try {
-      status = ToolRunner.run(new Merge(), args);
+      status = ToolRunner.run(HBaseConfiguration.create(), new Merge(), args);
     } catch (Exception e) {
       LOG.error("exiting due to error", e);
       status = -1;

@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
+
 
 /**
  * Defines methods to create new HTableInterface.
@@ -35,5 +36,5 @@ public interface HTableInterfaceFactory {
    * @param tableName name of the HBase table.
    * @return HTableInterface instance.
    */
-  HTableInterface createHTableInterface(HBaseConfiguration config, byte[] tableName);
+  HTableInterface createHTableInterface(Configuration config, byte[] tableName);
 }

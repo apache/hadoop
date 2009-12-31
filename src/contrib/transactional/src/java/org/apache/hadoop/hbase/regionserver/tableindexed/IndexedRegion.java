@@ -34,10 +34,9 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Leases;
@@ -49,20 +48,20 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.tableindexed.IndexSpecification;
 import org.apache.hadoop.hbase.client.tableindexed.IndexedTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionalRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 
 class IndexedRegion extends TransactionalRegion {
 
   private static final Log LOG = LogFactory.getLog(IndexedRegion.class);
 
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
   private final IndexedTableDescriptor indexTableDescriptor;
   private Map<IndexSpecification, HTable> indexSpecToTable = new HashMap<IndexSpecification, HTable>();
 
   public IndexedRegion(final Path basedir, final HLog log, final FileSystem fs,
-      final HBaseConfiguration conf, final HRegionInfo regionInfo,
+      final Configuration conf, final HRegionInfo regionInfo,
       final FlushRequester flushListener, Leases trxLeases) throws IOException {
     super(basedir, log, fs, conf, regionInfo, flushListener, trxLeases);
     this.indexTableDescriptor = new IndexedTableDescriptor(regionInfo.getTableDesc());

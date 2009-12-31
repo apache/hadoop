@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.io.IOException"
+  import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnection"
   import="org.apache.hadoop.hbase.HRegionInfo"
@@ -8,7 +9,7 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  HBaseConfiguration conf = master.getConfiguration();
+  Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   HConnection connection = hbadmin.getConnection();
   ZooKeeperWrapper wrapper = connection.getZooKeeperWrapper();

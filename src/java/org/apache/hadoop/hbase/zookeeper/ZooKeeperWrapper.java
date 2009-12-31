@@ -33,7 +33,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -42,8 +42,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.data.Stat;
 
@@ -72,11 +72,11 @@ public class ZooKeeperWrapper implements HConstants {
 
   /**
    * Create a ZooKeeperWrapper.
-   * @param conf HBaseConfiguration to read settings from.
+   * @param conf Configuration to read settings from.
    * @param watcher ZooKeeper watcher to register.
    * @throws IOException If a connection error occurs.
    */
-  public ZooKeeperWrapper(HBaseConfiguration conf, Watcher watcher)
+  public ZooKeeperWrapper(Configuration conf, Watcher watcher)
   throws IOException {
     Properties properties = HQuorumPeer.makeZKProps(conf);
     setQuorumServers(properties);

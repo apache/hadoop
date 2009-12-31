@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Factory for creating HTable instances.
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 public class HTableFactory implements HTableInterfaceFactory {
 
   @Override
-  public HTableInterface createHTableInterface(HBaseConfiguration config,
+  public HTableInterface createHTableInterface(Configuration config,
       byte[] tableName) {
     try {
       return new HTable(config, tableName);

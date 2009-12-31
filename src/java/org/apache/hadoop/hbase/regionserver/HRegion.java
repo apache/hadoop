@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -135,7 +136,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   final Path basedir;
   final HLog log;
   final FileSystem fs;
-  final HBaseConfiguration conf;
+  final Configuration conf;
   final HRegionInfo regionInfo;
   final Path regiondir;
   private final Path regionCompactionDir;
@@ -248,7 +249,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
    */
-  public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
+  public HRegion(Path basedir, HLog log, FileSystem fs, Configuration conf, 
       HRegionInfo regionInfo, FlushRequester flushListener) {
     this.basedir = basedir;
     this.comparator = regionInfo.getComparator();
@@ -538,7 +539,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   }
 
   /** @return Configuration object */
-  public HBaseConfiguration getConf() {
+  public Configuration getConf() {
     return this.conf;
   }
 
@@ -1851,7 +1852,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-    final HBaseConfiguration conf)
+    final Configuration conf)
   throws IOException {
     Path tableDir =
       HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName());
@@ -1879,7 +1880,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   public static HRegion openHRegion(final HRegionInfo info, final Path rootDir,
-    final HLog log, final HBaseConfiguration conf)
+    final HLog log, final Configuration conf)
   throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
@@ -2124,7 +2125,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       listPaths(fs, b.getRegionDir());
     }
     
-    HBaseConfiguration conf = a.getConf();
+    Configuration conf = a.getConf();
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path basedir = a.getBaseDir();
@@ -2439,7 +2440,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    */
   private static void processTable(final FileSystem fs, final Path p,
-      final HLog log, final HBaseConfiguration c,
+      final HLog log, final Configuration c,
       final boolean majorCompact)
   throws IOException {
     HRegion region = null;
@@ -2528,7 +2529,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       majorCompact = true;
     }
     Path tableDir  = new Path(args[0]);
-    HBaseConfiguration c = new HBaseConfiguration();
+    Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     Path logdir = new Path(c.get("hbase.tmp.dir"),
       "hlog" + tableDir.getName() + System.currentTimeMillis());

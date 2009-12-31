@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -92,11 +93,11 @@ public class HConnectionManager implements HConstants {
   // synchronized access to them.  We set instances to 31.  The zk default max
   // connections is 30 so should run into zk issues before hit this value of 31.
   private static 
-  final Map<HBaseConfiguration, TableServers> HBASE_INSTANCES =
-    new LinkedHashMap<HBaseConfiguration, TableServers>
+  final Map<Integer, TableServers> HBASE_INSTANCES =
+    new LinkedHashMap<Integer, TableServers>
       ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
       @Override
-      protected boolean removeEldestEntry(Map.Entry<HBaseConfiguration, TableServers> eldest) {
+      protected boolean removeEldestEntry(Map.Entry<Integer, TableServers> eldest) {
         return size() > MAX_CACHED_HBASE_INSTANCES;
       }
   };
@@ -110,13 +111,14 @@ public class HConnectionManager implements HConstants {
    * @param conf
    * @return HConnection object for the instance specified by the configuration
    */
-  public static HConnection getConnection(HBaseConfiguration conf) {
+  public static HConnection getConnection(Configuration conf) {
     TableServers connection;
+    Integer key = HBaseConfiguration.hashCode(conf);
     synchronized (HBASE_INSTANCES) {
-      connection = HBASE_INSTANCES.get(conf);
+      connection = HBASE_INSTANCES.get(key);
       if (connection == null) {
         connection = new TableServers(conf);
-        HBASE_INSTANCES.put(conf, connection);
+        HBASE_INSTANCES.put(key, connection);
       }
     }
     return connection;
@@ -127,7 +129,7 @@ public class HConnectionManager implements HConstants {
    * @param conf
    * @param stopProxy
    */
-  public static void deleteConnectionInfo(HBaseConfiguration conf,
+  public static void deleteConnectionInfo(Configuration conf,
       boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
       TableServers t = HBASE_INSTANCES.remove(conf);
@@ -165,7 +167,7 @@ public class HConnectionManager implements HConstants {
    * @throws IOException
    */
   public static synchronized ClientZKWatcher getClientZooKeeperWatcher(
-      HBaseConfiguration conf) throws IOException {
+      Configuration conf) throws IOException {
     if (!ZK_WRAPPERS.containsKey(conf.get(HConstants.ZOOKEEPER_QUORUM))) {
       ZK_WRAPPERS.put(conf.get(HConstants.ZOOKEEPER_QUORUM),
           new ClientZKWatcher(conf));
@@ -182,14 +184,14 @@ public class HConnectionManager implements HConstants {
 
     static final Log LOG = LogFactory.getLog(ClientZKWatcher.class);
     private ZooKeeperWrapper zooKeeperWrapper;
-    private HBaseConfiguration conf;
+    private Configuration conf;
 
     /**
      * Takes a configuration to pass it to ZKW but won't instanciate it
      * @param conf
      * @throws IOException
      */
-    public ClientZKWatcher(HBaseConfiguration conf) {
+    public ClientZKWatcher(Configuration conf) {
       this.conf = conf;
     }
 
@@ -254,7 +256,7 @@ public class HConnectionManager implements HConstants {
     private final Object metaRegionLock = new Object();
     private final Object userRegionLock = new Object();
         
-    private volatile HBaseConfiguration conf;
+    private volatile Configuration conf;
     
     // Known region HServerAddress.toString() -> HRegionInterface 
     private final Map<String, HRegionInterface> servers =
@@ -272,7 +274,7 @@ public class HConnectionManager implements HConstants {
      * @param conf Configuration object
      */
     @SuppressWarnings("unchecked")
-    public TableServers(HBaseConfiguration conf) {
+    public TableServers(Configuration conf) {
       this.conf = conf;
 
       String serverClassName =

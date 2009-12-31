@@ -69,22 +69,22 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
       RecordWriter<ImmutableBytesWritable, Writable> {
     private static final Log LOG = LogFactory.getLog(MultiTableRecordWriter.class);
     Map<ImmutableBytesWritable, HTable> tables;
-    HBaseConfiguration config;
+    Configuration conf;
     boolean useWriteAheadLogging;
 
     /**
-     * @param config
+     * @param conf
      *          HBaseConfiguration to used
      * @param useWriteAheadLogging
      *          whether to use write ahead logging. This can be turned off (
      *          <tt>false</tt>) to improve performance when bulk loading data.
      */
-    public MultiTableRecordWriter(HBaseConfiguration config,
+    public MultiTableRecordWriter(Configuration conf,
         boolean useWriteAheadLogging) {
       LOG.debug("Created new MultiTableRecordReader with WAL "
           + (useWriteAheadLogging ? "on" : "off"));
       this.tables = new HashMap<ImmutableBytesWritable, HTable>();
-      this.config = config;
+      this.conf = conf;
       this.useWriteAheadLogging = useWriteAheadLogging;
     }
 
@@ -98,7 +98,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     HTable getTable(ImmutableBytesWritable tableName) throws IOException {
       if (!tables.containsKey(tableName)) {
         LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
-        HTable table = new HTable(config, tableName.get());
+        HTable table = new HTable(conf, tableName.get());
         table.setAutoFlush(false);
         tables.put(tableName, table);
       }
@@ -155,9 +155,9 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
   @Override
   public RecordWriter<ImmutableBytesWritable, Writable> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
-    Configuration configuration = context.getConfiguration();
-    return new MultiTableRecordWriter(new HBaseConfiguration(configuration),
-        configuration.getBoolean(WAL_PROPERTY, WAL_ON));
+    Configuration conf = context.getConfiguration();
+    return new MultiTableRecordWriter(HBaseConfiguration.create(conf),
+        conf.getBoolean(WAL_PROPERTY, WAL_ON));
   }
 
 }

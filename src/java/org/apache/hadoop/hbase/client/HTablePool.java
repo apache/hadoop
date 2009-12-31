@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class HTablePool {
   private final Map<String, LinkedList<HTableInterface>> tables =
       Collections.synchronizedMap(new HashMap<String, LinkedList<HTableInterface>>());
-  private final HBaseConfiguration config;
+  private final Configuration config;
   private final int maxSize;
   private HTableInterfaceFactory tableFactory = new HTableFactory();
 
@@ -49,7 +50,7 @@ public class HTablePool {
    * Default Constructor.  Default HBaseConfiguration and no limit on pool size.
    */
   public HTablePool() {
-    this(new HBaseConfiguration(), Integer.MAX_VALUE);
+    this(HBaseConfiguration.create(), Integer.MAX_VALUE);
   }
 
   /**
@@ -57,12 +58,12 @@ public class HTablePool {
    * @param config configuration
    * @param maxSize maximum number of references to keep for each table
    */
-  public HTablePool(HBaseConfiguration config, int maxSize) {
+  public HTablePool(Configuration config, int maxSize) {
     this.config = config;
     this.maxSize = maxSize;
   }
 
-  public HTablePool(HBaseConfiguration config, int maxSize, HTableInterfaceFactory tableFactory) {
+  public HTablePool(Configuration config, int maxSize, HTableInterfaceFactory tableFactory) {
     this.config = config;
     this.maxSize = maxSize;
     this.tableFactory = tableFactory;

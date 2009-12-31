@@ -64,7 +64,7 @@ public class LocalHBaseCluster implements HConstants {
   public static final String LOCAL = "local";
   /** 'local:' */
   public static final String LOCAL_COLON = LOCAL + ":";
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
   private final Class<? extends HRegionServer> regionServerClass;
 
   /**
@@ -72,7 +72,7 @@ public class LocalHBaseCluster implements HConstants {
    * @param conf
    * @throws IOException
    */
-  public LocalHBaseCluster(final HBaseConfiguration conf)
+  public LocalHBaseCluster(final Configuration conf)
   throws IOException {
     this(conf, DEFAULT_NO);
   }
@@ -85,7 +85,7 @@ public class LocalHBaseCluster implements HConstants {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public LocalHBaseCluster(final HBaseConfiguration conf,
+  public LocalHBaseCluster(final Configuration conf,
     final int noRegionServers)
   throws IOException {
     this.conf = conf;
@@ -113,7 +113,7 @@ public class LocalHBaseCluster implements HConstants {
     synchronized (regionThreads) {
       HRegionServer server; 
       try {
-        server = regionServerClass.getConstructor(HBaseConfiguration.class).
+        server = regionServerClass.getConstructor(Configuration.class).
           newInstance(conf);
       } catch (Exception e) {
         IOException ioe = new IOException();
@@ -324,7 +324,7 @@ public class LocalHBaseCluster implements HConstants {
    * @throws IOException
    */
   public static void main(String[] args) throws IOException {
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
     HBaseAdmin admin = new HBaseAdmin(conf);

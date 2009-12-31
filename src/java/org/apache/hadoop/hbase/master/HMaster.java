@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -117,7 +118,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   // TODO: Is this separate flag necessary?
   private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
   private final Path rootdir;
   private InfoServer infoServer;
   private final int threadWakeFrequency; 
@@ -155,7 +156,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @param conf configuration
    * @throws IOException
    */
-  public HMaster(HBaseConfiguration conf) throws IOException {
+  public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
@@ -208,7 +209,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * needed populating the directory with necessary bootup files).
    * @throws IOException
    */
-  private static Path checkRootDir(final Path rd, final HBaseConfiguration c,
+  private static Path checkRootDir(final Path rd, final Configuration c,
     final FileSystem fs)
   throws IOException {
     // If FS is in safe mode wait till out of it.
@@ -227,7 +228,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return rd;
   }
 
-  private static void bootstrap(final Path rd, final HBaseConfiguration c)
+  private static void bootstrap(final Path rd, final Configuration c)
   throws IOException {
     LOG.info("BOOTSTRAP: creating ROOT and first META regions");
     try {
@@ -269,7 +270,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @return This masters' address.
    * @throws UnknownHostException
    */
-  private static String getMyAddress(final HBaseConfiguration c)
+  private static String getMyAddress(final Configuration c)
   throws UnknownHostException {
     // Find out our address up in DNS.
     String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
@@ -332,7 +333,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /**
    * @return Return configuration being used by this server.
    */
-  public HBaseConfiguration getConfiguration() {
+  public Configuration getConfiguration() {
     return this.conf;
   }
 
@@ -1170,7 +1171,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     if (args.length < 1) {
       printUsageAndExit();
     }
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     // Process command-line args.
     for (String cmd: args) {
 

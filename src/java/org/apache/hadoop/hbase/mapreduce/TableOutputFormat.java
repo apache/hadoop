@@ -106,6 +106,7 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
    * @throws InterruptedException When the jobs is cancelled.
    * @see org.apache.hadoop.mapreduce.lib.output.FileOutputFormat#getRecordWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
    */
+  @Override
   public RecordWriter<KEY, Writable> getRecordWriter(
     TaskAttemptContext context) 
   throws IOException, InterruptedException {
@@ -113,7 +114,8 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
     String tableName = context.getConfiguration().get(OUTPUT_TABLE);
     HTable table = null;
     try {
-      table = new HTable(new HBaseConfiguration(context.getConfiguration()), 
+      HBaseConfiguration.addHbaseResources(context.getConfiguration());
+      table = new HTable(context.getConfiguration(), 
         tableName);
     } catch(IOException e) {
       LOG.error(e);

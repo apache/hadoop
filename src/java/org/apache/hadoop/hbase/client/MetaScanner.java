@@ -2,7 +2,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -22,7 +22,7 @@ class MetaScanner implements HConstants {
    * @param visitor A custom visitor
    * @throws IOException
    */
-  public static void metaScan(HBaseConfiguration configuration,
+  public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
     metaScan(configuration, visitor, EMPTY_START_ROW);
@@ -37,7 +37,7 @@ class MetaScanner implements HConstants {
    * @param tableName
    * @throws IOException
    */
-  public static void metaScan(HBaseConfiguration configuration,
+  public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor, byte[] tableName)
   throws IOException {
     HConnection connection = HConnectionManager.getConnection(configuration);

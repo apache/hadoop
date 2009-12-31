@@ -37,17 +37,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -56,6 +54,8 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -99,7 +99,7 @@ public class Store implements HConstants, HeapSize {
   private final HRegion region;
   private final HColumnDescriptor family;
   final FileSystem fs;
-  private final HBaseConfiguration conf;
+  private final Configuration conf;
   // ttl in milliseconds.
   protected long ttl;
   private long majorCompactionTime;
@@ -159,7 +159,7 @@ public class Store implements HConstants, HeapSize {
    * @throws IOException
    */
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
-    FileSystem fs, Path reconstructionLog, HBaseConfiguration conf,
+    FileSystem fs, Path reconstructionLog, Configuration conf,
     final Progressable reporter)
   throws IOException {
     HRegionInfo info = region.regionInfo;

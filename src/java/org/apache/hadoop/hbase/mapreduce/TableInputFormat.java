@@ -70,7 +70,7 @@ implements Configurable {
     this.conf = configuration;
     String tableName = conf.get(INPUT_TABLE);
     try {
-      setHTable(new HTable(new HBaseConfiguration(conf), tableName));
+      setHTable(new HTable(HBaseConfiguration.create(conf), tableName));
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }

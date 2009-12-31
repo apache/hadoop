@@ -32,8 +32,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,7 +75,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * @param conf
    * @param server
    */
-  public MemStoreFlusher(final HBaseConfiguration conf,
+  public MemStoreFlusher(final Configuration conf,
       final HRegionServer server) {
     super();
     this.server = server;
@@ -116,7 +116,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * @return Limit.
    */
   static long globalMemStoreLimit(final long max,
-     final float defaultLimit, final String key, final HBaseConfiguration c) {
+     final float defaultLimit, final String key, final Configuration c) {
     float limit = c.getFloat(key, defaultLimit);
     return getMemStoreLimit(max, limit, defaultLimit);
   }

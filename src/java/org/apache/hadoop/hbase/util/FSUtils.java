@@ -26,13 +26,13 @@ import java.net.URISyntaxException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -242,7 +242,7 @@ public class FSUtils {
    * @param wait Sleep between retries
    * @throws IOException
    */
-  public static void waitOnSafeMode(final HBaseConfiguration conf,
+  public static void waitOnSafeMode(final Configuration conf,
     final long wait)
   throws IOException {
     FileSystem fs = FileSystem.get(conf);
@@ -295,7 +295,7 @@ public class FSUtils {
    * configuration as a Path.
    * @throws IOException 
    */
-  public static Path getRootDir(final HBaseConfiguration c) throws IOException {
+  public static Path getRootDir(final Configuration c) throws IOException {
     return new Path(c.get(HConstants.HBASE_DIR));
   }
 
