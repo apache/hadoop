@@ -374,7 +374,7 @@ public class Result implements Writable {
    */
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("keyvalues=");
     if(isEmpty()) {
       sb.append("NONE");

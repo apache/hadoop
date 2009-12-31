@@ -487,7 +487,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   @Override
   public String toString() {
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
     s.append('{');
     s.append(HConstants.NAME);
     s.append(" => '");

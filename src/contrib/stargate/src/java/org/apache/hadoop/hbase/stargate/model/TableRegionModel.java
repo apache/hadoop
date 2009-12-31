@@ -81,7 +81,7 @@ public class TableRegionModel implements Serializable {
    */
   @XmlAttribute
   public String getName() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append(table);
     sb.append(',');
     sb.append(Bytes.toString(startKey));

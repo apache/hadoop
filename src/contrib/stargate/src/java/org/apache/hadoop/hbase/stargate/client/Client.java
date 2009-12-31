@@ -106,7 +106,7 @@ public class Client {
     do {
       cluster.lastHost = cluster.nodes.get(i);
       try {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("http://");
         sb.append(cluster.lastHost);
         sb.append(path);

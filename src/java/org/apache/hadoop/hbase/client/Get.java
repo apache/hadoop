@@ -276,7 +276,7 @@ public class Get implements Writable {
    */
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("row=");
     sb.append(Bytes.toString(this.row));
     sb.append(", maxVersions=");

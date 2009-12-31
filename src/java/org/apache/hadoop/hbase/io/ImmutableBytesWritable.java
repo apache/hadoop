@@ -204,7 +204,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    */
   @Override
   public String toString() { 
-    StringBuffer sb = new StringBuffer(3*this.bytes.length);
+    StringBuilder sb = new StringBuilder(3*this.bytes.length);
     for (int idx = 0; idx < this.bytes.length; idx++) {
       // if not the first, put a blank separator in
       if (idx != 0) {

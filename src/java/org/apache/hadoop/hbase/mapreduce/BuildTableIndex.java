@@ -87,7 +87,7 @@ public class BuildTableIndex {
     String iconfFile = null;
     String indexDir = null;
     String tableName = null;
-    StringBuffer columnNames = null;
+    StringBuilder columnNames = null;
 
     // parse args
     for (int i = 0; i < args.length - 1; i++) {
@@ -100,7 +100,7 @@ public class BuildTableIndex {
       } else if ("-table".equals(args[i])) {
         tableName = args[++i];
       } else if ("-columns".equals(args[i])) {
-        columnNames = new StringBuffer(args[++i]);
+        columnNames = new StringBuilder(args[++i]);
         while (i + 1 < args.length && !args[i + 1].startsWith("-")) {
           columnNames.append(" ");
           columnNames.append(args[++i]);

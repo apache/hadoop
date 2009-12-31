@@ -403,7 +403,7 @@ public class Scan implements Writable {
    */
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("startRow=");
     sb.append(Bytes.toString(this.startRow));
     sb.append(", stopRow=");

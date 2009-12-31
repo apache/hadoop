@@ -131,7 +131,7 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
   }
 
   private String createIndexConfContent() {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     buffer.append("<configuration><column><property>" +
       "<name>hbase.column.name</name><value>" + Bytes.toString(INPUT_FAMILY) +
       "</value></property>");
