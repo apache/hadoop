@@ -22,7 +22,9 @@ import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -105,6 +107,24 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue memstoreSizeMB =
     new MetricsIntValue("memstoreSizeMB", registry);
 
+  /**
+   * filesystem read latency
+   */
+  public final MetricsTimeVaryingRate fsReadLatency = 
+    new MetricsTimeVaryingRate("fsReadLatency", registry);
+
+  /**
+   * filesystem write latency
+   */
+  public final MetricsTimeVaryingRate fsWriteLatency = 
+    new MetricsTimeVaryingRate("fsWriteLatency", registry);
+
+  /**
+   * filesystem sync latency
+   */
+  public final MetricsTimeVaryingRate fsSyncLatency = 
+    new MetricsTimeVaryingRate("fsSyncLatency", registry);
+
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
@@ -143,13 +163,26 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
+
+      // mix in HFile metrics
+      this.fsReadLatency.inc((int)HFile.getReadOps(), HFile.getReadTime());
+      this.fsWriteLatency.inc((int)HFile.getWriteOps(), HFile.getWriteTime());
+      // mix in HLog metrics
+      this.fsWriteLatency.inc((int)HLog.getWriteOps(), HLog.getWriteTime());
+      this.fsSyncLatency.inc((int)HLog.getSyncOps(), HLog.getSyncTime());
+      // push the result
+      this.fsReadLatency.pushMetric(this.metricsRecord);
+      this.fsWriteLatency.pushMetric(this.metricsRecord);
+      this.fsSyncLatency.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
     this.lastUpdate = System.currentTimeMillis();
   }
 
   public void resetAllMinMax() {
-    // Nothing to do
+    this.atomicIncrementTime.resetMinMax();
+    this.fsReadLatency.resetMinMax();
+    this.fsWriteLatency.resetMinMax();
   }
 
   /**

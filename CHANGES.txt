@@ -268,6 +268,7 @@ Release 0.21.0 - Unreleased
    HBASE-2025  0.20.2 accessed from older client throws 
                UndeclaredThrowableException; frustrates rolling upgrade
    HBASE-2081  Set the retries higher in shell since client pause is lower
+   HBASE-1956  Export HDFS read and write latency as a metric
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

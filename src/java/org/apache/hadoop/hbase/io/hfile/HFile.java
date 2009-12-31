@@ -154,6 +154,36 @@ public class HFile {
   public final static String DEFAULT_COMPRESSION =
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
+  // For measuring latency of "typical" reads and writes
+  private static volatile long readOps;
+  private static volatile long readTime;
+  private static volatile long writeOps;
+  private static volatile long writeTime;
+
+  public static final long getReadOps() {
+    long ret = readOps;
+    readOps = 0;
+    return ret;
+  }
+
+  public static final long getReadTime() {
+    long ret = readTime;
+    readTime = 0;
+    return ret;
+  }
+
+  public static final long getWriteOps() {
+    long ret = writeOps;
+    writeOps = 0;
+    return ret;
+  }
+
+  public static final long getWriteTime() {
+    long ret = writeTime;
+    writeTime = 0;
+    return ret;
+  }
+
   /**
    * HFile Writer.
    */
@@ -320,12 +350,17 @@ public class HFile {
      */
     private void finishBlock() throws IOException {
       if (this.out == null) return;
+      long now = System.currentTimeMillis();
+
       int size = releaseCompressingStream(this.out);
       this.out = null;
       blockKeys.add(firstKey);
       blockOffsets.add(Long.valueOf(blockBegin));
       blockDataSizes.add(Integer.valueOf(size));
       this.totalBytes += size;
+
+      writeTime += System.currentTimeMillis() - now;
+      writeOps++;
     }
 
     /*
@@ -896,6 +931,7 @@ public class HFile {
       buf.rewind();
       return buf;
     }
+
     /**
      * Read in a file block.
      * @param block Index of block to read.
@@ -910,7 +946,6 @@ public class HFile {
         throw new IOException("Requested block is out of range: " + block +
           ", max: " + blockIndex.count);
       }
-
       // For any given block from any given file, synchronize reads for said
       // block.
       // Without a cache, this synchronizing is needless overhead, but really
@@ -930,6 +965,7 @@ public class HFile {
         }
 
         // Load block from filesystem.
+        long now = System.currentTimeMillis();
         long onDiskBlockSize;
         if (block == blockIndex.count - 1) {
           // last block!  The end of data block is first meta block if there is
@@ -953,6 +989,9 @@ public class HFile {
         buf.compact();
         buf.limit(buf.limit() - DATABLOCKMAGIC.length);
         buf.rewind();
+
+        readTime += System.currentTimeMillis() - now;
+        readOps++;
 
         // Cache the block
         if(cacheBlock && cache != null) {
