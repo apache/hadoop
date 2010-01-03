@@ -82,9 +82,9 @@ class LogRoller extends Thread implements LogRollListener {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        byte [] regionToFlush = server.getLog().rollWriter();
-        if (regionToFlush != null) {
-          scheduleFlush(regionToFlush);
+        byte [][] regionsToFlush = server.getLog().rollWriter();
+        if (regionsToFlush != null) {
+          for (byte [] r: regionsToFlush) scheduleFlush(r);
         }
       } catch (FailedLogCloseException e) {
         LOG.fatal("Forcing server shutdown", e);
