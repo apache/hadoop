@@ -76,6 +76,9 @@ Trunk (unreleased changes)
 
     HADOOP-6435. Make RPC.waitForProxy with timeout public. (Steve Loughran
     via tomwhite)
+  
+    HADOOP-6472. add tokenCache option to GenericOptionsParser for passing
+     file with secret keys to a map reduce job. (boryas)
 
   OPTIMIZATIONS
 
