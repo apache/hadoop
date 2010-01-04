@@ -157,6 +157,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
   private final int msgInterval;
 
   protected final int numRegionsToReport;
+
+  private final long maxScannerResultSize;
   
   // Remote HMaster
   private HMasterRegionInterface hbaseMaster;
@@ -256,6 +258,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     sleeper = new Sleeper(this.msgInterval, this.stopRequested);
 
+    this.maxScannerResultSize = conf.getLong(
+            HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 
+            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+              
     // Task thread to process requests from Master
     this.worker = new Worker();
 
@@ -1795,12 +1801,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       this.leases.renewLease(scannerName);
       List<Result> results = new ArrayList<Result>();
-      for (int i = 0; i < nbRows; i++) {
+      long currentScanResultSize = 0;
+      for (int i = 0; i < nbRows && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
         List<KeyValue> values = new ArrayList<KeyValue>();
         boolean moreRows = s.next(values);
         if (!values.isEmpty()) {
+          for (KeyValue kv : values) {
+            currentScanResultSize += kv.heapSize();
+          }
           results.add(new Result(values));
         }
         if (!moreRows) {

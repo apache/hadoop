@@ -284,4 +284,20 @@ public interface HConstants {
     TABLE_SET_HTD, 
     TABLE_SPLIT
   }
+  
+    /**
+     * Parameter name for maximum number of bytes returned when calling a
+     * scanner's next method.
+     */
+  public static String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
+  
+  /**
+   * Maximum number of bytes returned when calling a scanner's next method.
+   * Note that when a single row is larger than this limit the row is still
+   * returned completely.
+   * 
+   * The default value is unlimited.
+   */
+  public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+
 }

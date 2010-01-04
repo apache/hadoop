@@ -282,6 +282,8 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2052  Upper bound of outstanding WALs can be overrun
    HBASE-2086  Job(configuration,String) deprecated (Kay Kay via Stack)
+   HBASE-1996  Configure scanner buffer in bytes instead of number of rows
+               (Erik Rozendaal and Dave Latham via Stack)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
