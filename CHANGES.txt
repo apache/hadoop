@@ -148,6 +148,8 @@ Release 0.21.0 - Unreleased
                (Lars George via JD)
    HBASE-2082  TableInputFormat is ignoring input scan's stop row setting
                (Scott Wang via Andrew Purtell)
+   HBASE-2068  MetricsRate is missing "registry" parameter
+               (Lars George and Gary Helmling via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

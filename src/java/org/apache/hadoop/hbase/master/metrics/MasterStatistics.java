@@ -19,15 +19,15 @@ package org.apache.hadoop.hbase.master.metrics;
 
 import javax.management.ObjectName;
 
+import org.apache.hadoop.hbase.metrics.MetricsMBeanBase;
 import org.apache.hadoop.metrics.util.MBeanUtil;
-import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 /**
  * Exports the {@link MasterMetrics} statistics as an MBean
  * for JMX.
  */
-public class MasterStatistics extends MetricsDynamicMBeanBase {
+public class MasterStatistics extends MetricsMBeanBase {
   private final ObjectName mbeanName;
 
   public MasterStatistics(MetricsRegistry registry) {
