@@ -348,7 +348,7 @@ public class HLog implements HConstants, Syncable {
         Path oldFile = cleanupCurrentWriter(this.filenum);
         this.filenum = System.currentTimeMillis();
         Path newPath = computeFilename(this.filenum);
-        this.writer = createWriter(fs, newPath, new HBaseConfiguration(conf));
+        this.writer = createWriter(fs, newPath, HBaseConfiguration.create(conf));
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
             this.numEntries.get() +

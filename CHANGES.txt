@@ -279,6 +279,7 @@ Release 0.21.0 - Unreleased
    HBASE-2085  StringBuffer -> StringBuilder - conversion of references as necessary
                (Kay Kay via Stack)
    HBASE-2052  Upper bound of outstanding WALs can be overrun
+   HBASE-2086  Job(configuration,String) deprecated (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

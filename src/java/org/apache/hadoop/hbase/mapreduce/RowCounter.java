@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -85,7 +86,9 @@ public class RowCounter {
   public static Job createSubmittableJob(Configuration conf, String[] args) 
   throws IOException {
     String tableName = args[0];
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Cluster mrCluster = new Cluster(conf);
+    Job job = Job.getInstance(mrCluster, conf);
+    job.setJobName(NAME + "_" + tableName);
     job.setJarByClass(RowCounter.class);
     // Columns are space delimited
     StringBuilder sb = new StringBuilder();

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -85,7 +86,10 @@ public class Import {
   throws IOException {
     String tableName = args[0];
     Path inputDir = new Path(args[1]);
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Cluster mrCluster = new Cluster(conf);
+    Job job = Job.getInstance(mrCluster, conf);
+    job.setJobName(NAME + "_" + tableName);
+
     job.setJarByClass(Importer.class);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(SequenceFileInputFormat.class);

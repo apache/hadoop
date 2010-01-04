@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -123,8 +124,9 @@ public class BuildTableIndex {
       iconf.addFromXML(content);
       conf.set("hbase.index.conf", content);
     }
-
-    Job job = new Job(conf, "build index for table " + tableName);
+    Cluster mrCluster = new Cluster(conf);
+    Job job = Job.getInstance(mrCluster, conf);
+    job.setJobName("build index for table " + tableName);
     // number of indexes to partition into
     job.setNumReduceTasks(numReduceTasks);
     Scan scan = new Scan();

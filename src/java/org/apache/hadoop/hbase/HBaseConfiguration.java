@@ -47,7 +47,7 @@ public class HBaseConfiguration extends Configuration {
   }
   
   /**
-   * Instantinating HBaseConfiguration() is deprecated. Please use 
+   * Instantiating HBaseConfiguration() is deprecated. Please use 
    * HBaseConfiguration#create(conf) to construct a plain Configuration
    */
   @Deprecated
