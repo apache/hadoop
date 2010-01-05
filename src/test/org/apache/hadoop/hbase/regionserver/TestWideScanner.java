@@ -21,7 +21,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public class TestWideScanner extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
-  final int BATCH = 1000;
+  static final int BATCH = 1000;
 
   private MiniDFSCluster cluster = null;
   private HRegion r;

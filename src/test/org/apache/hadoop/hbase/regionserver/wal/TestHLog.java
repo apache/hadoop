@@ -193,7 +193,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   public void testFindMemstoresWithEditsOlderThan() throws IOException {
     Map<byte [], Long> regionsToSeqids = new HashMap<byte [], Long>();
     for (int i = 0; i < 10; i++) {
-      Long l = new Long(i);
+      Long l = Long.valueOf(i);
       regionsToSeqids.put(l.toString().getBytes(), l);
     }
     byte [][] regions =

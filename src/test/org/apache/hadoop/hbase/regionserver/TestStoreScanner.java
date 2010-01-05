@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestStoreScanner extends TestCase {
-  private final String CF_STR = "cf";
+  private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
 
   /**

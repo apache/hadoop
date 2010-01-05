@@ -40,8 +40,8 @@ public class TestStoreReconstruction {
 
   private Path dir;
   private MiniDFSCluster cluster;
-  private final String TABLE = "testtable";
-  private final int TOTAL_EDITS = 10000;
+  private static final String TABLE = "testtable";
+  private static final int TOTAL_EDITS = 10000;
   private HBaseConfiguration conf;
 
   /**

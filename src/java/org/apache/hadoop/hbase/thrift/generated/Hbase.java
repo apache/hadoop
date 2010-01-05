@@ -3666,7 +3666,7 @@ public class Hbase {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Boolean(isSuccess());
+        return Boolean.valueOf(isSuccess());
 
       case IO:
         return getIo();

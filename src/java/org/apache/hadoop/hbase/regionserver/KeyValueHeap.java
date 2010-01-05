@@ -130,7 +130,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     return next(result, -1);
   }
 
-  private class KVScannerComparator implements Comparator<KeyValueScanner> {
+  private static class KVScannerComparator implements Comparator<KeyValueScanner> {
     private KVComparator kvComparator;
     /**
      * Constructor
