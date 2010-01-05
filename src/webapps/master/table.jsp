@@ -28,6 +28,7 @@
       master.getServerManager().getServerAddressToServerInfo();
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
   HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
+  Map<String, Integer> frags = master.getTableFragmentation(); 
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -121,6 +122,7 @@
 <table>
   <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
   <tr><td>Enabled</td><td><%= hbadmin.isTableEnabled(table.getTableName()) %></td><td>Is the table enabled</td></tr>
+  <tr><td>Fragmentation</td><td><%= frags.get(tableName) != null ? frags.get(tableName).intValue() + "%" : "n/a" %></td><td>How fragmented is the table. After a major compaction it is 0%.</td></tr>
 </table>
 <%
   Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();

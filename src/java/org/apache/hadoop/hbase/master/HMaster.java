@@ -151,6 +151,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private final ServerManager serverManager;
   private final RegionManager regionManager;
 
+  private long lastFragmentationQuery = -1L;
+  private Map<String, Integer> fragmentation = null;
+  
   /** 
    * Constructor
    * @param conf configuration
@@ -1231,6 +1234,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Print out usage if we get to here.
       printUsageAndExit();
     }
+  }
+
+  public Map<String, Integer> getTableFragmentation() throws IOException {
+    long now = System.currentTimeMillis();
+    // only check every two minutes by default
+    int check = this.conf.getInt("hbase.master.fragmentation.check.frequency", 2 * 60 * 1000);
+    if (lastFragmentationQuery == -1 || now - lastFragmentationQuery > check) {
+      fragmentation = FSUtils.getTableFragmentation(this);
+      lastFragmentationQuery = now;
+    }
+    return fragmentation;
   }
 
   /**

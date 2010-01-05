@@ -217,4 +217,14 @@ class CompactSplitThread extends Thread implements HConstants {
       this.interrupt();
     }
   }
+  
+  /**
+   * Returns the current size of the queue containing regions that are 
+   * processed. 
+   *
+   * @return The current size of the regions queue.
+   */
+  public int getCompactionQueueSize() {
+    return compactionQueue.size();   
+  }  
 }
