@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -38,7 +39,7 @@ public class TestFullLogReconstruction {
   private final static byte[] TABLE_NAME = Bytes.toBytes("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
 
-  private HBaseConfiguration conf;
+  private Configuration conf;
 
     /**
    * @throws java.lang.Exception

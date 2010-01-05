@@ -33,6 +33,7 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -403,7 +404,7 @@ public class TestFromClientSide {
   @Test
   public void testMaxKeyValueSize() throws Exception {
     byte [] TABLE = Bytes.toBytes("testMaxKeyValueSize");
-    HBaseConfiguration conf = TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
     String oldMaxSize = conf.get("hbase.client.keyvalue.maxsize");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte[] value = new byte[4 * 1024 * 1024];

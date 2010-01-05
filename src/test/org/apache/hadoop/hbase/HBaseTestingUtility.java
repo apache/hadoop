@@ -63,7 +63,7 @@ public class HBaseTestingUtility {
   
   private final Log LOG = LogFactory.getLog(getClass());
   
-  private final HBaseConfiguration conf = new HBaseConfiguration();
+  private final Configuration conf = HBaseConfiguration.create();
   private MiniZooKeeperCluster zkCluster = null;
   private MiniDFSCluster dfsCluster = null;
   private MiniHBaseCluster hbaseCluster = null;
@@ -76,9 +76,9 @@ public class HBaseTestingUtility {
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
 
   /**
-   * @return Instance of HBaseConfiguration.
+   * @return Instance of Configuration.
    */
-  public HBaseConfiguration getConfiguration() {
+  public Configuration getConfiguration() {
     return this.conf;
   }
 
@@ -351,7 +351,7 @@ public class HBaseTestingUtility {
       Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
     };
 
-    HBaseConfiguration c = getConfiguration();
+    Configuration c = getConfiguration();
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
     HTableDescriptor htd = table.getTableDescriptor();
     if(!htd.hasFamily(columnFamily)) {

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -34,7 +35,7 @@ public class TestZooKeeper {
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
-  private HBaseConfiguration conf;
+  private Configuration    conf;
   private MiniHBaseCluster cluster;
 
   /**

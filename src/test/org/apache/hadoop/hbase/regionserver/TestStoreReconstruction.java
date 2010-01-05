@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
@@ -42,7 +43,7 @@ public class TestStoreReconstruction {
   private MiniDFSCluster cluster;
   private static final String TABLE = "testtable";
   private static final int TOTAL_EDITS = 10000;
-  private HBaseConfiguration conf;
+  private Configuration conf;
 
   /**
    * @throws java.lang.Exception

@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -40,7 +41,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
  */
 public class MiniHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
-  private HBaseConfiguration conf;
+  private Configuration conf;
   public LocalHBaseCluster hbaseCluster;
 
   /**
@@ -49,7 +50,7 @@ public class MiniHBaseCluster implements HConstants {
    * @param numRegionServers initial number of region servers to start.
    * @throws IOException
    */
-  public MiniHBaseCluster(HBaseConfiguration conf, int numRegionServers) 
+  public MiniHBaseCluster(Configuration conf, int numRegionServers) 
   throws IOException {
     this.conf = conf;
     init(numRegionServers);

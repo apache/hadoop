@@ -285,6 +285,7 @@ Release 0.21.0 - Unreleased
    HBASE-1996  Configure scanner buffer in bytes instead of number of rows
                (Erik Rozendaal and Dave Latham via Stack)
    HBASE-2090  findbugs issues (Kay Kay via Stack)
+   HBASE-2089  HBaseConfiguration() ctor. deprecated (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
