@@ -39,8 +39,8 @@ public class AvroSpecificSerialization
 
   @Override
   public boolean accept(Map<String, String> metadata) {
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
+    if (!checkSerializationKey(metadata)) {
+      return false;
     }
     Class<?> c = getClassFromMetadata(metadata);
     return c == null ? false : SpecificRecord.class.isAssignableFrom(c);

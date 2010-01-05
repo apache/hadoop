@@ -80,6 +80,9 @@ Trunk (unreleased changes)
     HADOOP-6472. add tokenCache option to GenericOptionsParser for passing
      file with secret keys to a map reduce job. (boryas)
 
+    HADOOP-6443. Serialization classes accept invalid metadata.
+    (Aaron Kimball via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

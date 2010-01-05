@@ -135,11 +135,10 @@ public class WritableSerialization extends SerializationBase<Writable> {
 
   @Override
   public boolean accept(Map<String, String> metadata) {
-    String intendedSerializer = metadata.get(SERIALIZATION_KEY);
-    if (intendedSerializer != null &&
-        !getClass().getName().equals(intendedSerializer)) {
+    if (!checkSerializationKey(metadata)) {
       return false;
     }
+
     Class<?> c = getClassFromMetadata(metadata);
     return c == null ? false : Writable.class.isAssignableFrom(c);
   }

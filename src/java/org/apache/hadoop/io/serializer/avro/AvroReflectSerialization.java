@@ -54,8 +54,8 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
     if (packages == null) {
       getPackages();
     }
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
+    if (!checkSerializationKey(metadata)) {
+      return false;
     }
     Class<?> c = getClassFromMetadata(metadata);
     if (c == null) {

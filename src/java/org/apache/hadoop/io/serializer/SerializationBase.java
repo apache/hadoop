@@ -101,4 +101,17 @@ public abstract class SerializationBase<T> extends Configured
    * for this given metadata.
    */
   public abstract RawComparator<T> getRawComparator(Map<String,String> metadata);
+
+  /**
+   * Check that the SERIALIZATION_KEY, if set, matches the current class.
+   * @param metadata the serialization metadata to check.
+   * @return true if SERIALIZATION_KEY is unset, or if it matches the current class
+   * (meaning that accept() should continue processing), or false if it is a mismatch,
+   * meaning that accept() should return false.
+   */
+  protected boolean checkSerializationKey(Map<String, String> metadata) {
+    String intendedSerializer = metadata.get(SERIALIZATION_KEY);
+    return intendedSerializer == null ||
+        getClass().getName().equals(intendedSerializer);
+  }
 }

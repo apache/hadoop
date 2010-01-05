@@ -141,8 +141,7 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
    * @return a RawComparator parameterized for the specified Avro schema.
    */
   public RawComparator<T> getRawComparator(Map<String, String> metadata) {
-    Schema schema = Schema.parse(metadata.get(AVRO_SCHEMA_KEY));
+    Schema schema = getSchema(metadata);
     return new AvroComparator(schema);
   }
-
 }

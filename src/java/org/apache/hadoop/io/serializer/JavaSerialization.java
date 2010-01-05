@@ -99,9 +99,7 @@ public class JavaSerialization extends SerializationBase<Serializable> {
   }
 
   public boolean accept(Map<String, String> metadata) {
-    String intendedSerializer = metadata.get(SERIALIZATION_KEY);
-    if (intendedSerializer != null &&
-        !getClass().getName().equals(intendedSerializer)) {
+    if (!checkSerializationKey(metadata)) {
       return false;
     }
 
