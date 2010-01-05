@@ -83,6 +83,9 @@ Trunk (unreleased changes)
     HADOOP-6443. Serialization classes accept invalid metadata.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-3205. Read multiple chunks directly from FSInputChecker subclass
+    into user buffers. (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
