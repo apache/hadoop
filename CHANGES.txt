@@ -33,6 +33,8 @@ Trunk (unreleased changes)
     HADOOP-6415. Adds a common token interface for both job token and 
     delegation token. (Kan Zhang via ddas)
 
+    HADOOP-6466. Add a ZooKeeper service to the cloud scripts. (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by

@@ -18,8 +18,8 @@ from __future__ import with_statement
 import ConfigParser
 from hadoop.cloud import VERSION
 from hadoop.cloud.cluster import get_cluster
+from hadoop.cloud.service import get_service
 from hadoop.cloud.service import InstanceTemplate
-from hadoop.cloud.service import HadoopService
 from hadoop.cloud.service import NAMENODE
 from hadoop.cloud.service import SECONDARY_NAMENODE
 from hadoop.cloud.service import JOBTRACKER
@@ -33,6 +33,7 @@ from optparse import make_option
 import os
 import sys
 
+DEFAULT_SERVICE_NAME = 'hadoop'
 DEFAULT_CLOUD_PROVIDER = 'ec2'
 
 DEFAULT_CONFIG_DIR_NAME = '.hadoop-cloud'
@@ -183,8 +184,10 @@ def parse_options_and_config(command, option_list=[], extra_arguments=(),
   cluster_name = args[0]
   opt = merge_config_with_options(cluster_name, config, options_dict)
   logging.debug("Options: %s", str(opt))
-  cluster = get_cluster(get_cloud_provider(opt))(cluster_name, config_dir)
-  service = get_service(cluster)
+  service_name = get_service_name(opt)
+  cloud_provider = get_cloud_provider(opt)
+  cluster = get_cluster(cloud_provider)(cluster_name, config_dir)
+  service = get_service(service_name, cloud_provider)(cluster)
   return (opt, args, service)
 
 def parse_options(command, option_list=[], expected_arguments=(),
@@ -223,14 +226,17 @@ def get_config_dir(options_dict):
     config_dir = DEFAULT_CONFIG_DIR
   return config_dir
 
+def get_service_name(options_dict):
+  service_name = options_dict.get("service", None)
+  if service_name is None:
+    service_name = DEFAULT_SERVICE_NAME
+  return service_name
+
 def get_cloud_provider(options_dict):
   provider = options_dict.get("cloud_provider", None)
   if provider is None:
     provider = DEFAULT_CLOUD_PROVIDER
   return provider
-
-def get_service(cluster):
-  return HadoopService(cluster)
 
 def check_options_set(options, option_names):
   for option_name in option_names:
@@ -268,8 +274,10 @@ def main():
   if command == 'list':
     (opt, args) = parse_options(command, BASIC_OPTIONS, unbounded_args=True)
     if len(args) == 0:
-      service = get_service(None)
-      service.list_all(get_cloud_provider(opt))
+      service_name = get_service_name(opt)
+      cloud_provider = get_cloud_provider(opt)
+      service = get_service(service_name, cloud_provider)(None)
+      service.list_all(cloud_provider)
     else:
       (opt, args, service) = parse_options_and_config(command, BASIC_OPTIONS)
       service.list()

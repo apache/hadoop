@@ -316,3 +316,24 @@ larger changes, is to create you own image.
 It's possible to use any image, as long as it i) runs (gzip compressed) user
 data on boot, and ii) has Java installed.
 
+OTHER SERVICES
+==============
+
+ZooKeeper
+=========
+
+You can run ZooKeeper by setting the "service" parameter to "zookeeper". For
+example:
+
+[my-zookeeper-cluster]
+service=zookeeper
+ami=ami-ed59bf84
+instance_type=m1.small
+key_name=tom
+availability_zone=us-east-1c
+public_key=PATH_TO_PUBLIC_KEY
+private_key=PATH_TO_PRIVATE_KEY
+
+Then to launch a three-node ZooKeeper ensemble, run:
+
+% ./hadoop-ec2 launch-cluster my-zookeeper-cluster 3 zk
