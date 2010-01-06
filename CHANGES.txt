@@ -35,6 +35,9 @@ Trunk (unreleased changes)
 
     HADOOP-6466. Add a ZooKeeper service to the cloud scripts. (tomwhite)
 
+    HADOOP-6408. Add a /conf servlet to dump running configuration.
+    (Todd Lipcon via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
