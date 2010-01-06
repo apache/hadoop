@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HADOOP-3205. Read multiple chunks directly from FSInputChecker subclass
     into user buffers. (Todd Lipcon via tomwhite)
 
+    HADOOP-6479. TestUTF8 assertions could fail with better text.
+    (Steve Loughran via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
