@@ -277,9 +277,10 @@ Release 0.21.0 - Unreleased
    HBASE-2080  [EC2] Support multivolume local instance storage
    HBASE-2083  [EC2] HDFS DataNode no longer required on master
    HBASE-2084  [EC2] JAVA_HOME handling broken
-   HBASE-2036  Use Configuration instead of HBaseConfiguration (Enis Soztutar via Stack)
-   HBASE-2085  StringBuffer -> StringBuilder - conversion of references as necessary
-               (Kay Kay via Stack)
+   HBASE-2036  Use Configuration instead of HBaseConfiguration (Enis Soztutar
+               via Stack)
+   HBASE-2085  StringBuffer -> StringBuilder - conversion of references as
+               necessary (Kay Kay via Stack)
    HBASE-2052  Upper bound of outstanding WALs can be overrun
    HBASE-2086  Job(configuration,String) deprecated (Kay Kay via Stack)
    HBASE-1996  Configure scanner buffer in bytes instead of number of rows
@@ -287,6 +288,8 @@ Release 0.21.0 - Unreleased
    HBASE-2090  findbugs issues (Kay Kay via Stack)
    HBASE-2089  HBaseConfiguration() ctor. deprecated (Kay Kay via Stack)
    HBASE-2035  Binary values are formatted wrong in shell
+   HBASE-2095  TIF shuold support more confs for the scanner (Bassam Tabbara
+               via Andrew Purtell)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
