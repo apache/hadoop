@@ -1514,6 +1514,11 @@ public class TaskTracker
       if(tip == null)
          return -1;
       
+      if (!tip.getTask().isMapTask() || 
+          tip.getRunState() != TaskStatus.State.SUCCEEDED) {
+        return -1;
+      }
+      
       MapOutputFile mapOutputFile = new MapOutputFile();
       mapOutputFile.setJobId(taskId.getJobID());
       mapOutputFile.setConf(conf);

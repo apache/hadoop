@@ -1,5 +1,12 @@
 Hadoop Change Log
 
+Release 0.19.3 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-4963. Logs saying org.apache.hadoop.util.DiskChecker$DiskErrorException
+    in TaskTracker are not relevant ((Amareshwari Sriramadasu via ddas) 
+
 Release 0.19.2 - 2009-06-30
 
   BUG FIXES
