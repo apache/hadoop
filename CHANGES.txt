@@ -78,6 +78,9 @@ Trunk (unreleased changes)
     HDFS-767. An improved retry policy when the DFSClient is unable to fetch a
     block from the datanode.  (Ning Zhang via dhruba)
 
+    HDFS-187. Initialize secondary namenode http address in TestStartup.
+    (Todd Lipcon via szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

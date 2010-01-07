@@ -49,7 +49,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class TestStartup extends TestCase {
   public static final String NAME_NODE_HOST = "localhost:";
-  public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
+  public static final String WILDCARD_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
     LogFactory.getLog(TestStartup.class.getName());
   private Configuration config;
@@ -87,6 +87,8 @@ public class TestStartup extends TestCase {
         new File(hdfsDir, "data").getPath());
     config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
         fileAsURI(new File(hdfsDir, "secondary")).toString());
+    config.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+	       WILDCARD_HTTP_HOST + "0");
     
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
   }
