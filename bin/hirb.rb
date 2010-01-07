@@ -298,8 +298,7 @@ NAME, VERSIONS, COMPRESSION, etc.  Constants do not need to be quoted.  Type
 'Object.constants' to see a (messy) list of all constants in the environment.
 
 In case you are using binary keys or values and need to enter them into the 
-shell then use double-quotes to make use of hexadecimal or octal notations, 
-for example:
+shell then use double-quotes to make use of hexadecimal for example:
 
   hbase> get 't1', "key\\x03\\x3f\\xcd"
   hbase> get 't1', "key\\003\\023\\011"

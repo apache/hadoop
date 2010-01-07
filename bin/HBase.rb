@@ -425,13 +425,13 @@ module HBase
       i = s.iterator()
       while i.hasNext()
         r = i.next()
-        row = String.from_java_bytes r.getRow()
+        row = Bytes::toStringBinary(r.getRow())
         if limit != -1 and count >= limit
           break
         end
         for kv in r.list
           family = String.from_java_bytes kv.getFamily()
-          qualifier = String.from_java_bytes kv.getQualifier()
+          qualifier = Bytes::toStringBinary(kv.getQualifier())
           column = family + ':' + qualifier
           cell = toString(column, kv, maxlength)
           @formatter.row([row, "column=%s, %s" % [column, cell]])
@@ -494,7 +494,7 @@ module HBase
             Bytes.toLong(kv.getValue())]
         end
       end
-      val = "timestamp=" + kv.getTimestamp().to_s + ", value=" + Bytes.toStringBinary(kv.getValue())
+      val = "timestamp=" + kv.getTimestamp().to_s + ", value=" + Bytes::toStringBinary(kv.getValue())
       maxlength != -1 ? val[0, maxlength] : val    
     end
   
@@ -555,7 +555,7 @@ module HBase
       if !result.isEmpty()
         for kv in result.list()
           family = String.from_java_bytes kv.getFamily()
-          qualifier = String.from_java_bytes kv.getQualifier()
+          qualifier = Bytes::toStringBinary(kv.getQualifier())
           column = family + ':' + qualifier
           @formatter.row([column, toString(column, kv, maxlength)])
         end
