@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
@@ -363,6 +364,49 @@ public class TestConfiguration extends TestCase {
       fail = true;
     }
     assertTrue(fail);
+  }
+
+  public void testMap() throws IOException {
+    Configuration conf = new Configuration();
+
+    // manually create a map in the config; extract
+    // its values as a map object.
+    conf.set("foo.bar", "A");
+    conf.set("foo.baz", "B");
+    assertEquals("A", conf.get("foo.bar"));
+    assertEquals("B", conf.get("foo.baz"));
+
+    Map<String, String> out = conf.getMap("foo");
+    assertEquals("A", out.get("bar"));
+    assertEquals("B", out.get("baz"));
+
+    Map<String, String> in = new HashMap<String, String>();
+    in.put("yak", "123");
+    in.put("bop", "456");
+    conf.setMap("quux", in);
+
+    // Assert that we can extract individual entries in
+    // the nested map ok.
+    assertEquals("123", conf.get("quux.yak"));
+
+    // Assert that we can get the whole map back out again.
+    out = conf.getMap("quux");
+    assertEquals("123", out.get("yak"));
+    assertEquals("456", out.get("bop"));
+
+    // Test that substitution is handled by getMap().
+    conf.set("subparam", "foo");
+    conf.set("mymap.someprop", "AAA${subparam}BBB");
+    out = conf.getMap("mymap");
+    assertEquals("AAAfooBBB", out.get("someprop"));
+
+    // Test deprecation of maps.
+    Configuration.addDeprecation("oldfoo", new String[]{"newfoo"});
+    conf.set("newfoo.a", "A");
+    conf.set("newfoo.b", "B");
+    out = conf.getMap("oldfoo");
+    assertEquals("A", out.get("a"));
+    assertEquals("B", out.get("b"));
   }
 
   public void testPattern() throws IOException {

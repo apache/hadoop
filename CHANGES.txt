@@ -94,6 +94,9 @@ Trunk (unreleased changes)
     HADOOP-6479. TestUTF8 assertions could fail with better text.
     (Steve Loughran via tomwhite)
 
+    HADOOP-6420. Add functionality permitting subsets of Configuration to be
+    interpreted as Map<String,String>. (Aaron Kimball via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
