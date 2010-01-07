@@ -89,6 +89,9 @@ should be run. (Amazon EC2 only.) (May be specified multiple times.)"),
   make_option("--public-key", metavar="FILE",
     help="The public key to authorize on launching instances. (Non-EC2 \
 providers only.)"),
+  make_option("--private-key", metavar="FILE",
+    help="The private key to use when connecting to instances. (Non-EC2 \
+providers only.)"),
 ]
 
 SNAPSHOT_OPTIONS = [
@@ -289,7 +292,8 @@ def main():
     template = InstanceTemplate((NAMENODE, SECONDARY_NAMENODE, JOBTRACKER), 1,
                          get_image_id(service.cluster, opt),
                          opt.get('instance_type'), opt.get('key_name'),
-                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('public_key'), opt.get('private_key'),
+                         opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
                          opt.get('auto_shutdown'), opt.get('env'),
                          opt.get('security_group'))
@@ -303,7 +307,8 @@ def main():
     template = InstanceTemplate((DATANODE, TASKTRACKER), number_of_slaves,
                          get_image_id(service.cluster, opt),
                          opt.get('instance_type'), opt.get('key_name'),
-                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('public_key'), opt.get('private_key'),
+                         opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
                          opt.get('auto_shutdown'), opt.get('env'),
                          opt.get('security_group'))
@@ -324,14 +329,16 @@ def main():
         InstanceTemplate((NAMENODE, SECONDARY_NAMENODE, JOBTRACKER), 1,
                          get_image_id(service.cluster, opt),
                          opt.get('instance_type'), opt.get('key_name'),
-                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('public_key'), opt.get('private_key'),
+                         opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
                          opt.get('auto_shutdown'), opt.get('env'),
                          opt.get('security_group')),
         InstanceTemplate((DATANODE, TASKTRACKER), number_of_slaves,
                          get_image_id(service.cluster, opt),
                          opt.get('instance_type'), opt.get('key_name'),
-                         opt.get('public_key'), opt.get('user_data_file'),
+                         opt.get('public_key'), opt.get('private_key'),
+                         opt.get('user_data_file'),
                          opt.get('availability_zone'), opt.get('user_packages'),
                          opt.get('auto_shutdown'), opt.get('env'),
                          opt.get('security_group')),
@@ -346,7 +353,8 @@ def main():
         instance_templates.append(
           InstanceTemplate(roles, number, get_image_id(service.cluster, opt),
                            opt.get('instance_type'), opt.get('key_name'),
-                           opt.get('public_key'), opt.get('user_data_file'),
+                           opt.get('public_key'), opt.get('private_key'),
+                           opt.get('user_data_file'),
                            opt.get('availability_zone'),
                            opt.get('user_packages'),
                            opt.get('auto_shutdown'), opt.get('env'),

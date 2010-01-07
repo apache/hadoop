@@ -28,6 +28,7 @@ from hadoop.cloud.storage import Storage
 CLUSTER_PROVIDER_MAP = {
   "dummy": ('hadoop.cloud.providers.dummy', 'DummyCluster'),
   "ec2": ('hadoop.cloud.providers.ec2', 'Ec2Cluster'),
+  "rackspace": ('hadoop.cloud.providers.rackspace', 'RackspaceCluster'),
 }
 
 def get_cluster(provider):

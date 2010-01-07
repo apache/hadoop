@@ -1,8 +1,9 @@
 Hadoop Cloud Scripts
 ====================
 
-These scripts allow you to run Hadoop on cloud providers. Currently only Amazon
-EC2 is supported, but more providers are expected to be added over time.
+These scripts allow you to run Hadoop on cloud providers. These instructions
+assume you are running on Amazon EC2, the differences for other providers are
+noted at the end of this document.
 
 Getting Started
 ===============
@@ -337,3 +338,160 @@ private_key=PATH_TO_PRIVATE_KEY
 Then to launch a three-node ZooKeeper ensemble, run:
 
 % ./hadoop-ec2 launch-cluster my-zookeeper-cluster 3 zk
+
+PROVIDER-SPECIFIC DETAILS
+=========================
+
+Rackspace
+=========
+
+Running on Rackspace is very similar to running on EC2, with a few minor
+differences noted here.
+
+Security Warning
+================
+
+Currently, Hadoop clusters on Rackspace are insecure since they don't run behind
+a firewall.
+
+Creating an image
+=================
+
+Rackspace doesn't support shared images, so you will need to build your own base
+image to get started. See "Instructions for creating an image" at the end of
+this document for details.
+
+Installation
+============
+
+To run on rackspace you need to install libcloud by checking out the latest
+source from Apache:
+
+git clone git://git.apache.org/libcloud.git
+cd libcloud; python setup.py install
+
+Set up your Rackspace credentials by exporting the following environment
+variables:
+
+    * RACKSPACE_KEY - Your Rackspace user name
+    * RACKSPACE_SECRET - Your Rackspace API key
+    
+Configuration
+=============
+
+The cloud_provider parameter must be set to specify Rackspace as the provider.
+Here is a typical configuration:
+
+[my-rackspace-cluster]
+cloud_provider=rackspace
+image_id=200152
+instance_type=4
+public_key=/path/to/public/key/file
+private_key=/path/to/private/key/file
+ssh_options=-i %(private_key)s -o StrictHostKeyChecking=no
+
+It's a good idea to create a dedicated key using a command similar to:
+
+ssh-keygen -f id_rsa_rackspace -P ''
+
+Launching a cluster
+===================
+
+Use the "hadoop-cloud" command instead of "hadoop-ec2".
+
+After launching a cluster you need to manually add a hostname mapping for the
+master node to your client's /etc/hosts to get it to work. This is because DNS
+isn't set up for the cluster nodes so your client won't resolve their addresses.
+You can do this with
+
+hadoop-cloud list my-rackspace-cluster | grep 'nn,snn,jt' \
+ | awk '{print $4 " " $3 }'  | sudo tee -a /etc/hosts
+
+Instructions for creating an image
+==================================
+
+First set your Rackspace credentials:
+
+export RACKSPACE_KEY=<Your Rackspace user name>
+export RACKSPACE_SECRET=<Your Rackspace API key>
+
+Now create an authentication token for the session, and retrieve the server
+management URL to perform operations against.
+
+# Final SED is to remove trailing ^M
+AUTH_TOKEN=`curl -D - -H X-Auth-User:$RACKSPACE_KEY \
+  -H X-Auth-Key:$RACKSPACE_SECRET https://auth.api.rackspacecloud.com/v1.0 \
+  | grep 'X-Auth-Token:' | awk '{print $2}' | sed 's/.$//'`
+SERVER_MANAGEMENT_URL=`curl -D - -H X-Auth-User:$RACKSPACE_KEY \
+  -H X-Auth-Key:$RACKSPACE_SECRET https://auth.api.rackspacecloud.com/v1.0 \
+  | grep 'X-Server-Management-Url:' | awk '{print $2}' | sed 's/.$//'`
+
+echo $AUTH_TOKEN
+echo $SERVER_MANAGEMENT_URL
+
+You can get a list of images with the following
+
+curl -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/images
+
+Here's the same query, but with pretty-printed XML output:
+
+curl -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/images.xml | xmllint --format -
+
+There are similar queries for flavors and running instances:
+
+curl -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/flavors.xml | xmllint --format -
+curl -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/servers.xml | xmllint --format -
+
+The following command will create a new server. In this case it will create a
+2GB Ubuntu 8.10 instance, as determined by the imageId and flavorId attributes.
+The name of the instance is set to something meaningful too.
+
+curl -v -X POST -H X-Auth-Token:$AUTH_TOKEN -H 'Content-type: text/xml' -d @- $SERVER_MANAGEMENT_URL/servers << EOF
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" name="apache-hadoop-ubuntu-8.10-base" imageId="11" flavorId="4">
+  <metadata/>
+</server>
+EOF
+
+Make a note of the new server's ID, public IP address and admin password as you
+will need these later.
+
+You can check the status of the server with
+
+curl -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/servers/$SERVER_ID.xml | xmllint --format -
+
+When it has started (status "ACTIVE"), copy the setup script over:
+
+scp tools/rackspace/remote-setup.sh root@$SERVER:remote-setup.sh
+
+Log in to and run the setup script (you will need to manually accept the
+Sun Java license):
+
+sh remote-setup.sh
+
+Once the script has completed, log out and create an image of the running
+instance (giving it a memorable name):
+
+curl -v -X POST -H X-Auth-Token:$AUTH_TOKEN -H 'Content-type: text/xml' -d @- $SERVER_MANAGEMENT_URL/images << EOF
+<image xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" name="Apache Hadoop Ubuntu 8.10" serverId="$SERVER_ID" />
+EOF
+
+Keep a note of the image ID as this is what you will use to launch fresh
+instances from.
+
+You can check the status of the image with
+
+curl -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/images/$IMAGE_ID.xml | xmllint --format -
+
+When it's "ACTIVE" is is ready for use. It's important to realize that you have
+to keep the server from which you generated the image running for as long as the
+image is in use.
+
+However, if you want to clean up an old instance run:
+
+curl -X DELETE -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/servers/$SERVER_ID
+
+Similarly, you can delete old images:
+
+curl -X DELETE -H X-Auth-Token:$AUTH_TOKEN $SERVER_MANAGEMENT_URL/images/$IMAGE_ID
+
+

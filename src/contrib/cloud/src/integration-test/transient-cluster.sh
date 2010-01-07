@@ -32,6 +32,7 @@ WORKSPACE=${WORKSPACE:-`pwd`}
 CONFIG_DIR=${CONFIG_DIR:-$WORKSPACE/.hadoop-cloud}
 CLUSTER=${CLUSTER:-hadoop-cloud-$USER-test-cluster}
 IMAGE_ID=${IMAGE_ID:-ami-6159bf08} # default to Fedora 32-bit AMI
+INSTANCE_TYPE=${INSTANCE_TYPE:-m1.small}
 AVAILABILITY_ZONE=${AVAILABILITY_ZONE:-us-east-1c}
 KEY_NAME=${KEY_NAME:-$USER}
 AUTO_SHUTDOWN=${AUTO_SHUTDOWN:-15}
@@ -39,11 +40,12 @@ LOCAL_HADOOP_VERSION=${LOCAL_HADOOP_VERSION:-0.20.1}
 HADOOP_HOME=${HADOOP_HOME:-$WORKSPACE/hadoop-$LOCAL_HADOOP_VERSION}
 HADOOP_CLOUD_HOME=${HADOOP_CLOUD_HOME:-$bin/../py}
 HADOOP_CLOUD_PROVIDER=${HADOOP_CLOUD_PROVIDER:-ec2}
-SSH_OPTIONS=${SSH_OPTIONS:-"-i ~/.$HADOOP_CLOUD_PROVIDER/id_rsa-$KEY_NAME \
-  -o StrictHostKeyChecking=no"}
-LAUNCH_ARGS=${LAUNCH_ARGS:-1} # Try LAUNCH_ARGS="1 nn,snn 1 jt 1 dn,tt"
+PUBLIC_KEY=${PUBLIC_KEY:-~/.$HADOOP_CLOUD_PROVIDER/id_rsa-$KEY_NAME.pub}
+PRIVATE_KEY=${PRIVATE_KEY:-~/.$HADOOP_CLOUD_PROVIDER/id_rsa-$KEY_NAME}
+SSH_OPTIONS=${SSH_OPTIONS:-"-i $PRIVATE_KEY -o StrictHostKeyChecking=no"}
+LAUNCH_ARGS=${LAUNCH_ARGS:-"1 nn,snn,jt 1 dn,tt"}
 
-HADOOP_CLOUD_SCRIPT=$HADOOP_CLOUD_HOME/hadoop-$HADOOP_CLOUD_PROVIDER
+HADOOP_CLOUD_SCRIPT=$HADOOP_CLOUD_HOME/hadoop-cloud
 export HADOOP_CONF_DIR=$CONFIG_DIR/$CLUSTER
 
 # Install Hadoop locally
@@ -55,18 +57,43 @@ $LOCAL_HADOOP_VERSION/hadoop-$LOCAL_HADOOP_VERSION.tar.gz
 fi
 
 # Launch a cluster
-$HADOOP_CLOUD_SCRIPT launch-cluster --config-dir=$CONFIG_DIR \
-  --image-id=$IMAGE_ID --key-name=$KEY_NAME --auto-shutdown=$AUTO_SHUTDOWN \
-  --availability-zone=$AVAILABILITY_ZONE $CLIENT_CIDRS $ENVS $CLUSTER \
-  $LAUNCH_ARGS
+if [ $HADOOP_CLOUD_PROVIDER == 'ec2' ]; then
+  $HADOOP_CLOUD_SCRIPT launch-cluster \
+    --config-dir=$CONFIG_DIR \
+    --image-id=$IMAGE_ID \
+    --instance-type=$INSTANCE_TYPE \
+    --key-name=$KEY_NAME \
+    --auto-shutdown=$AUTO_SHUTDOWN \
+    --availability-zone=$AVAILABILITY_ZONE \
+    $CLIENT_CIDRS $ENVS $CLUSTER $LAUNCH_ARGS
+else
+  $HADOOP_CLOUD_SCRIPT launch-cluster --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+    --config-dir=$CONFIG_DIR \
+    --image-id=$IMAGE_ID \
+    --instance-type=$INSTANCE_TYPE \
+    --public-key=$PUBLIC_KEY \
+    --private-key=$PRIVATE_KEY \
+    --auto-shutdown=$AUTO_SHUTDOWN \
+    $CLIENT_CIDRS $ENVS $CLUSTER $LAUNCH_ARGS
+fi
   
 # List clusters
-$HADOOP_CLOUD_SCRIPT list --config-dir=$CONFIG_DIR
-$HADOOP_CLOUD_SCRIPT list --config-dir=$CONFIG_DIR $CLUSTER
+$HADOOP_CLOUD_SCRIPT list --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+  --config-dir=$CONFIG_DIR
+$HADOOP_CLOUD_SCRIPT list --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+  --config-dir=$CONFIG_DIR $CLUSTER
 
 # Run a proxy and save its pid in HADOOP_CLOUD_PROXY_PID
-eval `$HADOOP_CLOUD_SCRIPT proxy --config-dir=$CONFIG_DIR \
+eval `$HADOOP_CLOUD_SCRIPT proxy --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+  --config-dir=$CONFIG_DIR \
   --ssh-options="$SSH_OPTIONS" $CLUSTER`
+  
+if [ $HADOOP_CLOUD_PROVIDER == 'rackspace' ]; then
+  # Need to update /etc/hosts (interactively)
+  $HADOOP_CLOUD_SCRIPT list --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+    --config-dir=$CONFIG_DIR $CLUSTER | grep 'nn,snn,jt' \
+    | awk '{print $4 " " $3 }'  | sudo tee -a /etc/hosts
+fi
 
 # Run a job and check it works
 $HADOOP_HOME/bin/hadoop fs -mkdir input
@@ -78,6 +105,8 @@ $HADOOP_HOME/bin/hadoop fs -cat 'output/part-00000' | grep Apache
 
 # Shutdown the cluster
 kill $HADOOP_CLOUD_PROXY_PID
-$HADOOP_CLOUD_SCRIPT terminate-cluster --config-dir=$CONFIG_DIR --force $CLUSTER
+$HADOOP_CLOUD_SCRIPT terminate-cluster --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+  --config-dir=$CONFIG_DIR --force $CLUSTER
 sleep 5 # wait for termination to take effect
-$HADOOP_CLOUD_SCRIPT delete-cluster --config-dir=$CONFIG_DIR $CLUSTER
+$HADOOP_CLOUD_SCRIPT delete-cluster --cloud-provider=$HADOOP_CLOUD_PROVIDER \
+  --config-dir=$CONFIG_DIR $CLUSTER

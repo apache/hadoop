@@ -38,6 +38,8 @@ Trunk (unreleased changes)
     HADOOP-6408. Add a /conf servlet to dump running configuration.
     (Todd Lipcon via tomwhite)
 
+    HADOOP-6464. Write a Rackspace cloud provider. (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
