@@ -54,8 +54,8 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
     if (packages == null) {
       getPackages();
     }
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
+    if (!checkSerializationKey(metadata)) {
+      return false;
     }
     Class<?> c = getClassFromMetadata(metadata);
     if (c == null) {
@@ -85,8 +85,9 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
   }
 
   @Override
-  protected Schema getSchema(Object t, Map<String, String> metadata) {
-    return ReflectData.get().getSchema(t.getClass());
+  protected Schema getSchema(Map<String, String> metadata) {
+    Class<?> c = getClassFromMetadata(metadata);
+    return ReflectData.get().getSchema(c);
   }
 
   @Override

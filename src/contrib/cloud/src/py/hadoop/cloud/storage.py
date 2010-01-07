@@ -81,6 +81,10 @@ class JsonVolumeManager(object):
 
   def _store(self, obj):
     return json.dump(obj, open(self.filename, "w"), sort_keys=True, indent=2)
+  
+  def get_roles(self):
+    json_dict = self._load()
+    return json_dict.keys()
 
   def add_instance_storage_for_role(self, role, mountable_volumes):
     json_dict = self._load()
@@ -142,7 +146,13 @@ class Storage(object):
     """
     return False
 
-  def print_status(self, roles):
+  def get_roles(self):
+    """
+    Return a list of roles that have storage defined.
+    """
+    return []
+
+  def print_status(self, roles=None):
     """
     Print the status of storage volumes for the given roles.
     """
@@ -156,8 +166,8 @@ class Storage(object):
     """
     pass
 
-  def delete(self, role):
+  def delete(self, roles=[]):
     """
-    Permanently delete all the storage for a role.
+    Permanently delete all the storage for the given roles.
     """
     pass

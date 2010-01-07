@@ -16,6 +16,28 @@ Trunk (unreleased changes)
 
     HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
 
+    Hadoop-6223. Add new file system interface AbstractFileSystem with
+    implementation of some file systems that delegate to old FileSystem.
+    (Sanjay Radia via suresh)
+
+    HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
+    (tomwhite)
+
+    HADOOP-6323. Add comparators to the serialization API.
+    (Aaron Kimball via cutting)
+
+    HADOOP-6433. Introduce asychronous deletion of files via a pool of
+    threads. This can be used to delete files in the Distributed
+    Cache. (Zheng Shao via dhruba)
+
+    HADOOP-6415. Adds a common token interface for both job token and 
+    delegation token. (Kan Zhang via ddas)
+
+    HADOOP-6466. Add a ZooKeeper service to the cloud scripts. (tomwhite)
+
+    HADOOP-6408. Add a /conf servlet to dump running configuration.
+    (Todd Lipcon via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
@@ -27,18 +49,53 @@ Trunk (unreleased changes)
     HADOOP-6305. Unify build property names to facilitate cross-projects
     modifications (cos)
 
-    HADOOP-6204. Implementing aspects development and fault injeciton
-    framework for Hadoop (cos)
-
     HADOOP-6312. Remove unnecessary debug logging in Configuration constructor.
     (Aaron Kimball via cdouglas)
-
-    HADOOP-6326. Hundson runs should check for AspectJ warnings and report
-    failure if any is present (cos)
 
     HADOOP-6366. Reduce ivy console output to ovservable level (cos)
 
     HADOOP-6400. Log errors getting Unix UGI. (Todd Lipcon via tomwhite)
+
+    HADOOP-6346. Add support for specifying unpack pattern regex to
+    RunJar.unJar. (Todd Lipcon via tomwhite)
+
+    HADOOP-6422. Make RPC backend plugable, protocol-by-protocol, to
+    ease evolution towards Avro.  (cutting)
+
+    HADOOP-5958. Use JDK 1.6 File APIs in DF.java wherever possible.
+    (Aaron Kimball via tomwhite)
+
+    HADOOP-6222. Core doesn't have TestCommonCLI facility. (cos)
+
+    HADOOP-6394. Add a helper class to simplify FileContext related tests and
+    improve code reusability. (Jitendra Nath Pandey via suresh)
+
+    HADOOP-6426. Create ant build for running EC2 unit tests. (tomwhite)
+
+    HADOOP-4656. Add a user to groups mapping service. (boryas, acmurthy)
+
+    HADOOP-6444. Support additional security group option in hadoop-ec2 script.
+    (Paul Egan via tomwhite)
+
+    HADOOP-6454. Create setup.py for EC2 cloud scripts. (tomwhite)
+
+    HADOOP-6435. Make RPC.waitForProxy with timeout public. (Steve Loughran
+    via tomwhite)
+  
+    HADOOP-6472. add tokenCache option to GenericOptionsParser for passing
+     file with secret keys to a map reduce job. (boryas)
+
+    HADOOP-6443. Serialization classes accept invalid metadata.
+    (Aaron Kimball via tomwhite)
+
+    HADOOP-3205. Read multiple chunks directly from FSInputChecker subclass
+    into user buffers. (Todd Lipcon via tomwhite)
+
+    HADOOP-6479. TestUTF8 assertions could fail with better text.
+    (Steve Loughran via tomwhite)
+
+    HADOOP-6420. Add functionality permitting subsets of Configuration to be
+    interpreted as Map<String,String>. (Aaron Kimball via cdouglas)
 
   OPTIMIZATIONS
 
@@ -52,12 +109,29 @@ Trunk (unreleased changes)
     HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
     szetszwo)
 
-    HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
-
     HADOOP-6405. Update Eclipse configuration to match changes to Ivy
     configuration (Edwin Chan via cos)
 
     HADOOP-6411. Remove deprecated file src/test/hadoop-site.xml. (cos)
+
+    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
+    IllegalArgumentException is thrown (cos)
+
+    HADOOP-6254. Slow reads cause s3n to fail with SocketTimeoutException.
+    (Andrew Hitchcock via tomwhite)
+
+    HADOOP-6428. HttpServer sleeps with negative values. (cos)
+
+    HADOOP-6414. Add command line help for -expunge command.
+    (Ravi Phulari via tomwhite)
+
+    HADOOP-6391. Classpath should not be part of command line arguments.
+    (Cristian Ivascu via tomwhite)
+
+    HADOOP-6462. Target "compile" does not exist in contrib/cloud. (tomwhite)
+
+    HADOOP-6402. testConf.xsl is not well-formed XML. (Steve Loughran
+    via tomwhite)
 
 Release 0.21.0 - Unreleased
 
@@ -271,12 +345,11 @@ Release 0.21.0 - Unreleased
     HADOOP-6240. Add new FileContext rename operation that posix compliant
     that allows overwriting existing destination. (suresh)
 
+    HADOOP-6204. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
     HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
     flush APIs to application users. (Hairong Kuang via suresh)
-
-    Hadoop-6223. Add new file system interface AbstractFileSystem with
-    implementation of some file systems that delegate to old FileSystem.
-    (Sanjay Radia via suresh)
 
   IMPROVEMENTS
 
@@ -659,6 +732,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6309. Change build.xml to run tests with java asserts.  (Eli
     Collins via szetszwo)
 
+    HADOOP-6326. Hundson runs should check for AspectJ warnings and report
+    failure if any is present (cos)
+
     HADOOP-6329. Add build-fi directory to the ignore lists.  (szetszwo)
 
     HADOOP-5107. Use Maven ant tasks to publish the subproject jars.
@@ -672,6 +748,10 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6395. Upgrade some libraries to be consistent across common, hdfs,
     and mapreduce. (omalley)
+
+    HADOOP-6398. Build is broken after HADOOP-6395 patch has been applied (cos)
+
+    HADOOP-6413. Move TestReflectionUtils to Common. (Todd Lipcon via tomwhite)
 
   OPTIMIZATIONS
 
@@ -1185,6 +1265,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6375. Sync documentation for FsShell du with its implementation.
     (Todd Lipcon via cdouglas)
 
+    HADOOP-6441. Protect web ui from cross site scripting attacks (XSS) on
+    the host http header and using encoded utf-7. (omalley)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
@@ -1206,6 +1289,10 @@ Release 0.20.2 - Unreleased
 
     HADOOP-6269. Fix threading issue with defaultResource in Configuration.
     (Sreekanth Ramakrishnan via cdouglas)
+
+    HADOOP-6460. Reinitializes buffers used for serializing responses in ipc
+    server on exceeding maximum response size to free up Java heap. (suresh)
+    
 
 Release 0.20.1 - 2009-09-01
 

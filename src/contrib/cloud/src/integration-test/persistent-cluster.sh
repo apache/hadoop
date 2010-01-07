@@ -71,10 +71,10 @@ fi
 
 # Create storage
 $HADOOP_CLOUD_SCRIPT create-storage --config-dir=$CONFIG_DIR \
-  --availability-zone=$AVAILABILITY_ZONE $CLUSTER master 1 \
+  --availability-zone=$AVAILABILITY_ZONE $CLUSTER nn 1 \
   $bin/ebs-storage-spec.json
 $HADOOP_CLOUD_SCRIPT create-storage --config-dir=$CONFIG_DIR \
-  --availability-zone=$AVAILABILITY_ZONE $CLUSTER slave 1 \
+  --availability-zone=$AVAILABILITY_ZONE $CLUSTER dn 1 \
   $bin/ebs-storage-spec.json
 
 # Launch a cluster

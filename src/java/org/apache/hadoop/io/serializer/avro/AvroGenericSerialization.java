@@ -30,16 +30,18 @@ import org.apache.hadoop.io.serializer.SerializationBase;
 
 /**
  * Serialization for Avro Generic classes. For a class to be accepted by this 
- * serialization it must have metadata with key
- * {@link SerializationBase#SERIALIZATION_KEY} set to {@link AvroGenericSerialization}'s
- * fully-qualified classname.
+ * serialization it must have a schema specified.
  * The schema used is the one set by {@link AvroSerialization#AVRO_SCHEMA_KEY}.
  */
 @SuppressWarnings("unchecked")
 public class AvroGenericSerialization extends AvroSerialization<Object> {
-  
+
   @Override
   public boolean accept(Map<String, String> metadata) {
+    if (!checkSerializationKey(metadata)) {
+      return false;
+    }
+
     return metadata.get(AVRO_SCHEMA_KEY) != null;
   }
 
@@ -50,9 +52,8 @@ public class AvroGenericSerialization extends AvroSerialization<Object> {
   }
 
   @Override
-  protected Schema getSchema(Object t, Map<String, String> metadata) {
-    String jsonSchema = metadata.get(AVRO_SCHEMA_KEY);
-    return jsonSchema != null ? Schema.parse(jsonSchema) : GenericData.get().induce(t);
+  protected Schema getSchema(Map<String, String> metadata) {
+    return Schema.parse(metadata.get(AVRO_SCHEMA_KEY));
   }
 
   @Override

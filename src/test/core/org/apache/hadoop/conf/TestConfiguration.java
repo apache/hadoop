@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
@@ -362,6 +364,76 @@ public class TestConfiguration extends TestCase {
       fail = true;
     }
     assertTrue(fail);
+  }
+
+  public void testMap() throws IOException {
+    Configuration conf = new Configuration();
+
+    // manually create a map in the config; extract
+    // its values as a map object.
+    conf.set("foo.bar", "A");
+    conf.set("foo.baz", "B");
+    assertEquals("A", conf.get("foo.bar"));
+    assertEquals("B", conf.get("foo.baz"));
+
+    Map<String, String> out = conf.getMap("foo");
+    assertEquals("A", out.get("bar"));
+    assertEquals("B", out.get("baz"));
+
+    Map<String, String> in = new HashMap<String, String>();
+    in.put("yak", "123");
+    in.put("bop", "456");
+    conf.setMap("quux", in);
+
+    // Assert that we can extract individual entries in
+    // the nested map ok.
+    assertEquals("123", conf.get("quux.yak"));
+
+    // Assert that we can get the whole map back out again.
+    out = conf.getMap("quux");
+    assertEquals("123", out.get("yak"));
+    assertEquals("456", out.get("bop"));
+
+    // Test that substitution is handled by getMap().
+    conf.set("subparam", "foo");
+    conf.set("mymap.someprop", "AAA${subparam}BBB");
+    out = conf.getMap("mymap");
+    assertEquals("AAAfooBBB", out.get("someprop"));
+
+    // Test deprecation of maps.
+    Configuration.addDeprecation("oldfoo", new String[]{"newfoo"});
+    conf.set("newfoo.a", "A");
+    conf.set("newfoo.b", "B");
+    out = conf.getMap("oldfoo");
+    assertEquals("A", out.get("a"));
+    assertEquals("B", out.get("b"));
+  }
+
+  public void testPattern() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.pattern1", "");
+    appendProperty("test.pattern2", "(");
+    appendProperty("test.pattern3", "a+b");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+
+    Pattern defaultPattern = Pattern.compile("x+");
+    // Return default if missing
+    assertEquals(defaultPattern.pattern(),
+                 conf.getPattern("xxxxx", defaultPattern).pattern());
+    // Return null if empty and default is null
+    assertNull(conf.getPattern("test.pattern1", null));
+    // Return default for empty
+    assertEquals(defaultPattern.pattern(),
+                 conf.getPattern("test.pattern1", defaultPattern).pattern());
+    // Return default for malformed
+    assertEquals(defaultPattern.pattern(),
+                 conf.getPattern("test.pattern2", defaultPattern).pattern());
+    // Works for correct patterns
+    assertEquals("a+b",
+                 conf.getPattern("test.pattern3", defaultPattern).pattern());
   }
 
   public void testReload() throws IOException {

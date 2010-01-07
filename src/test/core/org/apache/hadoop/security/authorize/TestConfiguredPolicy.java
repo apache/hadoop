@@ -17,7 +17,13 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import java.security.Permission;
+import java.security.CodeSource;
+import java.security.CodeSigner;
+import java.security.PermissionCollection;
+import java.security.ProtectionDomain;
+import java.net.URL;
+import java.net.NetPermission;
+import java.net.MalformedURLException;
 
 import javax.security.auth.Subject;
 
@@ -36,7 +42,7 @@ public class TestConfiguredPolicy extends TestCase {
   
   private static final String KEY_1 = "test.policy.1";
   private static final String KEY_2 = "test.policy.2";
-  
+
   public static class Protocol1 {
     int i;
   }
@@ -55,11 +61,7 @@ public class TestConfiguredPolicy extends TestCase {
   }
   
   public void testConfiguredPolicy() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(KEY_1, AccessControlList.WILDCARD_ACL_VALUE);
-    conf.set(KEY_2, USER1 + " " + GROUPS1[0]);
-    
-    ConfiguredPolicy policy = new ConfiguredPolicy(conf, new TestPolicyProvider());
+    ConfiguredPolicy policy = createConfiguredPolicy();
     SecurityUtil.setPolicy(policy);
     
     Subject user1 = 
@@ -78,5 +80,61 @@ public class TestConfiguredPolicy extends TestCase {
       failed = true;
     }
     assertTrue(failed);
+  }
+
+  /**
+   * Create a configured policy with some keys
+   * @return a new configured policy
+   */
+  private ConfiguredPolicy createConfiguredPolicy() {
+    Configuration conf = new Configuration();
+    conf.set(KEY_1, AccessControlList.WILDCARD_ACL_VALUE);
+    conf.set(KEY_2, USER1 + " " + GROUPS1[0]);
+
+    return new ConfiguredPolicy(conf, new TestPolicyProvider());
+  }
+
+  /**
+   * Create a test code source against a test URL
+   * @return a new code source
+   * @throws MalformedURLException
+   */
+  private CodeSource createCodeSource() throws MalformedURLException {
+    return new CodeSource(new URL("http://hadoop.apache.org"),
+        (CodeSigner[]) null);
+  }
+
+  /**
+   * Assert that a permission collection can have new permissions added
+   * @param permissions the collection to check
+   */
+  private void assertWritable(PermissionCollection permissions) {
+    assertFalse(permissions.isReadOnly());
+    NetPermission netPermission = new NetPermission("something");
+    permissions.add(netPermission);
+  }
+
+  /**
+   * test that the {@link PermissionCollection} returned by
+   * {@link ConfiguredPolicy#getPermissions(CodeSource)} is writeable
+   * @throws Throwable on any failure
+   */
+  public void testPolicyWritable() throws Throwable {
+    ConfiguredPolicy policy = createConfiguredPolicy();
+    CodeSource source = createCodeSource();
+    PermissionCollection permissions = policy.getPermissions(source);
+    assertWritable(permissions);
+  }
+
+  /**
+   * test that the {@link PermissionCollection} returned by
+   * {@link ConfiguredPolicy#getPermissions(CodeSource)} is writeable
+   * @throws Throwable on any failure
+   */
+  public void testProtectionDomainPolicyWritable() throws Throwable {
+    ConfiguredPolicy policy = createConfiguredPolicy();
+    CodeSource source = createCodeSource();
+    PermissionCollection permissions = policy.getPermissions(new ProtectionDomain(source, null));
+    assertWritable(permissions);
   }
 }

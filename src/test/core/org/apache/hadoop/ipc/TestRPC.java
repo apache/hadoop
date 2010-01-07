@@ -190,7 +190,8 @@ public class TestRPC extends TestCase {
   public void testSlowRpc() throws Exception {
     System.out.println("Testing Slow RPC");
     // create a server with two handlers
-    Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, 2, false, conf);
+    Server server = RPC.getServer(TestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, 2, false, conf);
     TestProtocol proxy = null;
     
     try {
@@ -230,9 +231,9 @@ public class TestRPC extends TestCase {
     }
   }
 
-
   public void testCalls(Configuration conf) throws Exception {
-    Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, conf);
+    Server server = RPC.getServer(TestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, conf);
     TestProtocol proxy = null;
     try {
     server.start();
@@ -306,8 +307,8 @@ public class TestRPC extends TestCase {
     assertTrue(Arrays.equals(strings, new String[]{"a","b"}));
 
     Method ping = TestProtocol.class.getMethod("ping", new Class[] {});
-    Object[] voids = (Object[])RPC.call(ping, new Object[][]{{},{}},
-                                        new InetSocketAddress[] {addr, addr}, conf);
+    Object[] voids = RPC.call(ping, new Object[][]{{},{}},
+                              new InetSocketAddress[] {addr, addr}, conf);
     assertEquals(voids, null);
     } finally {
       server.stop();
@@ -339,7 +340,8 @@ public class TestRPC extends TestCase {
   private void doRPCs(Configuration conf, boolean expectFailure) throws Exception {
     SecurityUtil.setPolicy(new ConfiguredPolicy(conf, new TestPolicyProvider()));
     
-    Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, 5, true, conf);
+    Server server = RPC.getServer(TestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, 5, true, conf);
 
     TestProtocol proxy = null;
 

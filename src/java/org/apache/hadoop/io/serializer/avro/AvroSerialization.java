@@ -28,6 +28,7 @@ import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.serializer.DeserializerBase;
 import org.apache.hadoop.io.serializer.SerializationBase;
 import org.apache.hadoop.io.serializer.SerializerBase;
@@ -50,7 +51,7 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
   /**
    * Return an Avro Schema instance for the given class and metadata.
    */
-  protected abstract Schema getSchema(T t, Map<String, String> metadata);
+  protected abstract Schema getSchema(Map<String, String> metadata);
 
   /**
    * Create and return Avro DatumWriter for the given metadata.
@@ -68,10 +69,13 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
     private DatumWriter<T> writer;
     private BinaryEncoder encoder;
     private OutputStream outStream;
+    private Schema schema;
 
     AvroSerializer(Map<String, String> metadata) {
       this.metadata = metadata;
-      writer = getWriter(metadata);
+      this.writer = getWriter(metadata);
+      this.schema = getSchema(this.metadata);
+      writer.setSchema(this.schema);
     }
 
     @Override
@@ -88,7 +92,6 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
 
     @Override
     public void serialize(T t) throws IOException {
-      writer.setSchema(getSchema(t, metadata));
       writer.write(t, encoder);
     }
 
@@ -127,4 +130,18 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
 
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  /**
+   * Provides a raw comparator for Avro-encoded serialized data.
+   * Requires that {@link AvroSerialization#AVRO_SCHEMA_KEY} be provided
+   * in the metadata argument.
+   * @param metadata the Avro-serialization-specific parameters being
+   * provided that detail the schema for the data to deserialize and compare.
+   * @return a RawComparator parameterized for the specified Avro schema.
+   */
+  public RawComparator<T> getRawComparator(Map<String, String> metadata) {
+    Schema schema = getSchema(metadata);
+    return new AvroComparator(schema);
+  }
 }

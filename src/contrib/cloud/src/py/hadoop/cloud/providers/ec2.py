@@ -85,7 +85,7 @@ class Ec2Cluster(Cluster):
     return self.name
 
   def _check_role_name(self, role):
-    if not re.match("^[a-zA-Z0-9_]+$", role):
+    if not re.match("^[a-zA-Z0-9_+]+$", role):
       raise RoleSyntaxException("Invalid role name '%s'" % role)
 
   def _group_name_for_role(self, role):
@@ -95,9 +95,11 @@ class Ec2Cluster(Cluster):
     self._check_role_name(role)
     return "%s-%s" % (self.name, role)
 
-  def _get_group_names(self, role):
-    self._check_role_name(role)
-    return [self._get_cluster_group_name(), self._group_name_for_role(role)]
+  def _get_group_names(self, roles):
+    group_names = [self._get_cluster_group_name()]
+    for role in roles:
+      group_names.append(self._group_name_for_role(role))
+    return group_names
 
   def _get_all_group_names(self):
     security_groups = self.ec2Connection.get_all_security_groups()
@@ -111,7 +113,7 @@ class Ec2Cluster(Cluster):
     if self.name not in all_group_names:
       return r
     for group in all_group_names:
-      if re.match("^%s(-[a-zA-Z0-9_]+)?$" % self.name, group):
+      if re.match("^%s(-[a-zA-Z0-9_+]+)?$" % self.name, group):
         r.append(group)
     return r
 
@@ -198,25 +200,32 @@ class Ec2Cluster(Cluster):
       instance.state, xstr(instance.key_name), instance.instance_type,
       str(instance.launch_time), instance.placement))
 
-  def print_status(self, roles, state_filter="running"):
+  def print_status(self, roles=None, state_filter="running"):
     """
     Print the status of instances in the given roles, filtered by state.
     """
-    for role in roles:
-      for instance in self._get_instances(self._group_name_for_role(role),
+    if not roles:
+      for instance in self._get_instances(self._get_cluster_group_name(),
                                           state_filter):
-        self._print_instance(role, instance)
+        self._print_instance("", instance)
+    else:
+      for role in roles:
+        for instance in self._get_instances(self._group_name_for_role(role),
+                                            state_filter):
+          self._print_instance(role, instance)
 
-  def launch_instances(self, role, number, image_id, size_id,
+  def launch_instances(self, roles, number, image_id, size_id,
                        instance_user_data, **kwargs):
-    self._check_role_name(role)
-
-    self._create_groups(role)
+    for role in roles:
+      self._check_role_name(role)  
+      self._create_groups(role)
+      
     user_data = instance_user_data.read_as_gzip_stream()
+    security_groups = self._get_group_names(roles) + kwargs.get('security_groups', [])
 
     reservation = self.ec2Connection.run_instances(image_id, min_count=number,
       max_count=number, key_name=kwargs.get('key_name', None),
-      security_groups=self._get_group_names(role), user_data=user_data,
+      security_groups=security_groups, user_data=user_data,
       instance_type=size_id, placement=kwargs.get('placement', None))
     return [instance.id for instance in reservation.instances]
 
@@ -372,6 +381,11 @@ class Ec2Storage(Storage):
         return True
     return False
 
+  def get_roles(self):
+    storage_filename = self._get_storage_filename()
+    volume_manager = JsonVolumeManager(storage_filename)
+    return volume_manager.get_roles()
+  
   def _get_ec2_volumes_dict(self, mountable_volumes):
     volume_ids = [mv.volume_id for mv in sum(mountable_volumes, [])]
     volumes = self.cluster.ec2Connection.get_all_volumes(volume_ids)
@@ -386,7 +400,11 @@ class Ec2Storage(Storage):
                      volume.status, str(volume.create_time),
                      str(volume.attach_time)))
 
-  def print_status(self, roles):
+  def print_status(self, roles=None):
+    if roles == None:
+      storage_filename = self._get_storage_filename()
+      volume_manager = JsonVolumeManager(storage_filename)
+      roles = volume_manager.get_roles()
     for role in roles:
       mountable_volumes_list = self._get_mountable_volumes(role)
       ec2_volumes = self._get_ec2_volumes_dict(mountable_volumes_list)
@@ -441,20 +459,21 @@ class Ec2Storage(Storage):
         print "Attaching %s to %s" % (volume.id, instance.id)
         volume.attach(instance.id, mountable_volume.device)
 
-  def delete(self, role):
+  def delete(self, roles=[]):
     storage_filename = self._get_storage_filename()
     volume_manager = JsonVolumeManager(storage_filename)
-    mountable_volumes_list = volume_manager.get_instance_storage_for_role(role)
-    ec2_volumes = self._get_ec2_volumes_dict(mountable_volumes_list)
-    all_available = True
-    for volume in ec2_volumes.itervalues():
-      if volume.status != 'available':
-        all_available = False
-        logger.warning("Volume %s is not available.", volume)
-    if not all_available:
-      logger.warning("Some volumes are still in use for role %s.\
-        Aborting delete.", role)
-      return
-    for volume in ec2_volumes.itervalues():
-      volume.delete()
-    volume_manager.remove_instance_storage_for_role(role)
+    for role in roles:
+      mountable_volumes_list = volume_manager.get_instance_storage_for_role(role)
+      ec2_volumes = self._get_ec2_volumes_dict(mountable_volumes_list)
+      all_available = True
+      for volume in ec2_volumes.itervalues():
+        if volume.status != 'available':
+          all_available = False
+          logger.warning("Volume %s is not available.", volume)
+      if not all_available:
+        logger.warning("Some volumes are still in use for role %s.\
+          Aborting delete.", role)
+        return
+      for volume in ec2_volumes.itervalues():
+        volume.delete()
+      volume_manager.remove_instance_storage_for_role(role)

@@ -28,6 +28,21 @@
            TokenComparator
            -->
   <tests>
+    <!-- Tests for help -->
+    <test> <!-- TESTED -->
+      <description>help: check if fs help message is shown</description>
+      <test-commands>
+        <command>-help</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>hadoop fs is the command to execute fs commands. The full syntax is</expected-output>
+        </comparator>
+      </comparators>
+    </test>
 
   </tests>
 </configuration>

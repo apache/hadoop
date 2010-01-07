@@ -200,21 +200,35 @@ public abstract class ChecksumFs extends FilterFs {
         byte[] checksum) throws IOException {
       boolean eof = false;
       if (needChecksum()) {
-        try {
-          final long checksumPos = getChecksumFilePos(pos); 
-          if (checksumPos != sums.getPos()) {
-            sums.seek(checksumPos);
-          }
-          sums.readFully(checksum);
-        } catch (EOFException e) {
-          eof = true;
+        assert checksum != null; // we have a checksum buffer
+        assert checksum.length % CHECKSUM_SIZE == 0; // it is sane length
+        assert len >= bytesPerSum; // we must read at least one chunk
+
+        final int checksumsToRead = Math.min(
+          len/bytesPerSum, // number of checksums based on len to read
+          checksum.length / CHECKSUM_SIZE); // size of checksum buffer
+        long checksumPos = getChecksumFilePos(pos); 
+        if(checksumPos != sums.getPos()) {
+          sums.seek(checksumPos);
         }
-        len = bytesPerSum;
+
+        int sumLenRead = sums.read(checksum, 0, CHECKSUM_SIZE * checksumsToRead);
+        if (sumLenRead >= 0 && sumLenRead % CHECKSUM_SIZE != 0) {
+          throw new EOFException("Checksum file not a length multiple of checksum size " +
+                                 "in " + file + " at " + pos + " checksumpos: " + checksumPos +
+                                 " sumLenread: " + sumLenRead );
+        }
+        if (sumLenRead <= 0) { // we're at the end of the file
+          eof = true;
+        } else {
+          // Adjust amount of data to read based on how many checksum chunks we read
+          len = Math.min(len, bytesPerSum * (sumLenRead / CHECKSUM_SIZE));
+        }
       }
       if (pos != datas.getPos()) {
         datas.seek(pos);
       }
-      final int nread = readFully(datas, buf, offset, len);
+      int nread = readFully(datas, buf, offset, len);
       if (eof && nread > 0) {
         throw new ChecksumException("Checksum error: "+file+" at "+pos, pos);
       }

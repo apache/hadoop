@@ -111,7 +111,10 @@ public abstract class Service extends Configured implements Closeable {
    * A root cause for failure. May be null.
    */
   private Throwable failureCause;
-  
+
+  /**
+   * State change listeners
+   */
   private List<StateChangeListener> stateListeners;
 
   /**
@@ -780,6 +783,14 @@ public abstract class Service extends Configured implements Closeable {
     CREATED,
 
     /**
+     * The service is in its start() method, and is not yet out of its early initialization.
+     * A key point here is that when you can try to terminate a service that is starting, which is
+     * done by interrupting the object. Ideally services should not block in this state, but as they
+     * do, we need a way to exit them.
+     */
+    STARTING,
+
+    /**
      * The service is starting up.
      * Its {@link Service#start()} method has been called.
      * When it is ready for work, it will declare itself LIVE.
@@ -793,7 +804,14 @@ public abstract class Service extends Configured implements Closeable {
      * The service has failed
      */
     FAILED,
-      /**
+
+    /**
+     * Its {@link Service#close()} ()} method has been called and the service is now in the (hopefully short)
+     * shutdown process. 
+     */
+    CLOSING,
+
+    /**
      * the service has been shut down
      * The container process may now destroy the instance
      * Its {@link Service#close()} ()} method has been called.

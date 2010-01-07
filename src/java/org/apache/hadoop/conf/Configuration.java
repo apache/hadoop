@@ -27,9 +27,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URL;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,11 +49,13 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -67,6 +71,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
+import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -153,6 +158,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private ArrayList<Object> resources = new ArrayList<Object>();
 
   /**
+   * The value reported as the setting resource when a key is set
+   * by code rather than a file resource.
+   */
+  static final String UNKNOWN_RESOURCE = "Unknown";
+
+  /**
    * List of configuration parameters marked <b>final</b>. 
    */
   private Set<String> finalParameters = new HashSet<String>();
@@ -174,13 +185,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   private static final Map<ClassLoader, Map<String, Class<?>>>
     CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
-  
-  /**
-   * Flag to indicate if the storage of resource which updates a key needs 
-   * to be stored for each key
-   */
-  private boolean storeResource;
-  
+
   /**
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
@@ -384,25 +389,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
+    updatingResource = new HashMap<String, String>();
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
-    }
-    this.storeResource = false;
-  }
-  
-  /**
-   * A new configuration with the same settings and additional facility for
-   * storage of resource to each key which loads or updates 
-   * the key most recently
-   * @param other the configuration from which to clone settings
-   * @param storeResource flag to indicate if the storage of resource to 
-   * each key is to be stored
-   */
-  private Configuration(Configuration other, boolean storeResource) {
-    this(other);
-    this.storeResource = storeResource;
-    if (storeResource) {
-      updatingResource = new HashMap<String, String>();
     }
   }
   
@@ -422,6 +411,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
      if (other.overlay!=null) {
        this.overlay = (Properties)other.overlay.clone();
      }
+
+     this.updatingResource = new HashMap<String, String>(other.updatingResource);
    }
    
     this.finalParameters = new HashSet<String>(other.finalParameters);
@@ -603,6 +594,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (!isDeprecated(name)) {
       getOverlay().setProperty(name, value);
       getProps().setProperty(name, value);
+      updatingResource.put(name, UNKNOWN_RESOURCE);
     }
     else {
       DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
@@ -832,6 +824,45 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Get the value of the <code>name</code> property as a <code>Pattern</code>.
+   * If no such property is specified, or if the specified value is not a valid
+   * <code>Pattern</code>, then <code>DefaultValue</code> is returned.
+   *
+   * @param name property name
+   * @param defaultValue default value
+   * @return property value as a compiled Pattern, or defaultValue
+   */
+  public Pattern getPattern(String name, Pattern defaultValue) {
+    String valString = get(name);
+    if (null == valString || "".equals(valString)) {
+      return defaultValue;
+    }
+    try {
+      return Pattern.compile(valString);
+    } catch (PatternSyntaxException pse) {
+      LOG.warn("Regular expression '" + valString + "' for property '" +
+               name + "' not valid. Using default", pse);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Set the given property to <code>Pattern</code>.
+   * If the pattern is passed as null, sets the empty pattern which results in
+   * further calls to getPattern(...) returning the default value.
+   *
+   * @param name property name
+   * @param pattern new value
+   */
+  public void setPattern(String name, Pattern pattern) {
+    if (null == pattern) {
+      set(name, null);
+    } else {
+      set(name, pattern.pattern());
+    }
+  }
+
+  /**
    * A class that represents a set of positive integer ranges. It parses 
    * strings of the form: "2-3,5,7-" where ranges are separated by comma and 
    * the lower/upper bounds are separated by dash. Either the lower or upper 
@@ -1037,7 +1068,139 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public void setStrings(String name, String... values) {
     set(name, StringUtils.arrayToString(values));
   }
- 
+
+  /**
+   * Instantiates a map view over a subset of the entries in
+   * the Configuration. This is instantiated by getMap(), which
+   * binds a prefix of the namespace to the ConfigItemMap. This
+   * mapping reflects changes to the underlying Configuration.
+   *
+   * This map does not support iteration.
+   */
+  protected class ConfigItemMap extends AbstractMap<String, String>
+      implements Map<String, String> {
+
+    private final String prefix;
+
+    public ConfigItemMap(String prefix) {
+      this.prefix = prefix;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+      return lookup(key.toString()) != null;
+    }
+
+    @Override
+    public Set<Map.Entry<String, String>> entrySet() {
+      throw new UnsupportedOperationException("unsupported");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o != null && o instanceof ConfigItemMap
+          && prefix.equals(((ConfigItemMap) o).prefix)
+          && Configuration.this == ((ConfigItemMap) o).getConfiguration();
+    }
+
+    private Configuration getConfiguration() {
+      return Configuration.this;
+    }
+
+    @Override
+    public String get(Object key) {
+      if (null == key) {
+        return null;
+      }
+
+      return lookup(key.toString());
+    }
+
+    @Override
+    public int hashCode() {
+      return prefix.hashCode();
+    }
+
+    @Override
+    public String put(String key, String val) {
+      if (null == key) {
+        return null;
+      }
+
+      String ret = get(key);
+      Configuration.this.set(prefix + key, val);
+      return ret;
+    }
+
+    @Override
+    public void putAll(Map<? extends String, ? extends String> m) {
+      for (Map.Entry<? extends String, ? extends String> entry : m.entrySet()) {
+        put(entry.getKey(), entry.getValue());
+      }
+    }
+
+    private String lookup(String subKey) {
+      String configKey = prefix + subKey;
+      Properties props = Configuration.this.getProps();
+      Object val = props.get(configKey);
+      String str = null;
+      if (null != val) {
+        str = substituteVars(val.toString());
+      }
+
+      return str;
+    }
+  }
+
+  /**
+   * Given a string -&gt; string map as a value, embed this in the
+   * Configuration by prepending 'name' to all the keys in the valueMap,
+   * and storing it inside the current Configuration.
+   *
+   * e.g., setMap("foo", { "bar" -&gt; "a", "baz" -&gt; "b" }) would
+   * insert "foo.bar" -&gt; "a" and "foo.baz" -&gt; "b" in this
+   * Configuration.
+   *
+   * @param name the prefix to attach to all keys in the valueMap. This
+   * should not have a trailing "." character.
+   * @param valueMap the map to embed in the Configuration.
+   */
+  public void setMap(String name, Map<String, String> valueMap) {
+    // Store all elements of the map proper.
+    for (Map.Entry<String, String> entry : valueMap.entrySet()) {
+      set(name + "." + entry.getKey(), entry.getValue());
+    }
+  }
+
+  /**
+   * Returns a map containing a view of all configuration properties
+   * whose names begin with "name.*", with the "name." prefix  removed.
+   * e.g., if "foo.bar" -&gt; "a" and "foo.baz" -&gt; "b" are in the
+   * Configuration, getMap("foo") would return { "bar" -&gt; "a",
+   * "baz" -&gt; "b" }.
+   *
+   * Map name deprecation is handled via "prefix deprecation"; the individual
+   * keys created in a configuration by inserting a map do not need to be
+   * individually deprecated -- it is sufficient to deprecate the 'name'
+   * associated with the map and bind that to a new name. e.g., if "foo"
+   * is deprecated for "newfoo," and the configuration contains entries for
+   * "newfoo.a" and "newfoo.b", getMap("foo") will return a map containing
+   * the keys "a" and "b".
+   *
+   * The returned map does not support iteration; it is a lazy view over
+   * the slice of the configuration whose keys begin with 'name'. Updates
+   * to the underlying configuration are reflected in the returned map,
+   * and updates to the map will modify the underlying configuration.
+   *
+   * @param name The prefix of the key names to extract into the output map.
+   * @return a String-&gt;String map that contains all (k, v) pairs
+   * where 'k' begins with 'name.'; the 'name.' prefix is removed in the output.
+   */
+  public Map<String, String> getMap(String name) {
+    String prefix = handleDeprecation(name) + ".";
+    return new ConfigItemMap(prefix);
+  }
+
   /**
    * Load a class by name.
    * 
@@ -1312,10 +1475,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       loadResources(properties, resources, quietmode);
       if (overlay!= null) {
         properties.putAll(overlay);
-        if (storeResource) {
-          for (Map.Entry<Object,Object> item: overlay.entrySet()) {
-            updatingResource.put((String) item.getKey(), "Unknown");
-          }
+        for (Map.Entry<Object,Object> item: overlay.entrySet()) {
+          updatingResource.put((String) item.getKey(), UNKNOWN_RESOURCE);
         }
       }
     }
@@ -1398,9 +1559,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (finalParameters.contains(oldKey)) {
         finalParameters.remove(oldKey);
       }
-      if (storeResource) {
-        updatingResource.remove(oldKey);
-      }
+      updatingResource.remove(oldKey);
     }
   }
   
@@ -1424,9 +1583,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         continue;
       }
       properties.setProperty(key, value);
-      if (storeResource) {
-        updatingResource.put(key, updatingResource.get(attr));
-      }
+      updatingResource.put(key, updatingResource.get(attr));
       if (finalParameter) {
         finalParameters.add(key);
       }
@@ -1541,9 +1698,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           if (value != null) {
             if (!finalParameters.contains(attr)) {
               properties.setProperty(attr, value);
-              if (storeResource) {
-                updatingResource.put(attr, name.toString());
-              }
+              updatingResource.put(attr, name.toString());
             } else {
               LOG.warn(name+":a attempt to override final parameter: "+attr
                      +";  Ignoring.");
@@ -1571,12 +1726,22 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /** 
-   * Write out the non-default properties in this configuration to the give
+   * Write out the non-default properties in this configuration to the given
    * {@link OutputStream}.
    * 
    * @param out the output stream to write to.
    */
   public void writeXml(OutputStream out) throws IOException {
+    writeXml(new OutputStreamWriter(out));
+  }
+
+  /** 
+   * Write out the non-default properties in this configuration to the given
+   * {@link Writer}.
+   * 
+   * @param out the writer to write to.
+   */
+  public synchronized void writeXml(Writer out) throws IOException {
     Properties properties = getProps();
     try {
       Document doc =
@@ -1595,7 +1760,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
         Element propNode = doc.createElement("property");
         conf.appendChild(propNode);
-      
+
+        if (updatingResource != null) {
+          Comment commentNode = doc.createComment(
+            "Loaded from " + updatingResource.get(name));
+          propNode.appendChild(commentNode);
+        }
         Element nameNode = doc.createElement("name");
         nameNode.appendChild(doc.createTextNode(name));
         propNode.appendChild(nameNode);
@@ -1612,8 +1782,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       TransformerFactory transFactory = TransformerFactory.newInstance();
       Transformer transformer = transFactory.newTransformer();
       transformer.transform(source, result);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+    } catch (TransformerException te) {
+      throw new IOException(te);
+    } catch (ParserConfigurationException pe) {
+      throw new IOException(pe);
     }
   }
 
@@ -1628,26 +1800,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param out the Writer to write to
    * @throws IOException
    */
-  public static void dumpConfiguration(Configuration conf, 
+  public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    Configuration config = new Configuration(conf,true);
-    config.reloadConfiguration();
     JsonFactory dumpFactory = new JsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();
     dumpGenerator.flush();
-    for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
-      dumpGenerator.writeStartObject();
-      dumpGenerator.writeStringField("key", (String) item.getKey());
-      dumpGenerator.writeStringField("value", 
-          config.get((String) item.getKey()));
-      dumpGenerator.writeBooleanField("isFinal",
-          config.finalParameters.contains(item.getKey()));
-      dumpGenerator.writeStringField("resource",
-          config.updatingResource.get(item.getKey()));
-      dumpGenerator.writeEndObject();
+    synchronized (config) {
+      for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
+        dumpGenerator.writeStartObject();
+        dumpGenerator.writeStringField("key", (String) item.getKey());
+        dumpGenerator.writeStringField("value", 
+                                       config.get((String) item.getKey()));
+        dumpGenerator.writeBooleanField("isFinal",
+                                        config.finalParameters.contains(item.getKey()));
+        dumpGenerator.writeStringField("resource",
+                                       config.updatingResource.get(item.getKey()));
+        dumpGenerator.writeEndObject();
+      }
     }
     dumpGenerator.writeEndArray();
     dumpGenerator.writeEndObject();

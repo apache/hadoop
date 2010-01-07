@@ -19,22 +19,23 @@ package org.apache.hadoop.util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URI;
+
+import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import junit.framework.TestCase;
-
 public class TestGenericOptionsParser extends TestCase {
-  private static File testDir = 
-    new File(System.getProperty("test.build.data", "/tmp"), "generic");
+  File testDir;
+  Configuration conf;
+  FileSystem localFs;
+    
   
   public void testFilesOption() throws Exception {
-    Configuration conf = new Configuration();
     File tmpFile = new File(testDir, "tmpfile");
-    FileSystem localFs = FileSystem.getLocal(conf);
     Path tmpPath = new Path(tmpFile.toString());
     localFs.create(tmpPath);
     String[] args = new String[2];
@@ -74,7 +75,62 @@ public class TestGenericOptionsParser extends TestCase {
       th instanceof FileNotFoundException);
     files = conf2.get("tmpfiles");
     assertNull("files is not null", files);
-    testDir.delete();
+  }
+  
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    conf = new Configuration();
+    localFs = FileSystem.getLocal(conf);
+    testDir = new File(System.getProperty("test.build.data", "/tmp"), "generic");
+    if(testDir.exists())
+      localFs.delete(new Path(testDir.toString()), true);
   }
 
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    if(testDir.exists()) {
+      localFs.delete(new Path(testDir.toString()), true);
+    }
+  }
+
+  /**
+   * testing -fileCache option
+   * @throws IOException
+   */
+  public void testTokenCacheOption() throws IOException {
+    FileSystem localFs = FileSystem.getLocal(conf);
+    
+    File tmpFile = new File(testDir, "tokenCacheFile");
+    if(tmpFile.exists()) {
+      tmpFile.delete();
+    }
+    String[] args = new String[2];
+    // pass a files option 
+    args[0] = "-tokenCacheFile";
+    args[1] = tmpFile.toString();
+    
+    // test non existing file
+    Throwable th = null;
+    try {
+      new GenericOptionsParser(conf, args);
+    } catch (Exception e) {
+      th = e;
+    }
+    assertNotNull(th);
+    assertTrue("FileNotFoundException is not thrown",
+        th instanceof FileNotFoundException);
+    
+    // create file
+    Path tmpPath = new Path(tmpFile.toString());
+    localFs.create(tmpPath);
+    new GenericOptionsParser(conf, args);
+    String fileName = conf.get("tokenCacheFile");
+    assertNotNull("files is null", fileName);
+    assertEquals("files option does not match",
+      localFs.makeQualified(tmpPath).toString(), fileName);
+    
+    localFs.delete(new Path(testDir.getAbsolutePath()), true);
+  }
 }

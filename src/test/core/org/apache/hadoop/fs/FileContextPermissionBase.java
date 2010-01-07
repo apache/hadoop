@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -31,6 +30,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 /**
  * <p>
@@ -51,24 +52,8 @@ import org.junit.Test;
  *     @AfterClass    public static void ClusterShutdownAtEnd()
  * </p>
  */
-public class FileContextPermissionBase {  
-  static final String TEST_ROOT_DIR = new Path(System.getProperty(
-      "test.build.data", "/tmp")).toString().replace(' ', '_')
-      + "/" + TestLocalFileSystemPermission.class.getSimpleName() + "_";
+public abstract class FileContextPermissionBase {  
   
-  protected Path getTestRootRelativePath(String pathString) {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
-  }
-  
-  private Path rootPath = null;
-  protected Path getTestRootPath() {
-    if (rootPath == null) {
-      rootPath = fc.makeQualified(new Path(TEST_ROOT_DIR));
-    }
-    return rootPath;   
-  }
-
-
   {
     try {
       ((org.apache.commons.logging.impl.Log4JLogger)FileSystem.LOG).getLogger()
@@ -84,23 +69,14 @@ public class FileContextPermissionBase {
 
   @Before
   public void setUp() throws Exception {
-    fc.mkdir(getTestRootPath(), FileContext.DEFAULT_PERM, true);
+    fc.mkdir(getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestRootPath(), true);
+    fc.delete(getTestRootPath(fc), true);
   }
   
-
-  private Path writeFile(FileContext theFc, String name) throws IOException {
-    Path f = getTestRootRelativePath(name);
-    FSDataOutputStream stm = theFc.create(f, EnumSet.of(CreateFlag.CREATE));
-    stm.writeBytes("42\n");
-    stm.close();
-    return f;
-  }
-
   private void cleanupFile(FileContext theFc, Path name) throws IOException {
     Assert.assertTrue(theFc.exists(name));
     theFc.delete(name, true);
@@ -114,7 +90,7 @@ public class FileContextPermissionBase {
       return;
     }
     String filename = "foo";
-    Path f = writeFile(fc, filename);
+    Path f = createFile(fc, filename);
     doFilePermissionCheck(FileContext.DEFAULT_PERM.applyUMask(fc.getUMask()),
                         fc.getFileStatus(f).getPermission());
   }
@@ -128,7 +104,7 @@ public class FileContextPermissionBase {
     }
 
     String filename = "foo";
-    Path f = writeFile(fc, filename);
+    Path f = createFile(fc, filename);
 
     try {
       // create files and manipulate them.
@@ -152,7 +128,7 @@ public class FileContextPermissionBase {
     }
 
     String filename = "bar";
-    Path f = writeFile(fc, filename);
+    Path f = createFile(fc, filename);
     List<String> groups = null;
     try {
       groups = getGroups();

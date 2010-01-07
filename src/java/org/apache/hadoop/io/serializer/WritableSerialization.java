@@ -26,8 +26,12 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A {@link SerializationBase} for {@link Writable}s that delegates to
@@ -35,7 +39,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  * {@link Writable#readFields(java.io.DataInput)}.
  */
 public class WritableSerialization extends SerializationBase<Writable> {
-  
   static class WritableDeserializer extends DeserializerBase<Writable> {
 
     private Class<?> writableClass;
@@ -79,9 +82,25 @@ public class WritableSerialization extends SerializationBase<Writable> {
     
     private Map<String, String> metadata;
     private DataOutputStream dataOut;
+    private Class<?> serializedClass;
     
-    public WritableSerializer(Map<String, String> metadata) {
+    public WritableSerializer(Configuration conf,
+        Map<String, String> metadata) {
       this.metadata = metadata;
+
+      // If this metadata specifies a serialized class, memoize the
+      // class object for this.
+      String className = this.metadata.get(CLASS_KEY);
+      if (null != className) {
+        try {
+          this.serializedClass = conf.getClassByName(className);
+        } catch (ClassNotFoundException cnfe) {
+          throw new RuntimeException(cnfe);
+        }
+      } else {
+        throw new UnsupportedOperationException("the "
+            + CLASS_KEY + " metadata is missing, but is required.");
+      }
     }
     
     @Override
@@ -95,6 +114,10 @@ public class WritableSerialization extends SerializationBase<Writable> {
 
     @Override
     public void serialize(Writable w) throws IOException {
+      if (serializedClass != w.getClass()) {
+        throw new IOException("Type mismatch in serialization: expected "
+            + serializedClass + "; received " + w.getClass());
+      }
       w.write(dataOut);
     }
 
@@ -112,16 +135,17 @@ public class WritableSerialization extends SerializationBase<Writable> {
 
   @Override
   public boolean accept(Map<String, String> metadata) {
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
+    if (!checkSerializationKey(metadata)) {
+      return false;
     }
+
     Class<?> c = getClassFromMetadata(metadata);
     return c == null ? false : Writable.class.isAssignableFrom(c);
   }
 
   @Override
   public SerializerBase<Writable> getSerializer(Map<String, String> metadata) {
-    return new WritableSerializer(metadata);
+    return new WritableSerializer(getConf(), metadata);
   }
   
   @Override
@@ -130,4 +154,17 @@ public class WritableSerialization extends SerializationBase<Writable> {
     return new WritableDeserializer(getConf(), c);
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public RawComparator<Writable> getRawComparator(Map<String, String> metadata) {
+    Class<?> klazz = getClassFromMetadata(metadata);
+    if (null == klazz) {
+      throw new IllegalArgumentException(
+          "Cannot get comparator without " + SerializationBase.CLASS_KEY
+          + " set in metadata");
+    }
+
+    return (RawComparator) WritableComparator.get(
+        (Class<WritableComparable>)klazz);
+  }
 }

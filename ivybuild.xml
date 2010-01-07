@@ -379,10 +379,6 @@ ${build.ivy.report.dir}
       <arg value="changelist"/>
       <arg value="${ivy.issue}"/>
       <!-- core -->
-      <!-- question this one -->
-      <!--
-      <arg value="${core/hadoop}/security/authorize/ConfiguredPolicy.java" />
-      -->
       <arg value="build.xml" />
       <arg value="ivy/hadoop-core.pom" />
       <arg value="ivy/libraries.properties" />

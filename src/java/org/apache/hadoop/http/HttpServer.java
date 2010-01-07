@@ -27,6 +27,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -45,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.conf.ConfServlet;
 
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -76,6 +78,10 @@ public class HttpServer implements FilterContainer {
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
 
+  // The ServletContext attribute where the daemon Configuration
+  // gets stored.
+  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+
   protected final Server webServer;
   protected final Connector listener;
   protected final WebAppContext webAppContext;
@@ -84,6 +90,8 @@ public class HttpServer implements FilterContainer {
       new HashMap<Context, Boolean>();
   protected final List<String> filterNames = new ArrayList<String>();
   private static final int MAX_RETRIES = 10;
+  static final String STATE_DESCRIPTION_ALIVE = " - alive";
+  static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
 
   /** Same as this(name, bindAddress, port, findPort, null); */
   public HttpServer(String name, String bindAddress, int port, boolean findPort
@@ -119,6 +127,7 @@ public class HttpServer implements FilterContainer {
     webAppContext = new WebAppContext();
     webAppContext.setContextPath("/");
     webAppContext.setWar(appDir + "/" + name);
+    webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webServer.addHandler(webAppContext);
 
     addDefaultApps(contexts, appDir);
@@ -197,6 +206,7 @@ public class HttpServer implements FilterContainer {
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
     addServlet("metrics", "/metrics", MetricsServlet.class);
+    addServlet("conf", "/conf", ConfServlet.class);
   }
 
   public void addContext(Context ctxt, boolean isFiltered)
@@ -469,6 +479,32 @@ public class HttpServer implements FilterContainer {
           } //Workaround end
           LOG.info("Jetty bound to port " + port);
           webServer.start();
+          // Workaround for HADOOP-6386
+          port = listener.getLocalPort();
+          if (port < 0) {
+            LOG.warn("Bounds port is " + port + " after webserver start");
+            for (int i = 0; i < MAX_RETRIES/2; i++) {
+              try {
+                webServer.stop();
+              } catch (Exception e) {
+                LOG.warn("Can't stop  web-server", e);
+              }
+              Thread.sleep(1000);
+              
+              listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
+              listener.open();
+              Thread.sleep(100);
+              webServer.start();
+              LOG.info(i + "attempts to restart webserver");
+              port = listener.getLocalPort();
+              if (port > 0)
+                break;
+            }
+            if (port < 0)
+              throw new Exception("listener.getLocalPort() is returning " +
+                		"less than 0 even after " +MAX_RETRIES+" resets");
+          }
+          // End of HADOOP-6386 workaround
           break;
         } catch (IOException ex) {
           // if this is a bind exception,
@@ -515,7 +551,7 @@ public class HttpServer implements FilterContainer {
    * @return true if the web server is started, false otherwise
    */
   public boolean isAlive() {
-    return webServer.isStarted();
+    return webServer != null && webServer.isStarted();
   }
 
   /**
@@ -525,7 +561,8 @@ public class HttpServer implements FilterContainer {
   @Override
   public String toString() {
     return listener != null ?
-        ("HttpServer at http://" + listener.getHost() + ":" + listener.getLocalPort() + "/")
+        ("HttpServer at http://" + listener.getHost() + ":" + listener.getLocalPort() + "/"
+            + (isAlive() ? STATE_DESCRIPTION_ALIVE : STATE_DESCRIPTION_NOT_LIVE))
         : "Inactive HttpServer";
   }
 
@@ -620,6 +657,25 @@ public class HttpServer implements FilterContainer {
         }
         return result;
       }
+      
+      /**
+       * Quote the url so that users specifying the HOST HTTP header
+       * can't inject attacks.
+       */
+      @Override
+      public StringBuffer getRequestURL(){
+        String url = rawRequest.getRequestURL().toString();
+        return new StringBuffer(HtmlQuoting.quoteHtmlChars(url));
+      }
+      
+      /**
+       * Quote the server name so that users specifying the HOST HTTP header
+       * can't inject attacks.
+       */
+      @Override
+      public String getServerName() {
+        return HtmlQuoting.quoteHtmlChars(rawRequest.getServerName());
+      }
     }
 
     @Override
@@ -637,6 +693,10 @@ public class HttpServer implements FilterContainer {
                          ) throws IOException, ServletException {
       HttpServletRequestWrapper quoted = 
         new RequestQuoter((HttpServletRequest) request);
+      final HttpServletResponse httpResponse = (HttpServletResponse) response;
+      // set the default to UTF-8 so that we don't need to worry about IE7
+      // choosing to interpret the special characters as UTF-7
+      httpResponse.setContentType("text/html;charset=utf-8");
       chain.doFilter(quoted, response);
     }
 

@@ -28,6 +28,8 @@ import java.lang.reflect.Proxy;
 import javax.net.SocketFactory;
 import javax.security.auth.login.LoginException;
 
+import org.apache.commons.logging.*;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -41,8 +43,13 @@ import org.apache.avro.reflect.*;
  * does not give cross-language wire compatibility, since the Hadoop RPC wire
  * format is non-standard, but it does permit use of Avro's protocol versioning
  * features for inter-Java RPCs. */
-public class AvroRpc {
+class AvroRpcEngine implements RpcEngine {
+  private static final Log LOG = LogFactory.getLog(RPC.class);
+
   private static int VERSION = 0;
+
+  // the implementation we tunnel through
+  private static final RpcEngine ENGINE = new WritableRpcEngine();
 
   /** Tunnel an Avro RPC request and response through Hadoop's RPC. */
   private static interface TunnelProtocol extends VersionedProtocol {
@@ -91,8 +98,9 @@ public class AvroRpc {
                              UserGroupInformation ticket,
                              Configuration conf, SocketFactory factory)
       throws IOException {
-      this.tunnel = (TunnelProtocol)RPC.getProxy(TunnelProtocol.class, VERSION,
-                                                 addr, ticket, conf, factory);
+      this.tunnel =
+        (TunnelProtocol)ENGINE.getProxy(TunnelProtocol.class, VERSION,
+                                        addr, ticket, conf, factory);
       this.remote = addr;
     }
 
@@ -111,44 +119,48 @@ public class AvroRpc {
       throw new UnsupportedOperationException();
     }
 
-    public void close() throws IOException {}
-  }
-    
-  /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
-  public static Object getProxy(Class<?> protocol,
-                                InetSocketAddress addr,
-                                Configuration conf)
-    throws IOException {
-    UserGroupInformation ugi = null;
-    try {
-      ugi = UserGroupInformation.login(conf);
-    } catch (LoginException le) {
-      throw new RuntimeException("Couldn't login!");
+    public void close() throws IOException {
+      ENGINE.stopProxy(tunnel);
     }
-    return getProxy(protocol, addr, ugi, conf,
-                    NetUtils.getDefaultSocketFactory(conf));
   }
 
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
-  public static Object getProxy
-    (final Class<?> protocol, final InetSocketAddress addr,
-     final UserGroupInformation ticket,
-     final Configuration conf, final SocketFactory factory)
+  public Object getProxy(Class protocol, long clientVersion,
+                         InetSocketAddress addr, UserGroupInformation ticket,
+                         Configuration conf, SocketFactory factory)
     throws IOException {
-
     return Proxy.newProxyInstance
-      (protocol.getClassLoader(), new Class[] { protocol },
-       new InvocationHandler() {
-         public Object invoke(Object proxy, Method method, Object[] args) 
-           throws Throwable {
-           return new ReflectRequestor
-             (protocol,
-              new ClientTransceiver(addr, ticket, conf, factory))
-             .invoke(proxy, method, args);
-         }
-       });
+      (protocol.getClassLoader(),
+       new Class[] { protocol },
+       new Invoker(protocol, addr, ticket, conf, factory));
+  }
+
+  /** Stop this proxy. */
+  public void stopProxy(Object proxy) {
+    try {
+      ((Invoker)Proxy.getInvocationHandler(proxy)).close();
+    } catch (IOException e) {
+      LOG.warn("Error while stopping "+proxy, e);
+    }
+  }
+
+  private static class Invoker implements InvocationHandler, Closeable {
+    private final ClientTransceiver tx;
+    private final ReflectRequestor requestor;
+    public Invoker(Class<?> protocol, InetSocketAddress addr,
+                   UserGroupInformation ticket, Configuration conf,
+                   SocketFactory factory) throws IOException {
+      this.tx = new ClientTransceiver(addr, ticket, conf, factory);
+      this.requestor = new ReflectRequestor(protocol, tx);
+    }
+    @Override public Object invoke(Object proxy, Method method, Object[] args) 
+      throws Throwable {
+      return requestor.invoke(proxy, method, args);
+    }
+    public void close() throws IOException {
+      tx.close();
+    }
   }
 
   /** An Avro RPC Responder that can process requests passed via Hadoop RPC. */
@@ -170,24 +182,20 @@ public class AvroRpc {
     }
   }
 
-  /** Construct a server for a protocol implementation instance listening on a
-   * port and address. */
-  public static Server getServer(Object impl, String bindAddress, int port,
-                                 Configuration conf) 
-    throws IOException {
-    return RPC.getServer(new TunnelResponder(impl.getClass(), impl),
-                         bindAddress, port, conf);
-
+  public Object[] call(Method method, Object[][] params,
+                       InetSocketAddress[] addrs, UserGroupInformation ticket,
+                       Configuration conf) throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address. */
-  public static RPC.Server getServer(Object impl, String bindAddress, int port,
-                                     int numHandlers, boolean verbose,
-                                     Configuration conf) 
-    throws IOException {
-    return RPC.getServer(new TunnelResponder(impl.getClass(), impl),
-                         bindAddress, port, numHandlers, verbose, conf);
+  public RPC.Server getServer(Class iface, Object impl, String bindAddress,
+                              int port, int numHandlers, boolean verbose,
+                              Configuration conf) throws IOException {
+    return ENGINE.getServer(TunnelProtocol.class,
+                            new TunnelResponder(iface, impl),
+                            bindAddress, port, numHandlers, verbose, conf);
   }
 
 }

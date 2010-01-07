@@ -1,5 +1,5 @@
 {
-  "master": [
+  "nn": [
     {
       "device": "/dev/sdj",
       "mount_point": "/ebs1",
@@ -13,7 +13,7 @@
       "snapshot_id": "snap-fe44bb97"
     }
   ],
-  "slave": [
+  "dn": [
     {
       "device": "/dev/sdj",
       "mount_point": "/ebs1",

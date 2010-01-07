@@ -68,16 +68,16 @@ public class TestUTF8 extends TestCase {
       // test that it reads correctly
       in.reset(out.getData(), out.getLength());
       String after = UTF8.readString(in);
-      assertTrue(before.equals(after));
+      assertEquals(before, after);
 
       // test that it reads correctly with DataInput
       in.reset(out.getData(), out.getLength());
       String after2 = in.readUTF();
-      assertTrue(before.equals(after2));
+      assertEquals(before, after2);
 
       // test that it is compatible with Java's other decoder
       String after3 = new String(out.getData(), 2, out.getLength()-2, "UTF-8");
-      assertTrue(before.equals(after3));
+      assertEquals(before, after3);
 
     }
 

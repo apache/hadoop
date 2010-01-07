@@ -24,6 +24,7 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
+import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
@@ -38,8 +39,8 @@ public class AvroSpecificSerialization
 
   @Override
   public boolean accept(Map<String, String> metadata) {
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
+    if (!checkSerializationKey(metadata)) {
+      return false;
     }
     Class<?> c = getClassFromMetadata(metadata);
     return c == null ? false : SpecificRecord.class.isAssignableFrom(c);
@@ -55,8 +56,9 @@ public class AvroSpecificSerialization
   }
 
   @Override
-  protected Schema getSchema(SpecificRecord t, Map<String, String> metadata) {
-    return t.getSchema();
+  protected Schema getSchema(Map<String, String> metadata) {
+    Class<?> c = getClassFromMetadata(metadata);
+    return SpecificData.get().getSchema(c);
   }
 
   @Override
