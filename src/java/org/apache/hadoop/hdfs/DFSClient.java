@@ -1503,26 +1503,60 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
       }
 
-      int chunkLen = Math.min(dataLeft, bytesPerChecksum);
-      
-      if ( chunkLen > 0 ) {
-        // len should be >= chunkLen
-        IOUtils.readFully(in, buf, offset, chunkLen);
-        checksumBytes.get(checksumBuf, 0, checksumSize);
+      // Sanity checks
+      assert len >= bytesPerChecksum;
+      assert checksum != null;
+      assert checksumSize == 0 || (checksumBuf.length % checksumSize == 0);
+
+
+      int checksumsToRead, bytesToRead;
+
+      if (checksumSize > 0) {
+
+        // How many chunks left in our stream - this is a ceiling
+        // since we may have a partial chunk at the end of the file
+        int chunksLeft = (dataLeft - 1) / bytesPerChecksum + 1;
+
+        // How many chunks we can fit in databuffer
+        //  - note this is a floor since we always read full chunks
+        int chunksCanFit = Math.min(len / bytesPerChecksum,
+                                    checksumBuf.length / checksumSize);
+
+        // How many chunks should we read
+        checksumsToRead = Math.min(chunksLeft, chunksCanFit);
+        // How many bytes should we actually read
+        bytesToRead = Math.min(
+          checksumsToRead * bytesPerChecksum, // full chunks
+          dataLeft); // in case we have a partial
+      } else {
+        // no checksum
+        bytesToRead = Math.min(dataLeft, len);
+        checksumsToRead = 0;
+      }
+
+      if ( bytesToRead > 0 ) {
+        // Assert we have enough space
+        assert bytesToRead <= len;
+        assert checksumBytes.remaining() >= checksumSize * checksumsToRead;
+        assert checksumBuf.length >= checksumSize * checksumsToRead;
+        IOUtils.readFully(in, buf, offset, bytesToRead);
+        checksumBytes.get(checksumBuf, 0, checksumSize * checksumsToRead);
       }
       
-      dataLeft -= chunkLen;
+      dataLeft -= bytesToRead;
+      assert dataLeft >= 0;
+
       lastChunkOffset = chunkOffset;
-      lastChunkLen = chunkLen;
+      lastChunkLen = bytesToRead;
       
-      if ((dataLeft == 0 && isLastPacket) || chunkLen == 0) {
+      if ((dataLeft == 0 && isLastPacket) || bytesToRead == 0) {
         gotEOS = true;
       }
-      if ( chunkLen == 0 ) {
+      if ( bytesToRead == 0 ) {
         return -1;
       }
-      
-      return chunkLen;
+
+      return bytesToRead;
     }
     
     private BlockReader( String file, long blockId, DataInputStream in, 

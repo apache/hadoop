@@ -30,6 +30,9 @@ Trunk (unreleased changes)
 
     HDFS-685. Use the user-to-groups mapping service in the NameNode. (boryas, acmurthy)
 
+    HDFS-755. Read multiple checksum chunks at once in DFSInputStream.
+    (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
