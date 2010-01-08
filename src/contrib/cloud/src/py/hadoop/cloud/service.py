@@ -49,7 +49,7 @@ class InstanceTemplate(object):
   A template for creating server instances in a cluster.
   """
   def __init__(self, roles, number, image_id, size_id,
-                     key_name, public_key,
+                     key_name, public_key, private_key,
                      user_data_file_template=None, placement=None,
                      user_packages=None, auto_shutdown=None, env_strings=[],
                      security_groups=[]):
@@ -59,6 +59,7 @@ class InstanceTemplate(object):
     self.size_id = size_id
     self.key_name = key_name
     self.public_key = public_key
+    self.private_key = private_key
     self.user_data_file_template = user_data_file_template
     self.placement = placement
     self.user_packages = user_packages
@@ -244,7 +245,7 @@ class HadoopService(Service):
     Find and print clusters that have a running namenode instances
     """
     legacy_clusters = get_cluster(provider).get_clusters_with_role(MASTER)
-    clusters = get_cluster(provider).get_clusters_with_role(NAMENODE)
+    clusters = list(get_cluster(provider).get_clusters_with_role(NAMENODE))
     clusters.extend(legacy_clusters)
     if not clusters:
       print "No running clusters"
@@ -284,6 +285,8 @@ class HadoopService(Service):
     self._create_client_hadoop_site_file(config_dir)
     self._authorize_client_ports(client_cidr)
     self._attach_storage(roles)
+    self._update_cluster_membership(instance_templates[0].public_key,
+                                    instance_templates[0].private_key)
     try:
       self._wait_for_hadoop(number_of_tasktrackers)
     except TimeoutException:
@@ -412,8 +415,8 @@ echo Proxy pid %s;""" % (process.pid, process.pid)
     namenode = self._get_namenode()
     jobtracker = self._get_jobtracker()
     cluster_dir = os.path.join(config_dir, self.cluster.name)
-    aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID']
-    aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
+    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID') or ''
+    aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY') or ''
     if not os.path.exists(cluster_dir):
       os.makedirs(cluster_dir)
     with open(os.path.join(cluster_dir, 'hadoop-site.xml'), 'w') as f:
@@ -525,6 +528,9 @@ echo Proxy pid %s;""" % (process.pid, process.pid)
       for role in roles:
         storage.attach(role, self.cluster.get_instances_in_role(role, 'running'))
       storage.print_status(roles)
+      
+  def _update_cluster_membership(self, public_key, private_key):
+    pass
 
 
 class ZooKeeperService(Service):
@@ -610,7 +616,7 @@ clientPort=2181
 
 SERVICE_PROVIDER_MAP = {
   "hadoop": {
-    # "provider_code": ('hadoop.cloud.providers.provider_code', 'ProviderHadoopService')
+     "rackspace": ('hadoop.cloud.providers.rackspace', 'RackspaceHadoopService')
   },
   "zookeeper": {
     # "provider_code": ('hadoop.cloud.providers.provider_code', 'ProviderZooKeeperService')
