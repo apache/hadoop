@@ -212,19 +212,26 @@ public class TestFSInputChecker extends TestCase {
   private void testChecker(FileSystem fileSys, boolean readCS)
   throws Exception {
     Path file = new Path("try.dat");
-    if( readCS ) {
-      writeFile(fileSys, file);
-    } else {
-      writeFile(fileSys, file);
+    writeFile(fileSys, file);
+
+    try {
+      if (!readCS) {
+        fileSys.setVerifyChecksum(false);
+      }
+
+      stm = fileSys.open(file);
+      checkReadAndGetPos();
+      checkSeek();
+      checkSkip();
+      //checkMark
+      assertFalse(stm.markSupported());
+      stm.close();
+    } finally {
+      if (!readCS) {
+        fileSys.setVerifyChecksum(true);
+      }
+      cleanupFile(fileSys, file);
     }
-    stm = fileSys.open(file);
-    checkReadAndGetPos();
-    checkSeek();
-    checkSkip();
-    //checkMark
-    assertFalse(stm.markSupported());
-    stm.close();
-    cleanupFile(fileSys, file);
   }
   
   private void testFileCorruption(LocalFileSystem fileSys) throws IOException {

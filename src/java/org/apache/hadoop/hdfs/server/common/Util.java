@@ -17,12 +17,78 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 public final class Util {
+  private final static Log LOG = LogFactory.getLog(Util.class.getName());
+
   /**
    * Current system time.
    * @return current time in msec.
    */
   public static long now() {
     return System.currentTimeMillis();
+  }
+  
+  /**
+   * Interprets the passed string as a URI. In case of error it 
+   * assumes the specified string is a file.
+   *
+   * @param s the string to interpret
+   * @return the resulting URI 
+   * @throws IOException 
+   */
+  public static URI stringAsURI(String s) throws IOException {
+    URI u = null;
+    // try to make a URI
+    try {
+      u = new URI(s);
+    } catch (URISyntaxException e){
+      LOG.warn("Path " + s + " should be specified as a URI " +
+      "in configuration files. Please update hdfs configuration.", e);
+    }
+
+    // if URI is null or scheme is undefined, then assume it's file://
+    if(u == null || u.getScheme() == null){
+      u = fileAsURI(new File(s));
+    }
+    return u;
+  }
+
+  /**
+   * Converts the passed File to a URI.
+   *
+   * @param f the file to convert
+   * @return the resulting URI 
+   * @throws IOException 
+   */
+  public static URI fileAsURI(File f) throws IOException {
+    return f.getCanonicalFile().toURI();
+  }
+
+  /**
+   * Converts a collection of strings into a collection of URIs.
+   * @param names collection of strings to convert to URIs
+   * @return collection of URIs
+   */
+  public static Collection<URI> stringCollectionAsURIs(
+                                  Collection<String> names) {
+    Collection<URI> uris = new ArrayList<URI>(names.size());
+    for(String name : names) {
+      try {
+        uris.add(stringAsURI(name));
+      } catch (IOException e) {
+        LOG.error("Error while processing URI: " + name, e);
+      }
+    }
+    return uris;
   }
 }

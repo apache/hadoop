@@ -198,9 +198,6 @@ public interface ClientProtocol extends VersionedProtocol {
   public LocatedBlock addBlock(String src, String clientName,
                                Block previous) throws IOException;
 
-  public LocatedBlock addBlock(String src, String clientName,
-      Block previous, DatanodeInfo[] excludedNode) throws IOException;
-
   /**
    * The client is done writing data to the given filename, and would 
    * like to complete it.  

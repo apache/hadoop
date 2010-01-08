@@ -24,7 +24,6 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -216,7 +215,7 @@ public class FSEditLog {
   /**
    * Shutdown the file store.
    */
-  public synchronized void close() {
+  synchronized void close() {
     while (isSyncRunning) {
       try {
         wait(1000);
@@ -275,12 +274,6 @@ public class FSEditLog {
 
     String lsd = fsimage.listStorageDirectories();
     FSNamesystem.LOG.info("current list of storage dirs:" + lsd);
-    //EditLogOutputStream
-    if (editStreams == null || editStreams.size() <= 1) {
-      FSNamesystem.LOG.fatal(
-      "Fatal Error : All storage directories are inaccessible."); 
-      Runtime.getRuntime().exit(-1);
-    }
 
     ArrayList<StorageDirectory> al = null;
     for (EditLogOutputStream eStream : errorStreams) {
@@ -311,6 +304,12 @@ public class FSEditLog {
       } 
     }
     
+    if (editStreams == null || editStreams.size() <= 0) {
+      String msg = "Fatal Error: All storage directories are inaccessible.";
+      FSNamesystem.LOG.fatal(msg, new IOException(msg)); 
+      Runtime.getRuntime().exit(-1);
+    }
+
     // removed failed SDs
     if(propagate && al != null) fsimage.processIOError(al, false);
     
@@ -867,6 +866,7 @@ public class FSEditLog {
         try {
           eStream.flush();
         } catch (IOException ie) {
+          FSNamesystem.LOG.error("Unable to sync edit log.", ie);
           //
           // remember the streams that encountered an error.
           //
@@ -874,8 +874,6 @@ public class FSEditLog {
             errorStreams = new ArrayList<EditLogOutputStream>(1);
           }
           errorStreams.add(eStream);
-          FSNamesystem.LOG.error("Unable to sync edit log. " +
-                                 "Fatal Error.");
         }
       }
       long elapsed = FSNamesystem.now() - start;
@@ -1165,6 +1163,7 @@ public class FSEditLog {
         // replace by the new stream
         itE.replace(eStream);
       } catch (IOException e) {
+        FSNamesystem.LOG.warn("Error in editStream " + eStream.getName(), e);
         if(errorStreams == null)
           errorStreams = new ArrayList<EditLogOutputStream>(1);
         errorStreams.add(eStream);
@@ -1225,6 +1224,7 @@ public class FSEditLog {
         // replace by the new stream
         itE.replace(eStream);
       } catch (IOException e) {
+        FSNamesystem.LOG.warn("Error in editStream " + eStream.getName(), e);
         if(errorStreams == null)
           errorStreams = new ArrayList<EditLogOutputStream>(1);
         errorStreams.add(eStream);
@@ -1390,6 +1390,7 @@ public class FSEditLog {
       try {
         eStream.write(data, 0, length);
       } catch (IOException ie) {
+        FSNamesystem.LOG.warn("Error in editStream " + eStream.getName(), ie);
         if(errorStreams == null)
           errorStreams = new ArrayList<EditLogOutputStream>(1);
         errorStreams.add(eStream);

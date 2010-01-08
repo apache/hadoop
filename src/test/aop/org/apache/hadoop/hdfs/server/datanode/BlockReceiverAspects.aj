@@ -18,12 +18,14 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
+import org.apache.hadoop.fi.Pipeline;
 import org.apache.hadoop.fi.PipelineTest;
 import org.apache.hadoop.fi.ProbabilityModel;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hdfs.server.datanode.BlockReceiver.PacketResponder;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.NodeBytes;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
@@ -42,12 +45,7 @@ privileged public aspect BlockReceiverAspects {
   public static final Log LOG = LogFactory.getLog(BlockReceiverAspects.class);
 
   pointcut callReceivePacket(BlockReceiver blockreceiver) :
-    call (* OutputStream.write(..))
-      && withincode (* BlockReceiver.receivePacket(..))
-// to further limit the application of this aspect a very narrow 'target' can be used as follows
-//  && target(DataOutputStream)
-      && !within(BlockReceiverAspects +)
-      && this(blockreceiver);
+    call(* receivePacket(..)) && target(blockreceiver);
 	
   before(BlockReceiver blockreceiver
       ) throws IOException : callReceivePacket(blockreceiver) {
@@ -65,7 +63,30 @@ privileged public aspect BlockReceiverAspects {
     }
   }
   
-  // Pointcuts and advises for TestFiPipelines  
+  pointcut callWritePacketToDisk(BlockReceiver blockreceiver) :
+    call(* writePacketToDisk(..)) && target(blockreceiver);
+
+  before(BlockReceiver blockreceiver
+      ) throws IOException : callWritePacketToDisk(blockreceiver) {
+    LOG.info("FI: callWritePacketToDisk");
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null)
+      dtTest.fiCallWritePacketToDisk.run(
+          blockreceiver.getDataNode().getDatanodeRegistration());
+  }
+
+  pointcut afterDownstreamStatusRead(BlockReceiver.PacketResponder responder):
+    call(void PipelineAck.readFields(DataInput)) && this(responder);
+
+  after(BlockReceiver.PacketResponder responder)
+      throws IOException: afterDownstreamStatusRead(responder) {
+    final DataNode d = responder.receiver.getDataNode();
+    DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
+    if (dtTest != null)
+      dtTest.fiAfterDownstreamStatusRead.run(d.getDatanodeRegistration());
+  }
+
+    // Pointcuts and advises for TestFiPipelines  
   pointcut callSetNumBytes(BlockReceiver br, long offset) : 
     call (void ReplicaInPipelineInterface.setNumBytes(long)) 
     && withincode (int BlockReceiver.receivePacket(long, long, boolean, int, int))
@@ -97,12 +118,6 @@ privileged public aspect BlockReceiverAspects {
     && args(acked) 
     && this(pr);
 
-  pointcut callSetBytesAckedLastDN(PacketResponder pr, long acked) : 
-    call (void ReplicaInPipelineInterface.setBytesAcked(long)) 
-    && withincode (void PacketResponder.lastDataNodeRun())
-    && args(acked) 
-    && this(pr);
-  
   after (PacketResponder pr, long acked) : callSetBytesAcked (pr, acked) {
     PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
     if (pTest == null) {
@@ -115,19 +130,7 @@ privileged public aspect BlockReceiverAspects {
       bytesAckedService((PipelinesTest)pTest, pr, acked);
     }
   }
-  after (PacketResponder pr, long acked) : callSetBytesAckedLastDN (pr, acked) {
-    PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
-    if (pTest == null) {
-      LOG.debug("FI: no pipeline has been found in acking");
-      return;
-    }
-    LOG.debug("FI: Acked total bytes from (last DN): " + 
-        pr.receiver.datanode.dnRegistration.getStorageID() + ": " + acked);
-    if (pTest instanceof PipelinesTest) {
-      bytesAckedService((PipelinesTest)pTest, pr, acked); 
-    }
-  }
-  
+
   private void bytesAckedService 
       (final PipelinesTest pTest, final PacketResponder pr, final long acked) {
     NodeBytes nb = new NodeBytes(pr.receiver.datanode.dnRegistration, acked);
@@ -140,7 +143,7 @@ privileged public aspect BlockReceiverAspects {
   }
   
   pointcut preventAckSending () :
-    call (void ackReply(long)) 
+    call (void PipelineAck.write(DataOutput)) 
     && within (PacketResponder);
 
   static int ackCounter = 0;
@@ -193,7 +196,7 @@ privileged public aspect BlockReceiverAspects {
   }
 
   pointcut pipelineAck(BlockReceiver.PacketResponder packetresponder) :
-    call (Status Status.read(DataInput))
+    call (void PipelineAck.readFields(DataInput))
       && this(packetresponder);
 
   after(BlockReceiver.PacketResponder packetresponder) throws IOException

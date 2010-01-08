@@ -32,9 +32,9 @@
 
 
   <target name="check-libhdfs-exists" if="fusedfs">
-  <property name="libhdfs.lib" value="${hadoop.root}/build/libhdfs/libhdfs.so"/>
+  <property name="libhdfs.lib" value="${hadoop.root}/build/c++/${build.platform}/lib/libhdfs.so"/>
         <available file="${libhdfs.lib}" property="libhdfs-exists"/>
-    <fail message="libhdfs.so does not exist: ${libhdfs.lib}. Please check flags -Dlibhdfs=1 -Dfusedfs=1 are set or first try ant compile-libhdfs -Dlibhdfs=1">
+    <fail message="libhdfs.so does not exist: ${libhdfs.lib}. Please check flags -Dlibhdfs=1 -Dfusedfs=1 are set or first try ant compile -Dcompile.c++=true -Dlibhdfs=true">
          <condition>
             <not><isset property="libhdfs-exists"/></not>
           </condition>
@@ -59,7 +59,7 @@
       <env key="OS_ARCH" value="${os.arch}"/>
       <env key="HADOOP_HOME" value="${hadoop.root}"/>
       <env key="PACKAGE_VERSION" value="0.1.0"/>
-
+      <env key="BUILD_PLATFORM" value="${build.platform}" />
       <env key="PERMS" value="${perms}"/>
     </exec>
     <mkdir dir="${build.dir}"/>

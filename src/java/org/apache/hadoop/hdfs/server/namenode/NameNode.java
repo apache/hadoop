@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -50,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -74,7 +74,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -124,7 +123,8 @@ import org.apache.hadoop.util.StringUtils;
  **********************************************************/
 public class NameNode extends Service implements ClientProtocol, DatanodeProtocol,
                                  NamenodeProtocol, FSConstants,
-                                 RefreshAuthorizationPolicyProtocol {
+                                 RefreshAuthorizationPolicyProtocol,
+                                 RefreshUserToGroupMappingsProtocol {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
@@ -140,6 +140,8 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
       return NamenodeProtocol.versionID;
     } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
       return RefreshAuthorizationPolicyProtocol.versionID;
+    } else if (protocol.equals(RefreshUserToGroupMappingsProtocol.class.getName())){
+      return RefreshUserToGroupMappingsProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }
@@ -367,6 +369,8 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     this.httpServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
     this.httpServer.addInternalServlet("checksum", "/fileChecksum/*",
         FileChecksumServlets.RedirectServlet.class);
+    this.httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
+        ContentSummaryServlet.class);
     this.httpServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info
@@ -514,9 +518,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
   protected synchronized void innerClose() throws IOException {
     LOG.info("Closing " + getServiceName());
 
-    if (stopRequested)
-      return;
-    stopRequested = true;
+    synchronized(this) {
+      if (stopRequested)
+        return;
+      stopRequested = true;
+    }
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {
@@ -550,7 +556,11 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
       namesystem = null;
     }
   }
-  
+
+  synchronized boolean isStopRequested() {
+    return stopRequested;
+  }
+
   /////////////////////////////////////////////////////
   // NamenodeProtocol
   /////////////////////////////////////////////////////
@@ -706,30 +716,14 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     namesystem.setOwner(src, username, groupname);
   }
 
-
-  @Override
+  /**
+   */
   public LocatedBlock addBlock(String src, String clientName,
                                Block previous) throws IOException {
-    return addBlock(src, clientName, previous, null);
-  }
-
-  @Override
-  public LocatedBlock addBlock(String src,
-                               String clientName,
-                               Block previous,
-                               DatanodeInfo[] excludedNodes
-                               ) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
-    HashMap<Node, Node> excludedNodesSet = null;
-    if (excludedNodes != null) {
-      excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
-      for (Node node:excludedNodes) {
-        excludedNodesSet.put(node, node);
-      }
-    }
     LocatedBlock locatedBlock = 
-      namesystem.getAdditionalBlock(src, clientName, previous, excludedNodesSet);
+      namesystem.getAdditionalBlock(src, clientName, previous);
     if (locatedBlock != null)
       myMetrics.numAddBlockOps.inc();
     return locatedBlock;
@@ -1244,6 +1238,13 @@ public class NameNode extends Service implements ClientProtocol, DatanodeProtoco
     }
 
     SecurityUtil.getPolicy().refresh();
+  }
+
+  @Override
+  public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
+    LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
+             UserGroupInformation.getCurrentUGI().getUserName());
+    SecurityUtil.getUserToGroupsMappingService(conf).refresh();
   }
 
   private static void printUsage() {

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.READ_BLOCK;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.WRITE_BLOCK;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.SUCCESS;
 
@@ -157,9 +159,8 @@ public class TestDataTransferProtocol extends TestCase {
         
     //ok finally write a block with 0 len
     SUCCESS.write(recvOut);
-    Text.writeString(recvOut, ""); // first bad node
-    recvOut.writeLong(100);        // sequencenumber
-    SUCCESS.write(recvOut);
+    Text.writeString(recvOut, "");
+    new PipelineAck(100, new Status[]{SUCCESS}).write(recvOut);
     sendRecvData(description, false);
   }
   
@@ -381,9 +382,8 @@ public class TestDataTransferProtocol extends TestCase {
     // bad data chunk length
     sendOut.writeInt(-1-random.nextInt(oneMil));
     SUCCESS.write(recvOut);
-    Text.writeString(recvOut, ""); // first bad node
-    recvOut.writeLong(100);        // sequencenumber
-    ERROR.write(recvOut);
+    Text.writeString(recvOut, "");
+    new PipelineAck(100, new Status[]{ERROR}).write(recvOut);
     sendRecvData("negative DATA_CHUNK len while writing block " + newBlockId, 
                  true);
 
@@ -406,9 +406,8 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.flush();
     //ok finally write a block with 0 len
     SUCCESS.write(recvOut);
-    Text.writeString(recvOut, ""); // first bad node
-    recvOut.writeLong(100);        // sequencenumber
-    SUCCESS.write(recvOut);
+    Text.writeString(recvOut, "");
+    new PipelineAck(100, new Status[]{SUCCESS}).write(recvOut);
     sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
     /* Test OP_READ_BLOCK */

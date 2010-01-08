@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 import org.apache.hadoop.security.AccessControlException;
@@ -40,7 +41,6 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -339,26 +339,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
           "of the file system meta-data.");
     } else if (dirNames.isEmpty())
-      dirNames.add("/tmp/hadoop/dfs/name");
-    Collection<URI> dirs = new ArrayList<URI>(dirNames.size());
-    for(String name : dirNames) {
-      try {
-        URI u = new URI(name);
-        // If the scheme was not declared, default to file://
-        // and use the absolute path of the file, then warn the user 
-        if(u.getScheme() == null) {
-          u = new URI("file://" + new File(name).getAbsolutePath());
-          LOG.warn("Scheme is undefined for " + name);
-          LOG.warn("Please check your file system configuration in " +
-          		"hdfs-site.xml");
-        }
-        dirs.add(u);
-      } catch (Exception e) {
-        LOG.error("Error while processing URI: " + name + 
-            ". The error message was: " + e.getMessage());
-      }
-    }
-    return dirs;
+      dirNames.add("file:///tmp/hadoop/dfs/name");
+    return Util.stringCollectionAsURIs(dirNames);
   }
 
   public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {
@@ -688,6 +670,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public synchronized void setPermission(String src, FsPermission permission
       ) throws IOException {
+    if (isInSafeMode())
+      throw new SafeModeException("Cannot set permission for " + src, safeMode);
     checkOwner(src);
     dir.setPermission(src, permission);
     getEditLog().logSync();
@@ -705,6 +689,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public synchronized void setOwner(String src, String username, String group
       ) throws IOException {
+    if (isInSafeMode())
+        throw new SafeModeException("Cannot set owner for " + src, safeMode);
     FSPermissionChecker pc = checkOwner(src);
     if (!pc.isSuper) {
       if (username != null && !pc.user.equals(username)) {
@@ -1361,17 +1347,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  public LocatedBlock getAdditionalBlock(String src,
+  public LocatedBlock getAdditionalBlock(String src, 
                                          String clientName,
                                          Block previous
-                                         ) throws IOException {
-    return getAdditionalBlock(src, clientName, previous, null);
-  }
-
-  public LocatedBlock getAdditionalBlock(String src,
-                                         String clientName,
-                                         Block previous,
-                                         HashMap<Node, Node> excludedNodes
                                          ) throws IOException {
     long fileLength, blockSize;
     int replication;
@@ -1408,7 +1386,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
     // choose targets for the new block to be allocated.
     DatanodeDescriptor targets[] = blockManager.replicator.chooseTarget(
-        src, replication, clientNode, excludedNodes, blockSize);
+        src, replication, clientNode, blockSize);
     if (targets.length < blockManager.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
@@ -1909,10 +1887,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * contract.
    */
   void setQuota(String path, long nsQuota, long dsQuota) throws IOException {
+    if (isInSafeMode())
+      throw new SafeModeException("Cannot set quota on " + path, safeMode);
     if (isPermissionEnabled) {
       checkSuperuserPrivilege();
     }
-    
     dir.setQuota(path, nsQuota, dsQuota);
     getEditLog().logSync();
   }
@@ -2011,8 +1990,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     BlockInfoUnderConstruction lastBlock = pendingFile.getLastBlock();
     BlockUCState lastBlockState = lastBlock.getBlockUCState();
     BlockInfo penultimateBlock = pendingFile.getPenultimateBlock();
-    BlockUCState penultimateBlockState = (penultimateBlock == null ?
-        BlockUCState.COMPLETE : penultimateBlock.getBlockUCState());
+    boolean penultimateBlockMinReplication;
+    BlockUCState penultimateBlockState;
+    if (penultimateBlock == null) {
+      penultimateBlockState = BlockUCState.COMPLETE;
+      // If penultimate block doesn't exist then its minReplication is met
+      penultimateBlockMinReplication = true;
+    } else {
+      penultimateBlockState = BlockUCState.COMMITTED;
+      penultimateBlockMinReplication = 
+        blockManager.checkMinReplication(penultimateBlock);
+    }
     assert penultimateBlockState == BlockUCState.COMPLETE ||
            penultimateBlockState == BlockUCState.COMMITTED :
            "Unexpected state of penultimate block in " + src;
@@ -2023,7 +2011,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       break;
     case COMMITTED:
       // Close file if committed blocks are minimally replicated
-      if(blockManager.checkMinReplication(penultimateBlock) &&
+      if(penultimateBlockMinReplication &&
           blockManager.checkMinReplication(lastBlock)) {
         finalizeINodeFileUnderConstruction(src, pendingFile);
         NameNode.stateChangeLog.warn("BLOCK*"
@@ -3860,14 +3848,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     getFSImage().rollFSImage();
   }
 
-  NamenodeCommand startCheckpoint(NamenodeRegistration bnReg, // backup node
-                                  NamenodeRegistration nnReg) // active name-node
+  synchronized NamenodeCommand startCheckpoint(
+                                NamenodeRegistration bnReg, // backup node
+                                NamenodeRegistration nnReg) // active name-node
   throws IOException {
-    NamenodeCommand cmd;
-    synchronized(this) {
-      cmd = getFSImage().startCheckpoint(bnReg, nnReg);
-    }
     LOG.info("Start checkpoint for " + bnReg.getAddress());
+    NamenodeCommand cmd = getFSImage().startCheckpoint(bnReg, nnReg);
     getEditLog().logSync();
     return cmd;
   }

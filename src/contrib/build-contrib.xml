@@ -43,6 +43,9 @@
   <property name="test.timeout" value="900000"/>
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
+  <!-- NB: sun.arch.data.model is not supported on all platforms -->
+  <property name="build.platform"
+            value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
   <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>

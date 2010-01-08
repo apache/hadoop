@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.fi;
 
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -95,24 +96,23 @@ public class FiTestUtil {
   }
 
   /** Action interface */
-  public static interface Action<T> {
+  public static interface Action<T, E extends Exception> {
     /** Run the action with the parameter. */
-    public void run(T parameter) throws IOException;
+    public void run(T parameter) throws E;
   }
 
   /** An ActionContainer contains at most one action. */
-  public static class ActionContainer<T> {
-    private Action<T> action;
-
+  public static class ActionContainer<T, E extends Exception> {
+    private List<Action<T, E>> actionList = new ArrayList<Action<T, E>>();
     /** Create an empty container. */
     public ActionContainer() {}
 
     /** Set action. */
-    public void set(Action<T> a) {action = a;}
+    public void set(Action<T, E> a) {actionList.add(a);}
 
     /** Run the action if it exists. */
-    public void run(T obj) throws IOException {
-      if (action != null) {
+    public void run(T obj) throws E {
+      for (Action<T, E> action : actionList) {
         action.run(obj);
       }
     }
@@ -124,21 +124,21 @@ public class FiTestUtil {
     public boolean isSatisfied();
   }
 
-  /** Counting down, the constraint is satisfied if the count is zero. */
+  /** Counting down, the constraint is satisfied if the count is one. */
   public static class CountdownConstraint implements Constraint {
     private int count;
 
     /** Initialize the count. */
     public CountdownConstraint(int count) {
-      if (count < 0) {
-        throw new IllegalArgumentException(count + " = count < 0");
+      if (count < 1) {
+        throw new IllegalArgumentException(count + " = count < 1");
       }
       this.count = count;
     }
 
     /** Counting down, the constraint is satisfied if the count is zero. */
     public boolean isSatisfied() {
-      if (count > 0) {
+      if (count > 1) {
         count--;
         return false;
       }
@@ -147,13 +147,14 @@ public class FiTestUtil {
   }
   
   /** An action is fired if all the constraints are satisfied. */
-  public static class ConstraintSatisfactionAction<T> implements Action<T> {
-    private final Action<T> action;
+  public static class ConstraintSatisfactionAction<T, E extends Exception> 
+      implements Action<T, E> {
+    private final Action<T, E> action;
     private final Constraint[] constraints;
     
     /** Constructor */
     public ConstraintSatisfactionAction(
-        Action<T> action, Constraint... constraints) {
+        Action<T, E> action, Constraint... constraints) {
       this.action = action;
       this.constraints = constraints;
     }
@@ -163,7 +164,7 @@ public class FiTestUtil {
      * Short-circuit-and is used. 
      */
     @Override
-    public final void run(T parameter) throws IOException {
+    public final void run(T parameter) throws E {
       for(Constraint c : constraints) {
         if (!c.isSatisfied()) {
           return;

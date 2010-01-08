@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.log4j.Level;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
@@ -30,6 +34,11 @@ import java.io.IOException;
 /** Class contains a set of tests to verify the correctness of 
  * newly introduced {@link FSDataOutputStream#hflush()} method */
 public class TestHFlush {
+  {
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+  }
+  
   private final String fName = "hflushtest.dat";
   
   /** The test uses {@link #doTheJob(Configuration, String, long, short)
@@ -142,5 +151,56 @@ public class TestHFlush {
                    expected[from+idx], actual[idx]);
       actual[idx] = 0;
     }
+  }
+  
+  /** This creates a slow writer and check to see 
+   * if pipeline heartbeats work fine
+   */
+ @Test
+  public void testPipelineHeartbeat() throws Exception {
+    final int DATANODE_NUM = 2;
+    final int fileLen = 6;
+    Configuration conf = new HdfsConfiguration();
+    final int timeout = 2000;
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 
+        timeout);
+
+    final Path p = new Path("/pipelineHeartbeat/foo");
+    System.out.println("p=" + p);
+    
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+
+    byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
+
+    // create a new file.
+    FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, DATANODE_NUM);
+
+    stm.write(fileContents, 0, 1);
+    Thread.sleep(timeout);
+    stm.hflush();
+    System.out.println("Wrote 1 byte and hflush " + p);
+
+    // write another byte
+    Thread.sleep(timeout);
+    stm.write(fileContents, 1, 1);
+    stm.hflush();
+    
+    stm.write(fileContents, 2, 1);
+    Thread.sleep(timeout);
+    stm.hflush();
+    
+    stm.write(fileContents, 3, 1);
+    Thread.sleep(timeout);
+    stm.write(fileContents, 4, 1);
+    stm.hflush();
+    
+    stm.write(fileContents, 5, 1);
+    Thread.sleep(timeout);
+    stm.close();
+
+    // verify that entire file is good
+    AppendTestUtil.checkFullFile(fs, p, fileLen,
+        fileContents, "Failed to slowly write to a file");
   }
 }

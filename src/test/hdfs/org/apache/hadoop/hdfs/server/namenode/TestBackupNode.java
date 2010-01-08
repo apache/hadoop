@@ -215,12 +215,12 @@ public class TestBackupNode extends TestCase {
     try {
       // start name-node and backup node 1
       cluster = new MiniDFSCluster(conf1, 0, true, null);
-      conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7770");
+      conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7771");
       conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7775");
       backup1 = startBackupNode(conf1, StartupOption.BACKUP, 1);
       // try to start backup node 2
       conf2 = new HdfsConfiguration(conf1);
-      conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7771");
+      conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7772");
       conf2.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7776");
       try {
         backup2 = startBackupNode(conf2, StartupOption.BACKUP, 2);

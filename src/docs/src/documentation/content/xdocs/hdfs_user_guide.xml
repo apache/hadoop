@@ -530,7 +530,7 @@
       of Hadoop and rollback the cluster to the state it was in 
       before
       the upgrade. HDFS upgrade is described in more detail in 
-      <a href="http://wiki.apache.org/hadoop/Hadoop%20Upgrade">Hadoop Upgrade</a> Wiki page.
+      <a href="http://wiki.apache.org/hadoop/Hadoop_Upgrade">Hadoop Upgrade</a> Wiki page.
       HDFS can have one such backup at a time. Before upgrading,
       administrators need to remove existing backup using <code>bin/hadoop
       dfsadmin -finalizeUpgrade</code> command. The following

@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
@@ -258,10 +259,12 @@ public class MiniDFSCluster {
     FileSystem.setDefaultUri(conf, "hdfs://localhost:"+ Integer.toString(nameNodePort));
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");  
     if (manageNameDfsDirs) {
-      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, new File(base_dir, "name1").getPath()+","+
-               new File(base_dir, "name2").getPath());
-      conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, new File(base_dir, "namesecondary1").
-                getPath()+"," + new File(base_dir, "namesecondary2").getPath());
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          fileAsURI(new File(base_dir, "name1"))+","+
+          fileAsURI(new File(base_dir, "name2")));
+      conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+          fileAsURI(new File(base_dir, "namesecondary1"))+","+
+          fileAsURI(new File(base_dir, "namesecondary2")));
     }
     
     int replication = conf.getInt("dfs.replication", 3);
@@ -716,8 +719,8 @@ public class MiniDFSCluster {
 
   /**
    * Restart a datanode, on the same port if requested
-   * @param dnprop, the datanode to restart
-   * @param keepPort, whether to use the same port 
+   * @param dnprop the datanode to restart
+   * @param keepPort whether to use the same port 
    * @return true if restarting is successful
    * @throws IOException
    */
@@ -807,6 +810,28 @@ public class MiniDFSCluster {
    */
   public FileSystem getFileSystem() throws IOException {
     return FileSystem.get(conf);
+  }
+  
+
+  /**
+   * Get another FileSystem instance that is different from FileSystem.get(conf).
+   * This simulating different threads working on different FileSystem instances.
+   */
+  public FileSystem getNewFileSystemInstance() throws IOException {
+    return FileSystem.newInstance(conf);
+  }
+  
+  /**
+   * @return a {@link HftpFileSystem} object.
+   */
+  public HftpFileSystem getHftpFileSystem() throws IOException {
+    final String str = "hftp://"
+        + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    try {
+      return (HftpFileSystem)FileSystem.get(new URI(str), conf); 
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
   }
 
   /**
@@ -957,7 +982,6 @@ public class MiniDFSCluster {
 
   /**
    * Access to the data directory used for Datanodes
-   * @throws IOException 
    */
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();

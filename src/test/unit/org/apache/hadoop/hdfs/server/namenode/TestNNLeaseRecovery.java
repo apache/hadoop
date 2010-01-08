@@ -19,15 +19,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static junit.framework.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -39,13 +30,20 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
+import static org.junit.Assert.assertFalse;
 import org.junit.Before;
 import org.junit.Test;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.*;
+
+import java.io.File;
+import java.io.IOException;
 
 public class TestNNLeaseRecovery {
   public static final Log LOG = LogFactory.getLog(TestNNLeaseRecovery.class);
@@ -128,8 +126,8 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(null, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps);
+    mockFileBlocks(2, null, 
+      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
     
     fsn.internalReleaseLease(lm, file.toString(), null);
     assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
@@ -152,8 +150,52 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
 
-    mockFileBlocks(HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps);
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
+
+    fsn.internalReleaseLease(lm, file.toString(), null);
+    assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
+      "AlreadyBeingCreatedException here", false);
+  }
+
+  /**
+   * Mocks FSNamesystem instance, adds an empty file with 0 blocks
+   * and invokes lease recovery method. 
+   * 
+   */
+  @Test
+  public void testInternalReleaseLease_0blocks () throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+
+    mockFileBlocks(0, null, null, file, dnd, ps, false);
+
+    assertTrue("True has to be returned in this case",
+      fsn.internalReleaseLease(lm, file.toString(), null));
+  }
+  
+  /**
+   * Mocks FSNamesystem instance, adds an empty file with 1 block
+   * and invokes lease recovery method. 
+   * AlreadyBeingCreatedException is expected.
+   * @throws AlreadyBeingCreatedException as the result
+   */
+  @Test(expected=AlreadyBeingCreatedException.class)
+  public void testInternalReleaseLease_1blocks () throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+
+    mockFileBlocks(1, null, HdfsConstants.BlockUCState.COMMITTED, file, dnd, ps, false);
 
     fsn.internalReleaseLease(lm, file.toString(), null);
     assertTrue("FSNamesystem.internalReleaseLease suppose to throw " +
@@ -176,25 +218,159 @@ public class TestNNLeaseRecovery {
     PermissionStatus ps =
       new PermissionStatus("test", "test", new FsPermission((short)0777));
     
-    mockFileBlocks(HdfsConstants.BlockUCState.COMMITTED, 
-      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps);
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
         
     assertFalse("False is expected in return in this case",
       fsn.internalReleaseLease(lm, file.toString(), null));
   }
 
-  private void mockFileBlocks(HdfsConstants.BlockUCState penUltState,
-                           HdfsConstants.BlockUCState lastState,
-                           Path file, DatanodeDescriptor dnd, 
-                           PermissionStatus ps) throws IOException {
+  @Test
+  public void testCommitBlockSynchronization_BlockNotFound () 
+    throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    long recoveryId = 2002;
+    long newSize = 273487234;
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+    
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, false);
+    
+    BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock(); 
+    try {
+      fsn.commitBlockSynchronization(lastBlock,
+        recoveryId, newSize, true, false, new DatanodeID[1]);
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().startsWith("Block (="));
+    }
+  }
+  
+  @Test
+  public void testCommitBlockSynchronization_notUR () 
+    throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    long recoveryId = 2002;
+    long newSize = 273487234;
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+    
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.COMPLETE, file, dnd, ps, true);
+    
+    BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
+    when(lastBlock.isComplete()).thenReturn(true);
+    
+    try {
+      fsn.commitBlockSynchronization(lastBlock,
+        recoveryId, newSize, true, false, new DatanodeID[1]);
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().startsWith("Unexpected block (="));
+    }
+  }
+  
+  @Test
+  public void testCommitBlockSynchronization_WrongGreaterRecoveryID() 
+    throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    long recoveryId = 2002;
+    long newSize = 273487234;
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+    
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
+    
+    BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
+    when(((BlockInfoUnderConstruction)lastBlock).getBlockRecoveryId()).thenReturn(recoveryId-100);
+    
+    try {
+      fsn.commitBlockSynchronization(lastBlock,
+        recoveryId, newSize, true, false, new DatanodeID[1]);
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().startsWith("The recovery id " + recoveryId + " does not match current recovery id " + (recoveryId-100)));
+    }
+  }  
+  
+  @Test
+  public void testCommitBlockSynchronization_WrongLesserRecoveryID() 
+    throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    long recoveryId = 2002;
+    long newSize = 273487234;
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+    
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
+    
+    BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
+    when(((BlockInfoUnderConstruction)lastBlock).getBlockRecoveryId()).thenReturn(recoveryId+100);
+    
+    try {           
+      fsn.commitBlockSynchronization(lastBlock,
+        recoveryId, newSize, true, false, new DatanodeID[1]);
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().startsWith("The recovery id " + recoveryId + " does not match current recovery id " + (recoveryId+100)));
+    }
+  }
+
+  @Test
+  public void testCommitBlockSynchronization_EqualRecoveryID() 
+    throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    long recoveryId = 2002;
+    long newSize = 273487234;
+    Path file = 
+      spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
+    DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
+    PermissionStatus ps =
+      new PermissionStatus("test", "test", new FsPermission((short)0777));
+    
+    mockFileBlocks(2, HdfsConstants.BlockUCState.COMMITTED, 
+      HdfsConstants.BlockUCState.UNDER_CONSTRUCTION, file, dnd, ps, true);
+    
+    BlockInfo lastBlock = fsn.dir.getFileINode(anyString()).getLastBlock();
+    when(((BlockInfoUnderConstruction)lastBlock).getBlockRecoveryId()).thenReturn(recoveryId);
+    
+    boolean recoveryChecked = false;
+    try {
+      fsn.commitBlockSynchronization(lastBlock,
+        recoveryId, newSize, true, false, new DatanodeID[1]);
+    } catch (NullPointerException ioe) {
+      // It is fine to get NPE here because the datanodes array is empty
+      recoveryChecked = true;
+    }
+    assertTrue("commitBlockSynchronization had to throw NPE here", recoveryChecked);
+  }
+
+  private void mockFileBlocks(int fileBlocksNumber,
+                              HdfsConstants.BlockUCState penUltState,
+                              HdfsConstants.BlockUCState lastState,
+                              Path file, DatanodeDescriptor dnd,
+                              PermissionStatus ps,
+                              boolean setStoredBlock) throws IOException {
     BlockInfo b = mock(BlockInfo.class);
     BlockInfoUnderConstruction b1 = mock(BlockInfoUnderConstruction.class);
     when(b.getBlockUCState()).thenReturn(penUltState);
     when(b1.getBlockUCState()).thenReturn(lastState);
-    BlockInfo[] blocks = new BlockInfo[]{b, b1};
+    BlockInfo[] blocks;
 
     FSDirectory fsDir = mock(FSDirectory.class);
     INodeFileUnderConstruction iNFmock = mock(INodeFileUnderConstruction.class);
+
     fsn.dir = fsDir;
     FSImage fsImage = mock(FSImage.class);
     FSEditLog editLog = mock(FSEditLog.class);
@@ -203,13 +379,33 @@ public class TestNNLeaseRecovery {
     when(fsn.getFSImage().getEditLog()).thenReturn(editLog);
     fsn.getFSImage().setFSNamesystem(fsn);
     
+    switch (fileBlocksNumber) {
+      case 0:
+        blocks = new BlockInfo[0];
+        break;
+      case 1:
+        blocks = new BlockInfo[]{b1};
+        when(iNFmock.getLastBlock()).thenReturn(b1);
+        break;
+      default:
+        when(iNFmock.getPenultimateBlock()).thenReturn(b);
+        when(iNFmock.getLastBlock()).thenReturn(b1);
+        blocks = new BlockInfo[]{b, b1};
+    }
+    
     when(iNFmock.getBlocks()).thenReturn(blocks);
-    when(iNFmock.numBlocks()).thenReturn(2);
-    when(iNFmock.getPenultimateBlock()).thenReturn(b);
-    when(iNFmock.getLastBlock()).thenReturn(b1);
+    when(iNFmock.numBlocks()).thenReturn(blocks.length);
     when(iNFmock.isUnderConstruction()).thenReturn(true);
+    when(iNFmock.convertToInodeFile()).thenReturn(iNFmock);    
     fsDir.addFile(file.toString(), ps, (short)3, 1l, "test", 
       "test-machine", dnd, 1001l);
+
+    fsn.leaseManager = mock(LeaseManager.class);
+    fsn.leaseManager.addLease("mock-lease", file.toString());
+    if (setStoredBlock) {
+      when(b1.getINode()).thenReturn(iNFmock);
+      fsn.blockManager.blocksMap.addINode(b1, iNFmock);
+    }
 
     when(fsDir.getFileINode(anyString())).thenReturn(iNFmock);
   }

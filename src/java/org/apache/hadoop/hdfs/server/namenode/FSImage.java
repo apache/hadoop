@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
@@ -305,11 +306,10 @@ public class FSImage extends Storage {
     for ( ;it.hasNext(); ) {
       StorageDirectory sd = it.next();
       try {
-        list.add(new URI("file://" + sd.getRoot().getAbsolutePath()));
-      } catch (Exception e) {
+        list.add(Util.fileAsURI(sd.getRoot()));
+      } catch (IOException e) {
         throw new IOException("Exception while processing " +
-            "StorageDirectory " + sd.getRoot().getAbsolutePath() + ". The"
-            + " full error message is " + e.getMessage());
+            "StorageDirectory " + sd.getRoot(), e);
       }
     }
     return list;
@@ -1708,7 +1708,7 @@ public class FSImage extends Storage {
     ckptState = CheckpointStates.UPLOAD_DONE;
   }
 
-  void close() throws IOException {
+  synchronized void close() throws IOException {
     getEditLog().close();
     unlockAll();
   }
@@ -1907,25 +1907,9 @@ public class FSImage extends Storage {
     if (dirNames.size() == 0 && defaultValue != null) {
       dirNames.add(defaultValue);
     }
-    Collection<URI> dirs = new ArrayList<URI>(dirNames.size());
-    for(String name : dirNames) {
-      try {
-        // process value as URI 
-        URI u = new URI(name);
-        // if scheme is undefined, then assume it's file://
-        if(u.getScheme() == null)
-          u = new URI("file://" + new File(name).getAbsolutePath());
-        // check that scheme is not null (trivial) and supported
-        checkSchemeConsistency(u);
-        dirs.add(u);
-      } catch (Exception e) {
-        LOG.error("Error while processing URI: " + name + 
-            ". The error message was: " + e.getMessage());
-      }
-    }
-    return dirs;
+    return Util.stringCollectionAsURIs(dirNames);
   }
-  
+
   static Collection<URI> getCheckpointEditsDirs(Configuration conf,
       String defaultName) {
     Collection<String> dirNames = 
@@ -1933,23 +1917,7 @@ public class FSImage extends Storage {
     if (dirNames.size() == 0 && defaultName != null) {
       dirNames.add(defaultName);
     }
-    Collection<URI> dirs = new ArrayList<URI>(dirNames.size());
-    for(String name : dirNames) {
-      try {
-        // process value as URI 
-        URI u = new URI(name);
-        // if scheme is undefined, then assume it's file://
-        if(u.getScheme() == null)
-          u = new URI("file://" + new File(name).getAbsolutePath());
-        // check that scheme is not null (trivial) and supported
-        checkSchemeConsistency(u);
-        dirs.add(u);
-      } catch (Exception e) {
-        LOG.error("Error while processing URI: " + name + 
-            ". The error message was: " + e.getMessage());
-      }
-    }
-    return dirs;    
+    return Util.stringCollectionAsURIs(dirNames);
   }
 
   static private final DeprecatedUTF8 U_STR = new DeprecatedUTF8();

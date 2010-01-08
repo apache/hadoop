@@ -59,30 +59,36 @@ public class DataTransferTestUtil {
     private volatile boolean isSuccess = false;
 
     /** Simulate action for the receiverOpWriteBlock pointcut */
-    public final ActionContainer<DatanodeID> fiReceiverOpWriteBlock
-        = new ActionContainer<DatanodeID>();
+    public final ActionContainer<DatanodeID, IOException> fiReceiverOpWriteBlock
+        = new ActionContainer<DatanodeID, IOException>();
     /** Simulate action for the callReceivePacket pointcut */
-    public final ActionContainer<DatanodeID> fiCallReceivePacket
-        = new ActionContainer<DatanodeID>();
+    public final ActionContainer<DatanodeID, IOException> fiCallReceivePacket
+        = new ActionContainer<DatanodeID, IOException>();
+    /** Simulate action for the callWritePacketToDisk pointcut */
+    public final ActionContainer<DatanodeID, IOException> fiCallWritePacketToDisk
+        = new ActionContainer<DatanodeID, IOException>();
     /** Simulate action for the statusRead pointcut */
-    public final ActionContainer<DatanodeID> fiStatusRead
-        = new ActionContainer<DatanodeID>();
+    public final ActionContainer<DatanodeID, IOException> fiStatusRead
+        = new ActionContainer<DatanodeID, IOException>();
+    /** Simulate action for the afterDownstreamStatusRead pointcut */
+    public final ActionContainer<DatanodeID, IOException> fiAfterDownstreamStatusRead
+        = new ActionContainer<DatanodeID, IOException>();
     /** Simulate action for the pipelineAck pointcut */
-    public final ActionContainer<DatanodeID> fiPipelineAck
-        = new ActionContainer<DatanodeID>();
+    public final ActionContainer<DatanodeID, IOException> fiPipelineAck
+        = new ActionContainer<DatanodeID, IOException>();
     /** Simulate action for the pipelineClose pointcut */
-    public final ActionContainer<DatanodeID> fiPipelineClose
-        = new ActionContainer<DatanodeID>();
+    public final ActionContainer<DatanodeID, IOException> fiPipelineClose
+        = new ActionContainer<DatanodeID, IOException>();
     /** Simulate action for the blockFileClose pointcut */
-    public final ActionContainer<DatanodeID> fiBlockFileClose
-        = new ActionContainer<DatanodeID>();
+    public final ActionContainer<DatanodeID, IOException> fiBlockFileClose
+        = new ActionContainer<DatanodeID, IOException>();
 
     /** Verification action for the pipelineInitNonAppend pointcut */
-    public final ActionContainer<Integer> fiPipelineInitErrorNonAppend
-        = new ActionContainer<Integer>();
+    public final ActionContainer<Integer, RuntimeException> fiPipelineInitErrorNonAppend
+        = new ActionContainer<Integer, RuntimeException>();
     /** Verification action for the pipelineErrorAfterInit pointcut */
-    public final ActionContainer<Integer> fiPipelineErrorAfterInit
-        = new ActionContainer<Integer>();
+    public final ActionContainer<Integer, RuntimeException> fiPipelineErrorAfterInit
+        = new ActionContainer<Integer, RuntimeException>();
 
     /** Get test status */
     public boolean isSuccess() {
@@ -121,7 +127,8 @@ public class DataTransferTestUtil {
   }
 
   /** Action for DataNode */
-  public static abstract class DataNodeAction implements Action<DatanodeID> {
+  public static abstract class DataNodeAction implements
+      Action<DatanodeID, IOException> {
     /** The name of the test */
     final String currentTest;
     /** The index of the datanode */
@@ -195,6 +202,28 @@ public class DataTransferTestUtil {
     }
   }
 
+  /** Throws OutOfMemoryError if the count is zero. */
+  public static class CountdownOomAction extends OomAction {
+    private final CountdownConstraint countdown;
+
+    /** Create an action for datanode i in the pipeline with count down. */
+    public CountdownOomAction(String currentTest, int i, int count) {
+      super(currentTest, i);
+      countdown = new CountdownConstraint(count);
+    }
+
+    @Override
+    public void run(DatanodeID id) {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
+      if (p.contains(index, id) && countdown.isSatisfied()) {
+        final String s = toString(id);
+        FiTestUtil.LOG.info(s);
+        throw new OutOfMemoryError(s);
+      }
+    }
+  }
+
   /** Throws DiskOutOfSpaceException. */
   public static class DoosAction extends DataNodeAction {
     /** Create an action for datanode i in the pipeline. */
@@ -239,6 +268,28 @@ public class DataTransferTestUtil {
     @Override
     public String toString() {
       return error + " " + super.toString();
+    }
+  }
+
+  /** Throws DiskOutOfSpaceException if the count is zero. */
+  public static class CountdownDoosAction extends DoosAction {
+    private final CountdownConstraint countdown;
+
+    /** Create an action for datanode i in the pipeline with count down. */
+    public CountdownDoosAction(String currentTest, int i, int count) {
+      super(currentTest, i);
+      countdown = new CountdownConstraint(count);
+    }
+
+    @Override
+    public void run(DatanodeID id) throws DiskOutOfSpaceException {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
+      if (p.contains(index, id) && countdown.isSatisfied()) {
+        final String s = toString(id);
+        FiTestUtil.LOG.info(s);
+        throw new DiskOutOfSpaceException(s);
+      }
     }
   }
 
@@ -307,8 +358,50 @@ public class DataTransferTestUtil {
     }
   }
 
+  /**
+   * When the count is zero,
+   * sleep some period of time so that it slows down the datanode
+   * or sleep forever so that datanode becomes not responding.
+   */
+  public static class CountdownSleepAction extends SleepAction {
+    private final CountdownConstraint countdown;
+
+    /**
+     * Create an action for datanode i in the pipeline.
+     * @param duration In milliseconds, duration <= 0 means sleeping forever.
+     */
+    public CountdownSleepAction(String currentTest, int i,
+        long duration, int count) {
+      this(currentTest, i, duration, duration+1, count);
+    }
+
+    /** Create an action for datanode i in the pipeline with count down. */
+    public CountdownSleepAction(String currentTest, int i,
+        long minDuration, long maxDuration, int count) {
+      super(currentTest, i, minDuration, maxDuration);
+      countdown = new CountdownConstraint(count);
+    }
+
+    @Override
+    public void run(DatanodeID id) {
+      final DataTransferTest test = getDataTransferTest();
+      final Pipeline p = test.getPipeline(id);
+      if (p.contains(index, id) && countdown.isSatisfied()) {
+        final String s = toString(id) + ", duration = ["
+        + minDuration + "," + maxDuration + ")";
+        FiTestUtil.LOG.info(s);
+        if (maxDuration <= 1) {
+          for(; true; FiTestUtil.sleep(1000)); //sleep forever
+        } else {
+          FiTestUtil.sleep(minDuration, maxDuration);
+        }
+      }
+    }
+  }
+
   /** Action for pipeline error verification */
-  public static class VerificationAction implements Action<Integer> {
+  public static class VerificationAction implements
+      Action<Integer, RuntimeException> {
     /** The name of the test */
     final String currentTest;
     /** The error index of the datanode */
@@ -343,9 +436,10 @@ public class DataTransferTestUtil {
    *  Create a OomAction with a CountdownConstraint
    *  so that it throws OutOfMemoryError if the count is zero.
    */
-  public static ConstraintSatisfactionAction<DatanodeID> createCountdownOomAction(
-      String currentTest, int i, int count) {
-    return new ConstraintSatisfactionAction<DatanodeID>(
+  public static ConstraintSatisfactionAction<DatanodeID, IOException>
+      createCountdownOomAction(
+        String currentTest, int i, int count) {
+    return new ConstraintSatisfactionAction<DatanodeID, IOException>(
         new OomAction(currentTest, i), new CountdownConstraint(count));
   }
 
@@ -353,9 +447,10 @@ public class DataTransferTestUtil {
    *  Create a DoosAction with a CountdownConstraint
    *  so that it throws DiskOutOfSpaceException if the count is zero.
    */
-  public static ConstraintSatisfactionAction<DatanodeID> createCountdownDoosAction(
+  public static ConstraintSatisfactionAction<DatanodeID, IOException>
+    createCountdownDoosAction(
       String currentTest, int i, int count) {
-    return new ConstraintSatisfactionAction<DatanodeID>(
+    return new ConstraintSatisfactionAction<DatanodeID, IOException>(
         new DoosAction(currentTest, i), new CountdownConstraint(count));
   }
 
@@ -366,9 +461,9 @@ public class DataTransferTestUtil {
    * sleep some period of time so that it slows down the datanode
    * or sleep forever so the that datanode becomes not responding.
    */
-  public static ConstraintSatisfactionAction<DatanodeID> createCountdownSleepAction(
+  public static ConstraintSatisfactionAction<DatanodeID, IOException> createCountdownSleepAction(
       String currentTest, int i, long minDuration, long maxDuration, int count) {
-    return new ConstraintSatisfactionAction<DatanodeID>(
+    return new ConstraintSatisfactionAction<DatanodeID, IOException>(
         new SleepAction(currentTest, i, minDuration, maxDuration),
         new CountdownConstraint(count));
   }
@@ -377,7 +472,7 @@ public class DataTransferTestUtil {
    * Same as
    * createCountdownSleepAction(currentTest, i, duration, duration+1, count).
    */
-  public static ConstraintSatisfactionAction<DatanodeID> createCountdownSleepAction(
+  public static ConstraintSatisfactionAction<DatanodeID, IOException> createCountdownSleepAction(
       String currentTest, int i, long duration, int count) {
     return createCountdownSleepAction(currentTest, i, duration, duration+1,
         count);
