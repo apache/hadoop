@@ -821,6 +821,18 @@ public class MiniDFSCluster {
     return FileSystem.newInstance(conf);
   }
   
+  /**
+   * @return a {@link HftpFileSystem} object.
+   */
+  public HftpFileSystem getHftpFileSystem() throws IOException {
+    final String str = "hftp://"
+        + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    try {
+      return (HftpFileSystem)FileSystem.get(new URI(str), conf); 
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
 
   /**
    * Get the directories where the namenode stores its image.

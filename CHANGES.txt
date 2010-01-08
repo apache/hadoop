@@ -33,6 +33,9 @@ Trunk (unreleased changes)
     HDFS-755. Read multiple checksum chunks at once in DFSInputStream.
     (Todd Lipcon via tomwhite)
 
+    HDFS-786. Implement getContentSummary in HftpFileSystem.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
