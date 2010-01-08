@@ -65,8 +65,8 @@ Release 0.21.0 - Unreleased
    HBASE-1831  Scanning API must be reworked to allow for fully functional
                Filters client-side
    HBASE-1890  hbase-1506 where assignment is done at regionserver doesn't
-                work
-   HBASE-1889 ClassNotFoundException on trunk for REST
+               work
+   HBASE-1889  ClassNotFoundException on trunk for REST
    HBASE-1905  Remove unused config. hbase.hstore.blockCache.blockSize
    HBASE-1906  FilterList of prefix and columnvalue not working properly with
                deletes and multiple values
@@ -150,6 +150,7 @@ Release 0.21.0 - Unreleased
                (Scott Wang via Andrew Purtell)
    HBASE-2068  MetricsRate is missing "registry" parameter
                (Lars George and Gary Helmling via Stack)
+   HBASE-2093  [stargate] RowSpec parse bug
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

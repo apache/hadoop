@@ -277,7 +277,26 @@ scheme://user:pass@example.net:8080/path/to/file;type=foo?name=val#frag
 Stargate exposes HBase tables, rows, cells, and metadata as URL specified
 resources.
 <p>
-
+<b>NOTE:</b> The characters <tt>/</tt>, <tt>:</tt>, and <tt>,</tt> are reserved
+within row keys, column names, and column qualifiers. Clients must escape them
+somehow, perhaps by encoding them as hex escapes or by using www-url-encoding. For
+example, the key:
+<p>
+<pre>
+    http://www.google.com/
+</pre>
+<p>
+should first be encoded as:
+<p>
+<pre>
+    http%3A%2F%2Fwww.google.com%2F
+</pre>
+<p>
+to produce a path like:
+<pre>
+    /SomeTable/http%3A%2F%2Fwww.google.com%2F/someColumn:qualifier
+</pre>
+<p>
 <h3>Addressing for cell or row query (GET)</h3>
 <p>
 <pre>

@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
@@ -60,7 +61,8 @@ public class RowResource implements Constants {
   public RowResource(String table, String rowspec, String versions)
       throws IOException {
     this.table = table;
-    this.rowspec = new RowSpec(rowspec);
+    this.rowspec = new RowSpec(URLDecoder.decode(rowspec,
+      HConstants.UTF8_ENCODING));
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.valueOf(versions));
     }
@@ -143,7 +145,8 @@ public class RowResource implements Constants {
     try {
       table = pool.getTable(this.table);
       for (RowModel row: model.getRows()) {
-        Put put = new Put(row.getKey());
+        byte[] key = row.getKey();
+        Put put = new Put(key);
         for (CellModel cell: row.getCells()) {
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
           if(parts.length == 1) {

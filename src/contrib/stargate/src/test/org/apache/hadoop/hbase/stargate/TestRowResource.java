@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.stargate;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URLEncoder;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -31,6 +32,7 @@ import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -299,6 +301,18 @@ public class TestRowResource extends MiniClusterTestCase {
     assertEquals(response.getCode(), 200);
     response = deleteRow(TABLE, ROW_4);
     assertEquals(response.getCode(), 200);
+  }
+
+  public void testURLEncodedKey() throws IOException, JAXBException {
+    String encodedKey = URLEncoder.encode("http://www.google.com/", 
+      HConstants.UTF8_ENCODING);
+    Response response;
+    response = putValueXML(TABLE, encodedKey, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = putValuePB(TABLE, encodedKey, COLUMN_2, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, encodedKey, COLUMN_1, VALUE_1);
+    checkValueXML(TABLE, encodedKey, COLUMN_2, VALUE_2);
   }
 
   public void testMultiCellGetPutXML() throws IOException, JAXBException {
