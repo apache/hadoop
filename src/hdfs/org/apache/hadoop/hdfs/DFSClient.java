@@ -1619,7 +1619,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       // Connect to best DataNode for desired Block, with potential offset
       //
       DatanodeInfo chosenNode = null;
-      failures = 0;
       while (s == null) {
         DNAddrPair retval = chooseDataNode(targetBlock);
         chosenNode = retval.info;
@@ -1820,7 +1819,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       Socket dn = null;
       int numAttempts = block.getLocations().length;
       IOException ioe = null;
-      failures = 0;
       
       while (dn == null && numAttempts-- > 0 ) {
         DNAddrPair retval = chooseDataNode(block);
