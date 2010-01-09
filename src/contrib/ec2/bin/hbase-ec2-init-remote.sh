@@ -18,7 +18,10 @@ HBASE_VERSION=`echo $HBASE_HOME | cut -d '-' -f 2`
 
 export USER="root"
 
-# up open file descriptor limits
+# up file-max
+sysctl -w fs.file-max=32768
+
+# up ulimits
 echo "root soft nofile 32768" >> /etc/security/limits.conf
 echo "root hard nofile 32768" >> /etc/security/limits.conf
 

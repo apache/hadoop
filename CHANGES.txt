@@ -151,6 +151,7 @@ Release 0.21.0 - Unreleased
    HBASE-2068  MetricsRate is missing "registry" parameter
                (Lars George and Gary Helmling via Stack)
    HBASE-2093  [stargate] RowSpec parse bug
+   HBASE-2100  [EC2] Adjust fs.file-max
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
