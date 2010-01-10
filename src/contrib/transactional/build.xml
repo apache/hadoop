@@ -21,8 +21,23 @@
 Before you can run these subtargets directly, you need 
 to call at top-level: ant deploy-contrib compile-core-test
 -->
-<project name="transactional" default="jar">
+<project name="transactional" default="jar" basedir=".">
+  <property name="hbase.root" location="../../.." />
+  
   <import file="../build-contrib.xml"/>
+
+  <path id="classpath">
+  <path refid="contrib.classpath"/>
+  </path> 
+
+  <path id="test.classpath">
+    <path refid="test.contrib.classpath"/>
+    <fileset dir="${hbase.root}/lib">
+      <include name="zookeeper*.jar" />	
+    </fileset>	
+  </path>
+  
+  
   <!-- ====================================================== -->
   <!-- Override standard contrib package target to include
        IndexedTable.rb in the same directory as the jar       -->
@@ -33,8 +48,8 @@ to call at top-level: ant deploy-contrib compile-core-test
       <fileset dir="${build.dir}">
         <include name="hbase-${version}-${name}.jar" />
       </fileset>
-      <fileset dir="${root}/bin">
-      	<include name="TableIndexed.rb" />
+      <fileset dir="${basedir}/bin">
+        <include name="TableIndexed.rb" />
       </fileset>
     </copy>
   </target>

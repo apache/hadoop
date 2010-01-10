@@ -23,18 +23,16 @@
 
   <property name="version" value="0.20.0"/>
   <property name="name" value="${ant.project.name}"/>
-  <property name="root" value="${basedir}"/>
 
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
   <property file="${user.home}/${name}.build.properties" />
-  <property file="${root}/build.properties" />
+  <property file="${basedir}/build.properties" />
 
-  <property name="hbase.root" location="${root}/../../../"/>
-
-  <property name="src.dir"  location="${root}/src/java"/>
-  <property name="src.test" location="${root}/src/test"/>
-  <property name="src.examples" location="${root}/src/examples"/>
+  <property name="src.dir"  location="${basedir}/src/java"/>
+  <property name="src.test" location="${basedir}/src/test"/>
+  <property name="src.examples" location="${basedir}/src/examples"/>
+  <property name="ivy.dir" location="${hbase.root}/ivy" />
 
   <available file="${src.examples}" type="dir" property="examples.available"/>
   <available file="${src.test}" type="dir" property="test.available"/>
@@ -43,18 +41,19 @@
   <property name="test.junit.output.format" value="plain"/>
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
+
   <property name="build.dir" location="${hbase.root}/build/contrib/${name}"/>
   <property name="dist.dir" location="${build.dir}/${name}-${version}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
-  <property name="hbase.log.dir" location="${build.dir}/test/logs"/>
+  <property name="hbase.log.dir" location="${build.test}/logs"/>
   <!-- all jars together -->
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
   <property name="javadoc.link"
-    value="http://java.sun.com/j2se/1.4/docs/api/"/>
+    value="http://java.sun.com/j2se/1.6/docs/api/"/>
 
   <property name="build.encoding" value="ISO-8859-1"/>
 
@@ -71,27 +70,35 @@
         <isset property="clover.present"/>
     </and>
   </condition>
-
-  <fileset id="lib.jars" dir="${root}" includes="lib/*.jar"/>
+  <import file="../../ivy-targets.xml" />
+  
 
   <!-- the normal classpath -->
-  <path id="classpath">
-    <pathelement location="${build.classes}"/>
-    <fileset refid="lib.jars"/>
-    <pathelement location="${hbase.root}/build/classes"/>
+  <path id="contrib.classpath">
+  	<pathelement location="${build.classes}"/>
+  
+    <fileset dir="${common.ivy.lib.dir}">
+        <include name="*jar" />
+    </fileset>
+    <pathelement location="${hbase.root}/build/classes" />
     <fileset dir="${hbase.root}/lib">
-      <include name="**/*.jar" />
+      <include name="libthrift-*.jar" />   
+      <include name="zookeeper*.jar" />   
     </fileset>
   </path>
 
   <!-- the unit test classpath -->
-  <path id="test.classpath">
-    <path refid="classpath"/>
-    <pathelement location="${build.test}" />
+  <path id="test.contrib.classpath">
+  	<path refid="contrib.classpath"/>
+    <fileset dir="${test.ivy.lib.dir}">
+      <include name="*jar" />
+    </fileset>
+    <pathelement location="${build.test}" />    
     <pathelement location="${hbase.root}/build/test"/>
     <pathelement location="${hbase.root}/build"/>
     <pathelement location="${hbase.root}/src/test"/>
-    <pathelement location="${conf.dir}"/>
+    <pathelement location="${conf.dir}" />
+
     <pathelement path="${clover.jar}"/>
   </path>
 
@@ -117,7 +124,7 @@
   <!-- ====================================================== -->
   <!-- Compile a hbase contrib's files                       -->
   <!-- ====================================================== -->
-  <target name="compile" depends="clover,init" unless="skip.contrib">
+  <target name="compile" depends="clover,init,ivy-retrieve-common" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -150,7 +157,7 @@
   <!-- ================================================================== -->
   <!-- Compile test code                                                  -->
   <!-- ================================================================== -->
-  <target name="compile-test" depends="compile-examples" if="test.available">
+  <target name="compile-test" depends="compile-examples,ivy-retrieve-test" if="test.available">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"

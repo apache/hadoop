@@ -296,6 +296,8 @@ Release 0.21.0 - Unreleased
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
                hfiles direct) uploader
+   HBASE-1433  Update hbase build to match core, use ivy, publish jars to maven
+               repo, etc. (Kay Kay via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

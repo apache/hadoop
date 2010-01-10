@@ -1,6 +1,6 @@
 <project name="stargate" default="package" basedir=".">
-  <import file="../build-contrib.xml"/>
-
+  <property name="hbase.root" location="../../.." />
+  
   <import file="../build-contrib.xml"/>
   
   <property name="build.war.classes" location="${build.dir}/warClasses"/>
@@ -14,6 +14,14 @@
   <property name="javac.debug" value="on"/>
   <property name="javac.source" value="1.6"/>
   
+  <path id="classpath">
+    <path refid="contrib.classpath"/>
+  </path>
+
+  <path id="test.classpath">
+    <path refid="test.contrib.classpath"/>
+  </path>
+  
   <target name="init-contrib">
     <tstamp/>
     <mkdir dir="${build.war.classes}"/>
@@ -25,7 +33,7 @@
     </javadoc>
   </target>
   
-  <target name="compile" depends="compile-jar, compile-war">
+  <target name="compile" depends="ivy-retrieve-common, compile-jar, compile-war">
     <echo message="contrib: ${name}"/>
   </target>
 
@@ -42,7 +50,7 @@
     </javac>
   </target>
   
-  <target name="compile-test" depends="compile-jar,compile-war">
+  <target name="compile-test" depends="ivy-retrieve-test, compile-jar,compile-war">
     <javac srcdir="${src.test}" includes="**/*.java" destdir="${build.test}" debug="${javac.debug}" source="1.6">
       <classpath refid="test.classpath"/>
     </javac>
@@ -56,11 +64,11 @@
       <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/>
       <classpath refid="test.classpath"/>
       <formatter type="${test.junit.output.format}"/>
-      <batchtest todir="${build.test}" unless="testcase">
-        <fileset dir="${src.test}" includes="**/Test*.java"/>
+      <batchtest todir="${build.test}" unless="testcase" >
+        <fileset dir="${src.test}" includes="**/Test*.java" />
       </batchtest>
-      <batchtest todir="${build.test}" if="testcase">
-        <fileset dir="${src.test}" includes="**/${testcase}.java"/>
+      <batchtest todir="${build.test}" if="testcase" >
+        <fileset dir="${src.test}" includes="**/Test*.java" />
       </batchtest>
     </junit>
     <fail if="tests.failed">

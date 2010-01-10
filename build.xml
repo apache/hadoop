@@ -88,6 +88,14 @@
     </and>
   </condition>
 
+  <property name="build.dir" location="${basedir}/build" />
+  <property name="lib.dir" value="${basedir}/lib"/>   
+  <property name="build.ivy.dir" location="${build.dir}/ivy" />
+  <property name="hbase.root" location="." />
+  <property name="ivy.dir" location="${hbase.root}/ivy" />
+  
+  <import file="${basedir}/ivy-targets.xml" />
+  
   <!--We need to have the hadoop jars ride in front of the hbase classes or we
     get the below exceptions:
 
@@ -95,16 +103,19 @@
 
     When we move off 0.16.0 hadoop, fix HttpStatusServer
    -->
-  <fileset id="lib.jars" dir="${basedir}" includes="lib/*.jar"/>
   <path id="classpath">
-    <fileset refid="lib.jars"/>
-    <fileset dir="${lib.dir}/jsp-2.1/">
+    <fileset dir="${common.ivy.lib.dir}">
       <include name="*jar" />
+    </fileset>
+  	<fileset dir="${lib.dir}">
+      <include name="libthrift-*.jar" />   
+      <include name="zookeeper*.jar" />   
     </fileset>
     <pathelement location="${build.classes}"/>
     <pathelement location="${conf.dir}"/>
   </path>
 
+  
   <target name="init">
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
@@ -124,7 +135,10 @@
     <!--Copy bin, lib, and conf. too-->
     <mkdir dir="${build.lib}"/>
     <copy todir="${build.lib}">
-      <fileset dir="${lib.dir}" />
+      <fileset dir="${lib.dir}" >
+      	<include name="zookeeper*" />
+      	<include name="libthrift* "/>
+      </fileset>	
     </copy>
     <mkdir dir="${build.conf}"/>
     <copy todir="${build.conf}">
@@ -147,7 +161,7 @@
     </exec>
   </target>
 
-  <target name="compile-core" depends="clover,init,jspc" description="Compile hbase core">
+  <target name="compile-core" depends="clover,init,ivy-retrieve-common,jspc" description="Compile hbase core">
    <!--Compile whats under src and generated java classes made from jsp-->
    <javac
     encoding="${build.encoding}"
@@ -166,13 +180,13 @@
      <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
-     </subant>  	
+     </subant>    
   </target>
 
   <target name="compile" depends="compile-core, compile-contrib"
      description="Compile core, contrib">
   </target>
-	
+  
   <target name="jar" depends="compile"
        description="Build jar">
     <!--Copy over any properties under src-->
@@ -187,9 +201,9 @@
       </fileset>
       <zipfileset dir="conf" prefix="conf" includes="hbase-default.xml" />
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
-   		<manifest>
+      <manifest>
             <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapreduce/Driver" />
-    	</manifest>
+      </manifest>
     </jar>
   </target>
 
@@ -198,14 +212,13 @@
      -->
   <target name="jspc" depends="init" unless="jspc.not.required">
     <path id="jspc.classpath">
-      <fileset dir="${basedir}/lib/jsp-2.1/">
-        <include name="*jar" />
-      </fileset>
-      <fileset dir="${basedir}/lib/">
+      <fileset dir="${common.ivy.lib.dir}">
         <include name="servlet-api*jar" />
         <include name="commons-logging*jar" />
         <include name="jasper-*jar" />
         <include name="jetty-*jar" />
+      	<include name="jsp-*jar" />
+      	<include name="commons-el*jar" />
       </fileset>
     </path>
     <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" >
@@ -290,7 +303,7 @@
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
-    </subant>  	
+    </subant>   
     <mkdir dir="${dist.dir}/webapps"/>
     <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}" />
@@ -413,11 +426,11 @@
       doctitle="${Name} ${version} API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       >
-    	<packageset dir="${src.dir}">
+      <packageset dir="${src.dir}">
           <include name="org/apache/**"/>
           <exclude name="org/onelab/**"/>
           <exclude name="org/apache/hadoop/hbase/thrift/generated/**"/>
-    	</packageset>
+      </packageset>
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
@@ -426,10 +439,10 @@
           </fileset>
           <pathelement path="${java.class.path}"/>
         </classpath>
-    	<packageset dir="src/contrib/transactional/src/java"/>
-    	<packageset dir="src/contrib/stargate/src/java"/>
+      <packageset dir="src/contrib/transactional/src/java"/>
+      <packageset dir="src/contrib/stargate/src/java"/>
     </javadoc>
-  </target>	
+  </target> 
 
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
@@ -439,18 +452,26 @@
            ${src.test} *must* come before rest of class path. Otherwise
                     the test hbase-site.xml will not be found.
          ============  *  *  *  *  *  N O T E  *  *  *  *  * ============ -->
+
     <pathelement location="${src.test}"/>
     <pathelement location="${build.test}" />
-    <path refid="classpath"/>
+  	<path  refid="classpath" />
+    <fileset dir="${test.ivy.lib.dir}">
+      <include name="*jar" />
+    </fileset>
     <pathelement location="${build.dir}"/>
     <pathelement path="${clover.jar}"/>
   </path>
+	
+  <target name="test.list">
+  	<echo message="${toString:test.classpath}"/>
+  </target>	
 
   <!--'compile-test' used to depend on 'compile' but removed it. Hudson doesn't like
       redoing init and jscpc at this stage of the game; i.e. the prereqs
       for compile.  TODO: Investigate why.  For now, test will fail
       if not preceeded by manual 'jar' or 'compile' invokation -->
-  <target name="compile-core-test" depends="compile" description="Build test jar">
+  <target name="compile-core-test" depends="compile,ivy-retrieve-test" description="Build test jar">
     <javac encoding="${build.encoding}" 
        srcdir="${src.test}" 
        includes="**/*.java" 
@@ -472,8 +493,8 @@
     </jar>
   </target>
 
-  <target name="test-core" depends="compile-core-test"
-   	  description="Build test jar and run tests">
+  <target name="test-core" depends="compile-core-test,test.list"
+      description="Build test jar and run tests">
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
     <junit
@@ -522,7 +543,7 @@
   <target name="clean-contrib" description="Clean contrib">
      <subant target="clean">        
         <fileset file="src/contrib/build.xml"/>
-     </subant>  	
+     </subant>    
   </target>
   <target name="clean" depends="clean-contrib" description="Clean all old builds">
     <delete dir="${build.dir}"/>

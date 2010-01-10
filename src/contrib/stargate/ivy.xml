@@ -1,0 +1,128 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<ivy-module version="1.0">
+  <info organisation="org.apache.hadoop" module="${ant.project.name}" revision="${version}">
+    <license name="Apache 2.0"/>
+    <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
+    <description>
+        Hadoop Core
+    </description>
+  </info>
+  <configurations defaultconfmapping="default">
+    <!--these match the Maven configurations-->
+    <conf name="default" extends="master,runtime"/>
+    <conf name="master" description="contains the artifact but no dependencies"/>
+    <conf name="runtime" description="runtime but not the artifact"
+      extends="client,server,s3-server,kfs,mandatory,jetty,ftp"/>
+
+    <conf name="mandatory" description="contains the critical  dependencies"
+      extends="commons-logging,log4j"/>
+
+    <!--
+    These public configurations contain the core dependencies for running hadoop client or server.
+    The server is effectively a superset of the client.
+    -->
+    <conf name="client" description="client-side dependencies"
+      extends="mandatory,httpclient"/>
+    <conf name="server" description="server-side dependencies"
+      extends="client"/>
+    <conf name="s3-client" description="dependencies for working with S3/EC2 infrastructure"
+      extends="client"/>
+    <conf name="s3-server" description="dependencies for running on S3/EC2 infrastructure"
+      extends="s3-client,server"/>
+    <conf name="kfs" description="dependencies for KFS file system support"/>
+    <conf name="ftp" description="dependencies for workign with FTP filesytems" 
+              extends="mandatory"/>
+   <conf name="jetty" description="Jetty provides the in-VM HTTP daemon" extends="commons-logging"/>
+
+   <conf name="common" extends="runtime,mandatory,httpclient,ftp,jetty"
+          description="common artifacts"/>
+    <!--Testing pulls in everything-->
+   <conf name="test" extends="master" description="the classpath needed to run tests"/>
+
+    <!--Private configurations. -->
+
+    <conf name="javadoc" visibility="private" description="artifacts required while performing doc generation"
+      extends="common,mandatory,jetty,lucene"/>
+
+    <conf name="releaseaudit" visibility="private"
+  description="Artifacts required for releaseaudit target"/>
+     
+    <conf name="commons-logging" visibility="private"/>
+    <conf name="httpclient" visibility="private" extends="commons-logging"/>
+    <conf name="log4j" visibility="private"/>
+    <conf name="lucene" visibility="private"/>
+    <conf name="jdiff" visibility="private" extends="log4j,s3-client,jetty,server"/>
+    <conf name="checkstyle" visibility="private"/>
+
+  </configurations>
+
+  <publications>
+    <!--get the artifact from our module name-->
+    <artifact conf="master"/>
+  </publications>
+  <dependencies>
+   <!--  Common -->
+   <dependency org="javax.ws.rs" name="jsr311-api" 
+               rev="${jsr311.version}" conf="common->default"/>
+   <dependency org="commons-cli"  name="commons-cli"
+      rev="${commons-cli.version}" conf="client->default"/>
+   <dependency org="com.sun.jersey" name="jersey-server" 
+      rev="${jersey.version}" conf="common->default" />
+   <dependency org="com.sun.jersey" name="jersey-json" 
+      rev="${jersey.version}" conf="common->default" />
+      
+   <dependency org="org.apache.hadoop" name="hadoop-core" 
+               rev="${hadoop-core.version}" conf="common->default" >
+      <exclude conf="test"/>  
+   </dependency>        
+   <dependency org="org.apache.hadoop" name="hadoop-hdfs" 
+               rev="${hadoop-hdfs.version}" conf="common->default">
+      <exclude conf="test"/>  
+   </dependency>             
+   <dependency org="org.apache.hadoop" name="hadoop-mapred" 
+               rev="${hadoop-mapred.version}" conf="common->default">
+      <exclude conf="test"/>  
+   </dependency>                       
+               
+   <dependency org="com.google.protobuf" name="protobuf-java" 
+               rev="${protobuf.version}" conf="common->default"/> 
+    <dependency org="org.jruby" name="jruby-complete"
+              rev="${jruby.version}" conf="common->default" />                
+   <!--
+   TODO: Enter URL in ivysettings.xml that stores the artifacts of zookeeper     
+
+   <dependency org="org.apache.hadoop.zookeeper" name="zookeeper" 
+               rev="${zookeeper.version}" conf="common->default"/> 
+   -->
+
+   <!--  Test  -->
+   <dependency org="org.apache.hadoop" name="hadoop-core-test" 
+               rev="${hadoop-core.version}" conf="test->default" transitive="false" /> 
+   <dependency org="org.apache.hadoop" name="hadoop-hdfs-test" 
+               rev="${hadoop-hdfs.version}" conf="test->default" transitive="false" /> 
+   <dependency org="org.apache.hadoop" name="hadoop-mapred-test" 
+               rev="${hadoop-mapred.version}" conf="test->default" transitive="false" /> 
+               
+   <dependency org="log4j" name="log4j" 
+               rev="${log4j.version}" conf="test->master">
+      <exclude conf="jmx,mail,jms"/>  
+    </dependency>                
+               
+    </dependencies>
+</ivy-module>
