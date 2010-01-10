@@ -86,6 +86,8 @@ Trunk (unreleased changes)
 
     HDFS-187. Initialize secondary namenode http address in TestStartup.
     (Todd Lipcon via szetszwo)
+    
+    HDFS-775. FSDataset calls getCapacity() twice. (stevel)
 
 Release 0.21.0 - Unreleased
 
