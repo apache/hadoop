@@ -88,6 +88,8 @@ Trunk (unreleased changes)
     (Todd Lipcon via szetszwo)
     
     HDFS-775. FSDataset calls getCapacity() twice. (stevel)
+    
+    HDFS-885. Datanode toString() NPEs on null dnRegistration. (stevel)
 
 Release 0.21.0 - Unreleased
 

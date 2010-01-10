@@ -1422,8 +1422,10 @@ public class DataNode extends Configured
   public String toString() {
     return "DataNode{" +
       "data=" + data +
-      ", localName='" + dnRegistration.getName() + "'" +
-      ", storageID='" + dnRegistration.getStorageID() + "'" +
+      (dnRegistration != null ?
+          (", localName='" + dnRegistration.getName() + "'" +
+              ", storageID='" + dnRegistration.getStorageID() + "'")
+          : "") +
       ", xmitsInProgress=" + xmitsInProgress.get() +
       "}";
   }
