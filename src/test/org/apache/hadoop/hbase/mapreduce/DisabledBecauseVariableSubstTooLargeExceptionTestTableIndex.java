@@ -45,12 +45,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MultiSearcher;
+import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Searchable;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.store.FSDirectory;
 
 /**
  * Test Map/Reduce job to build index over HBase table
@@ -205,13 +209,13 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
     ResultScanner scanner = null;
     try {
       if (indexDirs.length == 1) {
-        searcher = new IndexSearcher((new File(indexDirs[0].getPath().
-          toUri())).getAbsolutePath());
+        searcher = new IndexSearcher(FSDirectory.open(new File(indexDirs[0].getPath().
+          toUri())));
       } else if (indexDirs.length > 1) {
         Searchable[] searchers = new Searchable[indexDirs.length];
         for (int i = 0; i < indexDirs.length; i++) {
-          searchers[i] = new IndexSearcher((new File(indexDirs[i].getPath().
-            toUri()).getAbsolutePath()));
+          searchers[i] = new IndexSearcher(FSDirectory.open(new File(indexDirs[i].getPath().
+            toUri())));
         }
         searcher = new MultiSearcher(searchers);
       } else {
@@ -235,7 +239,9 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
       for (Result r : scanner) {
         String value = Bytes.toString(r.getRow());
         Term term = new Term(rowkeyName, value);
-        int hitCount = searcher.search(new TermQuery(term)).length();
+        CountCollector collector = new CountCollector();
+        searcher.search(new TermQuery(term), collector);
+        int hitCount = collector.getCount();
         assertEquals("check row " + value, 1, hitCount);
         count++;
       }
@@ -250,6 +256,48 @@ public class DisabledBecauseVariableSubstTooLargeExceptionTestTableIndex extends
         scanner.close();
     }
   }
+  
+  /**
+   * Collector that retrieves the count of the documents.
+   * 
+   * @author Kay Kay
+   *
+   */
+  public static class CountCollector extends Collector {
+
+    private int count; 
+    
+    public CountCollector() { 
+      count = 0;
+    }
+    
+    public int getCount() { 
+      return this.count;
+    }
+    
+    @Override
+    public boolean acceptsDocsOutOfOrder() {
+      //Make this accept docs out of order as some collectors can be efficient that way.
+      return true;
+    }
+  
+    @Override
+    public void collect(int doc) throws IOException {
+      ++count;
+    }
+
+    @Override
+    public void setNextReader(IndexReader reader, int docBase)
+    throws IOException {
+      //Do nothing		
+    }
+
+    @Override
+    public void setScorer(Scorer scorer) throws IOException {
+      //Nothing to do with scorer.
+    } 
+  }
+
   /**
    * @param args unused
    */

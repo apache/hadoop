@@ -37,6 +37,7 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -53,7 +54,15 @@ public class IndexConfiguration extends Configuration {
   static final String HBASE_COLUMN_NAME = "hbase.column.name";
   static final String HBASE_COLUMN_STORE = "hbase.column.store";
   static final String HBASE_COLUMN_INDEX = "hbase.column.index";
+  
+  /**
+   * Tokenize property terminology is deprecated in lucene / replaced by analyze.
+   * @see #HBASE_COLUMN_ANALYZE
+   * @deprecated
+   */
   static final String HBASE_COLUMN_TOKENIZE = "hbase.column.tokenize";
+  static final String HBASE_COLUMN_ANALYZE = "hbase.column.analyze";
+  
   static final String HBASE_COLUMN_BOOST = "hbase.column.boost";
   static final String HBASE_COLUMN_OMIT_NORMS = "hbase.column.omit.norms";
   static final String HBASE_INDEX_ROWKEY_NAME = "hbase.index.rowkey.name";
@@ -131,14 +140,34 @@ public class IndexConfiguration extends Configuration {
     getColumn(columnName).setBoolean(HBASE_COLUMN_STORE, store);
   }
 
+  /**
+   * @deprecated 
+   * @see Use #isAnalyze(String) for replacement.
+   * @param columnName
+   * @return
+   */
   public boolean isTokenize(String columnName) {
     return getColumn(columnName).getBoolean(HBASE_COLUMN_TOKENIZE, true);
   }
 
+  /**
+   * @deprecated
+   * @see Use #setAnalyze(String, boolean) for replacement.
+   * @param columnName
+   * @param tokenize
+   */
   public void setTokenize(String columnName, boolean tokenize) {
     getColumn(columnName).setBoolean(HBASE_COLUMN_TOKENIZE, tokenize);
   }
 
+  public boolean isAnalyze(String columnName) {
+	    return getColumn(columnName).getBoolean(HBASE_COLUMN_ANALYZE, true);
+  }
+
+  public void setAnalyze(String columnName, boolean analyze) {
+	  getColumn(columnName).setBoolean(HBASE_COLUMN_ANALYZE, analyze);
+  }
+	  
   public float getBoost(String columnName) {
     return getColumn(columnName).getFloat(HBASE_COLUMN_BOOST, 1.0f);
   }
@@ -166,7 +195,7 @@ public class IndexConfiguration extends Configuration {
 
   public String getAnalyzerName() {
     return get(HBASE_INDEX_ANALYZER_NAME,
-        "org.apache.lucene.analysis.standard.StandardAnalyzer");
+        StandardAnalyzer.class.getName());
   }
 
   public void setAnalyzerName(String analyzerName) {

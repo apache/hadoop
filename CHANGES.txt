@@ -292,6 +292,7 @@ Release 0.21.0 - Unreleased
    HBASE-2035  Binary values are formatted wrong in shell
    HBASE-2095  TIF shuold support more confs for the scanner (Bassam Tabbara
                via Andrew Purtell)
+   HBASE-2107  Upgrading Lucene 2.2 to Lucene 3.0.0 (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
@@ -32,7 +33,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
 import org.apache.lucene.search.Similarity;
+import org.apache.lucene.store.FSDirectory;
 
 /**
  * Create a local index, unwrap Lucene documents created by reduce, add them to
@@ -87,8 +90,8 @@ extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
     }
 
     // build locally first
-    final IndexWriter writer = new IndexWriter(fs.startLocalOutput(perm, temp)
-        .toString(), analyzer, true);
+    final IndexWriter writer = new IndexWriter(FSDirectory.open(new File(fs.startLocalOutput(perm, temp)
+        .toString())), analyzer, true, MaxFieldLength.LIMITED);
 
     // no delete, so no need for maxBufferedDeleteTerms
     writer.setMaxBufferedDocs(indexConf.getMaxBufferedDocs());
@@ -98,11 +101,10 @@ extends FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
     String similarityName = indexConf.getSimilarityName();
     if (similarityName != null) {
       try {
-        Class<?> similarityClass = Class.forName(similarityName);
-        Similarity similarity = (Similarity) similarityClass.newInstance();
+        Similarity similarity = Class.forName(similarityName).asSubclass(Similarity.class).newInstance();
         writer.setSimilarity(similarity);
       } catch (Exception e) {
-        throw new IOException("Error in creating a similarty object "
+        throw new IOException("Error in creating a similarity object "
             + similarityName);
       }
     }
