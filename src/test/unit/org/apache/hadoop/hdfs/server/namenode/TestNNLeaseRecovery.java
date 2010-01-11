@@ -24,11 +24,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -46,7 +48,10 @@ import java.io.File;
 import java.io.IOException;
 
 public class TestNNLeaseRecovery {
-  public static final Log LOG = LogFactory.getLog(TestNNLeaseRecovery.class);
+  private static final Log LOG = LogFactory.getLog(TestNNLeaseRecovery.class);
+  private static final String NAME_DIR =
+    MiniDFSCluster.getBaseDirectory() + "name";
+
   FSNamesystem fsn;
   Configuration conf;
   
@@ -62,6 +67,8 @@ public class TestNNLeaseRecovery {
   @Before
   public void startUp() throws IOException {
     conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, NAME_DIR);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, NAME_DIR);
     // avoid stubbing access control
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false); 
     NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
@@ -80,11 +87,13 @@ public class TestNNLeaseRecovery {
   public void tearDown() throws IOException {
     if (fsn != null) {
       try {
-        if (fsn.getFSImage() != null) fsn.getFSImage().close();
         fsn.close();
+      } catch(Exception e) {
+        LOG.error("Cannot close: ", e);
       } finally {
-        File dir = new File(conf.get("hadoop.tmp.dir"));
-        if (dir != null) deleteDir(dir);
+        File dir = new File(NAME_DIR);
+        if (dir != null)
+          assertTrue("Cannot delete name-node dirs", FileUtil.fullyDelete(dir));
       }
     }
   }
@@ -371,6 +380,7 @@ public class TestNNLeaseRecovery {
     FSDirectory fsDir = mock(FSDirectory.class);
     INodeFileUnderConstruction iNFmock = mock(INodeFileUnderConstruction.class);
 
+    fsn.dir.close();
     fsn.dir = fsDir;
     FSImage fsImage = mock(FSImage.class);
     FSEditLog editLog = mock(FSEditLog.class);
@@ -408,22 +418,5 @@ public class TestNNLeaseRecovery {
     }
 
     when(fsDir.getFileINode(anyString())).thenReturn(iNFmock);
-  }
-
-  private static boolean deleteDir(File dir) {
-    if (dir == null) return false;
-    
-    if (dir.isDirectory()) {
-      String[] children = dir.list();
-      for (String aChildren : children) {
-        boolean success = deleteDir(new File(dir, aChildren));
-        if (!success) {
-          return false;
-        }
-      }
-    }
-
-    // The directory is now empty so delete it
-    return dir.delete();
   }
 }

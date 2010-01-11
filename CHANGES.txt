@@ -21,7 +21,7 @@ Trunk (unreleased changes)
     HDFS-703. Replace current fault injection implementation with one
     from (cos)
 
-    HDFS-754. Reduce ivy console output to ovservable level (cos)
+    HDFS-754. Reduce ivy console output to observable level (cos)
 
     HDFS-832. HDFS side of HADOOP-6222. (cos)
 
@@ -607,6 +607,8 @@ Release 0.21.0 - Unreleased
     (Cristian Ivascu via dhruba)
 
     HDFS-868. Fix link to Hadoop Upgrade Wiki. (Chris A. Mattmann via shv)
+    
+    HDFS-880. TestNNLeaseRecovery fails on windows (cos, shv)
 
 Release 0.20.2 - Unreleased
 
