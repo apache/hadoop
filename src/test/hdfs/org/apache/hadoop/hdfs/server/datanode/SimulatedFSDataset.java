@@ -790,7 +790,15 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
   throws IOException {
-    return new ReplicaRecoveryInfo(rBlock.getBlock(), ReplicaState.FINALIZED);
+    Block b = rBlock.getBlock();
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      throw new IOException("No such Block " + b );  
+    }
+
+    return new ReplicaRecoveryInfo(binfo.getBlockId(), binfo.getBytesOnDisk(), 
+        binfo.getGenerationStamp(), 
+        binfo.isFinalized()?ReplicaState.FINALIZED : ReplicaState.RBW);
   }
 
   @Override // FSDatasetInterface

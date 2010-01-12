@@ -37,8 +37,8 @@ public class ReplicaRecoveryInfo extends Block {
   public ReplicaRecoveryInfo() {
   }
 
-  public ReplicaRecoveryInfo(Block r, ReplicaState rState) {
-    super(r);
+  public ReplicaRecoveryInfo(long blockId, long diskLen, long gs, ReplicaState rState) {
+    set(blockId, diskLen, gs);
     originalState = rState;
   }
 

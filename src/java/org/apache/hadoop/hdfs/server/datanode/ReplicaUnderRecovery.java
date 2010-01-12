@@ -168,6 +168,8 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   }
 
   ReplicaRecoveryInfo createInfo() {
-    return new ReplicaRecoveryInfo(this, getOrignalReplicaState()); 
+    return new ReplicaRecoveryInfo(original.getBlockId(), 
+        original.getBytesOnDisk(), original.getGenerationStamp(),
+        getOrignalReplicaState()); 
   }
 }
