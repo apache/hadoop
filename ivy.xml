@@ -91,7 +91,11 @@
       <exclude conf="test"/>  
    </dependency>            
    <dependency org="org.apache.lucene" name="lucene-core"
-               rev="${lucene.version}" conf="common->default" />               
+               rev="${lucene.version}" conf="common->default" />      
+   <dependency org="log4j" name="log4j" 
+               rev="${log4j.version}" conf="common->master">
+      <exclude conf="jmx,mail,jms"/>  
+   </dependency>                        
    <!--
    TODO: Enter URL in ivysettings.xml that stores the artifacts of Zookeeper / thrift.     
 
@@ -110,9 +114,6 @@
                rev="${hadoop-mapred.version}" conf="test->default" transitive="false"/> 
    <dependency org="org.apache.commons" name="commons-math" 
                rev="${commons-math.version}" conf="test->default"/> 
-   <dependency org="log4j" name="log4j" 
-               rev="${log4j.version}" conf="test->master">
-      <exclude conf="jmx,mail,jms"/>  
-    </dependency>
+
     </dependencies>
 </ivy-module>

@@ -2323,7 +2323,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
               LOG.info("vmInputArguments=" + runtime.getInputArguments());
             }
             Constructor<? extends HRegionServer> c =
-              regionServerClass.getConstructor(HBaseConfiguration.class);
+              regionServerClass.getConstructor(Configuration.class);
             HRegionServer hrs = c.newInstance(conf);
             Thread t = new Thread(hrs);
             t.setName("regionserver" + hrs.server.getListenerAddress());

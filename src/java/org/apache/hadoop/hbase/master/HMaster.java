@@ -1199,7 +1199,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             (new LocalHBaseCluster(conf)).startup();
           } else {
             Constructor<? extends HMaster> c =
-              clazz.getConstructor(HBaseConfiguration.class);
+              clazz.getConstructor(Configuration.class);
             HMaster master = c.newInstance(conf);
             if (master.shutdownRequested.get()) {
               LOG.info("Won't bring the Master up as a shutdown is requested");

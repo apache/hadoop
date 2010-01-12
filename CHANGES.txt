@@ -152,6 +152,7 @@ Release 0.21.0 - Unreleased
                (Lars George and Gary Helmling via Stack)
    HBASE-2093  [stargate] RowSpec parse bug
    HBASE-2100  [EC2] Adjust fs.file-max
+   HBASE-2114  Can't start HBase in trunk (JD and Kay Kay via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
