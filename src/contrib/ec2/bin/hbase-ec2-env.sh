@@ -34,7 +34,7 @@ EC2_CERT=
 EC2_ROOT_SSH_KEY=
 
 # The version of HBase to use.
-HBASE_VERSION=0.20.3-dev
+HBASE_VERSION=@HBASE_VERSION@
 
 # The version of Hadoop to use.
 HADOOP_VERSION=0.20.1
@@ -42,8 +42,7 @@ HADOOP_VERSION=0.20.1
 # The Amazon S3 bucket where the HBase AMI is stored.
 # Change this value only if you are creating your own (private) AMI
 # so you can store it in a bucket you own.
-#S3_BUCKET=hbase-images
-S3_BUCKET=iridiant-bundles
+S3_BUCKET=apache-hbase-images
 
 # Enable public access web interfaces
 ENABLE_WEB_PORTS=false

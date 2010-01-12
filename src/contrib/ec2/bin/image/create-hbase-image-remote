@@ -37,7 +37,7 @@ rm -f "$bin"/credentials.sh
 # Install Java
 echo "Downloading and installing java binary."
 cd /usr/local
-wget -nv -O java.bin http://iridiant.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-${arch}.bin
+wget -nv -O java.bin http://hbase.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-${arch}.bin
 sh java.bin
 rm -f java.bin
 
@@ -66,7 +66,7 @@ sed -i \
 # Install HBase
 echo "Installing HBase $HBASE_VERSION."
 cd /usr/local
-wget -nv http://iridiant.s3.amazonaws.com/hbase/hbase-$HBASE_VERSION.tar.gz
+wget -nv http://hbase.s3.amazonaws.com/hbase/hbase-$HBASE_VERSION.tar.gz
 tar xzf hbase-$HBASE_VERSION.tar.gz
 rm -f hbase-$HBASE_VERSION.tar.gz
 
@@ -97,7 +97,7 @@ echo '    StrictHostKeyChecking no' >> /etc/ssh/ssh_config
 
 # Install LZO
 echo "Installing LZO codec support"
-wget -nv -O /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz http://iridiant.s3.amazonaws.com/hbase/lzo-linux-${HADOOP_VERSION}.tar.gz
+wget -nv -O /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz http://hbase.s3.amazonaws.com/hbase/lzo-linux-${HADOOP_VERSION}.tar.gz
 cd /usr/local/hadoop-${HADOOP_VERSION} && tar xzf /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
 cd /usr/local/hbase-${HBASE_VERSION} && tar xzf /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
 rm -f /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz

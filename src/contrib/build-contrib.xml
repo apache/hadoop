@@ -21,7 +21,7 @@
 
 <project name="hbasebuildcontrib">
 
-  <property name="version" value="0.20.0"/>
+  <property name="version" value="0.20.3"/>
   <property name="name" value="${ant.project.name}"/>
 
   <!-- Load all the default properties, and any the user wants    -->
