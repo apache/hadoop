@@ -265,6 +265,21 @@ public class BlockManager {
       "commitBlock length is less than the stored one "
       + commitBlock.getNumBytes() + " vs. " + lastBlock.getNumBytes();
     ((BlockInfoUnderConstruction)lastBlock).commitBlock(commitBlock);
+    
+    // Adjust disk space consumption if required
+    long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
+    if (diff > 0) {
+      try {
+        String path = /* For finding parents */
+        namesystem.leaseManager.findPath(fileINode);
+        namesystem.dir.updateSpaceConsumed(path, 0, -diff
+            * fileINode.getReplication());
+      } catch (IOException e) {
+        FSNamesystem.LOG
+            .warn("Unexpected exception while updating disk space : "
+                + e.getMessage());
+      }
+    }
   }
 
   /**
@@ -1022,73 +1037,6 @@ public class BlockManager {
 
     // add block to the data-node
     boolean added = node.addBlock(storedBlock);
-
-    if (block != storedBlock) {
-      long cursize = storedBlock.getNumBytes();
-      long newsize = block.getNumBytes();
-      if (newsize >= 0) {
-        if (cursize == 0) {
-          storedBlock.setNumBytes(newsize);
-        } else if (cursize != newsize) {
-          FSNamesystem.LOG.warn("Inconsistent size for block " + block +
-                   " reported from " + node.getName() +
-                   " current size is " + cursize +
-                   " reported size is " + newsize);
-          try {
-            if (cursize > newsize) {
-              // new replica is smaller in size than existing block.
-              // Mark the new replica as corrupt.
-              FSNamesystem.LOG.warn("Mark new replica "
-                  + block + " from " + node.getName() + " as corrupt "
-                  + "because length is shorter than existing ones");
-              markBlockAsCorrupt(storedBlock, node);
-            } else {
-              // new replica is larger in size than existing block.
-              // Mark pre-existing replicas as corrupt.
-              int numNodes = storedBlock.numNodes();
-              int count = 0;
-              DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
-              Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(storedBlock);
-              while (it.hasNext()) {
-                DatanodeDescriptor dd = it.next();
-                if (!dd.equals(node)) {
-                  nodes[count++] = dd;
-                }
-              }
-              for (int j = 0; j < count; j++) {
-                FSNamesystem.LOG.warn("Mark existing replica "
-                        + block + " from " + node.getName() + " as corrupt "
-                        + "because its length is shorter than the new one");
-                markBlockAsCorrupt(storedBlock, nodes[j]);
-              }
-              //
-              // change the size of block in blocksMap
-              //
-              storedBlock.setNumBytes(newsize);
-            }
-          } catch (IOException e) {
-            FSNamesystem.LOG.warn("Error in deleting bad block " + block + e);
-          }
-        }
-
-        // Updated space consumed if required.
-        long diff = fileINode.getPreferredBlockSize() - storedBlock.getNumBytes();
-        
-        if (diff > 0 && fileINode.isUnderConstruction() &&
-            cursize < storedBlock.getNumBytes()) {
-          try {
-            String path = /* For finding parents */
-            namesystem.leaseManager.findPath((INodeFileUnderConstruction)fileINode);
-            namesystem.dir.updateSpaceConsumed(path, 0, -diff
-                * fileINode.getReplication());
-          } catch (IOException e) {
-            FSNamesystem.LOG
-                .warn("Unexpected exception while updating disk space : "
-                    + e.getMessage());
-          }
-        }
-      }
-    }
 
     int curReplicaDelta = 0;
     if (added) {

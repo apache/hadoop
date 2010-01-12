@@ -52,8 +52,7 @@ import org.apache.log4j.Level;
 
 
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests various cases during file creation.
  */
 public class TestFileCreation extends junit.framework.TestCase {
   static final String DIR = "/" + TestFileCreation.class.getSimpleName() + "/";
@@ -70,10 +69,6 @@ public class TestFileCreation extends junit.framework.TestCase {
   static final int numBlocks = 2;
   static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
-
-  // The test file is 2 times the blocksize plus one. This means that when the
-  // entire file is written, the first two blocks definitely get flushed to
-  // the datanodes.
 
   // creates a file but does not close it
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
@@ -98,49 +93,6 @@ public class TestFileCreation extends junit.framework.TestCase {
   public static void writeFile(FSDataOutputStream stm, int size) throws IOException {
     byte[] buffer = AppendTestUtil.randomBytes(seed, size);
     stm.write(buffer, 0, size);
-  }
-
-  //
-  // verify that the data written to the full blocks are sane
-  // 
-  private void checkFile(FileSystem fileSys, Path name, int repl)
-    throws IOException {
-    boolean done = false;
-
-    // wait till all full blocks are confirmed by the datanodes.
-    while (!done) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {}
-      done = true;
-      BlockLocation[] locations = fileSys.getFileBlockLocations(
-          fileSys.getFileStatus(name), 0, fileSize);
-      if (locations.length < numBlocks) {
-        done = false;
-        continue;
-      }
-      for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].getHosts().length < repl) {
-          done = false;
-          break;
-        }
-      }
-    }
-    FSDataInputStream stm = fileSys.open(name);
-    final byte[] expected;
-    if (simulatedStorage) {
-      expected = new byte[numBlocks * blockSize];
-      for (int i= 0; i < expected.length; i++) {  
-        expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
-      }
-    } else {
-      expected = AppendTestUtil.randomBytes(seed, numBlocks*blockSize);
-    }
-    // do a sanity check. Read the file
-    byte[] actual = new byte[numBlocks * blockSize];
-    stm.readFully(0, actual);
-    stm.close();
-    checkData(actual, 0, expected, "Read 1");
   }
 
   static private void checkData(byte[] actual, int from, byte[] expected, String message) {
@@ -201,7 +153,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   /**
-   * Test that file data becomes available before file is closed.
+   * Test if file creation and disk space consumption works right
    */
   public void testFileCreation() throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -240,6 +192,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       // create a new file in home directory. Do not close it.
       //
       Path file1 = new Path("filestatus.dat");
+      Path parent = file1.getParent();
+      fs.mkdirs(parent);
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      dfs.setQuota(file1.getParent(), 100L, blockSize*5);
       FSDataOutputStream stm = createFile(fs, file1, 1);
 
       // verify that file exists in FS namespace
@@ -250,23 +206,18 @@ public class TestFileCreation extends junit.framework.TestCase {
       // write to file
       writeFile(stm);
 
-      // Make sure a client can read it before it is closed.
-      checkFile(fs, file1, 1);
-
-      // verify that file size has changed
-      long len = fs.getFileStatus(file1).getLen();
-      assertTrue(file1 + " should be of size " + (numBlocks * blockSize) +
-                 " but found to be of size " + len, 
-                  len == numBlocks * blockSize);
-
       stm.close();
 
       // verify that file size has changed to the full size
-      len = fs.getFileStatus(file1).getLen();
+      long len = fs.getFileStatus(file1).getLen();
       assertTrue(file1 + " should be of size " + fileSize +
                  " but found to be of size " + len, 
                   len == fileSize);
       
+      // verify the disk space the file occupied
+      long diskSpace = dfs.getContentSummary(file1.getParent()).getLength();
+      assertEquals(file1 + " should take " + fileSize + " bytes disk space " +
+          "but found to take " + diskSpace + " bytes", fileSize, diskSpace);
       
       // Check storage usage 
       // can't check capacities for real storage since the OS file system may be changing under us.
