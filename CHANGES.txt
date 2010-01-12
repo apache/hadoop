@@ -153,6 +153,8 @@ Release 0.21.0 - Unreleased
    HBASE-2093  [stargate] RowSpec parse bug
    HBASE-2100  [EC2] Adjust fs.file-max
    HBASE-2114  Can't start HBase in trunk (JD and Kay Kay via JD)
+   HBASE-2115  ./hbase shell would not launch due to missing jruby dependency
+               (Kay Kay via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

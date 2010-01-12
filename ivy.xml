@@ -95,7 +95,9 @@
    <dependency org="log4j" name="log4j" 
                rev="${log4j.version}" conf="common->master">
       <exclude conf="jmx,mail,jms"/>  
-   </dependency>                        
+   </dependency>            
+   <dependency org="org.jruby" name="jruby-complete"
+               rev="${jruby.version}" conf="common->default" />
    <!--
    TODO: Enter URL in ivysettings.xml that stores the artifacts of Zookeeper / thrift.     
 
