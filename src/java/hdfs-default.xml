@@ -236,7 +236,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.datanode.data.dir</name>
-  <value>${hadoop.tmp.dir}/dfs/data</value>
+  <value>file://${hadoop.tmp.dir}/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
   should store its blocks.  If this is a comma-delimited
   list of directories, then data will be stored in all named

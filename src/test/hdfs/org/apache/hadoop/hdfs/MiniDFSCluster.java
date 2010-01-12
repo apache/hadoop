@@ -310,6 +310,14 @@ public class MiniDFSCluster {
   }
 
   /**
+   * Get configuration.
+   * @return Configuration of this MiniDFSCluster
+   */
+  public Configuration getConfiguration() {
+    return conf;
+  }
+
+  /**
    * wait for the cluster to get out of 
    * safemode.
    */
@@ -415,14 +423,16 @@ public class MiniDFSCluster {
           throw new IOException("Mkdirs failed to create directory for DataNode "
                                 + i + ": " + dir1 + " or " + dir2);
         }
-        dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dir1.getPath() + "," + dir2.getPath()); 
+        dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+                    fileAsURI(dir1) + "," + fileAsURI(dir2));
       }
       if (simulatedCapacities != null) {
         dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);
         dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
             simulatedCapacities[i-curDatanodesNum]);
       }
-      System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
+      System.out.println("Starting DataNode " + i + " with "
+                         + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + ": "
                          + dnConf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
       if (hosts != null) {
         dnConf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, hosts[i - curDatanodesNum]);
@@ -441,6 +451,9 @@ public class MiniDFSCluster {
         NetUtils.addStaticResolution(hosts[i - curDatanodesNum], "localhost");
       }
       DataNode dn = DataNode.instantiateDataNode(dnArgs, dnConf);
+      if(dn == null)
+        throw new IOException("Cannot start DataNode in "
+            + dnConf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
       //since the HDFS does things based on IP:port, we need to add the mapping
       //for IP:port to rackId
       String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();

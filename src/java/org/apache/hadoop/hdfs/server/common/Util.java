@@ -52,12 +52,14 @@ public final class Util {
     try {
       u = new URI(s);
     } catch (URISyntaxException e){
-      LOG.warn("Path " + s + " should be specified as a URI " +
-      "in configuration files. Please update hdfs configuration.", e);
+      LOG.error("Syntax error in URI " + s
+          + ". Please check hdfs configuration.", e);
     }
 
     // if URI is null or scheme is undefined, then assume it's file://
     if(u == null || u.getScheme() == null){
+      LOG.warn("Path " + s + " should be specified as a URI "
+          + "in configuration files. Please update hdfs configuration.");
       u = fileAsURI(new File(s));
     }
     return u;

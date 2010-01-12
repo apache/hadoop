@@ -122,6 +122,12 @@ Release 0.21.0 - Unreleased
     HDFS-512. Block.equals() and compareTo() compare blocks based
     only on block Ids, ignoring generation stamps. (shv)
 
+    HDFS-512. Block.equals() and compareTo() compare blocks based
+    only on block Ids, ignoring generation stamps. (shv)
+
+    HDFS-873. Configuration specifies data-node storage directories as URIs.
+    (shv)
+
   NEW FEATURES
 
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
