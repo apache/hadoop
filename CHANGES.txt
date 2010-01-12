@@ -151,7 +151,6 @@ Release 0.21.0 - Unreleased
    HBASE-2068  MetricsRate is missing "registry" parameter
                (Lars George and Gary Helmling via Stack)
    HBASE-2093  [stargate] RowSpec parse bug
-   HBASE-2100  [EC2] Adjust fs.file-max
    HBASE-2114  Can't start HBase in trunk (JD and Kay Kay via JD)
    HBASE-2115  ./hbase shell would not launch due to missing jruby dependency
                (Kay Kay via JD)
@@ -233,7 +232,6 @@ Release 0.21.0 - Unreleased
    HBASE-1975  SingleColumnValueFilter: Add ability to match the value of
                previous versions of the specified column
                (Jeremiah Jacquet via Stack)
-   HBASE-1961  HBase EC2 scripts
    HBASE-1971  Unit test the full WAL replay cycle
    HBASE-1970  Export does one version only; make it configurable how many
                it does
@@ -242,14 +240,11 @@ Release 0.21.0 - Unreleased
    HBASE-1985  change HTable.delete(ArrayList) to HTable.delete(List)
    HBASE-1958  Remove "# TODO: PUT BACK !!! "${HADOOP_HOME}"/bin/hadoop
                dfsadmin -safemode wait"
-   HBASE-2009  [EC2] Support mapreduce
-   HBASE-2012  [EC2] LZO support
    HBASE-2011  Add zktop like output to HBase's master UI (Lars George via
                Andrew Purtell)
    HBASE-1995  Add configurable max value size check (Lars George via Andrew
                Purtell)
    HBASE-2017  Set configurable max value size check to 10MB
-   HBASE-2019  [EC2] remember credentials if not configured
    HBASE-2029  Reduce shell exception dump on console
                (Lars George and J-D via Stack)
    HBASE-2027  HConnectionManager.HBASE_INSTANCES leaks TableServers
@@ -267,8 +262,6 @@ Release 0.21.0 - Unreleased
                Andrew Purtell)
    HBASE-2028  Add HTable.incrementColumnValue support to shell (Lars George
                via Andrew Purtell)
-   HBASE-1982  [EC2] Handle potentially large and uneven instance startup
-               times
    HBASE-2062  Metrics documentation outdated (Lars George via JD)
    HBASE-2045  Update trunk and branch zk to just-release 3.2.2.
    HBASE-2074  Improvements to the hadoop-config script (Bassam Tabbara via
@@ -279,9 +272,6 @@ Release 0.21.0 - Unreleased
                UndeclaredThrowableException; frustrates rolling upgrade
    HBASE-2081  Set the retries higher in shell since client pause is lower
    HBASE-1956  Export HDFS read and write latency as a metric
-   HBASE-2080  [EC2] Support multivolume local instance storage
-   HBASE-2083  [EC2] HDFS DataNode no longer required on master
-   HBASE-2084  [EC2] JAVA_HOME handling broken
    HBASE-2036  Use Configuration instead of HBaseConfiguration (Enis Soztutar
                via Stack)
    HBASE-2085  StringBuffer -> StringBuilder - conversion of references as
@@ -298,9 +288,18 @@ Release 0.21.0 - Unreleased
    HBASE-2107  Upgrading Lucene 2.2 to Lucene 3.0.0 (Kay Kay via Stack)
    HBASE-2111  Move to ivy broke our being able to run in-place; i.e.
                ./bin/start-hbase.sh in a checkout
-   HBASE-2103  [EC2] pull version from build
 
   NEW FEATURES
+   HBASE-1961  HBase EC2 scripts
+   HBASE-1982  [EC2] Handle potentially large and uneven instance startup times
+   HBASE-2009  [EC2] Support mapreduce
+   HBASE-2012  [EC2] LZO support
+   HBASE-2019  [EC2] remember credentials if not configured
+   HBASE-2080  [EC2] Support multivolume local instance storage
+   HBASE-2083  [EC2] HDFS DataNode no longer required on master
+   HBASE-2084  [EC2] JAVA_HOME handling broken
+   HBASE-2100  [EC2] Adjust fs.file-max
+   HBASE-2103  [EC2] pull version from build
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
                hfiles direct) uploader
    HBASE-1433  Update hbase build to match core, use ivy, publish jars to maven
