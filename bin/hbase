@@ -86,11 +86,9 @@ IFS=
 
 # CLASSPATH initially contains $HBASE_CONF_DIR
 CLASSPATH="${HBASE_CONF_DIR}"
-
-
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
-# for developers, add hbase classes to CLASSPATH
+# For developers, add hbase classes to CLASSPATH
 if [ -d "$HBASE_HOME/build/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/classes
 fi
@@ -117,14 +115,23 @@ for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-for f in $HBASE_HOME/lib/jsp-2.1/*.jar; do
+# Add libs handled by ivy
+if [ -d "$HBASE_HOME/build/ivy/lib/common" ]; then
+for f in $HBASE_HOME/build/ivy/lib/common/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
+fi
+if [ -d "$HBASE_HOME/build/ivy/lib/test" ]; then
+for f in $HBASE_HOME/build/ivy/lib/test/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+fi
 
-# add user-specified CLASSPATH last
+# Add user-specified CLASSPATH last
 if [ "$HBASE_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
 fi
+
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then
