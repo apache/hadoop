@@ -36,6 +36,9 @@ Trunk (unreleased changes)
     HDFS-786. Implement getContentSummary in HftpFileSystem.
     (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HDFS-587. Add support for specifying queue name in mapreduce tests.
+    (Erik Steffl via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
