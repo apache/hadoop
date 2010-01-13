@@ -1163,7 +1163,9 @@ Release 0.20.2 - Unreleased
 
     HADOOP-6460. Reinitializes buffers used for serializing responses in ipc
     server on exceeding maximum response size to free up Java heap. (suresh)
-    
+
+    HADOOP-6315. Avoid incorrect use of BuiltInflater/BuiltInDeflater in
+    GzipCodec. (Aaron Kimball via cdouglas)
 
 Release 0.20.1 - 2009-09-01
 
