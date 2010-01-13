@@ -1139,6 +1139,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6441. Protect web ui from cross site scripting attacks (XSS) on
     the host http header and using encoded utf-7. (omalley)
 
+    HADOOP-6451. Fix build to run contrib unit tests. (Tom White via cdouglas)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
