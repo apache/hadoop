@@ -5,7 +5,7 @@
 
   <target name="compile">
     <copy todir="${build.dir}">
-      <fileset dir="${root}">
+      <fileset dir="${basedir}">
 	<exclude name="build.xml"/>
       </fileset>
     </copy>
