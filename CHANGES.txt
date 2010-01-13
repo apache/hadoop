@@ -155,6 +155,7 @@ Release 0.21.0 - Unreleased
    HBASE-2115  ./hbase shell would not launch due to missing jruby dependency
                (Kay Kay via JD)
    HBASE-2101  KeyValueSortReducer collapses all values to last passed
+   HBASE-2119  Fix top-level NOTICES.txt file. Its stale.
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
