@@ -24,7 +24,10 @@ import java.util.ArrayList;
 
 /**
  * Interface that alll the serializers have to implement.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public interface RecordOutput {
   /**
    * Write a byte to serialized record.

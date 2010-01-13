@@ -23,7 +23,10 @@ import java.util.Map;
 
 /**
  * Abstract Base class for all types supported by Hadoop Record I/O.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 abstract public class JType {
   
   static String toCamelCase(String name) {

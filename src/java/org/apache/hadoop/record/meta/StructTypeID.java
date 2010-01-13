@@ -26,7 +26,10 @@ import org.apache.hadoop.record.RecordOutput;
 
 /** 
  * Represents typeID for a struct 
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class StructTypeID extends TypeID {
   private ArrayList<FieldTypeInfo> typeInfos = new ArrayList<FieldTypeInfo>();
   

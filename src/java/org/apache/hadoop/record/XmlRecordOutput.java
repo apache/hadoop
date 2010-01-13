@@ -28,7 +28,10 @@ import java.util.Stack;
 
 /**
  * XML Serializer.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class XmlRecordOutput implements RecordOutput {
 
   private PrintStream stream;

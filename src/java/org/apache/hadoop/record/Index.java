@@ -30,7 +30,10 @@ package org.apache.hadoop.record;
  *   idx.incr();
  * }
  * </code>
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public interface Index {
   boolean done();
   void incr();

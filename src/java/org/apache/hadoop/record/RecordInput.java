@@ -22,7 +22,10 @@ import java.io.IOException;
 
 /**
  * Interface that all the Deserializers have to implement.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public interface RecordInput {
   /**
    * Read a byte from serialized record.

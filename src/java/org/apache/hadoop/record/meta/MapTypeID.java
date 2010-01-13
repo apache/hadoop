@@ -25,7 +25,10 @@ import org.apache.hadoop.record.RecordOutput;
 
 /** 
  * Represents typeID for a Map 
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class MapTypeID extends TypeID {
   
   private TypeID typeIDKey; 

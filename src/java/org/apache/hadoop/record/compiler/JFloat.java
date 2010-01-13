@@ -19,7 +19,9 @@
 package org.apache.hadoop.record.compiler;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JFloat extends JType {
   
   class JavaFloat extends JavaType {

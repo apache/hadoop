@@ -25,7 +25,9 @@ import java.io.PushbackReader;
 import java.io.UnsupportedEncodingException;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class CsvRecordInput implements RecordInput {
     
   private PushbackReader stream;

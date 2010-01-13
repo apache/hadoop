@@ -26,7 +26,10 @@ import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Various utility functions for Hadooop record I/O runtime.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class Utils {
   
   /** Cannot create a new instance of Utils */

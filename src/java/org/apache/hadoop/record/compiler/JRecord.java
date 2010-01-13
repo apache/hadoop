@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.util.*;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JRecord extends JCompType {
   
   class JavaRecord extends JavaCompType {

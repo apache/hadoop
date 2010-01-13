@@ -20,7 +20,9 @@ package org.apache.hadoop.record.compiler;
 
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JDouble extends JType {
   
   class JavaDouble extends JavaType {

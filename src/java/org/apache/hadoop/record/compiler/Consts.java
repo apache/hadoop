@@ -24,7 +24,10 @@ import org.apache.hadoop.record.RecordInput;
 
 /**
  * const definitions for Record I/O compiler
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class Consts {
   
   /** Cannot create a new instance */

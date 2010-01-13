@@ -25,7 +25,9 @@ import java.io.UnsupportedEncodingException;
  * It is resizable and distinguishes between the count of the seqeunce and
  * the current capacity.
  * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class Buffer implements Comparable, Cloneable {
   /** Number of valid bytes in this.bytes. */
   private int count;

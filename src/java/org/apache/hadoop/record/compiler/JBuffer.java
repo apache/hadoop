@@ -21,7 +21,10 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * Code generator for "buffer" type.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JBuffer extends JCompType {
   
   class JavaBuffer extends JavaCompType {

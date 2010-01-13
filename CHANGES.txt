@@ -99,6 +99,8 @@ Trunk (unreleased changes)
     HADOOP-6420. Add functionality permitting subsets of Configuration to be
     interpreted as Map<String,String>. (Aaron Kimball via cdouglas)
 
+    HADOOP-6155. Deprecate RecordIO anticipating Avro. (Tom White via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

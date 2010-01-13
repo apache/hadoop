@@ -46,7 +46,10 @@ import org.apache.tools.ant.types.FileSet;
  *   &lt;fileset include="**\/*.jr" /&gt;
  * &lt;/recordcc&gt;
  * </pre>
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class RccTask extends Task {
   
   private String language = "java";

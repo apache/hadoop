@@ -22,7 +22,9 @@ import java.util.Map;
 
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JMap extends JCompType {
   
   static private int level = 0;

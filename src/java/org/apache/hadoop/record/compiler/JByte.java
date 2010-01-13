@@ -20,7 +20,10 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * Code generator for "byte" type.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JByte extends JType {
   
   class JavaByte extends JavaType {

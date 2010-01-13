@@ -20,7 +20,10 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * A thin wrappper around record field.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JField<T> {
   
   private String name;

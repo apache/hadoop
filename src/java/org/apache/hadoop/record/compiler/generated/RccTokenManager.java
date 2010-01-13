@@ -27,6 +27,10 @@ import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+/**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
+ */
+@Deprecated
 public class RccTokenManager implements RccConstants
 {
   public  java.io.PrintStream debugStream = System.out;
