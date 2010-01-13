@@ -424,6 +424,9 @@ Release 0.21.0 - Unreleased
     HDFS-145. Cleanup inconsistent block length handling code in
     FSNameSystem#addStoredBlock. (hairong)
 
+    HDFS-127. Reset failure count in DFSClient for each block acquiring
+    operation.  (Igor Bolotin via szetszwo)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
@@ -625,9 +628,6 @@ Release 0.21.0 - Unreleased
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
-
-    HDFS-127. Reset failure count in DFSClient for each block acquiring
-    operation.  (Igor Bolotin via szetszwo)
 
     HDFS-737. Add full path name of the file to the block information and 
     summary of total number of files, blocks, live and deadnodes to 
