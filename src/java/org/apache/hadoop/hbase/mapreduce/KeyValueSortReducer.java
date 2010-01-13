@@ -38,7 +38,7 @@ public class KeyValueSortReducer extends Reducer<ImmutableBytesWritable, KeyValu
   throws java.io.IOException, InterruptedException {
     TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
     for (KeyValue kv: kvs) {
-      map.add(kv);
+      map.add(kv.clone());
     }
     context.setStatus("Read " + map.getClass());
     int index = 0;
