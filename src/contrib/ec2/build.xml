@@ -1,4 +1,6 @@
 <project name="ec2" default="package" basedir=".">
+  <property name="hbase.root" location="../../.." />
+
   <import file="../build-contrib.xml"/>
 
   <target name="compile">
