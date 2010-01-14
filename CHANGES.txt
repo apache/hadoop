@@ -87,9 +87,6 @@ Trunk (unreleased changes)
     HDFS-767. An improved retry policy when the DFSClient is unable to fetch a
     block from the datanode.  (Ning Zhang via dhruba)
 
-    HDFS-187. Initialize secondary namenode http address in TestStartup.
-    (Todd Lipcon via szetszwo)
-    
     HDFS-775. FSDataset calls getCapacity() twice. (stevel)
     
     HDFS-885. Datanode toString() NPEs on null dnRegistration. (stevel)
@@ -660,6 +657,9 @@ Release 0.20.2 - Unreleased
 
     HDFS-101. DFS write pipeline: DFSClient sometimes does not detect second
     datanode failure. (hairong)
+
+    HDFS-187. Initialize secondary namenode http address in TestStartup.
+    (Todd Lipcon via szetszwo)
 
 Release 0.20.1 - 2009-09-01
 
