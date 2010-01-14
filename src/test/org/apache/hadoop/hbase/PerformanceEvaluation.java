@@ -921,13 +921,11 @@ public class PerformanceEvaluation implements HConstants {
       System.err.println(message);
     }
     System.err.println("Usage: java " + this.getClass().getName() +
-        " [--master=HOST:PORT] \\");
-    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] [--compress=TYPE] \\");
+        " [--miniCluster] \\");
+    System.err.println("  [--nomapred] [--rows=ROWS] [--table=NAME] [--compress=TYPE] \\");
     System.err.println("  <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
-    System.err.println(" master          Specify host and port of HBase " +
-        "cluster master. If not present,");
     System.err.println("                 address is read from configuration");
     System.err.println(" miniCluster     Run the test on an HBaseMiniCluster");
     System.err.println(" nomapred        Run multiple clients using threads " +

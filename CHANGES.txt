@@ -158,6 +158,7 @@ Release 0.21.0 - Unreleased
    HBASE-2119  Fix top-level NOTICES.txt file. Its stale.
    HBASE-2120  [stargate] Unable to delete column families (Greg Lu via Andrew
                Purtell)
+   HBASE-2123  Remove 'master' command-line option from PE
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
