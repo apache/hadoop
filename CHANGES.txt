@@ -159,6 +159,10 @@ Release 0.21.0 - Unreleased
    HBASE-2120  [stargate] Unable to delete column families (Greg Lu via Andrew
                Purtell)
    HBASE-2123  Remove 'master' command-line option from PE
+   HBASE-2024  [stargate] Deletes not working as expected (Greg Lu via Andrew
+               Purtell)
+   HBASE-2122  [stargate] Initializing scanner column families doesn't work
+               (Greg Lu via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

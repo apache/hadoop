@@ -59,7 +59,7 @@ public class ScannerResultGenerator extends ResultGenerator {
         byte[][] columns = rowspec.getColumns();
         for (byte[] column: columns) {
           byte[][] split = KeyValue.parseColumn(column);
-          if (split.length == 2) {
+          if (split.length == 2 && split[1].length != 0) {
             scan.addColumn(split[0], split[1]);
           } else {
             scan.addFamily(split[0]);

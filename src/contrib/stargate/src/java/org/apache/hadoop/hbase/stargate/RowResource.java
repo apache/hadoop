@@ -277,7 +277,13 @@ public class RowResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
-    Delete delete = new Delete(rowspec.getRow());
+
+    Delete delete = null;
+    if (rowspec.hasTimestamp())
+      delete = new Delete(rowspec.getRow(), rowspec.getTimestamp(), null);
+    else
+      delete = new Delete(rowspec.getRow());
+
     for (byte[] column: rowspec.getColumns()) {
       byte[][] split = KeyValue.parseColumn(column);
       if (rowspec.hasTimestamp()) {
