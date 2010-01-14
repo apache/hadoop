@@ -90,6 +90,9 @@ Release 0.20.2 - Unreleased
     HADOOP-6315. Avoid incorrect use of BuiltInflater/BuiltInDeflater in
     GzipCodec. (Aaron Kimball via cdouglas)
 
+    HDFS-187. Initialize secondary namenode http address in TestStartup.
+    (Todd Lipcon via szetszwo)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
