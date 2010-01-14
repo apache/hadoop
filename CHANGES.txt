@@ -622,6 +622,9 @@ Release 0.21.0 - Unreleased
     HDFS-699. Primary datanode should compare replicas' on disk lengths.
     (hairong)
 
+    HDFS-897. Fix a bug related to generation stamp comparison in 
+    ReplicasMap. (suresh)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS

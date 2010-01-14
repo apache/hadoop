@@ -81,7 +81,7 @@ class ReplicasMap {
     Long key = Long.valueOf(block.getBlockId());
     ReplicaInfo replicaInfo = map.get(key);
     if (replicaInfo != null &&
-        replicaInfo.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
+        block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
       return remove(key);
     } 
     
