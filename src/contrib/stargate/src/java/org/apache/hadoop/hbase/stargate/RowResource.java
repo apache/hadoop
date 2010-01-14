@@ -281,13 +281,13 @@ public class RowResource implements Constants {
     for (byte[] column: rowspec.getColumns()) {
       byte[][] split = KeyValue.parseColumn(column);
       if (rowspec.hasTimestamp()) {
-        if (split.length == 2) {
+        if (split.length == 2 && split[1].length != 0) {
           delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
         } else {
           delete.deleteFamily(split[0], rowspec.getTimestamp());
         }
       } else {
-        if (split.length == 2) {
+        if (split.length == 2 && split[1].length != 0) {
           delete.deleteColumns(split[0], split[1]);
         } else {
           delete.deleteFamily(split[0]);

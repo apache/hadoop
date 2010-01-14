@@ -156,6 +156,8 @@ Release 0.21.0 - Unreleased
                (Kay Kay via JD)
    HBASE-2101  KeyValueSortReducer collapses all values to last passed
    HBASE-2119  Fix top-level NOTICES.txt file. Its stale.
+   HBASE-2120  [stargate] Unable to delete column families (Greg Lu via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
