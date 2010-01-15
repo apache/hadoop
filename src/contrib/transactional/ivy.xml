@@ -79,11 +79,11 @@
   <dependencies>
    <!--  Common -->
     <dependency org="org.apache.hadoop" name="hadoop-core" 
-               rev="${hadoop-core.version}" conf="common->default"  >
+               rev="${hadoop-core.version}" conf="common->default" changing="true" >
       <exclude conf="test"/>  
     </dependency>             
     <dependency org="org.apache.hadoop" name="hadoop-hdfs" 
-               rev="${hadoop-hdfs.version}" conf="common->default" >
+               rev="${hadoop-hdfs.version}" conf="common->default" changing="true" >
       <exclude conf="test"/>  
     </dependency>
     <dependency org="org.jruby" name="jruby-complete"
@@ -93,12 +93,12 @@
    <!-- 
    Test Zookeeper cluster
     <dependency org="org.apache.hadoop" name="hadoop-mapred-test" 
-               rev="${hadoop-mapred.version}" conf="test->default"/> 
+               rev="${hadoop-mapred.version}" conf="test->default" changing="true"/> 
    -->                
     <dependency org="org.apache.hadoop" name="hadoop-core-test" 
-               rev="${hadoop-core.version}" conf="test->default"  transitive="false" />
+               rev="${hadoop-core.version}" conf="test->default"  transitive="false" changing="true" />
     <dependency org="org.apache.hadoop" name="hadoop-hdfs-test" 
-               rev="${hadoop-hdfs.version}" conf="test->default" transitive="false"/>
+               rev="${hadoop-hdfs.version}" conf="test->default" transitive="false" changing="true" />
     <dependency org="log4j" name="log4j" 
                rev="${log4j.version}" conf="test->master">
       <exclude conf="jmx,mail,jms"/>  
