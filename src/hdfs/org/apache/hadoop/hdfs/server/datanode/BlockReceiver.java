@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
@@ -774,13 +773,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               // send a heartbeat if it is time.
               now = System.currentTimeMillis();
               if (now - lastHeartbeat > datanode.socketTimeout/2) {
-                PipelineAck.HEART_BEAT.write(replyOut);  // send heart beat
+                replyOut.writeLong(-1); // send heartbeat
                 replyOut.flush();
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("PacketResponder " + numTargets +
-                            " for block " + block + 
-                            " sent a heartbeat");
-                }
                 lastHeartbeat = now;
               }
             }
@@ -820,8 +814,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               lastPacket = true;
             }
 
-            new PipelineAck(expected, new short[]{
-                DataTransferProtocol.OP_STATUS_SUCCESS}).write(replyOut);
+            replyOut.writeLong(expected);
+            replyOut.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
             replyOut.flush();
         } catch (Exception e) {
           if (running) {
@@ -851,21 +845,23 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
         try {
+            short op = DataTransferProtocol.OP_STATUS_SUCCESS;
             boolean didRead = false;
             long expected = -2;
-            PipelineAck ack = new PipelineAck();
             try { 
-              // read an ack from downstream datanode
-              ack.readFields(mirrorIn);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("PacketResponder " + numTargets + " got " + ack);
-              }
-              long seqno = ack.getSeqno();
+              // read seqno from downstream datanode
+              long seqno = mirrorIn.readLong();
               didRead = true;
-              if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
-                ack.write(replyOut); // send keepalive
+              if (seqno == -1) {
+                replyOut.writeLong(-1); // send keepalive
                 replyOut.flush();
-              } else if (seqno >= 0) {
+                LOG.debug("PacketResponder " + numTargets + " got -1");
+                continue;
+              } else if (seqno == -2) {
+                LOG.debug("PacketResponder " + numTargets + " got -2");
+              } else {
+                LOG.debug("PacketResponder " + numTargets + " got seqno = " + 
+                    seqno);
                 Packet pkt = null;
                 synchronized (this) {
                   while (running && datanode.shouldRun && ackQueue.size() == 0) {
@@ -880,6 +876,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                   pkt = ackQueue.removeFirst();
                   expected = pkt.seqno;
                   notifyAll();
+                  LOG.debug("PacketResponder " + numTargets + " seqno = " + seqno);
                   if (seqno != expected) {
                     throw new IOException("PacketResponder " + numTargets +
                                           " for block " + block +
@@ -912,6 +909,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               continue;
             }
             
+            if (!didRead) {
+              op = DataTransferProtocol.OP_STATUS_ERROR;
+            }
+            
             // If this is the last packet in block, then close block
             // file and finalize the block before responding success
             if (lastPacketInBlock && !receiver.finalized) {
@@ -934,34 +935,43 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               }
             }
 
-            // construct my ack message
-            short[] replies = null;
-            if (!didRead) { // no ack is read
-              replies = new short[2];
-              replies[0] = DataTransferProtocol.OP_STATUS_SUCCESS;
-              replies[1] = DataTransferProtocol.OP_STATUS_ERROR;
-            } else {
-              replies = new short[1+ack.getNumOfReplies()];
-              replies[0] = DataTransferProtocol.OP_STATUS_SUCCESS;
-              for (int i=0; i<ack.getNumOfReplies(); i++) {
-                replies[i+1] = ack.getReply(i);
-              }
-            }
-            PipelineAck replyAck = new PipelineAck(expected, replies);
- 
-            // send my ack back to upstream datanode
-            replyAck.write(replyOut);
-            replyOut.flush();
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("PacketResponder " + numTargets +
-                        " for block " + block +
-                        " responded an ack: " + replyAck);
-            }
+            // send my status back to upstream datanode
+            replyOut.writeLong(expected); // send seqno upstream
+            replyOut.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
 
+            LOG.debug("PacketResponder " + numTargets + 
+                      " for block " + block +
+                      " responded my status " +
+                      " for seqno " + expected);
+
+            // forward responses from downstream datanodes.
+            for (int i = 0; i < numTargets && datanode.shouldRun; i++) {
+              try {
+                if (op == DataTransferProtocol.OP_STATUS_SUCCESS) {
+                  op = mirrorIn.readShort();
+                  if (op != DataTransferProtocol.OP_STATUS_SUCCESS) {
+                    LOG.debug("PacketResponder for block " + block +
+                              ": error code received from downstream " +
+                              " datanode[" + i + "] " + op);
+                  }
+                }
+              } catch (Throwable e) {
+                op = DataTransferProtocol.OP_STATUS_ERROR;
+              }
+              replyOut.writeShort(op);
+            }
+            replyOut.flush();
+            LOG.debug("PacketResponder " + block + " " + numTargets + 
+                      " responded other status " + " for seqno " + expected);
+
+            // If we were unable to read the seqno from downstream, then stop.
+            if (expected == -2) {
+              running = false;
+            }
             // If we forwarded an error response from a downstream datanode
             // and we are acting on behalf of a client, then we quit. The 
             // client will drive the recovery mechanism.
-            if (!replyAck.isSuccess() && receiver.clientName.length() > 0) {
+            if (op == DataTransferProtocol.OP_STATUS_ERROR && receiver.clientName.length() > 0) {
               running = false;
             }
         } catch (IOException e) {
