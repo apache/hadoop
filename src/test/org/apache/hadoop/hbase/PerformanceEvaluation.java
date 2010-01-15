@@ -434,7 +434,7 @@ public class PerformanceEvaluation implements HConstants {
           int index = Integer.parseInt(getName());
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
-               perClientRows, perClientRows,
+               perClientRows, R,
                new Status() {
                   public void setStatus(final String msg) throws IOException {
                     LOG.info("client-" + getName() + " " + msg);

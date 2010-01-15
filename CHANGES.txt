@@ -164,6 +164,9 @@ Release 0.21.0 - Unreleased
    HBASE-2122  [stargate] Initializing scanner column families doesn't work
                (Greg Lu via Andrew Purtell)
    HBASE-2124  Useless exception in HMaster on startup
+   HBASE-2127  randomWrite mode of PerformanceEvaluation benchmark program
+               writes only to a small range of keys (Kannan Muthukkaruppan
+               via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
