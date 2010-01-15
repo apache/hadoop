@@ -81,9 +81,6 @@ Release 0.20.2 - Unreleased
 
     HADOOP-6428. HttpServer sleeps with negative values (cos)
 
-    HDFS-101. DFS write pipeline: DFSClient sometimes does not detect second
-    datanode failure. (hairong)
-
     HADOOP-5623. Fixes a problem to do with status messages getting overwritten
     in streaming jobs. (Rick Cox and Jothi Padmanabhan via tomwhite)
 
