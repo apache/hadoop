@@ -167,6 +167,7 @@ Release 0.21.0 - Unreleased
    HBASE-2127  randomWrite mode of PerformanceEvaluation benchmark program
                writes only to a small range of keys (Kannan Muthukkaruppan
                via Stack)
+   HBASE-2126  Fix build break - ec2 (Kay Kay via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
