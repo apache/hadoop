@@ -62,7 +62,12 @@ else
   service gmond start
 fi
 
-# Probe for instance volumes
+# Reformat sdb as xfs
+umount /mnt
+mkfs.xfs -f /dev/sdb
+mount -o noatime /dev/sdb /mnt
+
+# Probe for additional instance volumes
 
 # /dev/sdb as /mnt is always set up by base image
 DFS_NAME_DIR="/mnt/hadoop/dfs/name"
@@ -71,8 +76,9 @@ i=2
 for d in c d e f g h i j k l m n o p q r s t u v w x y z; do
   m="/mnt${i}"
   mkdir -p $m
-  mount /dev/sd${d} $m > /dev/null 2>&1
+  mkfs.xfs -f /dev/sd${d}
   if [ $? -eq 0 ] ; then
+    mount -o noatime /dev/sd${d} $m > /dev/null 2>&1
     if [ $i -lt 3 ] ; then # no more than two namedirs
       DFS_NAME_DIR="${DFS_NAME_DIR},${m}/hadoop/dfs/name"
     fi

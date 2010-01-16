@@ -318,6 +318,7 @@ Release 0.21.0 - Unreleased
    HBASE-2084  [EC2] JAVA_HOME handling broken
    HBASE-2100  [EC2] Adjust fs.file-max
    HBASE-2103  [EC2] pull version from build
+   HBASE-2131  [EC2] Mount data volumes as xfs, noatime
    HBASE-1901  "General" partitioner for "hbase-48" bulk (behind the api, write
                hfiles direct) uploader
    HBASE-1433  Update hbase build to match core, use ivy, publish jars to maven

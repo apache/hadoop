@@ -44,7 +44,7 @@ rm -f java.bin
 # Install tools
 echo "Installing rpms."
 yum -y update
-yum -y install rsync lynx screen ganglia-gmetad ganglia-gmond ganglia-web httpd php lzo-devel
+yum -y install rsync lynx screen ganglia-gmetad ganglia-gmond ganglia-web httpd php lzo-devel xfsprogs
 yum -y clean all
 
 # Install Hadoop
