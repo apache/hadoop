@@ -101,6 +101,9 @@ Trunk (unreleased changes)
 
     HADOOP-6155. Deprecate RecordIO anticipating Avro. (Tom White via cdouglas)
 
+    HADOOP-6492. Make some Avro serialization APIs public.
+    (Aaron Kimball via cutting)
+
   OPTIMIZATIONS
 
   BUG FIXES

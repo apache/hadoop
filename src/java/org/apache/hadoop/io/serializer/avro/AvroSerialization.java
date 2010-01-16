@@ -51,17 +51,17 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
   /**
    * Return an Avro Schema instance for the given class and metadata.
    */
-  protected abstract Schema getSchema(Map<String, String> metadata);
+  public abstract Schema getSchema(Map<String, String> metadata);
 
   /**
    * Create and return Avro DatumWriter for the given metadata.
    */
-  protected abstract DatumWriter<T> getWriter(Map<String, String> metadata);
+  public abstract DatumWriter<T> getWriter(Map<String, String> metadata);
 
   /**
    * Create and return Avro DatumReader for the given metadata.
    */
-  protected abstract DatumReader<T> getReader(Map<String, String> metadata);
+  public abstract DatumReader<T> getReader(Map<String, String> metadata);
 
   class AvroSerializer extends SerializerBase<T> {
 

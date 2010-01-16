@@ -46,18 +46,18 @@ public class AvroGenericSerialization extends AvroSerialization<Object> {
   }
 
   @Override
-  protected DatumReader getReader(Map<String, String> metadata) {
+  public DatumReader getReader(Map<String, String> metadata) {
     Schema schema = Schema.parse(metadata.get(AVRO_SCHEMA_KEY));
     return new GenericDatumReader<Object>(schema);
   }
 
   @Override
-  protected Schema getSchema(Map<String, String> metadata) {
+  public Schema getSchema(Map<String, String> metadata) {
     return Schema.parse(metadata.get(AVRO_SCHEMA_KEY));
   }
 
   @Override
-  protected DatumWriter getWriter(Map<String, String> metadata) {
+  public DatumWriter getWriter(Map<String, String> metadata) {
     return new GenericDatumWriter<Object>();
   }
 

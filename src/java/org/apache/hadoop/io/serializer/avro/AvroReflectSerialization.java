@@ -76,7 +76,7 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
   }
 
   @Override
-  protected DatumReader getReader(Map<String, String> metadata) {
+  public DatumReader getReader(Map<String, String> metadata) {
     try {
       return new ReflectDatumReader(getClassFromMetadata(metadata));
     } catch (Exception e) {
@@ -85,13 +85,13 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
   }
 
   @Override
-  protected Schema getSchema(Map<String, String> metadata) {
+  public Schema getSchema(Map<String, String> metadata) {
     Class<?> c = getClassFromMetadata(metadata);
     return ReflectData.get().getSchema(c);
   }
 
   @Override
-  protected DatumWriter getWriter(Map<String, String> metadata) {
+  public DatumWriter getWriter(Map<String, String> metadata) {
     return new ReflectDatumWriter();
   }
 

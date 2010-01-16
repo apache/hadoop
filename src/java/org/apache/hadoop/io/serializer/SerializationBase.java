@@ -77,8 +77,8 @@ public abstract class SerializationBase<T> extends Configured
    */
   public abstract DeserializerBase<T> getDeserializer(
       Map<String, String> metadata);
-  
-  protected Class<?> getClassFromMetadata(Map<String, String> metadata) {
+
+  public Class<?> getClassFromMetadata(Map<String, String> metadata) {
     String classname = metadata.get(CLASS_KEY);
     if (classname == null) {
       return null;

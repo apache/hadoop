@@ -47,7 +47,7 @@ public class AvroSpecificSerialization
   }
 
   @Override
-  protected DatumReader getReader(Map<String, String> metadata) {
+  public DatumReader getReader(Map<String, String> metadata) {
     try {
       return new SpecificDatumReader(getClassFromMetadata(metadata));
     } catch (Exception e) {
@@ -56,13 +56,13 @@ public class AvroSpecificSerialization
   }
 
   @Override
-  protected Schema getSchema(Map<String, String> metadata) {
+  public Schema getSchema(Map<String, String> metadata) {
     Class<?> c = getClassFromMetadata(metadata);
     return SpecificData.get().getSchema(c);
   }
 
   @Override
-  protected DatumWriter getWriter(Map<String, String> metadata) {
+  public DatumWriter getWriter(Map<String, String> metadata) {
     return new SpecificDatumWriter();
   }
 
