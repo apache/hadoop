@@ -305,6 +305,7 @@ Release 0.21.0 - Unreleased
    HBASE-2111  Move to ivy broke our being able to run in-place; i.e.
                ./bin/start-hbase.sh in a checkout
    HBASE-2136  Forward-port the old mapred package
+   HBASE-2133  Increase default number of client handlers
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
