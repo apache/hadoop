@@ -137,6 +137,8 @@ Trunk (unreleased changes)
     HADOOP-6402. testConf.xsl is not well-formed XML. (Steve Loughran
     via tomwhite)
 
+    HADOOP-6489. Fix 3 findbugs warnings. (Erik Steffl via suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

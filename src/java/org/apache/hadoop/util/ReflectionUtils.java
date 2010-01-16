@@ -47,7 +47,7 @@ import org.apache.hadoop.io.serializer.SerializerBase;
 public class ReflectionUtils {
     
   private static final Class<?>[] EMPTY_ARRAY = new Class[]{};
-  private static SerializationFactory serialFactory = null;
+  volatile private static SerializationFactory serialFactory = null;
 
   /** 
    * Cache of constructors for each class. Pins the classes so they

@@ -199,29 +199,38 @@ public class CompressionCodecFactory {
           System.out.println("Codec for " + args[i] + " not found.");
         } else { 
           if (encode) {
-            CompressionOutputStream out = 
-              codec.createOutputStream(new java.io.FileOutputStream(args[i]));
-            byte[] buffer = new byte[100];
-            String inFilename = removeSuffix(args[i], 
-                                             codec.getDefaultExtension());
-            java.io.InputStream in = new java.io.FileInputStream(inFilename);
-            int len = in.read(buffer);
-            while (len > 0) {
-              out.write(buffer, 0, len);
-              len = in.read(buffer);
+            CompressionOutputStream out = null;
+            java.io.InputStream in = null;
+            try {
+              out = codec.createOutputStream(
+                  new java.io.FileOutputStream(args[i]));
+              byte[] buffer = new byte[100];
+              String inFilename = removeSuffix(args[i], 
+                  codec.getDefaultExtension());
+              in = new java.io.FileInputStream(inFilename);
+              int len = in.read(buffer);
+              while (len > 0) {
+                out.write(buffer, 0, len);
+                len = in.read(buffer);
+              }
+            } finally {
+              if(out != null) { out.close(); }
+              if(in  != null) { in.close(); }
             }
-            in.close();
-            out.close();
           } else {
-            CompressionInputStream in = 
-              codec.createInputStream(new java.io.FileInputStream(args[i]));
-            byte[] buffer = new byte[100];
-            int len = in.read(buffer);
-            while (len > 0) {
-              System.out.write(buffer, 0, len);
-              len = in.read(buffer);
+            CompressionInputStream in = null;
+            try {
+              in = codec.createInputStream(
+                  new java.io.FileInputStream(args[i]));
+              byte[] buffer = new byte[100];
+              int len = in.read(buffer);
+              while (len > 0) {
+                System.out.write(buffer, 0, len);
+                len = in.read(buffer);
+              }
+            } finally {
+              if(in != null) { in.close(); }
             }
-            in.close();
           }
         }
       }
