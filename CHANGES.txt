@@ -173,6 +173,8 @@ Release 0.21.0 - Unreleased
    HBASE-2138  unknown metrics type (Stack via JD)
    HBASE-2137  javadoc warnings from 'javadoc' target (Kay Kay via Stack)
    HBASE-2135  ant javadoc complains about missing classe (Kay Kay via Stack)
+   HBASE-2130  bin/* scripts - not to include lib/test/**/*.jar
+               (Kay Kay via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

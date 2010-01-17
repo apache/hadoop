@@ -434,8 +434,8 @@
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
-          <fileset dir="src/contrib/">
-            <include name="*/lib/*.jar" />
+          <fileset dir="${build.dir}/contrib">
+            <include name="**/ivy/lib/common/*.jar" />
           </fileset>
           <pathelement path="${java.class.path}"/>
         </classpath>
