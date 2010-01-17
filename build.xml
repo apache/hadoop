@@ -95,7 +95,7 @@
   <property name="ivy.dir" location="${hbase.root}/ivy" />
   
   <import file="${basedir}/ivy-targets.xml" />
-  
+  <import file="${basedir}/findbugs-targets.xml" />
   <!--We need to have the hadoop jars ride in front of the hbase classes or we
     get the below exceptions:
 

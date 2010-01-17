@@ -177,6 +177,7 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2140  findbugs issues - 2 performance warnings as suggested by findbugs
                (Kay Kay via Stack)
+   HBASE-2139  findbugs task in build.xml (Kay Kay via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

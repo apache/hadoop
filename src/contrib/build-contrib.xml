@@ -71,6 +71,7 @@
     </and>
   </condition>
   <import file="../../ivy-targets.xml" />
+  <import file="../../findbugs-targets.xml" />
   
 
   <!-- the normal classpath -->
