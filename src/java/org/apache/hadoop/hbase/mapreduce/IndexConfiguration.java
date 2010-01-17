@@ -142,9 +142,9 @@ public class IndexConfiguration extends Configuration {
 
   /**
    * @deprecated 
-   * @see Use #isAnalyze(String) for replacement.
+   * See {@link #isAnalyze(String)} for replacement.
    * @param columnName
-   * @return
+   * @return true, if column needs to be tokenized
    */
   public boolean isTokenize(String columnName) {
     return getColumn(columnName).getBoolean(HBASE_COLUMN_TOKENIZE, true);
@@ -152,7 +152,7 @@ public class IndexConfiguration extends Configuration {
 
   /**
    * @deprecated
-   * @see Use #setAnalyze(String, boolean) for replacement.
+   * See {@link #setAnalyze(String, boolean)} for replacement.
    * @param columnName
    * @param tokenize
    */

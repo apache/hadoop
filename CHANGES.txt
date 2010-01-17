@@ -171,6 +171,8 @@ Release 0.21.0 - Unreleased
    HBASE-2134  Ivy nit regarding checking with latest snapshots (Kay Kay via
                Andrew Purtell)
    HBASE-2138  unknown metrics type (Stack via JD)
+   HBASE-2137  javadoc warnings from 'javadoc' target (Kay Kay via Stack)
+   HBASE-2135  ant javadoc complains about missing classe (Kay Kay via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
