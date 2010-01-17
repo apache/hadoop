@@ -170,6 +170,7 @@ Release 0.21.0 - Unreleased
    HBASE-2126  Fix build break - ec2 (Kay Kay via JD)
    HBASE-2134  Ivy nit regarding checking with latest snapshots (Kay Kay via
                Andrew Purtell)
+   HBASE-2138  unknown metrics type (Stack via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

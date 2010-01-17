@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,10 +58,25 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
   protected MBeanInfo extendedInfo;
   
   protected MetricsMBeanBase( MetricsRegistry mr, String description ) {
-    super(mr, description);
+    super(copyMinusHBaseMetrics(mr), description);
     this.registry = mr;
     this.description = description;
     this.init();
+  }
+
+  /*
+   * @param mr MetricsRegistry.
+   * @return A copy of the passed MetricsRegistry minus the hbase metrics
+   */
+  private static MetricsRegistry copyMinusHBaseMetrics(final MetricsRegistry mr) {
+    MetricsRegistry copy = new MetricsRegistry();
+    for (MetricsBase metric : mr.getMetricsList()) {
+      if (metric instanceof org.apache.hadoop.hbase.metrics.MetricsRate) {
+        continue;
+      }
+      copy.add(metric.getName(), metric);
+    }
+    return copy;
   }
 
   protected void init() {
@@ -81,13 +95,12 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
         continue;
       
       // add on custom HBase metric types
-      if (metric instanceof MetricsRate) {
+      if (metric instanceof org.apache.hadoop.hbase.metrics.MetricsRate) {
         attributes.add( new MBeanAttributeInfo(metric.getName(), 
             "java.lang.Float", metric.getDescription(), true, false, false) );
         extendedAttributes.put(metric.getName(), metric);
-      }  else {
-        LOG.error("unknown metrics instance: "+metric.getClass().getName());
-      }      
+      }
+      // else, its probably a hadoop metric already registered. Skip it.
     }
 
     this.extendedInfo = new MBeanInfo( this.getClass().getName(), 

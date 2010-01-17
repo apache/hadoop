@@ -169,13 +169,26 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
-
-      // mix in HFile metrics
-      this.fsReadLatency.inc((int)HFile.getReadOps(), HFile.getReadTime());
-      this.fsWriteLatency.inc((int)HFile.getWriteOps(), HFile.getWriteTime());
+      
+      // Mix in HFile and HLog metrics
+      // Be careful. Here is code for MTVR from up in hadoop:
+      // public synchronized void inc(final int numOps, final long time) {
+      //   currentData.numOperations += numOps;
+      //   currentData.time += time;
+      //   long timePerOps = time/numOps;
+      //    minMax.update(timePerOps);
+      // }
+      // Means you can't pass a numOps of zero or get a ArithmeticException / by zero.
+      int ops = (int)HFile.getReadOps();
+      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTime());
+      ops = (int)HFile.getWriteOps();
+      if (ops != 0) this.fsWriteLatency.inc(ops, HFile.getWriteTime());
       // mix in HLog metrics
-      this.fsWriteLatency.inc((int)HLog.getWriteOps(), HLog.getWriteTime());
-      this.fsSyncLatency.inc((int)HLog.getSyncOps(), HLog.getSyncTime());
+      ops = (int)HLog.getWriteOps();
+      if (ops != 0) this.fsWriteLatency.inc(ops, HLog.getWriteTime());
+      ops = (int)HLog.getSyncOps();
+      if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
+
       // push the result
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
