@@ -136,8 +136,9 @@ public class Scan implements Writable {
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
-    for (byte[] fam : fams.keySet()) {
-      NavigableSet<byte[]> cols = fams.get(fam);
+    for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
+      byte [] fam = entry.getKey();
+      NavigableSet<byte[]> cols = entry.getValue();
       if (cols != null && cols.size() > 0) {
         for (byte[] col : cols) {
           addColumn(fam, col);

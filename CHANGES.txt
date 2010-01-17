@@ -175,6 +175,8 @@ Release 0.21.0 - Unreleased
    HBASE-2135  ant javadoc complains about missing classe (Kay Kay via Stack)
    HBASE-2130  bin/* scripts - not to include lib/test/**/*.jar
                (Kay Kay via Stack)
+   HBASE-2140  findbugs issues - 2 performance warnings as suggested by findbugs
+               (Kay Kay via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
