@@ -121,11 +121,6 @@ for f in $HBASE_HOME/build/ivy/lib/common/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 fi
-if [ -d "$HBASE_HOME/build/ivy/lib/test" ]; then
-for f in $HBASE_HOME/build/ivy/lib/test/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
 
 # Add user-specified CLASSPATH last
 if [ "$HBASE_CLASSPATH" != "" ]; then
