@@ -104,6 +104,10 @@ Trunk (unreleased changes)
     HADOOP-6492. Make some Avro serialization APIs public.
     (Aaron Kimball via cutting)
 
+    HADOOP-6497. Add an adapter for Avro's SeekableInput interface, so
+    that Avro can read FileSystem data.
+    (Aaron Kimball via cutting)
+
   OPTIMIZATIONS
 
   BUG FIXES
