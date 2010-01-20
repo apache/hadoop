@@ -7,6 +7,7 @@ Release 0.21.0 - Unreleased
    HBASE-1930  Put.setTimeStamp misleading (doesn't change timestamp on
                existing KeyValues, not copied in copy constructor)
                (Dave Latham via Stack)
+   HBASE-1360  move up to Thrift 0.2.0 (Kay Kay and Lars Francke via Stack)
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -179,7 +180,8 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2139  findbugs task in build.xml (Kay Kay via Stack)
    HBASE-2147  run zookeeper in the same jvm as master during non-distributed mode
-   HBASE-1360  move up to Thrift 0.2.0 (Kay Kay and Lars Francke via Stack)
+   HBASE-65    Thrift Server should have an option to bind to ip address
+               (Lars Francke via Stack)
    HBASE-2146  RPC related metrics are missing in 0.20.3 since recent changes
                (Gary Helmling via Lars George)
 
