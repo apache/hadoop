@@ -180,6 +180,8 @@ Release 0.21.0 - Unreleased
    HBASE-2139  findbugs task in build.xml (Kay Kay via Stack)
    HBASE-2147  run zookeeper in the same jvm as master during non-distributed mode
    HBASE-1360  move up to Thrift 0.2.0 (Kay Kay and Lars Francke via Stack)
+   HBASE-2146  RPC related metrics are missing in 0.20.3 since recent changes
+               (Gary Helmling via Lars George)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

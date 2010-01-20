@@ -31,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -115,6 +116,10 @@ public class HBaseRPC {
     return localCode;
   }
   
+  static Collection<String> getMappedMethodNames() {
+    return Invocation.CODE_TO_METHODNAME.values();
+  }
+
   static {
     code = HBaseRPC.addToMap(VersionedProtocol.class, code);
     code = HBaseRPC.addToMap(HMasterInterface.class, code);
@@ -656,8 +661,6 @@ public class HBaseRPC {
           LOG.debug("Served: " + call.getMethodName() +
             " queueTime= " + qTime +
             " procesingTime= " + processingTime);
-          rpcMetrics.rpcQueueTime.inc(qTime);
-          rpcMetrics.rpcProcessingTime.inc(processingTime);
         }
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
