@@ -1,6 +1,4 @@
-/*
- * Copyright 2009 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +17,21 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
+import java.util.BitSet;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -1795,6 +1801,7 @@ public class Hbase {
 
   }
   public static class Processor implements TProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Processor.class.getName());
     public Processor(Iface iface)
     {
       iface_ = iface;
@@ -1870,6 +1877,14 @@ public class Hbase {
           iface_.enableTable(args.tableName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing enableTable", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing enableTable");
+          oprot.writeMessageBegin(new TMessage("enableTable", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("enableTable", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1890,6 +1905,14 @@ public class Hbase {
           iface_.disableTable(args.tableName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing disableTable", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing disableTable");
+          oprot.writeMessageBegin(new TMessage("disableTable", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("disableTable", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1908,9 +1931,17 @@ public class Hbase {
         isTableEnabled_result result = new isTableEnabled_result();
         try {
           result.success = iface_.isTableEnabled(args.tableName);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing isTableEnabled", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing isTableEnabled");
+          oprot.writeMessageBegin(new TMessage("isTableEnabled", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("isTableEnabled", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1931,6 +1962,14 @@ public class Hbase {
           iface_.compact(args.tableNameOrRegionName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing compact", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing compact");
+          oprot.writeMessageBegin(new TMessage("compact", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("compact", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1951,6 +1990,14 @@ public class Hbase {
           iface_.majorCompact(args.tableNameOrRegionName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing majorCompact", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing majorCompact");
+          oprot.writeMessageBegin(new TMessage("majorCompact", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("majorCompact", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1971,6 +2018,14 @@ public class Hbase {
           result.success = iface_.getTableNames();
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getTableNames", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getTableNames");
+          oprot.writeMessageBegin(new TMessage("getTableNames", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getTableNames", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1991,6 +2046,14 @@ public class Hbase {
           result.success = iface_.getColumnDescriptors(args.tableName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getColumnDescriptors", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getColumnDescriptors");
+          oprot.writeMessageBegin(new TMessage("getColumnDescriptors", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getColumnDescriptors", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2011,6 +2074,14 @@ public class Hbase {
           result.success = iface_.getTableRegions(args.tableName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getTableRegions", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getTableRegions");
+          oprot.writeMessageBegin(new TMessage("getTableRegions", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getTableRegions", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2035,6 +2106,14 @@ public class Hbase {
           result.ia = ia;
         } catch (AlreadyExists exist) {
           result.exist = exist;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing createTable", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing createTable");
+          oprot.writeMessageBegin(new TMessage("createTable", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("createTable", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2055,6 +2134,14 @@ public class Hbase {
           iface_.deleteTable(args.tableName);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing deleteTable", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing deleteTable");
+          oprot.writeMessageBegin(new TMessage("deleteTable", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("deleteTable", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2075,6 +2162,14 @@ public class Hbase {
           result.success = iface_.get(args.tableName, args.row, args.column);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing get", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing get");
+          oprot.writeMessageBegin(new TMessage("get", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("get", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2095,6 +2190,14 @@ public class Hbase {
           result.success = iface_.getVer(args.tableName, args.row, args.column, args.numVersions);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getVer", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getVer");
+          oprot.writeMessageBegin(new TMessage("getVer", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getVer", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2115,6 +2218,14 @@ public class Hbase {
           result.success = iface_.getVerTs(args.tableName, args.row, args.column, args.timestamp, args.numVersions);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getVerTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getVerTs");
+          oprot.writeMessageBegin(new TMessage("getVerTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getVerTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2135,6 +2246,14 @@ public class Hbase {
           result.success = iface_.getRow(args.tableName, args.row);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRow", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRow");
+          oprot.writeMessageBegin(new TMessage("getRow", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getRow", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2155,6 +2274,14 @@ public class Hbase {
           result.success = iface_.getRowWithColumns(args.tableName, args.row, args.columns);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRowWithColumns", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRowWithColumns");
+          oprot.writeMessageBegin(new TMessage("getRowWithColumns", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getRowWithColumns", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2175,6 +2302,14 @@ public class Hbase {
           result.success = iface_.getRowTs(args.tableName, args.row, args.timestamp);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRowTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRowTs");
+          oprot.writeMessageBegin(new TMessage("getRowTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getRowTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2195,6 +2330,14 @@ public class Hbase {
           result.success = iface_.getRowWithColumnsTs(args.tableName, args.row, args.columns, args.timestamp);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing getRowWithColumnsTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing getRowWithColumnsTs");
+          oprot.writeMessageBegin(new TMessage("getRowWithColumnsTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("getRowWithColumnsTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2217,6 +2360,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing mutateRow", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing mutateRow");
+          oprot.writeMessageBegin(new TMessage("mutateRow", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("mutateRow", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2239,6 +2390,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing mutateRowTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing mutateRowTs");
+          oprot.writeMessageBegin(new TMessage("mutateRowTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("mutateRowTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2261,6 +2420,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing mutateRows", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing mutateRows");
+          oprot.writeMessageBegin(new TMessage("mutateRows", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("mutateRows", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2283,6 +2450,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing mutateRowsTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing mutateRowsTs");
+          oprot.writeMessageBegin(new TMessage("mutateRowsTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("mutateRowsTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2301,11 +2476,19 @@ public class Hbase {
         atomicIncrement_result result = new atomicIncrement_result();
         try {
           result.success = iface_.atomicIncrement(args.tableName, args.row, args.column, args.value);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing atomicIncrement", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing atomicIncrement");
+          oprot.writeMessageBegin(new TMessage("atomicIncrement", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("atomicIncrement", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2326,6 +2509,14 @@ public class Hbase {
           iface_.deleteAll(args.tableName, args.row, args.column);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing deleteAll", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing deleteAll");
+          oprot.writeMessageBegin(new TMessage("deleteAll", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("deleteAll", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2346,6 +2537,14 @@ public class Hbase {
           iface_.deleteAllTs(args.tableName, args.row, args.column, args.timestamp);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing deleteAllTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing deleteAllTs");
+          oprot.writeMessageBegin(new TMessage("deleteAllTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("deleteAllTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2366,6 +2565,14 @@ public class Hbase {
           iface_.deleteAllRow(args.tableName, args.row);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing deleteAllRow", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing deleteAllRow");
+          oprot.writeMessageBegin(new TMessage("deleteAllRow", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("deleteAllRow", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2386,6 +2593,14 @@ public class Hbase {
           iface_.deleteAllRowTs(args.tableName, args.row, args.timestamp);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing deleteAllRowTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing deleteAllRowTs");
+          oprot.writeMessageBegin(new TMessage("deleteAllRowTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("deleteAllRowTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2404,9 +2619,17 @@ public class Hbase {
         scannerOpen_result result = new scannerOpen_result();
         try {
           result.success = iface_.scannerOpen(args.tableName, args.startRow, args.columns);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerOpen", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerOpen");
+          oprot.writeMessageBegin(new TMessage("scannerOpen", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerOpen", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2425,9 +2648,17 @@ public class Hbase {
         scannerOpenWithStop_result result = new scannerOpenWithStop_result();
         try {
           result.success = iface_.scannerOpenWithStop(args.tableName, args.startRow, args.stopRow, args.columns);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerOpenWithStop", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerOpenWithStop");
+          oprot.writeMessageBegin(new TMessage("scannerOpenWithStop", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerOpenWithStop", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2446,9 +2677,17 @@ public class Hbase {
         scannerOpenWithPrefix_result result = new scannerOpenWithPrefix_result();
         try {
           result.success = iface_.scannerOpenWithPrefix(args.tableName, args.startAndPrefix, args.columns);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerOpenWithPrefix", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerOpenWithPrefix");
+          oprot.writeMessageBegin(new TMessage("scannerOpenWithPrefix", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerOpenWithPrefix", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2467,9 +2706,17 @@ public class Hbase {
         scannerOpenTs_result result = new scannerOpenTs_result();
         try {
           result.success = iface_.scannerOpenTs(args.tableName, args.startRow, args.columns, args.timestamp);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerOpenTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerOpenTs");
+          oprot.writeMessageBegin(new TMessage("scannerOpenTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerOpenTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2488,9 +2735,17 @@ public class Hbase {
         scannerOpenWithStopTs_result result = new scannerOpenWithStopTs_result();
         try {
           result.success = iface_.scannerOpenWithStopTs(args.tableName, args.startRow, args.stopRow, args.columns, args.timestamp);
-          result.__isset.success = true;
+          result.setSuccessIsSet(true);
         } catch (IOError io) {
           result.io = io;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerOpenWithStopTs", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerOpenWithStopTs");
+          oprot.writeMessageBegin(new TMessage("scannerOpenWithStopTs", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerOpenWithStopTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2513,6 +2768,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerGet", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerGet");
+          oprot.writeMessageBegin(new TMessage("scannerGet", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerGet", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2535,6 +2798,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerGetList", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerGetList");
+          oprot.writeMessageBegin(new TMessage("scannerGetList", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerGetList", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2557,6 +2828,14 @@ public class Hbase {
           result.io = io;
         } catch (IllegalArgument ia) {
           result.ia = ia;
+        } catch (Throwable th) {
+          LOGGER.error("Internal error processing scannerClose", th);
+          TApplicationException x = new TApplicationException(TApplicationException.INTERNAL_ERROR, "Internal error processing scannerClose");
+          oprot.writeMessageBegin(new TMessage("scannerClose", TMessageType.EXCEPTION, seqid));
+          x.write(oprot);
+          oprot.writeMessageEnd();
+          oprot.getTransport().flush();
+          return;
         }
         oprot.writeMessageBegin(new TMessage("scannerClose", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -2568,16 +2847,72 @@ public class Hbase {
 
   }
 
-  public static class enableTable_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class enableTable_args implements TBase<enableTable_args._Fields>, java.io.Serializable, Cloneable, Comparable<enableTable_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("enableTable_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -2604,7 +2939,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public enableTable_args deepCopy() {
+      return new enableTable_args(this);
+    }
+
+    @Deprecated
     public enableTable_args clone() {
       return new enableTable_args(this);
     }
@@ -2613,15 +2952,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public enableTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -2632,9 +2972,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -2642,29 +2982,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -2694,6 +3042,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(enableTable_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      enableTable_args typedOther = (enableTable_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -2706,23 +3080,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -2744,34 +3118,91 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("enableTable_args(");
+      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class enableTable_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class enableTable_result implements TBase<enableTable_result._Fields>, java.io.Serializable, Cloneable, Comparable<enableTable_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("enableTable_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -2798,7 +3229,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public enableTable_result deepCopy() {
+      return new enableTable_result(this);
+    }
+
+    @Deprecated
     public enableTable_result clone() {
       return new enableTable_result(this);
     }
@@ -2807,15 +3242,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public enableTable_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -2826,8 +3262,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -2836,29 +3272,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -2888,6 +3332,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(enableTable_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      enableTable_result typedOther = (enableTable_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -2900,24 +3370,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -2938,6 +3408,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("enableTable_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -2945,27 +3416,83 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class disableTable_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class disableTable_args implements TBase<disableTable_args._Fields>, java.io.Serializable, Cloneable, Comparable<disableTable_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("disableTable_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -2992,7 +3519,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public disableTable_args deepCopy() {
+      return new disableTable_args(this);
+    }
+
+    @Deprecated
     public disableTable_args clone() {
       return new disableTable_args(this);
     }
@@ -3001,15 +3532,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public disableTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -3020,9 +3552,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -3030,29 +3562,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -3082,6 +3622,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(disableTable_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      disableTable_args typedOther = (disableTable_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -3094,23 +3660,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -3132,34 +3698,91 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("disableTable_args(");
+      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class disableTable_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class disableTable_result implements TBase<disableTable_result._Fields>, java.io.Serializable, Cloneable, Comparable<disableTable_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("disableTable_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -3186,7 +3809,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public disableTable_result deepCopy() {
+      return new disableTable_result(this);
+    }
+
+    @Deprecated
     public disableTable_result clone() {
       return new disableTable_result(this);
     }
@@ -3195,15 +3822,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public disableTable_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -3214,8 +3842,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -3224,29 +3852,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -3276,6 +3912,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(disableTable_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      disableTable_result typedOther = (disableTable_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -3288,24 +3950,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -3326,6 +3988,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("disableTable_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -3333,27 +3996,83 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class isTableEnabled_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class isTableEnabled_args implements TBase<isTableEnabled_args._Fields>, java.io.Serializable, Cloneable, Comparable<isTableEnabled_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("isTableEnabled_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -3380,7 +4099,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public isTableEnabled_args deepCopy() {
+      return new isTableEnabled_args(this);
+    }
+
+    @Deprecated
     public isTableEnabled_args clone() {
       return new isTableEnabled_args(this);
     }
@@ -3389,15 +4112,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public isTableEnabled_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -3408,9 +4132,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -3418,29 +4142,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -3470,6 +4202,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(isTableEnabled_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      isTableEnabled_args typedOther = (isTableEnabled_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -3482,23 +4240,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -3520,45 +4278,98 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("isTableEnabled_args(");
+      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class isTableEnabled_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class isTableEnabled_result implements TBase<isTableEnabled_result._Fields>, java.io.Serializable, Cloneable, Comparable<isTableEnabled_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("isTableEnabled_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public boolean success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.BOOL)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -3575,7 +4386,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
     }
 
@@ -3583,14 +4394,19 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public isTableEnabled_result(isTableEnabled_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
       }
     }
 
-    @Override
+    public isTableEnabled_result deepCopy() {
+      return new isTableEnabled_result(this);
+    }
+
+    @Deprecated
     public isTableEnabled_result clone() {
       return new isTableEnabled_result(this);
     }
@@ -3599,37 +4415,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(boolean success) {
+    public isTableEnabled_result setSuccess(boolean success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public isTableEnabled_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -3640,8 +4458,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -3658,34 +4476,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return Boolean.valueOf(isSuccess());
+        return new Boolean(isSuccess());
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -3724,6 +4550,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(isTableEnabled_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      isTableEnabled_result typedOther = (isTableEnabled_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -3736,32 +4601,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.BOOL) {
-              this.success = iprot.readBool();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.BOOL) {
+                this.success = iprot.readBool();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -3805,21 +4670,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class compact_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class compact_args implements TBase<compact_args._Fields>, java.io.Serializable, Cloneable, Comparable<compact_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("compact_args");
+
     private static final TField TABLE_NAME_OR_REGION_NAME_FIELD_DESC = new TField("tableNameOrRegionName", TType.STRING, (short)1);
 
     public byte[] tableNameOrRegionName;
-    public static final int TABLENAMEORREGIONNAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAMEORREGIONNAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME_OR_REGION_NAME((short)1, "tableNameOrRegionName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME_OR_REGION_NAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -3846,7 +4766,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public compact_args deepCopy() {
+      return new compact_args(this);
+    }
+
+    @Deprecated
     public compact_args clone() {
       return new compact_args(this);
     }
@@ -3855,15 +4779,16 @@ public class Hbase {
       return this.tableNameOrRegionName;
     }
 
-    public void setTableNameOrRegionName(byte[] tableNameOrRegionName) {
+    public compact_args setTableNameOrRegionName(byte[] tableNameOrRegionName) {
       this.tableNameOrRegionName = tableNameOrRegionName;
+      return this;
     }
 
     public void unsetTableNameOrRegionName() {
       this.tableNameOrRegionName = null;
     }
 
-    // Returns true if field tableNameOrRegionName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableNameOrRegionName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableNameOrRegionName() {
       return this.tableNameOrRegionName != null;
     }
@@ -3874,9 +4799,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAMEORREGIONNAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME_OR_REGION_NAME:
         if (value == null) {
           unsetTableNameOrRegionName();
         } else {
@@ -3884,29 +4809,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAMEORREGIONNAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME_OR_REGION_NAME:
         return getTableNameOrRegionName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAMEORREGIONNAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME_OR_REGION_NAME:
         return isSetTableNameOrRegionName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -3936,6 +4869,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableNameOrRegionName = true && (isSetTableNameOrRegionName());
+      builder.append(present_tableNameOrRegionName);
+      if (present_tableNameOrRegionName)
+        builder.append(tableNameOrRegionName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(compact_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      compact_args typedOther = (compact_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableNameOrRegionName()).compareTo(isSetTableNameOrRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableNameOrRegionName, typedOther.tableNameOrRegionName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -3948,23 +4907,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAMEORREGIONNAME:
-            if (field.type == TType.STRING) {
-              this.tableNameOrRegionName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME_OR_REGION_NAME:
+              if (field.type == TType.STRING) {
+                this.tableNameOrRegionName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -3986,34 +4945,91 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("compact_args(");
+      boolean first = true;
 
       sb.append("tableNameOrRegionName:");
       if (this.tableNameOrRegionName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.tableNameOrRegionName));
+        sb.append(this.tableNameOrRegionName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class compact_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
-   private static final TStruct STRUCT_DESC = new TStruct("compact_result");
+  public static class compact_result implements TBase<compact_result._Fields>, java.io.Serializable, Cloneable, Comparable<compact_result>   {
+    private static final TStruct STRUCT_DESC = new TStruct("compact_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -4040,7 +5056,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public compact_result deepCopy() {
+      return new compact_result(this);
+    }
+
+    @Deprecated
     public compact_result clone() {
       return new compact_result(this);
     }
@@ -4049,15 +5069,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public compact_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -4068,8 +5089,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -4078,29 +5099,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4130,6 +5159,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(compact_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      compact_result typedOther = (compact_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -4142,24 +5197,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -4180,6 +5235,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("compact_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -4187,27 +5243,83 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class majorCompact_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class majorCompact_args implements TBase<majorCompact_args._Fields>, java.io.Serializable, Cloneable, Comparable<majorCompact_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("majorCompact_args");
+
     private static final TField TABLE_NAME_OR_REGION_NAME_FIELD_DESC = new TField("tableNameOrRegionName", TType.STRING, (short)1);
 
     public byte[] tableNameOrRegionName;
-    public static final int TABLENAMEORREGIONNAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAMEORREGIONNAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME_OR_REGION_NAME((short)1, "tableNameOrRegionName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME_OR_REGION_NAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -4234,7 +5346,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public majorCompact_args deepCopy() {
+      return new majorCompact_args(this);
+    }
+
+    @Deprecated
     public majorCompact_args clone() {
       return new majorCompact_args(this);
     }
@@ -4243,15 +5359,16 @@ public class Hbase {
       return this.tableNameOrRegionName;
     }
 
-    public void setTableNameOrRegionName(byte[] tableNameOrRegionName) {
+    public majorCompact_args setTableNameOrRegionName(byte[] tableNameOrRegionName) {
       this.tableNameOrRegionName = tableNameOrRegionName;
+      return this;
     }
 
     public void unsetTableNameOrRegionName() {
       this.tableNameOrRegionName = null;
     }
 
-    // Returns true if field tableNameOrRegionName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableNameOrRegionName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableNameOrRegionName() {
       return this.tableNameOrRegionName != null;
     }
@@ -4262,9 +5379,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAMEORREGIONNAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME_OR_REGION_NAME:
         if (value == null) {
           unsetTableNameOrRegionName();
         } else {
@@ -4272,29 +5389,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAMEORREGIONNAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME_OR_REGION_NAME:
         return getTableNameOrRegionName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAMEORREGIONNAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME_OR_REGION_NAME:
         return isSetTableNameOrRegionName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4324,6 +5449,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableNameOrRegionName = true && (isSetTableNameOrRegionName());
+      builder.append(present_tableNameOrRegionName);
+      if (present_tableNameOrRegionName)
+        builder.append(tableNameOrRegionName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(majorCompact_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      majorCompact_args typedOther = (majorCompact_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableNameOrRegionName()).compareTo(isSetTableNameOrRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableNameOrRegionName, typedOther.tableNameOrRegionName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -4336,23 +5487,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAMEORREGIONNAME:
-            if (field.type == TType.STRING) {
-              this.tableNameOrRegionName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME_OR_REGION_NAME:
+              if (field.type == TType.STRING) {
+                this.tableNameOrRegionName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -4374,34 +5525,91 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("majorCompact_args(");
+      boolean first = true;
 
       sb.append("tableNameOrRegionName:");
       if (this.tableNameOrRegionName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.tableNameOrRegionName));
+        sb.append(this.tableNameOrRegionName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class majorCompact_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class majorCompact_result implements TBase<majorCompact_result._Fields>, java.io.Serializable, Cloneable, Comparable<majorCompact_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("majorCompact_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -4428,7 +5636,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public majorCompact_result deepCopy() {
+      return new majorCompact_result(this);
+    }
+
+    @Deprecated
     public majorCompact_result clone() {
       return new majorCompact_result(this);
     }
@@ -4437,15 +5649,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public majorCompact_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -4456,8 +5669,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -4466,29 +5679,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4518,6 +5739,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(majorCompact_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      majorCompact_result typedOther = (majorCompact_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -4530,24 +5777,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -4568,6 +5815,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("majorCompact_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -4575,22 +5823,77 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getTableNames_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getTableNames_args implements TBase<getTableNames_args._Fields>, java.io.Serializable, Cloneable, Comparable<getTableNames_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getTableNames_args");
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+;
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
     }});
 
     static {
@@ -4606,31 +5909,43 @@ public class Hbase {
     public getTableNames_args(getTableNames_args other) {
     }
 
-    @Override
+    public getTableNames_args deepCopy() {
+      return new getTableNames_args(this);
+    }
+
+    @Deprecated
     public getTableNames_args clone() {
       return new getTableNames_args(this);
     }
 
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      }
+    }
+
     public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
-      }
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      }
+      throw new IllegalStateException();
+    }
+
     public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
-      }
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4651,6 +5966,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getTableNames_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getTableNames_args typedOther = (getTableNames_args)other;
+
       return 0;
     }
 
@@ -4663,16 +5991,16 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -4689,33 +6017,90 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getTableNames_args(");
+      boolean first = true;
+
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getTableNames_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getTableNames_result implements TBase<getTableNames_result._Fields>, java.io.Serializable, Cloneable, Comparable<getTableNames_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("getTableNames_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<byte[]> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -4751,7 +6136,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getTableNames_result deepCopy() {
+      return new getTableNames_result(this);
+    }
+
+    @Deprecated
     public getTableNames_result clone() {
       return new getTableNames_result(this);
     }
@@ -4775,15 +6164,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<byte[]> success) {
+    public getTableNames_result setSuccess(List<byte[]> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -4798,15 +6188,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getTableNames_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -4817,8 +6208,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -4835,34 +6226,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -4901,6 +6300,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getTableNames_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getTableNames_result typedOther = (getTableNames_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -4913,41 +6351,41 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list9 = iprot.readListBegin();
-                this.success = new ArrayList<byte[]>(_list9.size);
-                for (int _i10 = 0; _i10 < _list9.size; ++_i10)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  byte[] _elem11;
-                  _elem11 = iprot.readBinary();
-                  this.success.add(_elem11);
+                  TList _list9 = iprot.readListBegin();
+                  this.success = new ArrayList<byte[]>(_list9.size);
+                  for (int _i10 = 0; _i10 < _list9.size; ++_i10)
+                  {
+                    byte[] _elem11;
+                    _elem11 = iprot.readBinary();
+                    this.success.add(_elem11);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -4960,7 +6398,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
-          for (byte[] _iter12 : this.success)          {
+          for (byte[] _iter12 : this.success)
+          {
             oprot.writeBinary(_iter12);
           }
           oprot.writeListEnd();
@@ -5001,21 +6440,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getColumnDescriptors_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getColumnDescriptors_args implements TBase<getColumnDescriptors_args._Fields>, java.io.Serializable, Cloneable, Comparable<getColumnDescriptors_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getColumnDescriptors_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -5042,7 +6536,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getColumnDescriptors_args deepCopy() {
+      return new getColumnDescriptors_args(this);
+    }
+
+    @Deprecated
     public getColumnDescriptors_args clone() {
       return new getColumnDescriptors_args(this);
     }
@@ -5051,15 +6549,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getColumnDescriptors_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -5070,9 +6569,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -5080,29 +6579,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -5132,6 +6639,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getColumnDescriptors_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getColumnDescriptors_args typedOther = (getColumnDescriptors_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -5144,23 +6677,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -5182,41 +6715,98 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getColumnDescriptors_args(");
+      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getColumnDescriptors_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getColumnDescriptors_result implements TBase<getColumnDescriptors_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("getColumnDescriptors_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.MAP, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public Map<byte[],ColumnDescriptor> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new MapMetaData(TType.MAP, 
               new FieldValueMetaData(TType.STRING), 
               new StructMetaData(TType.STRUCT, ColumnDescriptor.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -5260,7 +6850,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getColumnDescriptors_result deepCopy() {
+      return new getColumnDescriptors_result(this);
+    }
+
+    @Deprecated
     public getColumnDescriptors_result clone() {
       return new getColumnDescriptors_result(this);
     }
@@ -5280,15 +6874,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(Map<byte[],ColumnDescriptor> success) {
+    public getColumnDescriptors_result setSuccess(Map<byte[],ColumnDescriptor> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -5303,15 +6898,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getColumnDescriptors_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -5322,8 +6918,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -5340,34 +6936,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -5406,7 +7010,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -5418,44 +7034,44 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.MAP) {
-              {
-                TMap _map13 = iprot.readMapBegin();
-                this.success = new HashMap<byte[],ColumnDescriptor>(2*_map13.size);
-                for (int _i14 = 0; _i14 < _map13.size; ++_i14)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.MAP) {
                 {
-                  byte[] _key15;
-                  ColumnDescriptor _val16;
-                  _key15 = iprot.readBinary();
-                  _val16 = new ColumnDescriptor();
-                  _val16.read(iprot);
-                  this.success.put(_key15, _val16);
+                  TMap _map13 = iprot.readMapBegin();
+                  this.success = new HashMap<byte[],ColumnDescriptor>(2*_map13.size);
+                  for (int _i14 = 0; _i14 < _map13.size; ++_i14)
+                  {
+                    byte[] _key15;
+                    ColumnDescriptor _val16;
+                    _key15 = iprot.readBinary();
+                    _val16 = new ColumnDescriptor();
+                    _val16.read(iprot);
+                    this.success.put(_key15, _val16);
+                  }
+                  iprot.readMapEnd();
                 }
-                iprot.readMapEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -5468,7 +7084,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new TMap(TType.STRING, TType.STRUCT, this.success.size()));
-          for (Map.Entry<byte[], ColumnDescriptor> _iter17 : this.success.entrySet())          {
+          for (Map.Entry<byte[], ColumnDescriptor> _iter17 : this.success.entrySet())
+          {
             oprot.writeBinary(_iter17.getKey());
             _iter17.getValue().write(oprot);
           }
@@ -5510,21 +7127,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getTableRegions_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getTableRegions_args implements TBase<getTableRegions_args._Fields>, java.io.Serializable, Cloneable, Comparable<getTableRegions_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getTableRegions_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -5551,7 +7223,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getTableRegions_args deepCopy() {
+      return new getTableRegions_args(this);
+    }
+
+    @Deprecated
     public getTableRegions_args clone() {
       return new getTableRegions_args(this);
     }
@@ -5560,15 +7236,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getTableRegions_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -5579,9 +7256,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -5589,29 +7266,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -5641,6 +7326,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getTableRegions_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getTableRegions_args typedOther = (getTableRegions_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -5653,23 +7364,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -5691,40 +7402,97 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getTableRegions_args(");
+      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getTableRegions_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getTableRegions_result implements TBase<getTableRegions_result._Fields>, java.io.Serializable, Cloneable, Comparable<getTableRegions_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("getTableRegions_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TRegionInfo> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRegionInfo.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -5760,7 +7528,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getTableRegions_result deepCopy() {
+      return new getTableRegions_result(this);
+    }
+
+    @Deprecated
     public getTableRegions_result clone() {
       return new getTableRegions_result(this);
     }
@@ -5784,15 +7556,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRegionInfo> success) {
+    public getTableRegions_result setSuccess(List<TRegionInfo> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -5807,15 +7580,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getTableRegions_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -5826,8 +7600,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -5844,34 +7618,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -5910,6 +7692,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getTableRegions_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getTableRegions_result typedOther = (getTableRegions_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -5922,42 +7743,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list18 = iprot.readListBegin();
-                this.success = new ArrayList<TRegionInfo>(_list18.size);
-                for (int _i19 = 0; _i19 < _list18.size; ++_i19)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRegionInfo _elem20;
-                  _elem20 = new TRegionInfo();
-                  _elem20.read(iprot);
-                  this.success.add(_elem20);
+                  TList _list18 = iprot.readListBegin();
+                  this.success = new ArrayList<TRegionInfo>(_list18.size);
+                  for (int _i19 = 0; _i19 < _list18.size; ++_i19)
+                  {
+                    TRegionInfo _elem20;
+                    _elem20 = new TRegionInfo();
+                    _elem20.read(iprot);
+                    this.success.add(_elem20);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -5970,7 +7791,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRegionInfo _iter21 : this.success)          {
+          for (TRegionInfo _iter21 : this.success)
+          {
             _iter21.write(oprot);
           }
           oprot.writeListEnd();
@@ -6011,26 +7833,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class createTable_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class createTable_args implements TBase<createTable_args._Fields>, java.io.Serializable, Cloneable, Comparable<createTable_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("createTable_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField COLUMN_FAMILIES_FIELD_DESC = new TField("columnFamilies", TType.LIST, (short)2);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public List<ColumnDescriptor> columnFamilies;
-    public static final int COLUMNFAMILIES = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      COLUMN_FAMILIES((short)2, "columnFamilies");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNFAMILIES, new FieldMetaData("columnFamilies", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN_FAMILIES, new FieldMetaData("columnFamilies", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, ColumnDescriptor.class))));
     }});
@@ -6067,7 +7944,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public createTable_args deepCopy() {
+      return new createTable_args(this);
+    }
+
+    @Deprecated
     public createTable_args clone() {
       return new createTable_args(this);
     }
@@ -6076,15 +7957,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public createTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -6114,15 +7996,16 @@ public class Hbase {
       return this.columnFamilies;
     }
 
-    public void setColumnFamilies(List<ColumnDescriptor> columnFamilies) {
+    public createTable_args setColumnFamilies(List<ColumnDescriptor> columnFamilies) {
       this.columnFamilies = columnFamilies;
+      return this;
     }
 
     public void unsetColumnFamilies() {
       this.columnFamilies = null;
     }
 
-    // Returns true if field columnFamilies is set (has been asigned a value) and false otherwise
+    /** Returns true if field columnFamilies is set (has been asigned a value) and false otherwise */
     public boolean isSetColumnFamilies() {
       return this.columnFamilies != null;
     }
@@ -6133,9 +8016,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -6143,7 +8026,7 @@ public class Hbase {
         }
         break;
 
-      case COLUMNFAMILIES:
+      case COLUMN_FAMILIES:
         if (value == null) {
           unsetColumnFamilies();
         } else {
@@ -6151,34 +8034,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case COLUMNFAMILIES:
+      case COLUMN_FAMILIES:
         return getColumnFamilies();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case COLUMNFAMILIES:
+      case COLUMN_FAMILIES:
         return isSetColumnFamilies();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -6217,6 +8108,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_columnFamilies = true && (isSetColumnFamilies());
+      builder.append(present_columnFamilies);
+      if (present_columnFamilies)
+        builder.append(columnFamilies);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(createTable_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      createTable_args typedOther = (createTable_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumnFamilies()).compareTo(isSetColumnFamilies());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columnFamilies, typedOther.columnFamilies);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -6229,41 +8159,41 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNFAMILIES:
-            if (field.type == TType.LIST) {
-              {
-                TList _list22 = iprot.readListBegin();
-                this.columnFamilies = new ArrayList<ColumnDescriptor>(_list22.size);
-                for (int _i23 = 0; _i23 < _list22.size; ++_i23)
-                {
-                  ColumnDescriptor _elem24;
-                  _elem24 = new ColumnDescriptor();
-                  _elem24.read(iprot);
-                  this.columnFamilies.add(_elem24);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case COLUMN_FAMILIES:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list22 = iprot.readListBegin();
+                  this.columnFamilies = new ArrayList<ColumnDescriptor>(_list22.size);
+                  for (int _i23 = 0; _i23 < _list22.size; ++_i23)
+                  {
+                    ColumnDescriptor _elem24;
+                    _elem24 = new ColumnDescriptor();
+                    _elem24.read(iprot);
+                    this.columnFamilies.add(_elem24);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -6282,7 +8212,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMN_FAMILIES_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.columnFamilies.size()));
-          for (ColumnDescriptor _iter25 : this.columnFamilies)          {
+          for (ColumnDescriptor _iter25 : this.columnFamilies)
+          {
             _iter25.write(oprot);
           }
           oprot.writeListEnd();
@@ -6302,7 +8233,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -6319,31 +8250,86 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class createTable_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class createTable_result implements TBase<createTable_result._Fields>, java.io.Serializable, Cloneable, Comparable<createTable_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("createTable_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
     private static final TField EXIST_FIELD_DESC = new TField("exist", TType.STRUCT, (short)3);
 
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
     public AlreadyExists exist;
-    public static final int EXIST = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia"),
+      EXIST((short)3, "exist");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(EXIST, new FieldMetaData("exist", TFieldRequirementType.DEFAULT, 
+      put(_Fields.EXIST, new FieldMetaData("exist", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -6380,7 +8366,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public createTable_result deepCopy() {
+      return new createTable_result(this);
+    }
+
+    @Deprecated
     public createTable_result clone() {
       return new createTable_result(this);
     }
@@ -6389,15 +8379,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public createTable_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -6412,15 +8403,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public createTable_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -6435,15 +8427,16 @@ public class Hbase {
       return this.exist;
     }
 
-    public void setExist(AlreadyExists exist) {
+    public createTable_result setExist(AlreadyExists exist) {
       this.exist = exist;
+      return this;
     }
 
     public void unsetExist() {
       this.exist = null;
     }
 
-    // Returns true if field exist is set (has been asigned a value) and false otherwise
+    /** Returns true if field exist is set (has been asigned a value) and false otherwise */
     public boolean isSetExist() {
       return this.exist != null;
     }
@@ -6454,8 +8447,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -6480,13 +8473,15 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
@@ -6496,23 +8491,29 @@ public class Hbase {
       case EXIST:
         return getExist();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
       case EXIST:
         return isSetExist();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -6560,6 +8561,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      boolean present_exist = true && (isSetExist());
+      builder.append(present_exist);
+      if (present_exist)
+        builder.append(exist);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(createTable_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      createTable_result typedOther = (createTable_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetExist()).compareTo(isSetExist());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(exist, typedOther.exist);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -6572,40 +8625,40 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case EXIST:
-            if (field.type == TType.STRUCT) {
-              this.exist = new AlreadyExists();
-              this.exist.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case EXIST:
+              if (field.type == TType.STRUCT) {
+                this.exist = new AlreadyExists();
+                this.exist.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -6665,21 +8718,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteTable_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteTable_args implements TBase<deleteTable_args._Fields>, java.io.Serializable, Cloneable, Comparable<deleteTable_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteTable_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -6706,7 +8814,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteTable_args deepCopy() {
+      return new deleteTable_args(this);
+    }
+
+    @Deprecated
     public deleteTable_args clone() {
       return new deleteTable_args(this);
     }
@@ -6715,15 +8827,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public deleteTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -6734,9 +8847,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -6744,29 +8857,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -6796,6 +8917,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteTable_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteTable_args typedOther = (deleteTable_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -6808,23 +8955,23 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -6846,34 +8993,91 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteTable_args(");
+      boolean first = true;
 
       sb.append("tableName:");
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteTable_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteTable_result implements TBase<deleteTable_result._Fields>, java.io.Serializable, Cloneable, Comparable<deleteTable_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteTable_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -6900,7 +9104,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteTable_result deepCopy() {
+      return new deleteTable_result(this);
+    }
+
+    @Deprecated
     public deleteTable_result clone() {
       return new deleteTable_result(this);
     }
@@ -6909,15 +9117,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public deleteTable_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -6928,8 +9137,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -6938,29 +9147,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -6990,6 +9207,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteTable_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteTable_result typedOther = (deleteTable_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -7002,24 +9245,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -7040,6 +9283,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteTable_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -7047,37 +9291,93 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class get_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class get_args implements TBase<get_args._Fields>, java.io.Serializable, Cloneable, Comparable<get_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public byte[] column;
-    public static final int COLUMN = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMN((short)3, "column");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -7114,7 +9414,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public get_args deepCopy() {
+      return new get_args(this);
+    }
+
+    @Deprecated
     public get_args clone() {
       return new get_args(this);
     }
@@ -7123,15 +9427,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public get_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -7146,15 +9451,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public get_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -7169,15 +9475,16 @@ public class Hbase {
       return this.column;
     }
 
-    public void setColumn(byte[] column) {
+    public get_args setColumn(byte[] column) {
       this.column = column;
+      return this;
     }
 
     public void unsetColumn() {
       this.column = null;
     }
 
-    // Returns true if field column is set (has been asigned a value) and false otherwise
+    /** Returns true if field column is set (has been asigned a value) and false otherwise */
     public boolean isSetColumn() {
       return this.column != null;
     }
@@ -7188,9 +9495,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -7214,14 +9521,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -7230,23 +9539,29 @@ public class Hbase {
       case COLUMN:
         return getColumn();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case COLUMN:
         return isSetColumn();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -7294,6 +9609,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(get_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      get_args typedOther = (get_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -7306,37 +9673,37 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN:
+              if (field.type == TType.STRING) {
+                this.column = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -7374,7 +9741,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -7382,7 +9749,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -7390,7 +9757,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.column));
+        sb.append(this.column);
       }
       first = false;
       sb.append(")");
@@ -7399,27 +9766,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class get_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class get_result implements TBase<get_result._Fields>, java.io.Serializable, Cloneable, Comparable<get_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("get_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TCell> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TCell.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -7455,7 +9877,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public get_result deepCopy() {
+      return new get_result(this);
+    }
+
+    @Deprecated
     public get_result clone() {
       return new get_result(this);
     }
@@ -7479,15 +9905,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TCell> success) {
+    public get_result setSuccess(List<TCell> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -7502,15 +9929,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public get_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -7521,8 +9949,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -7539,34 +9967,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -7605,6 +10041,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(get_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      get_result typedOther = (get_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -7617,42 +10092,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list26 = iprot.readListBegin();
-                this.success = new ArrayList<TCell>(_list26.size);
-                for (int _i27 = 0; _i27 < _list26.size; ++_i27)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TCell _elem28;
-                  _elem28 = new TCell();
-                  _elem28.read(iprot);
-                  this.success.add(_elem28);
+                  TList _list26 = iprot.readListBegin();
+                  this.success = new ArrayList<TCell>(_list26.size);
+                  for (int _i27 = 0; _i27 < _list26.size; ++_i27)
+                  {
+                    TCell _elem28;
+                    _elem28 = new TCell();
+                    _elem28.read(iprot);
+                    this.success.add(_elem28);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -7665,7 +10140,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TCell _iter29 : this.success)          {
+          for (TCell _iter29 : this.success)
+          {
             _iter29.write(oprot);
           }
           oprot.writeListEnd();
@@ -7706,42 +10182,93 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getVer_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getVer_args implements TBase<getVer_args._Fields>, java.io.Serializable, Cloneable, Comparable<getVer_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getVer_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
     private static final TField NUM_VERSIONS_FIELD_DESC = new TField("numVersions", TType.I32, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public byte[] column;
-    public static final int COLUMN = 3;
     public int numVersions;
-    public static final int NUMVERSIONS = 4;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean numVersions = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMN((short)3, "column"),
+      NUM_VERSIONS((short)4, "numVersions");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __NUMVERSIONS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(NUMVERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT, 
+      put(_Fields.NUM_VERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -7763,13 +10290,15 @@ public class Hbase {
       this.row = row;
       this.column = column;
       this.numVersions = numVersions;
-      this.__isset.numVersions = true;
+      setNumVersionsIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public getVer_args(getVer_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -7779,11 +10308,14 @@ public class Hbase {
       if (other.isSetColumn()) {
         this.column = other.column;
       }
-      __isset.numVersions = other.__isset.numVersions;
       this.numVersions = other.numVersions;
     }
 
-    @Override
+    public getVer_args deepCopy() {
+      return new getVer_args(this);
+    }
+
+    @Deprecated
     public getVer_args clone() {
       return new getVer_args(this);
     }
@@ -7792,15 +10324,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getVer_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -7815,15 +10348,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public getVer_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -7838,15 +10372,16 @@ public class Hbase {
       return this.column;
     }
 
-    public void setColumn(byte[] column) {
+    public getVer_args setColumn(byte[] column) {
       this.column = column;
+      return this;
     }
 
     public void unsetColumn() {
       this.column = null;
     }
 
-    // Returns true if field column is set (has been asigned a value) and false otherwise
+    /** Returns true if field column is set (has been asigned a value) and false otherwise */
     public boolean isSetColumn() {
       return this.column != null;
     }
@@ -7861,27 +10396,28 @@ public class Hbase {
       return this.numVersions;
     }
 
-    public void setNumVersions(int numVersions) {
+    public getVer_args setNumVersions(int numVersions) {
       this.numVersions = numVersions;
-      this.__isset.numVersions = true;
+      setNumVersionsIsSet(true);
+      return this;
     }
 
     public void unsetNumVersions() {
-      this.__isset.numVersions = false;
+      __isset_bit_vector.clear(__NUMVERSIONS_ISSET_ID);
     }
 
-    // Returns true if field numVersions is set (has been asigned a value) and false otherwise
+    /** Returns true if field numVersions is set (has been asigned a value) and false otherwise */
     public boolean isSetNumVersions() {
-      return this.__isset.numVersions;
+      return __isset_bit_vector.get(__NUMVERSIONS_ISSET_ID);
     }
 
     public void setNumVersionsIsSet(boolean value) {
-      this.__isset.numVersions = value;
+      __isset_bit_vector.set(__NUMVERSIONS_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -7905,7 +10441,7 @@ public class Hbase {
         }
         break;
 
-      case NUMVERSIONS:
+      case NUM_VERSIONS:
         if (value == null) {
           unsetNumVersions();
         } else {
@@ -7913,14 +10449,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -7929,28 +10467,34 @@ public class Hbase {
       case COLUMN:
         return getColumn();
 
-      case NUMVERSIONS:
-        return getNumVersions();
+      case NUM_VERSIONS:
+        return new Integer(getNumVersions());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case COLUMN:
         return isSetColumn();
-      case NUMVERSIONS:
+      case NUM_VERSIONS:
         return isSetNumVersions();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -8007,6 +10551,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_numVersions = true;
+      builder.append(present_numVersions);
+      if (present_numVersions)
+        builder.append(numVersions);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getVer_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getVer_args typedOther = (getVer_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetNumVersions()).compareTo(isSetNumVersions());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(numVersions, typedOther.numVersions);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -8019,45 +10628,45 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case NUMVERSIONS:
-            if (field.type == TType.I32) {
-              this.numVersions = iprot.readI32();
-              this.__isset.numVersions = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN:
+              if (field.type == TType.STRING) {
+                this.column = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case NUM_VERSIONS:
+              if (field.type == TType.I32) {
+                this.numVersions = iprot.readI32();
+                setNumVersionsIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -8098,7 +10707,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8106,7 +10715,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8114,7 +10723,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.column));
+        sb.append(this.column);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8127,27 +10736,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getVer_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getVer_result implements TBase<getVer_result._Fields>, java.io.Serializable, Cloneable, Comparable<getVer_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("getVer_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TCell> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TCell.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -8183,7 +10847,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getVer_result deepCopy() {
+      return new getVer_result(this);
+    }
+
+    @Deprecated
     public getVer_result clone() {
       return new getVer_result(this);
     }
@@ -8207,15 +10875,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TCell> success) {
+    public getVer_result setSuccess(List<TCell> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -8230,15 +10899,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getVer_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -8249,8 +10919,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -8267,34 +10937,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -8333,6 +11011,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getVer_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getVer_result typedOther = (getVer_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -8345,42 +11062,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list30 = iprot.readListBegin();
-                this.success = new ArrayList<TCell>(_list30.size);
-                for (int _i31 = 0; _i31 < _list30.size; ++_i31)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TCell _elem32;
-                  _elem32 = new TCell();
-                  _elem32.read(iprot);
-                  this.success.add(_elem32);
+                  TList _list30 = iprot.readListBegin();
+                  this.success = new ArrayList<TCell>(_list30.size);
+                  for (int _i31 = 0; _i31 < _list30.size; ++_i31)
+                  {
+                    TCell _elem32;
+                    _elem32 = new TCell();
+                    _elem32.read(iprot);
+                    this.success.add(_elem32);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -8393,7 +11110,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TCell _iter33 : this.success)          {
+          for (TCell _iter33 : this.success)
+          {
             _iter33.write(oprot);
           }
           oprot.writeListEnd();
@@ -8434,14 +11152,13 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getVerTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getVerTs_args implements TBase<getVerTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<getVerTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getVerTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
@@ -8449,33 +11166,85 @@ public class Hbase {
     private static final TField NUM_VERSIONS_FIELD_DESC = new TField("numVersions", TType.I32, (short)5);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public byte[] column;
-    public static final int COLUMN = 3;
     public long timestamp;
-    public static final int TIMESTAMP = 4;
     public int numVersions;
-    public static final int NUMVERSIONS = 5;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
-      public boolean numVersions = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMN((short)3, "column"),
+      TIMESTAMP((short)4, "timestamp"),
+      NUM_VERSIONS((short)5, "numVersions");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private static final int __NUMVERSIONS_ISSET_ID = 1;
+    private BitSet __isset_bit_vector = new BitSet(2);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
-      put(NUMVERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT, 
+      put(_Fields.NUM_VERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -8498,15 +11267,17 @@ public class Hbase {
       this.row = row;
       this.column = column;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
       this.numVersions = numVersions;
-      this.__isset.numVersions = true;
+      setNumVersionsIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public getVerTs_args(getVerTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -8516,13 +11287,15 @@ public class Hbase {
       if (other.isSetColumn()) {
         this.column = other.column;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
-      __isset.numVersions = other.__isset.numVersions;
       this.numVersions = other.numVersions;
     }
 
-    @Override
+    public getVerTs_args deepCopy() {
+      return new getVerTs_args(this);
+    }
+
+    @Deprecated
     public getVerTs_args clone() {
       return new getVerTs_args(this);
     }
@@ -8531,15 +11304,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getVerTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -8554,15 +11328,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public getVerTs_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -8577,15 +11352,16 @@ public class Hbase {
       return this.column;
     }
 
-    public void setColumn(byte[] column) {
+    public getVerTs_args setColumn(byte[] column) {
       this.column = column;
+      return this;
     }
 
     public void unsetColumn() {
       this.column = null;
     }
 
-    // Returns true if field column is set (has been asigned a value) and false otherwise
+    /** Returns true if field column is set (has been asigned a value) and false otherwise */
     public boolean isSetColumn() {
       return this.column != null;
     }
@@ -8600,49 +11376,51 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public getVerTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
     public int getNumVersions() {
       return this.numVersions;
     }
 
-    public void setNumVersions(int numVersions) {
+    public getVerTs_args setNumVersions(int numVersions) {
       this.numVersions = numVersions;
-      this.__isset.numVersions = true;
+      setNumVersionsIsSet(true);
+      return this;
     }
 
     public void unsetNumVersions() {
-      this.__isset.numVersions = false;
+      __isset_bit_vector.clear(__NUMVERSIONS_ISSET_ID);
     }
 
-    // Returns true if field numVersions is set (has been asigned a value) and false otherwise
+    /** Returns true if field numVersions is set (has been asigned a value) and false otherwise */
     public boolean isSetNumVersions() {
-      return this.__isset.numVersions;
+      return __isset_bit_vector.get(__NUMVERSIONS_ISSET_ID);
     }
 
     public void setNumVersionsIsSet(boolean value) {
-      this.__isset.numVersions = value;
+      __isset_bit_vector.set(__NUMVERSIONS_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -8674,7 +11452,7 @@ public class Hbase {
         }
         break;
 
-      case NUMVERSIONS:
+      case NUM_VERSIONS:
         if (value == null) {
           unsetNumVersions();
         } else {
@@ -8682,14 +11460,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -8699,20 +11479,23 @@ public class Hbase {
         return getColumn();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      case NUMVERSIONS:
-        return getNumVersions();
+      case NUM_VERSIONS:
+        return new Integer(getNumVersions());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
@@ -8720,11 +11503,14 @@ public class Hbase {
         return isSetColumn();
       case TIMESTAMP:
         return isSetTimestamp();
-      case NUMVERSIONS:
+      case NUM_VERSIONS:
         return isSetNumVersions();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -8790,6 +11576,84 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_numVersions = true;
+      builder.append(present_numVersions);
+      if (present_numVersions)
+        builder.append(numVersions);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getVerTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getVerTs_args typedOther = (getVerTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetNumVersions()).compareTo(isSetNumVersions());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(numVersions, typedOther.numVersions);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -8802,53 +11666,53 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case NUMVERSIONS:
-            if (field.type == TType.I32) {
-              this.numVersions = iprot.readI32();
-              this.__isset.numVersions = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN:
+              if (field.type == TType.STRING) {
+                this.column = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case NUM_VERSIONS:
+              if (field.type == TType.I32) {
+                this.numVersions = iprot.readI32();
+                setNumVersionsIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -8892,7 +11756,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8900,7 +11764,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8908,7 +11772,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.column));
+        sb.append(this.column);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -8925,27 +11789,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getVerTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getVerTs_result implements TBase<getVerTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<getVerTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("getVerTs_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TCell> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TCell.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -8981,7 +11900,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getVerTs_result deepCopy() {
+      return new getVerTs_result(this);
+    }
+
+    @Deprecated
     public getVerTs_result clone() {
       return new getVerTs_result(this);
     }
@@ -9005,15 +11928,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TCell> success) {
+    public getVerTs_result setSuccess(List<TCell> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -9028,15 +11952,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getVerTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -9047,8 +11972,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -9065,34 +11990,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -9131,6 +12064,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getVerTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getVerTs_result typedOther = (getVerTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -9143,42 +12115,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list34 = iprot.readListBegin();
-                this.success = new ArrayList<TCell>(_list34.size);
-                for (int _i35 = 0; _i35 < _list34.size; ++_i35)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TCell _elem36;
-                  _elem36 = new TCell();
-                  _elem36.read(iprot);
-                  this.success.add(_elem36);
+                  TList _list34 = iprot.readListBegin();
+                  this.success = new ArrayList<TCell>(_list34.size);
+                  for (int _i35 = 0; _i35 < _list34.size; ++_i35)
+                  {
+                    TCell _elem36;
+                    _elem36 = new TCell();
+                    _elem36.read(iprot);
+                    this.success.add(_elem36);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -9191,7 +12163,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TCell _iter37 : this.success)          {
+          for (TCell _iter37 : this.success)
+          {
             _iter37.write(oprot);
           }
           oprot.writeListEnd();
@@ -9232,26 +12205,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRow_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRow_args implements TBase<getRow_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRow_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getRow_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -9283,7 +12311,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getRow_args deepCopy() {
+      return new getRow_args(this);
+    }
+
+    @Deprecated
     public getRow_args clone() {
       return new getRow_args(this);
     }
@@ -9292,15 +12324,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getRow_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -9315,15 +12348,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public getRow_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -9334,9 +12368,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -9352,34 +12386,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
         return getRow();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -9418,6 +12460,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRow_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRow_args typedOther = (getRow_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -9430,30 +12511,30 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -9486,7 +12567,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -9494,7 +12575,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       sb.append(")");
@@ -9503,27 +12584,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRow_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRow_result implements TBase<getRow_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("getRow_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TRowResult> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -9559,7 +12695,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getRow_result deepCopy() {
+      return new getRow_result(this);
+    }
+
+    @Deprecated
     public getRow_result clone() {
       return new getRow_result(this);
     }
@@ -9583,15 +12723,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRowResult> success) {
+    public getRow_result setSuccess(List<TRowResult> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -9606,15 +12747,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getRow_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -9625,8 +12767,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -9643,34 +12785,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -9709,7 +12859,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -9721,42 +12883,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list38 = iprot.readListBegin();
-                this.success = new ArrayList<TRowResult>(_list38.size);
-                for (int _i39 = 0; _i39 < _list38.size; ++_i39)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRowResult _elem40;
-                  _elem40 = new TRowResult();
-                  _elem40.read(iprot);
-                  this.success.add(_elem40);
+                  TList _list38 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list38.size);
+                  for (int _i39 = 0; _i39 < _list38.size; ++_i39)
+                  {
+                    TRowResult _elem40;
+                    _elem40 = new TRowResult();
+                    _elem40.read(iprot);
+                    this.success.add(_elem40);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -9769,7 +12931,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter41 : this.success)          {
+          for (TRowResult _iter41 : this.success)
+          {
             _iter41.write(oprot);
           }
           oprot.writeListEnd();
@@ -9810,31 +12973,86 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRowWithColumns_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRowWithColumns_args implements TBase<getRowWithColumns_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRowWithColumns_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumns_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public List<byte[]> columns;
-    public static final int COLUMNS = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMNS((short)3, "columns");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
     }});
@@ -9876,7 +13094,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getRowWithColumns_args deepCopy() {
+      return new getRowWithColumns_args(this);
+    }
+
+    @Deprecated
     public getRowWithColumns_args clone() {
       return new getRowWithColumns_args(this);
     }
@@ -9885,15 +13107,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getRowWithColumns_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -9908,15 +13131,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public getRowWithColumns_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -9946,15 +13170,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public getRowWithColumns_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -9965,9 +13190,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -9991,14 +13216,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -10007,23 +13234,29 @@ public class Hbase {
       case COLUMNS:
         return getColumns();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case COLUMNS:
         return isSetColumns();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -10071,6 +13304,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRowWithColumns_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRowWithColumns_args typedOther = (getRowWithColumns_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -10083,47 +13368,47 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list42 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list42.size);
-                for (int _i43 = 0; _i43 < _list42.size; ++_i43)
-                {
-                  byte[] _elem44;
-                  _elem44 = iprot.readBinary();
-                  this.columns.add(_elem44);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list42 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list42.size);
+                  for (int _i43 = 0; _i43 < _list42.size; ++_i43)
+                  {
+                    byte[] _elem44;
+                    _elem44 = iprot.readBinary();
+                    this.columns.add(_elem44);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -10147,7 +13432,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter45 : this.columns)          {
+          for (byte[] _iter45 : this.columns)
+          {
             oprot.writeBinary(_iter45);
           }
           oprot.writeListEnd();
@@ -10167,7 +13453,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10175,7 +13461,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10192,27 +13478,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRowWithColumns_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRowWithColumns_result implements TBase<getRowWithColumns_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumns_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TRowResult> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -10248,7 +13589,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getRowWithColumns_result deepCopy() {
+      return new getRowWithColumns_result(this);
+    }
+
+    @Deprecated
     public getRowWithColumns_result clone() {
       return new getRowWithColumns_result(this);
     }
@@ -10272,15 +13617,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRowResult> success) {
+    public getRowWithColumns_result setSuccess(List<TRowResult> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -10295,15 +13641,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getRowWithColumns_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -10314,8 +13661,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -10332,34 +13679,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -10398,7 +13753,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -10410,42 +13777,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list46 = iprot.readListBegin();
-                this.success = new ArrayList<TRowResult>(_list46.size);
-                for (int _i47 = 0; _i47 < _list46.size; ++_i47)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRowResult _elem48;
-                  _elem48 = new TRowResult();
-                  _elem48.read(iprot);
-                  this.success.add(_elem48);
+                  TList _list46 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list46.size);
+                  for (int _i47 = 0; _i47 < _list46.size; ++_i47)
+                  {
+                    TRowResult _elem48;
+                    _elem48 = new TRowResult();
+                    _elem48.read(iprot);
+                    this.success.add(_elem48);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -10458,7 +13825,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter49 : this.success)          {
+          for (TRowResult _iter49 : this.success)
+          {
             _iter49.write(oprot);
           }
           oprot.writeListEnd();
@@ -10499,37 +13867,88 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRowTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRowTs_args implements TBase<getRowTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRowTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getRowTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public long timestamp;
-    public static final int TIMESTAMP = 3;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      private boolean timestamp;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      TIMESTAMP((short)3, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -10549,24 +13968,29 @@ public class Hbase {
       this.tableName = tableName;
       this.row = row;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public getRowTs_args(getRowTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
       if (other.isSetRow()) {
         this.row = other.row;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public getRowTs_args deepCopy() {
+      return new getRowTs_args(this);
+    }
+
+    @Deprecated
     public getRowTs_args clone() {
       return new getRowTs_args(this);
     }
@@ -10575,15 +13999,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getRowTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -10598,15 +14023,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public getRowTs_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -10621,27 +14047,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public getRowTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -10665,39 +14092,47 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
         return getRow();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -10745,6 +14180,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRowTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRowTs_args typedOther = (getRowTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -10757,38 +14244,38 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -10824,7 +14311,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10832,7 +14319,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -10845,27 +14332,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRowTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRowTs_result implements TBase<getRowTs_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("getRowTs_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TRowResult> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -10901,7 +14443,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getRowTs_result deepCopy() {
+      return new getRowTs_result(this);
+    }
+
+    @Deprecated
     public getRowTs_result clone() {
       return new getRowTs_result(this);
     }
@@ -10925,15 +14471,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRowResult> success) {
+    public getRowTs_result setSuccess(List<TRowResult> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -10948,15 +14495,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getRowTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -10967,8 +14515,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -10985,34 +14533,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -11051,7 +14607,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -11063,42 +14631,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list50 = iprot.readListBegin();
-                this.success = new ArrayList<TRowResult>(_list50.size);
-                for (int _i51 = 0; _i51 < _list50.size; ++_i51)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRowResult _elem52;
-                  _elem52 = new TRowResult();
-                  _elem52.read(iprot);
-                  this.success.add(_elem52);
+                  TList _list50 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list50.size);
+                  for (int _i51 = 0; _i51 < _list50.size; ++_i51)
+                  {
+                    TRowResult _elem52;
+                    _elem52 = new TRowResult();
+                    _elem52.read(iprot);
+                    this.success.add(_elem52);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -11111,7 +14679,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter53 : this.success)          {
+          for (TRowResult _iter53 : this.success)
+          {
             _iter53.write(oprot);
           }
           oprot.writeListEnd();
@@ -11152,43 +14721,94 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRowWithColumnsTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRowWithColumnsTs_args implements TBase<getRowWithColumnsTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<getRowWithColumnsTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumnsTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public List<byte[]> columns;
-    public static final int COLUMNS = 3;
     public long timestamp;
-    public static final int TIMESTAMP = 4;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMNS((short)3, "columns"),
+      TIMESTAMP((short)4, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -11210,13 +14830,15 @@ public class Hbase {
       this.row = row;
       this.columns = columns;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public getRowWithColumnsTs_args(getRowWithColumnsTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -11230,11 +14852,14 @@ public class Hbase {
         }
         this.columns = __this__columns;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public getRowWithColumnsTs_args deepCopy() {
+      return new getRowWithColumnsTs_args(this);
+    }
+
+    @Deprecated
     public getRowWithColumnsTs_args clone() {
       return new getRowWithColumnsTs_args(this);
     }
@@ -11243,15 +14868,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public getRowWithColumnsTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -11266,15 +14892,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public getRowWithColumnsTs_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -11304,15 +14931,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public getRowWithColumnsTs_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -11327,27 +14955,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public getRowWithColumnsTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -11379,14 +15008,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -11396,17 +15027,20 @@ public class Hbase {
         return getColumns();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
@@ -11414,9 +15048,12 @@ public class Hbase {
         return isSetColumns();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -11473,6 +15110,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(getRowWithColumnsTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getRowWithColumnsTs_args typedOther = (getRowWithColumnsTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -11485,55 +15187,55 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list54 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list54.size);
-                for (int _i55 = 0; _i55 < _list54.size; ++_i55)
-                {
-                  byte[] _elem56;
-                  _elem56 = iprot.readBinary();
-                  this.columns.add(_elem56);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list54 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list54.size);
+                  for (int _i55 = 0; _i55 < _list54.size; ++_i55)
+                  {
+                    byte[] _elem56;
+                    _elem56 = iprot.readBinary();
+                    this.columns.add(_elem56);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -11557,7 +15259,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter57 : this.columns)          {
+          for (byte[] _iter57 : this.columns)
+          {
             oprot.writeBinary(_iter57);
           }
           oprot.writeListEnd();
@@ -11580,7 +15283,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -11588,7 +15291,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -11609,27 +15312,82 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class getRowWithColumnsTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class getRowWithColumnsTs_result implements TBase<getRowWithColumnsTs_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("getRowWithColumnsTs_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public List<TRowResult> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -11665,7 +15423,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public getRowWithColumnsTs_result deepCopy() {
+      return new getRowWithColumnsTs_result(this);
+    }
+
+    @Deprecated
     public getRowWithColumnsTs_result clone() {
       return new getRowWithColumnsTs_result(this);
     }
@@ -11689,15 +15451,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRowResult> success) {
+    public getRowWithColumnsTs_result setSuccess(List<TRowResult> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -11712,15 +15475,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public getRowWithColumnsTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -11731,8 +15495,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -11749,34 +15513,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -11815,7 +15587,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -11827,42 +15611,42 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list58 = iprot.readListBegin();
-                this.success = new ArrayList<TRowResult>(_list58.size);
-                for (int _i59 = 0; _i59 < _list58.size; ++_i59)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRowResult _elem60;
-                  _elem60 = new TRowResult();
-                  _elem60.read(iprot);
-                  this.success.add(_elem60);
+                  TList _list58 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list58.size);
+                  for (int _i59 = 0; _i59 < _list58.size; ++_i59)
+                  {
+                    TRowResult _elem60;
+                    _elem60 = new TRowResult();
+                    _elem60.read(iprot);
+                    this.success.add(_elem60);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -11875,7 +15659,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter61 : this.success)          {
+          for (TRowResult _iter61 : this.success)
+          {
             _iter61.write(oprot);
           }
           oprot.writeListEnd();
@@ -11916,31 +15701,86 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRow_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRow_args implements TBase<mutateRow_args._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRow_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRow_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public List<Mutation> mutations;
-    public static final int MUTATIONS = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      MUTATIONS((short)3, "mutations");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
+      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, Mutation.class))));
     }});
@@ -11982,7 +15822,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public mutateRow_args deepCopy() {
+      return new mutateRow_args(this);
+    }
+
+    @Deprecated
     public mutateRow_args clone() {
       return new mutateRow_args(this);
     }
@@ -11991,15 +15835,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public mutateRow_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -12014,15 +15859,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public mutateRow_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -12052,15 +15898,16 @@ public class Hbase {
       return this.mutations;
     }
 
-    public void setMutations(List<Mutation> mutations) {
+    public mutateRow_args setMutations(List<Mutation> mutations) {
       this.mutations = mutations;
+      return this;
     }
 
     public void unsetMutations() {
       this.mutations = null;
     }
 
-    // Returns true if field mutations is set (has been asigned a value) and false otherwise
+    /** Returns true if field mutations is set (has been asigned a value) and false otherwise */
     public boolean isSetMutations() {
       return this.mutations != null;
     }
@@ -12071,9 +15918,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -12097,14 +15944,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -12113,23 +15962,29 @@ public class Hbase {
       case MUTATIONS:
         return getMutations();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case MUTATIONS:
         return isSetMutations();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -12177,6 +16032,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_mutations = true && (isSetMutations());
+      builder.append(present_mutations);
+      if (present_mutations)
+        builder.append(mutations);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRow_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRow_args typedOther = (mutateRow_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetMutations()).compareTo(isSetMutations());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(mutations, typedOther.mutations);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -12189,48 +16096,48 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case MUTATIONS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list62 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list62.size);
-                for (int _i63 = 0; _i63 < _list62.size; ++_i63)
-                {
-                  Mutation _elem64;
-                  _elem64 = new Mutation();
-                  _elem64.read(iprot);
-                  this.mutations.add(_elem64);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case MUTATIONS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list62 = iprot.readListBegin();
+                  this.mutations = new ArrayList<Mutation>(_list62.size);
+                  for (int _i63 = 0; _i63 < _list62.size; ++_i63)
+                  {
+                    Mutation _elem64;
+                    _elem64 = new Mutation();
+                    _elem64.read(iprot);
+                    this.mutations.add(_elem64);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -12254,7 +16161,8 @@ public class Hbase {
         oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter65 : this.mutations)          {
+          for (Mutation _iter65 : this.mutations)
+          {
             _iter65.write(oprot);
           }
           oprot.writeListEnd();
@@ -12274,7 +16182,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -12282,7 +16190,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -12299,26 +16207,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRow_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRow_result implements TBase<mutateRow_result._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRow_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRow_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -12350,7 +16313,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public mutateRow_result deepCopy() {
+      return new mutateRow_result(this);
+    }
+
+    @Deprecated
     public mutateRow_result clone() {
       return new mutateRow_result(this);
     }
@@ -12359,15 +16326,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public mutateRow_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -12382,15 +16350,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public mutateRow_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -12401,8 +16370,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -12419,34 +16388,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -12485,6 +16462,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRow_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRow_result typedOther = (mutateRow_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -12497,32 +16513,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -12570,43 +16586,94 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRowTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRowTs_args implements TBase<mutateRowTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRowTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public List<Mutation> mutations;
-    public static final int MUTATIONS = 3;
     public long timestamp;
-    public static final int TIMESTAMP = 4;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      MUTATIONS((short)3, "mutations"),
+      TIMESTAMP((short)4, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
+      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, Mutation.class))));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -12628,13 +16695,15 @@ public class Hbase {
       this.row = row;
       this.mutations = mutations;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public mutateRowTs_args(mutateRowTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -12648,11 +16717,14 @@ public class Hbase {
         }
         this.mutations = __this__mutations;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public mutateRowTs_args deepCopy() {
+      return new mutateRowTs_args(this);
+    }
+
+    @Deprecated
     public mutateRowTs_args clone() {
       return new mutateRowTs_args(this);
     }
@@ -12661,15 +16733,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public mutateRowTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -12684,15 +16757,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public mutateRowTs_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -12722,15 +16796,16 @@ public class Hbase {
       return this.mutations;
     }
 
-    public void setMutations(List<Mutation> mutations) {
+    public mutateRowTs_args setMutations(List<Mutation> mutations) {
       this.mutations = mutations;
+      return this;
     }
 
     public void unsetMutations() {
       this.mutations = null;
     }
 
-    // Returns true if field mutations is set (has been asigned a value) and false otherwise
+    /** Returns true if field mutations is set (has been asigned a value) and false otherwise */
     public boolean isSetMutations() {
       return this.mutations != null;
     }
@@ -12745,27 +16820,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public mutateRowTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -12797,14 +16873,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -12814,17 +16892,20 @@ public class Hbase {
         return getMutations();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
@@ -12832,9 +16913,12 @@ public class Hbase {
         return isSetMutations();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -12891,6 +16975,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_mutations = true && (isSetMutations());
+      builder.append(present_mutations);
+      if (present_mutations)
+        builder.append(mutations);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRowTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRowTs_args typedOther = (mutateRowTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetMutations()).compareTo(isSetMutations());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(mutations, typedOther.mutations);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -12903,56 +17052,56 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case MUTATIONS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list66 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list66.size);
-                for (int _i67 = 0; _i67 < _list66.size; ++_i67)
-                {
-                  Mutation _elem68;
-                  _elem68 = new Mutation();
-                  _elem68.read(iprot);
-                  this.mutations.add(_elem68);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case MUTATIONS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list66 = iprot.readListBegin();
+                  this.mutations = new ArrayList<Mutation>(_list66.size);
+                  for (int _i67 = 0; _i67 < _list66.size; ++_i67)
+                  {
+                    Mutation _elem68;
+                    _elem68 = new Mutation();
+                    _elem68.read(iprot);
+                    this.mutations.add(_elem68);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -12976,7 +17125,8 @@ public class Hbase {
         oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.mutations.size()));
-          for (Mutation _iter69 : this.mutations)          {
+          for (Mutation _iter69 : this.mutations)
+          {
             _iter69.write(oprot);
           }
           oprot.writeListEnd();
@@ -12999,7 +17149,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -13007,7 +17157,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -13028,26 +17178,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRowTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRowTs_result implements TBase<mutateRowTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRowTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowTs_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -13079,7 +17284,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public mutateRowTs_result deepCopy() {
+      return new mutateRowTs_result(this);
+    }
+
+    @Deprecated
     public mutateRowTs_result clone() {
       return new mutateRowTs_result(this);
     }
@@ -13088,15 +17297,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public mutateRowTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -13111,15 +17321,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public mutateRowTs_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -13130,8 +17341,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -13148,34 +17359,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -13214,6 +17433,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRowTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRowTs_result typedOther = (mutateRowTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -13226,32 +17484,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -13299,26 +17557,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRows_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRows_args implements TBase<mutateRows_args._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRows_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRows_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_BATCHES_FIELD_DESC = new TField("rowBatches", TType.LIST, (short)2);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public List<BatchMutation> rowBatches;
-    public static final int ROWBATCHES = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW_BATCHES((short)2, "rowBatches");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROWBATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW_BATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, BatchMutation.class))));
     }});
@@ -13355,7 +17668,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public mutateRows_args deepCopy() {
+      return new mutateRows_args(this);
+    }
+
+    @Deprecated
     public mutateRows_args clone() {
       return new mutateRows_args(this);
     }
@@ -13364,15 +17681,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public mutateRows_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -13402,15 +17720,16 @@ public class Hbase {
       return this.rowBatches;
     }
 
-    public void setRowBatches(List<BatchMutation> rowBatches) {
+    public mutateRows_args setRowBatches(List<BatchMutation> rowBatches) {
       this.rowBatches = rowBatches;
+      return this;
     }
 
     public void unsetRowBatches() {
       this.rowBatches = null;
     }
 
-    // Returns true if field rowBatches is set (has been asigned a value) and false otherwise
+    /** Returns true if field rowBatches is set (has been asigned a value) and false otherwise */
     public boolean isSetRowBatches() {
       return this.rowBatches != null;
     }
@@ -13421,9 +17740,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -13431,7 +17750,7 @@ public class Hbase {
         }
         break;
 
-      case ROWBATCHES:
+      case ROW_BATCHES:
         if (value == null) {
           unsetRowBatches();
         } else {
@@ -13439,34 +17758,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case ROWBATCHES:
+      case ROW_BATCHES:
         return getRowBatches();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case ROWBATCHES:
+      case ROW_BATCHES:
         return isSetRowBatches();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -13505,6 +17832,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rowBatches = true && (isSetRowBatches());
+      builder.append(present_rowBatches);
+      if (present_rowBatches)
+        builder.append(rowBatches);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRows_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRows_args typedOther = (mutateRows_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRowBatches()).compareTo(isSetRowBatches());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(rowBatches, typedOther.rowBatches);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -13517,41 +17883,41 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROWBATCHES:
-            if (field.type == TType.LIST) {
-              {
-                TList _list70 = iprot.readListBegin();
-                this.rowBatches = new ArrayList<BatchMutation>(_list70.size);
-                for (int _i71 = 0; _i71 < _list70.size; ++_i71)
-                {
-                  BatchMutation _elem72;
-                  _elem72 = new BatchMutation();
-                  _elem72.read(iprot);
-                  this.rowBatches.add(_elem72);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case ROW_BATCHES:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list70 = iprot.readListBegin();
+                  this.rowBatches = new ArrayList<BatchMutation>(_list70.size);
+                  for (int _i71 = 0; _i71 < _list70.size; ++_i71)
+                  {
+                    BatchMutation _elem72;
+                    _elem72 = new BatchMutation();
+                    _elem72.read(iprot);
+                    this.rowBatches.add(_elem72);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -13570,7 +17936,8 @@ public class Hbase {
         oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter73 : this.rowBatches)          {
+          for (BatchMutation _iter73 : this.rowBatches)
+          {
             _iter73.write(oprot);
           }
           oprot.writeListEnd();
@@ -13590,7 +17957,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -13607,26 +17974,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRows_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRows_result implements TBase<mutateRows_result._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRows_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRows_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -13658,7 +18080,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public mutateRows_result deepCopy() {
+      return new mutateRows_result(this);
+    }
+
+    @Deprecated
     public mutateRows_result clone() {
       return new mutateRows_result(this);
     }
@@ -13667,15 +18093,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public mutateRows_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -13690,15 +18117,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public mutateRows_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -13709,8 +18137,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -13727,34 +18155,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -13793,6 +18229,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRows_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRows_result typedOther = (mutateRows_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -13805,32 +18280,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -13878,38 +18353,89 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRowsTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRowsTs_args implements TBase<mutateRowsTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRowsTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowsTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_BATCHES_FIELD_DESC = new TField("rowBatches", TType.LIST, (short)2);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public List<BatchMutation> rowBatches;
-    public static final int ROWBATCHES = 2;
     public long timestamp;
-    public static final int TIMESTAMP = 3;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW_BATCHES((short)2, "rowBatches"),
+      TIMESTAMP((short)3, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROWBATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW_BATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, BatchMutation.class))));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -13929,13 +18455,15 @@ public class Hbase {
       this.tableName = tableName;
       this.rowBatches = rowBatches;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public mutateRowsTs_args(mutateRowsTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -13946,11 +18474,14 @@ public class Hbase {
         }
         this.rowBatches = __this__rowBatches;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public mutateRowsTs_args deepCopy() {
+      return new mutateRowsTs_args(this);
+    }
+
+    @Deprecated
     public mutateRowsTs_args clone() {
       return new mutateRowsTs_args(this);
     }
@@ -13959,15 +18490,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public mutateRowsTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -13997,15 +18529,16 @@ public class Hbase {
       return this.rowBatches;
     }
 
-    public void setRowBatches(List<BatchMutation> rowBatches) {
+    public mutateRowsTs_args setRowBatches(List<BatchMutation> rowBatches) {
       this.rowBatches = rowBatches;
+      return this;
     }
 
     public void unsetRowBatches() {
       this.rowBatches = null;
     }
 
-    // Returns true if field rowBatches is set (has been asigned a value) and false otherwise
+    /** Returns true if field rowBatches is set (has been asigned a value) and false otherwise */
     public boolean isSetRowBatches() {
       return this.rowBatches != null;
     }
@@ -14020,27 +18553,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public mutateRowsTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -14048,7 +18582,7 @@ public class Hbase {
         }
         break;
 
-      case ROWBATCHES:
+      case ROW_BATCHES:
         if (value == null) {
           unsetRowBatches();
         } else {
@@ -14064,39 +18598,47 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case ROWBATCHES:
+      case ROW_BATCHES:
         return getRowBatches();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case ROWBATCHES:
+      case ROW_BATCHES:
         return isSetRowBatches();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -14144,6 +18686,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rowBatches = true && (isSetRowBatches());
+      builder.append(present_rowBatches);
+      if (present_rowBatches)
+        builder.append(rowBatches);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRowsTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRowsTs_args typedOther = (mutateRowsTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRowBatches()).compareTo(isSetRowBatches());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(rowBatches, typedOther.rowBatches);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -14156,49 +18750,49 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROWBATCHES:
-            if (field.type == TType.LIST) {
-              {
-                TList _list74 = iprot.readListBegin();
-                this.rowBatches = new ArrayList<BatchMutation>(_list74.size);
-                for (int _i75 = 0; _i75 < _list74.size; ++_i75)
-                {
-                  BatchMutation _elem76;
-                  _elem76 = new BatchMutation();
-                  _elem76.read(iprot);
-                  this.rowBatches.add(_elem76);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case ROW_BATCHES:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list74 = iprot.readListBegin();
+                  this.rowBatches = new ArrayList<BatchMutation>(_list74.size);
+                  for (int _i75 = 0; _i75 < _list74.size; ++_i75)
+                  {
+                    BatchMutation _elem76;
+                    _elem76 = new BatchMutation();
+                    _elem76.read(iprot);
+                    this.rowBatches.add(_elem76);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -14217,7 +18811,8 @@ public class Hbase {
         oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.rowBatches.size()));
-          for (BatchMutation _iter77 : this.rowBatches)          {
+          for (BatchMutation _iter77 : this.rowBatches)
+          {
             _iter77.write(oprot);
           }
           oprot.writeListEnd();
@@ -14240,7 +18835,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -14261,26 +18856,81 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class mutateRowsTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class mutateRowsTs_result implements TBase<mutateRowsTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<mutateRowsTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("mutateRowsTs_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -14312,7 +18962,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public mutateRowsTs_result deepCopy() {
+      return new mutateRowsTs_result(this);
+    }
+
+    @Deprecated
     public mutateRowsTs_result clone() {
       return new mutateRowsTs_result(this);
     }
@@ -14321,15 +18975,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public mutateRowsTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -14344,15 +18999,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public mutateRowsTs_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -14363,8 +19019,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -14381,34 +19037,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -14447,6 +19111,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(mutateRowsTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      mutateRowsTs_result typedOther = (mutateRowsTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -14459,32 +19162,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -14532,42 +19235,93 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class atomicIncrement_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class atomicIncrement_args implements TBase<atomicIncrement_args._Fields>, java.io.Serializable, Cloneable, Comparable<atomicIncrement_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("atomicIncrement_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
     private static final TField VALUE_FIELD_DESC = new TField("value", TType.I64, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public byte[] column;
-    public static final int COLUMN = 3;
     public long value;
-    public static final int VALUE = 4;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean value = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMN((short)3, "column"),
+      VALUE((short)4, "value");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __VALUE_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+      put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -14589,13 +19343,15 @@ public class Hbase {
       this.row = row;
       this.column = column;
       this.value = value;
-      this.__isset.value = true;
+      setValueIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public atomicIncrement_args(atomicIncrement_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -14605,11 +19361,14 @@ public class Hbase {
       if (other.isSetColumn()) {
         this.column = other.column;
       }
-      __isset.value = other.__isset.value;
       this.value = other.value;
     }
 
-    @Override
+    public atomicIncrement_args deepCopy() {
+      return new atomicIncrement_args(this);
+    }
+
+    @Deprecated
     public atomicIncrement_args clone() {
       return new atomicIncrement_args(this);
     }
@@ -14618,15 +19377,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public atomicIncrement_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -14641,15 +19401,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public atomicIncrement_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -14664,15 +19425,16 @@ public class Hbase {
       return this.column;
     }
 
-    public void setColumn(byte[] column) {
+    public atomicIncrement_args setColumn(byte[] column) {
       this.column = column;
+      return this;
     }
 
     public void unsetColumn() {
       this.column = null;
     }
 
-    // Returns true if field column is set (has been asigned a value) and false otherwise
+    /** Returns true if field column is set (has been asigned a value) and false otherwise */
     public boolean isSetColumn() {
       return this.column != null;
     }
@@ -14687,27 +19449,28 @@ public class Hbase {
       return this.value;
     }
 
-    public void setValue(long value) {
+    public atomicIncrement_args setValue(long value) {
       this.value = value;
-      this.__isset.value = true;
+      setValueIsSet(true);
+      return this;
     }
 
     public void unsetValue() {
-      this.__isset.value = false;
+      __isset_bit_vector.clear(__VALUE_ISSET_ID);
     }
 
-    // Returns true if field value is set (has been asigned a value) and false otherwise
+    /** Returns true if field value is set (has been asigned a value) and false otherwise */
     public boolean isSetValue() {
-      return this.__isset.value;
+      return __isset_bit_vector.get(__VALUE_ISSET_ID);
     }
 
     public void setValueIsSet(boolean value) {
-      this.__isset.value = value;
+      __isset_bit_vector.set(__VALUE_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -14739,14 +19502,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -14756,17 +19521,20 @@ public class Hbase {
         return getColumn();
 
       case VALUE:
-        return getValue();
+        return new Long(getValue());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
@@ -14774,9 +19542,12 @@ public class Hbase {
         return isSetColumn();
       case VALUE:
         return isSetValue();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -14833,6 +19604,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_value = true;
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(atomicIncrement_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      atomicIncrement_args typedOther = (atomicIncrement_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetValue()).compareTo(isSetValue());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(value, typedOther.value);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -14845,45 +19681,45 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case VALUE:
-            if (field.type == TType.I64) {
-              this.value = iprot.readI64();
-              this.__isset.value = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN:
+              if (field.type == TType.STRING) {
+                this.column = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case VALUE:
+              if (field.type == TType.I64) {
+                this.value = iprot.readI64();
+                setValueIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -14924,7 +19760,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -14932,7 +19768,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -14940,7 +19776,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.column));
+        sb.append(this.column);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -14953,37 +19789,88 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class atomicIncrement_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class atomicIncrement_result implements TBase<atomicIncrement_result._Fields>, java.io.Serializable, Cloneable, Comparable<atomicIncrement_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("atomicIncrement_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I64, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public long success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -15001,7 +19888,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
       this.ia = ia;
     }
@@ -15010,7 +19897,8 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public atomicIncrement_result(atomicIncrement_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
@@ -15020,7 +19908,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public atomicIncrement_result deepCopy() {
+      return new atomicIncrement_result(this);
+    }
+
+    @Deprecated
     public atomicIncrement_result clone() {
       return new atomicIncrement_result(this);
     }
@@ -15029,37 +19921,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(long success) {
+    public atomicIncrement_result setSuccess(long success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public atomicIncrement_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -15074,15 +19968,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public atomicIncrement_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -15093,8 +19988,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -15119,15 +20014,17 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return getSuccess();
+        return new Long(getSuccess());
 
       case IO:
         return getIo();
@@ -15135,23 +20032,29 @@ public class Hbase {
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -15199,6 +20102,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(atomicIncrement_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      atomicIncrement_result typedOther = (atomicIncrement_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -15211,40 +20166,40 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.I64) {
-              this.success = iprot.readI64();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.I64) {
+                this.success = iprot.readI64();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -15300,31 +20255,86 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAll_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAll_args implements TBase<deleteAll_args._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAll_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAll_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public byte[] column;
-    public static final int COLUMN = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMN((short)3, "column");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -15361,7 +20371,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteAll_args deepCopy() {
+      return new deleteAll_args(this);
+    }
+
+    @Deprecated
     public deleteAll_args clone() {
       return new deleteAll_args(this);
     }
@@ -15370,15 +20384,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public deleteAll_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -15393,15 +20408,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public deleteAll_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -15416,15 +20432,16 @@ public class Hbase {
       return this.column;
     }
 
-    public void setColumn(byte[] column) {
+    public deleteAll_args setColumn(byte[] column) {
       this.column = column;
+      return this;
     }
 
     public void unsetColumn() {
       this.column = null;
     }
 
-    // Returns true if field column is set (has been asigned a value) and false otherwise
+    /** Returns true if field column is set (has been asigned a value) and false otherwise */
     public boolean isSetColumn() {
       return this.column != null;
     }
@@ -15435,9 +20452,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -15461,14 +20478,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -15477,23 +20496,29 @@ public class Hbase {
       case COLUMN:
         return getColumn();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case COLUMN:
         return isSetColumn();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -15541,6 +20566,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAll_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAll_args typedOther = (deleteAll_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -15553,37 +20630,37 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN:
+              if (field.type == TType.STRING) {
+                this.column = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -15621,7 +20698,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15629,7 +20706,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -15637,7 +20714,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.column));
+        sb.append(this.column);
       }
       first = false;
       sb.append(")");
@@ -15646,21 +20723,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAll_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAll_result implements TBase<deleteAll_result._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAll_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAll_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -15687,7 +20819,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteAll_result deepCopy() {
+      return new deleteAll_result(this);
+    }
+
+    @Deprecated
     public deleteAll_result clone() {
       return new deleteAll_result(this);
     }
@@ -15696,15 +20832,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public deleteAll_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -15715,8 +20852,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -15725,29 +20862,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -15777,6 +20922,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAll_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAll_result typedOther = (deleteAll_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -15789,24 +20960,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -15827,6 +20998,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAll_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -15834,48 +21006,100 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAllTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAllTs_args implements TBase<deleteAllTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAllTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public byte[] column;
-    public static final int COLUMN = 3;
     public long timestamp;
-    public static final int TIMESTAMP = 4;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      COLUMN((short)3, "column"),
+      TIMESTAMP((short)4, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -15897,13 +21121,15 @@ public class Hbase {
       this.row = row;
       this.column = column;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public deleteAllTs_args(deleteAllTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -15913,11 +21139,14 @@ public class Hbase {
       if (other.isSetColumn()) {
         this.column = other.column;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public deleteAllTs_args deepCopy() {
+      return new deleteAllTs_args(this);
+    }
+
+    @Deprecated
     public deleteAllTs_args clone() {
       return new deleteAllTs_args(this);
     }
@@ -15926,15 +21155,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public deleteAllTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -15949,15 +21179,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public deleteAllTs_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -15972,15 +21203,16 @@ public class Hbase {
       return this.column;
     }
 
-    public void setColumn(byte[] column) {
+    public deleteAllTs_args setColumn(byte[] column) {
       this.column = column;
+      return this;
     }
 
     public void unsetColumn() {
       this.column = null;
     }
 
-    // Returns true if field column is set (has been asigned a value) and false otherwise
+    /** Returns true if field column is set (has been asigned a value) and false otherwise */
     public boolean isSetColumn() {
       return this.column != null;
     }
@@ -15995,27 +21227,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public deleteAllTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -16047,14 +21280,16 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
@@ -16064,17 +21299,20 @@ public class Hbase {
         return getColumn();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
@@ -16082,9 +21320,12 @@ public class Hbase {
         return isSetColumn();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16141,6 +21382,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAllTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAllTs_args typedOther = (deleteAllTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -16153,45 +21459,45 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMN:
+              if (field.type == TType.STRING) {
+                this.column = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -16232,7 +21538,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16240,7 +21546,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16248,7 +21554,7 @@ public class Hbase {
       if (this.column == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.column));
+        sb.append(this.column);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16261,21 +21567,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAllTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAllTs_result implements TBase<deleteAllTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAllTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllTs_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -16302,7 +21663,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteAllTs_result deepCopy() {
+      return new deleteAllTs_result(this);
+    }
+
+    @Deprecated
     public deleteAllTs_result clone() {
       return new deleteAllTs_result(this);
     }
@@ -16311,15 +21676,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public deleteAllTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -16330,8 +21696,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -16340,29 +21706,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16392,6 +21766,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAllTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAllTs_result typedOther = (deleteAllTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -16404,24 +21804,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -16442,6 +21842,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllTs_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -16449,32 +21850,88 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAllRow_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAllRow_args implements TBase<deleteAllRow_args._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAllRow_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRow_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -16506,7 +21963,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteAllRow_args deepCopy() {
+      return new deleteAllRow_args(this);
+    }
+
+    @Deprecated
     public deleteAllRow_args clone() {
       return new deleteAllRow_args(this);
     }
@@ -16515,15 +21976,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public deleteAllRow_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -16538,15 +22000,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public deleteAllRow_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -16557,9 +22020,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -16575,34 +22038,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
         return getRow();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16641,6 +22112,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAllRow_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAllRow_args typedOther = (deleteAllRow_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -16653,30 +22163,30 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -16709,7 +22219,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -16717,7 +22227,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       sb.append(")");
@@ -16726,21 +22236,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAllRow_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAllRow_result implements TBase<deleteAllRow_result._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAllRow_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRow_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -16767,7 +22332,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteAllRow_result deepCopy() {
+      return new deleteAllRow_result(this);
+    }
+
+    @Deprecated
     public deleteAllRow_result clone() {
       return new deleteAllRow_result(this);
     }
@@ -16776,15 +22345,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public deleteAllRow_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -16795,8 +22365,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -16805,29 +22375,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -16857,6 +22435,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAllRow_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAllRow_result typedOther = (deleteAllRow_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -16869,24 +22473,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -16907,6 +22511,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRow_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -16914,43 +22519,95 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAllRowTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAllRowTs_args implements TBase<deleteAllRowTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAllRowTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRowTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] row;
-    public static final int ROW = 2;
     public long timestamp;
-    public static final int TIMESTAMP = 3;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      ROW((short)2, "row"),
+      TIMESTAMP((short)3, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -16970,24 +22627,29 @@ public class Hbase {
       this.tableName = tableName;
       this.row = row;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public deleteAllRowTs_args(deleteAllRowTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
       if (other.isSetRow()) {
         this.row = other.row;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public deleteAllRowTs_args deepCopy() {
+      return new deleteAllRowTs_args(this);
+    }
+
+    @Deprecated
     public deleteAllRowTs_args clone() {
       return new deleteAllRowTs_args(this);
     }
@@ -16996,15 +22658,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public deleteAllRowTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -17019,15 +22682,16 @@ public class Hbase {
       return this.row;
     }
 
-    public void setRow(byte[] row) {
+    public deleteAllRowTs_args setRow(byte[] row) {
       this.row = row;
+      return this;
     }
 
     public void unsetRow() {
       this.row = null;
     }
 
-    // Returns true if field row is set (has been asigned a value) and false otherwise
+    /** Returns true if field row is set (has been asigned a value) and false otherwise */
     public boolean isSetRow() {
       return this.row != null;
     }
@@ -17042,27 +22706,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public deleteAllRowTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -17086,39 +22751,47 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
       case ROW:
         return getRow();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
       case ROW:
         return isSetRow();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -17166,6 +22839,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAllRowTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAllRowTs_args typedOther = (deleteAllRowTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -17178,38 +22903,38 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case ROW:
+              if (field.type == TType.STRING) {
+                this.row = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -17245,7 +22970,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17253,7 +22978,7 @@ public class Hbase {
       if (this.row == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.row));
+        sb.append(this.row);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17266,21 +22991,76 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class deleteAllRowTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class deleteAllRowTs_result implements TBase<deleteAllRowTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<deleteAllRowTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("deleteAllRowTs_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public IOError io;
-    public static final int IO = 1;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -17307,7 +23087,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public deleteAllRowTs_result deepCopy() {
+      return new deleteAllRowTs_result(this);
+    }
+
+    @Deprecated
     public deleteAllRowTs_result clone() {
       return new deleteAllRowTs_result(this);
     }
@@ -17316,15 +23100,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public deleteAllRowTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -17335,8 +23120,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -17345,29 +23130,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -17397,6 +23190,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(deleteAllRowTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      deleteAllRowTs_result typedOther = (deleteAllRowTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -17409,24 +23228,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -17447,6 +23266,7 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("deleteAllRowTs_result(");
+      boolean first = true;
 
       sb.append("io:");
       if (this.io == null) {
@@ -17454,37 +23274,93 @@ public class Hbase {
       } else {
         sb.append(this.io);
       }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpen_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpen_args implements TBase<scannerOpen_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpen_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpen_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] startRow;
-    public static final int STARTROW = 2;
     public List<byte[]> columns;
-    public static final int COLUMNS = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      START_ROW((short)2, "startRow"),
+      COLUMNS((short)3, "columns");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STARTROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
     }});
@@ -17526,7 +23402,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public scannerOpen_args deepCopy() {
+      return new scannerOpen_args(this);
+    }
+
+    @Deprecated
     public scannerOpen_args clone() {
       return new scannerOpen_args(this);
     }
@@ -17535,15 +23415,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public scannerOpen_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -17558,15 +23439,16 @@ public class Hbase {
       return this.startRow;
     }
 
-    public void setStartRow(byte[] startRow) {
+    public scannerOpen_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
+      return this;
     }
 
     public void unsetStartRow() {
       this.startRow = null;
     }
 
-    // Returns true if field startRow is set (has been asigned a value) and false otherwise
+    /** Returns true if field startRow is set (has been asigned a value) and false otherwise */
     public boolean isSetStartRow() {
       return this.startRow != null;
     }
@@ -17596,15 +23478,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public scannerOpen_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -17615,9 +23498,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -17625,7 +23508,7 @@ public class Hbase {
         }
         break;
 
-      case STARTROW:
+      case START_ROW:
         if (value == null) {
           unsetStartRow();
         } else {
@@ -17641,39 +23524,47 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case STARTROW:
+      case START_ROW:
         return getStartRow();
 
       case COLUMNS:
         return getColumns();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case STARTROW:
+      case START_ROW:
         return isSetStartRow();
       case COLUMNS:
         return isSetColumns();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -17721,6 +23612,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpen_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpen_args typedOther = (scannerOpen_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStartRow()).compareTo(isSetStartRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(startRow, typedOther.startRow);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -17733,47 +23676,47 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STARTROW:
-            if (field.type == TType.STRING) {
-              this.startRow = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list78 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list78.size);
-                for (int _i79 = 0; _i79 < _list78.size; ++_i79)
-                {
-                  byte[] _elem80;
-                  _elem80 = iprot.readBinary();
-                  this.columns.add(_elem80);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case START_ROW:
+              if (field.type == TType.STRING) {
+                this.startRow = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list78 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list78.size);
+                  for (int _i79 = 0; _i79 < _list78.size; ++_i79)
+                  {
+                    byte[] _elem80;
+                    _elem80 = iprot.readBinary();
+                    this.columns.add(_elem80);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -17797,7 +23740,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter81 : this.columns)          {
+          for (byte[] _iter81 : this.columns)
+          {
             oprot.writeBinary(_iter81);
           }
           oprot.writeListEnd();
@@ -17817,7 +23761,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17825,7 +23769,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.startRow));
+        sb.append(this.startRow);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -17842,32 +23786,83 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpen_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpen_result implements TBase<scannerOpen_result._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpen_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpen_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public int success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -17884,7 +23879,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
     }
 
@@ -17892,14 +23887,19 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpen_result(scannerOpen_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
       }
     }
 
-    @Override
+    public scannerOpen_result deepCopy() {
+      return new scannerOpen_result(this);
+    }
+
+    @Deprecated
     public scannerOpen_result clone() {
       return new scannerOpen_result(this);
     }
@@ -17908,37 +23908,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(int success) {
+    public scannerOpen_result setSuccess(int success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerOpen_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -17949,8 +23951,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -17967,34 +23969,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return getSuccess();
+        return new Integer(getSuccess());
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18033,6 +24043,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpen_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpen_result typedOther = (scannerOpen_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -18045,32 +24094,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.I32) {
+                this.success = iprot.readI32();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -18114,36 +24163,91 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenWithStop_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenWithStop_args implements TBase<scannerOpenWithStop_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenWithStop_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStop_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
     private static final TField STOP_ROW_FIELD_DESC = new TField("stopRow", TType.STRING, (short)3);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] startRow;
-    public static final int STARTROW = 2;
     public byte[] stopRow;
-    public static final int STOPROW = 3;
     public List<byte[]> columns;
-    public static final int COLUMNS = 4;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      START_ROW((short)2, "startRow"),
+      STOP_ROW((short)3, "stopRow"),
+      COLUMNS((short)4, "columns");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STARTROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STOPROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.STOP_ROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
     }});
@@ -18190,7 +24294,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public scannerOpenWithStop_args deepCopy() {
+      return new scannerOpenWithStop_args(this);
+    }
+
+    @Deprecated
     public scannerOpenWithStop_args clone() {
       return new scannerOpenWithStop_args(this);
     }
@@ -18199,15 +24307,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public scannerOpenWithStop_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -18222,15 +24331,16 @@ public class Hbase {
       return this.startRow;
     }
 
-    public void setStartRow(byte[] startRow) {
+    public scannerOpenWithStop_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
+      return this;
     }
 
     public void unsetStartRow() {
       this.startRow = null;
     }
 
-    // Returns true if field startRow is set (has been asigned a value) and false otherwise
+    /** Returns true if field startRow is set (has been asigned a value) and false otherwise */
     public boolean isSetStartRow() {
       return this.startRow != null;
     }
@@ -18245,15 +24355,16 @@ public class Hbase {
       return this.stopRow;
     }
 
-    public void setStopRow(byte[] stopRow) {
+    public scannerOpenWithStop_args setStopRow(byte[] stopRow) {
       this.stopRow = stopRow;
+      return this;
     }
 
     public void unsetStopRow() {
       this.stopRow = null;
     }
 
-    // Returns true if field stopRow is set (has been asigned a value) and false otherwise
+    /** Returns true if field stopRow is set (has been asigned a value) and false otherwise */
     public boolean isSetStopRow() {
       return this.stopRow != null;
     }
@@ -18283,15 +24394,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public scannerOpenWithStop_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -18302,9 +24414,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -18312,7 +24424,7 @@ public class Hbase {
         }
         break;
 
-      case STARTROW:
+      case START_ROW:
         if (value == null) {
           unsetStartRow();
         } else {
@@ -18320,7 +24432,7 @@ public class Hbase {
         }
         break;
 
-      case STOPROW:
+      case STOP_ROW:
         if (value == null) {
           unsetStopRow();
         } else {
@@ -18336,44 +24448,52 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case STARTROW:
+      case START_ROW:
         return getStartRow();
 
-      case STOPROW:
+      case STOP_ROW:
         return getStopRow();
 
       case COLUMNS:
         return getColumns();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case STARTROW:
+      case START_ROW:
         return isSetStartRow();
-      case STOPROW:
+      case STOP_ROW:
         return isSetStopRow();
       case COLUMNS:
         return isSetColumns();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18430,6 +24550,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_stopRow = true && (isSetStopRow());
+      builder.append(present_stopRow);
+      if (present_stopRow)
+        builder.append(stopRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenWithStop_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenWithStop_args typedOther = (scannerOpenWithStop_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStartRow()).compareTo(isSetStartRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(startRow, typedOther.startRow);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStopRow()).compareTo(isSetStopRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(stopRow, typedOther.stopRow);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -18442,54 +24627,54 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STARTROW:
-            if (field.type == TType.STRING) {
-              this.startRow = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STOPROW:
-            if (field.type == TType.STRING) {
-              this.stopRow = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list82 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list82.size);
-                for (int _i83 = 0; _i83 < _list82.size; ++_i83)
-                {
-                  byte[] _elem84;
-                  _elem84 = iprot.readBinary();
-                  this.columns.add(_elem84);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case START_ROW:
+              if (field.type == TType.STRING) {
+                this.startRow = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case STOP_ROW:
+              if (field.type == TType.STRING) {
+                this.stopRow = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list82 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list82.size);
+                  for (int _i83 = 0; _i83 < _list82.size; ++_i83)
+                  {
+                    byte[] _elem84;
+                    _elem84 = iprot.readBinary();
+                    this.columns.add(_elem84);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -18518,7 +24703,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter85 : this.columns)          {
+          for (byte[] _iter85 : this.columns)
+          {
             oprot.writeBinary(_iter85);
           }
           oprot.writeListEnd();
@@ -18538,7 +24724,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -18546,7 +24732,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.startRow));
+        sb.append(this.startRow);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -18554,7 +24740,7 @@ public class Hbase {
       if (this.stopRow == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.stopRow));
+        sb.append(this.stopRow);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -18571,32 +24757,83 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenWithStop_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenWithStop_result implements TBase<scannerOpenWithStop_result._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenWithStop_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStop_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public int success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -18613,7 +24850,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
     }
 
@@ -18621,14 +24858,19 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpenWithStop_result(scannerOpenWithStop_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
       }
     }
 
-    @Override
+    public scannerOpenWithStop_result deepCopy() {
+      return new scannerOpenWithStop_result(this);
+    }
+
+    @Deprecated
     public scannerOpenWithStop_result clone() {
       return new scannerOpenWithStop_result(this);
     }
@@ -18637,37 +24879,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(int success) {
+    public scannerOpenWithStop_result setSuccess(int success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerOpenWithStop_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -18678,8 +24922,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -18696,34 +24940,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return getSuccess();
+        return new Integer(getSuccess());
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -18762,6 +25014,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenWithStop_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenWithStop_result typedOther = (scannerOpenWithStop_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -18774,32 +25065,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.I32) {
+                this.success = iprot.readI32();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -18843,31 +25134,86 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenWithPrefix_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenWithPrefix_args implements TBase<scannerOpenWithPrefix_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenWithPrefix_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithPrefix_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_AND_PREFIX_FIELD_DESC = new TField("startAndPrefix", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] startAndPrefix;
-    public static final int STARTANDPREFIX = 2;
     public List<byte[]> columns;
-    public static final int COLUMNS = 3;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      START_AND_PREFIX((short)2, "startAndPrefix"),
+      COLUMNS((short)3, "columns");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STARTANDPREFIX, new FieldMetaData("startAndPrefix", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_AND_PREFIX, new FieldMetaData("startAndPrefix", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
     }});
@@ -18909,7 +25255,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public scannerOpenWithPrefix_args deepCopy() {
+      return new scannerOpenWithPrefix_args(this);
+    }
+
+    @Deprecated
     public scannerOpenWithPrefix_args clone() {
       return new scannerOpenWithPrefix_args(this);
     }
@@ -18918,15 +25268,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public scannerOpenWithPrefix_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -18941,15 +25292,16 @@ public class Hbase {
       return this.startAndPrefix;
     }
 
-    public void setStartAndPrefix(byte[] startAndPrefix) {
+    public scannerOpenWithPrefix_args setStartAndPrefix(byte[] startAndPrefix) {
       this.startAndPrefix = startAndPrefix;
+      return this;
     }
 
     public void unsetStartAndPrefix() {
       this.startAndPrefix = null;
     }
 
-    // Returns true if field startAndPrefix is set (has been asigned a value) and false otherwise
+    /** Returns true if field startAndPrefix is set (has been asigned a value) and false otherwise */
     public boolean isSetStartAndPrefix() {
       return this.startAndPrefix != null;
     }
@@ -18979,15 +25331,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public scannerOpenWithPrefix_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -18998,9 +25351,9 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -19008,7 +25361,7 @@ public class Hbase {
         }
         break;
 
-      case STARTANDPREFIX:
+      case START_AND_PREFIX:
         if (value == null) {
           unsetStartAndPrefix();
         } else {
@@ -19024,39 +25377,47 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case STARTANDPREFIX:
+      case START_AND_PREFIX:
         return getStartAndPrefix();
 
       case COLUMNS:
         return getColumns();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case STARTANDPREFIX:
+      case START_AND_PREFIX:
         return isSetStartAndPrefix();
       case COLUMNS:
         return isSetColumns();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -19104,6 +25465,58 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startAndPrefix = true && (isSetStartAndPrefix());
+      builder.append(present_startAndPrefix);
+      if (present_startAndPrefix)
+        builder.append(startAndPrefix);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenWithPrefix_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenWithPrefix_args typedOther = (scannerOpenWithPrefix_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStartAndPrefix()).compareTo(isSetStartAndPrefix());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(startAndPrefix, typedOther.startAndPrefix);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -19116,47 +25529,47 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STARTANDPREFIX:
-            if (field.type == TType.STRING) {
-              this.startAndPrefix = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list86 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list86.size);
-                for (int _i87 = 0; _i87 < _list86.size; ++_i87)
-                {
-                  byte[] _elem88;
-                  _elem88 = iprot.readBinary();
-                  this.columns.add(_elem88);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case START_AND_PREFIX:
+              if (field.type == TType.STRING) {
+                this.startAndPrefix = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list86 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list86.size);
+                  for (int _i87 = 0; _i87 < _list86.size; ++_i87)
+                  {
+                    byte[] _elem88;
+                    _elem88 = iprot.readBinary();
+                    this.columns.add(_elem88);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -19180,7 +25593,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter89 : this.columns)          {
+          for (byte[] _iter89 : this.columns)
+          {
             oprot.writeBinary(_iter89);
           }
           oprot.writeListEnd();
@@ -19200,7 +25614,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -19208,7 +25622,7 @@ public class Hbase {
       if (this.startAndPrefix == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.startAndPrefix));
+        sb.append(this.startAndPrefix);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -19225,32 +25639,83 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenWithPrefix_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenWithPrefix_result implements TBase<scannerOpenWithPrefix_result._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenWithPrefix_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithPrefix_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public int success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -19267,7 +25732,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
     }
 
@@ -19275,14 +25740,19 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpenWithPrefix_result(scannerOpenWithPrefix_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
       }
     }
 
-    @Override
+    public scannerOpenWithPrefix_result deepCopy() {
+      return new scannerOpenWithPrefix_result(this);
+    }
+
+    @Deprecated
     public scannerOpenWithPrefix_result clone() {
       return new scannerOpenWithPrefix_result(this);
     }
@@ -19291,37 +25761,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(int success) {
+    public scannerOpenWithPrefix_result setSuccess(int success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerOpenWithPrefix_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -19332,8 +25804,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -19350,34 +25822,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return getSuccess();
+        return new Integer(getSuccess());
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -19416,6 +25896,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenWithPrefix_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenWithPrefix_result typedOther = (scannerOpenWithPrefix_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -19428,32 +25947,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.I32) {
+                this.success = iprot.readI32();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -19497,43 +26016,94 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenTs_args implements TBase<scannerOpenTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] startRow;
-    public static final int STARTROW = 2;
     public List<byte[]> columns;
-    public static final int COLUMNS = 3;
     public long timestamp;
-    public static final int TIMESTAMP = 4;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      START_ROW((short)2, "startRow"),
+      COLUMNS((short)3, "columns"),
+      TIMESTAMP((short)4, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STARTROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -19555,13 +26125,15 @@ public class Hbase {
       this.startRow = startRow;
       this.columns = columns;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpenTs_args(scannerOpenTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -19575,11 +26147,14 @@ public class Hbase {
         }
         this.columns = __this__columns;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public scannerOpenTs_args deepCopy() {
+      return new scannerOpenTs_args(this);
+    }
+
+    @Deprecated
     public scannerOpenTs_args clone() {
       return new scannerOpenTs_args(this);
     }
@@ -19588,15 +26163,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public scannerOpenTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -19611,15 +26187,16 @@ public class Hbase {
       return this.startRow;
     }
 
-    public void setStartRow(byte[] startRow) {
+    public scannerOpenTs_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
+      return this;
     }
 
     public void unsetStartRow() {
       this.startRow = null;
     }
 
-    // Returns true if field startRow is set (has been asigned a value) and false otherwise
+    /** Returns true if field startRow is set (has been asigned a value) and false otherwise */
     public boolean isSetStartRow() {
       return this.startRow != null;
     }
@@ -19649,15 +26226,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public scannerOpenTs_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -19672,27 +26250,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public scannerOpenTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -19700,7 +26279,7 @@ public class Hbase {
         }
         break;
 
-      case STARTROW:
+      case START_ROW:
         if (value == null) {
           unsetStartRow();
         } else {
@@ -19724,44 +26303,52 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case STARTROW:
+      case START_ROW:
         return getStartRow();
 
       case COLUMNS:
         return getColumns();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case STARTROW:
+      case START_ROW:
         return isSetStartRow();
       case COLUMNS:
         return isSetColumns();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -19818,6 +26405,71 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenTs_args typedOther = (scannerOpenTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStartRow()).compareTo(isSetStartRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(startRow, typedOther.startRow);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -19830,55 +26482,55 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STARTROW:
-            if (field.type == TType.STRING) {
-              this.startRow = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list90 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list90.size);
-                for (int _i91 = 0; _i91 < _list90.size; ++_i91)
-                {
-                  byte[] _elem92;
-                  _elem92 = iprot.readBinary();
-                  this.columns.add(_elem92);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case START_ROW:
+              if (field.type == TType.STRING) {
+                this.startRow = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list90 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list90.size);
+                  for (int _i91 = 0; _i91 < _list90.size; ++_i91)
+                  {
+                    byte[] _elem92;
+                    _elem92 = iprot.readBinary();
+                    this.columns.add(_elem92);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -19902,7 +26554,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter93 : this.columns)          {
+          for (byte[] _iter93 : this.columns)
+          {
             oprot.writeBinary(_iter93);
           }
           oprot.writeListEnd();
@@ -19925,7 +26578,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -19933,7 +26586,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.startRow));
+        sb.append(this.startRow);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -19954,32 +26607,83 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenTs_result implements TBase<scannerOpenTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenTs_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public int success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -19996,7 +26700,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
     }
 
@@ -20004,14 +26708,19 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpenTs_result(scannerOpenTs_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
       }
     }
 
-    @Override
+    public scannerOpenTs_result deepCopy() {
+      return new scannerOpenTs_result(this);
+    }
+
+    @Deprecated
     public scannerOpenTs_result clone() {
       return new scannerOpenTs_result(this);
     }
@@ -20020,37 +26729,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(int success) {
+    public scannerOpenTs_result setSuccess(int success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerOpenTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -20061,8 +26772,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -20079,34 +26790,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return getSuccess();
+        return new Integer(getSuccess());
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20145,6 +26864,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenTs_result typedOther = (scannerOpenTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -20157,32 +26915,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.I32) {
+                this.success = iprot.readI32();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -20226,14 +26984,13 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenWithStopTs_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenWithStopTs_args implements TBase<scannerOpenWithStopTs_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenWithStopTs_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStopTs_args");
+
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
     private static final TField STOP_ROW_FIELD_DESC = new TField("stopRow", TType.STRING, (short)3);
@@ -20241,33 +26998,85 @@ public class Hbase {
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)5);
 
     public byte[] tableName;
-    public static final int TABLENAME = 1;
     public byte[] startRow;
-    public static final int STARTROW = 2;
     public byte[] stopRow;
-    public static final int STOPROW = 3;
     public List<byte[]> columns;
-    public static final int COLUMNS = 4;
     public long timestamp;
-    public static final int TIMESTAMP = 5;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean timestamp = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      TABLE_NAME((short)1, "tableName"),
+      START_ROW((short)2, "startRow"),
+      STOP_ROW((short)3, "stopRow"),
+      COLUMNS((short)4, "columns"),
+      TIMESTAMP((short)5, "timestamp");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(TABLENAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __TIMESTAMP_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STARTROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(STOPROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.STOP_ROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRING)));
-      put(COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new FieldValueMetaData(TType.STRING))));
-      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -20291,13 +27100,15 @@ public class Hbase {
       this.stopRow = stopRow;
       this.columns = columns;
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpenWithStopTs_args(scannerOpenWithStopTs_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetTableName()) {
         this.tableName = other.tableName;
       }
@@ -20314,11 +27125,14 @@ public class Hbase {
         }
         this.columns = __this__columns;
       }
-      __isset.timestamp = other.__isset.timestamp;
       this.timestamp = other.timestamp;
     }
 
-    @Override
+    public scannerOpenWithStopTs_args deepCopy() {
+      return new scannerOpenWithStopTs_args(this);
+    }
+
+    @Deprecated
     public scannerOpenWithStopTs_args clone() {
       return new scannerOpenWithStopTs_args(this);
     }
@@ -20327,15 +27141,16 @@ public class Hbase {
       return this.tableName;
     }
 
-    public void setTableName(byte[] tableName) {
+    public scannerOpenWithStopTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
+      return this;
     }
 
     public void unsetTableName() {
       this.tableName = null;
     }
 
-    // Returns true if field tableName is set (has been asigned a value) and false otherwise
+    /** Returns true if field tableName is set (has been asigned a value) and false otherwise */
     public boolean isSetTableName() {
       return this.tableName != null;
     }
@@ -20350,15 +27165,16 @@ public class Hbase {
       return this.startRow;
     }
 
-    public void setStartRow(byte[] startRow) {
+    public scannerOpenWithStopTs_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
+      return this;
     }
 
     public void unsetStartRow() {
       this.startRow = null;
     }
 
-    // Returns true if field startRow is set (has been asigned a value) and false otherwise
+    /** Returns true if field startRow is set (has been asigned a value) and false otherwise */
     public boolean isSetStartRow() {
       return this.startRow != null;
     }
@@ -20373,15 +27189,16 @@ public class Hbase {
       return this.stopRow;
     }
 
-    public void setStopRow(byte[] stopRow) {
+    public scannerOpenWithStopTs_args setStopRow(byte[] stopRow) {
       this.stopRow = stopRow;
+      return this;
     }
 
     public void unsetStopRow() {
       this.stopRow = null;
     }
 
-    // Returns true if field stopRow is set (has been asigned a value) and false otherwise
+    /** Returns true if field stopRow is set (has been asigned a value) and false otherwise */
     public boolean isSetStopRow() {
       return this.stopRow != null;
     }
@@ -20411,15 +27228,16 @@ public class Hbase {
       return this.columns;
     }
 
-    public void setColumns(List<byte[]> columns) {
+    public scannerOpenWithStopTs_args setColumns(List<byte[]> columns) {
       this.columns = columns;
+      return this;
     }
 
     public void unsetColumns() {
       this.columns = null;
     }
 
-    // Returns true if field columns is set (has been asigned a value) and false otherwise
+    /** Returns true if field columns is set (has been asigned a value) and false otherwise */
     public boolean isSetColumns() {
       return this.columns != null;
     }
@@ -20434,27 +27252,28 @@ public class Hbase {
       return this.timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
+    public scannerOpenWithStopTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
-      this.__isset.timestamp = true;
+      setTimestampIsSet(true);
+      return this;
     }
 
     public void unsetTimestamp() {
-      this.__isset.timestamp = false;
+      __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
     }
 
-    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
     public boolean isSetTimestamp() {
-      return this.__isset.timestamp;
+      return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
     }
 
     public void setTimestampIsSet(boolean value) {
-      this.__isset.timestamp = value;
+      __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
         if (value == null) {
           unsetTableName();
         } else {
@@ -20462,7 +27281,7 @@ public class Hbase {
         }
         break;
 
-      case STARTROW:
+      case START_ROW:
         if (value == null) {
           unsetStartRow();
         } else {
@@ -20470,7 +27289,7 @@ public class Hbase {
         }
         break;
 
-      case STOPROW:
+      case STOP_ROW:
         if (value == null) {
           unsetStopRow();
         } else {
@@ -20494,49 +27313,57 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return getTableName();
 
-      case STARTROW:
+      case START_ROW:
         return getStartRow();
 
-      case STOPROW:
+      case STOP_ROW:
         return getStopRow();
 
       case COLUMNS:
         return getColumns();
 
       case TIMESTAMP:
-        return getTimestamp();
+        return new Long(getTimestamp());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
-      case TABLENAME:
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
         return isSetTableName();
-      case STARTROW:
+      case START_ROW:
         return isSetStartRow();
-      case STOPROW:
+      case STOP_ROW:
         return isSetStopRow();
       case COLUMNS:
         return isSetColumns();
       case TIMESTAMP:
         return isSetTimestamp();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20602,6 +27429,84 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_stopRow = true && (isSetStopRow());
+      builder.append(present_stopRow);
+      if (present_stopRow)
+        builder.append(stopRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenWithStopTs_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenWithStopTs_args typedOther = (scannerOpenWithStopTs_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(tableName, typedOther.tableName);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStartRow()).compareTo(isSetStartRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(startRow, typedOther.startRow);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetStopRow()).compareTo(isSetStopRow());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(stopRow, typedOther.stopRow);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetColumns()).compareTo(isSetColumns());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -20614,62 +27519,62 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case TABLENAME:
-            if (field.type == TType.STRING) {
-              this.tableName = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STARTROW:
-            if (field.type == TType.STRING) {
-              this.startRow = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case STOPROW:
-            if (field.type == TType.STRING) {
-              this.stopRow = iprot.readBinary();
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list94 = iprot.readListBegin();
-                this.columns = new ArrayList<byte[]>(_list94.size);
-                for (int _i95 = 0; _i95 < _list94.size; ++_i95)
-                {
-                  byte[] _elem96;
-                  _elem96 = iprot.readBinary();
-                  this.columns.add(_elem96);
-                }
-                iprot.readListEnd();
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case TABLE_NAME:
+              if (field.type == TType.STRING) {
+                this.tableName = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              this.__isset.timestamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case START_ROW:
+              if (field.type == TType.STRING) {
+                this.startRow = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case STOP_ROW:
+              if (field.type == TType.STRING) {
+                this.stopRow = iprot.readBinary();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case COLUMNS:
+              if (field.type == TType.LIST) {
+                {
+                  TList _list94 = iprot.readListBegin();
+                  this.columns = new ArrayList<byte[]>(_list94.size);
+                  for (int _i95 = 0; _i95 < _list94.size; ++_i95)
+                  {
+                    byte[] _elem96;
+                    _elem96 = iprot.readBinary();
+                    this.columns.add(_elem96);
+                  }
+                  iprot.readListEnd();
+                }
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case TIMESTAMP:
+              if (field.type == TType.I64) {
+                this.timestamp = iprot.readI64();
+                setTimestampIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -20698,7 +27603,8 @@ public class Hbase {
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRING, this.columns.size()));
-          for (byte[] _iter97 : this.columns)          {
+          for (byte[] _iter97 : this.columns)
+          {
             oprot.writeBinary(_iter97);
           }
           oprot.writeListEnd();
@@ -20721,7 +27627,7 @@ public class Hbase {
       if (this.tableName == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toString(this.tableName));
+        sb.append(this.tableName);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20729,7 +27635,7 @@ public class Hbase {
       if (this.startRow == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.startRow));
+        sb.append(this.startRow);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20737,7 +27643,7 @@ public class Hbase {
       if (this.stopRow == null) {
         sb.append("null");
       } else {
-        sb.append(Bytes.toStringBinary(this.stopRow));
+        sb.append(this.stopRow);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -20758,32 +27664,83 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerOpenWithStopTs_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerOpenWithStopTs_result implements TBase<scannerOpenWithStopTs_result._Fields>, java.io.Serializable, Cloneable, Comparable<scannerOpenWithStopTs_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerOpenWithStopTs_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
 
     public int success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean success = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -20800,7 +27757,7 @@ public class Hbase {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
       this.io = io;
     }
 
@@ -20808,14 +27765,19 @@ public class Hbase {
      * Performs a deep copy on <i>other</i>.
      */
     public scannerOpenWithStopTs_result(scannerOpenWithStopTs_result other) {
-      __isset.success = other.__isset.success;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.success = other.success;
       if (other.isSetIo()) {
         this.io = new IOError(other.io);
       }
     }
 
-    @Override
+    public scannerOpenWithStopTs_result deepCopy() {
+      return new scannerOpenWithStopTs_result(this);
+    }
+
+    @Deprecated
     public scannerOpenWithStopTs_result clone() {
       return new scannerOpenWithStopTs_result(this);
     }
@@ -20824,37 +27786,39 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(int success) {
+    public scannerOpenWithStopTs_result setSuccess(int success) {
       this.success = success;
-      this.__isset.success = true;
+      setSuccessIsSet(true);
+      return this;
     }
 
     public void unsetSuccess() {
-      this.__isset.success = false;
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
-      return this.__isset.success;
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
     }
 
     public void setSuccessIsSet(boolean value) {
-      this.__isset.success = value;
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
     }
 
     public IOError getIo() {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerOpenWithStopTs_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -20865,8 +27829,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -20883,34 +27847,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
-        return getSuccess();
+        return new Integer(getSuccess());
 
       case IO:
         return getIo();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -20949,6 +27921,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerOpenWithStopTs_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerOpenWithStopTs_result typedOther = (scannerOpenWithStopTs_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -20961,32 +27972,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.I32) {
+                this.success = iprot.readI32();
+                setSuccessIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -21030,27 +28041,78 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerGet_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerGet_args implements TBase<scannerGet_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerGet_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerGet_args");
+
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
 
     public int id;
-    public static final int ID = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean id = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      ID((short)1, "id");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __ID_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -21066,18 +28128,23 @@ public class Hbase {
     {
       this();
       this.id = id;
-      this.__isset.id = true;
+      setIdIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public scannerGet_args(scannerGet_args other) {
-      __isset.id = other.__isset.id;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.id = other.id;
     }
 
-    @Override
+    public scannerGet_args deepCopy() {
+      return new scannerGet_args(this);
+    }
+
+    @Deprecated
     public scannerGet_args clone() {
       return new scannerGet_args(this);
     }
@@ -21086,26 +28153,27 @@ public class Hbase {
       return this.id;
     }
 
-    public void setId(int id) {
+    public scannerGet_args setId(int id) {
       this.id = id;
-      this.__isset.id = true;
+      setIdIsSet(true);
+      return this;
     }
 
     public void unsetId() {
-      this.__isset.id = false;
+      __isset_bit_vector.clear(__ID_ISSET_ID);
     }
 
-    // Returns true if field id is set (has been asigned a value) and false otherwise
+    /** Returns true if field id is set (has been asigned a value) and false otherwise */
     public boolean isSetId() {
-      return this.__isset.id;
+      return __isset_bit_vector.get(__ID_ISSET_ID);
     }
 
     public void setIdIsSet(boolean value) {
-      this.__isset.id = value;
+      __isset_bit_vector.set(__ID_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case ID:
         if (value == null) {
           unsetId();
@@ -21114,29 +28182,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case ID:
-        return getId();
+        return new Integer(getId());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case ID:
         return isSetId();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -21166,6 +28242,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_id = true;
+      builder.append(present_id);
+      if (present_id)
+        builder.append(id);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerGet_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerGet_args typedOther = (scannerGet_args)other;
+
+      lastComparison = Boolean.valueOf(isSetId()).compareTo(isSetId());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(id, typedOther.id);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -21178,24 +28280,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case ID:
-            if (field.type == TType.I32) {
-              this.id = iprot.readI32();
-              this.__isset.id = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case ID:
+              if (field.type == TType.I32) {
+                this.id = iprot.readI32();
+                setIdIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -21215,40 +28317,98 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerGet_args(");
+      boolean first = true;
+
       sb.append("id:");
       sb.append(this.id);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerGet_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerGet_result implements TBase<scannerGet_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerGet_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public List<TRowResult> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -21289,7 +28449,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public scannerGet_result deepCopy() {
+      return new scannerGet_result(this);
+    }
+
+    @Deprecated
     public scannerGet_result clone() {
       return new scannerGet_result(this);
     }
@@ -21313,15 +28477,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRowResult> success) {
+    public scannerGet_result setSuccess(List<TRowResult> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -21336,15 +28501,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerGet_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -21359,15 +28525,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public scannerGet_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -21378,8 +28545,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -21404,13 +28571,15 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
@@ -21420,23 +28589,29 @@ public class Hbase {
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -21484,7 +28659,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -21496,50 +28688,50 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list98 = iprot.readListBegin();
-                this.success = new ArrayList<TRowResult>(_list98.size);
-                for (int _i99 = 0; _i99 < _list98.size; ++_i99)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRowResult _elem100;
-                  _elem100 = new TRowResult();
-                  _elem100.read(iprot);
-                  this.success.add(_elem100);
+                  TList _list98 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list98.size);
+                  for (int _i99 = 0; _i99 < _list98.size; ++_i99)
+                  {
+                    TRowResult _elem100;
+                    _elem100 = new TRowResult();
+                    _elem100.read(iprot);
+                    this.success.add(_elem100);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -21552,7 +28744,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter101 : this.success)          {
+          for (TRowResult _iter101 : this.success)
+          {
             _iter101.write(oprot);
           }
           oprot.writeListEnd();
@@ -21605,33 +28798,84 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerGetList_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerGetList_args implements TBase<scannerGetList_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerGetList_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerGetList_args");
+
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
     private static final TField NB_ROWS_FIELD_DESC = new TField("nbRows", TType.I32, (short)2);
 
     public int id;
-    public static final int ID = 1;
     public int nbRows;
-    public static final int NBROWS = 2;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean id = false;
-      public boolean nbRows = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      ID((short)1, "id"),
+      NB_ROWS((short)2, "nbRows");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __ID_ISSET_ID = 0;
+    private static final int __NBROWS_ISSET_ID = 1;
+    private BitSet __isset_bit_vector = new BitSet(2);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
-      put(NBROWS, new FieldMetaData("nbRows", TFieldRequirementType.DEFAULT, 
+      put(_Fields.NB_ROWS, new FieldMetaData("nbRows", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -21648,22 +28892,26 @@ public class Hbase {
     {
       this();
       this.id = id;
-      this.__isset.id = true;
+      setIdIsSet(true);
       this.nbRows = nbRows;
-      this.__isset.nbRows = true;
+      setNbRowsIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public scannerGetList_args(scannerGetList_args other) {
-      __isset.id = other.__isset.id;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.id = other.id;
-      __isset.nbRows = other.__isset.nbRows;
       this.nbRows = other.nbRows;
     }
 
-    @Override
+    public scannerGetList_args deepCopy() {
+      return new scannerGetList_args(this);
+    }
+
+    @Deprecated
     public scannerGetList_args clone() {
       return new scannerGetList_args(this);
     }
@@ -21672,48 +28920,50 @@ public class Hbase {
       return this.id;
     }
 
-    public void setId(int id) {
+    public scannerGetList_args setId(int id) {
       this.id = id;
-      this.__isset.id = true;
+      setIdIsSet(true);
+      return this;
     }
 
     public void unsetId() {
-      this.__isset.id = false;
+      __isset_bit_vector.clear(__ID_ISSET_ID);
     }
 
-    // Returns true if field id is set (has been asigned a value) and false otherwise
+    /** Returns true if field id is set (has been asigned a value) and false otherwise */
     public boolean isSetId() {
-      return this.__isset.id;
+      return __isset_bit_vector.get(__ID_ISSET_ID);
     }
 
     public void setIdIsSet(boolean value) {
-      this.__isset.id = value;
+      __isset_bit_vector.set(__ID_ISSET_ID, value);
     }
 
     public int getNbRows() {
       return this.nbRows;
     }
 
-    public void setNbRows(int nbRows) {
+    public scannerGetList_args setNbRows(int nbRows) {
       this.nbRows = nbRows;
-      this.__isset.nbRows = true;
+      setNbRowsIsSet(true);
+      return this;
     }
 
     public void unsetNbRows() {
-      this.__isset.nbRows = false;
+      __isset_bit_vector.clear(__NBROWS_ISSET_ID);
     }
 
-    // Returns true if field nbRows is set (has been asigned a value) and false otherwise
+    /** Returns true if field nbRows is set (has been asigned a value) and false otherwise */
     public boolean isSetNbRows() {
-      return this.__isset.nbRows;
+      return __isset_bit_vector.get(__NBROWS_ISSET_ID);
     }
 
     public void setNbRowsIsSet(boolean value) {
-      this.__isset.nbRows = value;
+      __isset_bit_vector.set(__NBROWS_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case ID:
         if (value == null) {
           unsetId();
@@ -21722,7 +28972,7 @@ public class Hbase {
         }
         break;
 
-      case NBROWS:
+      case NB_ROWS:
         if (value == null) {
           unsetNbRows();
         } else {
@@ -21730,34 +28980,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case ID:
-        return getId();
+        return new Integer(getId());
 
-      case NBROWS:
-        return getNbRows();
+      case NB_ROWS:
+        return new Integer(getNbRows());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case ID:
         return isSetId();
-      case NBROWS:
+      case NB_ROWS:
         return isSetNbRows();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -21796,6 +29054,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_id = true;
+      builder.append(present_id);
+      if (present_id)
+        builder.append(id);
+
+      boolean present_nbRows = true;
+      builder.append(present_nbRows);
+      if (present_nbRows)
+        builder.append(nbRows);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerGetList_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerGetList_args typedOther = (scannerGetList_args)other;
+
+      lastComparison = Boolean.valueOf(isSetId()).compareTo(isSetId());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(id, typedOther.id);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetNbRows()).compareTo(isSetNbRows());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(nbRows, typedOther.nbRows);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -21808,32 +29105,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case ID:
-            if (field.type == TType.I32) {
-              this.id = iprot.readI32();
-              this.__isset.id = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case NBROWS:
-            if (field.type == TType.I32) {
-              this.nbRows = iprot.readI32();
-              this.__isset.nbRows = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case ID:
+              if (field.type == TType.I32) {
+                this.id = iprot.readI32();
+                setIdIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case NB_ROWS:
+              if (field.type == TType.I32) {
+                this.nbRows = iprot.readI32();
+                setNbRowsIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -21871,32 +29168,87 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerGetList_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerGetList_result implements TBase<scannerGetList_result._Fields>, java.io.Serializable, Cloneable   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerGetList_result");
+
     private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public List<TRowResult> success;
-    public static final int SUCCESS = 0;
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      SUCCESS((short)0, "success"),
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
           new ListMetaData(TType.LIST, 
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -21937,7 +29289,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public scannerGetList_result deepCopy() {
+      return new scannerGetList_result(this);
+    }
+
+    @Deprecated
     public scannerGetList_result clone() {
       return new scannerGetList_result(this);
     }
@@ -21961,15 +29317,16 @@ public class Hbase {
       return this.success;
     }
 
-    public void setSuccess(List<TRowResult> success) {
+    public scannerGetList_result setSuccess(List<TRowResult> success) {
       this.success = success;
+      return this;
     }
 
     public void unsetSuccess() {
       this.success = null;
     }
 
-    // Returns true if field success is set (has been asigned a value) and false otherwise
+    /** Returns true if field success is set (has been asigned a value) and false otherwise */
     public boolean isSetSuccess() {
       return this.success != null;
     }
@@ -21984,15 +29341,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerGetList_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -22007,15 +29365,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public scannerGetList_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -22026,8 +29385,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case SUCCESS:
         if (value == null) {
           unsetSuccess();
@@ -22052,13 +29411,15 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return getSuccess();
 
@@ -22068,23 +29429,29 @@ public class Hbase {
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case SUCCESS:
         return isSetSuccess();
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -22132,7 +29499,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -22144,50 +29528,50 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case SUCCESS:
-            if (field.type == TType.LIST) {
-              {
-                TList _list102 = iprot.readListBegin();
-                this.success = new ArrayList<TRowResult>(_list102.size);
-                for (int _i103 = 0; _i103 < _list102.size; ++_i103)
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case SUCCESS:
+              if (field.type == TType.LIST) {
                 {
-                  TRowResult _elem104;
-                  _elem104 = new TRowResult();
-                  _elem104.read(iprot);
-                  this.success.add(_elem104);
+                  TList _list102 = iprot.readListBegin();
+                  this.success = new ArrayList<TRowResult>(_list102.size);
+                  for (int _i103 = 0; _i103 < _list102.size; ++_i103)
+                  {
+                    TRowResult _elem104;
+                    _elem104 = new TRowResult();
+                    _elem104.read(iprot);
+                    this.success.add(_elem104);
+                  }
+                  iprot.readListEnd();
                 }
-                iprot.readListEnd();
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
               }
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+              break;
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -22200,7 +29584,8 @@ public class Hbase {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-          for (TRowResult _iter105 : this.success)          {
+          for (TRowResult _iter105 : this.success)
+          {
             _iter105.write(oprot);
           }
           oprot.writeListEnd();
@@ -22253,27 +29638,78 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerClose_args implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerClose_args implements TBase<scannerClose_args._Fields>, java.io.Serializable, Cloneable, Comparable<scannerClose_args>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerClose_args");
+
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
 
     public int id;
-    public static final int ID = 1;
 
-    private final Isset __isset = new Isset();
-    private static final class Isset implements java.io.Serializable {
-      private static final long serialVersionUID = 1L;
-      public boolean id = false;
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      ID((short)1, "id");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
     }
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+    // isset id assignments
+    private static final int __ID_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -22289,18 +29725,23 @@ public class Hbase {
     {
       this();
       this.id = id;
-      this.__isset.id = true;
+      setIdIsSet(true);
     }
 
     /**
      * Performs a deep copy on <i>other</i>.
      */
     public scannerClose_args(scannerClose_args other) {
-      __isset.id = other.__isset.id;
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       this.id = other.id;
     }
 
-    @Override
+    public scannerClose_args deepCopy() {
+      return new scannerClose_args(this);
+    }
+
+    @Deprecated
     public scannerClose_args clone() {
       return new scannerClose_args(this);
     }
@@ -22309,26 +29750,27 @@ public class Hbase {
       return this.id;
     }
 
-    public void setId(int id) {
+    public scannerClose_args setId(int id) {
       this.id = id;
-      this.__isset.id = true;
+      setIdIsSet(true);
+      return this;
     }
 
     public void unsetId() {
-      this.__isset.id = false;
+      __isset_bit_vector.clear(__ID_ISSET_ID);
     }
 
-    // Returns true if field id is set (has been asigned a value) and false otherwise
+    /** Returns true if field id is set (has been asigned a value) and false otherwise */
     public boolean isSetId() {
-      return this.__isset.id;
+      return __isset_bit_vector.get(__ID_ISSET_ID);
     }
 
     public void setIdIsSet(boolean value) {
-      this.__isset.id = value;
+      __isset_bit_vector.set(__ID_ISSET_ID, value);
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case ID:
         if (value == null) {
           unsetId();
@@ -22337,29 +29779,37 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case ID:
-        return getId();
+        return new Integer(getId());
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case ID:
         return isSetId();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -22389,6 +29839,32 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_id = true;
+      builder.append(present_id);
+      if (present_id)
+        builder.append(id);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerClose_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerClose_args typedOther = (scannerClose_args)other;
+
+      lastComparison = Boolean.valueOf(isSetId()).compareTo(isSetId());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(id, typedOther.id);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -22401,24 +29877,24 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case ID:
-            if (field.type == TType.I32) {
-              this.id = iprot.readI32();
-              this.__isset.id = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case ID:
+              if (field.type == TType.I32) {
+                this.id = iprot.readI32();
+                setIdIsSet(true);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -22438,34 +29914,92 @@ public class Hbase {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("scannerClose_args(");
+      boolean first = true;
+
       sb.append("id:");
       sb.append(this.id);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }
 
-  public static class scannerClose_result implements TBase, java.io.Serializable, Cloneable   {
-    private static final long serialVersionUID = 1L;
+  public static class scannerClose_result implements TBase<scannerClose_result._Fields>, java.io.Serializable, Cloneable, Comparable<scannerClose_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("scannerClose_result");
+
     private static final TField IO_FIELD_DESC = new TField("io", TType.STRUCT, (short)1);
     private static final TField IA_FIELD_DESC = new TField("ia", TType.STRUCT, (short)2);
 
     public IOError io;
-    public static final int IO = 1;
     public IllegalArgument ia;
-    public static final int IA = 2;
 
-    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-      put(IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byId.put((int)field._thriftId, field);
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        return byId.get(fieldId);
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
-      put(IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -22497,7 +30031,11 @@ public class Hbase {
       }
     }
 
-    @Override
+    public scannerClose_result deepCopy() {
+      return new scannerClose_result(this);
+    }
+
+    @Deprecated
     public scannerClose_result clone() {
       return new scannerClose_result(this);
     }
@@ -22506,15 +30044,16 @@ public class Hbase {
       return this.io;
     }
 
-    public void setIo(IOError io) {
+    public scannerClose_result setIo(IOError io) {
       this.io = io;
+      return this;
     }
 
     public void unsetIo() {
       this.io = null;
     }
 
-    // Returns true if field io is set (has been asigned a value) and false otherwise
+    /** Returns true if field io is set (has been asigned a value) and false otherwise */
     public boolean isSetIo() {
       return this.io != null;
     }
@@ -22529,15 +30068,16 @@ public class Hbase {
       return this.ia;
     }
 
-    public void setIa(IllegalArgument ia) {
+    public scannerClose_result setIa(IllegalArgument ia) {
       this.ia = ia;
+      return this;
     }
 
     public void unsetIa() {
       this.ia = null;
     }
 
-    // Returns true if field ia is set (has been asigned a value) and false otherwise
+    /** Returns true if field ia is set (has been asigned a value) and false otherwise */
     public boolean isSetIa() {
       return this.ia != null;
     }
@@ -22548,8 +30088,8 @@ public class Hbase {
       }
     }
 
-    public void setFieldValue(int fieldID, Object value) {
-      switch (fieldID) {
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
       case IO:
         if (value == null) {
           unsetIo();
@@ -22566,34 +30106,42 @@ public class Hbase {
         }
         break;
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
     }
 
-    public Object getFieldValue(int fieldID) {
-      switch (fieldID) {
+    public void setFieldValue(int fieldID, Object value) {
+      setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
       case IO:
         return getIo();
 
       case IA:
         return getIa();
 
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
     }
 
-    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-    public boolean isSet(int fieldID) {
-      switch (fieldID) {
+    public Object getFieldValue(int fieldId) {
+      return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      switch (field) {
       case IO:
         return isSetIo();
       case IA:
         return isSetIa();
-      default:
-        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
       }
+      throw new IllegalStateException();
+    }
+
+    public boolean isSet(int fieldID) {
+      return isSet(_Fields.findByThriftIdOrThrow(fieldID));
     }
 
     @Override
@@ -22632,6 +30180,45 @@ public class Hbase {
 
     @Override
     public int hashCode() {
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
+    }
+
+    public int compareTo(scannerClose_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      scannerClose_result typedOther = (scannerClose_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(io, typedOther.io);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(ia, typedOther.ia);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
       return 0;
     }
 
@@ -22644,32 +30231,32 @@ public class Hbase {
         if (field.type == TType.STOP) { 
           break;
         }
-        switch (field.id)
-        {
-          case IO:
-            if (field.type == TType.STRUCT) {
-              this.io = new IOError();
-              this.io.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IA:
-            if (field.type == TType.STRUCT) {
-              this.ia = new IllegalArgument();
-              this.ia.read(iprot);
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
+        _Fields fieldId = _Fields.findByThriftId(field.id);
+        if (fieldId == null) {
+          TProtocolUtil.skip(iprot, field.type);
+        } else {
+          switch (fieldId) {
+            case IO:
+              if (field.type == TType.STRUCT) {
+                this.io = new IOError();
+                this.io.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+            case IA:
+              if (field.type == TType.STRUCT) {
+                this.ia = new IllegalArgument();
+                this.ia.read(iprot);
+              } else { 
+                TProtocolUtil.skip(iprot, field.type);
+              }
+              break;
+          }
+          iprot.readFieldEnd();
         }
-        iprot.readFieldEnd();
       }
       iprot.readStructEnd();
-
 
       // check for required fields of primitive type, which can't be checked in the validate method
       validate();
@@ -22717,7 +30304,6 @@ public class Hbase {
 
     public void validate() throws TException {
       // check for required fields
-      // check that fields of type enum have valid values
     }
 
   }

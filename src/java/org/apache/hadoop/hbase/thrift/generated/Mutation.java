@@ -1,6 +1,4 @@
-/*
- * Copyright 2009 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +17,21 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
+import java.util.BitSet;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -31,32 +39,84 @@ import org.apache.thrift.protocol.*;
 /**
  * A Mutation object is used to either update or delete a column-value.
  */
-public class Mutation implements TBase, java.io.Serializable, Cloneable {
-  private static final long serialVersionUID = 1L;
+public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, Cloneable, Comparable<Mutation> {
   private static final TStruct STRUCT_DESC = new TStruct("Mutation");
+
   private static final TField IS_DELETE_FIELD_DESC = new TField("isDelete", TType.BOOL, (short)1);
   private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)2);
   private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)3);
 
   public boolean isDelete;
-  public static final int ISDELETE = 1;
   public byte[] column;
-  public static final int COLUMN = 2;
   public byte[] value;
-  public static final int VALUE = 3;
 
-  private final Isset __isset = new Isset();
-  private static final class Isset implements java.io.Serializable {
-    private static final long serialVersionUID = 1L;
-    public boolean isDelete = false;
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    IS_DELETE((short)1, "isDelete"),
+    COLUMN((short)2, "column"),
+    VALUE((short)3, "value");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
   }
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(ISDELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT, 
+  // isset id assignments
+  private static final int __ISDELETE_ISSET_ID = 0;
+  private BitSet __isset_bit_vector = new BitSet(1);
+
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.IS_DELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.BOOL)));
-    put(COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+    put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
   }});
 
@@ -76,7 +136,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
   {
     this();
     this.isDelete = isDelete;
-    this.__isset.isDelete = true;
+    setIsDeleteIsSet(true);
     this.column = column;
     this.value = value;
   }
@@ -85,7 +145,8 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
    * Performs a deep copy on <i>other</i>.
    */
   public Mutation(Mutation other) {
-    __isset.isDelete = other.__isset.isDelete;
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
     this.isDelete = other.isDelete;
     if (other.isSetColumn()) {
       this.column = other.column;
@@ -95,7 +156,11 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     }
   }
 
-  @Override
+  public Mutation deepCopy() {
+    return new Mutation(this);
+  }
+
+  @Deprecated
   public Mutation clone() {
     return new Mutation(this);
   }
@@ -104,37 +169,39 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     return this.isDelete;
   }
 
-  public void setIsDelete(boolean isDelete) {
+  public Mutation setIsDelete(boolean isDelete) {
     this.isDelete = isDelete;
-    this.__isset.isDelete = true;
+    setIsDeleteIsSet(true);
+    return this;
   }
 
   public void unsetIsDelete() {
-    this.__isset.isDelete = false;
+    __isset_bit_vector.clear(__ISDELETE_ISSET_ID);
   }
 
-  // Returns true if field isDelete is set (has been asigned a value) and false otherwise
+  /** Returns true if field isDelete is set (has been asigned a value) and false otherwise */
   public boolean isSetIsDelete() {
-    return this.__isset.isDelete;
+    return __isset_bit_vector.get(__ISDELETE_ISSET_ID);
   }
 
   public void setIsDeleteIsSet(boolean value) {
-    this.__isset.isDelete = value;
+    __isset_bit_vector.set(__ISDELETE_ISSET_ID, value);
   }
 
   public byte[] getColumn() {
     return this.column;
   }
 
-  public void setColumn(byte[] column) {
+  public Mutation setColumn(byte[] column) {
     this.column = column;
+    return this;
   }
 
   public void unsetColumn() {
     this.column = null;
   }
 
-  // Returns true if field column is set (has been asigned a value) and false otherwise
+  /** Returns true if field column is set (has been asigned a value) and false otherwise */
   public boolean isSetColumn() {
     return this.column != null;
   }
@@ -149,15 +216,16 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     return this.value;
   }
 
-  public void setValue(byte[] value) {
+  public Mutation setValue(byte[] value) {
     this.value = value;
+    return this;
   }
 
   public void unsetValue() {
     this.value = null;
   }
 
-  // Returns true if field value is set (has been asigned a value) and false otherwise
+  /** Returns true if field value is set (has been asigned a value) and false otherwise */
   public boolean isSetValue() {
     return this.value != null;
   }
@@ -168,9 +236,9 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
-    case ISDELETE:
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
+    case IS_DELETE:
       if (value == null) {
         unsetIsDelete();
       } else {
@@ -194,15 +262,17 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
-    case ISDELETE:
-      return Boolean.valueOf(isIsDelete());
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
+    case IS_DELETE:
+      return new Boolean(isIsDelete());
 
     case COLUMN:
       return getColumn();
@@ -210,23 +280,29 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     case VALUE:
       return getValue();
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
-    case ISDELETE:
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
+    case IS_DELETE:
       return isSetIsDelete();
     case COLUMN:
       return isSetColumn();
     case VALUE:
       return isSetValue();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -274,6 +350,58 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
 
   @Override
   public int hashCode() {
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_isDelete = true;
+    builder.append(present_isDelete);
+    if (present_isDelete)
+      builder.append(isDelete);
+
+    boolean present_column = true && (isSetColumn());
+    builder.append(present_column);
+    if (present_column)
+      builder.append(column);
+
+    boolean present_value = true && (isSetValue());
+    builder.append(present_value);
+    if (present_value)
+      builder.append(value);
+
+    return builder.toHashCode();
+  }
+
+  public int compareTo(Mutation other) {
+    if (!getClass().equals(other.getClass())) {
+      return getClass().getName().compareTo(other.getClass().getName());
+    }
+
+    int lastComparison = 0;
+    Mutation typedOther = (Mutation)other;
+
+    lastComparison = Boolean.valueOf(isSetIsDelete()).compareTo(isSetIsDelete());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(isDelete, typedOther.isDelete);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(column, typedOther.column);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetValue()).compareTo(isSetValue());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(value, typedOther.value);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
     return 0;
   }
 
@@ -286,38 +414,38 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case ISDELETE:
-          if (field.type == TType.BOOL) {
-            this.isDelete = iprot.readBool();
-            this.__isset.isDelete = true;
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case COLUMN:
-          if (field.type == TType.STRING) {
-            this.column = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case VALUE:
-          if (field.type == TType.STRING) {
-            this.value = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        default:
-          TProtocolUtil.skip(iprot, field.type);
-          break;
+      _Fields fieldId = _Fields.findByThriftId(field.id);
+      if (fieldId == null) {
+        TProtocolUtil.skip(iprot, field.type);
+      } else {
+        switch (fieldId) {
+          case IS_DELETE:
+            if (field.type == TType.BOOL) {
+              this.isDelete = iprot.readBool();
+              setIsDeleteIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case COLUMN:
+            if (field.type == TType.STRING) {
+              this.column = iprot.readBinary();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case VALUE:
+            if (field.type == TType.STRING) {
+              this.value = iprot.readBinary();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+        }
+        iprot.readFieldEnd();
       }
-      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -357,7 +485,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     if (this.column == null) {
       sb.append("null");
     } else {
-      sb.append(Bytes.toStringBinary(this.column));
+      sb.append(this.column);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -365,7 +493,7 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
     if (this.value == null) {
       sb.append("null");
     } else {
-      sb.append(Bytes.toStringBinary(this.value));
+      sb.append(this.value);
     }
     first = false;
     sb.append(")");
@@ -374,7 +502,6 @@ public class Mutation implements TBase, java.io.Serializable, Cloneable {
 
   public void validate() throws TException {
     // check for required fields
-    // check that fields of type enum have valid values
   }
 
 }

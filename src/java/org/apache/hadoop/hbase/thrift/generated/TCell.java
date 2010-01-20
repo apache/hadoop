@@ -1,6 +1,4 @@
-/*
- * Copyright 2009 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +17,21 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
+import java.util.BitSet;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -34,27 +42,79 @@ import org.apache.thrift.protocol.*;
  * the timestamp of a cell to a first-class value, making it easy to take
  * note of temporal data. Cell is used all the way from HStore up to HTable.
  */
-public class TCell implements TBase, java.io.Serializable, Cloneable {
-  private static final long serialVersionUID = 1L;
+public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Cloneable, Comparable<TCell> {
   private static final TStruct STRUCT_DESC = new TStruct("TCell");
+
   private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)1);
   private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)2);
 
   public byte[] value;
-  public static final int VALUE = 1;
   public long timestamp;
-  public static final int TIMESTAMP = 2;
 
-  private final Isset __isset = new Isset();
-  private static final class Isset implements java.io.Serializable {
-    private static final long serialVersionUID = 1L;
-    public boolean timestamp = false;
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    VALUE((short)1, "value"),
+    TIMESTAMP((short)2, "timestamp");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
   }
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+  // isset id assignments
+  private static final int __TIMESTAMP_ISSET_ID = 0;
+  private BitSet __isset_bit_vector = new BitSet(1);
+
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+    put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I64)));
   }});
 
@@ -72,21 +132,26 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
     this();
     this.value = value;
     this.timestamp = timestamp;
-    this.__isset.timestamp = true;
+    setTimestampIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public TCell(TCell other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
     if (other.isSetValue()) {
       this.value = other.value;
     }
-    __isset.timestamp = other.__isset.timestamp;
     this.timestamp = other.timestamp;
   }
 
-  @Override
+  public TCell deepCopy() {
+    return new TCell(this);
+  }
+
+  @Deprecated
   public TCell clone() {
     return new TCell(this);
   }
@@ -95,15 +160,16 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
     return this.value;
   }
 
-  public void setValue(byte[] value) {
+  public TCell setValue(byte[] value) {
     this.value = value;
+    return this;
   }
 
   public void unsetValue() {
     this.value = null;
   }
 
-  // Returns true if field value is set (has been asigned a value) and false otherwise
+  /** Returns true if field value is set (has been asigned a value) and false otherwise */
   public boolean isSetValue() {
     return this.value != null;
   }
@@ -118,26 +184,27 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
     return this.timestamp;
   }
 
-  public void setTimestamp(long timestamp) {
+  public TCell setTimestamp(long timestamp) {
     this.timestamp = timestamp;
-    this.__isset.timestamp = true;
+    setTimestampIsSet(true);
+    return this;
   }
 
   public void unsetTimestamp() {
-    this.__isset.timestamp = false;
+    __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
   }
 
-  // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+  /** Returns true if field timestamp is set (has been asigned a value) and false otherwise */
   public boolean isSetTimestamp() {
-    return this.__isset.timestamp;
+    return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
   }
 
   public void setTimestampIsSet(boolean value) {
-    this.__isset.timestamp = value;
+    __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case VALUE:
       if (value == null) {
         unsetValue();
@@ -154,34 +221,42 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case VALUE:
       return getValue();
 
     case TIMESTAMP:
-      return getTimestamp();
+      return new Long(getTimestamp());
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case VALUE:
       return isSetValue();
     case TIMESTAMP:
       return isSetTimestamp();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -220,6 +295,45 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
 
   @Override
   public int hashCode() {
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_value = true && (isSetValue());
+    builder.append(present_value);
+    if (present_value)
+      builder.append(value);
+
+    boolean present_timestamp = true;
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    return builder.toHashCode();
+  }
+
+  public int compareTo(TCell other) {
+    if (!getClass().equals(other.getClass())) {
+      return getClass().getName().compareTo(other.getClass().getName());
+    }
+
+    int lastComparison = 0;
+    TCell typedOther = (TCell)other;
+
+    lastComparison = Boolean.valueOf(isSetValue()).compareTo(isSetValue());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(value, typedOther.value);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
     return 0;
   }
 
@@ -232,31 +346,31 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case VALUE:
-          if (field.type == TType.STRING) {
-            this.value = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case TIMESTAMP:
-          if (field.type == TType.I64) {
-            this.timestamp = iprot.readI64();
-            this.__isset.timestamp = true;
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        default:
-          TProtocolUtil.skip(iprot, field.type);
-          break;
+      _Fields fieldId = _Fields.findByThriftId(field.id);
+      if (fieldId == null) {
+        TProtocolUtil.skip(iprot, field.type);
+      } else {
+        switch (fieldId) {
+          case VALUE:
+            if (field.type == TType.STRING) {
+              this.value = iprot.readBinary();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TIMESTAMP:
+            if (field.type == TType.I64) {
+              this.timestamp = iprot.readI64();
+              setTimestampIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+        }
+        iprot.readFieldEnd();
       }
-      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -287,7 +401,7 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
     if (this.value == null) {
       sb.append("null");
     } else {
-      sb.append(Bytes.toStringBinary(this.value));
+      sb.append(this.value);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -300,7 +414,6 @@ public class TCell implements TBase, java.io.Serializable, Cloneable {
 
   public void validate() throws TException {
     // check for required fields
-    // check that fields of type enum have valid values
   }
 
 }

@@ -1,6 +1,4 @@
-/*
- * Copyright 2009 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +17,20 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
+import java.util.BitSet;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
@@ -31,16 +40,72 @@ import org.apache.thrift.protocol.*;
  * An IllegalArgument exception indicates an illegal or invalid
  * argument was passed into a procedure.
  */
-public class IllegalArgument extends Exception implements TBase, java.io.Serializable, Cloneable {
-  private static final long serialVersionUID = 1L;
+public class IllegalArgument extends Exception implements TBase<IllegalArgument._Fields>, java.io.Serializable, Cloneable, Comparable<IllegalArgument> {
   private static final TStruct STRUCT_DESC = new TStruct("IllegalArgument");
+
   private static final TField MESSAGE_FIELD_DESC = new TField("message", TType.STRING, (short)1);
 
   public String message;
-  public static final int MESSAGE = 1;
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT, 
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    MESSAGE((short)1, "message");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
+  }
+
+  // isset id assignments
+
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
   }});
 
@@ -67,7 +132,11 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
     }
   }
 
-  @Override
+  public IllegalArgument deepCopy() {
+    return new IllegalArgument(this);
+  }
+
+  @Deprecated
   public IllegalArgument clone() {
     return new IllegalArgument(this);
   }
@@ -76,15 +145,16 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
     return this.message;
   }
 
-  public void setMessage(String message) {
+  public IllegalArgument setMessage(String message) {
     this.message = message;
+    return this;
   }
 
   public void unsetMessage() {
     this.message = null;
   }
 
-  // Returns true if field message is set (has been asigned a value) and false otherwise
+  /** Returns true if field message is set (has been asigned a value) and false otherwise */
   public boolean isSetMessage() {
     return this.message != null;
   }
@@ -95,8 +165,8 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
     case MESSAGE:
       if (value == null) {
         unsetMessage();
@@ -105,29 +175,37 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
     case MESSAGE:
       return getMessage();
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
     case MESSAGE:
       return isSetMessage();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -157,6 +235,32 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
 
   @Override
   public int hashCode() {
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_message = true && (isSetMessage());
+    builder.append(present_message);
+    if (present_message)
+      builder.append(message);
+
+    return builder.toHashCode();
+  }
+
+  public int compareTo(IllegalArgument other) {
+    if (!getClass().equals(other.getClass())) {
+      return getClass().getName().compareTo(other.getClass().getName());
+    }
+
+    int lastComparison = 0;
+    IllegalArgument typedOther = (IllegalArgument)other;
+
+    lastComparison = Boolean.valueOf(isSetMessage()).compareTo(isSetMessage());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(message, typedOther.message);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
     return 0;
   }
 
@@ -169,23 +273,23 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case MESSAGE:
-          if (field.type == TType.STRING) {
-            this.message = iprot.readString();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        default:
-          TProtocolUtil.skip(iprot, field.type);
-          break;
+      _Fields fieldId = _Fields.findByThriftId(field.id);
+      if (fieldId == null) {
+        TProtocolUtil.skip(iprot, field.type);
+      } else {
+        switch (fieldId) {
+          case MESSAGE:
+            if (field.type == TType.STRING) {
+              this.message = iprot.readString();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+        }
+        iprot.readFieldEnd();
       }
-      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -207,6 +311,7 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("IllegalArgument(");
+    boolean first = true;
 
     sb.append("message:");
     if (this.message == null) {
@@ -214,13 +319,13 @@ public class IllegalArgument extends Exception implements TBase, java.io.Seriali
     } else {
       sb.append(this.message);
     }
+    first = false;
     sb.append(")");
     return sb.toString();
   }
 
   public void validate() throws TException {
     // check for required fields
-    // check that fields of type enum have valid values
   }
 
 }

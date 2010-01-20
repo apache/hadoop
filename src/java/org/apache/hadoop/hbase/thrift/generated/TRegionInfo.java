@@ -1,6 +1,4 @@
-/*
- * Copyright 2009 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +17,21 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Collections;
+import java.util.BitSet;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
@@ -31,9 +39,9 @@ import org.apache.thrift.protocol.*;
 /**
  * A TRegionInfo contains information about an HTable region.
  */
-public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
-  private static final long serialVersionUID = 1L;
+public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializable, Cloneable, Comparable<TRegionInfo> {
   private static final TStruct STRUCT_DESC = new TStruct("TRegionInfo");
+
   private static final TField START_KEY_FIELD_DESC = new TField("startKey", TType.STRING, (short)1);
   private static final TField END_KEY_FIELD_DESC = new TField("endKey", TType.STRING, (short)2);
   private static final TField ID_FIELD_DESC = new TField("id", TType.I64, (short)3);
@@ -41,33 +49,85 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
   private static final TField VERSION_FIELD_DESC = new TField("version", TType.BYTE, (short)5);
 
   public byte[] startKey;
-  public static final int STARTKEY = 1;
   public byte[] endKey;
-  public static final int ENDKEY = 2;
   public long id;
-  public static final int ID = 3;
   public byte[] name;
-  public static final int NAME = 4;
   public byte version;
-  public static final int VERSION = 5;
 
-  private final Isset __isset = new Isset();
-  private static final class Isset implements java.io.Serializable {
-    private static final long serialVersionUID = 1L;
-    public boolean id = false;
-    public boolean version = false;
+  /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+  public enum _Fields implements TFieldIdEnum {
+    START_KEY((short)1, "startKey"),
+    END_KEY((short)2, "endKey"),
+    ID((short)3, "id"),
+    NAME((short)4, "name"),
+    VERSION((short)5, "version");
+
+    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
+    private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+    static {
+      for (_Fields field : EnumSet.allOf(_Fields.class)) {
+        byId.put((int)field._thriftId, field);
+        byName.put(field.getFieldName(), field);
+      }
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, or null if its not found.
+     */
+    public static _Fields findByThriftId(int fieldId) {
+      return byId.get(fieldId);
+    }
+
+    /**
+     * Find the _Fields constant that matches fieldId, throwing an exception
+     * if it is not found.
+     */
+    public static _Fields findByThriftIdOrThrow(int fieldId) {
+      _Fields fields = findByThriftId(fieldId);
+      if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+      return fields;
+    }
+
+    /**
+     * Find the _Fields constant that matches name, or null if its not found.
+     */
+    public static _Fields findByName(String name) {
+      return byName.get(name);
+    }
+
+    private final short _thriftId;
+    private final String _fieldName;
+
+    _Fields(short thriftId, String fieldName) {
+      _thriftId = thriftId;
+      _fieldName = fieldName;
+    }
+
+    public short getThriftFieldId() {
+      return _thriftId;
+    }
+
+    public String getFieldName() {
+      return _fieldName;
+    }
   }
 
-  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
-    put(STARTKEY, new FieldMetaData("startKey", TFieldRequirementType.DEFAULT, 
+  // isset id assignments
+  private static final int __ID_ISSET_ID = 0;
+  private static final int __VERSION_ISSET_ID = 1;
+  private BitSet __isset_bit_vector = new BitSet(2);
+
+  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
+    put(_Fields.START_KEY, new FieldMetaData("startKey", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(ENDKEY, new FieldMetaData("endKey", TFieldRequirementType.DEFAULT, 
+    put(_Fields.END_KEY, new FieldMetaData("endKey", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+    put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.I64)));
-    put(NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT, 
+    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.STRING)));
-    put(VERSION, new FieldMetaData("version", TFieldRequirementType.DEFAULT, 
+    put(_Fields.VERSION, new FieldMetaData("version", TFieldRequirementType.DEFAULT, 
         new FieldValueMetaData(TType.BYTE)));
   }});
 
@@ -89,32 +149,36 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     this.startKey = startKey;
     this.endKey = endKey;
     this.id = id;
-    this.__isset.id = true;
+    setIdIsSet(true);
     this.name = name;
     this.version = version;
-    this.__isset.version = true;
+    setVersionIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public TRegionInfo(TRegionInfo other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
     if (other.isSetStartKey()) {
       this.startKey = other.startKey;
     }
     if (other.isSetEndKey()) {
       this.endKey = other.endKey;
     }
-    __isset.id = other.__isset.id;
     this.id = other.id;
     if (other.isSetName()) {
       this.name = other.name;
     }
-    __isset.version = other.__isset.version;
     this.version = other.version;
   }
 
-  @Override
+  public TRegionInfo deepCopy() {
+    return new TRegionInfo(this);
+  }
+
+  @Deprecated
   public TRegionInfo clone() {
     return new TRegionInfo(this);
   }
@@ -123,15 +187,16 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     return this.startKey;
   }
 
-  public void setStartKey(byte[] startKey) {
+  public TRegionInfo setStartKey(byte[] startKey) {
     this.startKey = startKey;
+    return this;
   }
 
   public void unsetStartKey() {
     this.startKey = null;
   }
 
-  // Returns true if field startKey is set (has been asigned a value) and false otherwise
+  /** Returns true if field startKey is set (has been asigned a value) and false otherwise */
   public boolean isSetStartKey() {
     return this.startKey != null;
   }
@@ -146,15 +211,16 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     return this.endKey;
   }
 
-  public void setEndKey(byte[] endKey) {
+  public TRegionInfo setEndKey(byte[] endKey) {
     this.endKey = endKey;
+    return this;
   }
 
   public void unsetEndKey() {
     this.endKey = null;
   }
 
-  // Returns true if field endKey is set (has been asigned a value) and false otherwise
+  /** Returns true if field endKey is set (has been asigned a value) and false otherwise */
   public boolean isSetEndKey() {
     return this.endKey != null;
   }
@@ -169,37 +235,39 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     return this.id;
   }
 
-  public void setId(long id) {
+  public TRegionInfo setId(long id) {
     this.id = id;
-    this.__isset.id = true;
+    setIdIsSet(true);
+    return this;
   }
 
   public void unsetId() {
-    this.__isset.id = false;
+    __isset_bit_vector.clear(__ID_ISSET_ID);
   }
 
-  // Returns true if field id is set (has been asigned a value) and false otherwise
+  /** Returns true if field id is set (has been asigned a value) and false otherwise */
   public boolean isSetId() {
-    return this.__isset.id;
+    return __isset_bit_vector.get(__ID_ISSET_ID);
   }
 
   public void setIdIsSet(boolean value) {
-    this.__isset.id = value;
+    __isset_bit_vector.set(__ID_ISSET_ID, value);
   }
 
   public byte[] getName() {
     return this.name;
   }
 
-  public void setName(byte[] name) {
+  public TRegionInfo setName(byte[] name) {
     this.name = name;
+    return this;
   }
 
   public void unsetName() {
     this.name = null;
   }
 
-  // Returns true if field name is set (has been asigned a value) and false otherwise
+  /** Returns true if field name is set (has been asigned a value) and false otherwise */
   public boolean isSetName() {
     return this.name != null;
   }
@@ -214,27 +282,28 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     return this.version;
   }
 
-  public void setVersion(byte version) {
+  public TRegionInfo setVersion(byte version) {
     this.version = version;
-    this.__isset.version = true;
+    setVersionIsSet(true);
+    return this;
   }
 
   public void unsetVersion() {
-    this.__isset.version = false;
+    __isset_bit_vector.clear(__VERSION_ISSET_ID);
   }
 
-  // Returns true if field version is set (has been asigned a value) and false otherwise
+  /** Returns true if field version is set (has been asigned a value) and false otherwise */
   public boolean isSetVersion() {
-    return this.__isset.version;
+    return __isset_bit_vector.get(__VERSION_ISSET_ID);
   }
 
   public void setVersionIsSet(boolean value) {
-    this.__isset.version = value;
+    __isset_bit_vector.set(__VERSION_ISSET_ID, value);
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    switch (fieldID) {
-    case STARTKEY:
+  public void setFieldValue(_Fields field, Object value) {
+    switch (field) {
+    case START_KEY:
       if (value == null) {
         unsetStartKey();
       } else {
@@ -242,7 +311,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
-    case ENDKEY:
+    case END_KEY:
       if (value == null) {
         unsetEndKey();
       } else {
@@ -274,39 +343,44 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
       }
       break;
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
   }
 
-  public Object getFieldValue(int fieldID) {
-    switch (fieldID) {
-    case STARTKEY:
+  public void setFieldValue(int fieldID, Object value) {
+    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
+  }
+
+  public Object getFieldValue(_Fields field) {
+    switch (field) {
+    case START_KEY:
       return getStartKey();
 
-    case ENDKEY:
+    case END_KEY:
       return getEndKey();
 
     case ID:
-      return getId();
+      return new Long(getId());
 
     case NAME:
       return getName();
 
     case VERSION:
-      return getVersion();
+      return new Byte(getVersion());
 
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
   }
 
-  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
-  public boolean isSet(int fieldID) {
-    switch (fieldID) {
-    case STARTKEY:
+  public Object getFieldValue(int fieldId) {
+    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
+  }
+
+  /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
+  public boolean isSet(_Fields field) {
+    switch (field) {
+    case START_KEY:
       return isSetStartKey();
-    case ENDKEY:
+    case END_KEY:
       return isSetEndKey();
     case ID:
       return isSetId();
@@ -314,9 +388,12 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
       return isSetName();
     case VERSION:
       return isSetVersion();
-    default:
-      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
     }
+    throw new IllegalStateException();
+  }
+
+  public boolean isSet(int fieldID) {
+    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -382,6 +459,84 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
 
   @Override
   public int hashCode() {
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_startKey = true && (isSetStartKey());
+    builder.append(present_startKey);
+    if (present_startKey)
+      builder.append(startKey);
+
+    boolean present_endKey = true && (isSetEndKey());
+    builder.append(present_endKey);
+    if (present_endKey)
+      builder.append(endKey);
+
+    boolean present_id = true;
+    builder.append(present_id);
+    if (present_id)
+      builder.append(id);
+
+    boolean present_name = true && (isSetName());
+    builder.append(present_name);
+    if (present_name)
+      builder.append(name);
+
+    boolean present_version = true;
+    builder.append(present_version);
+    if (present_version)
+      builder.append(version);
+
+    return builder.toHashCode();
+  }
+
+  public int compareTo(TRegionInfo other) {
+    if (!getClass().equals(other.getClass())) {
+      return getClass().getName().compareTo(other.getClass().getName());
+    }
+
+    int lastComparison = 0;
+    TRegionInfo typedOther = (TRegionInfo)other;
+
+    lastComparison = Boolean.valueOf(isSetStartKey()).compareTo(isSetStartKey());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(startKey, typedOther.startKey);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetEndKey()).compareTo(isSetEndKey());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(endKey, typedOther.endKey);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetId()).compareTo(isSetId());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(id, typedOther.id);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetName()).compareTo(isSetName());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(name, typedOther.name);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = Boolean.valueOf(isSetVersion()).compareTo(isSetVersion());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    lastComparison = TBaseHelper.compareTo(version, typedOther.version);
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
     return 0;
   }
 
@@ -394,53 +549,53 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
       if (field.type == TType.STOP) { 
         break;
       }
-      switch (field.id)
-      {
-        case STARTKEY:
-          if (field.type == TType.STRING) {
-            this.startKey = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case ENDKEY:
-          if (field.type == TType.STRING) {
-            this.endKey = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case ID:
-          if (field.type == TType.I64) {
-            this.id = iprot.readI64();
-            this.__isset.id = true;
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case NAME:
-          if (field.type == TType.STRING) {
-            this.name = iprot.readBinary();
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        case VERSION:
-          if (field.type == TType.BYTE) {
-            this.version = iprot.readByte();
-            this.__isset.version = true;
-          } else { 
-            TProtocolUtil.skip(iprot, field.type);
-          }
-          break;
-        default:
-          TProtocolUtil.skip(iprot, field.type);
-          break;
+      _Fields fieldId = _Fields.findByThriftId(field.id);
+      if (fieldId == null) {
+        TProtocolUtil.skip(iprot, field.type);
+      } else {
+        switch (fieldId) {
+          case START_KEY:
+            if (field.type == TType.STRING) {
+              this.startKey = iprot.readBinary();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case END_KEY:
+            if (field.type == TType.STRING) {
+              this.endKey = iprot.readBinary();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case ID:
+            if (field.type == TType.I64) {
+              this.id = iprot.readI64();
+              setIdIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case NAME:
+            if (field.type == TType.STRING) {
+              this.name = iprot.readBinary();
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case VERSION:
+            if (field.type == TType.BYTE) {
+              this.version = iprot.readByte();
+              setVersionIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+        }
+        iprot.readFieldEnd();
       }
-      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
-
 
     // check for required fields of primitive type, which can't be checked in the validate method
     validate();
@@ -484,7 +639,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     if (this.startKey == null) {
       sb.append("null");
     } else {
-      sb.append(Bytes.toStringBinary(this.startKey));
+      sb.append(this.startKey);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -492,7 +647,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     if (this.endKey == null) {
       sb.append("null");
     } else {
-      sb.append(Bytes.toStringBinary(this.endKey));
+      sb.append(this.endKey);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -504,7 +659,7 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
     if (this.name == null) {
       sb.append("null");
     } else {
-      sb.append(Bytes.toStringBinary(this.name));
+      sb.append(this.name);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -517,7 +672,6 @@ public class TRegionInfo implements TBase, java.io.Serializable, Cloneable {
 
   public void validate() throws TException {
     // check for required fields
-    // check that fields of type enum have valid values
   }
 
 }
