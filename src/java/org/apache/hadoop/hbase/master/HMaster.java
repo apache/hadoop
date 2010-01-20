@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Result;
@@ -1196,6 +1198,25 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           // If 'local', defer to LocalHBaseCluster instance.  Starts master
           // and regionserver both in the one JVM.
           if (LocalHBaseCluster.isLocal(conf)) {
+            // TODO make zookeepercluster a field and do an orderly shutdown
+            MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster();
+            File zkDataPath = new File(conf.get("hbase.zookeeper.property.dataDir"));
+            int zkClientPort = conf.getInt("hbase.zookeeper.property.clientPort", 0);
+            if (zkClientPort == 0) {
+              throw new IOException("No config value for hbase.zookeeper.property.clientPort");
+            }
+
+            zooKeeperCluster.setTickTime(conf.getInt("hbase.zookeeper.property.tickTime", 3000));
+            zooKeeperCluster.setClientPort(zkClientPort);
+            int clientPort = zooKeeperCluster.startup(zkDataPath);
+            if (clientPort != zkClientPort) {
+              String errorMsg = "Couldnt start ZK at requested address of " +
+                  zkClientPort + ", instead got: " + clientPort + ". Aborting. Why? " +
+                  "Because clients (eg shell) wont be able to find this ZK quorum";
+              System.err.println(errorMsg);
+              throw new IOException(errorMsg);
+            }
+            conf.set("hbase.zookeeper.property.clientPort", Integer.toString(clientPort));
             (new LocalHBaseCluster(conf)).startup();
           } else {
             Constructor<? extends HMaster> c =
