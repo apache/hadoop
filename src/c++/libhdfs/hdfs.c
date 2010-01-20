@@ -219,6 +219,7 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const 
       if (groups == NULL || groups_size <= 0) {
         fprintf(stderr, "ERROR: groups must not be empty/null\n");
         errno = EINVAL;
+        destroyLocalReference(env, jConfiguration);
         return NULL;
       }
 
@@ -227,6 +228,8 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const 
       if (jGroups == NULL) {
         errno = EINTERNAL;
         fprintf(stderr, "ERROR: could not construct groups array\n");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
         return NULL;
       }
 
@@ -259,12 +262,14 @@ hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const 
           destroyLocalReference(env, jGroups);
         }          
         destroyLocalReference(env, jUgi);
+        destroyLocalReference(env, jAttrString);
         return NULL;
       }
 
       destroyLocalReference(env, jUserString);
       destroyLocalReference(env, jGroups);
       destroyLocalReference(env, jUgi);
+      destroyLocalReference(env, jAttrString);
     }
 #else
     
@@ -402,6 +407,7 @@ hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *us
       if (groups == NULL || groups_size <= 0) {
         fprintf(stderr, "ERROR: groups must not be empty/null\n");
         errno = EINVAL;
+        destroyLocalReference(env, jConfiguration);
         return NULL;
       }
 
@@ -410,6 +416,8 @@ hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *us
       if (jGroups == NULL) {
         errno = EINTERNAL;
         fprintf(stderr, "ERROR: could not construct groups array\n");
+        destroyLocalReference(env, jConfiguration);
+        destroyLocalReference(env, jUserString);
         return NULL;
       }
 
@@ -442,12 +450,14 @@ hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *us
           destroyLocalReference(env, jGroups);
         }          
         destroyLocalReference(env, jUgi);
+        destroyLocalReference(env, jAttrString);
         return NULL;
       }
 
       destroyLocalReference(env, jUserString);
       destroyLocalReference(env, jGroups);
       destroyLocalReference(env, jUgi);
+      destroyLocalReference(env, jAttrString);
     }
 #else
     
@@ -726,12 +736,12 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     file = malloc(sizeof(struct hdfsFile_internal));
     if (!file) {
         errno = ENOMEM;
-        return NULL;
-    }
-    file->file = (*env)->NewGlobalRef(env, jVal.l);
-    file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
+    } else {
+        file->file = (*env)->NewGlobalRef(env, jVal.l);
+        file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
 
-    destroyLocalReference(env, jVal.l);
+        destroyLocalReference(env, jVal.l);
+    }
 
     done:
 
@@ -813,9 +823,11 @@ int hdfsExists(hdfsFS fs, const char *path)
                      jPath) != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FileSystem::exists");
+        destroyLocalReference(env, jPath);
         return -1;
     }
 
+    destroyLocalReference(env, jPath);
     return jVal.z ? 0 : -1;
 }
 
@@ -1332,6 +1344,7 @@ int hdfsDelete(hdfsFS fs, const char* path, int recursive)
                      jPath, jRecursive) != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FileSystem::delete");
+        destroyLocalReference(env, jPath);
         return -1;
     }
 
@@ -1382,6 +1395,8 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath)
                      jOldPath, jNewPath) != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FileSystem::rename");
+        destroyLocalReference(env, jOldPath);
+        destroyLocalReference(env, jNewPath);
         return -1;
     }
 
@@ -1645,6 +1660,7 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode)
     //Create an object of org.apache.hadoop.fs.Path
     jobject jPath = constructNewObjectOfPath(env, path);
     if (jPath == NULL) {
+      destroyLocalReference(env, jPermObj);
       return -3;
     }
 
@@ -1916,8 +1932,10 @@ tOffset hdfsGetCapacity(hdfsFS fs)
                      "getCapacity", "()J") != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FsStatus::getCapacity");
+        destroyLocalReference(env, fss);
         return -1;
     }
+    destroyLocalReference(env, fss);
     return jVal.j;
 }
 
@@ -1952,8 +1970,10 @@ tOffset hdfsGetUsed(hdfsFS fs)
                      "getUsed", "()J") != 0) {
         errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
                                    "FsStatus::getUsed");
+        destroyLocalReference(env, fss);
         return -1;
     }
+    destroyLocalReference(env, fss);
     return jVal.j;
 
 }
