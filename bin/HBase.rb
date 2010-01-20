@@ -286,24 +286,28 @@ module HBase
           puts("    %s" % [ server ])
         end
       elsif format != nil and format == "simple"
+        load = 0
+        regions = 0
         puts("%d live servers" % [ status.getServers() ])
         for server in status.getServerInfo()
           puts("    %s:%d %d" % \
             [ server.getServerAddress().getHostname(),  \
               server.getServerAddress().getPort(), server.getStartCode() ])
           puts("        %s" % [ server.getLoad().toString() ])
+          load += server.getLoad().getNumberOfRequests()
+          regions += server.getLoad().getNumberOfRegions()
         end
         puts("%d dead servers" % [ status.getDeadServers() ])
         for server in status.getDeadServerNames()
           puts("    %s" % [ server ])
         end
+        puts("Aggregate load: %d, regions: %d" % [ load , regions ] )
       else
         puts("%d servers, %d dead, %.4f average load" % \
           [ status.getServers(), status.getDeadServers(), \
-            status.getAverageLoad()]) 
+            status.getAverageLoad()])
       end
     end
-
     def hcd(arg)
       # Return a new HColumnDescriptor made of passed args
       # TODO: This is brittle code.
