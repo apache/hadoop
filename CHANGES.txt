@@ -631,6 +631,9 @@ Release 0.21.0 - Unreleased
     HDFS-101. DFS write pipeline: DFSClient sometimes does not detect second
     datanode failure. (hairong)
 
+    HDFS-822. Appends to already-finalized blocks can rename across volumes.
+    (hairong)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS

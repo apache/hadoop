@@ -1101,7 +1101,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     // construct a RBW replica with the new GS
     File blkfile = replicaInfo.getBlockFile();
-    FSVolume v = volumes.getNextVolume(estimateBlockLen);
+    FSVolume v = replicaInfo.getVolume();
+    if (v.getAvailable() < estimateBlockLen - replicaInfo.getNumBytes()) {
+      throw new DiskOutOfSpaceException("Insufficient space for appending to "
+          + replicaInfo);
+    }
     File newBlkFile = new File(v.rbwDir, replicaInfo.getBlockName());
     File oldmeta = replicaInfo.getMetaFile();
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(

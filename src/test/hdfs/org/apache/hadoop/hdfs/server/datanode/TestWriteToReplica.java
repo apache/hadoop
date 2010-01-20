@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -147,10 +148,26 @@ public class TestWriteToReplica {
   
   private void testAppend(FSDataset dataSet) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
+    FSVolume v = dataSet.volumeMap.get(blocks[FINALIZED]).getVolume();
+    long available = v.getCapacity()-v.getDfsUsed();
+    long expectedLen = blocks[FINALIZED].getNumBytes();
+    try {
+      v.decDfsUsed(-available);
+      blocks[FINALIZED].setNumBytes(expectedLen+100);
+      dataSet.append(blocks[FINALIZED], newGS, expectedLen);
+      Assert.fail("Should not have space to append to an RWR replica" + blocks[RWR]);
+    } catch (DiskOutOfSpaceException e) {
+      Assert.assertTrue(e.getMessage().startsWith(
+          "Insufficient space for appending to "));
+    }
+    v.decDfsUsed(available);
+    blocks[FINALIZED].setNumBytes(expectedLen);
+
+    newGS = blocks[RBW].getGenerationStamp()+1;
     dataSet.append(blocks[FINALIZED], newGS, 
         blocks[FINALIZED].getNumBytes());  // successful
     blocks[FINALIZED].setGenerationStamp(newGS);
-    
+        
     try {
       dataSet.append(blocks[TEMPORARY], blocks[TEMPORARY].getGenerationStamp()+1, 
           blocks[TEMPORARY].getNumBytes());
