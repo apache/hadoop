@@ -98,6 +98,16 @@
    </dependency>            
    <dependency org="org.jruby" name="jruby-complete"
                rev="${jruby.version}" conf="common->default" />
+
+   <!-- Thrift dependencies manually hardcoded until THRIFT-363 is in place -->
+   <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j.version}"
+               conf="common->default" />
+   <dependency org="org.slf4j" name="slf4j-simple" rev="${slf4j.version}"
+               conf="common->default" />
+   <dependency org="commons-lang" name="commons-lang" rev="${commons-lang.version}"
+               conf="common->default" />
+   <!-- End Thrift dependency -->
+
    <!--
    TODO: Enter URL in ivysettings.xml that stores the artifacts of Zookeeper / thrift.     
 
