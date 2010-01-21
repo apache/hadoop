@@ -42,8 +42,8 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param mgr the secret manager
    */
   public Token(T id, SecretManager<T> mgr) {
-    identifier = id.getBytes();
     password = mgr.createPassword(id);
+    identifier = id.getBytes();
     kind = id.getKind();
     service = new Text();
   }

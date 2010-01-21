@@ -108,6 +108,9 @@ Trunk (unreleased changes)
     that Avro can read FileSystem data.
     (Aaron Kimball via cutting)
 
+    HADOOP-6495.  Identifier should be serialized after the password is
+     created In Token constructor (jnp via boryas)
+
   OPTIMIZATIONS
 
   BUG FIXES
