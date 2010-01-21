@@ -42,26 +42,23 @@ public class Hbase {
 
     /**
      * Brings a table on-line (enables it)
-     * @param tableName name of the table
      * 
-     * @param tableName
+     * @param tableName name of the table
      */
     public void enableTable(byte[] tableName) throws IOError, TException;
 
     /**
      * Disables a table (takes it off-line) If it is being served, the master
      * will tell the servers to stop serving it.
-     * @param tableName name of the table
      * 
-     * @param tableName
+     * @param tableName name of the table
      */
     public void disableTable(byte[] tableName) throws IOError, TException;
 
     /**
-     * @param tableName name of table to check
      * @return true if table is on-line
      * 
-     * @param tableName
+     * @param tableName name of the table to check
      */
     public boolean isTableEnabled(byte[] tableName) throws IOError, TException;
 
@@ -71,52 +68,48 @@ public class Hbase {
 
     /**
      * List all the userspace tables.
-     * @return - returns a list of names
+     * @return returns a list of names
      */
     public List<byte[]> getTableNames() throws IOError, TException;
 
     /**
      * List all the column families assoicated with a table.
-     * @param tableName table name
      * @return list of column family descriptors
      * 
-     * @param tableName
+     * @param tableName table name
      */
     public Map<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException;
 
     /**
      * List the regions associated with a table.
-     * @param tableName table name
      * @return list of region descriptors
      * 
-     * @param tableName
+     * @param tableName table name
      */
     public List<TRegionInfo> getTableRegions(byte[] tableName) throws IOError, TException;
 
     /**
      * Create a table with the specified column families.  The name
      * field for each ColumnDescriptor must be set and must end in a
-     * colon (:).  All other fields are optional and will get default
+     * colon (:). All other fields are optional and will get default
      * values if not explicitly specified.
-     * 
-     * @param tableName name of table to create
-     * @param columnFamilies list of column family descriptors
      * 
      * @throws IllegalArgument if an input parameter is invalid
      * @throws AlreadyExists if the table name already exists
      * 
-     * @param tableName
-     * @param columnFamilies
+     * @param tableName name of table to create
+     * 
+     * @param columnFamilies list of column family descriptors
      */
     public void createTable(byte[] tableName, List<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException;
 
     /**
      * Deletes a table
-     * @param tableName name of table to delete
+     * 
      * @throws IOError if table doesn't exist on server or there was some other
      * problem
      * 
-     * @param tableName
+     * @param tableName name of table to delete
      */
     public void deleteTable(byte[] tableName) throws IOError, TException;
 
@@ -124,14 +117,13 @@ public class Hbase {
      * Get a single TCell for the specified table, row, and column at the
      * latest timestamp. Returns an empty list if no such value exists.
      * 
-     * @param tableName name of table
-     * @param row row key
-     * @param column column name
      * @return value for specified row/column
      * 
-     * @param tableName
-     * @param row
-     * @param column
+     * @param tableName name of table
+     * 
+     * @param row row key
+     * 
+     * @param column column name
      */
     public List<TCell> get(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
 
@@ -139,16 +131,15 @@ public class Hbase {
      * Get the specified number of versions for the specified table,
      * row, and column.
      * 
-     * @param tableName name of table
-     * @param row row key
-     * @param column column name
-     * @param numVersions number of versions to retrieve
      * @return list of cells for specified row/column
      * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param numVersions
+     * @param tableName name of table
+     * 
+     * @param row row key
+     * 
+     * @param column column name
+     * 
+     * @param numVersions number of versions to retrieve
      */
     public List<TCell> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, TException;
 
@@ -157,18 +148,17 @@ public class Hbase {
      * row, and column.  Only versions less than or equal to the specified
      * timestamp will be returned.
      * 
-     * @param tableName name of table
-     * @param row row key
-     * @param column column name
-     * @param timestamp timestamp
-     * @param numVersions number of versions to retrieve
      * @return list of cells for specified row/column
      * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param timestamp
-     * @param numVersions
+     * @param tableName name of table
+     * 
+     * @param row row key
+     * 
+     * @param column column name
+     * 
+     * @param timestamp timestamp
+     * 
+     * @param numVersions number of versions to retrieve
      */
     public List<TCell> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, TException;
 
@@ -176,12 +166,11 @@ public class Hbase {
      * Get all the data for the specified table and row at the latest
      * timestamp. Returns an empty list if the row does not exist.
      * 
-     * @param tableName name of table
-     * @param row row key
      * @return TRowResult containing the row and map of columns to TCells
      * 
-     * @param tableName
-     * @param row
+     * @param tableName name of table
+     * 
+     * @param row row key
      */
     public List<TRowResult> getRow(byte[] tableName, byte[] row) throws IOError, TException;
 
@@ -189,14 +178,13 @@ public class Hbase {
      * Get the specified columns for the specified table and row at the latest
      * timestamp. Returns an empty list if the row does not exist.
      * 
-     * @param tableName name of table
-     * @param row row key
-     * @param columns List of columns to return, null for all columns
      * @return TRowResult containing the row and map of columns to TCells
      * 
-     * @param tableName
-     * @param row
-     * @param columns
+     * @param tableName name of table
+     * 
+     * @param row row key
+     * 
+     * @param columns List of columns to return, null for all columns
      */
     public List<TRowResult> getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException;
 
@@ -204,14 +192,13 @@ public class Hbase {
      * Get all the data for the specified table and row at the specified
      * timestamp. Returns an empty list if the row does not exist.
      * 
-     * @param tableName of table
-     * @param row row key
-     * @param timestamp timestamp
      * @return TRowResult containing the row and map of columns to TCells
      * 
-     * @param tableName
-     * @param row
-     * @param timestamp
+     * @param tableName name of the table
+     * 
+     * @param row row key
+     * 
+     * @param timestamp timestamp
      */
     public List<TRowResult> getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
 
@@ -219,14 +206,14 @@ public class Hbase {
      * Get the specified columns for the specified table and row at the specified
      * timestamp. Returns an empty list if the row does not exist.
      * 
-     * @param tableName name of table
-     * @param row row key
-     * @param columns List of columns to return, null for all columns
      * @return TRowResult containing the row and map of columns to TCells
      * 
-     * @param tableName
-     * @param row
-     * @param columns
+     * @param tableName name of table
+     * 
+     * @param row row key
+     * 
+     * @param columns List of columns to return, null for all columns
+     * 
      * @param timestamp
      */
     public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException;
@@ -238,12 +225,10 @@ public class Hbase {
      * all entries will have an identical timestamp.
      * 
      * @param tableName name of table
-     * @param row row key
-     * @param mutations list of mutation commands
      * 
-     * @param tableName
-     * @param row
-     * @param mutations
+     * @param row row key
+     * 
+     * @param mutations list of mutation commands
      */
     public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException;
 
@@ -254,14 +239,12 @@ public class Hbase {
      * all entries will have an identical timestamp.
      * 
      * @param tableName name of table
-     * @param row row key
-     * @param mutations list of mutation commands
-     * @param timestamp timestamp
      * 
-     * @param tableName
-     * @param row
-     * @param mutations
-     * @param timestamp
+     * @param row row key
+     * 
+     * @param mutations list of mutation commands
+     * 
+     * @param timestamp timestamp
      */
     public void mutateRowTs(byte[] tableName, byte[] row, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
 
@@ -272,10 +255,8 @@ public class Hbase {
      * all entries will have an identical timestamp.
      * 
      * @param tableName name of table
-     * @param rowBatches list of row batches
      * 
-     * @param tableName
-     * @param rowBatches
+     * @param rowBatches list of row batches
      */
     public void mutateRows(byte[] tableName, List<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException;
 
@@ -286,26 +267,23 @@ public class Hbase {
      * all entries will have an identical timestamp.
      * 
      * @param tableName name of table
-     * @param rowBatches list of row batches
-     * @param timestamp timestamp
      * 
-     * @param tableName
-     * @param rowBatches
-     * @param timestamp
+     * @param rowBatches list of row batches
+     * 
+     * @param timestamp timestamp
      */
     public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException;
 
     /**
      * Atomically increment the column value specified.  Returns the next value post increment.
-     * @param tableName name of table
-     * @param row row to increment
-     * @param column name of column
-     * @param value amount to increment by
      * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param value
+     * @param tableName name of table
+     * 
+     * @param row row to increment
+     * 
+     * @param column name of column
+     * 
+     * @param value amount to increment by
      */
     public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, long value) throws IOError, IllegalArgument, TException;
 
@@ -313,12 +291,10 @@ public class Hbase {
      * Delete all cells that match the passed row and column.
      * 
      * @param tableName name of table
-     * @param row Row to update
-     * @param column name of column whose value is to be deleted
      * 
-     * @param tableName
-     * @param row
-     * @param column
+     * @param row Row to update
+     * 
+     * @param column name of column whose value is to be deleted
      */
     public void deleteAll(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
 
@@ -327,14 +303,12 @@ public class Hbase {
      * timestamp is equal-to or older than the passed timestamp.
      * 
      * @param tableName name of table
-     * @param row Row to update
-     * @param column name of column whose value is to be deleted
-     * @param timestamp timestamp
      * 
-     * @param tableName
-     * @param row
-     * @param column
-     * @param timestamp
+     * @param row Row to update
+     * 
+     * @param column name of column whose value is to be deleted
+     * 
+     * @param timestamp timestamp
      */
     public void deleteAllTs(byte[] tableName, byte[] row, byte[] column, long timestamp) throws IOError, TException;
 
@@ -342,10 +316,8 @@ public class Hbase {
      * Completely delete the row's cells.
      * 
      * @param tableName name of table
-     * @param row key of the row to be completely deleted.
      * 
-     * @param tableName
-     * @param row
+     * @param row key of the row to be completely deleted.
      */
     public void deleteAllRow(byte[] tableName, byte[] row) throws IOError, TException;
 
@@ -354,12 +326,10 @@ public class Hbase {
      * equal-to or older than the passed timestamp.
      * 
      * @param tableName name of table
-     * @param row key of the row to be completely deleted.
-     * @param timestamp timestamp
      * 
-     * @param tableName
-     * @param row
-     * @param timestamp
+     * @param row key of the row to be completely deleted.
+     * 
+     * @param timestamp timestamp
      */
     public void deleteAllRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
 
@@ -367,18 +337,16 @@ public class Hbase {
      * Get a scanner on the current table starting at the specified row and
      * ending at the last row in the table.  Return the specified columns.
      * 
-     * @param columns columns to scan. If column name is a column family, all
-     * columns of the specified column family are returned.  Its also possible
-     * to pass a regex in the column qualifier.
-     * @param tableName name of table
-     * @param startRow starting row in table to scan.  send "" (empty string) to
-     *                 start at the first row.
-     * 
      * @return scanner id to be used with other scanner procedures
      * 
-     * @param tableName
-     * @param startRow
-     * @param columns
+     * @param tableName name of table
+     * 
+     * @param startRow Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     * 
+     * @param columns columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
      */
     public int scannerOpen(byte[] tableName, byte[] startRow, List<byte[]> columns) throws IOError, TException;
 
@@ -387,21 +355,19 @@ public class Hbase {
      * specified rows.  ending at the last row in the table.  Return the
      * specified columns.
      * 
-     * @param columns columns to scan. If column name is a column family, all
-     * columns of the specified column family are returned.  Its also possible
-     * to pass a regex in the column qualifier.
-     * @param tableName name of table
-     * @param startRow starting row in table to scan.  send "" (empty string) to
-     *                 start at the first row.
-     * @param stopRow row to stop scanning on.  This row is *not* included in the
-     *                scanner's results
-     * 
      * @return scanner id to be used with other scanner procedures
      * 
-     * @param tableName
-     * @param startRow
-     * @param stopRow
-     * @param columns
+     * @param tableName name of table
+     * 
+     * @param startRow Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     * 
+     * @param stopRow row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     * 
+     * @param columns columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
      */
     public int scannerOpenWithStop(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns) throws IOError, TException;
 
@@ -409,14 +375,13 @@ public class Hbase {
      * Open a scanner for a given prefix.  That is all rows will have the specified
      * prefix. No other rows will be returned.
      * 
-     * @param tableName name of table
-     * @param startAndPrefix the prefix (and thus start row) of the keys you want
-     * @param columns the columns you want returned
      * @return scanner id to use with other scanner calls
      * 
-     * @param tableName
-     * @param startAndPrefix
-     * @param columns
+     * @param tableName name of table
+     * 
+     * @param startAndPrefix the prefix (and thus start row) of the keys you want
+     * 
+     * @param columns the columns you want returned
      */
     public int scannerOpenWithPrefix(byte[] tableName, byte[] startAndPrefix, List<byte[]> columns) throws IOError, TException;
 
@@ -425,20 +390,18 @@ public class Hbase {
      * ending at the last row in the table.  Return the specified columns.
      * Only values with the specified timestamp are returned.
      * 
-     * @param columns columns to scan. If column name is a column family, all
-     * columns of the specified column family are returned.  Its also possible
-     * to pass a regex in the column qualifier.
-     * @param tableName name of table
-     * @param startRow starting row in table to scan.  send "" (empty string) to
-     *                 start at the first row.
-     * @param timestamp timestamp
-     * 
      * @return scanner id to be used with other scanner procedures
      * 
-     * @param tableName
-     * @param startRow
-     * @param columns
-     * @param timestamp
+     * @param tableName name of table
+     * 
+     * @param startRow Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     * 
+     * @param columns columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     * 
+     * @param timestamp timestamp
      */
     public int scannerOpenTs(byte[] tableName, byte[] startRow, List<byte[]> columns, long timestamp) throws IOError, TException;
 
@@ -448,23 +411,21 @@ public class Hbase {
      * specified columns.  Only values with the specified timestamp are
      * returned.
      * 
-     * @param columns columns to scan. If column name is a column family, all
-     * columns of the specified column family are returned.  Its also possible
-     * to pass a regex in the column qualifier.
-     * @param tableName name of table
-     * @param startRow starting row in table to scan.  send "" (empty string) to
-     *                 start at the first row.
-     * @param stopRow row to stop scanning on.  This row is *not* included
-     *                in the scanner's results
-     * @param timestamp timestamp
-     * 
      * @return scanner id to be used with other scanner procedures
      * 
-     * @param tableName
-     * @param startRow
-     * @param stopRow
-     * @param columns
-     * @param timestamp
+     * @param tableName name of table
+     * 
+     * @param startRow Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     * 
+     * @param stopRow row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     * 
+     * @param columns columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     * 
+     * @param timestamp timestamp
      */
     public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns, long timestamp) throws IOError, TException;
 
@@ -474,12 +435,11 @@ public class Hbase {
      * greater-than-or-equal-to the scanner's specified stopRow is reached,
      * an empty list is returned.
      * 
-     * @param id id of a scanner returned by scannerOpen
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
      * 
-     * @param id
+     * @param id id of a scanner returned by scannerOpen
      */
     public List<TRowResult> scannerGet(int id) throws IOError, IllegalArgument, TException;
 
@@ -489,24 +449,22 @@ public class Hbase {
      * rows in the table, or a key greater-than-or-equal-to the scanner's
      * specified stopRow is reached,  an empty list is returned.
      * 
-     * @param id id of a scanner returned by scannerOpen
-     * @param nbRows number of results to regturn
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
      * 
-     * @param id
-     * @param nbRows
+     * @param id id of a scanner returned by scannerOpen
+     * 
+     * @param nbRows number of results to return
      */
     public List<TRowResult> scannerGetList(int id, int nbRows) throws IOError, IllegalArgument, TException;
 
     /**
      * Closes the server-state associated with an open scanner.
      * 
-     * @param id id of a scanner returned by scannerOpen
      * @throws IllegalArgument if ScannerID is invalid
      * 
-     * @param id
+     * @param id id of a scanner returned by scannerOpen
      */
     public void scannerClose(int id) throws IOError, IllegalArgument, TException;
 
@@ -2852,10 +2810,16 @@ public class Hbase {
 
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
+    /**
+     * name of the table
+     */
     public byte[] tableName;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of the table
+       */
       TABLE_NAME((short)1, "tableName");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -2948,10 +2912,16 @@ public class Hbase {
       return new enableTable_args(this);
     }
 
+    /**
+     * name of the table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of the table
+     */
     public enableTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -3432,10 +3402,16 @@ public class Hbase {
 
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
+    /**
+     * name of the table
+     */
     public byte[] tableName;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of the table
+       */
       TABLE_NAME((short)1, "tableName");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -3528,10 +3504,16 @@ public class Hbase {
       return new disableTable_args(this);
     }
 
+    /**
+     * name of the table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of the table
+     */
     public disableTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -4012,10 +3994,16 @@ public class Hbase {
 
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
+    /**
+     * name of the table to check
+     */
     public byte[] tableName;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of the table to check
+       */
       TABLE_NAME((short)1, "tableName");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -4108,10 +4096,16 @@ public class Hbase {
       return new isTableEnabled_args(this);
     }
 
+    /**
+     * name of the table to check
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of the table to check
+     */
     public isTableEnabled_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -6449,10 +6443,16 @@ public class Hbase {
 
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
+    /**
+     * table name
+     */
     public byte[] tableName;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * table name
+       */
       TABLE_NAME((short)1, "tableName");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -6545,10 +6545,16 @@ public class Hbase {
       return new getColumnDescriptors_args(this);
     }
 
+    /**
+     * table name
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * table name
+     */
     public getColumnDescriptors_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -7136,10 +7142,16 @@ public class Hbase {
 
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
+    /**
+     * table name
+     */
     public byte[] tableName;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * table name
+       */
       TABLE_NAME((short)1, "tableName");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -7232,10 +7244,16 @@ public class Hbase {
       return new getTableRegions_args(this);
     }
 
+    /**
+     * table name
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * table name
+     */
     public getTableRegions_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -7843,12 +7861,24 @@ public class Hbase {
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField COLUMN_FAMILIES_FIELD_DESC = new TField("columnFamilies", TType.LIST, (short)2);
 
+    /**
+     * name of table to create
+     */
     public byte[] tableName;
+    /**
+     * list of column family descriptors
+     */
     public List<ColumnDescriptor> columnFamilies;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table to create
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * list of column family descriptors
+       */
       COLUMN_FAMILIES((short)2, "columnFamilies");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -7953,10 +7983,16 @@ public class Hbase {
       return new createTable_args(this);
     }
 
+    /**
+     * name of table to create
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table to create
+     */
     public createTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -7992,10 +8028,16 @@ public class Hbase {
       this.columnFamilies.add(elem);
     }
 
+    /**
+     * list of column family descriptors
+     */
     public List<ColumnDescriptor> getColumnFamilies() {
       return this.columnFamilies;
     }
 
+    /**
+     * list of column family descriptors
+     */
     public createTable_args setColumnFamilies(List<ColumnDescriptor> columnFamilies) {
       this.columnFamilies = columnFamilies;
       return this;
@@ -8727,10 +8769,16 @@ public class Hbase {
 
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
 
+    /**
+     * name of table to delete
+     */
     public byte[] tableName;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table to delete
+       */
       TABLE_NAME((short)1, "tableName");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -8823,10 +8871,16 @@ public class Hbase {
       return new deleteTable_args(this);
     }
 
+    /**
+     * name of table to delete
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table to delete
+     */
     public deleteTable_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -9309,14 +9363,32 @@ public class Hbase {
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * column name
+     */
     public byte[] column;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * column name
+       */
       COLUMN((short)3, "column");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -9423,10 +9495,16 @@ public class Hbase {
       return new get_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public get_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -9447,10 +9525,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public get_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -9471,10 +9555,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * column name
+     */
     public byte[] getColumn() {
       return this.column;
     }
 
+    /**
+     * column name
+     */
     public get_args setColumn(byte[] column) {
       this.column = column;
       return this;
@@ -10194,16 +10284,40 @@ public class Hbase {
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
     private static final TField NUM_VERSIONS_FIELD_DESC = new TField("numVersions", TType.I32, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * column name
+     */
     public byte[] column;
+    /**
+     * number of versions to retrieve
+     */
     public int numVersions;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * column name
+       */
       COLUMN((short)3, "column"),
+      /**
+       * number of versions to retrieve
+       */
       NUM_VERSIONS((short)4, "numVersions");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -10320,10 +10434,16 @@ public class Hbase {
       return new getVer_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public getVer_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -10344,10 +10464,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public getVer_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -10368,10 +10494,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * column name
+     */
     public byte[] getColumn() {
       return this.column;
     }
 
+    /**
+     * column name
+     */
     public getVer_args setColumn(byte[] column) {
       this.column = column;
       return this;
@@ -10392,10 +10524,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * number of versions to retrieve
+     */
     public int getNumVersions() {
       return this.numVersions;
     }
 
+    /**
+     * number of versions to retrieve
+     */
     public getVer_args setNumVersions(int numVersions) {
       this.numVersions = numVersions;
       setNumVersionsIsSet(true);
@@ -11165,18 +11303,48 @@ public class Hbase {
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
     private static final TField NUM_VERSIONS_FIELD_DESC = new TField("numVersions", TType.I32, (short)5);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * column name
+     */
     public byte[] column;
+    /**
+     * timestamp
+     */
     public long timestamp;
+    /**
+     * number of versions to retrieve
+     */
     public int numVersions;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * column name
+       */
       COLUMN((short)3, "column"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)4, "timestamp"),
+      /**
+       * number of versions to retrieve
+       */
       NUM_VERSIONS((short)5, "numVersions");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -11300,10 +11468,16 @@ public class Hbase {
       return new getVerTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public getVerTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -11324,10 +11498,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public getVerTs_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -11348,10 +11528,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * column name
+     */
     public byte[] getColumn() {
       return this.column;
     }
 
+    /**
+     * column name
+     */
     public getVerTs_args setColumn(byte[] column) {
       this.column = column;
       return this;
@@ -11372,10 +11558,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public getVerTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -11395,10 +11587,16 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    /**
+     * number of versions to retrieve
+     */
     public int getNumVersions() {
       return this.numVersions;
     }
 
+    /**
+     * number of versions to retrieve
+     */
     public getVerTs_args setNumVersions(int numVersions) {
       this.numVersions = numVersions;
       setNumVersionsIsSet(true);
@@ -12215,12 +12413,24 @@ public class Hbase {
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -12320,10 +12530,16 @@ public class Hbase {
       return new getRow_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public getRow_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -12344,10 +12560,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public getRow_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -12984,14 +13206,32 @@ public class Hbase {
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * List of columns to return, null for all columns
+     */
     public List<byte[]> columns;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * List of columns to return, null for all columns
+       */
       COLUMNS((short)3, "columns");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -13103,10 +13343,16 @@ public class Hbase {
       return new getRowWithColumns_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public getRowWithColumns_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -13127,10 +13373,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public getRowWithColumns_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -13166,10 +13418,16 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * List of columns to return, null for all columns
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * List of columns to return, null for all columns
+     */
     public getRowWithColumns_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -13878,14 +14136,32 @@ public class Hbase {
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
 
+    /**
+     * name of the table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of the table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)3, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -13995,10 +14271,16 @@ public class Hbase {
       return new getRowTs_args(this);
     }
 
+    /**
+     * name of the table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of the table
+     */
     public getRowTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -14019,10 +14301,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public getRowTs_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -14043,10 +14331,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public getRowTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -14733,15 +15027,33 @@ public class Hbase {
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * List of columns to return, null for all columns
+     */
     public List<byte[]> columns;
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * List of columns to return, null for all columns
+       */
       COLUMNS((short)3, "columns"),
       TIMESTAMP((short)4, "timestamp");
 
@@ -14864,10 +15176,16 @@ public class Hbase {
       return new getRowWithColumnsTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public getRowWithColumnsTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -14888,10 +15206,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public getRowWithColumnsTs_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -14927,10 +15251,16 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * List of columns to return, null for all columns
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * List of columns to return, null for all columns
+     */
     public getRowWithColumnsTs_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -15712,14 +16042,32 @@ public class Hbase {
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * list of mutation commands
+     */
     public List<Mutation> mutations;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * list of mutation commands
+       */
       MUTATIONS((short)3, "mutations");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -15831,10 +16179,16 @@ public class Hbase {
       return new mutateRow_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public mutateRow_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -15855,10 +16209,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public mutateRow_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -15894,10 +16254,16 @@ public class Hbase {
       this.mutations.add(elem);
     }
 
+    /**
+     * list of mutation commands
+     */
     public List<Mutation> getMutations() {
       return this.mutations;
     }
 
+    /**
+     * list of mutation commands
+     */
     public mutateRow_args setMutations(List<Mutation> mutations) {
       this.mutations = mutations;
       return this;
@@ -16598,16 +16964,40 @@ public class Hbase {
     private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row key
+     */
     public byte[] row;
+    /**
+     * list of mutation commands
+     */
     public List<Mutation> mutations;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row key
+       */
       ROW((short)2, "row"),
+      /**
+       * list of mutation commands
+       */
       MUTATIONS((short)3, "mutations"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)4, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -16729,10 +17119,16 @@ public class Hbase {
       return new mutateRowTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public mutateRowTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -16753,10 +17149,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row key
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row key
+     */
     public mutateRowTs_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -16792,10 +17194,16 @@ public class Hbase {
       this.mutations.add(elem);
     }
 
+    /**
+     * list of mutation commands
+     */
     public List<Mutation> getMutations() {
       return this.mutations;
     }
 
+    /**
+     * list of mutation commands
+     */
     public mutateRowTs_args setMutations(List<Mutation> mutations) {
       this.mutations = mutations;
       return this;
@@ -16816,10 +17224,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public mutateRowTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -17567,12 +17981,24 @@ public class Hbase {
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_BATCHES_FIELD_DESC = new TField("rowBatches", TType.LIST, (short)2);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * list of row batches
+     */
     public List<BatchMutation> rowBatches;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * list of row batches
+       */
       ROW_BATCHES((short)2, "rowBatches");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -17677,10 +18103,16 @@ public class Hbase {
       return new mutateRows_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public mutateRows_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -17716,10 +18148,16 @@ public class Hbase {
       this.rowBatches.add(elem);
     }
 
+    /**
+     * list of row batches
+     */
     public List<BatchMutation> getRowBatches() {
       return this.rowBatches;
     }
 
+    /**
+     * list of row batches
+     */
     public mutateRows_args setRowBatches(List<BatchMutation> rowBatches) {
       this.rowBatches = rowBatches;
       return this;
@@ -18364,14 +18802,32 @@ public class Hbase {
     private static final TField ROW_BATCHES_FIELD_DESC = new TField("rowBatches", TType.LIST, (short)2);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * list of row batches
+     */
     public List<BatchMutation> rowBatches;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * list of row batches
+       */
       ROW_BATCHES((short)2, "rowBatches"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)3, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -18486,10 +18942,16 @@ public class Hbase {
       return new mutateRowsTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public mutateRowsTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -18525,10 +18987,16 @@ public class Hbase {
       this.rowBatches.add(elem);
     }
 
+    /**
+     * list of row batches
+     */
     public List<BatchMutation> getRowBatches() {
       return this.rowBatches;
     }
 
+    /**
+     * list of row batches
+     */
     public mutateRowsTs_args setRowBatches(List<BatchMutation> rowBatches) {
       this.rowBatches = rowBatches;
       return this;
@@ -18549,10 +19017,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public mutateRowsTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -19247,16 +19721,40 @@ public class Hbase {
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
     private static final TField VALUE_FIELD_DESC = new TField("value", TType.I64, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * row to increment
+     */
     public byte[] row;
+    /**
+     * name of column
+     */
     public byte[] column;
+    /**
+     * amount to increment by
+     */
     public long value;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * row to increment
+       */
       ROW((short)2, "row"),
+      /**
+       * name of column
+       */
       COLUMN((short)3, "column"),
+      /**
+       * amount to increment by
+       */
       VALUE((short)4, "value");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -19373,10 +19871,16 @@ public class Hbase {
       return new atomicIncrement_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public atomicIncrement_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -19397,10 +19901,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * row to increment
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * row to increment
+     */
     public atomicIncrement_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -19421,10 +19931,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * name of column
+     */
     public byte[] getColumn() {
       return this.column;
     }
 
+    /**
+     * name of column
+     */
     public atomicIncrement_args setColumn(byte[] column) {
       this.column = column;
       return this;
@@ -19445,10 +19961,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * amount to increment by
+     */
     public long getValue() {
       return this.value;
     }
 
+    /**
+     * amount to increment by
+     */
     public atomicIncrement_args setValue(long value) {
       this.value = value;
       setValueIsSet(true);
@@ -20266,14 +20788,32 @@ public class Hbase {
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * Row to update
+     */
     public byte[] row;
+    /**
+     * name of column whose value is to be deleted
+     */
     public byte[] column;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * Row to update
+       */
       ROW((short)2, "row"),
+      /**
+       * name of column whose value is to be deleted
+       */
       COLUMN((short)3, "column");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -20380,10 +20920,16 @@ public class Hbase {
       return new deleteAll_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public deleteAll_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -20404,10 +20950,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * Row to update
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * Row to update
+     */
     public deleteAll_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -20428,10 +20980,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * name of column whose value is to be deleted
+     */
     public byte[] getColumn() {
       return this.column;
     }
 
+    /**
+     * name of column whose value is to be deleted
+     */
     public deleteAll_args setColumn(byte[] column) {
       this.column = column;
       return this;
@@ -21025,16 +21583,40 @@ public class Hbase {
     private static final TField COLUMN_FIELD_DESC = new TField("column", TType.STRING, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * Row to update
+     */
     public byte[] row;
+    /**
+     * name of column whose value is to be deleted
+     */
     public byte[] column;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * Row to update
+       */
       ROW((short)2, "row"),
+      /**
+       * name of column whose value is to be deleted
+       */
       COLUMN((short)3, "column"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)4, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -21151,10 +21733,16 @@ public class Hbase {
       return new deleteAllTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public deleteAllTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -21175,10 +21763,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * Row to update
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * Row to update
+     */
     public deleteAllTs_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -21199,10 +21793,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * name of column whose value is to be deleted
+     */
     public byte[] getColumn() {
       return this.column;
     }
 
+    /**
+     * name of column whose value is to be deleted
+     */
     public deleteAllTs_args setColumn(byte[] column) {
       this.column = column;
       return this;
@@ -21223,10 +21823,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public deleteAllTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -21867,12 +22473,24 @@ public class Hbase {
     private static final TField TABLE_NAME_FIELD_DESC = new TField("tableName", TType.STRING, (short)1);
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * key of the row to be completely deleted.
+     */
     public byte[] row;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * key of the row to be completely deleted.
+       */
       ROW((short)2, "row");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -21972,10 +22590,16 @@ public class Hbase {
       return new deleteAllRow_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public deleteAllRow_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -21996,10 +22620,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * key of the row to be completely deleted.
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * key of the row to be completely deleted.
+     */
     public deleteAllRow_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -22537,14 +23167,32 @@ public class Hbase {
     private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)2);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * key of the row to be completely deleted.
+     */
     public byte[] row;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * key of the row to be completely deleted.
+       */
       ROW((short)2, "row"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)3, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -22654,10 +23302,16 @@ public class Hbase {
       return new deleteAllRowTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public deleteAllRowTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -22678,10 +23332,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * key of the row to be completely deleted.
+     */
     public byte[] getRow() {
       return this.row;
     }
 
+    /**
+     * key of the row to be completely deleted.
+     */
     public deleteAllRowTs_args setRow(byte[] row) {
       this.row = row;
       return this;
@@ -22702,10 +23362,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public deleteAllRowTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -23292,14 +23958,38 @@ public class Hbase {
     private static final TField START_ROW_FIELD_DESC = new TField("startRow", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] startRow;
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> columns;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * Starting row in table to scan.
+       * Send "" (empty string) to start at the first row.
+       */
       START_ROW((short)2, "startRow"),
+      /**
+       * columns to scan. If column name is a column family, all
+       * columns of the specified column family are returned. It's also possible
+       * to pass a regex in the column qualifier.
+       */
       COLUMNS((short)3, "columns");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -23411,10 +24101,16 @@ public class Hbase {
       return new scannerOpen_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public scannerOpen_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -23435,10 +24131,18 @@ public class Hbase {
       }
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] getStartRow() {
       return this.startRow;
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public scannerOpen_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
       return this;
@@ -23474,10 +24178,20 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public scannerOpen_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -24175,16 +24889,48 @@ public class Hbase {
     private static final TField STOP_ROW_FIELD_DESC = new TField("stopRow", TType.STRING, (short)3);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] startRow;
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     */
     public byte[] stopRow;
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> columns;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * Starting row in table to scan.
+       * Send "" (empty string) to start at the first row.
+       */
       START_ROW((short)2, "startRow"),
+      /**
+       * row to stop scanning on. This row is *not* included in the
+       * scanner's results
+       */
       STOP_ROW((short)3, "stopRow"),
+      /**
+       * columns to scan. If column name is a column family, all
+       * columns of the specified column family are returned. It's also possible
+       * to pass a regex in the column qualifier.
+       */
       COLUMNS((short)4, "columns");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -24303,10 +25049,16 @@ public class Hbase {
       return new scannerOpenWithStop_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public scannerOpenWithStop_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -24327,10 +25079,18 @@ public class Hbase {
       }
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] getStartRow() {
       return this.startRow;
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public scannerOpenWithStop_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
       return this;
@@ -24351,10 +25111,18 @@ public class Hbase {
       }
     }
 
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     */
     public byte[] getStopRow() {
       return this.stopRow;
     }
 
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     */
     public scannerOpenWithStop_args setStopRow(byte[] stopRow) {
       this.stopRow = stopRow;
       return this;
@@ -24390,10 +25158,20 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public scannerOpenWithStop_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -25145,14 +25923,32 @@ public class Hbase {
     private static final TField START_AND_PREFIX_FIELD_DESC = new TField("startAndPrefix", TType.STRING, (short)2);
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * the prefix (and thus start row) of the keys you want
+     */
     public byte[] startAndPrefix;
+    /**
+     * the columns you want returned
+     */
     public List<byte[]> columns;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * the prefix (and thus start row) of the keys you want
+       */
       START_AND_PREFIX((short)2, "startAndPrefix"),
+      /**
+       * the columns you want returned
+       */
       COLUMNS((short)3, "columns");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -25264,10 +26060,16 @@ public class Hbase {
       return new scannerOpenWithPrefix_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public scannerOpenWithPrefix_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -25288,10 +26090,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * the prefix (and thus start row) of the keys you want
+     */
     public byte[] getStartAndPrefix() {
       return this.startAndPrefix;
     }
 
+    /**
+     * the prefix (and thus start row) of the keys you want
+     */
     public scannerOpenWithPrefix_args setStartAndPrefix(byte[] startAndPrefix) {
       this.startAndPrefix = startAndPrefix;
       return this;
@@ -25327,10 +26135,16 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * the columns you want returned
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * the columns you want returned
+     */
     public scannerOpenWithPrefix_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -26028,16 +26842,46 @@ public class Hbase {
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)3);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)4);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] startRow;
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> columns;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * Starting row in table to scan.
+       * Send "" (empty string) to start at the first row.
+       */
       START_ROW((short)2, "startRow"),
+      /**
+       * columns to scan. If column name is a column family, all
+       * columns of the specified column family are returned. It's also possible
+       * to pass a regex in the column qualifier.
+       */
       COLUMNS((short)3, "columns"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)4, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -26159,10 +27003,16 @@ public class Hbase {
       return new scannerOpenTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public scannerOpenTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -26183,10 +27033,18 @@ public class Hbase {
       }
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] getStartRow() {
       return this.startRow;
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public scannerOpenTs_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
       return this;
@@ -26222,10 +27080,20 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public scannerOpenTs_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -26246,10 +27114,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public scannerOpenTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -26997,18 +27871,56 @@ public class Hbase {
     private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.LIST, (short)4);
     private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)5);
 
+    /**
+     * name of table
+     */
     public byte[] tableName;
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] startRow;
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     */
     public byte[] stopRow;
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> columns;
+    /**
+     * timestamp
+     */
     public long timestamp;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * name of table
+       */
       TABLE_NAME((short)1, "tableName"),
+      /**
+       * Starting row in table to scan.
+       * Send "" (empty string) to start at the first row.
+       */
       START_ROW((short)2, "startRow"),
+      /**
+       * row to stop scanning on. This row is *not* included in the
+       * scanner's results
+       */
       STOP_ROW((short)3, "stopRow"),
+      /**
+       * columns to scan. If column name is a column family, all
+       * columns of the specified column family are returned. It's also possible
+       * to pass a regex in the column qualifier.
+       */
       COLUMNS((short)4, "columns"),
+      /**
+       * timestamp
+       */
       TIMESTAMP((short)5, "timestamp");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -27137,10 +28049,16 @@ public class Hbase {
       return new scannerOpenWithStopTs_args(this);
     }
 
+    /**
+     * name of table
+     */
     public byte[] getTableName() {
       return this.tableName;
     }
 
+    /**
+     * name of table
+     */
     public scannerOpenWithStopTs_args setTableName(byte[] tableName) {
       this.tableName = tableName;
       return this;
@@ -27161,10 +28079,18 @@ public class Hbase {
       }
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public byte[] getStartRow() {
       return this.startRow;
     }
 
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
     public scannerOpenWithStopTs_args setStartRow(byte[] startRow) {
       this.startRow = startRow;
       return this;
@@ -27185,10 +28111,18 @@ public class Hbase {
       }
     }
 
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     */
     public byte[] getStopRow() {
       return this.stopRow;
     }
 
+    /**
+     * row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     */
     public scannerOpenWithStopTs_args setStopRow(byte[] stopRow) {
       this.stopRow = stopRow;
       return this;
@@ -27224,10 +28158,20 @@ public class Hbase {
       this.columns.add(elem);
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public List<byte[]> getColumns() {
       return this.columns;
     }
 
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
     public scannerOpenWithStopTs_args setColumns(List<byte[]> columns) {
       this.columns = columns;
       return this;
@@ -27248,10 +28192,16 @@ public class Hbase {
       }
     }
 
+    /**
+     * timestamp
+     */
     public long getTimestamp() {
       return this.timestamp;
     }
 
+    /**
+     * timestamp
+     */
     public scannerOpenWithStopTs_args setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
@@ -28050,10 +29000,16 @@ public class Hbase {
 
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public int id;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * id of a scanner returned by scannerOpen
+       */
       ID((short)1, "id");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -28149,10 +29105,16 @@ public class Hbase {
       return new scannerGet_args(this);
     }
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public int getId() {
       return this.id;
     }
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public scannerGet_args setId(int id) {
       this.id = id;
       setIdIsSet(true);
@@ -28808,12 +29770,24 @@ public class Hbase {
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
     private static final TField NB_ROWS_FIELD_DESC = new TField("nbRows", TType.I32, (short)2);
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public int id;
+    /**
+     * number of results to return
+     */
     public int nbRows;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * id of a scanner returned by scannerOpen
+       */
       ID((short)1, "id"),
+      /**
+       * number of results to return
+       */
       NB_ROWS((short)2, "nbRows");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -28916,10 +29890,16 @@ public class Hbase {
       return new scannerGetList_args(this);
     }
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public int getId() {
       return this.id;
     }
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public scannerGetList_args setId(int id) {
       this.id = id;
       setIdIsSet(true);
@@ -28939,10 +29919,16 @@ public class Hbase {
       __isset_bit_vector.set(__ID_ISSET_ID, value);
     }
 
+    /**
+     * number of results to return
+     */
     public int getNbRows() {
       return this.nbRows;
     }
 
+    /**
+     * number of results to return
+     */
     public scannerGetList_args setNbRows(int nbRows) {
       this.nbRows = nbRows;
       setNbRowsIsSet(true);
@@ -29647,10 +30633,16 @@ public class Hbase {
 
     private static final TField ID_FIELD_DESC = new TField("id", TType.I32, (short)1);
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public int id;
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements TFieldIdEnum {
+      /**
+       * id of a scanner returned by scannerOpen
+       */
       ID((short)1, "id");
 
       private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
@@ -29746,10 +30738,16 @@ public class Hbase {
       return new scannerClose_args(this);
     }
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public int getId() {
       return this.id;
     }
 
+    /**
+     * id of a scanner returned by scannerOpen
+     */
     public scannerClose_args setId(int id) {
       this.id = id;
       setIdIsSet(true);

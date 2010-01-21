@@ -428,8 +428,6 @@
       >
       <packageset dir="${src.dir}">
           <include name="org/apache/**"/>
-          <exclude name="org/onelab/**"/>
-          <exclude name="org/apache/hadoop/hbase/thrift/generated/**"/>
       </packageset>
         <link href="${javadoc.link.java}"/>
         <classpath >

@@ -323,6 +323,8 @@ Release 0.21.0 - Unreleased
    HBASE-2133  Increase default number of client handlers
    HBASE-2109  status 'simple' should show total requests per second, also 
    	       the requests/sec is wrong as is
+   HBASE-2151  Remove onelab and include generated thrift classes in javadoc
+               (Lars Francke via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
