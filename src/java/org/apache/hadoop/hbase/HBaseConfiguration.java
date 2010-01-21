@@ -53,11 +53,10 @@ public class HBaseConfiguration extends Configuration {
   @Deprecated
   public HBaseConfiguration(final Configuration c) {
     //TODO:replace with private constructor
+    this();
     for (Entry<String, String>e: c) {
       set(e.getKey(), e.getValue());
     }
-    LOG.warn("instantinating HBaseConfiguration() is deprecated. Please use " +
-    		"HBaseConfiguration#create(conf) to construct a plain Configuration");
   }
   
   public static Configuration addHbaseResources(Configuration conf) {

@@ -184,6 +184,7 @@ Release 0.21.0 - Unreleased
                (Lars Francke via Stack)
    HBASE-2146  RPC related metrics are missing in 0.20.3 since recent changes
                (Gary Helmling via Lars George)
+   HBASE-2150  Deprecated HBC(Configuration) constructor doesn't call this()
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
