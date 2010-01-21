@@ -87,6 +87,7 @@
   <property name="test.junit.printsummary" value="yes" />
   <property name="test.junit.haltonfailure" value="no" />
   <property name="test.junit.maxmemory" value="512m" />
+  <property name="test.conf.dir" value="${build.dir}/test/conf" />
 
   <property name="test.core.build.classes" value="${test.build.dir}/core/classes"/>
 
@@ -190,7 +191,9 @@
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-test.classpath"/>
-    <path refid="classpath"/>
+    <pathelement location="${build.classes}"/>
+    <pathelement location="${test.conf.dir}"/>
+    <path refid="ivy-common.classpath"/>
   </path>
 <!--
   <path id="test.hdfs.classpath">
@@ -252,6 +255,12 @@
     <!-- copy all of the jsp and static files -->
 
     <copy todir="${conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+    <mkdir dir="${test.conf.dir}"/>
+    <copy todir="${test.conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
