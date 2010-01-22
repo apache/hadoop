@@ -293,6 +293,11 @@ public class Bytes {
             || ch == '_'
             || ch == '-'
             || ch == ':'
+            || ch == ' '
+            || ch == '<'
+            || ch == '>'
+            || ch == '='
+            || ch == '/'
             || ch == '.') {
           result.append(first.charAt(i));
         } else {

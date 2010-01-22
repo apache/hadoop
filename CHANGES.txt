@@ -190,6 +190,7 @@ Release 0.21.0 - Unreleased
    HBASE-2156  HBASE-2037 broke Scan - only a test for trunk
    HBASE-2057  Cluster won't stop (Gary Helmling and JD via JD)
    HBASE-2160  Can't put with ts in shell
+   HBASE-2144  Now does \x20 for spaces
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
