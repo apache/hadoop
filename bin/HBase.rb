@@ -447,17 +447,20 @@ module HBase
 
     def put(row, column, value, timestamp = nil)
       now = Time.now 
-      p = nil
-      if timestamp
-        p = Put.new(row.to_java_bytes, timestamp)
-      else
-        p = Put.new(row.to_java_bytes)
-      end
+      p = Put.new(row.to_java_bytes)
       split = KeyValue.parseColumn(column.to_java_bytes)
       if split.length > 1
-        p.add(split[0], split[1], value.to_java_bytes)
+        if timestamp
+          p.add(split[0], split[1], timestamp, value.to_java_bytes)
+        else
+          p.add(split[0], split[1], value.to_java_bytes)
+        end
       else
-        p.add(split[0], nil, value.to_java_bytes)
+        if timestamp
+          p.add(split[0], nil, timestamp, value.to_java_bytes)
+        else
+          p.add(split[0], nil, value.to_java_bytes)
+        end
       end
       @table.put(p)
       @formatter.header()
