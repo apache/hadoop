@@ -925,8 +925,12 @@ public class HTable implements HTableInterface {
     }
 
     /**
+     * Get <param>nbRows</param> rows.
+     * How many RPCs are made is determined by the {@link Scan#setCaching(int)}
+     * setting (or hbase.client.scanner.caching in hbase-site.xml).
      * @param nbRows number of rows to return
-     * @return Between zero and <param>nbRows</param> RowResults
+     * @return Between zero and <param>nbRows</param> RowResults.  Scan is done
+     * if returned array is of zero-length (We never return null).
      * @throws IOException
      */
     public Result [] next(int nbRows) throws IOException {
