@@ -116,8 +116,12 @@ magnitude faster if not more.
 pull from your data source.  Your reduce task will need to be hooked up to
 {@link org.apache.hadoop.hbase.mapreduce.HFileOutputFormat}.  It expects to receive a row id and a value.
 The row id must be formatted as a {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable} and the
-value as a {@link org.apache.hadoop.hbase.KeyValue} (A KeyValue holds he value for a cell and
-its coordinates; row/family/qualifier/timestamp, etc.).  Your reduce task
+value as a {@link org.apache.hadoop.hbase.KeyValue} (A KeyValue holds the value for a cell and
+its coordinates; row/family/qualifier/timestamp, etc.).  Note that you must
+specify a timestamp when you create the KeyValue in your map task
+otherwise the KeyValue will be created with the default LATEST_TIMESTAMP (Long.MAX_VALUE).  
+Use System.currentTimeMillis() if your data does not inherently bear a timestamp.
+Your reduce task
 will also need to emit the KeyValues in order.  See {@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer}
 for an example reducer that emits KeyValues in order.
 </p>

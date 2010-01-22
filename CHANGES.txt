@@ -330,6 +330,8 @@ Release 0.21.0 - Unreleased
    HBASE-2151  Remove onelab and include generated thrift classes in javadoc
                (Lars Francke via Stack)
    HBASE-2149  hbase.regionserver.global.memstore.lowerLimit is too low
+   HBASE-2157  LATEST_TIMESTAMP not replaced by current timestamp in KeyValue
+               (bulk loading)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
