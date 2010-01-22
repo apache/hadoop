@@ -135,7 +135,6 @@ Release 0.21.0 - Unreleased
    HBASE-1960  Master should wait for DFS to come up when creating
                hbase.version
    HBASE-2054  memstore size 0 is >= than blocking -2.0g size
-   HBASE-2057  Cluster won't stop
    HBASE-2064  Cannot disable a table if at the same the Master is moving 
                its regions around
    HBASE-2065  Cannot disable a table if any of its region is opening 
@@ -189,6 +188,7 @@ Release 0.21.0 - Unreleased
    HBASE-2152  Add default jmxremote.{access|password} files into conf
                (Lars George and Gary Helmling via Stack)
    HBASE-2156  HBASE-2037 broke Scan - only a test for trunk
+   HBASE-2057  Cluster won't stop (Gary Helmling and JD via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -173,18 +173,26 @@ if [ "$COMMAND" = "shell" ] ; then
   CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
-  HBASE_OPTS="$HBASE_OPTS $HBASE_MASTER_OPTS"
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_MASTER_OPTS"
+  fi
 elif [ "$COMMAND" = "regionserver" ] ; then
   CLASS='org.apache.hadoop.hbase.regionserver.HRegionServer'
-  HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_REGIONSERVER_OPTS"
+  fi
 elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
-  HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
+  fi
 elif [ "$COMMAND" = "migrate" ] ; then
   CLASS='org.apache.hadoop.hbase.util.Migrate'
 elif [ "$COMMAND" = "zookeeper" ] ; then
   CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
-  HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
+  fi
 else
   CLASS=$COMMAND
 fi
