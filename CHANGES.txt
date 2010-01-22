@@ -328,6 +328,7 @@ Release 0.21.0 - Unreleased
    	       the requests/sec is wrong as is
    HBASE-2151  Remove onelab and include generated thrift classes in javadoc
                (Lars Francke via Stack)
+   HBASE-2149  hbase.regionserver.global.memstore.lowerLimit is too low
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

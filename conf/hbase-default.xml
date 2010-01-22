@@ -267,7 +267,7 @@
   </property>
   <property>
     <name>hbase.regionserver.global.memstore.lowerLimit</name>
-    <value>0.25</value>
+    <value>0.35</value>
     <description>When memstores are being forced to flush to make room in
       memory, keep flushing until we hit this mark. Defaults to 30% of heap. 
       This value equal to hbase.regionserver.global.memstore.upperLimit causes
