@@ -39,10 +39,11 @@ export HBASE_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:+
 # Uncomment below to enable java garbage collection logging.
 # export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
 
-# Uncomment and adjust/create "jmxremote.*" to enable JMX exporting
-# export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=false"
-# export HBASE_JMX_BASE="$HBASE_JMX_BASE -Dcom.sun.management.jmxremote.password.file=$HBASE_HOME/conf/jmxremote.password"
-# export HBASE_JMX_BASE="$HBASE_JMX_BASE -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
+# Uncomment and adjust to enable JMX exporting
+# See jmxremote.password and jmxremote.access in $JRE_HOME/lib/management to configure remote password access.
+# More details at: http://java.sun.com/javase/6/docs/technotes/guides/management/agent.html
+#
+# export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
 # export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10101"
 # export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10102"
 # export HBASE_THRIFT_OPTS="$HBASE_THRIFT_OPTS $HBASE_JMX_BASE -Dcom.sun.management.jmxremote.port=10103"
