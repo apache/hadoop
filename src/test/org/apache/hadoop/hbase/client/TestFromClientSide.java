@@ -3477,4 +3477,21 @@ public class TestFromClientSide {
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
   }
+
+    /**
+   * For HBASE-2156
+   * @throws Exception
+   */
+  public void testScanVariableReuse() throws Exception {
+    Scan scan = new Scan();
+    scan.addFamily(FAMILY);
+    scan.addColumn(FAMILY, ROW);
+
+    assertTrue(scan.getFamilyMap().get(FAMILY).size() == 1);
+
+    scan = new Scan();
+    scan.addFamily(FAMILY);
+
+    assertTrue(scan.getFamilyMap().get(FAMILY).size() == 0);
+  }
 }

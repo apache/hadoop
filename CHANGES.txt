@@ -188,6 +188,7 @@ Release 0.21.0 - Unreleased
    HBASE-2154  Fix Client#next(int) javadoc
    HBASE-2152  Add default jmxremote.{access|password} files into conf
                (Lars George and Gary Helmling via Stack)
+   HBASE-2156  HBASE-2037 broke Scan - only a test for trunk
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
