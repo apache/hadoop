@@ -46,7 +46,6 @@
   <!-- ====================================================== -->
   <target name="test">
     <subant target="test">
-      <fileset dir="." includes="raid/build.xml"/>
       <fileset dir="." includes="hdfsproxy/build.xml"/>
     </subant>
   </target>

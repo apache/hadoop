@@ -6,10 +6,6 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
-    HDFS-503. This patch implements an optional layer over HDFS that 
-    implements offline erasure-coding.  It can be used to reduce the 
-    total storage requirements of HDFS.  (dhruba)
-
     HDFS-654. Add support new atomic rename functionality in HDFS for 
     supporting rename in FileContext. (suresh)
 
@@ -28,7 +24,8 @@ Trunk (unreleased changes)
     HDFS-840. Change tests to use FileContext test helper introduced in
     HADOOP-6394. (Jitendra Nath Pandey via suresh)
 
-    HDFS-685. Use the user-to-groups mapping service in the NameNode. (boryas, acmurthy)
+    HDFS-685. Use the user-to-groups mapping service in the NameNode. 
+    (boryas, acmurthy)
 
     HDFS-755. Read multiple checksum chunks at once in DFSInputStream.
     (Todd Lipcon via tomwhite)
@@ -38,6 +35,8 @@ Trunk (unreleased changes)
 
     HDFS-587. Add support for specifying queue name in mapreduce tests.
     (Erik Steffl via suresh)
+
+    HDFS-902 Move contrib/raid to MapReduce. (Eli Collins via omalley)
 
   OPTIMIZATIONS
 
