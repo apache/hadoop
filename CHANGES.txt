@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     
     HDFS-885. Datanode toString() NPEs on null dnRegistration. (stevel)
 
+    HDFS-877. Client-driven block verification not functioning. (Todd
+    Lipcon via hairong)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

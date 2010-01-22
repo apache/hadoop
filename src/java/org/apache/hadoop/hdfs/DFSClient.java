@@ -1322,23 +1322,37 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   public static class BlockReader extends FSInputChecker {
 
-    private Socket dnSock; //for now just sending checksumOk.
+    Socket dnSock; //for now just sending checksumOk.
     private DataInputStream in;
     private DataChecksum checksum;
+
+    /** offset in block of the last chunk received */
     private long lastChunkOffset = -1;
     private long lastChunkLen = -1;
     private long lastSeqNo = -1;
 
+    /** offset in block where reader wants to actually read */
     private long startOffset;
-    private long firstChunkOffset;
+
+    /** offset in block of of first chunk - may be less than startOffset
+        if startOffset is not chunk-aligned */
+    private final long firstChunkOffset;
+
     private int bytesPerChecksum;
     private int checksumSize;
+
+    /**
+     * The total number of bytes we need to transfer from the DN.
+     * This is the amount that the user has requested plus some padding
+     * at the beginning so that the read can begin on a chunk boundary.
+     */
+    private final long bytesNeededToFinish;
+
     private boolean gotEOS = false;
     
     byte[] skipBuf = null;
     ByteBuffer checksumBytes = null;
     int dataLeft = 0;
-    boolean isLastPacket = false;
     
     /* FSInputChecker interface */
     
@@ -1353,6 +1367,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     public synchronized int read(byte[] buf, int off, int len) 
                                  throws IOException {
       
+      // This has to be set here, *before* the skip, since we can
+      // hit EOS during the skip, in the case that our entire read
+      // is smaller than the checksum chunk.
+      boolean eosBefore = gotEOS;
+
       //for the first read, skip the extra bytes at the front.
       if (lastChunkLen < 0 && startOffset > firstChunkOffset && len > 0) {
         // Skip these bytes. But don't call this.skip()!
@@ -1366,7 +1385,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
       }
       
-      boolean eosBefore = gotEOS;
       int nRead = super.read(buf, off, len);
       
       // if gotEOS was set in the previous read and checksum is enabled :
@@ -1444,13 +1462,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                          int len, byte[] checksumBuf) 
                                          throws IOException {
       // Read one chunk.
-      
       if ( gotEOS ) {
-        if ( startOffset < 0 ) {
-          //This is mainly for debugging. can be removed.
-          throw new IOException( "BlockRead: already got EOS or an error" );
-        }
-        startOffset = -1;
+        // Already hit EOF
         return -1;
       }
       
@@ -1460,6 +1473,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         chunkOffset += lastChunkLen;
       }
       
+      // pos is relative to the start of the first chunk of the read.
+      // chunkOffset is relative to the start of the block.
+      // This makes sure that the read passed from FSInputChecker is the
+      // for the same chunk we expect to be reading from the DN.
       if ( (pos + firstChunkOffset) != chunkOffset ) {
         throw new IOException("Mismatch in pos : " + pos + " + " + 
                               firstChunkOffset + " != " + chunkOffset);
@@ -1494,7 +1511,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
         
         lastSeqNo = seqno;
-        isLastPacket = lastPacketInBlock;
         dataLeft = dataLen;
         adjustChecksumBytes(dataLen);
         if (dataLen > 0) {
@@ -1542,16 +1558,41 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         IOUtils.readFully(in, buf, offset, bytesToRead);
         checksumBytes.get(checksumBuf, 0, checksumSize * checksumsToRead);
       }
-      
+
       dataLeft -= bytesToRead;
       assert dataLeft >= 0;
 
       lastChunkOffset = chunkOffset;
       lastChunkLen = bytesToRead;
-      
-      if ((dataLeft == 0 && isLastPacket) || bytesToRead == 0) {
+
+      // If there's no data left in the current packet after satisfying
+      // this read, and we have satisfied the client read, we expect
+      // an empty packet header from the DN to signify this.
+      // Note that pos + bytesToRead may in fact be greater since the
+      // DN finishes off the entire last chunk.
+      if (dataLeft == 0 &&
+          pos + bytesToRead >= bytesNeededToFinish) {
+
+        // Read header
+        int packetLen = in.readInt();
+        long offsetInBlock = in.readLong();
+        long seqno = in.readLong();
+        boolean lastPacketInBlock = in.readBoolean();
+        int dataLen = in.readInt();
+
+        if (!lastPacketInBlock ||
+            dataLen != 0) {
+          throw new IOException("Expected empty end-of-read packet! Header: " +
+                                "(packetLen : " + packetLen + 
+                                ", offsetInBlock : " + offsetInBlock +
+                                ", seqno : " + seqno + 
+                                ", lastInBlock : " + lastPacketInBlock +
+                                ", dataLen : " + dataLen);
+        }
+
         gotEOS = true;
       }
+
       if ( bytesToRead == 0 ) {
         return -1;
       }
@@ -1561,7 +1602,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     
     private BlockReader( String file, long blockId, DataInputStream in, 
                          DataChecksum checksum, boolean verifyChecksum,
-                         long startOffset, long firstChunkOffset, 
+                         long startOffset, long firstChunkOffset,
+                         long bytesToRead,
                          Socket dnSock ) {
       super(new Path("/blk_" + blockId + ":of:" + file)/*too non path-like?*/,
             1, verifyChecksum,
@@ -1573,6 +1615,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       this.in = in;
       this.checksum = checksum;
       this.startOffset = Math.max( startOffset, 0 );
+
+      // The total number of bytes that we need to transfer from the DN is
+      // the amount that the user wants (bytesToRead), plus the padding at
+      // the beginning in order to chunk-align. Note that the DN may elect
+      // to send more than this amount if the read ends mid-chunk.
+      this.bytesNeededToFinish = bytesToRead + (startOffset - firstChunkOffset);
 
       this.firstChunkOffset = firstChunkOffset;
       lastChunkOffset = firstChunkOffset;
@@ -1650,7 +1698,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
 
       return new BlockReader( file, blockId, in, checksum, verifyChecksum,
-                              startOffset, firstChunkOffset, sock );
+                              startOffset, firstChunkOffset, len,
+                              sock );
     }
 
     @Override
@@ -1671,7 +1720,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * errors, we send OP_STATUS_CHECKSUM_OK to datanode to inform that 
      * checksum was verified and there was no error.
      */ 
-    private void checksumOk(Socket sock) {
+    void checksumOk(Socket sock) {
       try {
         OutputStream out = NetUtils.getOutputStream(sock, HdfsConstants.WRITE_TIMEOUT);
         CHECKSUM_OK.writeOutputStream(out);
