@@ -38,6 +38,10 @@ Trunk (unreleased changes)
 
     HDFS-902 Move contrib/raid to MapReduce. (Eli Collins via omalley)
 
+    HDFS-800. The last block of a file under construction may change to the
+    COMPLETE state in response to getAdditionalBlock or completeFileInternal.
+    (hairong)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -1326,8 +1326,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
-      // commit the last block
-      blockManager.commitLastBlock(pendingFile, previous);
+      // commit the last block and complete it if it has minimum replicas
+      blockManager.commitOrCompleteLastBlock(pendingFile, previous);
 
       //
       // If we fail this, bad things happen!
@@ -1361,9 +1361,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
-
-      // complete the penultimate block
-      blockManager.completeBlock(pendingFile, pendingFile.numBlocks()-2);
 
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pathINodes, targets);
@@ -1480,8 +1477,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       return CompleteFileStatus.OPERATION_FAILED;
     } 
 
-    // commit the last block
-    blockManager.commitLastBlock(pendingFile, last);
+    // commit the last block and complete it if it has minimum replicas
+    blockManager.commitOrCompleteLastBlock(pendingFile, last);
 
     if (!checkFileProgress(pendingFile, true)) {
       return CompleteFileStatus.STILL_WAITING;
@@ -1541,7 +1538,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       // check all blocks of the file.
       //
       for (BlockInfo block: v.getBlocks()) {
-        if (!blockManager.checkMinReplication(block)) {
+        if (!block.isComplete()) {
           LOG.info("BLOCK* NameSystem.checkFileProgress: "
               + "block " + block + " has not reached minimal replication "
               + blockManager.minReplication);
@@ -1553,7 +1550,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       // check the penultimate block of this file
       //
       BlockInfo b = v.getPenultimateBlock();
-      if (b != null && !blockManager.checkMinReplication(b)) {
+      if (b != null && !b.isComplete()) {
         LOG.info("BLOCK* NameSystem.checkFileProgress: "
             + "block " + b + " has not reached minimal replication "
             + blockManager.minReplication);
@@ -2020,16 +2017,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       INodeFileUnderConstruction pendingFile) throws IOException {
     leaseManager.removeLease(pendingFile.getClientName(), src);
 
-    // complete the penultimate block
-    blockManager.completeBlock(pendingFile, pendingFile.numBlocks()-2);
-
     // The file is no longer pending.
     // Create permanent INode, update blocks
     INodeFile newFile = pendingFile.convertToInodeFile();
     dir.replaceNode(src, pendingFile, newFile);
 
-    // complete last block of the file
-    blockManager.completeBlock(newFile, newFile.numBlocks()-1);
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);
 
@@ -2111,8 +2103,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       return;
     }
 
-    // commit the last block
-    blockManager.commitLastBlock(pendingFile, storedBlock);
+    // commit the last block and complete it if it has minimum replicas
+    blockManager.commitOrCompleteLastBlock(pendingFile, storedBlock);
 
     //remove lease, close file
     finalizeINodeFileUnderConstruction(src, pendingFile);

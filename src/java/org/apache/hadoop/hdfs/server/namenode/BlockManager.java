@@ -245,26 +245,23 @@ public class BlockManager {
   }
 
   /**
-   * Commit the last block of the file.
+   * Commit a block of a file
    * 
    * @param fileINode file inode
+   * @param block block to be committed
    * @param commitBlock - contains client reported block length and generation
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  void commitLastBlock(INodeFileUnderConstruction fileINode, 
+  private void commitBlock(INodeFileUnderConstruction fileINode,
+                       BlockInfoUnderConstruction block,
                        Block commitBlock) throws IOException {
-    if(commitBlock == null)
-      return; // not committing, this is a block allocation retry
-    BlockInfo lastBlock = fileINode.getLastBlock();
-    if(lastBlock == null)
-      return; // no blocks in file yet
-    if(lastBlock.isComplete())
-      return; // already completed (e.g. by syncBlock)
-    assert lastBlock.getNumBytes() <= commitBlock.getNumBytes() :
+    if (block.getBlockUCState() == BlockUCState.COMMITTED)
+      return;
+    assert block.getNumBytes() <= commitBlock.getNumBytes() :
       "commitBlock length is less than the stored one "
-      + commitBlock.getNumBytes() + " vs. " + lastBlock.getNumBytes();
-    ((BlockInfoUnderConstruction)lastBlock).commitBlock(commitBlock);
+      + commitBlock.getNumBytes() + " vs. " + block.getNumBytes();
+    block.commitBlock(commitBlock);
     
     // Adjust disk space consumption if required
     long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
@@ -280,6 +277,32 @@ public class BlockManager {
                 + e.getMessage());
       }
     }
+  }
+  
+  /**
+   * Commit the last block of the file and mark it as complete if it has
+   * meets the minimum replication requirement
+   * 
+   * @param fileINode file inode
+   * @param commitBlock - contains client reported block length and generation
+   * @throws IOException if the block does not have at least a minimal number
+   * of replicas reported from data-nodes.
+   */
+  void commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
+      Block commitBlock) throws IOException {
+    
+    if(commitBlock == null)
+      return; // not committing, this is a block allocation retry
+    BlockInfo lastBlock = fileINode.getLastBlock();
+    if(lastBlock == null)
+      return; // no blocks in file yet
+    if(lastBlock.isComplete())
+      return; // already completed (e.g. by syncBlock)
+    
+    commitBlock(fileINode, (BlockInfoUnderConstruction)lastBlock, commitBlock);
+
+    if(countNodes(lastBlock).liveReplicas() >= minReplication)
+      completeBlock(fileINode,fileINode.numBlocks()-1);
   }
 
   /**
