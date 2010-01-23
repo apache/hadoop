@@ -108,6 +108,11 @@
                conf="common->default" />
    <!-- End Thrift dependency -->
 
+   <!-- ZK dependencies manually hardcoded until ZOOKEEPER-224 in place -->
+    <dependency org="jline" name="jline" rev="${jline.version}" transitive="false"
+              conf="common->default" />
+   <!-- End ZK dependency -->
+
    <!--
    TODO: Enter URL in ivysettings.xml that stores the artifacts of Zookeeper / thrift.     
 
