@@ -182,6 +182,7 @@ service Hbase {
     
   /**
    * List all the userspace tables.
+   *
    * @return returns a list of names
    */
   list<Text> getTableNames()
@@ -189,6 +190,7 @@ service Hbase {
 
   /**
    * List all the column families assoicated with a table.
+   *
    * @return list of column family descriptors
    */
   map<Text,ColumnDescriptor> getColumnDescriptors (
@@ -198,6 +200,7 @@ service Hbase {
 
   /**
    * List the regions associated with a table.
+   *
    * @return list of region descriptors
    */
   list<TRegionInfo> getTableRegions(
@@ -212,6 +215,7 @@ service Hbase {
    * values if not explicitly specified.
    *
    * @throws IllegalArgument if an input parameter is invalid
+   *
    * @throws AlreadyExists if the table name already exists
    */
   void createTable(
@@ -645,7 +649,9 @@ service Hbase {
    * an empty list is returned.
    *
    * @return a TRowResult containing the current row and a map of the columns to TCells.
+   *
    * @throws IllegalArgument if ScannerID is invalid
+   *
    * @throws NotFound when the scanner reaches the end
    */
   list<TRowResult> scannerGet(
@@ -660,7 +666,9 @@ service Hbase {
    * specified stopRow is reached,  an empty list is returned.
    *
    * @return a TRowResult containing the current row and a map of the columns to TCells.
+   *
    * @throws IllegalArgument if ScannerID is invalid
+   *
    * @throws NotFound when the scanner reaches the end
    */
   list<TRowResult> scannerGetList(

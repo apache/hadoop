@@ -1,0 +1,608 @@
+<html><head>
+<link href="style.css" rel="stylesheet" type="text/css"/>
+<title>Thrift module: Hbase</title></head><body>
+<h1>Thrift module: Hbase</h1>
+<table><tr><th>Module</th><th>Services</th><th>Data types</th><th>Constants</th></tr>
+<tr>
+<td>Hbase</td><td><a href="Hbase.html#Svc_Hbase">Hbase</a><br/>
+<ul>
+<li><a href="Hbase.html#Fn_Hbase_atomicIncrement">atomicIncrement</a></li>
+<li><a href="Hbase.html#Fn_Hbase_compact">compact</a></li>
+<li><a href="Hbase.html#Fn_Hbase_createTable">createTable</a></li>
+<li><a href="Hbase.html#Fn_Hbase_deleteAll">deleteAll</a></li>
+<li><a href="Hbase.html#Fn_Hbase_deleteAllRow">deleteAllRow</a></li>
+<li><a href="Hbase.html#Fn_Hbase_deleteAllRowTs">deleteAllRowTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_deleteAllTs">deleteAllTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_deleteTable">deleteTable</a></li>
+<li><a href="Hbase.html#Fn_Hbase_disableTable">disableTable</a></li>
+<li><a href="Hbase.html#Fn_Hbase_enableTable">enableTable</a></li>
+<li><a href="Hbase.html#Fn_Hbase_get">get</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getColumnDescriptors">getColumnDescriptors</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getRow">getRow</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getRowTs">getRowTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getRowWithColumns">getRowWithColumns</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getRowWithColumnsTs">getRowWithColumnsTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getTableNames">getTableNames</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getTableRegions">getTableRegions</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getVer">getVer</a></li>
+<li><a href="Hbase.html#Fn_Hbase_getVerTs">getVerTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_isTableEnabled">isTableEnabled</a></li>
+<li><a href="Hbase.html#Fn_Hbase_majorCompact">majorCompact</a></li>
+<li><a href="Hbase.html#Fn_Hbase_mutateRow">mutateRow</a></li>
+<li><a href="Hbase.html#Fn_Hbase_mutateRowTs">mutateRowTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_mutateRows">mutateRows</a></li>
+<li><a href="Hbase.html#Fn_Hbase_mutateRowsTs">mutateRowsTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerClose">scannerClose</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerGet">scannerGet</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerGetList">scannerGetList</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerOpen">scannerOpen</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerOpenTs">scannerOpenTs</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerOpenWithPrefix">scannerOpenWithPrefix</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerOpenWithStop">scannerOpenWithStop</a></li>
+<li><a href="Hbase.html#Fn_Hbase_scannerOpenWithStopTs">scannerOpenWithStopTs</a></li>
+</ul>
+</td>
+<td><a href="Hbase.html#Struct_AlreadyExists">AlreadyExists</a><br/>
+<a href="Hbase.html#Struct_BatchMutation">BatchMutation</a><br/>
+<a href="Hbase.html#Typedef_Bytes">Bytes</a><br/>
+<a href="Hbase.html#Struct_ColumnDescriptor">ColumnDescriptor</a><br/>
+<a href="Hbase.html#Struct_IOError">IOError</a><br/>
+<a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a><br/>
+<a href="Hbase.html#Struct_Mutation">Mutation</a><br/>
+<a href="Hbase.html#Typedef_ScannerID">ScannerID</a><br/>
+<a href="Hbase.html#Struct_TCell">TCell</a><br/>
+<a href="Hbase.html#Struct_TRegionInfo">TRegionInfo</a><br/>
+<a href="Hbase.html#Struct_TRowResult">TRowResult</a><br/>
+<a href="Hbase.html#Typedef_Text">Text</a><br/>
+</td>
+<td><code></code></td>
+</tr></table>
+<hr/><h2 id="Typedefs">Type declarations</h2>
+<div class="definition"><h3 id="Typedef_Text">Typedef: Text</h3>
+<p><strong>Base type:</strong>&nbsp;<code>string</code></p>
+</div>
+<div class="definition"><h3 id="Typedef_Bytes">Typedef: Bytes</h3>
+<p><strong>Base type:</strong>&nbsp;<code>string</code></p>
+</div>
+<div class="definition"><h3 id="Typedef_ScannerID">Typedef: ScannerID</h3>
+<p><strong>Base type:</strong>&nbsp;<code>i32</code></p>
+</div>
+<hr/><h2 id="Structs">Data structures</h2>
+<div class="definition"><h3 id="Struct_TCell">Struct: TCell</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>value</td><td><code><a href="Hbase.html#Typedef_Bytes">Bytes</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>timestamp</td><td><code>i64</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>TCell - Used to transport a cell value (byte[]) and the timestamp it was
+stored with together as a result for get and getRow methods. This promotes
+the timestamp of a cell to a first-class value, making it easy to take
+note of temporal data. Cell is used all the way from HStore up to HTable.
+<br/></div><div class="definition"><h3 id="Struct_ColumnDescriptor">Struct: ColumnDescriptor</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>name</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>maxVersions</td><td><code>i32</code></td><td></td><td>yes</td><td>3</td></tr>
+<tr><td>compression</td><td><code>string</code></td><td></td><td>yes</td><td>"NONE"</td></tr>
+<tr><td>inMemory</td><td><code>bool</code></td><td></td><td>yes</td><td>0</td></tr>
+<tr><td>bloomFilterType</td><td><code>string</code></td><td></td><td>yes</td><td>"NONE"</td></tr>
+<tr><td>bloomFilterVectorSize</td><td><code>i32</code></td><td></td><td>yes</td><td>0</td></tr>
+<tr><td>bloomFilterNbHashes</td><td><code>i32</code></td><td></td><td>yes</td><td>0</td></tr>
+<tr><td>blockCacheEnabled</td><td><code>bool</code></td><td></td><td>yes</td><td>0</td></tr>
+<tr><td>timeToLive</td><td><code>i32</code></td><td></td><td>yes</td><td>-1</td></tr>
+</table><br/>An HColumnDescriptor contains information about a column family
+such as the number of versions, compression settings, etc. It is
+used as input when creating a table or adding a column.
+<br/></div><div class="definition"><h3 id="Struct_TRegionInfo">Struct: TRegionInfo</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>startKey</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>endKey</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>id</td><td><code>i64</code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>name</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>version</td><td><code>byte</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>A TRegionInfo contains information about an HTable region.
+<br/></div><div class="definition"><h3 id="Struct_Mutation">Struct: Mutation</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>isDelete</td><td><code>bool</code></td><td></td><td>yes</td><td>0</td></tr>
+<tr><td>column</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>value</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>A Mutation object is used to either update or delete a column-value.
+<br/></div><div class="definition"><h3 id="Struct_BatchMutation">Struct: BatchMutation</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>row</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>mutations</td><td><code>list&lt;<code><a href="Hbase.html#Struct_Mutation">Mutation</a></code>&gt;</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>A BatchMutation object is used to apply a number of Mutations to a single row.
+<br/></div><div class="definition"><h3 id="Struct_TRowResult">Struct: TRowResult</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>row</td><td><code><a href="Hbase.html#Typedef_Text">Text</a></code></td><td></td><td>yes</td><td></td></tr>
+<tr><td>columns</td><td><code>map&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>, <code><a href="Hbase.html#Struct_TCell">TCell</a></code>&gt;</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>Holds row name and then a map of columns to cells.
+<br/></div><div class="definition"><h3 id="Struct_IOError">Exception: IOError</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>message</td><td><code>string</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>An IOError exception signals that an error occurred communicating
+to the Hbase master or an Hbase region server.  Also used to return
+more general Hbase error conditions.
+<br/></div><div class="definition"><h3 id="Struct_IllegalArgument">Exception: IllegalArgument</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>message</td><td><code>string</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>An IllegalArgument exception indicates an illegal or invalid
+argument was passed into a procedure.
+<br/></div><div class="definition"><h3 id="Struct_AlreadyExists">Exception: AlreadyExists</h3>
+<table><tr><th>Field</th><th>Type</th><th>Description</th><th>Required</th><th>Default value</th></tr>
+<tr><td>message</td><td><code>string</code></td><td></td><td>yes</td><td></td></tr>
+</table><br/>An AlreadyExists exceptions signals that a table with the specified
+name already exists
+<br/></div><hr/><h2 id="Services">Services</h2>
+<h3 id="Svc_Hbase">Service: Hbase</h3>
+<div class="definition"><h4 id="Fn_Hbase_enableTable">Function: Hbase.enableTable</h4>
+<pre><code>void</code> enableTable(<code><a href="Hbase.html#Typedef_Bytes">Bytes</a></code> tableName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Brings a table on-line (enables it)
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of the table
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_disableTable">Function: Hbase.disableTable</h4>
+<pre><code>void</code> disableTable(<code><a href="Hbase.html#Typedef_Bytes">Bytes</a></code> tableName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Disables a table (takes it off-line) If it is being served, the master
+will tell the servers to stop serving it.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of the table
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_isTableEnabled">Function: Hbase.isTableEnabled</h4>
+<pre><code>bool</code> isTableEnabled(<code><a href="Hbase.html#Typedef_Bytes">Bytes</a></code> tableName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>@return true if table is on-line
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of the table to check
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_compact">Function: Hbase.compact</h4>
+<pre><code>void</code> compact(<code><a href="Hbase.html#Typedef_Bytes">Bytes</a></code> tableNameOrRegionName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableNameOrRegionName</td><td></td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_majorCompact">Function: Hbase.majorCompact</h4>
+<pre><code>void</code> majorCompact(<code><a href="Hbase.html#Typedef_Bytes">Bytes</a></code> tableNameOrRegionName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableNameOrRegionName</td><td></td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getTableNames">Function: Hbase.getTableNames</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> getTableNames()
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>List all the userspace tables.
+<p/>
+@return returns a list of names
+<br/></div><div class="definition"><h4 id="Fn_Hbase_getColumnDescriptors">Function: Hbase.getColumnDescriptors</h4>
+<pre><code>map&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>, <code><a href="Hbase.html#Struct_ColumnDescriptor">ColumnDescriptor</a></code>&gt;</code> getColumnDescriptors(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>List all the column families assoicated with a table.
+<p/>
+@return list of column family descriptors
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>table name
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getTableRegions">Function: Hbase.getTableRegions</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRegionInfo">TRegionInfo</a></code>&gt;</code> getTableRegions(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>List the regions associated with a table.
+<p/>
+@return list of region descriptors
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>table name
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_createTable">Function: Hbase.createTable</h4>
+<pre><code>void</code> createTable(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                 <code>list&lt;<code><a href="Hbase.html#Struct_ColumnDescriptor">ColumnDescriptor</a></code>&gt;</code> columnFamilies)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>, <code><a href="Hbase.html#Struct_AlreadyExists">AlreadyExists</a></code>
+</pre>Create a table with the specified column families.  The name
+field for each ColumnDescriptor must be set and must end in a
+colon (:). All other fields are optional and will get default
+values if not explicitly specified.
+<p/>
+@throws IllegalArgument if an input parameter is invalid
+<p/>
+@throws AlreadyExists if the table name already exists
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table to create
+</td></tr><tr><td>columnFamilies</td><td>list of column family descriptors
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_deleteTable">Function: Hbase.deleteTable</h4>
+<pre><code>void</code> deleteTable(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Deletes a table
+<p/>
+@throws IOError if table doesn't exist on server or there was some other
+problem
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table to delete
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_get">Function: Hbase.get</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TCell">TCell</a></code>&gt;</code> get(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                <code><a href="Hbase.html#Typedef_Text">Text</a></code> column)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get a single TCell for the specified table, row, and column at the
+latest timestamp. Returns an empty list if no such value exists.
+<p/>
+@return value for specified row/column
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>column</td><td>column name
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getVer">Function: Hbase.getVer</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TCell">TCell</a></code>&gt;</code> getVer(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                   <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                   <code><a href="Hbase.html#Typedef_Text">Text</a></code> column,
+                   <code>i32</code> numVersions)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get the specified number of versions for the specified table,
+row, and column.
+<p/>
+@return list of cells for specified row/column
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>column</td><td>column name
+</td></tr><tr><td>numVersions</td><td>number of versions to retrieve
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getVerTs">Function: Hbase.getVerTs</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TCell">TCell</a></code>&gt;</code> getVerTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                     <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                     <code><a href="Hbase.html#Typedef_Text">Text</a></code> column,
+                     <code>i64</code> timestamp,
+                     <code>i32</code> numVersions)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get the specified number of versions for the specified table,
+row, and column.  Only versions less than or equal to the specified
+timestamp will be returned.
+<p/>
+@return list of cells for specified row/column
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>column</td><td>column name
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr><tr><td>numVersions</td><td>number of versions to retrieve
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getRow">Function: Hbase.getRow</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRowResult">TRowResult</a></code>&gt;</code> getRow(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                        <code><a href="Hbase.html#Typedef_Text">Text</a></code> row)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get all the data for the specified table and row at the latest
+timestamp. Returns an empty list if the row does not exist.
+<p/>
+@return TRowResult containing the row and map of columns to TCells
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getRowWithColumns">Function: Hbase.getRowWithColumns</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRowResult">TRowResult</a></code>&gt;</code> getRowWithColumns(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                                   <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                                   <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get the specified columns for the specified table and row at the latest
+timestamp. Returns an empty list if the row does not exist.
+<p/>
+@return TRowResult containing the row and map of columns to TCells
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>columns</td><td>List of columns to return, null for all columns
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getRowTs">Function: Hbase.getRowTs</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRowResult">TRowResult</a></code>&gt;</code> getRowTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                          <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                          <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get all the data for the specified table and row at the specified
+timestamp. Returns an empty list if the row does not exist.
+<p/>
+@return TRowResult containing the row and map of columns to TCells
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of the table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_getRowWithColumnsTs">Function: Hbase.getRowWithColumnsTs</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRowResult">TRowResult</a></code>&gt;</code> getRowWithColumnsTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                                     <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                                     <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns,
+                                     <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get the specified columns for the specified table and row at the specified
+timestamp. Returns an empty list if the row does not exist.
+<p/>
+@return TRowResult containing the row and map of columns to TCells
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>columns</td><td>List of columns to return, null for all columns
+</td></tr><tr><td>timestamp</td><td></td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_mutateRow">Function: Hbase.mutateRow</h4>
+<pre><code>void</code> mutateRow(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+               <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+               <code>list&lt;<code><a href="Hbase.html#Struct_Mutation">Mutation</a></code>&gt;</code> mutations)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Apply a series of mutations (updates/deletes) to a row in a
+single transaction.  If an exception is thrown, then the
+transaction is aborted.  Default current timestamp is used, and
+all entries will have an identical timestamp.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>mutations</td><td>list of mutation commands
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_mutateRowTs">Function: Hbase.mutateRowTs</h4>
+<pre><code>void</code> mutateRowTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                 <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                 <code>list&lt;<code><a href="Hbase.html#Struct_Mutation">Mutation</a></code>&gt;</code> mutations,
+                 <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Apply a series of mutations (updates/deletes) to a row in a
+single transaction.  If an exception is thrown, then the
+transaction is aborted.  The specified timestamp is used, and
+all entries will have an identical timestamp.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row key
+</td></tr><tr><td>mutations</td><td>list of mutation commands
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_mutateRows">Function: Hbase.mutateRows</h4>
+<pre><code>void</code> mutateRows(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                <code>list&lt;<code><a href="Hbase.html#Struct_BatchMutation">BatchMutation</a></code>&gt;</code> rowBatches)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Apply a series of batches (each a series of mutations on a single row)
+in a single transaction.  If an exception is thrown, then the
+transaction is aborted.  Default current timestamp is used, and
+all entries will have an identical timestamp.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>rowBatches</td><td>list of row batches
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_mutateRowsTs">Function: Hbase.mutateRowsTs</h4>
+<pre><code>void</code> mutateRowsTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                  <code>list&lt;<code><a href="Hbase.html#Struct_BatchMutation">BatchMutation</a></code>&gt;</code> rowBatches,
+                  <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Apply a series of batches (each a series of mutations on a single row)
+in a single transaction.  If an exception is thrown, then the
+transaction is aborted.  The specified timestamp is used, and
+all entries will have an identical timestamp.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>rowBatches</td><td>list of row batches
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_atomicIncrement">Function: Hbase.atomicIncrement</h4>
+<pre><code>i64</code> atomicIncrement(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                    <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                    <code><a href="Hbase.html#Typedef_Text">Text</a></code> column,
+                    <code>i64</code> value)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Atomically increment the column value specified.  Returns the next value post increment.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>row to increment
+</td></tr><tr><td>column</td><td>name of column
+</td></tr><tr><td>value</td><td>amount to increment by
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_deleteAll">Function: Hbase.deleteAll</h4>
+<pre><code>void</code> deleteAll(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+               <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+               <code><a href="Hbase.html#Typedef_Text">Text</a></code> column)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Delete all cells that match the passed row and column.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>Row to update
+</td></tr><tr><td>column</td><td>name of column whose value is to be deleted
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_deleteAllTs">Function: Hbase.deleteAllTs</h4>
+<pre><code>void</code> deleteAllTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                 <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                 <code><a href="Hbase.html#Typedef_Text">Text</a></code> column,
+                 <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Delete all cells that match the passed row and column and whose
+timestamp is equal-to or older than the passed timestamp.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>Row to update
+</td></tr><tr><td>column</td><td>name of column whose value is to be deleted
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_deleteAllRow">Function: Hbase.deleteAllRow</h4>
+<pre><code>void</code> deleteAllRow(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                  <code><a href="Hbase.html#Typedef_Text">Text</a></code> row)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Completely delete the row's cells.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>key of the row to be completely deleted.
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_deleteAllRowTs">Function: Hbase.deleteAllRowTs</h4>
+<pre><code>void</code> deleteAllRowTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                    <code><a href="Hbase.html#Typedef_Text">Text</a></code> row,
+                    <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Completely delete the row's cells marked with a timestamp
+equal-to or older than the passed timestamp.
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>row</td><td>key of the row to be completely deleted.
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerOpen">Function: Hbase.scannerOpen</h4>
+<pre><code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> scannerOpen(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                      <code><a href="Hbase.html#Typedef_Text">Text</a></code> startRow,
+                      <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get a scanner on the current table starting at the specified row and
+ending at the last row in the table.  Return the specified columns.
+<p/>
+@return scanner id to be used with other scanner procedures
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>startRow</td><td>Starting row in table to scan.
+Send "" (empty string) to start at the first row.
+</td></tr><tr><td>columns</td><td>columns to scan. If column name is a column family, all
+columns of the specified column family are returned. It's also possible
+to pass a regex in the column qualifier.
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerOpenWithStop">Function: Hbase.scannerOpenWithStop</h4>
+<pre><code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> scannerOpenWithStop(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                              <code><a href="Hbase.html#Typedef_Text">Text</a></code> startRow,
+                              <code><a href="Hbase.html#Typedef_Text">Text</a></code> stopRow,
+                              <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get a scanner on the current table starting and stopping at the
+specified rows.  ending at the last row in the table.  Return the
+specified columns.
+<p/>
+@return scanner id to be used with other scanner procedures
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>startRow</td><td>Starting row in table to scan.
+Send "" (empty string) to start at the first row.
+</td></tr><tr><td>stopRow</td><td>row to stop scanning on. This row is *not* included in the
+scanner's results
+</td></tr><tr><td>columns</td><td>columns to scan. If column name is a column family, all
+columns of the specified column family are returned. It's also possible
+to pass a regex in the column qualifier.
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerOpenWithPrefix">Function: Hbase.scannerOpenWithPrefix</h4>
+<pre><code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> scannerOpenWithPrefix(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                                <code><a href="Hbase.html#Typedef_Text">Text</a></code> startAndPrefix,
+                                <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Open a scanner for a given prefix.  That is all rows will have the specified
+prefix. No other rows will be returned.
+<p/>
+@return scanner id to use with other scanner calls
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>startAndPrefix</td><td>the prefix (and thus start row) of the keys you want
+</td></tr><tr><td>columns</td><td>the columns you want returned
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerOpenTs">Function: Hbase.scannerOpenTs</h4>
+<pre><code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> scannerOpenTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                        <code><a href="Hbase.html#Typedef_Text">Text</a></code> startRow,
+                        <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns,
+                        <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get a scanner on the current table starting at the specified row and
+ending at the last row in the table.  Return the specified columns.
+Only values with the specified timestamp are returned.
+<p/>
+@return scanner id to be used with other scanner procedures
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>startRow</td><td>Starting row in table to scan.
+Send "" (empty string) to start at the first row.
+</td></tr><tr><td>columns</td><td>columns to scan. If column name is a column family, all
+columns of the specified column family are returned. It's also possible
+to pass a regex in the column qualifier.
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerOpenWithStopTs">Function: Hbase.scannerOpenWithStopTs</h4>
+<pre><code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> scannerOpenWithStopTs(<code><a href="Hbase.html#Typedef_Text">Text</a></code> tableName,
+                                <code><a href="Hbase.html#Typedef_Text">Text</a></code> startRow,
+                                <code><a href="Hbase.html#Typedef_Text">Text</a></code> stopRow,
+                                <code>list&lt;<code><a href="Hbase.html#Typedef_Text">Text</a></code>&gt;</code> columns,
+                                <code>i64</code> timestamp)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>
+</pre>Get a scanner on the current table starting and stopping at the
+specified rows.  ending at the last row in the table.  Return the
+specified columns.  Only values with the specified timestamp are
+returned.
+<p/>
+@return scanner id to be used with other scanner procedures
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>tableName</td><td>name of table
+</td></tr><tr><td>startRow</td><td>Starting row in table to scan.
+Send "" (empty string) to start at the first row.
+</td></tr><tr><td>stopRow</td><td>row to stop scanning on. This row is *not* included in the
+scanner's results
+</td></tr><tr><td>columns</td><td>columns to scan. If column name is a column family, all
+columns of the specified column family are returned. It's also possible
+to pass a regex in the column qualifier.
+</td></tr><tr><td>timestamp</td><td>timestamp
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerGet">Function: Hbase.scannerGet</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRowResult">TRowResult</a></code>&gt;</code> scannerGet(<code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> id)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Returns the scanner's current row value and advances to the next
+row in the table.  When there are no more rows in the table, or a key
+greater-than-or-equal-to the scanner's specified stopRow is reached,
+an empty list is returned.
+<p/>
+@return a TRowResult containing the current row and a map of the columns to TCells.
+<p/>
+@throws IllegalArgument if ScannerID is invalid
+<p/>
+@throws NotFound when the scanner reaches the end
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>id</td><td>id of a scanner returned by scannerOpen
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerGetList">Function: Hbase.scannerGetList</h4>
+<pre><code>list&lt;<code><a href="Hbase.html#Struct_TRowResult">TRowResult</a></code>&gt;</code> scannerGetList(<code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> id,
+                                <code>i32</code> nbRows)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Returns, starting at the scanner's current row value nbRows worth of
+rows and advances to the next row in the table.  When there are no more
+rows in the table, or a key greater-than-or-equal-to the scanner's
+specified stopRow is reached,  an empty list is returned.
+<p/>
+@return a TRowResult containing the current row and a map of the columns to TCells.
+<p/>
+@throws IllegalArgument if ScannerID is invalid
+<p/>
+@throws NotFound when the scanner reaches the end
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>id</td><td>id of a scanner returned by scannerOpen
+</td></tr><tr><td>nbRows</td><td>number of results to return
+</td></tr></table><br/>
+</div><div class="definition"><h4 id="Fn_Hbase_scannerClose">Function: Hbase.scannerClose</h4>
+<pre><code>void</code> scannerClose(<code><a href="Hbase.html#Typedef_ScannerID">ScannerID</a></code> id)
+    throws <code><a href="Hbase.html#Struct_IOError">IOError</a></code>, <code><a href="Hbase.html#Struct_IllegalArgument">IllegalArgument</a></code>
+</pre>Closes the server-state associated with an open scanner.
+<p/>
+@throws IllegalArgument if ScannerID is invalid
+<br/><br/><b> Parameters</b><br/>
+<table><tr><th>Name</th><th>Description</th></tr>
+<tr><td>id</td><td>id of a scanner returned by scannerOpen
+</td></tr></table><br/>
+</div></body></html>

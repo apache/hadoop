@@ -334,6 +334,8 @@ Release 0.21.0 - Unreleased
    HBASE-2149  hbase.regionserver.global.memstore.lowerLimit is too low
    HBASE-2157  LATEST_TIMESTAMP not replaced by current timestamp in KeyValue
                (bulk loading)
+   HBASE-2153  Publish generated HTML documentation for Thrift on the website
+               (Lars Francke via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
