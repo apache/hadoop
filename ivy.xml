@@ -20,7 +20,7 @@
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
     <description>
-        Hadoop Core
+        HBase
     </description>
   </info>
   <configurations defaultconfmapping="default">
@@ -28,7 +28,7 @@
     <conf name="default" extends="master,runtime"/>
     <conf name="master" description="contains the artifact but no dependencies"/>
     <conf name="runtime" description="runtime but not the artifact"
-      extends="client,server,s3-server,kfs,mandatory,jetty,ftp"/>
+      extends="client,server,kfs,mandatory,ftp"/>
 
     <conf name="mandatory" description="contains the critical  dependencies"
       extends="commons-logging,log4j"/>
@@ -41,16 +41,11 @@
       extends="mandatory,httpclient"/>
     <conf name="server" description="server-side dependencies"
       extends="client"/>
-    <conf name="s3-client" description="dependencies for working with S3/EC2 infrastructure"
-      extends="client"/>
-    <conf name="s3-server" description="dependencies for running on S3/EC2 infrastructure"
-      extends="s3-client,server"/>
     <conf name="kfs" description="dependencies for KFS file system support"/>
     <conf name="ftp" description="dependencies for workign with FTP filesytems" 
               extends="mandatory"/>
-   <conf name="jetty" description="Jetty provides the in-VM HTTP daemon" extends="commons-logging"/>
 
-   <conf name="common" extends="runtime,mandatory,httpclient,ftp,jetty"
+   <conf name="common" extends="runtime,mandatory,httpclient,ftp"
           description="common artifacts"/>
     <!--Testing pulls in everything-->
    <conf name="test" extends="master" description="the classpath needed to run tests"/>
@@ -58,7 +53,7 @@
     <!--Private configurations. -->
 
     <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation"
-      extends="common,mandatory,jetty,lucene"/>
+      extends="common,mandatory,lucene"/>
 
     <conf name="releaseaudit" visibility="private"
   description="Artifacts required for releaseaudit target"/>
@@ -67,7 +62,7 @@
     <conf name="httpclient" visibility="private" extends="commons-logging"/>
     <conf name="log4j" visibility="private"/>
     <conf name="lucene" visibility="private"/>
-    <conf name="jdiff" visibility="private" extends="log4j,s3-client,jetty,server"/>
+    <conf name="jdiff" visibility="private" extends="log4j,server"/>
     <conf name="checkstyle" visibility="private"/>
 
   </configurations>
