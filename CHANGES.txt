@@ -89,6 +89,9 @@ Release 0.20.2 - Unreleased
 
     MAPREDUCE-433. Use more reliable counters in TestReduceFetch. (cdouglas)
 
+    HDFS-792. DFSClient 0.20.1 is incompatible with HDFS 0.20.2.
+    (Tod Lipcon via hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES

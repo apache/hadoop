@@ -29,6 +29,7 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -2396,17 +2397,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       public void run() {
 
         this.setName("ResponseProcessor for block " + block);
+        PipelineAck ack = new PipelineAck();
   
         while (!closed && clientRunning && !lastPacketInBlock) {
           // process responses from datanodes.
           try {
-            // verify seqno from datanode
-            long seqno = blockReplyStream.readLong();
-            LOG.debug("DFSClient received ack for seqno " + seqno);
-            if (seqno == -1) {
+            // read an ack from the pipeline
+            ack.readFields(blockReplyStream, targets.length);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("DFSClient " + ack);
+            }
+            long seqno = ack.getSeqno();
+            if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
               continue;
             } else if (seqno == -2) {
-              // no nothing
+              // This signifies that some pipeline node failed to read downstream
+              // and therefore has no idea what sequence number the message corresponds
+              // to. So, we don't try to match it up with an ack.
+              assert ! ack.isSuccess();
             } else {
               Packet one = null;
               synchronized (ackQueue) {
@@ -2422,7 +2430,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
             // processes response status from all datanodes.
             for (int i = 0; i < targets.length && clientRunning; i++) {
-              short reply = blockReplyStream.readShort();
+              short reply = ack.getReply(i);
               if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
                 errorIndex = i; // first bad datanode
                 throw new IOException("Bad response " + reply +
