@@ -269,7 +269,9 @@
     <dependency org="org.apache.hadoop"
       name="avro"
       rev="${avro.version}"
-      conf="common->default"/>
+      conf="common->default">
+      <exclude module="slf4j-simple"/>
+    </dependency>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
       rev="${jackson.version}"

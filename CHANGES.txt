@@ -1289,6 +1289,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6374. JUnit tests should never depend on anything in conf.
     (Anatoli Fomenko via cos)
 
+    HADOOP-6290. Prevent duplicate slf4j-simple jar via Avro's classpath.
+    (Owen O'Malley via cdouglas)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
