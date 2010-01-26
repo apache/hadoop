@@ -46,9 +46,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 52: adding concat() API
+   * 54: changed addBlock to include a list of excluded datanodes.
    */
-  public static final long versionID = 52L;
+  public static final long versionID = 54L;
   
   ///////////////////////////////////////
   // File contents
@@ -96,7 +96,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * or explicitly as a result of lease expiration.
    * <p>
    * Blocks have a maximum size.  Clients that intend to create
-   * multi-block files must also use {@link #addBlock(String, String, Block)}.
+   * multi-block files must also use {@link #addBlock(String, String, Block, DatanodeInfo[])}.
    *
    * @param src path of the file being created.
    * @param masked masked permission.
@@ -192,11 +192,16 @@ public interface ClientProtocol extends VersionedProtocol {
    * addBlock() also commits the previous block by reporting
    * to the name-node the actual generation stamp and the length
    * of the block that the client has transmitted to data-nodes.
-   * 
+   *
+   * @param src the file being created
+   * @param clientName the name of the client that adds the block
+   * @param previous  previous block
+   * @param excludedNodes a list of nodes that should not be
+   * allocated for the current block
    * @return LocatedBlock allocated block information.
    */
   public LocatedBlock addBlock(String src, String clientName,
-                               Block previous) throws IOException;
+      Block previous, DatanodeInfo[] excludedNodes) throws IOException;
 
   /**
    * The client is done writing data to the given filename, and would 

@@ -97,6 +97,10 @@ Trunk (unreleased changes)
     HDFS-877. Client-driven block verification not functioning. (Todd
     Lipcon via hairong)
 
+    HDFS-630. In DFSOutputStream.nextBlockOutputStream(), the client can
+              exclude specific datanodes when locating the next block.
+              (Cosmin Lehene via Stack)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

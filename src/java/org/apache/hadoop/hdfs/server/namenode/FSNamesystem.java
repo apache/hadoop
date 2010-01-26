@@ -41,6 +41,7 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -1304,9 +1305,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * are replicated.  Will return an empty 2-elt array if we want the
    * client to "try again later".
    */
-  public LocatedBlock getAdditionalBlock(String src, 
+  public LocatedBlock getAdditionalBlock(String src,
                                          String clientName,
-                                         Block previous
+                                         Block previous,
+                                         HashMap<Node, Node> excludedNodes
                                          ) throws IOException {
     long fileLength, blockSize;
     int replication;
@@ -1343,7 +1345,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
     // choose targets for the new block to be allocated.
     DatanodeDescriptor targets[] = blockManager.replicator.chooseTarget(
-        src, replication, clientNode, blockSize);
+        src, replication, clientNode, excludedNodes, blockSize);
     if (targets.length < blockManager.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
