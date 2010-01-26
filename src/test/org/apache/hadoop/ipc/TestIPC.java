@@ -26,6 +26,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 
 import java.util.Random;
+import java.io.DataInput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -88,7 +89,7 @@ public class TestIPC extends TestCase {
         try {
           LongWritable param = new LongWritable(RANDOM.nextLong());
           LongWritable value =
-            (LongWritable)client.call(param, server);
+            (LongWritable)client.call(param, server, null, null);
           if (!param.equals(value)) {
             LOG.fatal("Call failed!");
             failed = true;
@@ -121,7 +122,7 @@ public class TestIPC extends TestCase {
           Writable[] params = new Writable[addresses.length];
           for (int j = 0; j < addresses.length; j++)
             params[j] = new LongWritable(RANDOM.nextLong());
-          Writable[] values = client.call(params, addresses);
+          Writable[] values = client.call(params, addresses, null, null);
           for (int j = 0; j < addresses.length; j++) {
             if (!params[j].equals(values[j])) {
               LOG.fatal("Call failed!");
@@ -216,7 +217,7 @@ public class TestIPC extends TestCase {
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
       client.call(new LongWritable(RANDOM.nextLong()),
-              address);
+              address, null, null);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       String message = e.getMessage();
@@ -231,6 +232,41 @@ public class TestIPC extends TestCase {
     }
   }
 
+  private static class LongErrorWritable extends LongWritable {
+    private final static String ERR_MSG =
+      "Come across an exception while reading";
+
+    LongErrorWritable() {}
+
+    LongErrorWritable(long longValue) {
+      super(longValue);
+    }
+
+    public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
+      throw new IOException(ERR_MSG);
+    }
+  }
+
+  public void testErrorClient() throws Exception {
+    // start server
+    Server server = new TestServer(1, false);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    // start client
+    Client client = new Client(LongErrorWritable.class, conf);
+    try {
+      client.call(new LongErrorWritable(RANDOM.nextLong()),
+          addr, null, null);
+      fail("Expected an exception to have been thrown");
+    } catch (IOException e) {
+      // check error
+      Throwable cause = e.getCause();
+      assertTrue(cause instanceof IOException);
+      assertEquals(LongErrorWritable.ERR_MSG, cause.getMessage());
+    }
+  }
 
   public static void main(String[] args) throws Exception {
 

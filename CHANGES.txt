@@ -92,6 +92,9 @@ Release 0.20.2 - Unreleased
     HDFS-792. DFSClient 0.20.1 is incompatible with HDFS 0.20.2.
     (Tod Lipcon via hairong)
 
+    HADOOP-6498. IPC client bug may cause rpc call hang. (Ruyue Ma and
+    hairong via hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
