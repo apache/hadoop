@@ -42,6 +42,10 @@ Trunk (unreleased changes)
     COMPLETE state in response to getAdditionalBlock or completeFileInternal.
     (hairong)
 
+    HDFS-899. Delegation Token Implementation
+     and corresponding changes in Namenode and DFS Api to issue, 
+    renew and cancel delegation tokens. (jnp via boryas)
+
   OPTIMIZATIONS
 
   BUG FIXES

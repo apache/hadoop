@@ -31,11 +31,15 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.*;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 import junit.framework.TestCase;
 
@@ -185,6 +189,22 @@ public class TestDFSClientRetries extends TestCase {
 
     public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
 
+    public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
+        throws IOException {
+      return null;
+    }
+    
+    public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+        throws InvalidToken, IOException {
+      return false;
+    }
+
+    public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+        throws IOException {
+      return false;
+    }
+    
+    
     @Deprecated
     public boolean rename(String src, String dst) throws IOException { return false; }
     
