@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -164,6 +165,10 @@ public class JobConf extends Configuration {
 
   static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
     JobContext.REDUCE_MEMORY_MB;
+
+  /** Pattern for the default unpacking behavior for job jars */
+  public static final Pattern UNPACK_JAR_PATTERN_DEFAULT =
+    Pattern.compile("(?:classes/|lib/).*");
 
   /**
    * Configuration key to set the java command line options for the child
@@ -418,6 +423,14 @@ public class JobConf extends Configuration {
    * @param jar the user jar for the map-reduce job.
    */
   public void setJar(String jar) { set(JobContext.JAR, jar); }
+
+  /**
+   * Get the pattern for jar contents to unpack on the tasktracker
+   */
+  public Pattern getJarUnpackPattern() {
+    return getPattern(JobContext.JAR_UNPACK_PATTERN, UNPACK_JAR_PATTERN_DEFAULT);
+  }
+
   
   /**
    * Set the job's jar file by finding an example class location.
@@ -435,6 +448,11 @@ public class JobConf extends Configuration {
     return getStrings(MRConfig.LOCAL_DIR);
   }
 
+  /**
+   * Use MRAsyncDiskService.moveAndDeleteAllVolumes instead.
+   * @see org.apache.hadoop.mapreduce.util.MRAsyncDiskService#cleanupAllVolumes()
+   */
+  @Deprecated
   public void deleteLocalFiles() throws IOException {
     String[] localDirs = getLocalDirs();
     for (int i = 0; i < localDirs.length; i++) {

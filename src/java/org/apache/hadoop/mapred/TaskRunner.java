@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.TaskController.InitializationContext;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
@@ -92,6 +91,8 @@ abstract class TaskRunner extends Thread {
   public Task getTask() { return t; }
   public TaskTracker.TaskInProgress getTaskInProgress() { return tip; }
   public TaskTracker getTracker() { return tracker; }
+
+  public JvmManager getJvmManager() { return jvmManager; }
 
   /** Called to assemble this task's input.  This method is run in the parent
    * process before the child is spawned.  It should not execute user code,
@@ -172,17 +173,13 @@ abstract class TaskRunner extends Thread {
       taskDistributedCacheManager = tracker.getTrackerDistributedCacheManager()
           .newTaskDistributedCacheManager(conf);
       taskDistributedCacheManager.setup(lDirAlloc, workDir, TaskTracker
-          .getDistributedCacheDir(conf.getUser()));
+          .getPrivateDistributedCacheDir(conf.getUser()), 
+          TaskTracker.getPublicDistributedCacheDir());
 
       // Set up the child task's configuration. After this call, no localization
       // of files should happen in the TaskTracker's process space. Any changes to
       // the conf object after this will NOT be reflected to the child.
       setupChildTaskConfiguration(lDirAlloc);
-
-      InitializationContext context = new InitializationContext();
-      context.user = conf.getUser();
-      context.workDir = new File(conf.get(TaskTracker.JOB_LOCAL_DIR));
-      tracker.getTaskController().initializeDistributedCache(context);
 
       if (!prepare()) {
         return;
@@ -521,7 +518,7 @@ abstract class TaskRunner extends Thread {
     }
     hadoopClientOpts = hadoopClientOpts + "-Dhadoop.tasklog.taskid=" + taskid
                        + " -Dhadoop.tasklog.totalLogFileSize=" + logSize;
-    env.put("HADOOP_CLIENT_OPTS", "\"" + hadoopClientOpts + "\"");
+    env.put("HADOOP_CLIENT_OPTS", hadoopClientOpts);
 
     // add the env variables passed by the user
     String mapredChildEnv = getChildEnv(conf);
@@ -647,7 +644,40 @@ abstract class TaskRunner extends Thread {
       }
     }
     classPaths.add(new File(jobCacheDir, "classes").toString());
-    classPaths.add(jobCacheDir.toString());
+    classPaths.add(new File(jobCacheDir, "job.jar").toString());
+  }
+  
+  /**
+   * Sets permissions recursively and then deletes the contents of dir.
+   * Makes dir empty directory(does not delete dir itself).
+   */
+  static void deleteDirContents(JobConf conf, File dir) throws IOException {
+    FileSystem fs = FileSystem.getLocal(conf);
+    if (fs.exists(new Path(dir.getAbsolutePath()))) {
+      File contents[] = dir.listFiles();
+      if (contents != null) {
+        for (int i = 0; i < contents.length; i++) {
+          try {
+            int ret = 0;
+            if ((ret = FileUtil.chmod(contents[i].getAbsolutePath(),
+                                      "ug+rwx", true)) != 0) {
+              LOG.warn("Unable to chmod for " + contents[i] + 
+                  "; chmod exit status = " + ret);
+            }
+          } catch(InterruptedException e) {
+            LOG.warn("Interrupted while setting permissions for contents of " +
+                "workDir. Not deleting the remaining contents of workDir.");
+            return;
+          }
+          if (!fs.delete(new Path(contents[i].getAbsolutePath()), true)) {
+            LOG.warn("Unable to delete "+ contents[i]);
+          }
+        }
+      }
+    }
+    else {
+      LOG.warn(dir + " does not exist.");
+    }
   }
   
   /**
@@ -660,11 +690,14 @@ abstract class TaskRunner extends Thread {
    * @param workDir Working directory, which is completely deleted.
    */
   public static void setupWorkDir(JobConf conf, File workDir) throws IOException {
-    LOG.debug("Fully deleting and re-creating" + workDir);
-    FileUtil.fullyDelete(workDir);
-    if (!workDir.mkdir()) {
-      LOG.debug("Did not recreate " + workDir);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Fully deleting contents of " + workDir);
     }
+
+    /** delete only the contents of workDir leaving the directory empty. We
+     * can't delete the workDir as it is the current working directory.
+     */
+    deleteDirContents(conf, workDir);
     
     if (DistributedCache.getSymlink(conf)) {
       URI[] archives = DistributedCache.getCacheArchives(conf);

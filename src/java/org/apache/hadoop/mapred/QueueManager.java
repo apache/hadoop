@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.TaskScheduler.QueueRefresher;
 import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.SecurityUtil.AccessControlList;
@@ -31,6 +32,8 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -87,6 +90,7 @@ class QueueManager {
   private Map<String, Queue> leafQueues = new HashMap<String,Queue>();
   private Map<String, Queue> allQueues = new HashMap<String, Queue>();
   static final String QUEUE_CONF_FILE_NAME = "mapred-queues.xml";
+  static final String QUEUE_CONF_DEFAULT_FILE_NAME = "mapred-queues-default.xml";
 
   // Prefix in configuration for queue related keys
   static final String QUEUE_CONF_PROPERTY_NAME_PREFIX
@@ -120,10 +124,24 @@ class QueueManager {
       }
       return new DeprecatedQueueConfigurationParser(conf);
     } else {
-      URL filePath =
+      URL xmlInUrl =
         Thread.currentThread().getContextClassLoader()
           .getResource(QUEUE_CONF_FILE_NAME);
-      return new QueueConfigurationParser(filePath.getPath());
+      if (xmlInUrl == null) {
+        xmlInUrl = Thread.currentThread().getContextClassLoader()
+          .getResource(QUEUE_CONF_DEFAULT_FILE_NAME);
+        assert xmlInUrl != null; // this should be in our jar
+      }
+      InputStream stream = null;
+      try {
+        stream = xmlInUrl.openStream();
+        return new QueueConfigurationParser(new BufferedInputStream(stream));
+      } catch (IOException ioe) {
+        throw new RuntimeException("Couldn't open queue configuration at " +
+                                   xmlInUrl, ioe);
+      } finally {
+        IOUtils.closeStream(stream);
+      }
     }
   }
 

@@ -27,9 +27,14 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 
+import javax.crypto.SecretKey;
+
 import org.apache.hadoop.http.HttpServer;
-import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +45,7 @@ public class TestShuffleJobToken {
   private static URL baseUrl;
   private static File dir;
   private static final String JOB_ID = "job_20091117075357176_0001";
+  private static final String BAD_JOB_ID = "job_20091117075357176_0002";
   
   // create fake url
   private URL getMapOutputURL(String host)  throws MalformedURLException {
@@ -86,25 +92,26 @@ public class TestShuffleJobToken {
     URL url = getMapOutputURL(baseUrl.toString());
     String enc_str = SecureShuffleUtils.buildMsgFrom(url);
     URLConnection connectionGood = url.openConnection();
-
-    // create key 
-    byte [] key= SecureShuffleUtils.getNewEncodedKey();
     
-    // create fake TaskTracker - needed for keys storage
-    JobTokens jt = new JobTokens();
-    jt.setShuffleJobToken(key);
     TaskTracker tt  = new TaskTracker();
+    JobTokenSecretManager jtSecretManager = new JobTokenSecretManager();
+    // create fake TaskTracker - needed for keys storage
+    JobTokenIdentifier identifier = new JobTokenIdentifier(new Text(JOB_ID));
+    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>(identifier,
+        jtSecretManager);
+    SecretKey tokenSecret = JobTokenSecretManager.createSecretKey(jt.getPassword());
     addJobToken(tt, JOB_ID, jt); // fake id
     server.setAttribute("task.tracker", tt);
 
     // encode the url
-    SecureShuffleUtils mac = new SecureShuffleUtils(key);
-    String urlHashGood = mac.generateHash(enc_str.getBytes()); // valid hash
+    String urlHashGood = SecureShuffleUtils.generateHash(enc_str.getBytes(), tokenSecret); // valid hash
     
     // another the key
-    byte [] badKey= SecureShuffleUtils.getNewEncodedKey();
-    mac = new SecureShuffleUtils(badKey);
-    String urlHashBad = mac.generateHash(enc_str.getBytes()); // invalid hash 
+    JobTokenIdentifier badIdentifier = new JobTokenIdentifier(new Text(BAD_JOB_ID));
+    Token<JobTokenIdentifier> badToken = new Token<JobTokenIdentifier>(badIdentifier,
+        jtSecretManager);
+    SecretKey badSecret = JobTokenSecretManager.createSecretKey(badToken.getPassword());
+    String urlHashBad = SecureShuffleUtils.generateHash(enc_str.getBytes(), badSecret); // invalid hash 
     
     // put url hash into http header
     connectionGood.addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, urlHashGood);
@@ -135,13 +142,13 @@ public class TestShuffleJobToken {
     } 
   }
   /*Note that this method is there for a unit testcase (TestShuffleJobToken)*/
-  void addJobToken(TaskTracker tt, String jobIdStr, JobTokens jt) {
+  void addJobToken(TaskTracker tt, String jobIdStr, Token<JobTokenIdentifier> token) {
     JobID jobId = JobID.forName(jobIdStr);
     TaskTracker.RunningJob rJob = new TaskTracker.RunningJob(jobId);
-    rJob.jobTokens = jt;
     synchronized (tt.runningJobs) {
       tt.runningJobs.put(jobId, rJob);
     }
+    tt.getJobTokenSecretManager().addTokenForJob(jobIdStr, token);
   }
 
 }

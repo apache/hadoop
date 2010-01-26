@@ -87,7 +87,7 @@ public class ConnFactory {
    * @return a ConnManager instance for the appropriate database
    * @throws IOException if it cannot find a ConnManager for this schema
    */
-  public ConnManager getManager(ImportOptions opts) throws IOException {
+  public ConnManager getManager(SqoopOptions opts) throws IOException {
     // Try all the available manager factories.
     for (ManagerFactory factory : factories) {
       LOG.debug("Trying ManagerFactory: " + factory.getClass().getName());

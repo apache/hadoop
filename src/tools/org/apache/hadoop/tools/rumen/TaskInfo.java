@@ -24,7 +24,8 @@ public class TaskInfo {
   private final int recsOut;
   private final long maxMemory;
 
-  public TaskInfo(long bytesIn, int recsIn, long bytesOut, int recsOut, int maxMemory) {
+  public TaskInfo(long bytesIn, int recsIn, long bytesOut, int recsOut,
+      long maxMemory) {
     this.bytesIn = bytesIn;
     this.recsIn = recsIn;
     this.bytesOut = bytesOut;

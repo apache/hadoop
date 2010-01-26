@@ -33,6 +33,7 @@
 
     <conf name="common" visibility="private" 
       description="artifacts needed to compile/test the application"/>
+    <conf name="test" visibility="private" extends="runtime"/>
   </configurations>
 
   <publications>

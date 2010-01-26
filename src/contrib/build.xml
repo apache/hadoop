@@ -59,9 +59,16 @@
       <fileset dir="." includes="gridmix/build.xml"/>
       <fileset dir="." includes="vertica/build.xml"/>
       <fileset dir="." includes="mumak/build.xml"/>
+      <fileset dir="." includes="raid/build.xml"/>
     </subant>
     <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>
+  </target>
+
+  <target name="docs">
+    <subant target="docs">
+      <fileset dir="." includes="capacity-scheduler/build.xml"/> 
+    </subant>
   </target>
 
   <!-- ====================================================== -->

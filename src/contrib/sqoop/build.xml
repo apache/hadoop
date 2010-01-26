@@ -33,7 +33,8 @@ to call at top-level: ant deploy-contrib compile-core-test
   <!-- Override with our own version so we can enforce build dependencies -->
   <!-- on compile-mapred-test for MiniMRCluster, and MRUnit.              -->
   <!-- ================================================================== -->
-  <target name="compile-test" depends="compile-examples" if="test.available">
+  <target name="compile-test" depends="compile-examples, ivy-retrieve-test"
+      if="test.available">
     <echo message="Compiling ${name} dependencies" />
     <!-- need top-level compile-mapred-test for MiniMRCluster -->
     <subant target="compile-mapred-test">
@@ -132,8 +133,6 @@ to call at top-level: ant deploy-contrib compile-core-test
       <classpath>
         <path refid="test.classpath"/>
         <path refid="contrib-classpath"/>
-        <!-- tools.jar from Sun JDK also required to invoke javac. -->
-        <pathelement path="${env.JAVA_HOME}/lib/tools.jar" />
         <!-- need thirdparty JDBC drivers for thirdparty tests -->
         <fileset dir="${sqoop.thirdparty.lib.dir}"
             includes="*.jar" />

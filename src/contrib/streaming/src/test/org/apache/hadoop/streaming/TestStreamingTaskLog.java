@@ -28,13 +28,15 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
 import org.apache.hadoop.util.Shell;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 
 /**
  * This tests the environment set by TT for the child of task jvm.
  * This will launch a streaming job with a shell script as mapper.
  */
-public class TestStreamingTaskLog extends TestCase {
+public class TestStreamingTaskLog {
   String input = "the dummy input";
   Path inputPath = new Path("inDir");
   Path outputPath = new Path("outDir");
@@ -65,6 +67,7 @@ public class TestStreamingTaskLog extends TestCase {
    *  (b) hadoop.tasklog.totalLogFileSize
    * for the children of java tasks in streaming jobs.
    */
+  @Test
   public void testStreamingTaskLogWithHadoopCmd() {
     try {
       final int numSlaves = 1;

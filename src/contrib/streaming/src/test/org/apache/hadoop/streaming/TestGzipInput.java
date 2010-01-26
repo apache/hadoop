@@ -30,13 +30,13 @@ public class TestGzipInput extends TestStreaming
 {
 
   public TestGzipInput() throws IOException {
-    INPUT_FILE = new File("input.txt.gz");
+    INPUT_FILE = new File(TEST_DIR, "input.txt.gz");
   }
   
   protected void createInput() throws IOException
   {
     GZIPOutputStream out = new GZIPOutputStream(
-                                                new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
+      new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
     out.write(input.getBytes("UTF-8"));
     out.close();
   }

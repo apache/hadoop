@@ -46,6 +46,7 @@ public class Cluster {
   private Configuration conf;
   private FileSystem fs = null;
   private Path sysDir = null;
+  private Path stagingAreaDir = null;
   private Path jobHistoryDir = null;
 
   static {
@@ -76,6 +77,7 @@ public class Cluster {
     ClientProtocol client;
     String tracker = conf.get("mapred.job.tracker", "local");
     if ("local".equals(tracker)) {
+      conf.setInt("mapreduce.job.maps", 1);
       client = new LocalJobRunner(conf);
     } else {
       client = createRPCProxy(JobTracker.getAddress(conf), conf);
@@ -221,6 +223,19 @@ public class Cluster {
       sysDir = new Path(client.getSystemDir());
     }
     return sysDir;
+  }
+  
+  /**
+   * Grab the jobtracker's view of the staging directory path where 
+   * job-specific files will  be placed.
+   * 
+   * @return the staging directory where job-specific files are to be placed.
+   */
+  public Path getStagingAreaDir() throws IOException, InterruptedException {
+    if (stagingAreaDir == null) {
+      stagingAreaDir = new Path(client.getStagingAreaDir());
+    }
+    return stagingAreaDir;
   }
 
   /**

@@ -19,26 +19,24 @@
 package org.apache.hadoop.sqoop.util;
 
 /**
- * General error during import process.
- *
- * 
+ * General error during export process.
  */
 @SuppressWarnings("serial")
-public class ImportError extends Exception {
+public class ExportException extends Exception {
 
-  public ImportError() {
-    super("ImportError");
+  public ExportException() {
+    super("ExportException");
   }
 
-  public ImportError(final String message) {
+  public ExportException(final String message) {
     super(message);
   }
 
-  public ImportError(final Throwable cause) {
+  public ExportException(final Throwable cause) {
     super(cause);
   }
 
-  public ImportError(final String message, final Throwable cause) {
+  public ExportException(final String message, final Throwable cause) {
     super(message, cause);
   }
 }

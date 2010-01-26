@@ -34,8 +34,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.apache.hadoop.sqoop.ImportOptions;
-import org.apache.hadoop.sqoop.ImportOptions.InvalidOptionsException;
+import org.apache.hadoop.sqoop.SqoopOptions;
+import org.apache.hadoop.sqoop.SqoopOptions.InvalidOptionsException;
 import org.apache.hadoop.sqoop.mapred.RawKeyTextOutputFormat;
 import org.apache.hadoop.sqoop.orm.CompilationManager;
 import org.apache.hadoop.sqoop.testutil.CommonArgs;
@@ -99,7 +99,7 @@ public class TestParseMethods extends ImportJobTestCase {
         encloseRequired);
     runImport(argv);
     try {
-      ImportOptions opts = new ImportOptions();
+      SqoopOptions opts = new SqoopOptions();
 
       String tableClassName = getTableName();
 

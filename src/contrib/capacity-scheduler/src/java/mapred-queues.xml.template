@@ -1,0 +1,164 @@
+<?xml version="1.0"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!--
+     This is the template for queue configuration when the configured
+     scheduler to use is capacity-scheduler
+     (org.apache.hadoop.mapred.CapacityTaskScheduler). To use this,
+     copy this file into conf directory renaming it to mapred-queues.xml.
+-->
+<queues aclsEnabled="false">
+  <queue>
+
+    <name>default</name>
+
+    <state>running</state>
+
+    <acl-submit-job>*</acl-submit-job>
+    <acl-administer-jobs>*</acl-administer-jobs>
+
+    <properties>
+
+      <property key="capacity" value="100">
+		<!--
+        <description>
+        For a root-level container queue, this is the percentage of the
+      	number of slots in the cluster that will be available for all its
+      	immediate children together. For a root-level leaf-queue, this is
+      	the percentage of the number of slots in the cluster that will be
+      	available for all its jobs.	For a non-root level container queue,
+      	this is the percentage of the number of slots in its parent queue
+      	that will be available for all its	children together. For a
+      	non-root-level leaf queue, this	is the percentage of the number of
+      	slots in its parent queue that will be available for jobs in this
+      	queue. The sum of capacities for all children of a container queue
+      	should be less than or equal 100. The sum of capacities of all the
+      	root-level queues should be less than or equal to 100.
+
+          This property can be refreshed.
+        </description>
+        -->    
+      </property>
+
+      <property key="maximum-capacity" value="-1">
+        <!--
+        <description>
+          A limit in percentage beyond which a non-root-level queue cannot use
+          the capacity of its parent queue; for a root-level queue, this is
+          the limit in percentage beyond which it cannot use the
+          cluster-capacity. This property provides a means to limit how much
+          excess capacity a queue can use.  It can be used to prevent queues
+          with long running jobs from occupying more than a certain percentage
+          of the parent-queue or the cluster, which, in the absence of
+          pre-emption, can lead to capacity guarantees of other queues getting
+          affected.
+
+          The maximum-capacity of a queue can only be greater than or equal to
+          its capacity. By default, there is no limit for a queue. For a
+          non-root-level queue this means it can occupy till the
+          maximum-capacity of its parent, for a root-level queue, it means that
+          it can occupy the whole cluster. A value of 100 implies that a queue
+          can use the complete capacity of its parent, or the complete
+          cluster-capacity in case of root-level-queues.
+
+          This property can be refreshed.
+        </description>
+        -->
+      </property>
+
+      <property key="supports-priority" value="false">
+        <!--
+        <description>This is only applicable to leaf queues. If true,
+          priorities of jobs will be taken into account in scheduling
+          decisions.
+
+          This property CANNOT be refreshed.
+        </description>
+        -->
+      </property>
+
+      <property key="minimum-user-limit-percent" value="100">
+        <!--
+        <description>This is only applicable to leaf queues. Each queue
+        enforces a limit on the percentage of resources allocated to a user at
+        any given time, if there is competition for them. This user limit can
+        vary between a minimum and maximum value. The former depends on the
+        number of users who have submitted jobs, and the latter is set to this
+        property value. For example, suppose the value of this property is 25.
+        If two users have submitted jobs to a queue, no single user can use
+        more than 50% of the queue resources. If a third user submits a job,
+        no single user can use more than 33% of the queue resources. With 4 
+        or more users, no user can use more than 25% of the queue's resources.
+        A value of 100 implies no user limits are imposed.
+
+        This property can be refreshed.
+        </description>
+        -->
+      </property>
+
+      <property key="maximum-initialized-jobs-per-user" value="2">
+      <!--
+        <description>This is only applicable to leaf queues. The maximum number
+        of jobs to be pre-initialized for a user of the job queue.
+
+        This property can be refreshed.
+        </description>
+      -->
+      </property>
+
+    </properties>
+  </queue>
+
+  <!-- Here is a sample of a hierarchical queue configuration
+       where q2 and q3 are children of q1 sharing the capacity
+       of q1. In this example, q2 and q3 are leaf level
+       queues as it has no queues configured within it. Currently, ACLs
+       and state are only supported for the leaf level queues.
+  <queue>
+    <name>q1</name>
+    <properties>
+      <property key="capacity" value="100"/>
+    </properties>
+    <queue>
+      <name>q2</name>
+      <state>stopped</state>
+      <acl-submit-job>*</acl-submit-job>
+      <acl-administer-jobs>*</acl-administer-jobs>
+      <properties>
+        <property key="capacity" value="50"/>
+        <property key="maximum-capacity" value="60"/>
+        <property key="supports-priority" value="false"/>
+        <property key="minimum-user-limit-percent" value="100"/>
+        <property key="maximum-initialized-jobs-per-user" value="2"/>
+      </properties>
+    </queue>
+    <queue>
+      <name>q3</name>
+      <state>stopped</state>
+      <acl-submit-job>*</acl-submit-job>
+      <acl-administer-jobs>*</acl-administer-jobs>
+      <properties>
+        <property key="capacity" value="50"/>
+        <property key="maximum-capacity" value="-1"/>
+        <property key="supports-priority" value="false"/>
+        <property key="minimum-user-limit-percent" value="100"/>
+        <property key="maximum-initialized-jobs-per-user" value="2"/>
+      </properties>
+    </queue>
+  </queue>
+ -->
+</queues>

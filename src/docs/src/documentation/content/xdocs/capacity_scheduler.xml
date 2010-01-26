@@ -40,7 +40,8 @@
       <p>The Capacity Scheduler supports the following features:</p> 
       <ul>
         <li>
-          Multiple queues, where a job is submitted to a queue.
+          Multiple queues, possibly hierarchical/recursive, where a job is
+          submitted to a queue.
         </li>
         <li>
           Queues are allocated a fraction of the capacity of the grid in the 
@@ -72,10 +73,22 @@
           competition for them.  
         </li>
         <li>
+          Queues can use idle resources of other queues. In order to prevent
+          monopolizing of resources by particular queues, each queue can be
+          set a cap on the maximum number of resources it can expand to in
+          the presence of idle resources in other queues of the cluster.
+        </li>
+        <li>
           Support for memory-intensive jobs, wherein a job can optionally 
           specify higher memory-requirements than the default, and the tasks 
           of the job will only be run on TaskTrackers that have enough memory 
           to spare.
+        </li>
+        <li>
+          Support for refreshing/reloading some of the queue-properties
+          without restarting the JobTracker, taking advantage of the
+          <a href="cluster_setup.html#Refreshing+queue+configuration">
+          queue-refresh</a> feature in the framework.
         </li>
       </ul>
     </section>
@@ -144,54 +157,113 @@
       <section>
         <title>Setting Up Queues</title>
         <p>
-          You can define multiple queues to which users can submit jobs with
-          the Capacity Scheduler. To define multiple queues, you should edit
-          the site configuration for Hadoop and modify the
-          <em>mapreduce.jobtracker.taskscheduler.queue.names</em> property.
-        </p>
-        <p>
-          You can also configure ACLs for controlling which users or groups
-          have access to the queues.
-        </p>
-        <p>
-          For more details, see
-          <a href="http://hadoop.apache.org/common/docs/current/cluster_setup.html#Configuring+the+Hadoop+Daemons">Configuring the Hadoop Daemons</a>.
-        </p>
+          You can define multiple, possibly hierarchical queues to which users
+          can submit jobs with the Capacity Scheduler. To define queues,
+          various properties should be set in two configuration files -
+          <a href="cluster_setup.html#mapred-queues.xml">mapred-queues.xml</a>
+          and
+          <a href="ext:capacity-scheduler-conf">conf/capacity-scheduler.xml</a>
+          .</p>
+          <p><em>conf/capacity-scheduler.xml</em> can be used to configure (1)
+          job-initialization-poller related properties and (2) the
+          default values for various properties in the queues</p>
+          <p><em>conf/mapred-queues.xml</em> contains the actual queue
+          configuration including (1) framework specific properties like ACLs
+          for controlling which users or groups have access to the queues and
+          state of the queues and (2) the scheduler specific properties for
+          each queue. If any of these scheduler specific properties are
+          missing and not configured for a queue, then the properties in
+          <em>conf/capacity-scheduler.xml</em> are used to set default values.
+          More details about the properties that can be configured, and their
+          semantics is mentioned below. Also, a default template for 
+          mapred-queues.xml tailored for using with
+          Capacity-scheduler can be found
+          <a href="ext:mapred-queues-capacity-scheduler">here</a>.</p>
       </section>
   
       <section>
         <title>Configuring Properties for Queues</title>
 
         <p>The Capacity Scheduler can be configured with several properties
-        for each queue that control the behavior of the Scheduler. This
-        configuration is in the <em>conf/capacity-scheduler.xml</em>. By
+        for each queue that control the behavior of the Scheduler. As
+        described above, this scheduler specific configuration has to be in
+        the <em>conf/mapred-queues.xml</em> along with the rest of the
+        framework specific configuration. By
         default, the configuration is set up for one queue, named 
         <em>default</em>.</p>
-        <p>To specify a property for a queue that is defined in the site
-        configuration, you should use the property name as
-        <em>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.&lt;property-name&gt;</em>.
-        </p>
-        <p>For example, to define the property <em>capacity</em>
-        for queue named <em>research</em>, you should specify the property
-        name as 
-        <em>mapred.capacity-scheduler.queue.research.capacity</em>.
+        <p>To specify a property for a specific queue that is defined in the
+        mapred-queues.xml, you should set the corresponding property in a
+        &lt;property&gt; tag explained
+        <a href="cluster_setup.html#property_tag">here</a>.
         </p>
 
         <p>The properties defined for queues and their descriptions are
         listed in the table below:</p>
 
         <table>
-          <tr><th>Name</th><th>Description</th></tr>
-          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-<br/>name&gt;.capacity</td>
-          	<td>Percentage of the number of slots in the cluster that are made 
-            to be available for jobs in this queue. The sum of capacities 
-            for all queues should be less than or equal 100.</td>
+          <tr>
+          	<th>Name</th>
+            <th>
+            	<a href="commands_manual.html#RefreshQueues">
+            	Refresh-able?</a>
+           	</th>
+            <th>Applicable to?</th>
+            <th>Description</th>
           </tr>
-          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-<br/>name&gt;.supports-priority</td>
+          <tr>
+          	<td>capacity</td>
+          	<td>Yes</td>
+          	<td>Container queues as well as leaf queues</td>
+          	<td>For a root-level container queue, this is the percentage of the
+          	number of slots in the cluster that will be available for all its
+          	immediate children together. For a root-level leaf-queue, this is
+          	the percentage of the number of slots in the cluster that will be
+          	available for all its jobs.	For a non-root level container queue,
+          	this is the percentage of the number of slots in its parent queue
+          	that will be available for all its	children together. For a
+          	non-root-level leaf queue, this	is the percentage of the number of
+          	slots in its parent queue that will be available for jobs in this
+          	queue. The sum of capacities for all children of a container queue
+          	should be less than or equal 100. The sum of capacities of all the
+          	root-level queues should be less than or equal to 100.
+            </td>
+          </tr>
+          <tr>
+            <td>maximum-capacity</td>
+            <td>Yes</td>
+          	<td>Container queues as well as leaf queues</td>
+            <td>
+	          A limit in percentage beyond which a non-root-level queue cannot use
+	          the capacity of its parent queue; for a root-level queue, this is
+	          the limit in percentage beyond which it cannot use the
+	          cluster-capacity. This property provides a means to limit how much
+	          excess capacity a queue can use.  It can be used to prevent queues
+	          with long running jobs from occupying more than a certain percentage
+	          of the parent-queue or the cluster, which, in the absence of
+	          pre-emption, can lead to capacity guarantees of other queues getting
+	          affected.
+	
+	          The maximum-capacity of a queue can only be greater than or equal to
+	          its capacity. By default, there is no limit for a queue. For a
+	          non-root-level queue this means it can occupy till the
+	          maximum-capacity of its parent, for a root-level queue, it means that
+	          it can occupy the whole cluster. A value of 100 implies that a queue
+	          can use the complete capacity of its parent, or the complete
+	          cluster-capacity in case of root-level-queues.
+            </td>
+          </tr>
+          <tr>
+          	<td>supports-priority</td>
+          	<td>No</td>
+          	<td>Leaf queues only</td>
           	<td>If true, priorities of jobs will be taken into account in scheduling 
-          	decisions.</td>
+          	decisions.
+          	</td>
           </tr>
-          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-<br/>name&gt;.minimum-user-limit-percent</td>
+          <tr>
+          	<td>minimum-user-limit-percent</td>
+          	<td>Yes</td>
+          	<td>Leaf queues only</td>
           	<td>Each queue enforces a limit on the percentage of resources 
           	allocated to a user at any given time, if there is competition 
           	for them. This user limit can vary between a minimum and maximum 
@@ -202,9 +274,25 @@
           	of the queue resources. If a third user submits a job, no single 
           	user can use more than 33% of the queue resources. With 4 or more 
           	users, no user can use more than 25% of the queue's resources. A 
-          	value of 100 implies no user limits are imposed.</td>
+          	value of 100 implies no user limits are imposed.
+	        </td>
           </tr>
+          <tr>
+            <td>maximum-initialized-jobs-per-user</td>
+            <td>Yes</td>
+          	<td>Leaf queues only</td>
+            <td>
+              Maximum number of jobs which are allowed to be pre-initialized for
+              a particular user in the queue. Once a job is scheduled, i.e.
+              it starts running, then that job is not considered
+              while scheduler computes the maximum job a user is allowed to
+              initialize.
+            </td>
+          </tr>  
         </table>
+        <p>See  <a href="ext:mapred-queues-capacity-scheduler">
+        this configuration file</a> for a default configuration of queues in
+        capacity-scheduler.</p>
       </section>
       
       <section>
@@ -294,18 +382,6 @@
         
         <table>
           <tr><th>Name</th><th>Description</th></tr>
-          <tr>
-            <td>
-              mapred.capacity-scheduler.queue.&lt;queue-<br/>name&gt;.maximum-initialized-jobs-per-user
-            </td>
-            <td>
-              Maximum number of jobs which are allowed to be pre-initialized for
-              a particular user in the queue. Once a job is scheduled, i.e. 
-              it starts running, then that job is not considered
-              while scheduler computes the maximum job a user is allowed to
-              initialize. 
-            </td>
-          </tr>
           <tr>
             <td>
               mapred.capacity-scheduler.init-poll-interval

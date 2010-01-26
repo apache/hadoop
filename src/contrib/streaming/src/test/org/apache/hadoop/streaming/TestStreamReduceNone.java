@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.streaming;
 
-import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
@@ -26,13 +25,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
+import static org.junit.Assert.*;
+import org.junit.Test;
+
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
  * It tests the case where number of reducers is set to 0.
    In this case, the mappers are expected to write out outputs directly.
    No reducer/combiner will be activated.
  */
-public class TestStreamReduceNone extends TestCase
+public class TestStreamReduceNone
 {
   protected File INPUT_FILE = new File("stream_reduce_none_input.txt");
   protected File OUTPUT_DIR = new File("stream_reduce_none_out");
@@ -69,8 +71,9 @@ public class TestStreamReduceNone extends TestCase
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }
-  
-  public void testCommandLine()
+
+  @Test
+  public void testCommandLine() throws Exception
   {
     String outFileName = "part-00000";
     File outFile = null;
@@ -92,23 +95,10 @@ public class TestStreamReduceNone extends TestCase
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
-    } catch(Exception e) {
-      failTrace(e);
     } finally {
-      try {
-        INPUT_FILE.delete();
-        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
-      } catch (IOException e) {
-        failTrace(e);
-      }
+      INPUT_FILE.delete();
+      FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
     }
-  }
-
-  private void failTrace(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
   }
 
   public static void main(String[]args) throws Exception

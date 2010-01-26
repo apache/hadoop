@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.streaming;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +58,7 @@ public class TestStreamingFailure extends TestStreaming
     };
   }
 
+  @Test
   public void testCommandLine()
   {
     try {

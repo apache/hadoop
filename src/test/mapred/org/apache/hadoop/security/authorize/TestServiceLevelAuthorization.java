@@ -58,7 +58,10 @@ public class TestServiceLevelAuthorization extends TestCase {
       JobConf mrConf = new JobConf(conf);
       mr = new MiniMRCluster(slaves, fileSys.getUri().toString(), 1, 
                              null, null, mrConf);
-
+      // make cleanup inline sothat validation of existence of these directories
+      // can be done
+      mr.setInlineCleanupThreads();
+      
       // Run examples
       TestMiniMRWithDFS.runPI(mr, mr.createJobConf(mrConf));
       TestMiniMRWithDFS.runWordCount(mr, mr.createJobConf(mrConf));

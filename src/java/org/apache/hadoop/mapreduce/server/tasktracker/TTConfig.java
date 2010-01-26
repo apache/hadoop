@@ -67,8 +67,14 @@ public interface TTConfig extends MRConfig {
     "mapreduce.tasktracker.instrumentation";
   public static final String TT_MAP_SLOTS = 
     "mapreduce.tasktracker.map.tasks.maximum";
+  /**
+   * @deprecated Use {@link #TT_RESOURCE_CALCULATOR_PLUGIN} instead
+   */
+  @Deprecated
   public static final String TT_MEMORY_CALCULATOR_PLUGIN = 
     "mapreduce.tasktracker.memorycalculatorplugin";
+  public static final String TT_RESOURCE_CALCULATOR_PLUGIN = 
+    "mapreduce.tasktracker.resourcecalculatorplugin";
   public static final String TT_REDUCE_SLOTS = 
     "mapreduce.tasktracker.reduce.tasks.maximum";
   public static final String TT_MEMORY_MANAGER_MONITORING_INTERVAL = 

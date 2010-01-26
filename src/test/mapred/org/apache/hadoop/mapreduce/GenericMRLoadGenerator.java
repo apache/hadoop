@@ -150,13 +150,13 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
     } else if (null != conf.getClass(INDIRECT_INPUT_FORMAT, null)) {
       // specified IndirectInputFormat? Build src list
       JobClient jClient = new JobClient(conf);  
-      Path sysdir = jClient.getSystemDir();
+      Path tmpDir = new Path("/tmp");
       Random r = new Random();
-      Path indirInputFile = new Path(sysdir,
+      Path indirInputFile = new Path(tmpDir,
           Integer.toString(r.nextInt(Integer.MAX_VALUE), 36) + "_files");
       conf.set(INDIRECT_INPUT_FILE, indirInputFile.toString());
       SequenceFile.Writer writer = SequenceFile.createWriter(
-          sysdir.getFileSystem(conf), conf, indirInputFile,
+          tmpDir.getFileSystem(conf), conf, indirInputFile,
           LongWritable.class, Text.class,
           SequenceFile.CompressionType.NONE);
       try {

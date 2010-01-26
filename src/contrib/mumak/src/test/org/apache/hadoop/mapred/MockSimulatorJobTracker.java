@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.QueueAclsInfo;
 import org.apache.hadoop.mapreduce.QueueInfo;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
@@ -43,6 +44,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.MapTaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.ReduceTaskAttemptInfo;
+import org.apache.hadoop.mapreduce.split.JobSplit.*;
 //
 // Mock jobtracker class that check heartbeat() in parameters and 
 // sends responses based on a prepopulated table
@@ -76,7 +78,8 @@ public class MockSimulatorJobTracker implements InterTrackerProtocol,
   }
 
   @Override
-  public JobStatus submitJob(JobID jobId) throws IOException {
+  public JobStatus submitJob(
+      JobID jobId, String jobSubmitDir, TokenStorage ts) throws IOException {
     JobStatus status = new JobStatus(jobId, 0.0f, 0.0f, 0.0f, 0.0f,
         JobStatus.State.RUNNING, JobPriority.NORMAL, "", "", "", "");
     return status;
@@ -172,8 +175,8 @@ public class MockSimulatorJobTracker implements InterTrackerProtocol,
     final int numSlotsRequired = 1;
     org.apache.hadoop.mapred.TaskAttemptID taskIdOldApi = 
         org.apache.hadoop.mapred.TaskAttemptID.downgrade(taskId);        
-    Task task = new MapTask("dummyjobfile", taskIdOldApi, 0, "dummysplitclass",
-                            null, numSlotsRequired);
+    Task task = new MapTask("dummyjobfile", taskIdOldApi, 0, new TaskSplitIndex(),
+                             numSlotsRequired);
     // all byte counters are 0
     TaskInfo taskInfo = new TaskInfo(0, 0, 0, 0, 0); 
     MapTaskAttemptInfo taskAttemptInfo = 
@@ -300,6 +303,11 @@ public class MockSimulatorJobTracker implements InterTrackerProtocol,
 
   @Override
   public String getSystemDir() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public String getStagingAreaDir() {
     throw new UnsupportedOperationException();
   }
   

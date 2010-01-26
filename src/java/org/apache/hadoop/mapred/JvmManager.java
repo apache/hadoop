@@ -30,11 +30,11 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.util.ProcessTree;
 
 class JvmManager {
@@ -136,6 +136,14 @@ class JvmManager {
     }
   }
 
+  void dumpStack(TaskRunner tr) {
+    if (tr.getTask().isMapTask()) {
+      mapJvmManager.dumpStack(tr);
+    } else {
+      reduceJvmManager.dumpStack(tr);
+    }
+  }
+
   public void killJvm(JVMId jvmId) {
     if (jvmId.isMap) {
       mapJvmManager.killJvm(jvmId);
@@ -143,6 +151,22 @@ class JvmManager {
       reduceJvmManager.killJvm(jvmId);
     }
   }  
+
+  /**
+   * Adds the task's work dir to the cleanup queue of taskTracker for
+   * asynchronous deletion of work dir.
+   * @param tracker taskTracker
+   * @param task    the task whose work dir needs to be deleted
+   * @throws IOException
+   */
+  static void deleteWorkDir(TaskTracker tracker, Task task) throws IOException {
+    tracker.getCleanupThread().addToQueue(
+        TaskTracker.buildTaskControllerPathDeletionContexts(
+          tracker.getLocalFileSystem(),
+          tracker.getLocalFiles(tracker.getJobConf(), ""),
+          task, true /* workDir */,
+          tracker.getTaskController()));
+  }
 
   private static class JvmManagerForType {
     //Mapping from the JVM IDs to running Tasks
@@ -243,6 +267,16 @@ class JvmManager {
       }
     }
     
+    synchronized void dumpStack(TaskRunner tr) {
+      JVMId jvmId = runningTaskToJvm.get(tr);
+      if (null != jvmId) {
+        JvmRunner jvmRunner = jvmIdToRunner.get(jvmId);
+        if (null != jvmRunner) {
+          jvmRunner.dumpChildStacks();
+        }
+      }
+    }
+
     synchronized public void stop() {
       //since the kill() method invoked later on would remove
       //an entry from the jvmIdToRunner map, we create a
@@ -428,7 +462,7 @@ class JvmManager {
             //task at the beginning of each task in the task JVM.
             //For the last task, we do it here.
             if (env.conf.getNumTasksToExecutePerJvm() != 1) {
-              FileUtil.fullyDelete(env.workDir);
+              deleteWorkDir(tracker, initalContext.task);
             }
           } catch (IOException ie){}
         }
@@ -459,7 +493,38 @@ class JvmManager {
           removeJvm(jvmId);
         }
       }
-      
+
+      /** Send a signal to the JVM requesting that it dump a stack trace,
+       * and wait for a timeout interval to give this signal time to be
+       * processed.
+       */
+      void dumpChildStacks() {
+        if (!killed) {
+          TaskController controller = tracker.getTaskController();
+          // Check inital context before issuing a signal to prevent situations
+          // where signal is issued before task is launched.
+          if (initalContext != null && initalContext.env != null) {
+            initalContext.pid = jvmIdToPid.get(jvmId);
+            initalContext.sleeptimeBeforeSigkill = tracker.getJobConf()
+                .getLong(TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL,
+                    ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+
+            // signal the task jvm
+            controller.dumpTaskStack(initalContext);
+
+            // We're going to kill the jvm with SIGKILL after this,
+            // so we should wait for a few seconds first to ensure that
+            // the SIGQUIT has time to be processed.
+            try {
+              Thread.sleep(initalContext.sleeptimeBeforeSigkill);
+            } catch (InterruptedException e) {
+              LOG.warn("Sleep interrupted : " +
+                  StringUtils.stringifyException(e));
+            }
+          }
+        }
+      }
+
       public void taskRan() {
         busy = false;
         numTasksRan++;

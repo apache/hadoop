@@ -37,6 +37,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskStatus;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.reduce.MapHost.State;
@@ -82,10 +83,12 @@ class ShuffleScheduler<K,V> {
   
   private int maxMapRuntime = 0;
   private int maxFailedUniqueFetches = 5;
+  private int maxFetchFailuresBeforeReporting;
   
   private long totalBytesShuffledTillNow = 0;
   private DecimalFormat  mbpsFormat = new DecimalFormat("0.00");
 
+  private boolean reportReadErrorImmediately = true;
   
   public ShuffleScheduler(JobConf job, TaskStatus status,
                           ExceptionReporter reporter,
@@ -108,6 +111,10 @@ class ShuffleScheduler<K,V> {
     referee.start();
     this.maxFailedUniqueFetches = Math.min(totalMaps,
         this.maxFailedUniqueFetches);
+    this.maxFetchFailuresBeforeReporting = job.getInt(
+        JobContext.SHUFFLE_FETCH_FAILURES, REPORT_FAILURE_LIMIT);
+    this.reportReadErrorImmediately = job.getBoolean(
+        JobContext.SHUFFLE_NOTIFY_READERROR, true);
   }
 
   public synchronized void copySucceeded(TaskAttemptID mapId, 
@@ -175,7 +182,6 @@ class ShuffleScheduler<K,V> {
       }
     }
     
-    // Notify the JobTracker after every 'reportFailureLimit' failures
     checkAndInformJobTracker(failures, mapId, readError);
 
     checkReducerHealth();
@@ -188,9 +194,14 @@ class ShuffleScheduler<K,V> {
     failedShuffleCounter.increment(1);
   }
   
+  // Notify the JobTracker  
+  // after every read error, if 'reportReadErrorImmediately' is true or
+  // after every 'maxFetchFailuresBeforeReporting' failures
   private void checkAndInformJobTracker(
       int failures, TaskAttemptID mapId, boolean readError) {
-    if (readError || ((failures % REPORT_FAILURE_LIMIT) == 0)) {
+    if ((reportReadErrorImmediately && readError)
+        || ((failures % maxFetchFailuresBeforeReporting) == 0)) {
+      LOG.info("Reporting fetch failure for " + mapId + " to jobtracker.");
       status.addFetchFailedMap((org.apache.hadoop.mapred.TaskAttemptID) mapId);
     }
   }

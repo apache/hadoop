@@ -36,7 +36,9 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * A simple wrapper for parsing JSON-encoded data using ObjectMapper.
- * @param <T> The (base) type of the object(s) to be parsed by this parser.
+ * 
+ * @param <T>
+ *          The (base) type of the object(s) to be parsed by this parser.
  */
 class JsonObjectMapperParser<T> implements Closeable {
   private final ObjectMapper mapper;
@@ -47,7 +49,7 @@ class JsonObjectMapperParser<T> implements Closeable {
   /**
    * Constructor.
    * 
-   * @param path 
+   * @param path
    *          Path to the JSON data file, possibly compressed.
    * @param conf
    * @throws IOException

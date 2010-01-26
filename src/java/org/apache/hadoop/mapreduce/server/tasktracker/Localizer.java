@@ -193,7 +193,7 @@ public class Localizer {
     synchronized (localizedUser) {
 
       if (localizedUser.get()) {
-        // User-directories are already localized for his user.
+        // User-directories are already localized for this user.
         LOG.info("User-directories for the user " + user
             + " are already initialized on this TT. Not doing anything.");
         return;
@@ -233,7 +233,7 @@ public class Localizer {
 
           // Set up the cache directory used for distributed cache files
           File distributedCacheDir =
-              new File(localDir, TaskTracker.getDistributedCacheDir(user));
+              new File(localDir, TaskTracker.getPrivateDistributedCacheDir(user));
           if (distributedCacheDir.exists() || distributedCacheDir.mkdirs()) {
             // Set permissions on the distcache-directory
             PermissionsHandler.setPermissions(distributedCacheDir,

@@ -29,7 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hsqldb.Server;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.manager.HsqldbManager;
 
@@ -226,13 +226,13 @@ public class HsqldbTestServer {
     populateData();
   }
 
-  public ImportOptions getImportOptions() {
-    return new ImportOptions(HsqldbTestServer.getUrl(),
+  public SqoopOptions getSqoopOptions() {
+    return new SqoopOptions(HsqldbTestServer.getUrl(),
         HsqldbTestServer.getTableName());
   }
 
   public ConnManager getManager() {
-    return new HsqldbManager(getImportOptions());
+    return new HsqldbManager(getSqoopOptions());
   }
 
 

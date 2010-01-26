@@ -250,6 +250,28 @@ public class TestQueueManager {
   }
 
   @Test
+  public void testMissingConfigFile() throws Exception {
+    checkForConfigFile(); // deletes file
+
+    try {
+      new QueueManager(CONFIG);
+      fail("Should throw an exception for missing file when " +
+           "explicitly passed.");
+    } catch (RuntimeException re) {
+    }
+
+    // If we just want to pick up the queues from the class loader
+    // it should fall through to the default. The class loader is set to
+    // load CONFIG for the "mapred-queues.xml" resource, but it's missing
+    // so should fall through to mapred-queues-default.xml
+    QueueManager qm = new QueueManager();
+    List<JobQueueInfo> rootQueues =
+      qm.getRoot().getJobQueueInfo().getChildren();
+    assertEquals(1, rootQueues.size());
+    assertEquals("default", rootQueues.get(0).getQueueName());
+  }
+
+  @Test
   public void testEmptyProperties() throws Exception {
     checkForConfigFile();
     Document doc = createDocument();

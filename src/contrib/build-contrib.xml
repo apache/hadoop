@@ -21,6 +21,8 @@
 
 <project name="hadoopbuildcontrib" xmlns:ivy="antlib:org.apache.ivy.ant">
 
+  <import file="../../build-utils.xml" />
+
   <property name="name" value="${ant.project.name}"/>
   <property name="root" value="${basedir}"/>
 
@@ -106,6 +108,7 @@
     <pathelement location="${hadoop.root}/build"/>
     <pathelement location="${build.examples}"/>
     <pathelement location="${hadoop.root}/build/examples"/>
+    <path refid="${ant.project.name}.test-classpath"/>
     <path refid="contrib-classpath"/>
   </path>
 
@@ -165,7 +168,7 @@
   <!-- ================================================================== -->
   <!-- Compile test code                                                  -->
   <!-- ================================================================== -->
-  <target name="compile-test" depends="compile-examples" if="test.available">
+  <target name="compile-test" depends="compile-examples, ivy-retrieve-test" if="test.available">
     <echo message="contrib: ${name}"/>
     <javac
      encoding="${build.encoding}"
@@ -214,6 +217,17 @@
         <include name="${dest.jar}" />
       </fileset>
     </copy>
+
+    <!-- copy the dependency libraries into the contrib/lib dir -->
+    <mkdir dir="${dist.dir}/contrib/${name}/lib"/>
+    <copy todir="${dist.dir}/contrib/${name}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${common.ivy.lib.dir}">
+        <!-- except for those already present due to Hadoop -->
+        <present present="srconly" targetdir="${dist.dir}/lib" />
+      </fileset>
+    </copy>
+    <!-- if the lib dir is empty, remove it. -->
+    <delete dir="${dist.dir}/contrib/${name}/lib" includeEmptyDirs="true" excludes="*.jar" />
   </target>
   
   <!-- ================================================================== -->
@@ -257,6 +271,10 @@
       </batchtest>
     </junit>
     <antcall target="checkfailure"/>
+  </target>
+
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+	<!-- Nothing by default -->
   </target>
 
   <target name="checkfailure" if="tests.failed">
@@ -314,5 +332,16 @@
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings" 
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
     <ivy:cachepath pathid="${ant.project.name}.common-classpath" conf="common" />
+  </target>
+
+  <target name="ivy-resolve-test" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test" />
+  </target>
+
+  <target name="ivy-retrieve-test" depends="ivy-resolve-test"
+    description="Retrieve Ivy-managed artifacts for the test configuration">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+    <ivy:cachepath pathid="${ant.project.name}.test-classpath" conf="test" />
   </target>
 </project>

@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
@@ -29,6 +31,8 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 
 /**
  * The default implementation for controlling tasks.
@@ -119,14 +123,14 @@ public class DefaultTaskController extends TaskController {
     if (shexec != null) {
       if (Shell.WINDOWS) {
         //We don't do send kill process signal in case of windows as 
-        //already we have done a process.destroy() in termintateTaskJVM()
+        //already we have done a process.destroy() in terminateTaskJVM()
         return;
       }
       String pid = context.pid;
       if (pid != null) {
         if(ProcessTree.isSetsidAvailable) {
           ProcessTree.killProcessGroup(pid);
-        }else {
+        } else {
           ProcessTree.killProcess(pid);
         }
       }
@@ -134,8 +138,37 @@ public class DefaultTaskController extends TaskController {
   }
 
   @Override
-  public void initializeDistributedCache(InitializationContext context) {
-    // Do nothing.
+  void dumpTaskStack(TaskControllerContext context) {
+    ShellCommandExecutor shexec = context.shExec;
+    if (shexec != null) {
+      if (Shell.WINDOWS) {
+        // We don't use signals in Windows.
+        return;
+      }
+      String pid = context.pid;
+      if (pid != null) {
+        // Send SIGQUIT to get a stack dump
+        if (ProcessTree.isSetsidAvailable) {
+          ProcessTree.sigQuitProcessGroup(pid);
+        } else {
+          ProcessTree.sigQuitProcess(pid);
+        }
+      }
+    }
+  }
+
+  @Override
+  public void initializeDistributedCacheFile(DistributedCacheFileContext context)
+      throws IOException {
+    Path localizedUniqueDir = context.getLocalizedUniqueDir();
+    try {
+      // Setting recursive execute permission on localized dir
+      LOG.info("Doing chmod on localdir :" + localizedUniqueDir);
+      FileUtil.chmod(localizedUniqueDir.toString(), "+x", true);
+    } catch (InterruptedException ie) {
+      LOG.warn("Exception in doing chmod on" + localizedUniqueDir, ie);
+      throw new IOException(ie);
+    }
   }
 
   @Override
@@ -155,6 +188,23 @@ public class DefaultTaskController extends TaskController {
     if (exitCode != 0) {
       throw new IOException("Task debug script exit with nonzero status of " 
           + exitCode + ".");
+    }
+  }
+
+  /**
+   * Enables the task for cleanup by changing permissions of the specified path
+   * in the local filesystem
+   */
+  @Override
+  void enableTaskForCleanup(PathDeletionContext context)
+         throws IOException {
+    try {
+      FileUtil.chmod(context.fullPath, "ug+rwx", true);
+    } catch(InterruptedException e) {
+      LOG.warn("Interrupted while setting permissions for " + context.fullPath +
+          " for deletion.");
+    } catch(IOException ioe) {
+      LOG.warn("Unable to change permissions of " + context.fullPath);
     }
   }
 }

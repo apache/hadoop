@@ -4,7 +4,13 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    MAPREDUCE-1287. Only call the partitioner with more than one reducer.
+    (cdouglas)
+
   NEW FEATURES
+
+    MAPREDUCE-698. Per-pool task limits for the fair scheduler.
+    (Kevin Peterson via matei)
 
     MAPREDUCE-1017. Compression and output splitting for Sqoop.
     (Aaron Kimball via tomwhite)
@@ -12,6 +18,20 @@ Trunk (unreleased changes)
     MAPREDUCE-1026. Does mutual authentication of the shuffle
     transfers using a shared JobTracker generated key.
     (Boris Shkolnik via ddas)
+
+    MAPREDUCE-1168. Export data to databases via Sqoop. (Aaron Kimball via
+    tomwhite)
+
+    MAPREDUCE-744. Introduces the notion of a public distributed cache.
+    (Devaraj Das)
+
+    MAPREDUCE-1338. Introduces the notion of token cache using which
+    tokens and secrets can be sent by the Job client to the JobTracker.
+    (Boris Shkolnik via ddas)
+
+    HDFS-503. This patch implements an optional layer over HDFS that 
+    implements offline erasure-coding.  It can be used to reduce the 
+    total storage requirements of HDFS.  (dhruba)
 
   IMPROVEMENTS
 
@@ -54,6 +74,62 @@ Trunk (unreleased changes)
     MAPREDUCE-1231. Added a new DistCp option, -skipcrccheck, so that the CRC
     check during setup can be skipped.  (Jothi Padmanabhan via szetszwo)
 
+    MAPREDUCE-1190. Add package documentation for BBP example.
+    (Tsz Wo (Nicholas) Sze via cdouglas)
+
+    MAPREDUCE-1119. When tasks fail to report status, show tasks's stack dump
+    before killing. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1185. Redirect running job url to history url if job is already 
+    retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
+
+    MAPREDUCE-1050. Introduce a mock object testing framework. (tomwhite)
+
+    MAPREDUCE-1084. Implementing aspects development and fault injeciton
+    framework for MapReduce. (Sreekanth Ramakrishnan via cos)
+
+    MAPREDUCE-1209. Move common specific part of the test TestReflectionUtils
+    out of mapred into common. (Todd Lipcon via tomwhite)
+
+    MAPREDUCE-967. TaskTracker does not need to fully unjar job jars.
+    (Todd Lipcon via tomwhite)
+
+    MAPREDUCE-1083. Changes in MapReduce so that group information of users 
+    can be refreshed in the JobTracker via command line. 
+    (Boris Shkolnik via ddas)
+
+    MAPREDUCE-181. Changes the job submission process to be secure.
+    (Devaraj Das)
+
+    MAPREDUCE-1250. Refactors the JobToken to use Common's Token interface.
+    (Kan Zhang via ddas)
+
+    MAPREDUCE-896. Enhance tasktracker to cleanup files that might have
+    been created by user tasks with non-writable permissions.
+    (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-372. Change org.apache.hadoop.mapred.lib.ChainMapper/Reducer 
+    to use new mapreduce api. (Amareshwari Sriramadasu via sharad)
+
+    MAPREDUCE-1295. Add a tool in Rumen for folding and manipulating job
+    traces. (Dick King via cdouglas)
+
+    MAPREDUCE-1302. TrackerDistributedCacheManager deletes file
+    asynchronously, thus reducing task initialization delays.
+    (Zheng Shao via dhruba)
+
+    MAPREDUCE-1218. TaskTrackers send cpu and memory usage of
+    node to JobTracker. (Scott Chen via dhruba)
+
+    MAPREDUCE-847. Fix Releaseaudit warning count to zero
+    (Giridharan Kesavan)
+
+    MAPREDUCE-1337. Use generics in StreamJob to improve readability of that
+    class. (Kay Kay via cdouglas)
+
+    MAPREDUCE-361. Port terasort example to the new mapreduce API. (Amareshwari
+    Sriramadasu via cdouglas)
+
   OPTIMIZATIONS
 
     MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
@@ -61,7 +137,17 @@ Trunk (unreleased changes)
     Configuration changes:
       add mapreduce.tasktracker.outofband.heartbeat 
 
+    MAPREDUCE-1224. Calling "SELECT t.* from <table> AS t" to get meta
+    information is too expensive for big tables. (Spencer Ho via tomwhite)
+
+    MAPREDUCE-1186. Modified code in distributed cache to set permissions
+    only on required set of localized paths.
+    (Amareshwari Sriramadasu via yhemanth)
+
   BUG FIXES
+
+    MAPREDUCE-1258. Fix fair scheduler event log not logging job info.
+    (matei)
 
     MAPREDUCE-1089. Fix NPE in fair scheduler preemption when tasks are
     scheduled but not running. (Todd Lipcon via matei)
@@ -100,6 +186,75 @@ Trunk (unreleased changes)
     MAPREDUCE-1140. Fix DistributedCache to not decrement reference counts for
     unreferenced files in error conditions.
     (Amareshwari Sriramadasu via yhemanth)
+
+    MAPREDUCE-1245. Fix TestFairScheduler failures by instantiating lightweight
+    Jobtracker. (sharad)
+
+    MAPREDUCE-1260. Update Eclipse configuration to match changes to Ivy
+    configuration. (Edwin Chan via cos)
+
+    MAPREDUCE-1152. Distinguish between failed and killed tasks in
+    JobTrackerInstrumentation. (Sharad Agarwal via cdouglas)
+
+    MAPREDUCE-1285. In DistCp.deleteNonexisting(..), get class from the
+    parameter instead of using FileStatus.class.  (Peter Romianowski via
+    szetszwo)
+
+    MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via tomwhite)
+
+    MAPREDUCE-1148. SQL identifiers are a superset of Java identifiers.
+    (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1294. Build fails to pull latest hadoop-core-* artifacts (cos)
+
+    MAPREDUCE-1213. TaskTrackers restart is faster because it deletes
+    distributed cache directory asynchronously. (Zheng Shao via dhruba)
+
+    MAPREDUCE-1146. Sqoop dependencies break Eclipse build on Linux.
+    (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1174. Sqoop improperly handles table/column names which are
+    reserved sql words. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1265. The task attempt error log prints the name of the 
+    tasktracker machine. (Scott Chen via dhruba)
+
+    MAPREDUCE-1201. ProcfsBasedProcessTree collects CPU usage information.
+    (Scott Chen via dhruba)
+
+    MAPREDUCE-1326. fi tests don't use fi-site.xml (cos)
+
+    MAPREDUCE-1235. Fix a MySQL timestamp incompatibility in Sqoop. (Aaron
+    Kimball via cdouglas)
+
+    MAPREDUCE-1165. Replace non-portable function name with C99 equivalent.
+    (Allen Wittenauer via cdouglas)
+
+    MAPREDUCE-1331. Fixes a typo in a testcase (Devaraj Das)
+
+    MAPREDUCE-1293. AutoInputFormat doesn't work with non-default FileSystems.
+    (Andrew Hitchcock via tomwhite)
+
+    MAPREDUCE-1131. Using profilers other than hprof can cause JobClient to
+    report job failure. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1155. Streaming tests swallow exceptions.
+    (Todd Lipcon via tomwhite)
+
+    MAPREDUCE-1310. CREATE TABLE statements for Hive do not correctly specify
+    delimiters. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1212. Mapreduce contrib project ivy dependencies are not included
+    in binary target. (Aaron Kimball via tomwhite)
+
+    MAPREDUCE-1388. Move the HDFS RAID package from HDFS to MAPREDUCE.
+    (Eli Collins via dhruba)
+
+    MAPREDUCE-1313. Fix NPE in Sqoop when table with null fields uses escape
+    during import. (Aaron Kimball via cdouglas)
+
+    MAPREDUCE-1327. Fix Sqoop handling of Oracle timezone with timestamp data
+    types in import. (Leonid Furman via cdouglas)
 
 Release 0.21.0 - Unreleased
 
@@ -534,6 +689,15 @@ Release 0.21.0 - Unreleased
     HADOOP-5107. Use Maven ant tasks to publish artifacts. (Giridharan Kesavan
     via omalley)
 
+    MAPREDUCE-1229. Allow customization of job submission policy in Mumak.
+    (Hong Tang via cdouglas)
+
+    MAPREDUCE-1317. Reduce the memory footprint of Rumen objects by interning
+    host Strings. (Hong Tang via cdouglas)
+
+    MAPREDUCE-1097. Add support for Vertica 3.5 to its contrib module. (Omer
+    Trajman via cdouglas)
+
   BUG FIXES
 
     MAPREDUCE-878. Rename fair scheduler design doc to 
@@ -931,3 +1095,78 @@ Release 0.21.0 - Unreleased
     MAPREDUCE-787. Fix JobSubmitter to honor user given symlink path.
     (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-1249. Update config default value for socket read timeout to
+    match code default. (Amareshwari Sriramadasu via cdouglas)
+
+    MAPREDUCE-1161. Remove ineffective synchronization in NotificationTestCase.
+    (Owen O'Malley via cdouglas)
+
+    MAPREDUCE-1244. Fix eclipse-plugin's build dependencies. (gkesavan)
+
+    MAPREDUCE-1075. Fix JobTracker to not throw an NPE for a non-existent
+    queue. (V.V.Chaitanya Krishna via yhemanth)
+
+    MAPREDUCE-754. Fix NPE in expiry thread when a TT is lost. (Amar Kamat 
+    via sharad)
+
+    MAPREDUCE-1074. Document Reducer mark/reset functionality. (Jothi
+    Padmanabhan via cdouglas)
+
+    MAPREDUCE-1267. Fix typo in mapred-default.xml. (Todd Lipcon via cdouglas)
+
+    MAPREDUCE-952. Remove inadvertently reintroduced Task.Counter enum. (Jothi
+    Padmanabhan via cdouglas)
+
+    MAPREDUCE-1230. Fix handling of null records in VerticaInputFormat. (Omer
+    Trajman via cdouglas)
+
+    MAPREDUCE-1171. Allow shuffle retries and read-error reporting to be
+    configurable. (Amareshwari Sriramadasu via acmurthy)
+
+    MAPREDUCE-879. Fix broken unit test TestTaskTrackerLocalization on MacOS.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+    MAPREDUCE-1124. Fix imprecise byte counts in Gridmix. (cdouglas)
+
+    MAPREDUCE-1222. Add an option to exclude numeric IP addresses in topologies
+    processed by Mumak. (Hong Tang via cdouglas)
+
+    MAPREDUCE-1284. Fix fts_open() call in task-controller that was failing
+    LinuxTaskController unit tests. (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-1143. Fix running task counters to be updated correctly
+    when speculative attempts are running for a TIP.
+    (Rahul Kumar Singh via yhemanth)
+
+    MAPREDUCE-1241. Use a default queue configuration in JobTracker when
+    mapred-queues.xml is unavailable. (Todd Lipcon via cdouglas)
+
+    MAPREDUCE-1301. Fix set up of permission checking script used in 
+    localization tests. (Amareshwari Sriramadasu via yhemanth)
+
+    MAPREDUCE-1286. Remove quoting from client opts in TaskRunner. (Yuri
+    Pradkin via cdouglas)
+
+    MAPREDUCE-1059. Use distcp.bytes.per.map when adding sync markers in
+    distcp. (Aaron Kimball via cdouglas)
+
+    MAPREDUCE-1009. Update forrest documentation describing hierarchical
+    queues. (Vinod Kumar Vavilapalli via yhemanth)
+
+    MAPREDUCE-1342. Fixed deadlock in global blacklisting of tasktrackers.
+    (Amareshwari Sriramadasu via acmurthy)
+
+    MAPREDUCE-1316. Fixes a memory leak of TaskInProgress instances in
+    the jobtracker. (Amar Kamat via yhemanth)
+
+    MAPREDUCE-1359. TypedBytes TestIO doesn't mkdir its test dir first.
+    (Anatoli Fomenko via cos)
+
+    MAPREDUCE-1314. Correct errant mapreduce.x.mapreduce.x replacements from
+    bulk change. (Amareshwari Sriramadasu via cdouglas)
+
+    MAPREDUCE-1365. Restore accidentally renamed test in
+    TestTaskTrackerBloacklisting. (Amareshwari Sriramadasu via cdouglas)
+
+    MAPREDUCE-1406. Fix spelling of JobContext.MAP_COMBINE_MIN_SPILLS.
+    (cdouglas)

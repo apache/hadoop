@@ -113,6 +113,12 @@ Import control options
   When using direct mode, write to multiple files of
   approximately _size_ bytes each.
 
+Export control options
+~~~~~~~~~~~~~~~~~~~~~~
+
+--export-dir (dir)::
+  Export from an HDFS path into a table (set with
+  --table)
 
 Output line formatting options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,6 +150,14 @@ Code generation options
 
 --package-name (package)::
   Puts auto-generated classes in the named Java package
+
+Library loading options
+~~~~~~~~~~~~~~~~~~~~~~~
+--jar-file (file)::
+  Disable code generation; use specified jar
+
+--class-name (name)::
+  The class within the jar that represents the table to import/export
 
 Additional commands
 ~~~~~~~~~~~~~~~~~~~

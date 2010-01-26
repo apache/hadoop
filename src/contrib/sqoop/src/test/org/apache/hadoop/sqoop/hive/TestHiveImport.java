@@ -27,7 +27,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.HsqldbTestServer;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
@@ -71,11 +71,11 @@ public class TestHiveImport extends ImportJobTestCase {
     return args.toArray(new String[0]);
   }
 
-  private ImportOptions getImportOptions(String [] extraArgs) {
-    ImportOptions opts = new ImportOptions();
+  private SqoopOptions getSqoopOptions(String [] extraArgs) {
+    SqoopOptions opts = new SqoopOptions();
     try {
       opts.parse(getArgv(false, extraArgs));
-    } catch (ImportOptions.InvalidOptionsException ioe) {
+    } catch (SqoopOptions.InvalidOptionsException ioe) {
       fail("Invalid options: " + ioe.toString());
     }
 
@@ -91,7 +91,7 @@ public class TestHiveImport extends ImportJobTestCase {
     
     // set up our mock hive shell to compare our generated script
     // against the correct expected one.
-    ImportOptions options = getImportOptions(extraArgs);
+    SqoopOptions options = getSqoopOptions(extraArgs);
     String hiveHome = options.getHiveHome();
     assertNotNull("hive.home was not set", hiveHome);
     Path testDataPath = new Path(new Path(hiveHome), "scripts/" + verificationScript);

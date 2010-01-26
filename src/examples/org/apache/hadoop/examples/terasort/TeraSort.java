@@ -25,17 +25,17 @@ import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.examples.terasort.TeraOutputFormat.TeraOutputCommitter;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Partitioner;
+import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -48,14 +48,18 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class TeraSort extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TeraSort.class);
+  static String SIMPLE_PARTITIONER = "mapreduce.terasort.simplepartitioner";
+  static String OUTPUT_REPLICATION = "mapreduce.terasort.output.replication";
 
   /**
    * A partitioner that splits text keys into roughly equal partitions
    * in a global sorted order.
    */
-  static class TotalOrderPartitioner implements Partitioner<Text,Text>{
+  static class TotalOrderPartitioner extends Partitioner<Text,Text>
+      implements Configurable {
     private TrieNode trie;
     private Text[] splitPoints;
+    private Configuration conf;
 
     /**
      * A generic trie node
@@ -147,9 +151,9 @@ public class TeraSort extends Configured implements Tool {
      * @return the strings to split the partitions on
      * @throws IOException
      */
-    private static Text[] readPartitions(FileSystem fs, Path p, 
-                                         JobConf job) throws IOException {
-      int reduces = job.getNumReduceTasks();
+    private static Text[] readPartitions(FileSystem fs, Path p,
+        Configuration conf) throws IOException {
+      int reduces = conf.getInt(JobContext.NUM_REDUCES, 1);
       Text[] result = new Text[reduces - 1];
       DataInputStream reader = fs.open(p);
       for(int i=0; i < reduces - 1; ++i) {
@@ -201,17 +205,22 @@ public class TeraSort extends Configured implements Tool {
       return result;
     }
 
-    public void configure(JobConf job) {
+    public void setConf(Configuration conf) {
       try {
-        FileSystem fs = FileSystem.getLocal(job);
+        FileSystem fs = FileSystem.getLocal(conf);
+        this.conf = conf;
         Path partFile = new Path(TeraInputFormat.PARTITION_FILENAME);
-        splitPoints = readPartitions(fs, partFile, job);
+        splitPoints = readPartitions(fs, partFile, conf);
         trie = buildTrie(splitPoints, 0, splitPoints.length, new Text(), 2);
       } catch (IOException ie) {
         throw new IllegalArgumentException("can't read paritions file", ie);
       }
     }
 
+    public Configuration getConf() {
+      return conf;
+    }
+    
     public TotalOrderPartitioner() {
     }
 
@@ -225,13 +234,21 @@ public class TeraSort extends Configured implements Tool {
    * A total order partitioner that assigns keys based on their first 
    * PREFIX_LENGTH bytes, assuming a flat distribution.
    */
-  public static class SimplePartitioner implements Partitioner<Text, Text>{
+  public static class SimplePartitioner extends Partitioner<Text, Text>
+      implements Configurable {
     int prefixesPerReduce;
     private static final int PREFIX_LENGTH = 3;
-    public void configure(JobConf job) {
+    private Configuration conf = null;
+    public void setConf(Configuration conf) {
+      this.conf = conf;
       prefixesPerReduce = (int) Math.ceil((1 << (8 * PREFIX_LENGTH)) / 
-                                          (float) job.getNumReduceTasks());
+        (float) conf.getInt(JobContext.NUM_REDUCES, 1));
     }
+    
+    public Configuration getConf() {
+      return conf;
+    }
+    
     @Override
     public int getPartition(Text key, Text value, int numPartitions) {
       byte[] bytes = key.getBytes();
@@ -244,35 +261,36 @@ public class TeraSort extends Configured implements Tool {
     }
   }
 
-  public static boolean getUseSimplePartitioner(Configuration conf) {
-    return conf.getBoolean("terasort.partitioner.simple", false);
+  public static boolean getUseSimplePartitioner(JobContext job) {
+    return job.getConfiguration().getBoolean(SIMPLE_PARTITIONER, false);
   }
 
-  public static void setUseSimplePartitioner(Configuration conf,
-                                             boolean value) {
-    conf.setBoolean("terasort.partitioner.simple", value);
+  public static void setUseSimplePartitioner(Job job, boolean value) {
+    job.getConfiguration().setBoolean(SIMPLE_PARTITIONER, value);
+  }
+
+  public static int getOutputReplication(JobContext job) {
+    return job.getConfiguration().getInt(OUTPUT_REPLICATION, 1);
+  }
+
+  public static void setOutputReplication(Job job, int value) {
+    job.getConfiguration().setInt(OUTPUT_REPLICATION, value);
   }
 
   public int run(String[] args) throws Exception {
     LOG.info("starting");
-    JobConf job = (JobConf) getConf();
+    Job job = Job.getInstance(new Cluster(getConf()), getConf());
     Path inputDir = new Path(args[0]);
     Path outputDir = new Path(args[1]);
     boolean useSimplePartitioner = getUseSimplePartitioner(job);
-    FileSystem outputFileSystem = outputDir.getFileSystem(job);
-    outputDir = outputDir.makeQualified(outputFileSystem);
-    if (outputFileSystem.exists(outputDir)) {
-      throw new IOException("Output directory " + outputDir + 
-                            " already exists.");
-    }
     TeraInputFormat.setInputPaths(job, inputDir);
     FileOutputFormat.setOutputPath(job, outputDir);
     job.setJobName("TeraSort");
     job.setJarByClass(TeraSort.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
-    job.setInputFormat(TeraInputFormat.class);
-    job.setOutputFormat(TeraOutputFormat.class);
+    job.setInputFormatClass(TeraInputFormat.class);
+    job.setOutputFormatClass(TeraOutputFormat.class);
     if (useSimplePartitioner) {
       job.setPartitionerClass(SimplePartitioner.class);
     } else {
@@ -282,27 +300,25 @@ public class TeraSort extends Configured implements Tool {
       URI partitionUri = new URI(partitionFile.toString() +
                                  "#" + TeraInputFormat.PARTITION_FILENAME);
       TeraInputFormat.writePartitionFile(job, partitionFile);
-      DistributedCache.addCacheFile(partitionUri, job);
-      DistributedCache.createSymlink(job);    
+      job.addCacheFile(partitionUri);
+      job.createSymlink();    
       long end = System.currentTimeMillis();
       System.out.println("Spent " + (end - start) + "ms computing partitions.");
       job.setPartitionerClass(TotalOrderPartitioner.class);
     }
-    job.setOutputCommitter(TeraOutputCommitter.class);
     
-    job.setInt("dfs.replication", 
-               job.getInt("terasort.output.replication", 1));
+    job.getConfiguration().setInt("dfs.replication", getOutputReplication(job));
     TeraOutputFormat.setFinalSync(job, true);
-    JobClient.runJob(job);
+    int ret = job.waitForCompletion(true) ? 0 : 1;
     LOG.info("done");
-    return 0;
+    return ret;
   }
 
   /**
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new JobConf(), new TeraSort(), args);
+    int res = ToolRunner.run(new Configuration(), new TeraSort(), args);
     System.exit(res);
   }
 

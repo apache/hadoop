@@ -37,6 +37,10 @@ public class TestFieldFormatter extends TestCase {
   public void testNullArgs() {
     String result = FieldFormatter.escapeAndEnclose("", null, null, null, false);
     assertEquals("", result);
+
+    char [] encloseFor = { '\"' };
+    assertNull(FieldFormatter.escapeAndEnclose(null, "\\", "\"", encloseFor,
+        false));
   }
 
   public void testBasicStr() {

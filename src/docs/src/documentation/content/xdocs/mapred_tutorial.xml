@@ -41,10 +41,10 @@
       </p> 
       <ul>
         <li>
-          <a href="http://hadoop.apache.org/common/docs/current/single_node_setup.html">Single Node Setup</a> for first-time users.
+          <a href="ext:single-node-setup">Single Node Setup</a> for first-time users.
         </li>
         <li>
-          <a href="http://hadoop.apache.org/common/docs/current/cluster_setup.html">Cluster Setup</a> for large, distributed clusters.
+          <a href="cluster_setup.html">Cluster Setup</a> for large, distributed clusters.
         </li>
       </ul>
     </section>
@@ -152,8 +152,8 @@
       occurences of each word in a given input set.</p>
       
       <p>This example works with a 
-      pseudo-distributed (<a href="http://hadoop.apache.org/common/docs/current/single_node_setup.html#SingleNodeSetup">Single Node Setup</a>) 
-     or fully-distributed (<a href="http://hadoop.apache.org/common/docs/current/cluster_setup.html">Cluster Setup</a>) 
+      pseudo-distributed (<a href="ext:single-node-setup">Single Node Setup</a>) 
+     or fully-distributed (<a href="cluster_setup.html">Cluster Setup</a>) 
       Hadoop installation.</p>   
       
       <section>
@@ -947,6 +947,177 @@
             map-outputs before writing them out to the <code>FileSystem</code>.
             </p>
           </section>
+
+          <section>
+            <title>Mark-Reset</title>
+
+            <p>While applications iterate through the values for a given key, it is
+            possible to mark the current position and later reset the iterator to
+            this position and continue the iteration process. The corresponding
+            methods are <code>mark()</code> and <code>reset()</code>. 
+            </p>
+
+            <p><code>mark()</code> and <code>reset()</code> can be called any
+            number of times during the iteration cycle.  The <code>reset()</code>
+            method will reset the iterator to the last record before a call to
+            the previous <code>mark()</code>.
+            </p>
+
+            <p>This functionality is available only with the new context based
+               reduce iterator.
+            </p>
+
+            <p> The following code snippet demonstrates the use of this 
+                functionality.
+            </p>
+           
+            <section>
+            <title>Source Code</title>
+
+            <table>
+            <tr><td>
+            <code>
+              public void reduce(IntWritable key, 
+                Iterable&lt;IntWritable&gt; values,
+                Context context) throws IOException, InterruptedException {
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                MarkableIterator&lt;IntWritable&gt; mitr = 
+                  new MarkableIterator&lt;IntWritable&gt;(values.iterator());
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // Mark the position
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                values.mark();
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                while (values.hasNext()) {
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  i = values.next();
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  // Do the necessary processing
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                }
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // Reset
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                values.reset();
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // Iterate all over again. Since mark was called before the first
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // call to values.next() in this example, we will iterate over all
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                // the values now
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                while (values.hasNext()) {
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  i = values.next();
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  // Do the necessary processing
+            </code>
+            </td></tr>
+
+            <tr><td>
+            <code>
+                &nbsp;&nbsp;
+                }
+            </code>
+            </td></tr>
+
+            <tr><td></td></tr>
+
+            <tr><td>
+            <code>
+              }
+            </code>
+            </td></tr>
+
+            </table>
+          </section>
+
+          </section>
         </section>
         
         <section>
@@ -1130,7 +1301,7 @@
         <p>Note: <code>mapred.{map|reduce}.child.java.opts</code> are used only 
         for configuring the launched child tasks from task tracker. Configuring 
         the memory options for daemons is documented under
-        <a href="http://hadoop.apache.org/common/docs/current/cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
+        <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
         Configuring the Environment of the Hadoop Daemons</a> (Cluster Setup).</p>
         
         <p>The memory available to some parts of the framework is also
@@ -1336,9 +1507,11 @@
         <li><code>${mapreduce.cluster.local.dir}/taskTracker/jobcache/$jobid/jars/</code>
         : The jars directory, which has the job jar file and expanded jar.
         The <code>job.jar</code> is the application's jar file that is
-        automatically distributed to each machine. It is expanded in jars
-        directory before the tasks for the job start. The job.jar location
-        is accessible to the application through the api
+        automatically distributed to each machine. Any library jars that are dependencies
+        of the application code may be packaged inside this jar in a <code>lib/</code> directory.
+        This directory is extracted from <code>job.jar</code> and its contents are
+        automatically added to the classpath for each task.
+        The job.jar location is accessible to the application through the api
         <a href="ext:api/org/apache/hadoop/mapred/jobconf/getjar"> 
         JobConf.getJar() </a>. To access the unjarred directory,
         JobConf.getJar().getParent() can be called.</li>
@@ -2239,8 +2412,8 @@
       
       <p>This example needs the HDFS to be up and running, especially for the 
       <code>DistributedCache</code>-related features. Hence it only works with a 
-      pseudo-distributed (<a href="http://hadoop.apache.org/common/docs/current/single_node_setup.html#SingleNodeSetup">Single Node Setup</a>) 
-     or fully-distributed (<a href="http://hadoop.apache.org/common/docs/current/cluster_setup.html#Fully-Distributed+Operation">Cluster Setup</a>) 
+      pseudo-distributed (<a href="ext:single-node-setup">Single Node Setup</a>) 
+     or fully-distributed (<a href="cluster_setup.html#Fully-Distributed+Operation">Cluster Setup</a>) 
       Hadoop installation.</p>     
       
       <section>

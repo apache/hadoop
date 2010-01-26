@@ -22,6 +22,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.mapred.Counters;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 public class TestStreamingCombiner extends TestStreaming {
 
   protected String combine = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{""});
@@ -41,7 +44,8 @@ public class TestStreamingCombiner extends TestStreaming {
     };
   }
 
-  public void testCommandLine() throws IOException {
+  @Test
+  public void testCommandLine() throws Exception  {
     super.testCommandLine();
     // validate combiner counters
     String counterGrp = "org.apache.hadoop.mapred.Task$Counter";

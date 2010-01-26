@@ -25,6 +25,7 @@ import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeTaskInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
 
@@ -60,7 +61,7 @@ public class TestSetupTaskScheduling extends TestCase {
     @Override
     public synchronized void initTasks() throws IOException {
       super.initTasks();
-      Job.RawSplit emptySplit = new Job.RawSplit();
+      JobSplit.TaskSplitMetaInfo emptySplit = new JobSplit.TaskSplitMetaInfo();
       setup = new TaskInProgress[2];
       setup[0] = new TaskInProgress(getJobID(), "test",  emptySplit,
           jobtracker, getJobConf(), this, numMapTasks + 1, 1);
@@ -109,12 +110,13 @@ public class TestSetupTaskScheduling extends TestCase {
     @Override
     public synchronized void initTasks() throws IOException {
       super.initTasks();
-      Job.RawSplit emptySplit = new Job.RawSplit();
+
       final int numSlotsPerTask = 2;
       maps = new TaskInProgress[1];
       reduces = new TaskInProgress[1];
       
-      maps[0] = new FakeTaskInProgress(getJobID(), "test",  emptySplit,
+      maps[0] = new FakeTaskInProgress(getJobID(), "test",  
+          JobSplit.EMPTY_TASK_SPLIT,
           jobtracker, getJobConf(), this, 0, numSlotsPerTask);
       TaskAttemptID attemptId = new TaskAttemptID(maps[0].getTIPId(), 0);
       

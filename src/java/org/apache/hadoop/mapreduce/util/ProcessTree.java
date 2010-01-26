@@ -37,6 +37,15 @@ public class ProcessTree {
 
   public static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 5000L;
 
+  private static final int SIGQUIT = 3;
+  private static final int SIGTERM = 15;
+  private static final int SIGKILL = 9;
+
+  private static final String SIGQUIT_STR = "SIGQUIT";
+  private static final String SIGTERM_STR = "SIGTERM";
+  private static final String SIGKILL_STR = "SIGKILL";
+
+
   public static final boolean isSetsidAvailable = isSetsidSupported();
   private static boolean isSetsidSupported() {
     ShellCommandExecutor shexec = null;
@@ -102,23 +111,68 @@ public class ProcessTree {
     sigKill(pgrpId, true, sleeptimeBeforeSigkill, inBackground);
   }
 
+
+  /**
+   * Send a specified signal to the specified pid
+   *
+   * @param pid the pid of the process [group] to signal.
+   * @param signalNum the signal to send.
+   * @param signalName the human-readable description of the signal
+   * (for logging).
+   */
+  private static void sendSignal(String pid, int signalNum, String signalName) {
+    ShellCommandExecutor shexec = null;
+    try {
+      String[] args = { "kill", "-" + signalNum, pid };
+      shexec = new ShellCommandExecutor(args);
+      shexec.execute();
+    } catch (IOException ioe) {
+      LOG.warn("Error executing shell command " + ioe);
+    } finally {
+      if (pid.startsWith("-")) {
+        LOG.info("Sending signal to all members of process group " + pid
+            + ": " + signalName + ". Exit code " + shexec.getExitCode());
+      } else {
+        LOG.info("Signaling process " + pid
+            + " with " + signalName + ". Exit code " + shexec.getExitCode());
+      }
+    }
+  }
+
+  /**
+   * Send a specified signal to the process, if it is alive.
+   *
+   * @param pid the pid of the process to signal.
+   * @param signalNum the signal to send.
+   * @param signalName the human-readable description of the signal
+   * (for logging).
+   * @param alwaysSignal if true then send signal even if isAlive(pid) is false
+   */
+  private static void maybeSignalProcess(String pid, int signalNum,
+      String signalName, boolean alwaysSignal) {
+    // If process tree is not alive then don't signal, unless alwaysSignal
+    // forces it so.
+    if (alwaysSignal || ProcessTree.isAlive(pid)) {
+      sendSignal(pid, signalNum, signalName);
+    }
+  }
+
+  private static void maybeSignalProcessGroup(String pgrpId, int signalNum,
+      String signalName, boolean alwaysSignal) {
+
+    if (alwaysSignal || ProcessTree.isProcessGroupAlive(pgrpId)) {
+      // signaling a process group means using a negative pid.
+      sendSignal("-" + pgrpId, signalNum, signalName);
+    }
+  }
+
   /**
    * Sends terminate signal to the process, allowing it to gracefully exit.
    * 
    * @param pid pid of the process to be sent SIGTERM
    */
   public static void terminateProcess(String pid) {
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", pid };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command " + ioe);
-    } finally {
-      LOG.info("Killing process " + pid +
-               " with SIGTERM. Exit code " + shexec.getExitCode());
-    }
+    maybeSignalProcess(pid, SIGTERM, SIGTERM_STR, true);
   }
 
   /**
@@ -128,17 +182,7 @@ public class ProcessTree {
    * @param pgrpId process group id
    */
   public static void terminateProcessGroup(String pgrpId) {
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", "--", "-" + pgrpId };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command " + ioe);
-    } finally {
-      LOG.info("Killing all processes in the process group " + pgrpId +
-               " with SIGTERM. Exit code " + shexec.getExitCode());
-    }
+    maybeSignalProcessGroup(pgrpId, SIGTERM, SIGTERM_STR, true);
   }
 
   /**
@@ -197,22 +241,17 @@ public class ProcessTree {
    * @param pid process id
    */
   public static void killProcess(String pid) {
+    maybeSignalProcess(pid, SIGKILL, SIGKILL_STR, false);
+  }
 
-    //If process tree is not alive then return immediately.
-    if(!ProcessTree.isAlive(pid)) {
-      return;
-    }
-    String[] args = { "kill", "-9", pid };
-    ShellCommandExecutor shexec = new ShellCommandExecutor(args);
-    try {
-      shexec.execute();
-    } catch (IOException e) {
-      LOG.warn("Error sending SIGKILL to process "+ pid + " ."+ 
-          StringUtils.stringifyException(e));
-    } finally {
-      LOG.info("Killing process " + pid + " with SIGKILL. Exit code "
-          + shexec.getExitCode());
-    }
+  /**
+   * Sends SIGQUIT to process; Java programs will dump their stack to
+   * stdout.
+   *
+   * @param pid process id
+   */
+  public static void sigQuitProcess(String pid) {
+    maybeSignalProcess(pid, SIGQUIT, SIGQUIT_STR, false);
   }
 
   /**
@@ -222,25 +261,20 @@ public class ProcessTree {
    * @param pgrpId process group id
    */
   public static void killProcessGroup(String pgrpId) {
-
-    //If process tree is not alive then return immediately.
-    if(!ProcessTree.isProcessGroupAlive(pgrpId)) {
-      return;
-    }
-
-    String[] args = { "kill", "-9", "-"+pgrpId };
-    ShellCommandExecutor shexec = new ShellCommandExecutor(args);
-    try {
-      shexec.execute();
-    } catch (IOException e) {
-      LOG.warn("Error sending SIGKILL to process group "+ pgrpId + " ."+ 
-          StringUtils.stringifyException(e));
-    } finally {
-      LOG.info("Killing process group" + pgrpId + " with SIGKILL. Exit code "
-          + shexec.getExitCode());
-    }
+    maybeSignalProcessGroup(pgrpId, SIGKILL, SIGKILL_STR, false);
   }
-  
+
+  /**
+   * Sends SIGQUIT to all processes belonging to the same process group,
+   * ordering all processes in the group to send their stack dump to
+   * stdout.
+   *
+   * @param pgrpId process group id
+   */
+  public static void sigQuitProcessGroup(String pgrpId) {
+    maybeSignalProcessGroup(pgrpId, SIGQUIT, SIGQUIT_STR, false);
+  }
+
   /**
    * Is the process with PID pid still alive?
    * This method assumes that isAlive is called on a pid that was alive not

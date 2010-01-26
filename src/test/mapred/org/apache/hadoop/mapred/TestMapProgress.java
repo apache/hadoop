@@ -20,6 +20,9 @@ package org.apache.hadoop.mapred;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -27,10 +30,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.OutputFormat;
+import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.split.JobSplitWriter;
+import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
+import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  *  Validates map phase progress.
@@ -92,9 +104,9 @@ public class TestMapProgress extends TestCase {
    */
   class TestMapTask extends MapTask {
     public TestMapTask(String jobFile, TaskAttemptID taskId, 
-        int partition, String splitClass, BytesWritable split,
+        int partition, TaskSplitIndex splitIndex,
         int numSlotsRequired) {
-      super(jobFile, taskId, partition, splitClass, split, numSlotsRequired);
+      super(jobFile, taskId, partition, splitIndex, numSlotsRequired);
     }
     
     /**
@@ -141,16 +153,20 @@ public class TestMapProgress extends TestCase {
     jobId = taskId.getJobID();
     
     JobContext jContext = new JobContextImpl(job, jobId);
-    Job.RawSplit[] rawSplits = LocalJobRunner.getRawSplits(jContext, job);
+    InputFormat<?, ?> input =
+      ReflectionUtils.newInstance(jContext.getInputFormatClass(), job);
 
-    job.setUseNewMapper(true); // use new api
-    for (int i = 0; i < rawSplits.length; i++) {// rawSplits.length is 1
+    List<InputSplit> splits = input.getSplits(jContext);
+    JobSplitWriter.createSplitFiles(new Path(TEST_ROOT_DIR), job, splits);
+    TaskSplitMetaInfo[] splitMetaInfo = 
+      SplitMetaInfoReader.readSplitMetaInfo(jobId, fs, job, new Path(TEST_ROOT_DIR));
+    job.setUseNewMapper(true); // use new api    
+    for (int i = 0; i < splitMetaInfo.length; i++) {// rawSplits.length is 1
       map = new TestMapTask(
           job.get(JTConfig.JT_SYSTEM_DIR, "/tmp/hadoop/mapred/system") +
           jobId + "job.xml",  
           taskId, i,
-          rawSplits[i].getClassName(),
-          rawSplits[i].getBytes(), 1);
+          splitMetaInfo[i].getSplitIndex(), 1);
 
       JobConf localConf = new JobConf(job);
       map.localizeConfiguration(localConf);

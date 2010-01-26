@@ -189,7 +189,7 @@ public class MiniMRCluster {
       conf.set(MRConfig.LOCAL_DIR, localPath.toString());
       LOG.info(MRConfig.LOCAL_DIR + " is " +  localPath);
       try {
-        tt = new TaskTracker(conf);
+        tt = createTaskTracker(conf);
         isInitialized = true;
       } catch (Throwable e) {
         isDead = true;
@@ -198,6 +198,13 @@ public class MiniMRCluster {
       }
     }
         
+    /**
+     * Creates a default {@link TaskTracker} using the conf passed.
+     */
+    TaskTracker createTaskTracker(JobConf conf) throws IOException {
+      return new TaskTracker(conf);
+    }
+    
     /**
      * Create and run the task tracker.
      */
@@ -268,7 +275,18 @@ public class MiniMRCluster {
   public int getNumTaskTrackers() {
     return taskTrackerList.size();
   }
-    
+  
+  /**
+   * Sets inline cleanup threads to all task trackers sothat deletion of
+   * temporary files/dirs happen inline
+   */
+  public void setInlineCleanupThreads() {
+    for (int i = 0; i < getNumTaskTrackers(); i++) {
+      getTaskTrackerRunner(i).getTaskTracker().setCleanupThread(
+          new UtilsForTests.InlineCleanupQueue());
+    }
+  }
+
   /**
    * Wait until the system is idle.
    */
@@ -671,6 +689,13 @@ public class MiniMRCluster {
     TaskTrackerRunner taskTracker;
     taskTracker = new TaskTrackerRunner(idx, numDir, host, conf);
     
+    addTaskTracker(taskTracker);
+  }
+  
+  /**
+   * Add a task-tracker to the Mini-MR cluster.
+   */
+  void addTaskTracker(TaskTrackerRunner taskTracker) {
     Thread taskTrackerThread = new Thread(taskTracker);
     taskTrackerList.add(taskTracker);
     taskTrackerThreadList.add(taskTrackerThread);

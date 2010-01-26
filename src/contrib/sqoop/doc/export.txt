@@ -1,0 +1,58 @@
+
+////
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+////
+
+
+Exporting to a Database
+-----------------------
+
+In addition to importing database tables into HDFS, Sqoop can also
+work in "reverse," reading the contents of a file or directory in
+HDFS, interpreting the data as database rows, and inserting them
+into a specified database table.
+
+To run an export, invoke Sqoop with the +--export-dir+ and
++--table+ options. e.g.:
+
+----
+$ sqoop --connect jdbc:mysql://db.example.com/foo --table bar  \
+    --export-dir /results/bar_data
+----
+
+This will take the files in +/results/bar_data+ and inject their
+contents in to the +bar+ table in the +foo+ database on +db.example.com+.
+The target table must already exist in the database. Sqoop will perform
+a set of +INSERT INTO+ operations, without regard for existing content. If
+Sqoop attempts to insert rows which violate constraints in the database
+(e.g., a particular primary key value already exists), then the export
+will fail.
+
+As in import mode, Sqoop will auto-generate an interoperability class
+to use with the particular table in question. This will be used to parse
+the records in HDFS files before loading their contents into the database.
+You must specify the same delimiters (e.g., with +--fields-terminated-by+,
+etc.) as are used in the files to export in order to parse the data
+correctly. If your data is stored in SequenceFiles (created with an import
+in the +--as-sequencefile+ format), then you do not need to specify
+delimiters.
+
+If you have an existing auto-generated jar and class that you intend to use
+with Sqoop, you can specify these with the +--jar-file+ and +--class-name+
+parameters. Providing these options will disable autogeneration of a new
+class based on the target table.
+
+

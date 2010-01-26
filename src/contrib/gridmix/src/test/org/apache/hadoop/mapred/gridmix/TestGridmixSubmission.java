@@ -20,9 +20,7 @@ package org.apache.hadoop.mapred.gridmix;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,16 +33,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.TaskInfo;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import static org.apache.hadoop.mapreduce.TaskCounter.*;
 
@@ -96,7 +92,7 @@ public class TestGridmixSubmission {
 
   static class TestMonitor extends JobMonitor {
 
-    static final long SLOPBYTES = 5 * 1024;
+    static final long SLOPBYTES = 1024;
     private final int expected;
     private final BlockingQueue<Job> retiredJobs;
 
@@ -138,12 +134,12 @@ public class TestGridmixSubmission {
         final TaskReport[] mReports = job.getTaskReports(TaskType.MAP);
         assertEquals("Mismatched map count", nMaps, mReports.length);
         check(TaskType.MAP, job, spec, mReports,
-            0, 1, nReds * SLOPBYTES, nReds + 1);
+            0, 0, SLOPBYTES, nReds);
 
         final TaskReport[] rReports = job.getTaskReports(TaskType.REDUCE);
         assertEquals("Mismatched reduce count", nReds, rReports.length);
         check(TaskType.REDUCE, job, spec, rReports,
-            nMaps * SLOPBYTES, nMaps + 1, 0, 1);
+            nMaps * SLOPBYTES, 2 * nMaps, 0, 0);
       }
     }
 
@@ -167,7 +163,8 @@ public class TestGridmixSubmission {
         switch (type) {
           case MAP:
              runInputBytes[i] = counters.findCounter("FileSystemCounters",
-                 "HDFS_BYTES_READ").getValue();
+                 "HDFS_BYTES_READ").getValue() - 
+                 counters.findCounter(TaskCounter.SPLIT_RAW_BYTES).getValue();
              runInputRecords[i] =
                (int)counters.findCounter(MAP_INPUT_RECORDS).getValue();
              runOutputBytes[i] =
@@ -176,72 +173,95 @@ public class TestGridmixSubmission {
                (int)counters.findCounter(MAP_OUTPUT_RECORDS).getValue();
 
             specInfo = spec.getTaskInfo(TaskType.MAP, i);
+            specInputRecords[i] = specInfo.getInputRecords();
+            specInputBytes[i] = specInfo.getInputBytes();
+            specOutputRecords[i] = specInfo.getOutputRecords();
+            specOutputBytes[i] = specInfo.getOutputBytes();
+            System.out.printf(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
+                 specInputBytes[i], specOutputBytes[i],
+                 specInputRecords[i], specOutputRecords[i]);
+            System.out.printf(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
+                 runInputBytes[i], runOutputBytes[i],
+                 runInputRecords[i], runOutputRecords[i]);
             break;
           case REDUCE:
-             runInputBytes[i] =
-               counters.findCounter(REDUCE_SHUFFLE_BYTES).getValue();
-             runInputRecords[i] =
-               (int)counters.findCounter(REDUCE_INPUT_RECORDS).getValue();
-             runOutputBytes[i] =
-               counters.findCounter("FileSystemCounters",
-                   "HDFS_BYTES_WRITTEN").getValue();
-             runOutputRecords[i] =
-               (int)counters.findCounter(REDUCE_OUTPUT_RECORDS).getValue();
+            runInputBytes[i] = 0;
+            runInputRecords[i] =
+              (int)counters.findCounter(REDUCE_INPUT_RECORDS).getValue();
+            runOutputBytes[i] =
+              counters.findCounter("FileSystemCounters",
+                  "HDFS_BYTES_WRITTEN").getValue();
+            runOutputRecords[i] =
+              (int)counters.findCounter(REDUCE_OUTPUT_RECORDS).getValue();
+
 
             specInfo = spec.getTaskInfo(TaskType.REDUCE, i);
+            // There is no reliable counter for reduce input bytes. The
+            // variable-length encoding of intermediate records and other noise
+            // make this quantity difficult to estimate. The shuffle and spec
+            // input bytes are included in debug output for reference, but are
+            // not checked
+            specInputBytes[i] = 0;
+            specInputRecords[i] = specInfo.getInputRecords();
+            specOutputRecords[i] = specInfo.getOutputRecords();
+            specOutputBytes[i] = specInfo.getOutputBytes();
+            System.out.printf(type + " SPEC: (%9d) -> %9d :: %5d -> %5d\n",
+                 specInfo.getInputBytes(), specOutputBytes[i],
+                 specInputRecords[i], specOutputRecords[i]);
+            System.out.printf(type + " RUN:  (%9d) -> %9d :: %5d -> %5d\n",
+                 counters.findCounter(REDUCE_SHUFFLE_BYTES).getValue(),
+                 runOutputBytes[i], runInputRecords[i], runOutputRecords[i]);
             break;
           default:
             specInfo = null;
             fail("Unexpected type: " + type);
         }
-        specInputBytes[i] = specInfo.getInputBytes();
-        specInputRecords[i] = specInfo.getInputRecords();
-        specOutputRecords[i] = specInfo.getOutputRecords();
-        specOutputBytes[i] = specInfo.getOutputBytes();
-        System.out.printf(type + " SPEC: %9d -> %9d :: %5d -> %5d\n",
-             specInputBytes[i], specOutputBytes[i],
-             specInputRecords[i], specOutputRecords[i]);
-        System.out.printf(type + " RUN:  %9d -> %9d :: %5d -> %5d\n",
-             runInputBytes[i], runOutputBytes[i],
-             runInputRecords[i], runOutputRecords[i]);
       }
 
       // Check input bytes
       Arrays.sort(specInputBytes);
       Arrays.sort(runInputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched input bytes " +
+        assertTrue("Mismatched " + type + " input bytes " +
             specInputBytes[i] + "/" + runInputBytes[i],
-            runInputBytes[i] - specInputBytes[i] <= extraInputBytes);
+            eqPlusMinus(runInputBytes[i], specInputBytes[i], extraInputBytes));
       }
 
       // Check input records
       Arrays.sort(specInputRecords);
       Arrays.sort(runInputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched input records " +
+        assertTrue("Mismatched " + type + " input records " +
             specInputRecords[i] + "/" + runInputRecords[i],
-            runInputRecords[i] - specInputRecords[i] <= extraInputRecords);
+            eqPlusMinus(runInputRecords[i], specInputRecords[i],
+              extraInputRecords));
       }
 
       // Check output bytes
       Arrays.sort(specOutputBytes);
       Arrays.sort(runOutputBytes);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched output bytes " +
+        assertTrue("Mismatched " + type + " output bytes " +
             specOutputBytes[i] + "/" + runOutputBytes[i],
-            runOutputBytes[i] - specOutputBytes[i] <= extraOutputBytes);
+            eqPlusMinus(runOutputBytes[i], specOutputBytes[i],
+              extraOutputBytes));
       }
 
       // Check output records
       Arrays.sort(specOutputRecords);
       Arrays.sort(runOutputRecords);
       for (int i = 0; i < runTasks.length; ++i) {
-        assertTrue("Mismatched output records " +
+        assertTrue("Mismatched " + type + " output records " +
             specOutputRecords[i] + "/" + runOutputRecords[i],
-            runOutputRecords[i] - specOutputRecords[i] <= extraOutputRecords);
+            eqPlusMinus(runOutputRecords[i], specOutputRecords[i],
+              extraOutputRecords));
       }
 
+    }
+
+    private static boolean eqPlusMinus(long a, long b, long x) {
+      final long diff = Math.abs(a - b);
+      return diff <= x;
     }
 
     @Override
@@ -292,6 +312,7 @@ public class TestGridmixSubmission {
     };
     DebugGridmix client = new DebugGridmix();
     final Configuration conf = mrCluster.createJobConf();
+    //conf.setInt(Gridmix.GRIDMIX_KEY_LEN, 2);
     int res = ToolRunner.run(conf, client, argv);
     assertEquals("Client exited with nonzero status", 0, res);
     client.checkMonitor();

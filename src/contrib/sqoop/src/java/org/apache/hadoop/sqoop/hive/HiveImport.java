@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.util.Executor;
 import org.apache.hadoop.sqoop.util.LoggingAsyncSink;
@@ -46,11 +46,11 @@ public class HiveImport {
 
   public static final Log LOG = LogFactory.getLog(HiveImport.class.getName());
 
-  private ImportOptions options;
+  private SqoopOptions options;
   private ConnManager connManager;
   private Configuration configuration;
 
-  public HiveImport(final ImportOptions opts, final ConnManager connMgr, final Configuration conf) {
+  public HiveImport(final SqoopOptions opts, final ConnManager connMgr, final Configuration conf) {
     this.options = opts;
     this.connManager = connMgr;
     this.configuration = conf;

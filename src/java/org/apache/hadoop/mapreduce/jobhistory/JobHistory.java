@@ -24,8 +24,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -80,6 +83,18 @@ public class JobHistory {
 
   private HistoryCleaner historyCleanerThread = null;
 
+  private Map<JobID, MovedFileInfo> jobHistoryFileMap = 
+    Collections.<JobID,MovedFileInfo>synchronizedMap(
+        new LinkedHashMap<JobID, MovedFileInfo>());
+
+  private static class MovedFileInfo {
+    private final String historyFile;
+    private final long timestamp;
+    public MovedFileInfo(String historyFile, long timestamp) {
+      this.historyFile = historyFile;
+      this.timestamp = timestamp;
+    }
+  }
   /**
    * Initialize Job History Module
    * @param jt Job Tracker handle
@@ -195,6 +210,16 @@ public class JobHistory {
     return new Path(dir, jobId.toString() + "_" + user);
   }
 
+  /**
+   * Given the job id, return the history file path from the cache
+   */
+  public String getHistoryFilePath(JobID jobId) {
+    MovedFileInfo info = jobHistoryFileMap.get(jobId);
+    if (info == null) {
+      return null;
+    }
+    return info.historyFile;
+  }
   /**
    * Create an event writer for the Job represented by the jobID.
    * This should be the first call to history for a job
@@ -383,7 +408,8 @@ public class JobHistory {
           historyFileDonePath = new Path(done, 
               historyFile.getName()).toString();
         }
-        
+        jobHistoryFileMap.put(id, new MovedFileInfo(historyFileDonePath, 
+            System.currentTimeMillis()));
         jobTracker.retireJob(org.apache.hadoop.mapred.JobID.downgrade(id),
             historyFileDonePath);
 
@@ -478,6 +504,21 @@ public class JobHistory {
             if (now - f.getModificationTime() > maxAgeOfHistoryFiles) {
               doneDirFs.delete(f.getPath(), true); 
               LOG.info("Deleting old history file : " + f.getPath());
+            }
+          }
+        }
+        //walking over the map to purge entries from jobHistoryFileMap
+        synchronized (jobHistoryFileMap) {
+          Iterator<Entry<JobID, MovedFileInfo>> it = 
+            jobHistoryFileMap.entrySet().iterator();
+          while (it.hasNext()) {
+            MovedFileInfo info = it.next().getValue();
+            if (now - info.timestamp > maxAgeOfHistoryFiles) {
+              it.remove();
+            } else {
+              //since entries are in sorted timestamp order, no more entries
+              //are required to be checked
+              break;
             }
           }
         }

@@ -32,7 +32,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.DataOutputStream;
-import java.util.Date;
 
 /**
  * Base class to test Job end notification in local and cluster mode.
@@ -51,17 +50,12 @@ import java.util.Date;
  */
 public abstract class NotificationTestCase extends HadoopTestCase {
 
-  private static void stdPrintln(String s) {
-    //System.out.println(s);
-  }
-
   protected NotificationTestCase(int mode) throws IOException {
     super(mode, HadoopTestCase.LOCAL_FS, 1, 1);
   }
 
   private int port;
   private String contextPath = "/notification";
-  private Class servletClass = NotificationServlet.class;
   private String servletPath = "/mapred";
   private Server webServer;
 
@@ -118,15 +112,9 @@ public abstract class NotificationTestCase extends HadoopTestCase {
         break;
       }
       if (counter % 2 == 0) {
-        stdPrintln((new Date()).toString() +
-                   "Receiving First notification for [" + req.getQueryString() +
-                   "], returning error");
         res.sendError(HttpServletResponse.SC_BAD_REQUEST, "forcing error");
       }
       else {
-        stdPrintln((new Date()).toString() +
-                   "Receiving Second notification for [" + req.getQueryString() +
-                   "], returning OK");
         res.setStatus(HttpServletResponse.SC_OK);
       }
       counter++;
@@ -160,10 +148,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   public void testMR() throws Exception {
     System.out.println(launchWordCount(this.createJobConf(),
                                        "a b c d e f g h", 1, 1));
-    synchronized(Thread.currentThread()) {
-      stdPrintln("Sleeping for 2 seconds to give time for retry");
-      Thread.currentThread().sleep(2000);
-    }
+    Thread.sleep(2000);
     assertEquals(2, NotificationServlet.counter);
     
     Path inDir = new Path("notificationjob/input");
@@ -180,19 +165,13 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     // run a job with KILLED status
     System.out.println(UtilsForTests.runJobKill(this.createJobConf(), inDir,
                                                 outDir).getID());
-    synchronized(Thread.currentThread()) {
-      stdPrintln("Sleeping for 2 seconds to give time for retry");
-      Thread.currentThread().sleep(2000);
-    }
+    Thread.sleep(2000);
     assertEquals(4, NotificationServlet.counter);
     
     // run a job with FAILED status
     System.out.println(UtilsForTests.runJobFail(this.createJobConf(), inDir,
                                                 outDir).getID());
-    synchronized(Thread.currentThread()) {
-      stdPrintln("Sleeping for 2 seconds to give time for retry");
-      Thread.currentThread().sleep(2000);
-    }
+    Thread.sleep(2000);
     assertEquals(6, NotificationServlet.counter);
   }
 

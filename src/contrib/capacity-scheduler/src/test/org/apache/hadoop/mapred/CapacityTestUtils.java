@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobHistory;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 import org.apache.hadoop.security.SecurityUtil.AccessControlList;
 
 
@@ -349,9 +350,9 @@ public class CapacityTestUtils {
         }
       }
       TaskAttemptID attemptId = getTaskAttemptID(true, areAllMapsRunning);
+      JobSplit.TaskSplitMetaInfo split = JobSplit.EMPTY_TASK_SPLIT;
       Task task = new MapTask(
-        "", attemptId, 0, "", new BytesWritable(),
-        super.numSlotsPerMap) {
+        "", attemptId, 0, split.getSplitIndex(), super.numSlotsPerMap) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -362,7 +363,7 @@ public class CapacityTestUtils {
       // create a fake TIP and keep track of it
       FakeTaskInProgress mapTip = new FakeTaskInProgress(
         getJobID(),
-        getJobConf(), task, true, this);
+        getJobConf(), task, true, this, split);
       mapTip.taskStatus.setRunState(TaskStatus.State.RUNNING);
       if (areAllMapsRunning) {
         speculativeMapTasks++;
@@ -408,7 +409,7 @@ public class CapacityTestUtils {
       // create a fake TIP and keep track of it
       FakeTaskInProgress reduceTip = new FakeTaskInProgress(
         getJobID(),
-        getJobConf(), task, false, this);
+        getJobConf(), task, false, this, null);
       reduceTip.taskStatus.setRunState(TaskStatus.State.RUNNING);
       if (areAllReducesRunning) {
         speculativeReduceTasks++;
@@ -499,8 +500,9 @@ public class CapacityTestUtils {
 
     FakeTaskInProgress(
       JobID jId, JobConf jobConf, Task t,
-      boolean isMap, FakeJobInProgress job) {
-      super(jId, "", new Job.RawSplit(), null, jobConf, job, 0, 1);
+      boolean isMap, FakeJobInProgress job, 
+      JobSplit.TaskSplitMetaInfo split) {
+      super(jId, "", split, null, jobConf, job, 0, 1);
       this.isMap = isMap;
       this.fakeJob = job;
       activeTasks = new TreeMap<TaskAttemptID, String>();

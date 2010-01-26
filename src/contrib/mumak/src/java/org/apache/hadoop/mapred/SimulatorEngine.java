@@ -20,7 +20,9 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -29,14 +31,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.SimulatorEvent;
 import org.apache.hadoop.mapred.SimulatorEventQueue;
 import org.apache.hadoop.mapred.JobCompleteEvent;
-import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.SimulatorJobClient;
 import org.apache.hadoop.mapred.SimulatorJobTracker;
 import org.apache.hadoop.mapred.SimulatorTaskTracker;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.tools.rumen.ClusterStory;
+import org.apache.hadoop.tools.rumen.ClusterTopologyReader;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
+import org.apache.hadoop.tools.rumen.LoggedNetworkTopology;
 import org.apache.hadoop.tools.rumen.MachineNode;
 import org.apache.hadoop.tools.rumen.RackNode;
 import org.apache.hadoop.tools.rumen.ZombieCluster;
@@ -78,8 +81,6 @@ public class SimulatorEngine extends Configured implements Tool {
 
     for (MachineNode node : clusterStory.getMachines()) {
       String hostname = node.getName();
-      RackNode rackNode = node.getRackNode();
-      StaticMapping.addNodeToRack(hostname, rackNode.getName());
       String taskTrackerName = "tracker_" + hostname + ":localhost/127.0.0.1:"
           + port;
       port++;
@@ -132,13 +133,23 @@ public class SimulatorEngine extends Configured implements Tool {
 
     MachineNode defaultNode = new MachineNode.Builder("default", 2)
         .setMapSlots(maxMaps).setReduceSlots(maxReduces).build();
-    ZombieCluster cluster = new ZombieCluster(new Path(topologyFile), 
-        defaultNode, jobConf);
+    
+    LoggedNetworkTopology topology = new ClusterTopologyReader(new Path(
+        topologyFile), jobConf).get();
+    // Setting the static mapping before removing numeric IP hosts.
+    setStaticMapping(topology);
+    if (getConf().getBoolean("mumak.topology.filter-numeric-ips", true)) {
+      removeIpHosts(topology);
+    }
+    ZombieCluster cluster = new ZombieCluster(topology, defaultNode);
     long firstJobStartTime = now + 60000;
     JobStoryProducer jobStoryProducer = new SimulatorJobStoryProducer(
         new Path(traceFile), cluster, firstJobStartTime, jobConf);
     
-    jc = new SimulatorJobClient(jt, jobStoryProducer);
+    final SimulatorJobSubmissionPolicy submissionPolicy = SimulatorJobSubmissionPolicy
+        .getPolicy(jobConf);
+    
+    jc = new SimulatorJobClient(jt, jobStoryProducer, submissionPolicy);
     queue.addAll(jc.init(firstJobStartTime));
 
     // create TTs based on topology.json     
@@ -235,5 +246,59 @@ public class SimulatorEngine extends Configured implements Tool {
    */
   long getCurrentTime() {
     return currentTime;
+  }
+  
+  // Due to HDFS-778, a node may appear in job history logs as both numeric
+  // ips and as host names. We remove them from the parsed network topology
+  // before feeding it to ZombieCluster.
+  static void removeIpHosts(LoggedNetworkTopology topology) {
+    for (Iterator<LoggedNetworkTopology> rackIt = topology.getChildren()
+        .iterator(); rackIt.hasNext();) {
+      LoggedNetworkTopology rack = rackIt.next();
+      List<LoggedNetworkTopology> nodes = rack.getChildren();
+      for (Iterator<LoggedNetworkTopology> it = nodes.iterator(); it.hasNext();) {
+        LoggedNetworkTopology node = it.next();
+        if (isIPAddress(node.getName())) {
+          it.remove();
+        }
+      }
+      if (nodes.isEmpty()) {
+        rackIt.remove();
+      }
+    }
+  }
+
+  static Pattern IP_PATTERN;
+  
+  static {
+    // 0-255
+    String IPV4BK1 = "(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
+    // .b.c.d - where b/c/d are 0-255, and optionally adding two more
+    // backslashes before each period
+    String IPV4BKN = "(?:\\\\?\\." + IPV4BK1 + "){3}";
+    String IPV4_PATTERN = IPV4BK1 + IPV4BKN;
+    
+    // first hexadecimal number
+    String IPV6BK1 = "(?:[0-9a-fA-F]{1,4})";
+    // remaining 7 hexadecimal numbers, each preceded with ":".
+    String IPV6BKN = "(?::" + IPV6BK1 + "){7}";
+    String IPV6_PATTERN = IPV6BK1 + IPV6BKN;
+
+    IP_PATTERN = Pattern.compile(
+        "^(?:" + IPV4_PATTERN + "|" + IPV6_PATTERN + ")$");
+  }
+
+ 
+  static boolean isIPAddress(String hostname) {
+    return IP_PATTERN.matcher(hostname).matches();
+  }
+  
+  static void setStaticMapping(LoggedNetworkTopology topology) {
+    for (LoggedNetworkTopology rack : topology.getChildren()) {
+      for (LoggedNetworkTopology node : rack.getChildren()) {
+        StaticMapping.addNodeToRack(node.getName(), 
+            new RackNode(rack.getName(), 1).getName());
+      }
+    }
   }
 }

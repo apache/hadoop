@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   const char * task_id = NULL;
   const char * tt_root = NULL;
   const char *log_dir = NULL;
+  const char * unique_string = NULL;
   int exit_code = 0;
   const char * task_pid = NULL;
   const char* const short_options = "l:";
@@ -58,6 +59,8 @@ int main(int argc, char **argv) {
       NULL, 0 } };
 
   const char* log_file = NULL;
+  char * dir_to_be_deleted = NULL;
+  int conf_dir_len = 0;
 
   //Minimum number of arguments required to run the task-controller
   //command-name user command tt-root
@@ -67,10 +70,17 @@ int main(int argc, char **argv) {
   }
 
 #ifndef HADOOP_CONF_DIR
-  hadoop_conf_dir = (char *) malloc (sizeof(char) *
-      (strlen(argv[0]) - strlen(EXEC_PATTERN)) + 1);
-  strncpy(hadoop_conf_dir,argv[0],(strlen(argv[0]) - strlen(EXEC_PATTERN)));
-  hadoop_conf_dir[(strlen(argv[0]) - strlen(EXEC_PATTERN))] = '\0';
+  conf_dir_len = (strlen(argv[0]) - strlen(EXEC_PATTERN)) + 1;
+  if (conf_dir_len < 1) {
+    // We didn't get an absolute path to our argv[0]; bail.
+    printf("Cannot find configuration directory.\n");
+    printf("This program must be run with its full absolute path.\n");
+    return INVALID_CONF_DIR;
+  } else {
+    hadoop_conf_dir = (char *) malloc (sizeof(char) * conf_dir_len);
+    strncpy(hadoop_conf_dir,argv[0],(strlen(argv[0]) - strlen(EXEC_PATTERN)));
+    hadoop_conf_dir[(strlen(argv[0]) - strlen(EXEC_PATTERN))] = '\0';
+  }
 #endif
   do {
     next_option = getopt_long(argc, argv, short_options, long_options, NULL);
@@ -112,8 +122,11 @@ int main(int argc, char **argv) {
     job_id = argv[optind++];
     exit_code = initialize_job(job_id, user_detail->pw_name);
     break;
-  case INITIALIZE_DISTRIBUTEDCACHE:
-    exit_code = initialize_distributed_cache(user_detail->pw_name);
+  case INITIALIZE_DISTRIBUTEDCACHE_FILE:
+    tt_root = argv[optind++];
+    unique_string = argv[optind++];
+    exit_code = initialize_distributed_cache_file(tt_root, unique_string,
+        user_detail->pw_name);
     break;
   case LAUNCH_TASK_JVM:
     tt_root = argv[optind++];
@@ -141,6 +154,17 @@ int main(int argc, char **argv) {
     task_id = argv[optind++];
     exit_code
         = run_debug_script_as_user(user_detail->pw_name, job_id, task_id, tt_root);
+    break;
+  case SIGQUIT_TASK_JVM:
+    task_pid = argv[optind++];
+    exit_code = kill_user_task(user_detail->pw_name, task_pid, SIGQUIT);
+    break;
+  case ENABLE_TASK_FOR_CLEANUP:
+    tt_root = argv[optind++];
+    job_id = argv[optind++];
+    dir_to_be_deleted = argv[optind++];
+    exit_code = enable_task_for_cleanup(tt_root, user_detail->pw_name, job_id,
+                                        dir_to_be_deleted);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;

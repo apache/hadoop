@@ -57,6 +57,10 @@ public final class FieldFormatter {
     boolean escapingLegal = (null != escape && escape.length() > 0 && !escape.equals("\000"));
     String withEscapes;
 
+    if (null == str) {
+      return null;
+    }
+
     if (escapingLegal) {
       // escaping is legal. Escape any instances of the escape char itself
       withEscapes = str.replace(escape, escape + escape);

@@ -25,6 +25,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -69,12 +72,10 @@ public abstract class TaskController implements Configurable {
    * disks:
    * <ul>
    * <li>mapreduce.cluster.local.directories</li>
-   * <li>Job cache directories</li>
-   * <li>Archive directories</li>
    * <li>Hadoop log directories</li>
    * </ul>
    */
-  void setup() {
+  public void setup() {
     for (String localDir : this.mapredLocalDirs) {
       // Set up the mapreduce.cluster.local.directories.
       File mapredlocalDir = new File(localDir);
@@ -108,13 +109,13 @@ public abstract class TaskController implements Configurable {
 
   /**
    * Take task-controller specific actions to initialize the distributed cache
-   * files. This involves setting appropriate permissions for these files so as
+   * file. This involves setting appropriate permissions for these files so as
    * to secure them to be accessible only their owners.
    * 
    * @param context
    * @throws IOException
    */
-  public abstract void initializeDistributedCache(InitializationContext context)
+  public abstract void initializeDistributedCacheFile(DistributedCacheFileContext context)
       throws IOException;
 
   /**
@@ -134,26 +135,26 @@ public abstract class TaskController implements Configurable {
 
   /**
    * Top level cleanup a task JVM method.
-   *
-   * The current implementation does the following.
    * <ol>
-   * <li>Sends a graceful terminate signal to task JVM allowing its sub-process
+   * <li>Sends a graceful termiante signal to task JVM to allow subprocesses
    * to cleanup.</li>
-   * <li>Waits for stipulated period</li>
    * <li>Sends a forceful kill signal to task JVM, terminating all its
-   * sub-process forcefully.</li>
+   * sub-processes forcefully.</li>
    * </ol>
-   * 
+   *
    * @param context the task for which kill signal has to be sent.
    */
   final void destroyTaskJVM(TaskControllerContext context) {
+    // Send SIGTERM to try to ask for a polite exit.
     terminateTask(context);
+
     try {
       Thread.sleep(context.sleeptimeBeforeSigkill);
     } catch (InterruptedException e) {
-      LOG.warn("Sleep interrupted : " + 
+      LOG.warn("Sleep interrupted : " +
           StringUtils.stringifyException(e));
     }
+
     killTask(context);
   }
 
@@ -191,12 +192,104 @@ public abstract class TaskController implements Configurable {
   }
 
   /**
+   * Contains info related to the path of the file/dir to be deleted. This info
+   * is needed by task-controller to build the full path of the file/dir
+   */
+  static class TaskControllerPathDeletionContext extends PathDeletionContext {
+    Task task;
+    boolean isWorkDir;
+    TaskController taskController;
+
+    /**
+     * mapredLocalDir is the base dir under which to-be-deleted taskWorkDir or
+     * taskAttemptDir exists. fullPath of taskAttemptDir or taskWorkDir
+     * is built using mapredLocalDir, jobId, taskId, etc.
+     */
+    Path mapredLocalDir;
+
+    public TaskControllerPathDeletionContext(FileSystem fs, Path mapredLocalDir,
+        Task task, boolean isWorkDir, TaskController taskController) {
+      super(fs, null);
+      this.task = task;
+      this.isWorkDir = isWorkDir;
+      this.taskController = taskController;
+      this.mapredLocalDir = mapredLocalDir;
+    }
+
+    @Override
+    protected String getPathForCleanup() {
+      if (fullPath == null) {
+        fullPath = buildPathForDeletion();
+      }
+      return fullPath;
+    }
+
+    /**
+     * Builds the path of taskAttemptDir OR taskWorkDir based on
+     * mapredLocalDir, jobId, taskId, etc
+     */
+    String buildPathForDeletion() {
+      String subDir = (isWorkDir) ? TaskTracker.getTaskWorkDir(task.getUser(),
+          task.getJobID().toString(), task.getTaskID().toString(),
+          task.isTaskCleanupTask())
+        : TaskTracker.getLocalTaskDir(task.getUser(),
+          task.getJobID().toString(), task.getTaskID().toString(),
+          task.isTaskCleanupTask());
+
+      return mapredLocalDir.toUri().getPath() + Path.SEPARATOR + subDir;
+    }
+
+    /**
+     * Makes the path(and its subdirectories recursively) fully deletable by
+     * setting proper permissions(770) by task-controller
+     */
+    @Override
+    protected void enablePathForCleanup() throws IOException {
+      getPathForCleanup();// allow init of fullPath, if not inited already
+      if (fs.exists(new Path(fullPath))) {
+        taskController.enableTaskForCleanup(this);
+      }
+    }
+  }
+
+  /**
    * NOTE: This class is internal only class and not intended for users!!
    * 
    */
   public static class InitializationContext {
     public File workDir;
     public String user;
+    
+    public InitializationContext() {
+    }
+    
+    public InitializationContext(String user, File workDir) {
+      this.user = user;
+      this.workDir = workDir;
+    }
+  }
+  
+  /**
+   * This is used for initializing the private localized files in distributed
+   * cache. Initialization would involve changing permission, ownership and etc.
+   */
+  public static class DistributedCacheFileContext extends InitializationContext {
+    // base directory under which file has been localized
+    Path localizedBaseDir;
+    // the unique string used to construct the localized path
+    String uniqueString;
+
+    public DistributedCacheFileContext(String user, File workDir,
+        Path localizedBaseDir, String uniqueString) {
+      super(user, workDir);
+      this.localizedBaseDir = localizedBaseDir;
+      this.uniqueString = uniqueString;
+    }
+
+    public Path getLocalizedUniqueDir() {
+      return new Path(localizedBaseDir, new Path(TaskTracker
+          .getPrivateDistributedCacheDir(user), uniqueString));
+    }
   }
 
   static class JobInitializationContext extends InitializationContext {
@@ -224,6 +317,15 @@ public abstract class TaskController implements Configurable {
    */
   abstract void killTask(TaskControllerContext context);
 
+
+  /**
+   * Sends a QUIT signal to direct the task JVM (and sub-processes) to
+   * dump their stack to stdout.
+   *
+   * @param context task context.
+   */
+  abstract void dumpTaskStack(TaskControllerContext context);
+
   /**
    * Initialize user on this TaskTracer in a TaskController specific manner.
    * 
@@ -242,4 +344,11 @@ public abstract class TaskController implements Configurable {
   abstract void runDebugScript(DebugScriptContext context) 
       throws IOException;
   
+  /**
+   * Enable the task for cleanup by changing permissions of the path
+   * @param context   path deletion context
+   * @throws IOException
+   */
+  abstract void enableTaskForCleanup(PathDeletionContext context)
+      throws IOException;
 }

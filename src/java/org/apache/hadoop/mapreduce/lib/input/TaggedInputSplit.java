@@ -125,7 +125,6 @@ class TaggedInputSplit extends InputSplit implements Configurable, Writable {
     Deserializer deserializer = factory.getDeserializer(inputSplitClass);
     deserializer.open((DataInputStream)in);
     inputSplit = (InputSplit)deserializer.deserialize(inputSplit);
-    deserializer.close();
   }
 
   private Class<?> readClass(DataInput in) throws IOException {
@@ -147,7 +146,6 @@ class TaggedInputSplit extends InputSplit implements Configurable, Writable {
           factory.getSerializer(inputSplitClass);
     serializer.open((DataOutputStream)out);
     serializer.serialize(inputSplit);
-    serializer.close();
   }
 
   public Configuration getConf() {

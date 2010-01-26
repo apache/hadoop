@@ -42,7 +42,8 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
  * The field separator is under attribute "mapreduce.fieldsel.data.field.separator"
  * 
  * The map output field list spec is under attribute 
- * "mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec". The value is expected to be like
+ * "mapreduce.fieldsel.map.output.key.value.fields.spec". 
+ * The value is expected to be like
  * "keyFieldsSpec:valueFieldsSpec" key/valueFieldsSpec are comma (,) separated
  * field spec: fieldSpec,fieldSpec,fieldSpec ... Each field spec can be a 
  * simple number (e.g. 5) specifying a specific field, or a range (like 2-5)

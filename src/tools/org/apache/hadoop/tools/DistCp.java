@@ -34,6 +34,8 @@ import java.util.Random;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -66,7 +68,10 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileRecordReader;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -1196,8 +1201,21 @@ public class DistCp implements Tool {
 
     final String randomId = getRandomId();
     JobClient jClient = new JobClient(jobConf);
-    Path jobDirectory = new Path(jClient.getSystemDir(), NAME + "_" + randomId);
+    Path stagingArea;
+    try {
+      stagingArea = 
+        JobSubmissionFiles.getStagingDir(jClient.getClusterHandle(), conf);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
+    }
+    
+    Path jobDirectory = new Path(stagingArea + NAME + "_" + randomId);
+    FsPermission mapredSysPerms = 
+      new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
+    FileSystem.mkdirs(jClient.getFs(), jobDirectory, mapredSysPerms);
     jobConf.set(JOB_DIR_LABEL, jobDirectory.toString());
+
+    long maxBytesPerMap = conf.getLong(BYTES_PER_MAP_LABEL, BYTES_PER_MAP);
 
     FileSystem dstfs = args.dst.getFileSystem(conf);
     boolean dstExists = dstfs.exists(args.dst);
@@ -1365,7 +1383,7 @@ public class DistCp implements Tool {
 
                 ++cnsyncf;
                 cbsyncs += child.getLen();
-                if (cnsyncf > SYNC_FILE_MAX || cbsyncs > BYTES_PER_MAP) {
+                if (cnsyncf > SYNC_FILE_MAX || cbsyncs > maxBytesPerMap) {
                   src_writer.sync();
                   dst_writer.sync();
                   cnsyncf = 0;
@@ -1540,7 +1558,7 @@ public class DistCp implements Tool {
     //write dst lsr results
     final Path dstlsr = new Path(jobdir, "_distcp_dst_lsr");
     final SequenceFile.Writer writer = SequenceFile.createWriter(jobfs, jobconf,
-        dstlsr, Text.class, FileStatus.class,
+        dstlsr, Text.class, dstroot.getClass(),
         SequenceFile.CompressionType.NONE);
     try {
       //do lsr to get all file statuses in dstroot

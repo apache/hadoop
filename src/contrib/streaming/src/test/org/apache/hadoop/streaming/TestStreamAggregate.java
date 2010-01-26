@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.streaming;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import java.io.*;
 
 import org.apache.hadoop.fs.FileUtil;
@@ -29,7 +30,7 @@ import org.apache.hadoop.mapreduce.JobContext;
  * It uses Hadoop Aggregate to count the numbers of word occurrences 
  * in the input.
  */
-public class TestStreamAggregate extends TestCase
+public class TestStreamAggregate
 {
   protected File INPUT_FILE = new File("stream_aggregate_input.txt");
   protected File OUTPUT_DIR = new File("stream_aggregate_out");
@@ -69,8 +70,8 @@ public class TestStreamAggregate extends TestCase
     };
   }
   
-  public void testCommandLine()
-  {
+  @Test
+  public void testCommandLine() throws Exception {
     try {
       try {
         FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
@@ -90,23 +91,10 @@ public class TestStreamAggregate extends TestCase
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
-    } catch(Exception e) {
-      failTrace(e);
     } finally {
-      try {
-        INPUT_FILE.delete();
-        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
-      } catch (IOException e) {
-        failTrace(e);
-      }
+      INPUT_FILE.delete();
+      FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
     }
-  }
-
-  private void failTrace(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
   }
 
   public static void main(String[]args) throws Exception

@@ -17,22 +17,10 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.Formatter;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,15 +28,10 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
@@ -65,7 +48,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.tools.rumen.JobStory;
@@ -80,6 +62,7 @@ import org.apache.commons.logging.LogFactory;
 class GridmixJob implements Callable<Job>, Delayed {
 
   public static final String JOBNAME = "GRIDMIX";
+  public static final String ORIGNAME = "gridmix.job.name.original";
   public static final Log LOG = LogFactory.getLog(GridmixJob.class);
 
   private static final ThreadLocal<Formatter> nameFormat =
@@ -180,14 +163,17 @@ class GridmixJob implements Callable<Job>, Delayed {
     job.setReducerClass(GridmixReducer.class);
     job.setNumReduceTasks(jobdesc.getNumberReduces());
     job.setMapOutputKeyClass(GridmixKey.class);
-    job.setMapOutputValueClass(BytesWritable.class);
-    job.setSortComparatorClass(BytesWritable.Comparator.class);
+    job.setMapOutputValueClass(GridmixRecord.class);
+    job.setSortComparatorClass(GridmixKey.Comparator.class);
     job.setGroupingComparatorClass(SpecGroupingComparator.class);
     job.setInputFormatClass(GridmixInputFormat.class);
     job.setOutputFormatClass(RawBytesOutputFormat.class);
     job.setPartitionerClass(DraftPartitioner.class);
     job.setJarByClass(GridmixJob.class);
     job.getConfiguration().setInt("gridmix.job.seq", seq);
+    job.getConfiguration().set(ORIGNAME, null == jobdesc.getJobID()
+        ? "<unknown>" : jobdesc.getJobID().toString());
+    job.getConfiguration().setBoolean(Job.USED_GENERIC_PARSER, true);
     FileInputFormat.addInputPath(job, new Path("ignored"));
     FileOutputFormat.setOutputPath(job, outdir);
     job.submit();
@@ -200,11 +186,10 @@ class GridmixJob implements Callable<Job>, Delayed {
     }
   }
 
-  /**
-   * Group REDUCE_SPEC records together
-   */
   public static class SpecGroupingComparator
-      implements RawComparator<GridmixKey>, Serializable {
+      implements RawComparator<GridmixKey> {
+    private final DataInputBuffer di = new DataInputBuffer();
+    private final byte[] reset = di.getData();
     @Override
     public int compare(GridmixKey g1, GridmixKey g2) {
       final byte t1 = g1.getType();
@@ -215,284 +200,128 @@ class GridmixJob implements Callable<Job>, Delayed {
       }
       assert t1 == GridmixKey.DATA;
       assert t2 == GridmixKey.DATA;
-      return WritableComparator.compareBytes(
-          g1.getBytes(), 0, g1.getLength(),
-          g2.getBytes(), 0, g2.getLength());
+      return g1.compareTo(g2);
     }
     @Override
-    public int compare(byte[] b1, int s1, int l1,
-                       byte[] b2, int s2, int l2) {
-      final byte t1 = b1[s1 + 4];
-      final byte t2 = b2[s2 + 4];
-      if (t1 == GridmixKey.REDUCE_SPEC ||
-          t2 == GridmixKey.REDUCE_SPEC) {
-        return t1 - t2;
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+      try {
+        final int ret;
+        di.reset(b1, s1, l1);
+        final int x1 = WritableUtils.readVInt(di);
+        di.reset(b2, s2, l2);
+        final int x2 = WritableUtils.readVInt(di);
+        final int t1 = b1[s1 + x1];
+        final int t2 = b2[s2 + x2];
+        if (t1 == GridmixKey.REDUCE_SPEC ||
+            t2 == GridmixKey.REDUCE_SPEC) {
+          ret = t1 - t2;
+        } else {
+          assert t1 == GridmixKey.DATA;
+          assert t2 == GridmixKey.DATA;
+          ret =
+            WritableComparator.compareBytes(b1, s1, x1, b2, s2, x2);
+        }
+        di.reset(reset, 0, 0);
+        return ret;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
       }
-      assert t1 == GridmixKey.DATA;
-      assert t2 == GridmixKey.DATA;
-      return WritableComparator.compareBytes(
-          b1, s1 + 4, l1 - 4,
-          b2, s2 + 4, l2 - 4);
-    }
-  }
-
-  /**
-   * Keytype for synthetic jobs, some embedding instructions for the reduce.
-   */
-  public static class GridmixKey extends BytesWritable {
-    // long fields specifying reduce contract
-    private enum RSpec { REC_IN, REC_OUT, BYTES_OUT };
-    private static final int SPEC_START = 5; // type + partition len
-    private static final int NUMFIELDS = RSpec.values().length;
-    private static final int SPEC_SIZE = NUMFIELDS * 8;
-
-    // Key types
-    static final byte REDUCE_SPEC = 0;
-    static final byte DATA = 1;
-
-    private IntBuffer partition;
-    private LongBuffer spec;
-
-    public GridmixKey() {
-      super(new byte[SPEC_START]);
-    }
-
-    public GridmixKey(byte type, byte[] b) {
-      super(b);
-      setType(type);
-    }
-
-    public byte getType() {
-      return getBytes()[0];
-    }
-    public void setPartition(int partition) {
-      this.partition.put(0, partition);
-    }
-    public int getPartition() {
-      return partition.get(0);
-    }
-    public long getReduceInputRecords() {
-      checkState(REDUCE_SPEC);
-      return spec.get(RSpec.REC_IN.ordinal());
-    }
-    public long getReduceOutputBytes() {
-      checkState(REDUCE_SPEC);
-      return spec.get(RSpec.BYTES_OUT.ordinal());
-    }
-    public long getReduceOutputRecords() {
-      checkState(REDUCE_SPEC);
-      return spec.get(RSpec.REC_OUT.ordinal());
-    }
-    public void setType(byte b) {
-      switch (b) {
-        case REDUCE_SPEC:
-          if (getCapacity() < SPEC_START + SPEC_SIZE) {
-            setSize(SPEC_START + SPEC_SIZE);
-          }
-          spec =
-            ByteBuffer.wrap(getBytes(), SPEC_START, SPEC_SIZE).asLongBuffer();
-          break;
-        case DATA:
-          if (getCapacity() < SPEC_START) {
-            setSize(SPEC_START);
-          }
-          spec = null;
-          break;
-        default:
-          throw new IllegalArgumentException("Illegal type " + b);
-      }
-      getBytes()[0] = b;
-      partition =
-        ByteBuffer.wrap(getBytes(), 1, SPEC_START - 1).asIntBuffer();
-    }
-    public void setReduceInputRecords(long records) {
-      checkState(REDUCE_SPEC);
-      spec.put(RSpec.REC_IN.ordinal(), records);
-    }
-    public void setReduceOutputBytes(long bytes) {
-      checkState(REDUCE_SPEC);
-      spec.put(RSpec.BYTES_OUT.ordinal(), bytes);
-    }
-    public void setReduceOutputRecords(long records) {
-      checkState(REDUCE_SPEC);
-      spec.put(RSpec.REC_OUT.ordinal(), records);
-    }
-    private void checkState(byte b) {
-      if (getLength() < SPEC_START || getType() != b) {
-        throw new IllegalStateException("Expected " + b + ", was " + getType());
-      }
-    }
-    @Override
-    public void readFields(DataInput in) throws IOException {
-      super.readFields(in);
-      if (getLength() < SPEC_START) {
-        throw new IOException("Invalid GridmixKey, len " + getLength());
-      }
-      partition =
-        ByteBuffer.wrap(getBytes(), 1, SPEC_START - 1).asIntBuffer();
-      spec = getType() == REDUCE_SPEC
-        ? ByteBuffer.wrap(getBytes(), SPEC_START, SPEC_SIZE).asLongBuffer()
-        : null;
-    }
-    @Override
-    public void write(DataOutput out) throws IOException {
-      super.write(out);
-      if (getType() == REDUCE_SPEC) {
-        LOG.debug("SPEC(" + getPartition() + ") " + getReduceInputRecords() +
-            " -> " + getReduceOutputRecords() + "/" + getReduceOutputBytes());
-      }
-    }
-    @Override
-    public boolean equals(Object other) {
-      if (other instanceof GridmixKey) {
-        return super.equals(other);
-      }
-      return false;
-    }
-
-    @Override
-    public int hashCode() {
-      return super.hashCode();
     }
   }
 
   public static class GridmixMapper
-      extends Mapper<IntWritable,BytesWritable,GridmixKey,BytesWritable> {
+      extends Mapper<NullWritable,GridmixRecord,GridmixKey,GridmixRecord> {
 
-    private final Random r = new Random();
-    private GridmixKey key;
-    private final BytesWritable val = new BytesWritable();
-
-    private int keyLen;
     private double acc;
     private double ratio;
-    private int[] reduceRecordSize;
-    private long[] reduceRecordCount;
-    private long[] reduceRecordRemaining;
+    private final ArrayList<RecordFactory> reduces =
+      new ArrayList<RecordFactory>();
+    private final Random r = new Random();
+
+    private final GridmixKey key = new GridmixKey();
+    private final GridmixRecord val = new GridmixRecord();
 
     @Override
-    protected void setup(Context context)
+    protected void setup(Context ctxt)
         throws IOException, InterruptedException {
-      // TODO clearly job-specific, but no data at present
-      keyLen = context.getConfiguration().getInt(Gridmix.GRIDMIX_KEY_LEN, 20);
-      key = new GridmixKey(GridmixKey.DATA, new byte[keyLen]);
-      final GridmixSplit split = (GridmixSplit) context.getInputSplit();
-      LOG.info("ID: " + split.getId());
-      reduceRecordCount = split.getOutputRecords();
-      reduceRecordRemaining =
-        Arrays.copyOf(reduceRecordCount, reduceRecordCount.length);
-      reduceRecordSize = new int[reduceRecordCount.length];
-      int valsize = -1;
+      final Configuration conf = ctxt.getConfiguration();
+      final GridmixSplit split = (GridmixSplit) ctxt.getInputSplit();
+      final int maps = split.getMapCount();
       final long[] reduceBytes = split.getOutputBytes();
+      final long[] reduceRecords = split.getOutputRecords();
+
       long totalRecords = 0L;
-      for (int i = 0; i < reduceBytes.length; ++i) {
-        reduceRecordSize[i] = Math.max(0,
-          Math.round(reduceBytes[i] / (1.0f * reduceRecordCount[i])) - keyLen);
-        valsize = Math.max(reduceRecordSize[i], valsize);
-        totalRecords += reduceRecordCount[i];
+      final int nReduces = ctxt.getNumReduceTasks();
+      if (nReduces > 0) {
+        int idx = 0;
+        int id = split.getId();
+        for (int i = 0; i < nReduces; ++i) {
+          final GridmixKey.Spec spec = new GridmixKey.Spec();
+          if (i == id) {
+            spec.bytes_out = split.getReduceBytes(idx);
+            spec.rec_out = split.getReduceRecords(idx);
+            ++idx;
+            id += maps;
+          }
+          reduces.add(new IntermediateRecordFactory(
+              new AvgRecordFactory(reduceBytes[i], reduceRecords[i], conf),
+              i, reduceRecords[i], spec, conf));
+          totalRecords += reduceRecords[i];
+        }
+      } else {
+        reduces.add(new AvgRecordFactory(reduceBytes[0], reduceRecords[0],
+              conf));
+        totalRecords = reduceRecords[0];
       }
-      valsize = Math.max(0, valsize - 4); // BW len encoding
-      val.setCapacity(valsize);
-      val.setSize(valsize);
-      ratio = totalRecords / (1.0 * split.getInputRecords());
+      final long splitRecords = split.getInputRecords();
+      final long inputRecords = splitRecords <= 0 && split.getLength() >= 0
+        ? Math.max(1,
+          split.getLength() / conf.getInt("gridmix.missing.rec.size", 64*1024))
+        : splitRecords;
+      ratio = totalRecords / (1.0 * inputRecords);
       acc = 0.0;
     }
 
-    protected void fillBytes(BytesWritable val, int len) {
-      r.nextBytes(val.getBytes());
-      val.setSize(len);
-    }
-
-    /** Find next non-empty partition after start. */
-    private int getNextPart(final int start) {
-      int p = start;
-      do {
-        p = (p + 1) % reduceRecordSize.length;
-      } while (0 == reduceRecordRemaining[p] && p != start);
-      return 0 == reduceRecordRemaining[p] ? -1 : p;
-    }
-
     @Override
-    public void map(IntWritable ignored, BytesWritable bytes,
+    public void map(NullWritable ignored, GridmixRecord rec,
         Context context) throws IOException, InterruptedException {
-      int p = getNextPart(r.nextInt(reduceRecordSize.length));
-      if (-1 == p) {
-        return;
-      }
       acc += ratio;
-      while (acc >= 1.0) {
-        fillBytes(key, key.getLength());
-        key.setType(GridmixKey.DATA);
-        key.setPartition(p);
-        --reduceRecordRemaining[p];
-        fillBytes(val, reduceRecordSize[p]);
+      while (acc >= 1.0 && !reduces.isEmpty()) {
+        key.setSeed(r.nextLong());
+        val.setSeed(r.nextLong());
+        final int idx = r.nextInt(reduces.size());
+        final RecordFactory f = reduces.get(idx);
+        if (!f.next(key, val)) {
+          reduces.remove(idx);
+          continue;
+        }
         context.write(key, val);
         acc -= 1.0;
-        if (0 == reduceRecordRemaining[p] && -1 == (p = getNextPart(p))) {
-          return;
-        }
       }
     }
 
     @Override
     public void cleanup(Context context)
         throws IOException, InterruptedException {
-      // output any remaining records
-      // TODO include reduce spec in remaining records if avail
-      //      (i.e. move this to map)
-      for (int i = 0; i < reduceRecordSize.length; ++i) {
-        for (long j = reduceRecordRemaining[i]; j > 0; --j) {
-          fillBytes(key, key.getLength());
-          key.setType(GridmixKey.DATA);
-          key.setPartition(i);
-          fillBytes(val, reduceRecordSize[i]);
+      for (RecordFactory factory : reduces) {
+        key.setSeed(r.nextLong());
+        while (factory.next(key, val)) {
           context.write(key, val);
+          key.setSeed(r.nextLong());
         }
-      }
-      val.setSize(0);
-      key.setType(GridmixKey.REDUCE_SPEC);
-      final int reduces = context.getNumReduceTasks();
-      final GridmixSplit split = (GridmixSplit) context.getInputSplit();
-      final int maps = split.getMapCount();
-      int idx = 0;
-      int id = split.getId();
-      for (int i = 0; i < reduces; ++i) {
-        key.setPartition(i);
-        key.setReduceInputRecords(reduceRecordCount[i]);
-        // Write spec for all red st r_id % id == 0
-        if (i == id) {
-          key.setReduceOutputBytes(split.getReduceBytes(idx));
-          key.setReduceOutputRecords(split.getReduceRecords(idx));
-          LOG.debug(String.format("SPEC'D %d / %d to %d",
-                split.getReduceRecords(idx), split.getReduceBytes(idx), i));
-          ++idx;
-          id += maps;
-        } else {
-          key.setReduceOutputBytes(0);
-          key.setReduceOutputRecords(0);
-        }
-        context.write(key, val);
       }
     }
   }
 
   public static class GridmixReducer
-      extends Reducer<GridmixKey,BytesWritable,NullWritable,BytesWritable> {
+      extends Reducer<GridmixKey,GridmixRecord,NullWritable,GridmixRecord> {
 
     private final Random r = new Random();
-    private final BytesWritable val = new BytesWritable();
+    private final GridmixRecord val = new GridmixRecord();
 
     private double acc;
     private double ratio;
-    private long written;
-    private long inRecords = 0L;
-    private long outBytes = 0L;
-    private long outRecords = 0L;
-
-    protected void fillBytes(BytesWritable val, int len) {
-      r.nextBytes(val.getBytes());
-      val.setSize(len);
-    }
+    private RecordFactory factory;
 
     @Override
     protected void setup(Context context)
@@ -501,62 +330,52 @@ class GridmixJob implements Callable<Job>, Delayed {
            context.getCurrentKey().getType() != GridmixKey.REDUCE_SPEC) {
         throw new IOException("Missing reduce spec");
       }
-      for (BytesWritable ignored : context.getValues()) {
+      long outBytes = 0L;
+      long outRecords = 0L;
+      long inRecords = 0L;
+      for (GridmixRecord ignored : context.getValues()) {
         final GridmixKey spec = context.getCurrentKey();
         inRecords += spec.getReduceInputRecords();
-        LOG.debug("GOT COUNT " + spec.getReduceInputRecords());
         outBytes += spec.getReduceOutputBytes();
         outRecords += spec.getReduceOutputRecords();
       }
-      LOG.debug("GOT SPEC " + outRecords + "/" + outBytes);
-      val.setCapacity(Math.round(outBytes / (1.0f * outRecords)));
+      if (0 == outRecords && inRecords > 0) {
+        LOG.info("Spec output bytes w/o records. Using input record count");
+        outRecords = inRecords;
+      }
+      factory =
+        new AvgRecordFactory(outBytes, outRecords, context.getConfiguration());
       ratio = outRecords / (1.0 * inRecords);
       acc = 0.0;
-      LOG.debug(String.format("RECV %d -> %10d/%10d %d %f", inRecords,
-            outRecords, outBytes, val.getCapacity(), ratio));
     }
     @Override
-    protected void reduce(GridmixKey key, Iterable<BytesWritable> values,
+    protected void reduce(GridmixKey key, Iterable<GridmixRecord> values,
         Context context) throws IOException, InterruptedException {
-      for (BytesWritable ignored : values) {
+      for (GridmixRecord ignored : values) {
         acc += ratio;
-        while (acc >= 1.0 && written < outBytes) {
-          final int len = (int) Math.min(outBytes - written, val.getCapacity());
-          fillBytes(val, len);
+        while (acc >= 1.0 && factory.next(null, val)) {
           context.write(NullWritable.get(), val);
           acc -= 1.0;
-          written += len;
-          LOG.debug(String.format("%f %d/%d", acc, written, outBytes));
         }
       }
     }
     @Override
     protected void cleanup(Context context)
         throws IOException, InterruptedException {
-      while (written < outBytes) {
-        final int len = (int) Math.min(outBytes - written, val.getCapacity());
-        fillBytes(val, len);
+      val.setSeed(r.nextLong());
+      while (factory.next(null, val)) {
         context.write(NullWritable.get(), val);
-        written += len;
+        val.setSeed(r.nextLong());
       }
     }
   }
 
   static class GridmixRecordReader
-      extends RecordReader<IntWritable,BytesWritable> {
+      extends RecordReader<NullWritable,GridmixRecord> {
 
-    private long bytesRead = 0;
-    private long bytesTotal;
-    private Configuration conf;
-    private final IntWritable key = new IntWritable();
-    private final BytesWritable inBytes = new BytesWritable();
-
-    private FSDataInputStream input;
-    private int idx = -1;
-    private int capacity;
-    private Path[] paths;
-    private long[] startoffset;
-    private long[] lengths;
+    private RecordFactory factory;
+    private final Random r = new Random();
+    private final GridmixRecord val = new GridmixRecord();
 
     public GridmixRecordReader() { }
 
@@ -564,178 +383,36 @@ class GridmixJob implements Callable<Job>, Delayed {
     public void initialize(InputSplit genericSplit, TaskAttemptContext ctxt)
             throws IOException, InterruptedException {
       final GridmixSplit split = (GridmixSplit)genericSplit;
-      this.conf = ctxt.getConfiguration();
-      paths = split.getPaths();
-      startoffset = split.getStartOffsets();
-      lengths = split.getLengths();
-      bytesTotal = split.getLength();
-      capacity = (int) Math.round(bytesTotal / (1.0 * split.getInputRecords()));
-      inBytes.setCapacity(capacity);
-      nextSource();
+      final Configuration conf = ctxt.getConfiguration();
+      factory = new ReadRecordFactory(split.getLength(),
+          split.getInputRecords(), new FileQueue(split, conf), conf);
     }
-    private void nextSource() throws IOException {
-      idx = (idx + 1) % paths.length;
-      final Path file = paths[idx];
-      final FileSystem fs = file.getFileSystem(conf);
-      input = fs.open(file, capacity);
-      input.seek(startoffset[idx]);
-    }
+
     @Override
     public boolean nextKeyValue() throws IOException {
-      if (bytesRead >= bytesTotal) {
-        return false;
-      }
-      final int len = (int)
-        Math.min(bytesTotal - bytesRead, inBytes.getCapacity());
-      int kvread = 0;
-      while (kvread < len) {
-        assert lengths[idx] >= 0;
-        if (lengths[idx] <= 0) {
-          nextSource();
-          continue;
-        }
-        final int srcRead = (int) Math.min(len - kvread, lengths[idx]);
-        IOUtils.readFully(input, inBytes.getBytes(), kvread, srcRead);
-        //LOG.trace("Read " + srcRead + " bytes from " + paths[idx]);
-        lengths[idx] -= srcRead;
-        kvread += srcRead;
-      }
-      bytesRead += kvread;
-      return true;
+      val.setSeed(r.nextLong());
+      return factory.next(null, val);
     }
     @Override
     public float getProgress() throws IOException {
-      return bytesRead / ((float)bytesTotal);
+      return factory.getProgress();
     }
     @Override
-    public IntWritable getCurrentKey() { return key; }
+    public NullWritable getCurrentKey() {
+      return NullWritable.get();
+    }
     @Override
-    public BytesWritable getCurrentValue() { return inBytes; }
+    public GridmixRecord getCurrentValue() {
+      return val;
+    }
     @Override
     public void close() throws IOException {
-      IOUtils.cleanup(null, input);
-    }
-  }
-
-  static class GridmixSplit extends CombineFileSplit {
-    private int id;
-    private int nSpec;
-    private int maps;
-    private int reduces;
-    private long inputRecords;
-    private long outputBytes;
-    private long outputRecords;
-    private long maxMemory;
-    private double[] reduceBytes = new double[0];
-    private double[] reduceRecords = new double[0];
-
-    // Spec for reduces id mod this
-    private long[] reduceOutputBytes = new long[0];
-    private long[] reduceOutputRecords = new long[0];
-
-    GridmixSplit() {
-      super();
-    }
-
-    public GridmixSplit(CombineFileSplit cfsplit, int maps, int id,
-        long inputBytes, long inputRecords, long outputBytes,
-        long outputRecords, double[] reduceBytes, double[] reduceRecords,
-        long[] reduceOutputBytes, long[] reduceOutputRecords)
-        throws IOException {
-      super(cfsplit);
-      this.id = id;
-      this.maps = maps;
-      reduces = reduceBytes.length;
-      this.inputRecords = inputRecords;
-      this.outputBytes = outputBytes;
-      this.outputRecords = outputRecords;
-      this.reduceBytes = Arrays.copyOf(reduceBytes, reduces);
-      this.reduceRecords = Arrays.copyOf(reduceRecords, reduces);
-      nSpec = reduceOutputBytes.length;
-      this.reduceOutputBytes = reduceOutputBytes;
-      this.reduceOutputRecords = reduceOutputRecords;
-    }
-    public int getId() {
-      return id;
-    }
-    public int getMapCount() {
-      return maps;
-    }
-    public long getInputRecords() {
-      return inputRecords;
-    }
-    public long[] getOutputBytes() {
-      final long[] ret = new long[reduces];
-      for (int i = 0; i < reduces; ++i) {
-        ret[i] = Math.round(outputBytes * reduceBytes[i]);
-      }
-      return ret;
-    }
-    public long[] getOutputRecords() {
-      final long[] ret = new long[reduces];
-      for (int i = 0; i < reduces; ++i) {
-        ret[i] = Math.round(outputRecords * reduceRecords[i]);
-      }
-      return ret;
-    }
-    public long getReduceBytes(int i) {
-      return reduceOutputBytes[i];
-    }
-    public long getReduceRecords(int i) {
-      return reduceOutputRecords[i];
-    }
-    @Override
-    public void write(DataOutput out) throws IOException {
-      super.write(out);
-      WritableUtils.writeVInt(out, id);
-      WritableUtils.writeVInt(out, maps);
-      WritableUtils.writeVLong(out, inputRecords);
-      WritableUtils.writeVLong(out, outputBytes);
-      WritableUtils.writeVLong(out, outputRecords);
-      WritableUtils.writeVLong(out, maxMemory);
-      WritableUtils.writeVInt(out, reduces);
-      for (int i = 0; i < reduces; ++i) {
-        out.writeDouble(reduceBytes[i]);
-        out.writeDouble(reduceRecords[i]);
-      }
-      WritableUtils.writeVInt(out, nSpec);
-      for (int i = 0; i < nSpec; ++i) {
-        out.writeLong(reduceOutputBytes[i]);
-        out.writeLong(reduceOutputRecords[i]);
-      }
-    }
-    @Override
-    public void readFields(DataInput in) throws IOException {
-      super.readFields(in);
-      id = WritableUtils.readVInt(in);
-      maps = WritableUtils.readVInt(in);
-      inputRecords = WritableUtils.readVLong(in);
-      outputBytes = WritableUtils.readVLong(in);
-      outputRecords = WritableUtils.readVLong(in);
-      maxMemory = WritableUtils.readVLong(in);
-      reduces = WritableUtils.readVInt(in);
-      if (reduceBytes.length < reduces) {
-        reduceBytes = new double[reduces];
-        reduceRecords = new double[reduces];
-      }
-      for (int i = 0; i < reduces; ++i) {
-        reduceBytes[i] = in.readDouble();
-        reduceRecords[i] = in.readDouble();
-      }
-      nSpec = WritableUtils.readVInt(in);
-      if (reduceOutputBytes.length < nSpec) {
-        reduceOutputBytes = new long[nSpec];
-        reduceOutputRecords = new long[nSpec];
-      }
-      for (int i = 0; i < nSpec; ++i) {
-        reduceOutputBytes[i] = in.readLong();
-        reduceOutputRecords[i] = in.readLong();
-      }
+      factory.close();
     }
   }
 
   static class GridmixInputFormat
-      extends InputFormat<IntWritable,BytesWritable> {
+      extends InputFormat<NullWritable,GridmixRecord> {
 
     @Override
     public List<InputSplit> getSplits(JobContext jobCtxt) throws IOException {
@@ -743,29 +420,28 @@ class GridmixJob implements Callable<Job>, Delayed {
             "gridmix.job.seq", -1));
     }
     @Override
-    public RecordReader<IntWritable,BytesWritable> createRecordReader(
+    public RecordReader<NullWritable,GridmixRecord> createRecordReader(
         InputSplit split, final TaskAttemptContext taskContext)
         throws IOException {
       return new GridmixRecordReader();
     }
   }
 
-  static class RawBytesOutputFormat
-      extends FileOutputFormat<NullWritable,BytesWritable> {
+  static class RawBytesOutputFormat<K>
+      extends FileOutputFormat<K,GridmixRecord> {
 
     @Override
-    public RecordWriter<NullWritable,BytesWritable> getRecordWriter(
+    public RecordWriter<K,GridmixRecord> getRecordWriter(
         TaskAttemptContext job) throws IOException {
 
       Path file = getDefaultWorkFile(job, "");
       FileSystem fs = file.getFileSystem(job.getConfiguration());
       final FSDataOutputStream fileOut = fs.create(file, false);
-      return new RecordWriter<NullWritable,BytesWritable>() {
+      return new RecordWriter<K,GridmixRecord>() {
         @Override
-        public void write(NullWritable key, BytesWritable value)
+        public void write(K ignored, GridmixRecord value)
             throws IOException {
-          //LOG.trace("WROTE " + value.getLength() + " bytes");
-          fileOut.write(value.getBytes(), 0, value.getLength());
+          value.writeRandom(fileOut, value.getSize());
         }
         @Override
         public void close(TaskAttemptContext ctxt) throws IOException {
@@ -829,8 +505,10 @@ class GridmixJob implements Callable<Job>, Delayed {
           jobdesc.getTaskInfo(TaskType.REDUCE, i + j * maps);
         specBytes[j] = info.getOutputBytes();
         specRecords[j] = info.getOutputRecords();
-        LOG.debug(String.format("SPEC(%d) %d -> %d %d %d", id(), i,
-            i + j * maps, info.getOutputRecords(), info.getOutputBytes()));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format("SPEC(%d) %d -> %d %d %d", id(), i,
+              i + j * maps, info.getOutputRecords(), info.getOutputBytes()));
+        }
       }
       final TaskInfo info = jobdesc.getTaskInfo(TaskType.MAP, i);
       splits.add(new GridmixSplit(striper.splitFor(inputDir,
@@ -842,77 +520,4 @@ class GridmixJob implements Callable<Job>, Delayed {
     pushDescription(id(), splits);
   }
 
-  static class InputStriper {
-    int idx;
-    long currentStart;
-    FileStatus current;
-    final List<FileStatus> files = new ArrayList<FileStatus>();
-
-    InputStriper(FilePool inputDir, long mapBytes)
-        throws IOException {
-      final long inputBytes = inputDir.getInputFiles(mapBytes, files);
-      if (mapBytes > inputBytes) {
-        LOG.warn("Using " + inputBytes + "/" + mapBytes + " bytes");
-      }
-      current = files.get(0);
-    }
-
-    CombineFileSplit splitFor(FilePool inputDir, long bytes, int nLocs)
-        throws IOException {
-      final ArrayList<Path> paths = new ArrayList<Path>();
-      final ArrayList<Long> start = new ArrayList<Long>();
-      final ArrayList<Long> length = new ArrayList<Long>();
-      final HashMap<String,Double> sb = new HashMap<String,Double>();
-      while (bytes > 0) {
-        paths.add(current.getPath());
-        start.add(currentStart);
-        final long fromFile = Math.min(bytes, current.getLen() - currentStart);
-        length.add(fromFile);
-        for (BlockLocation loc :
-            inputDir.locationsFor(current, currentStart, fromFile)) {
-          final double tedium = loc.getLength() / (1.0 * bytes);
-          for (String l : loc.getHosts()) {
-            Double j = sb.get(l);
-            if (null == j) {
-              sb.put(l, tedium);
-            } else {
-              sb.put(l, j.doubleValue() + tedium);
-            }
-          }
-        }
-        currentStart += fromFile;
-        bytes -= fromFile;
-        if (current.getLen() - currentStart == 0) {
-          current = files.get(++idx % files.size());
-          currentStart = 0;
-        }
-      }
-      final ArrayList<Entry<String,Double>> sort =
-        new ArrayList<Entry<String,Double>>(sb.entrySet());
-      Collections.sort(sort, hostRank);
-      final String[] hosts = new String[Math.min(nLocs, sort.size())];
-      for (int i = 0; i < nLocs && i < sort.size(); ++i) {
-        hosts[i] = sort.get(i).getKey();
-      }
-      return new CombineFileSplit(paths.toArray(new Path[0]),
-          toLongArray(start), toLongArray(length), hosts);
-    }
-
-    private long[] toLongArray(final ArrayList<Long> sigh) {
-      final long[] ret = new long[sigh.size()];
-      for (int i = 0; i < ret.length; ++i) {
-        ret[i] = sigh.get(i);
-      }
-      return ret;
-    }
-
-    final Comparator<Entry<String,Double>> hostRank =
-      new Comparator<Entry<String,Double>>() {
-        public int compare(Entry<String,Double> a, Entry<String,Double> b) {
-            final double va = a.getValue();
-            final double vb = b.getValue();
-            return va > vb ? -1 : va < vb ? 1 : 0;
-          }
-      };
-  }
 }

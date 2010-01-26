@@ -41,7 +41,7 @@ public class TestConnFactory extends TestCase {
     conf.set(ConnFactory.FACTORY_CLASS_NAMES_KEY, AlwaysDummyFactory.class.getName());
 
     ConnFactory factory = new ConnFactory(conf);
-    ConnManager manager = factory.getManager(new ImportOptions());
+    ConnManager manager = factory.getManager(new SqoopOptions());
     assertNotNull("No manager returned", manager);
     assertTrue("Expected a DummyManager", manager instanceof DummyManager);
   }
@@ -52,7 +52,7 @@ public class TestConnFactory extends TestCase {
 
     ConnFactory factory = new ConnFactory(conf);
     try {
-      ConnManager manager = factory.getManager(new ImportOptions());
+      ConnManager manager = factory.getManager(new SqoopOptions());
       fail("factory.getManager() expected to throw IOException");
     } catch (IOException ioe) {
       // Expected this. Test passes.
@@ -69,7 +69,7 @@ public class TestConnFactory extends TestCase {
     conf.set(ConnFactory.FACTORY_CLASS_NAMES_KEY, classNames);
 
     ConnFactory factory = new ConnFactory(conf);
-    ConnManager manager = factory.getManager(new ImportOptions());
+    ConnManager manager = factory.getManager(new SqoopOptions());
     assertNotNull("No manager returned", manager);
     assertTrue("Expected a DummyManager", manager instanceof DummyManager);
   }
@@ -77,14 +77,14 @@ public class TestConnFactory extends TestCase {
   ////// mock classes used for test cases above //////
 
   public static class AlwaysDummyFactory extends ManagerFactory {
-    public ConnManager accept(ImportOptions opts) {
+    public ConnManager accept(SqoopOptions opts) {
       // Always return a new DummyManager
       return new DummyManager();
     }
   }
 
   public static class EmptyFactory extends ManagerFactory {
-    public ConnManager accept(ImportOptions opts) {
+    public ConnManager accept(SqoopOptions opts) {
       // Never instantiate a proper ConnManager;
       return null;
     }
@@ -110,6 +110,24 @@ public class TestConnFactory extends TestCase {
     }
 
     public String getPrimaryKey(String tableName) {
+      return null;
+    }
+
+    /**
+    * Default implementation
+    * @param sqlType     sql data type
+    * @return            java data type
+    */
+    public String toJavaType(int sqlType) {
+      return null;
+    }
+
+    /**
+    * Default implementation
+    * @param sqlType     sql data type
+    * @return            hive data type
+    */
+    public String toHiveType(int sqlType) {
       return null;
     }
 

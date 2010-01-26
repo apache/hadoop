@@ -36,6 +36,7 @@ conf/mapred-queue-acls.xml.template
 conf/mapred-queues.xml
 docs/api/
 logs/
+src/contrib/capacity-scheduler/src/java/mapred-queues.xml
 src/contrib/index/conf/index-config.xml
 src/docs/build
 src/docs/cn/build

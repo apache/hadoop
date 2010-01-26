@@ -36,10 +36,12 @@ import org.junit.Test;
 public class TestSimulatorEndToEnd {
 
   public static final Log LOG = LogFactory.getLog(MockSimulatorEngine.class);
+  protected SimulatorJobSubmissionPolicy policy = SimulatorJobSubmissionPolicy.REPLAY;
   
   @Test
   public void testMain() throws Exception {
     final Configuration conf = new Configuration();
+    conf.set(SimulatorJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy.name());
     final FileSystem lfs = FileSystem.getLocal(conf);
     final Path rootInputDir = new Path(
         System.getProperty("src.test.data", "data")).makeQualified(lfs);
@@ -55,7 +57,7 @@ public class TestSimulatorEndToEnd {
     MockSimulatorEngine mockMumak = new MockSimulatorEngine(numJobs, nTrackers);
 
     String[] args = { traceFile.toString(), topologyFile.toString() };
-    int res = ToolRunner.run(new Configuration(), mockMumak, args);
+    int res = ToolRunner.run(conf, mockMumak, args);
     Assert.assertEquals(res, 0);
   }
   

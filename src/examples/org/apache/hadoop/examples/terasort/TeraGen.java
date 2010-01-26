@@ -21,27 +21,30 @@ package org.apache.hadoop.examples.terasort;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -71,12 +74,12 @@ public class TeraGen extends Configured implements Tool {
    * An input format that assigns ranges of longs to each mapper.
    */
   static class RangeInputFormat 
-       implements InputFormat<LongWritable, NullWritable> {
+      extends InputFormat<LongWritable, NullWritable> {
     
     /**
      * An input split consisting of a range on numbers.
      */
-    static class RangeInputSplit implements InputSplit {
+    static class RangeInputSplit extends InputSplit implements Writable {
       long firstRow;
       long rowCount;
 
@@ -110,39 +113,42 @@ public class TeraGen extends Configured implements Tool {
      * A record reader that will generate a range of numbers.
      */
     static class RangeRecordReader 
-          implements RecordReader<LongWritable, NullWritable> {
+        extends RecordReader<LongWritable, NullWritable> {
       long startRow;
       long finishedRows;
       long totalRows;
+      LongWritable key = null;
 
-      public RangeRecordReader(RangeInputSplit split) {
-        startRow = split.firstRow;
+      public RangeRecordReader() {
+      }
+      
+      public void initialize(InputSplit split, TaskAttemptContext context) 
+          throws IOException, InterruptedException {
+        startRow = ((RangeInputSplit)split).firstRow;
         finishedRows = 0;
-        totalRows = split.rowCount;
+        totalRows = ((RangeInputSplit)split).rowCount;
       }
 
       public void close() throws IOException {
         // NOTHING
       }
 
-      public LongWritable createKey() {
-        return new LongWritable();
+      public LongWritable getCurrentKey() {
+        return key;
       }
 
-      public NullWritable createValue() {
+      public NullWritable getCurrentValue() {
         return NullWritable.get();
-      }
-
-      public long getPos() throws IOException {
-        return finishedRows;
       }
 
       public float getProgress() throws IOException {
         return finishedRows / (float) totalRows;
       }
 
-      public boolean next(LongWritable key, 
-                          NullWritable value) {
+      public boolean nextKeyValue() {
+        if (key == null) {
+          key = new LongWritable();
+        }
         if (finishedRows < totalRows) {
           key.set(startRow + finishedRows);
           finishedRows += 1;
@@ -155,24 +161,25 @@ public class TeraGen extends Configured implements Tool {
     }
 
     public RecordReader<LongWritable, NullWritable> 
-      getRecordReader(InputSplit split, JobConf job,
-                      Reporter reporter) throws IOException {
-      return new RangeRecordReader((RangeInputSplit) split);
+        createRecordReader(InputSplit split, TaskAttemptContext context) 
+        throws IOException {
+      return new RangeRecordReader();
     }
 
     /**
      * Create the desired number of splits, dividing the number of rows
      * between the mappers.
      */
-    public InputSplit[] getSplits(JobConf job, 
-                                  int numSplits) {
+    public List<InputSplit> getSplits(JobContext job) {
       long totalRows = getNumberOfRows(job);
+      int numSplits = job.getConfiguration().getInt(JobContext.NUM_MAPS, 1);
       LOG.info("Generating " + totalRows + " using " + numSplits);
-      InputSplit[] splits = new InputSplit[numSplits];
+      List<InputSplit> splits = new ArrayList<InputSplit>();
       long currentRow = 0;
-      for(int split=0; split < numSplits; ++split) {
-        long goal = (long) Math.ceil(totalRows * (double)(split+1) / numSplits);
-        splits[split] = new RangeInputSplit(currentRow, goal - currentRow);
+      for(int split = 0; split < numSplits; ++split) {
+        long goal = 
+          (long) Math.ceil(totalRows * (double)(split + 1) / numSplits);
+        splits.add(new RangeInputSplit(currentRow, goal - currentRow));
         currentRow = goal;
       }
       return splits;
@@ -180,20 +187,20 @@ public class TeraGen extends Configured implements Tool {
 
   }
   
-  static long getNumberOfRows(JobConf job) {
-    return job.getLong(NUM_ROWS, 0);
+  static long getNumberOfRows(JobContext job) {
+    return job.getConfiguration().getLong(NUM_ROWS, 0);
   }
   
-  static void setNumberOfRows(JobConf job, long numRows) {
-    job.setLong(NUM_ROWS, numRows);
+  static void setNumberOfRows(Job job, long numRows) {
+    job.getConfiguration().setLong(NUM_ROWS, numRows);
   }
 
   /**
    * The Mapper class that given a row number, will generate the appropriate 
    * output line.
    */
-  public static class SortGenMapper extends MapReduceBase 
-      implements Mapper<LongWritable, NullWritable, Text, Text> {
+  public static class SortGenMapper 
+      extends Mapper<LongWritable, NullWritable, Text, Text> {
 
     private Text key = new Text();
     private Text value = new Text();
@@ -208,19 +215,18 @@ public class TeraGen extends Configured implements Tool {
     private Counter checksumCounter;
 
     public void map(LongWritable row, NullWritable ignored,
-                    OutputCollector<Text, Text> output,
-                    Reporter reporter) throws IOException {
+        Context context) throws IOException, InterruptedException {
       if (rand == null) {
         rowId = new Unsigned16(row.get());
         rand = Random16.skipAhead(rowId);
-        checksumCounter = reporter.getCounter(Counters.CHECKSUM);
+        checksumCounter = context.getCounter(Counters.CHECKSUM);
       }
       Random16.nextRand(rand);
       GenSort.generateRecord(buffer, rand, rowId);
       key.set(buffer, 0, TeraInputFormat.KEY_LENGTH);
       value.set(buffer, TeraInputFormat.KEY_LENGTH, 
                 TeraInputFormat.VALUE_LENGTH);
-      output.collect(key, value);
+      context.write(key, value);
       crc32.reset();
       crc32.update(buffer, 0, 
                    TeraInputFormat.KEY_LENGTH + TeraInputFormat.VALUE_LENGTH);
@@ -230,7 +236,7 @@ public class TeraGen extends Configured implements Tool {
     }
 
     @Override
-    public void close() {
+    public void cleanup(Context context) {
       checksumCounter.increment(total.getLow8());
     }
   }
@@ -271,15 +277,16 @@ public class TeraGen extends Configured implements Tool {
   /**
    * @param args the cli arguments
    */
-  public int run(String[] args) throws IOException {
-    JobConf job = (JobConf) getConf();
+  public int run(String[] args) 
+      throws IOException, InterruptedException, ClassNotFoundException {
+    Job job = Job.getInstance(new Cluster(getConf()), getConf());
     if (args.length != 2) {
       usage();
-      return 1;
+      return 2;
     }
     setNumberOfRows(job, parseHumanLong(args[0]));
     Path outputDir = new Path(args[1]);
-    if (outputDir.getFileSystem(job).exists(outputDir)) {
+    if (outputDir.getFileSystem(getConf()).exists(outputDir)) {
       throw new IOException("Output directory " + outputDir + 
                             " already exists.");
     }
@@ -290,14 +297,13 @@ public class TeraGen extends Configured implements Tool {
     job.setNumReduceTasks(0);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
-    job.setInputFormat(RangeInputFormat.class);
-    job.setOutputFormat(TeraOutputFormat.class);
-    JobClient.runJob(job);
-    return 0;
+    job.setInputFormatClass(RangeInputFormat.class);
+    job.setOutputFormatClass(TeraOutputFormat.class);
+    return job.waitForCompletion(true) ? 0 : 1;
   }
 
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new JobConf(), new TeraGen(), args);
+    int res = ToolRunner.run(new Configuration(), new TeraGen(), args);
     System.exit(res);
   }
 

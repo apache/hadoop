@@ -79,7 +79,7 @@
         jobs tolerate losing tasks; it only makes them take longer to finish.
       </p>
       <p>
-        Finally, the Fair Scheduler can limit the number of concurrent
+        The Fair Scheduler can limit the number of concurrent
         running jobs per user and per pool. This can be useful when a 
         user must submit hundreds of jobs at once, or for ensuring that
         intermediate data does not fill up disk space on a cluster when too many
@@ -88,6 +88,13 @@
         until some of the user/pool's earlier jobs finish.
         Jobs to run from each user/pool are chosen in order of priority and then
         submit time.
+      </p>
+      <p>
+        Finally, the Fair Scheduler can limit the number of concurrent
+        running tasks per pool. This can be useful when jobs have a
+        dependency on an external service like a database or web
+        service that could be overloaded if too many map or reduce
+        tasks are run at once.
       </p>
     </section>
 
@@ -176,7 +183,7 @@
           </td>
           <td>
             Specify which jobconf property is used to determine the pool that a
-            job belongs in. String, default: <em>mapreduce.job.mapreduce.job.user.name</em>
+            job belongs in. String, default: <em>mapreduce.job.user.name</em>
             (i.e. one pool for each user). 
             Another useful value is <em>group.name</em> to create a
             pool per Unix group.
@@ -351,6 +358,8 @@
           <ul>
           <li><em>minMaps</em> and <em>minReduces</em>,
             to set the pool's minimum share of task slots.</li>
+          <li><em>maxMaps</em> and <em>maxReduces</em>, to set the
+            pool's maximum concurrent task slots.</li>
           <li><em>schedulingMode</em>, the pool's internal scheduling mode,
           which can be <em>fair</em> for fair sharing or <em>fifo</em> for
           first-in-first-out.</li>
@@ -398,9 +407,11 @@
   &lt;pool name="sample_pool"&gt;
     &lt;minMaps&gt;5&lt;/minMaps&gt;
     &lt;minReduces&gt;5&lt;/minReduces&gt;
+    &lt;maxMaps&gt;25&lt;/maxMaps&gt;
+    &lt;maxReduces&gt;25&lt;/maxReduces&gt;
     &lt;minSharePreemptionTimeout&gt;300&lt;/minSharePreemptionTimeout&gt;
   &lt;/pool&gt;
-  &lt;mapreduce.job.mapreduce.job.user.name="sample_user"&gt;
+  &lt;mapreduce.job.user.name="sample_user"&gt;
     &lt;maxRunningJobs&gt;6&lt;/maxRunningJobs&gt;
   &lt;/user&gt;
   &lt;userMaxJobsDefault&gt;3&lt;/userMaxJobsDefault&gt;
@@ -412,7 +423,9 @@
         slots and 5 reduce slots. The pool also has a minimum share preemption
         timeout of 300 seconds (5 minutes), meaning that if it does not get its
         guaranteed share within this time, it is allowed to kill tasks from
-        other pools to achieve its share.
+        other pools to achieve its share. The pool has a cap of 25 map and 25
+        reduce slots, which means that once 25 tasks are running, no more will
+        be scheduled even if the pool's fair share is higher.
         The example also limits the number of running jobs 
         per user to 3, except for sample_user, who can run 6 jobs concurrently. 
         Finally, the example sets a fair share preemption timeout of 600 seconds

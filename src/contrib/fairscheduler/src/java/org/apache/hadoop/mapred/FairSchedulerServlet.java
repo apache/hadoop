@@ -151,16 +151,17 @@ public class FairSchedulerServlet extends HttpServlet {
    */
   private void showPools(PrintWriter out, boolean advancedView) {
     synchronized(scheduler) {
+      boolean warnInverted = false;
       PoolManager poolManager = scheduler.getPoolManager();
       out.print("<h2>Pools</h2>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
       out.print("<tr><th rowspan=2>Pool</th>" +
           "<th rowspan=2>Running Jobs</th>" + 
-          "<th colspan=3>Map Tasks</th>" + 
-          "<th colspan=3>Reduce Tasks</th>" +
+          "<th colspan=4>Map Tasks</th>" + 
+          "<th colspan=4>Reduce Tasks</th>" +
           "<th rowspan=2>Scheduling Mode</th></tr>\n<tr>" + 
-          "<th>Min Share</th><th>Running</th><th>Fair Share</th>" + 
-          "<th>Min Share</th><th>Running</th><th>Fair Share</th></tr>\n");
+          "<th>Min Share</th><th>Max Share</th><th>Running</th><th>Fair Share</th>" + 
+          "<th>Min Share</th><th>Max Share</th><th>Running</th><th>Fair Share</th></tr>\n");
       List<Pool> pools = new ArrayList<Pool>(poolManager.getPools());
       Collections.sort(pools, new Comparator<Pool>() {
         public int compare(Pool p1, Pool p2) {
@@ -174,21 +175,51 @@ public class FairSchedulerServlet extends HttpServlet {
         String name = pool.getName();
         int runningMaps = pool.getMapSchedulable().getRunningTasks();
         int runningReduces = pool.getReduceSchedulable().getRunningTasks();
+        int maxMaps = poolManager.getMaxSlots(name, TaskType.MAP);
+        int maxReduces = poolManager.getMaxSlots(name, TaskType.REDUCE);
+        boolean invertedMaps = poolManager.invertedMinMax(TaskType.MAP, name);
+        boolean invertedReduces = poolManager.invertedMinMax(TaskType.REDUCE, name);
+        warnInverted = warnInverted || invertedMaps || invertedReduces;
         out.print("<tr>");
         out.printf("<td>%s</td>", name);
         out.printf("<td>%d</td>", pool.getJobs().size());
+        // Map Tasks
         out.printf("<td>%d</td>", poolManager.getAllocation(name,
             TaskType.MAP));
+        out.print("<td>");
+        if(maxMaps == Integer.MAX_VALUE) {
+          out.print("-");
+        } else {
+          out.print(maxMaps);
+        }
+        if(invertedMaps) {
+          out.print("*");
+        }
+        out.print("</td>");
         out.printf("<td>%d</td>", runningMaps);
         out.printf("<td>%.1f</td>", pool.getMapSchedulable().getFairShare());
+        // Reduce Tasks
         out.printf("<td>%d</td>", poolManager.getAllocation(name,
             TaskType.REDUCE));
+        out.print("<td>");
+        if(maxReduces == Integer.MAX_VALUE) {
+          out.print("-");
+        } else {
+          out.print(maxReduces);
+        }
+        if(invertedReduces) {
+          out.print("*");
+        }
+        out.print("</td>");
         out.printf("<td>%d</td>", runningReduces);
         out.printf("<td>%.1f</td>", pool.getReduceSchedulable().getFairShare());
         out.printf("<td>%s</td>", pool.getSchedulingMode());
         out.print("</tr>\n");
       }
       out.print("</table>\n");
+      if(warnInverted) {
+        out.print("<p>* One or more pools have max share set lower than min share. Max share will be used and minimum will be treated as if set equal to max.</p>");
+      }
     }
   }
 

@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +47,10 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileRecordReader;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -420,10 +426,21 @@ public class DistCh extends DistTool {
     return Math.max(numMaps, 1);
   }
 
-  private boolean setup(List<FileOperation> ops, Path log) throws IOException {
+  private boolean setup(List<FileOperation> ops, Path log) 
+  throws IOException {
     final String randomId = getRandomId();
     JobClient jClient = new JobClient(jobconf);
-    Path jobdir = new Path(jClient.getSystemDir(), NAME + "_" + randomId);
+    Path stagingArea;
+    try {
+      stagingArea = JobSubmissionFiles.getStagingDir(
+                       jClient.getClusterHandle(), jobconf);
+    } catch (InterruptedException ie){
+      throw new IOException(ie);
+    }
+    Path jobdir = new Path(stagingArea + NAME + "_" + randomId);
+    FsPermission mapredSysPerms = 
+      new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
+    FileSystem.mkdirs(jClient.getFs(), jobdir, mapredSysPerms);
     LOG.info(JOB_DIR_LABEL + "=" + jobdir);
 
     if (log == null) {

@@ -21,6 +21,8 @@
    xmlns:artifact="urn:maven-artifact-ant"
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
+  <import file="build-utils.xml" />
+
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
   <property file="${user.home}/build.properties" />
@@ -361,6 +363,7 @@
     <copy todir="${build.classes}">
       <fileset dir="${mapred.src.dir}" includes="**/*.properties"/>
       <fileset dir="${mapred.src.dir}" includes="mapred-default.xml"/>
+      <fileset dir="${mapred.src.dir}" includes="mapred-queues-default.xml"/>
     </copy>
   </target>
 
@@ -439,6 +442,7 @@
       <fileset file="${conf.dir}/log4j.properties"/>
       <fileset file="${conf.dir}/hadoop-metrics.properties"/> -->
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
+      <fileset file="${jar.extra.properties.list}" />
     </jar>
   </target>
 
@@ -476,7 +480,7 @@
 
     <javac 
       encoding="${build.encoding}" 
-      srcdir="${test.src.dir}/mapred"
+      srcdir="${test.src.dir}/mapred;${test.src.dir}/unit"
       includes="org/apache/hadoop/**/*.java"
       destdir="${test.mapred.build.classes}"
       debug="${javac.debug}"
@@ -565,12 +569,15 @@
 
   <macrodef name="macro-test-runner">
     <attribute name="test.file" />
+    <attribute name="suite.type" />
     <sequential>
       <delete dir="${test.build.data}"/>
       <mkdir dir="${test.build.data}"/>
       <delete dir="${test.log.dir}"/>
       <mkdir dir="${test.log.dir}"/>
       <copy file="${test.src.dir}/hadoop-policy.xml" 
+        todir="${test.build.extraconf}" />
+      <copy file="${test.src.dir}/fi-site.xml"
         todir="${test.build.extraconf}" />
       <junit showoutput="${test.output}"
         printsummary="${test.junit.printsummary}"
@@ -600,10 +607,16 @@
         <syspropertyset dynamic="no">
           <propertyref name="compile.c++"/>
         </syspropertyset>
+        
+        <!-- Pass probability specifications to the spawn JVM -->
+        <syspropertyset id="FaultProbabilityProperties">
+          <propertyref regex="fi.*"/>
+        </syspropertyset>
+        
         <classpath refid="test.classpath"/>
         <formatter type="${test.junit.output.format}" />
         <batchtest todir="${test.build.dir}" unless="testcase">
-          <fileset dir="${test.src.dir}/mapred" excludes="**/${test.exclude}.java">
+          <fileset dir="${test.src.dir}/@{suite.type}" excludes="**/${test.exclude}.java">
             <patternset>
               <includesfile name="@{test.file}"/>
             </patternset>
@@ -611,20 +624,42 @@
         </batchtest>
         <batchtest todir="${test.build.dir}" if="testcase">
           <fileset dir="${test.src.dir}/mapred" includes="**/${testcase}.java"/>
+          <fileset dir="${test.src.dir}/unit" includes="**/${testcase}.java"/>
+        </batchtest>
+        <!--batch test to test all the testcases in aop folder with fault 
+        injection-->
+        <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
+          <fileset dir="${test.src.dir}/aop"
+            includes="**/${test.include}.java"
+            excludes="**/${test.exclude}.java" />
+        </batchtest>
+        <!-- batch test for testing a single test case in aop folder with
+        fault injection-->
+        <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
+         <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+        </batchtest>
+         <!--The following batch is for very special occasions only when
+         a non-FI tests are needed to be executed against FI-environment -->
+         <batchtest todir="${test.build.dir}" if="tests.testcaseonly.fi">
+          <fileset dir="${test.src.dir}/mapred" 
+            includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
     </sequential>
   </macrodef>
 
-  <target name="run-test-mapred" depends="compile-mapred-test" description="Run mapred unit tests">
-    <macro-test-runner test.file="${test.mapred.all.tests.file}" />
+  <target name="run-test-mapred" depends="compile-mapred-test" description="Run mapred functional and system tests">
+    <macro-test-runner test.file="${test.mapred.all.tests.file}" suite.type="mapred"/>
   </target> 
 
    <target name="run-commit-test" depends="compile-mapred-test" description="Run approximate 10-minute set of unit tests prior to commiting">
-     <macro-test-runner test.file="${test.mapred.commit.tests.file}" />
+     <macro-test-runner test.file="${test.mapred.commit.tests.file}" suite.type="mapred"/>
    </target>
  
+   <target name="run-test-unit" depends="compile-mapred-test" description="Run unit tests">
+     <macro-test-runner test.file="${test.mapred.all.tests.file}" suite.type="unit"/>
+   </target>
 
 
   <target name="checkfailure" if="tests.failed">
@@ -754,6 +789,8 @@
   <!-- ================================================================== -->
   
   <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+  	<copy file="${conf.dir}/mapred-queues.xml.template"
+  	      tofile="${build.docs}/mapred-queues.xml"/>
     <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
 	  failonerror="true">
       <env key="JAVA_HOME" value="${java5.home}"/>
@@ -765,16 +802,12 @@
     <style basedir="${mapred.src.dir}" destdir="${build.docs}"
            includes="mapred-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
+    <subant target="docs">
+       <property name="build.docs" value="${build.docs}"/>
+       <fileset file="${contrib.dir}/build.xml"/>
+    </subant> 
   </target>
 
-  <target name="forrest.check" unless="forrest.home" depends="java5.check">
-    <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
-  </target>
-
-  <target name="java5.check" unless="java5.home">
-    <fail message="'java5.home' is not defined.  Forrest requires Java 5.  Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
-  </target>
-	
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
@@ -1235,14 +1268,33 @@
       classpathref="releaseaudit-classpath"/>
   </target>
 
+  <!--<target name="releaseaudit" depends="package, rats-taskdef" description="Release Audit activities"> -->
   <target name="releaseaudit" depends="package, rats-taskdef" description="Release Audit activities">
    <rat:report xmlns:rat="antlib:org.apache.rat.anttasks">
       <fileset dir="${dist.dir}">
         <exclude name="CHANGES.txt"/>
-        <exclude name="docs/"/>
+        <exclude name="**/conf/*"/>
+        <exclude name="**/docs/"/>
+        <exclude name="**/VERSION"/>
+        <exclude name="webapps/**/WEB-INF/web.xml"/>
         <exclude name="lib/jdiff/"/>
         <exclude name="src/test/all-tests"/>
         <exclude name="src/test/commit-tests"/>
+        <exclude name="src/test/mapred/org/apache/hadoop/mapred/test.tgz"/>
+        <exclude name="src/test/tools/data/rumen/**/*"/>
+        <exclude name="src/test/mapred/org/apache/hadoop/mapred/*.txt"/>
+        <exclude name="src/contrib/sqoop/testdata/hive/scripts/*.q"/>
+        <exclude name="src/contrib/mumak/src/test/data/*.json"/>
+        <exclude name="src/contrib/index/sample/*.txt"/>
+        <exclude name="src/test/mapred/org/apache/hadoop/cli/data60bytes"/>
+        <exclude name="src/examples/org/apache/hadoop/examples/dancing/puzzle1.dta"/>
+        <exclude name="src/contrib/eclipse-plugin/META-INF/MANIFEST.MF"/>
+        <exclude name="src/c++/librecordio/*"/>
+        <exclude name="src/c++/pipes/*"/>
+        <exclude name="src/c++/utils/*"/>
+        <exclude name="src/c++/task-controller/*"/>
+        <exclude name="src/examples/pipes/*"/>
+        <exclude name="src/c++/pipes/debug/*"/>
       </fileset>
     </rat:report>
   </target>
@@ -1720,6 +1772,86 @@
         failonerror="yes">
     </exec>
   </target>
-
   <!-- end of task-controller targets -->
+  
+  <!-- Begining of fault-injection targets-->
+  <import file="${test.src.dir}/aop/build/aop.xml"/>
+  
+  <!-- declaring mapred.src.dir as java.src.dir for aop.xml -->
+  <property name="java.src.dir" value="${src.dir}/java"/>
+  
+  <!-- target dependency from aop.xml -->
+  <target name="-classes-compilation" 
+    depends="compile-mapred-classes, compile-mapred-test"/>
+  
+  <target name="jar-test-fault-inject" depends="jar-mapred-test-fault-inject"
+            description="Make hadoop-mapred-test-fi.jar files"/>
+  
+  <!-- target to build test-fi.jar-->
+  <target name="jar-mapred-test-fault-inject" depends="injectfaults"
+    description="Make hadoop-mapred-test-fi.jar">
+    <macro-jar-test-fault-inject target.name="jar-test" 
+      jar.final.name="test.final.name"
+      jar.final.value="${name}-test-${version}-fi"/>
+  </target>
+  
+  <!-- target to build the hadoop-fi.jar -->
+  <target name="jar-fault-inject" depends="injectfaults"
+    description="Make hadoop-fi.jar">
+    <macro-jar-fault-inject
+      target.name="jar"
+      jar.final.name="final.name"
+      jar.final.value="${final.name}-fi" />
+  </target>
+  
+  <!-- target to run fault injected test cases will run entire mapred test 
+       suite-->
+  <target name="run-test-mapred-fault-inject" depends="injectfaults"
+    description="Run full suite of unit tests with fault injection">
+    <macro-run-tests-fault-inject target.name="run-test-mapred"
+      testcasesonly="false"/>
+  </target>
+
+  <!-- target to run non-FI tests in a FI environment-->
+  <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
+    <fail unless="testcase">
+    Can't run this target without -Dtestcase setting!
+    </fail>
+    <macro-run-tests-fault-inject target.name="run-test-mapred"
+      testcasesonly="true"/>
+  </target>
+  <condition property="tests.notestcase">
+    <and>
+      <isfalse value="${test.fault.inject}"/>
+      <not>
+        <isset property="testcase"/>
+      </not>
+    </and>
+  </condition>
+  <condition property="tests.notestcase.fi">
+    <and>
+      <not>
+        <isset property="testcase"/>
+      </not>
+      <istrue value="${test.fault.inject}"/>
+    </and>
+  </condition>
+  <condition property="test.testcase">
+    <and>
+      <isfalse value="${test.fault.inject}"/>
+      <isset property="testcase"/>
+    </and>
+  </condition>
+  <condition property="tests.testcaseonly.fi">
+    <istrue value="${special.fi.testcasesonly}" />
+  </condition>
+  <condition property="tests.testcase.fi">
+    <and>
+      <istrue value="${test.fault.inject}" />
+      <isset property="testcase" />
+      <isfalse value="${special.fi.testcasesonly}" />
+    </and>
+  </condition>
+  <!-- End of fault injection targets-->
+  
 </project>

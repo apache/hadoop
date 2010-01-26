@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,13 +32,12 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobInProgress.DataStatistics;
 import org.apache.hadoop.mapred.SortedRanges.Range;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
 import org.apache.hadoop.mapreduce.jobhistory.TaskUpdatedEvent;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.net.Node;
 
 
@@ -65,7 +65,7 @@ class TaskInProgress {
 
   // Defines the TIP
   private String jobFile = null;
-  private Job.RawSplit rawSplit;
+  private TaskSplitMetaInfo splitInfo;
   private int numMaps;
   private int partition;
   private JobTracker jobtracker;
@@ -140,12 +140,12 @@ class TaskInProgress {
    * Constructor for MapTask
    */
   public TaskInProgress(JobID jobid, String jobFile, 
-                        Job.RawSplit rawSplit, 
+                        TaskSplitMetaInfo split, 
                         JobTracker jobtracker, JobConf conf, 
                         JobInProgress job, int partition,
                         int numSlotsRequired) {
     this.jobFile = jobFile;
-    this.rawSplit = rawSplit;
+    this.splitInfo = split;
     this.jobtracker = jobtracker;
     this.job = job;
     this.conf = conf;
@@ -316,9 +316,35 @@ class TaskInProgress {
    * Whether this is a map task
    */
   public boolean isMapTask() {
-    return rawSplit != null;
+    return splitInfo != null;
   }
     
+  /**
+   * Returns the {@link TaskType} of the {@link TaskAttemptID} passed. 
+   * The type of an attempt is determined by the nature of the task and not its 
+   * id. 
+   * For example,
+   * - Attempt 'attempt_123_01_m_01_0' might be a job-setup task even though it 
+   *   has a _m_ in its id. Hence the task type of this attempt is JOB_SETUP 
+   *   instead of MAP.
+   * - Similarly reduce attempt 'attempt_123_01_r_01_0' might have failed and is
+   *   now supposed to do the task-level cleanup. In such a case this attempt 
+   *   will be of type TASK_CLEANUP instead of REDUCE.
+   */
+  TaskType getAttemptType (TaskAttemptID id) {
+    if (isCleanupAttempt(id)) {
+      return TaskType.TASK_CLEANUP;
+    } else if (isJobSetupTask()) {
+      return TaskType.JOB_SETUP;
+    } else if (isJobCleanupTask()) {
+      return TaskType.JOB_CLEANUP;
+    } else if (isMapTask()) {
+      return TaskType.MAP;
+    } else {
+      return TaskType.REDUCE;
+    }
+  }
+  
   /**
    * Is the Task associated with taskid is the first attempt of the tip? 
    * @param taskId
@@ -334,6 +360,15 @@ class TaskInProgress {
    */
   public boolean isRunning() {
     return !activeTasks.isEmpty();
+  }
+
+  /**
+   * Is this TaskAttemptid running
+   * @param taskId
+   * @return true if taskId attempt is running.
+   */
+  boolean isAttemptRunning(TaskAttemptID taskId) {
+    return activeTasks.containsKey(taskId);
   }
     
   TaskAttemptID getSuccessfulTaskid() {
@@ -534,15 +569,16 @@ class TaskInProgress {
    * A status message from a client has arrived.
    * It updates the status of a single component-thread-task,
    * which might result in an overall TaskInProgress status update.
-   * @return has the task changed its state noticably?
+   * @return has the task changed its state noticeably?
    */
   synchronized boolean updateStatus(TaskStatus status) {
     TaskAttemptID taskid = status.getTaskID();
+    String tracker = status.getTaskTracker();
     String diagInfo = status.getDiagnosticInfo();
     TaskStatus oldStatus = taskStatuses.get(taskid);
     boolean changed = true;
     if (diagInfo != null && diagInfo.length() > 0) {
-      LOG.info("Error from "+taskid+": "+diagInfo);
+      LOG.info("Error from " + taskid + " on " +  tracker + ": "+ diagInfo);
       addDiagnosticInfo(taskid, diagInfo);
     }
     
@@ -697,6 +733,12 @@ class TaskInProgress {
     if (tasks.contains(taskid)) {
       if (taskState == TaskStatus.State.FAILED) {
         numTaskFailures++;
+        if (isMapTask()) {
+          jobtracker.getInstrumentation().failedMap(taskid);
+        } else {
+          jobtracker.getInstrumentation().failedReduce(taskid);
+        }
+        
         machinesWhereFailed.add(trackerHostName);
         if(maxSkipRecords>0) {
           //skipping feature enabled
@@ -707,6 +749,11 @@ class TaskInProgress {
 
       } else if (taskState == TaskStatus.State.KILLED) {
         numKilledTasks++;
+        if (isMapTask()) {
+            jobtracker.getInstrumentation().killedMap(taskid);
+          } else {
+            jobtracker.getInstrumentation().killedReduce(taskid);
+          }
       }
     }
 
@@ -787,7 +834,7 @@ class TaskInProgress {
    */
   public String[] getSplitLocations() {
     if (isMapTask() && !jobSetup && !jobCleanup) {
-      return rawSplit.getLocations();
+      return splitInfo.getLocations();
     }
     return new String[0];
   }
@@ -799,6 +846,13 @@ class TaskInProgress {
     return taskStatuses.values().toArray(new TaskStatus[taskStatuses.size()]);
   }
 
+  /**
+   * Get all the {@link TaskAttemptID}s in this {@link TaskInProgress}
+   */
+  TaskAttemptID[] getAllTaskAttemptIDs() {
+    return tasks.toArray(new TaskAttemptID[tasks.size()]);
+  }
+  
   /**
    * Get the status of the specified task
    * @param taskid
@@ -992,16 +1046,8 @@ class TaskInProgress {
     if (isMapTask()) {
       LOG.debug("attempt " + numTaskFailures + " sending skippedRecords "
           + failedRanges.getIndicesCount());
-      String splitClass = null;
-      BytesWritable split;
-      if (!jobSetup && !jobCleanup) {
-        splitClass = rawSplit.getClassName();
-        split = rawSplit.getBytes();
-      } else {
-        split = new BytesWritable();
-      }
-      t = new MapTask(jobFile, taskid, partition, splitClass, split,
-                      numSlotsNeeded);
+      t = new MapTask(jobFile, taskid, partition, splitInfo.getSplitIndex(),
+          numSlotsNeeded);
     } else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps, numSlotsNeeded);
     }
@@ -1114,7 +1160,7 @@ class TaskInProgress {
     if (!isMapTask() || jobSetup || jobCleanup) {
       return "";
     }
-    String[] splits = rawSplit.getLocations();
+    String[] splits = splitInfo.getLocations();
     Node[] nodes = new Node[splits.length];
     for (int i = 0; i < splits.length; i++) {
       nodes[i] = jobtracker.getNode(splits[i]);
@@ -1144,14 +1190,10 @@ class TaskInProgress {
 
   public long getMapInputSize() {
     if(isMapTask() && !jobSetup && !jobCleanup) {
-      return rawSplit.getDataLength();
+      return splitInfo.getInputDataLength();
     } else {
       return 0;
     }
-  }
-  
-  public void clearSplit() {
-    rawSplit.clearBytes();
   }
   
   /**

@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Matcher;
@@ -181,12 +182,12 @@ public class TestProcfsBasedProcessTree extends TestCase {
 
     LOG.info("Process-tree dump follows: \n" + processTreeDump);
     assertTrue("Process-tree dump doesn't start with a proper header",
-        processTreeDump.startsWith("\t|- PID PPID PGRPID SESSID CMD_NAME "
-            + "VMEM_USAGE(BYTES) RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
+        processTreeDump.startsWith("\t|- PID PPID PGRPID SESSID CMD_NAME " +
+        "USER_MODE_TIME(MILLIS) SYSTEM_TIME(MILLIS) VMEM_USAGE(BYTES) " +
+        "RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
     for (int i = N; i >= 0; i--) {
-      String cmdLineDump =
-          "\\|- [0-9]+ [0-9]+ [0-9]+ [0-9]+ \\(sh\\) [0-9]+ [0-9]+ sh " + shellScript
-              + " " + i;
+      String cmdLineDump = "\\|- [0-9]+ [0-9]+ [0-9]+ [0-9]+ \\(sh\\)" +
+          " [0-9]+ [0-9]+ [0-9]+ [0-9]+ sh " + shellScript + " " + i;
       Pattern pat = Pattern.compile(cmdLineDump);
       Matcher mat = pat.matcher(processTreeDump);
       assertTrue("Process-tree dump doesn't contain the cmdLineDump of " + i
@@ -267,6 +268,8 @@ public class TestProcfsBasedProcessTree extends TestCase {
     String session;
     String vmem = "0";
     String rssmemPage = "0";
+    String utime = "0";
+    String stime = "0";
     
     public ProcessStatInfo(String[] statEntries) {
       pid = statEntries[0];
@@ -278,27 +281,32 @@ public class TestProcfsBasedProcessTree extends TestCase {
       if (statEntries.length > 6) {
         rssmemPage = statEntries[6];
       }
+      if (statEntries.length > 7) {
+        utime = statEntries[7];
+        stime = statEntries[8];
+      }
     }
     
     // construct a line that mimics the procfs stat file.
     // all unused numerical entries are set to 0.
     public String getStatLine() {
       return String.format("%s (%s) S %s %s %s 0 0 0" +
-                      " 0 0 0 0 0 0 0 0 0 0 0 0 0 %s %s 0 0" +
+                      " 0 0 0 0 %s %s 0 0 0 0 0 0 0 %s %s 0 0" +
                       " 0 0 0 0 0 0 0 0" +
                       " 0 0 0 0 0", 
-                      pid, name, ppid, pgrpId, session, vmem, rssmemPage);
+                      pid, name, ppid, pgrpId, session,
+                      utime, stime, vmem, rssmemPage);
     }
   }
   
   /**
    * A basic test that creates a few process directories and writes
-   * stat files. Verifies that the virtual and rss memory is correctly
+   * stat files. Verifies that the cpu time and memory is correctly
    * computed.
    * @throws IOException if there was a problem setting up the
    *                      fake procfs directories or files.
    */
-  public void testMemoryForProcessTree() throws IOException {
+  public void testCpuAndMemoryForProcessTree() throws IOException {
 
     // test processes
     String[] pids = { "100", "200", "300", "400" };
@@ -313,13 +321,13 @@ public class TestProcfsBasedProcessTree extends TestCase {
       // assuming processes 100, 200, 300 are in tree and 400 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[4];
       procInfos[0] = new ProcessStatInfo(new String[] 
-                        {"100", "proc1", "1", "100", "100", "100000", "100"});
+          {"100", "proc1", "1", "100", "100", "100000", "100", "1000", "200"});
       procInfos[1] = new ProcessStatInfo(new String[] 
-                        {"200", "proc2", "100", "100", "100", "200000", "200"});
+          {"200", "proc2", "100", "100", "100", "200000", "200", "2000", "400"});
       procInfos[2] = new ProcessStatInfo(new String[] 
-                        {"300", "proc3", "200", "100", "100", "300000", "300"});
+          {"300", "proc3", "200", "100", "100", "300000", "300", "3000", "600"});
       procInfos[3] = new ProcessStatInfo(new String[] 
-                        {"400", "proc4", "1", "400", "400", "400000", "400"});
+          {"400", "proc4", "1", "400", "400", "400000", "400", "4000", "800"});
       
       writeStatFiles(procfsRootDir, pids, procInfos);
       
@@ -339,6 +347,28 @@ public class TestProcfsBasedProcessTree extends TestCase {
                         600L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
       assertEquals("Cumulative rss memory does not match",
                    cumuRssMem, processTree.getCumulativeRssmem());
+
+      // verify cumulative cpu time
+      long cumuCpuTime = ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0 ?
+             7200L * ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS : 0L;
+      assertEquals("Cumulative cpu time does not match",
+                   cumuCpuTime, processTree.getCumulativeCpuTime());
+
+      // test the cpu time again to see if it cumulates
+      procInfos[0] = new ProcessStatInfo(new String[]
+          {"100", "proc1", "1", "100", "100", "100000", "100", "2000", "300"});
+      procInfos[1] = new ProcessStatInfo(new String[]
+          {"200", "proc2", "100", "100", "100", "200000", "200", "3000", "500"});
+      writeStatFiles(procfsRootDir, pids, procInfos);
+
+      // build the process tree.
+      processTree.getProcessTree();
+
+      // verify cumulative cpu time again
+      cumuCpuTime = ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0 ?
+             9400L * ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS : 0L;
+      assertEquals("Cumulative cpu time does not match",
+                   cumuCpuTime, processTree.getCumulativeCpuTime());
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -498,17 +528,17 @@ public class TestProcfsBasedProcessTree extends TestCase {
       // Processes 200, 300, 400 and 500 are descendants of 100. 600 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[numProcesses];
       procInfos[0] = new ProcessStatInfo(new String[] {
-          "100", "proc1", "1", "100", "100", "100000", "100"});
+          "100", "proc1", "1", "100", "100", "100000", "100", "1000", "200"});
       procInfos[1] = new ProcessStatInfo(new String[] {
-          "200", "proc2", "100", "100", "100", "200000", "200"});
+          "200", "proc2", "100", "100", "100", "200000", "200", "2000", "400"});
       procInfos[2] = new ProcessStatInfo(new String[] {
-          "300", "proc3", "200", "100", "100", "300000", "300"});
+          "300", "proc3", "200", "100", "100", "300000", "300", "3000", "600"});
       procInfos[3] = new ProcessStatInfo(new String[] {
-          "400", "proc4", "200", "100", "100", "400000", "400"});
+          "400", "proc4", "200", "100", "100", "400000", "400", "4000", "800"});
       procInfos[4] = new ProcessStatInfo(new String[] {
-          "500", "proc5", "400", "100", "100", "400000", "400"});
+          "500", "proc5", "400", "100", "100", "400000", "400", "4000", "800"});
       procInfos[5] = new ProcessStatInfo(new String[] {
-          "600", "proc6", "1", "1", "1", "400000", "400"});
+          "600", "proc6", "1", "1", "1", "400000", "400", "4000", "800"});
 
       String[] cmdLines = new String[numProcesses];
       cmdLines[0] = "proc1 arg1 arg2";
@@ -532,15 +562,17 @@ public class TestProcfsBasedProcessTree extends TestCase {
 
       LOG.info("Process-tree dump follows: \n" + processTreeDump);
       assertTrue("Process-tree dump doesn't start with a proper header",
-          processTreeDump.startsWith("\t|- PID PPID PGRPID SESSID CMD_NAME "
-              + "VMEM_USAGE(BYTES) RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
+          processTreeDump.startsWith("\t|- PID PPID PGRPID SESSID CMD_NAME " +
+          "USER_MODE_TIME(MILLIS) SYSTEM_TIME(MILLIS) VMEM_USAGE(BYTES) " +
+          "RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
       for (int i = 0; i < 5; i++) {
         ProcessStatInfo p = procInfos[i];
         assertTrue(
             "Process-tree dump doesn't contain the cmdLineDump of process "
                 + p.pid, processTreeDump.contains("\t|- " + p.pid + " "
                 + p.ppid + " " + p.pgrpId + " " + p.session + " (" + p.name
-                + ") " + p.vmem + " " + p.rssmemPage + " " + cmdLines[i]));
+                + ") " + p.utime + " " + p.stime + " " + p.vmem + " "
+                + p.rssmemPage + " " + cmdLines[i]));
       }
 
       // 600 should not be in the dump
@@ -549,7 +581,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
           "Process-tree dump shouldn't contain the cmdLineDump of process "
               + p.pid, processTreeDump.contains("\t|- " + p.pid + " " + p.ppid
               + " " + p.pgrpId + " " + p.session + " (" + p.name + ") "
-              + p.vmem + " " + p.rssmemPage + " " + cmdLines[5]));
+              + p.utime + " " + p.stime + " " + p.vmem + " " + cmdLines[5]));
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }

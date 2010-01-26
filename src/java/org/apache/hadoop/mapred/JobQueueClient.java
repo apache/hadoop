@@ -175,6 +175,11 @@ class JobQueueClient extends Configured implements Tool {
   private void displayQueueInfo(String queue, boolean showJobs)
       throws IOException {
     JobQueueInfo jobQueueInfo = jc.getQueueInfo(queue);
+    
+    if (jobQueueInfo == null) {
+      System.out.println("Queue \"" + queue + "\" does not exist.");
+      return;
+    }
     printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out));
     if (showJobs && (jobQueueInfo.getChildren() == null ||
         jobQueueInfo.getChildren().size() == 0)) {

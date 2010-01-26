@@ -58,6 +58,8 @@ public class TestAllTables extends ImportJobTestCase {
     args.add(HsqldbTestServer.getUrl());
     args.add("--num-mappers");
     args.add("1");
+    args.add("--escaped-by");
+    args.add("\\");
 
     return args.toArray(new String[0]);
   }
@@ -86,9 +88,18 @@ public class TestAllTables extends ImportJobTestCase {
     // create two tables.
     this.expectedStrings.add("A winner");
     this.expectedStrings.add("is you!");
+    this.expectedStrings.add(null);
 
+    int i = 0;
     for (String expectedStr: this.expectedStrings) {
-      this.createTableForColType("VARCHAR(32) PRIMARY KEY", "'" + expectedStr + "'");
+      String wrappedStr = null;
+      if (expectedStr != null) {
+        wrappedStr = "'" + expectedStr + "'";
+      }
+
+      String [] types = { "INT NOT NULL PRIMARY KEY", "VARCHAR(32)" };
+      String [] vals = { Integer.toString(i++) , wrappedStr };
+      this.createTableWithColTypes(types, vals);
       this.tableNames.add(this.getTableName());
       this.removeTableDir();
       incrementTableNum();
@@ -100,13 +111,15 @@ public class TestAllTables extends ImportJobTestCase {
     runImport(argv);
 
     Path warehousePath = new Path(this.getWarehouseDir());
+    int i = 0;
     for (String tableName : this.tableNames) {
       Path tablePath = new Path(warehousePath, tableName);
       Path filePath = new Path(tablePath, "part-m-00000");
 
       // dequeue the expected value for this table. This
       // list has the same order as the tableNames list.
-      String expectedVal = this.expectedStrings.get(0);
+      String expectedVal = Integer.toString(i++) + ","
+          + this.expectedStrings.get(0);
       this.expectedStrings.remove(0);
 
       BufferedReader reader = new BufferedReader(

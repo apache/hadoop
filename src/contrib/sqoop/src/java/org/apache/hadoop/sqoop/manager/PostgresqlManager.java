@@ -28,8 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.sqoop.ImportOptions;
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.SqoopOptions;
+import org.apache.hadoop.sqoop.util.ImportException;
 
 /**
  * Manages connections to Postgresql databases
@@ -46,11 +46,11 @@ public class PostgresqlManager extends GenericJdbcManager {
   // set to true after we warn the user that we can use direct fastpath.
   private static boolean warningPrinted = false;
 
-  public PostgresqlManager(final ImportOptions opts) {
+  public PostgresqlManager(final SqoopOptions opts) {
     super(DRIVER_CLASS, opts);
   }
 
-  protected PostgresqlManager(final ImportOptions opts, boolean ignored) {
+  protected PostgresqlManager(final SqoopOptions opts, boolean ignored) {
     // constructor used by subclasses to avoid the --direct warning.
     super(DRIVER_CLASS, opts);
   }
@@ -67,12 +67,12 @@ public class PostgresqlManager extends GenericJdbcManager {
   @Override
   protected String getColNamesQuery(String tableName) {
     // Use LIMIT to return fast
-    return "SELECT t.* FROM " + tableName + " AS t LIMIT 1";
+    return "SELECT t.* FROM " + escapeTableName(tableName) + " AS t LIMIT 1";
   }
 
   @Override
   public void importTable(ImportJobContext context)
-        throws IOException, ImportError {
+        throws IOException, ImportException {
 
     // The user probably should have requested --direct to invoke pg_dump.
     // Display a warning informing them of this fact.

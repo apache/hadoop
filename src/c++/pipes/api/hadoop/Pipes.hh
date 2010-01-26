@@ -31,6 +31,8 @@
 #include <string>
 #endif
 
+#include <stdint.h>
+
 namespace HadoopPipes {
 
 /**

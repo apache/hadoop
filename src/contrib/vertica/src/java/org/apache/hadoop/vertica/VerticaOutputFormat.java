@@ -63,7 +63,7 @@ public class VerticaOutputFormat extends OutputFormat<Text, VerticaRecord> {
    * @param dropTable
    */
   public static void setOutput(Job job, String tableName, boolean dropTable) {
-    setOutput(job, tableName, dropTable);
+    setOutput(job, tableName, dropTable, (String[])null);
   }
 
   /**
@@ -193,39 +193,46 @@ public class VerticaOutputFormat extends OutputFormat<Text, VerticaRecord> {
     stmt.execute("select create_projection_design('" + designName + "', '', '"
         + designTables.toString() + "')");
 
-    rs = stmt.executeQuery("select get_design_script('" + designName + "', '"
-        + designName + "')");
-    rs.next();
-    String[] projSet = rs.getString(1).split(";");
-    for (String proj : projSet) {
-      stmt.execute(proj);
-    }
-    stmt.execute("select start_refresh()");
-
-    // pool for refresh complete
-    boolean refreshing = true;
-    Long timeout = vtconfig.getOptimizePollTimeout();
-    while (refreshing) {
-      refreshing = false;
-      rs = stmt
-          .executeQuery("select table_name, projection_name, status from vt_projection_refresh");
-      while (rs.next()) {
-        String table = rs.getString(1);
-        String stat = rs.getString(3);
-        if (stat.equals("refreshing") && tablesWithTemp.contains(table))
-          refreshing = true;
+    if(VerticaUtil.verticaVersion(conf, true) >= VerticaConfiguration.VERSION_3_5) {
+      stmt.execute("select deploy_design('" + designName + "', '" + designName + "')");
+    } else {
+      rs = stmt.executeQuery("select get_design_script('" + designName + "', '"
+          + designName + "')");
+      rs.next();
+      String[] projSet = rs.getString(1).split(";");
+      for (String proj : projSet) {
+        stmt.execute(proj);
+      }
+      stmt.execute("select start_refresh()");
+  
+      // poll for refresh complete
+      boolean refreshing = true;
+      Long timeout = vtconfig.getOptimizePollTimeout();
+      while (refreshing) {
+        refreshing = false;
+        rs = stmt
+            .executeQuery("select table_name, status from vt_projection_refresh");
+        while (rs.next()) {
+          String table = rs.getString(1);
+          String stat = rs.getString(2);
+          if (stat.equals("refreshing") && tablesWithTemp.contains(table))
+            refreshing = true;
+        }
+        rs.close();
+  
+        Thread.sleep(timeout);
+      }
+  
+      // refresh done, move the ancient history mark (ahm) and drop the temp projections
+      stmt.execute("select make_ahm_now()");
+  
+      for (String table : tablesWithTemp) {
+        for (String proj : tableProj.get(table)) {
+          stmt.execute("DROP PROJECTION " + proj);
+        }
       }
 
-      Thread.sleep(timeout);
-    }
-
-    // refresh done, move the ahm and drop the temp projections
-    stmt.execute("select make_ahm_now()");
-
-    for (String table : tablesWithTemp) {
-      for (String proj : tableProj.get(table)) {
-        stmt.execute("DROP PROJECTION " + proj);
-      }
+      stmt.close();
     }
   }
 

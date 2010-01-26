@@ -18,40 +18,31 @@
 package org.apache.hadoop.examples.terasort;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.zip.Checksum;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 public class TeraChecksum extends Configured implements Tool {
-  static class ChecksumMapper extends MapReduceBase 
-         implements Mapper<Text,Text,NullWritable,Unsigned16> {
-    private OutputCollector<NullWritable,Unsigned16> output;
+  static class ChecksumMapper 
+      extends Mapper<Text, Text, NullWritable, Unsigned16> {
     private Unsigned16 checksum = new Unsigned16();
     private Unsigned16 sum = new Unsigned16();
     private Checksum crc32 = new PureJavaCrc32();
 
     public void map(Text key, Text value, 
-                    OutputCollector<NullWritable,Unsigned16> output,
-                    Reporter reporter) throws IOException {
-      if (this.output == null) {
-        this.output = output;
-      }
+                    Context context) throws IOException {
       crc32.reset();
       crc32.update(key.getBytes(), 0, key.getLength());
       crc32.update(value.getBytes(), 0, value.getLength());
@@ -59,23 +50,22 @@ public class TeraChecksum extends Configured implements Tool {
       sum.add(checksum);
     }
 
-    public void close() throws IOException {
-      if (output != null) {
-        output.collect(NullWritable.get(), sum);
-      }
+    public void cleanup(Context context) 
+        throws IOException, InterruptedException {
+      context.write(NullWritable.get(), sum);
     }
   }
 
-  static class ChecksumReducer extends MapReduceBase 
-         implements Reducer<NullWritable,Unsigned16,NullWritable,Unsigned16> {
-    public void reduce(NullWritable key, Iterator<Unsigned16> values,
-                       OutputCollector<NullWritable, Unsigned16> output, 
-                       Reporter reporter) throws IOException {
+  static class ChecksumReducer 
+      extends Reducer<NullWritable, Unsigned16, NullWritable, Unsigned16> {
+
+    public void reduce(NullWritable key, Iterable<Unsigned16> values,
+        Context context) throws IOException, InterruptedException  {
       Unsigned16 sum = new Unsigned16();
-      while (values.hasNext()) {
-        sum.add(values.next());
+      for (Unsigned16 val : values) {
+        sum.add(val);
       }
-      output.collect(key, sum);
+      context.write(key, sum);
     }
   }
 
@@ -84,10 +74,10 @@ public class TeraChecksum extends Configured implements Tool {
   }
 
   public int run(String[] args) throws Exception {
-    JobConf job = (JobConf) getConf();
+    Job job = Job.getInstance(new Cluster(getConf()), getConf());
     if (args.length != 2) {
       usage();
-      return 1;
+      return 2;
     }
     TeraInputFormat.setInputPaths(job, new Path(args[0]));
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
@@ -99,16 +89,15 @@ public class TeraChecksum extends Configured implements Tool {
     job.setOutputValueClass(Unsigned16.class);
     // force a single reducer
     job.setNumReduceTasks(1);
-    job.setInputFormat(TeraInputFormat.class);
-    JobClient.runJob(job);
-    return 0;
+    job.setInputFormatClass(TeraInputFormat.class);
+    return job.waitForCompletion(true) ? 0 : 1;
   }
 
   /**
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new JobConf(), new TeraChecksum(), args);
+    int res = ToolRunner.run(new Configuration(), new TeraChecksum(), args);
     System.exit(res);
   }
 

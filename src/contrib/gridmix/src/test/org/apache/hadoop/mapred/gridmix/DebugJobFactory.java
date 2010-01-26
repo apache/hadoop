@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -27,7 +28,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -79,21 +79,58 @@ class DebugJobFactory extends JobFactory {
     public void close() { }
   }
 
+  static double[] getDistr(Random r, double mindist, int size) {
+    assert 0.0 <= mindist && mindist <= 1.0;
+    final double min = mindist / size;
+    final double rem = 1.0 - min * size;
+    final double[] tmp = new double[size];
+    for (int i = 0; i < tmp.length - 1; ++i) {
+      tmp[i] = r.nextDouble() * rem;
+    }
+    tmp[tmp.length - 1] = rem;
+    Arrays.sort(tmp);
+
+    final double[] ret = new double[size];
+    ret[0] = tmp[0] + min;
+    for (int i = 1; i < size; ++i) {
+      ret[i] = tmp[i] - tmp[i-1] + min;
+    }
+    return ret;
+  }
+
   /**
    * Generate random task data for a synthetic job.
    */
   static class MockJob implements JobStory {
 
-    public static final String MIN_BYTES_IN =   "gridmix.test.min.bytes.in";
-    public static final String VAR_BYTES_IN =   "gridmix.test.var.bytes.in";
-    public static final String MIN_BYTES_OUT =  "gridmix.test.min.bytes.out";
-    public static final String VAR_BYTES_OUT =  "gridmix.test.var.bytes.out";
+    static final int MIN_REC = 1 << 14;
+    static final int MIN_BYTES = 1 << 20;
+    static final int VAR_REC = 1 << 14;
+    static final int VAR_BYTES = 4 << 20;
+    static final int MAX_MAP = 5;
+    static final int MAX_RED = 3;
 
-    public static final String MIN_REC_SIZE =   "gridmix.test.min.rec.bytes";
-    public static final String VAR_REC_SIZE =   "gridmix.test.var.rec.bytes";
-
-    public static final String MAX_MAPS =       "gridmix.test.max.maps";
-    public static final String MAX_REDS =       "gridmix.test.max.reduces";
+    static void initDist(Random r, double min, int[] recs, long[] bytes,
+        long tot_recs, long tot_bytes) {
+      final double[] recs_dist = getDistr(r, min, recs.length);
+      final double[] bytes_dist = getDistr(r, min, recs.length);
+      long totalbytes = 0L;
+      int totalrecs = 0;
+      for (int i = 0; i < recs.length; ++i) {
+        recs[i] = (int) Math.round(tot_recs * recs_dist[i]);
+        bytes[i] = Math.round(tot_bytes * bytes_dist[i]);
+        totalrecs += recs[i];
+        totalbytes += bytes[i];
+      }
+      // Add/remove excess
+      recs[0] += totalrecs - tot_recs;
+      bytes[0] += totalbytes - tot_bytes;
+      if (LOG.isInfoEnabled()) {
+        LOG.info("DIST: " + Arrays.toString(recs) + " " +
+            tot_recs + "/" + totalrecs + " " +
+            Arrays.toString(bytes) + " " + tot_bytes + "/" + totalbytes);
+      }
+    }
 
     private static final AtomicInteger seq = new AtomicInteger(0);
     // set timestamps in the past
@@ -101,97 +138,65 @@ class DebugJobFactory extends JobFactory {
       new AtomicLong(System.currentTimeMillis() -
         TimeUnit.MILLISECONDS.convert(60, TimeUnit.DAYS));
 
+    private final int id;
     private final String name;
     private final int[] m_recsIn, m_recsOut, r_recsIn, r_recsOut;
     private final long[] m_bytesIn, m_bytesOut, r_bytesIn, r_bytesOut;
     private final long submitTime;
 
-    public MockJob() {
-      this(new Configuration(false));
-    }
-
     public MockJob(Configuration conf) {
-      this(conf.getInt(MIN_BYTES_IN, 1 << 20),
-           conf.getInt(VAR_BYTES_IN, 5 << 20),
-           conf.getInt(MIN_BYTES_OUT, 1 << 20),
-           conf.getInt(VAR_BYTES_OUT, 5 << 20),
-           conf.getInt(MIN_REC_SIZE , 100),
-           conf.getInt(VAR_REC_SIZE , 1 << 15),
-           conf.getInt(MAX_MAPS, 5),
-           conf.getInt(MAX_REDS, 3));
-    }
-
-    public MockJob(int min_bytes_in, int var_bytes_in,
-                   int min_bytes_out, int var_bytes_out,
-                   int min_rec_size, int var_rec_size,
-                   int max_maps, int max_reds) {
       final Random r = new Random();
-      name = String.format("MOCKJOB%05d", seq.getAndIncrement());
+      final long seed = r.nextLong();
+      r.setSeed(seed);
+      id = seq.getAndIncrement();
+      name = String.format("MOCKJOB%05d", id);
+      LOG.info(name + " (" + seed + ")");
       submitTime = timestamp.addAndGet(TimeUnit.MILLISECONDS.convert(
             r.nextInt(10), TimeUnit.SECONDS));
-      int iMapBTotal = 0, oMapBTotal = 0, iRedBTotal = 0, oRedBTotal = 0;
-      int iMapRTotal = 0, oMapRTotal = 0, iRedRTotal = 0, oRedRTotal = 0;
 
-      final int iAvgMapRec = r.nextInt(var_rec_size) + min_rec_size;
-      final int oAvgMapRec = r.nextInt(var_rec_size) + min_rec_size;
+      m_recsIn = new int[r.nextInt(MAX_MAP) + 1];
+      m_bytesIn = new long[m_recsIn.length];
+      m_recsOut = new int[m_recsIn.length];
+      m_bytesOut = new long[m_recsIn.length];
 
-      // MAP
-      m_bytesIn = new long[r.nextInt(max_maps) + 1];
-      m_bytesOut = new long[m_bytesIn.length];
-      m_recsIn = new int[m_bytesIn.length];
-      m_recsOut = new int[m_bytesIn.length];
-      for (int i = 0; i < m_bytesIn.length; ++i) {
-        m_bytesIn[i] = r.nextInt(var_bytes_in) + min_bytes_in;
-        iMapBTotal += m_bytesIn[i];
-        m_recsIn[i] = (int)(m_bytesIn[i] / iAvgMapRec);
-        iMapRTotal += m_recsIn[i];
+      r_recsIn = new int[r.nextInt(MAX_RED) + 1];
+      r_bytesIn = new long[r_recsIn.length];
+      r_recsOut = new int[r_recsIn.length];
+      r_bytesOut = new long[r_recsIn.length];
 
-        m_bytesOut[i] = r.nextInt(var_bytes_out) + min_bytes_out;
-        oMapBTotal += m_bytesOut[i];
-        m_recsOut[i] = (int)(m_bytesOut[i] / oAvgMapRec);
-        oMapRTotal += m_recsOut[i];
-      }
+      // map input
+      final long map_recs = r.nextInt(VAR_REC) + MIN_REC;
+      final long map_bytes = r.nextInt(VAR_BYTES) + MIN_BYTES;
+      initDist(r, 0.5, m_recsIn, m_bytesIn, map_recs, map_bytes);
 
-      // REDUCE
-      r_bytesIn = new long[r.nextInt(max_reds) + 1];
-      r_bytesOut = new long[r_bytesIn.length];
-      r_recsIn = new int[r_bytesIn.length];
-      r_recsOut = new int[r_bytesIn.length];
-      iRedBTotal = oMapBTotal;
-      iRedRTotal = oMapRTotal;
-      for (int j = 0; iRedBTotal > 0; ++j) {
-        int i = j % r_bytesIn.length;
-        final int inc = r.nextInt(var_bytes_out) + min_bytes_out;
-        r_bytesIn[i] += inc;
-        iRedBTotal -= inc;
-        if (iRedBTotal < 0) {
-          r_bytesIn[i] += iRedBTotal;
-          iRedBTotal = 0;
-        }
-        iRedRTotal += r_recsIn[i];
-        r_recsIn[i] = (int)(r_bytesIn[i] / oAvgMapRec);
-        iRedRTotal -= r_recsIn[i];
-        if (iRedRTotal < 0) {
-          r_recsIn[i] += iRedRTotal;
-          iRedRTotal = 0;
-        }
+      // shuffle
+      final long shuffle_recs = r.nextInt(VAR_REC) + MIN_REC;
+      final long shuffle_bytes = r.nextInt(VAR_BYTES) + MIN_BYTES;
+      initDist(r, 0.4, m_recsOut, m_bytesOut, shuffle_recs, shuffle_bytes);
+      initDist(r, 0.8, r_recsIn, r_bytesIn, shuffle_recs, shuffle_bytes);
 
-        r_bytesOut[i] = r.nextInt(var_bytes_in) + min_bytes_in;
-        oRedBTotal += r_bytesOut[i];
-        r_recsOut[i] = (int)(r_bytesOut[i] / iAvgMapRec);
-        oRedRTotal += r_recsOut[i];
-      }
-      r_recsIn[0] += iRedRTotal;
+      // reduce output
+      final long red_recs = r.nextInt(VAR_REC) + MIN_REC;
+      final long red_bytes = r.nextInt(VAR_BYTES) + MIN_BYTES;
+      initDist(r, 0.4, r_recsOut, r_bytesOut, red_recs, red_bytes);
 
       if (LOG.isDebugEnabled()) {
-        iRedRTotal = 0;
-        iRedBTotal = 0;
-        for (int i = 0; i < r_bytesIn.length; ++i) {
+        int iMapBTotal = 0, oMapBTotal = 0, iRedBTotal = 0, oRedBTotal = 0;
+        int iMapRTotal = 0, oMapRTotal = 0, iRedRTotal = 0, oRedRTotal = 0;
+        for (int i = 0; i < m_recsIn.length; ++i) {
+          iMapRTotal += m_recsIn[i];
+          iMapBTotal += m_bytesIn[i];
+          oMapRTotal += m_recsOut[i];
+          oMapBTotal += m_bytesOut[i];
+        }
+        for (int i = 0; i < r_recsIn.length; ++i) {
           iRedRTotal += r_recsIn[i];
           iRedBTotal += r_bytesIn[i];
+          oRedRTotal += r_recsOut[i];
+          oRedBTotal += r_bytesOut[i];
         }
         LOG.debug(String.format("%s: M (%03d) %6d/%10d -> %6d/%10d" +
-                             " R (%03d) %6d/%10d -> %6d/%10d @%d", name,
+                                   " R (%03d) %6d/%10d -> %6d/%10d @%d", name,
             m_bytesIn.length, iMapRTotal, iMapBTotal, oMapRTotal, oMapBTotal,
             r_bytesIn.length, iRedRTotal, iRedBTotal, oRedRTotal, oRedBTotal,
             submitTime));
@@ -210,7 +215,7 @@ class DebugJobFactory extends JobFactory {
 
     @Override
     public JobID getJobID() {
-      return null;
+      return new JobID("job_mock_" + name, id);
     }
 
     @Override

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.vertica;
 
-import java.io.FileNotFoundException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;

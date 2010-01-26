@@ -34,14 +34,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.io.SplittableBufferedWriter;
 import org.apache.hadoop.sqoop.util.AsyncSink;
 import org.apache.hadoop.sqoop.util.DirectImportUtils;
 import org.apache.hadoop.sqoop.util.ErrorableAsyncSink;
 import org.apache.hadoop.sqoop.util.ErrorableThread;
 import org.apache.hadoop.sqoop.util.Executor;
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.util.ImportException;
 import org.apache.hadoop.sqoop.util.JdbcUrl;
 import org.apache.hadoop.sqoop.util.LoggingAsyncSink;
 import org.apache.hadoop.sqoop.util.PerfCounters;
@@ -53,7 +53,7 @@ import org.apache.hadoop.sqoop.util.PerfCounters;
 public class DirectPostgresqlManager extends PostgresqlManager {
   public static final Log LOG = LogFactory.getLog(DirectPostgresqlManager.class.getName());
 
-  public DirectPostgresqlManager(final ImportOptions opts) {
+  public DirectPostgresqlManager(final SqoopOptions opts) {
     // Inform superclass that we're overriding import method via alt. constructor.
     super(opts, true);
   }
@@ -66,9 +66,9 @@ public class DirectPostgresqlManager extends PostgresqlManager {
   static class PostgresqlAsyncSink extends ErrorableAsyncSink {
     private final SplittableBufferedWriter writer;
     private final PerfCounters counters;
-    private final ImportOptions options;
+    private final SqoopOptions options;
 
-    PostgresqlAsyncSink(final SplittableBufferedWriter w, final ImportOptions opts,
+    PostgresqlAsyncSink(final SplittableBufferedWriter w, final SqoopOptions opts,
         final PerfCounters ctrs) {
       this.writer = w;
       this.options = opts;
@@ -85,11 +85,11 @@ public class DirectPostgresqlManager extends PostgresqlManager {
 
       private final SplittableBufferedWriter writer;
       private final InputStream stream;
-      private final ImportOptions options;
+      private final SqoopOptions options;
       private final PerfCounters counters;
 
       PostgresqlStreamThread(final InputStream is, final SplittableBufferedWriter w,
-          final ImportOptions opts, final PerfCounters ctrs) {
+          final SqoopOptions opts, final PerfCounters ctrs) {
         this.stream = is;
         this.writer = w;
         this.options = opts;
@@ -278,15 +278,15 @@ public class DirectPostgresqlManager extends PostgresqlManager {
    * via COPY FILE TO STDOUT.
    */
   public void importTable(ImportJobContext context)
-    throws IOException, ImportError {
+    throws IOException, ImportException {
 
     String tableName = context.getTableName();
     String jarFile = context.getJarFile();
-    ImportOptions options = context.getOptions();
+    SqoopOptions options = context.getOptions();
 
     LOG.info("Beginning psql fast path import");
 
-    if (options.getFileLayout() != ImportOptions.FileLayout.TextFile) {
+    if (options.getFileLayout() != SqoopOptions.FileLayout.TextFile) {
       // TODO(aaron): Support SequenceFile-based load-in
       LOG.warn("File import layout" + options.getFileLayout()
           + " is not supported by");
@@ -323,7 +323,7 @@ public class DirectPostgresqlManager extends PostgresqlManager {
       int port = JdbcUrl.getPort(connectString);
 
       if (null == databaseName) {
-        throw new ImportError("Could not determine database name");
+        throw new ImportException("Could not determine database name");
       }
 
       LOG.info("Performing import of table " + tableName + " from database " + databaseName);

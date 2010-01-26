@@ -26,9 +26,10 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestRawBytesStreaming extends TestCase {
+public class TestRawBytesStreaming {
 
   protected File INPUT_FILE = new File("input.txt");
   protected File OUTPUT_DIR = new File("out");
@@ -62,7 +63,8 @@ public class TestRawBytesStreaming extends TestCase {
       "-verbose"
     };
   }
-  
+
+  @Test
   public void testCommandLine() throws Exception {
     try {
       try {

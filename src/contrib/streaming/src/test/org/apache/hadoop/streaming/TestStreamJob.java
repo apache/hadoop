@@ -25,13 +25,15 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.KeyValueTextInputFormat;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * This class tests hadoop Streaming's StreamJob class.
  */
-public class TestStreamJob extends TestCase {
+public class TestStreamJob {
 
+  @Test
   public void testCreateJob() throws IOException {
     JobConf job;
     ArrayList<String> dummyArgs = new ArrayList<String>();

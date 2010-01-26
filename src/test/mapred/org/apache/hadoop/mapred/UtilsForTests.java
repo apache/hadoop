@@ -25,9 +25,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.logging.LogFactory;
@@ -48,6 +50,7 @@ import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSeq
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.util.StringUtils;
 
 import org.apache.commons.logging.Log;
 
@@ -272,7 +275,9 @@ public class UtilsForTests {
     while (true) {
       boolean shouldWait = false;
       for (JobStatus jobStatuses : jobClient.getAllJobs()) {
-        if (jobStatuses.getRunState() == JobStatus.RUNNING) {
+        if (jobStatuses.getRunState() != JobStatus.SUCCEEDED
+            && jobStatuses.getRunState() != JobStatus.FAILED
+            && jobStatuses.getRunState() != JobStatus.KILLED) {
           shouldWait = true;
           break;
         }
@@ -620,6 +625,7 @@ public class UtilsForTests {
     conf.setJobName("test-job-fail");
     conf.setMapperClass(FailMapper.class);
     conf.setReducerClass(IdentityReducer.class);
+    conf.setMaxMapAttempts(1);
     
     RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
     while (!job.isComplete()) {
@@ -660,6 +666,37 @@ public class UtilsForTests {
 
     return job;
   }
+  
+  /**
+   * Cleans up files/dirs inline. CleanupQueue deletes in a separate thread
+   * asynchronously.
+   */
+  public static class InlineCleanupQueue extends CleanupQueue {
+    List<String> stalePaths = new ArrayList<String>();
+
+    public InlineCleanupQueue() {
+      // do nothing
+    }
+
+    @Override
+    public void addToQueue(PathDeletionContext... contexts) {
+      // delete paths in-line
+      for (PathDeletionContext context : contexts) {
+        try {
+          if (!deletePath(context)) {
+            LOG.warn("Stale path " + context.fullPath);
+            stalePaths.add(context.fullPath);
+          }
+        } catch (IOException e) {
+          LOG.warn("Caught exception while deleting path "
+              + context.fullPath);
+          LOG.info(StringUtils.stringifyException(e));
+          stalePaths.add(context.fullPath);
+        }
+      }
+    }
+  }
+  
   static class FakeClock extends Clock {
     long time = 0;
     
@@ -722,7 +759,7 @@ public class UtilsForTests {
     conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
     JobTracker jt;
     try {
-      jt = new JobTracker(conf);
+      jt = JobTracker.startTracker(conf);
       return jt;
     } catch (Exception e) {
       throw new RuntimeException("Could not start jt", e);

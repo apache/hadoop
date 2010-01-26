@@ -82,6 +82,11 @@ public class PoolSchedulable extends Schedulable {
       sched.updateDemand();
       demand += sched.getDemand();
     }
+    // if demand exceeds the cap for this pool, limit to the max
+    int maxTasks = poolMgr.getMaxSlots(pool.getName(), taskType);
+    if(demand > maxTasks) {
+      demand = maxTasks;
+    }
   }
   
   /**
@@ -135,6 +140,10 @@ public class PoolSchedulable extends Schedulable {
   @Override
   public Task assignTask(TaskTrackerStatus tts, long currentTime,
       Collection<JobInProgress> visited) throws IOException {
+    int runningTasks = getRunningTasks();
+    if (runningTasks >= poolMgr.getMaxSlots(pool.getName(), taskType)) {
+      return null;
+    }
     SchedulingMode mode = pool.getSchedulingMode();
     Comparator<Schedulable> comparator;
     if (mode == SchedulingMode.FIFO) {

@@ -36,9 +36,10 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.streaming.AutoInputFormat;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestAutoInputFormat extends TestCase {
+public class TestAutoInputFormat {
 
   private static Configuration conf = new Configuration();
 
@@ -49,6 +50,7 @@ public class TestAutoInputFormat extends TestCase {
   private static final int SPLITS_COUNT = 2;
 
   @SuppressWarnings( { "unchecked", "deprecation" })
+  @Test
   public void testFormat() throws IOException {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getLocal(conf);

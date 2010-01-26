@@ -82,6 +82,11 @@ public class LoggedTaskAttempt implements DeepCompare {
     }
   }
 
+  void adjustTimes(long adjustment) {
+    startTime += adjustment;
+    finishTime += adjustment;
+  }
+
   public long getShuffleFinished() {
     return shuffleFinished;
   }
@@ -135,7 +140,7 @@ public class LoggedTaskAttempt implements DeepCompare {
   }
 
   void setHostName(String hostName) {
-    this.hostName = hostName;
+    this.hostName = hostName.intern();
   }
 
   public long getHdfsBytesRead() {

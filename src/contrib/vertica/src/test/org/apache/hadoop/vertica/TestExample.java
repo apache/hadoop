@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -87,12 +88,15 @@ public class TestExample extends VerticaTestCase implements Tool {
   }
 
   public Job getJob() throws IOException {
-    Job job = new Job();
+    Configuration conf = new Configuration(true);
+    Cluster cluster = new Cluster(conf);
+    Job job = Job.getInstance(cluster);
+    
+    conf = job.getConfiguration();
+    conf.set("mapreduce.job.tracker", "local");
+
     job.setJarByClass(TestExample.class);
     job.setJobName("vertica test");
-
-    Configuration conf = job.getConfiguration();
-    conf.set("mapred.job.tracker", "local");
 
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(VerticaRecord.class);

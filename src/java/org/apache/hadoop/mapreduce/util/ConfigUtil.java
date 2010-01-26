@@ -144,7 +144,9 @@ public class ConfigUtil {
     Configuration.addDeprecation("mapred.tasktracker.map.tasks.maximum", 
       new String[] {TTConfig.TT_MAP_SLOTS});
     Configuration.addDeprecation("mapred.tasktracker.memory_calculator_plugin", 
-      new String[] {TTConfig.TT_MEMORY_CALCULATOR_PLUGIN});
+      new String[] {TTConfig.TT_RESOURCE_CALCULATOR_PLUGIN});
+    Configuration.addDeprecation("mapred.tasktracker.memorycalculatorplugin", 
+      new String[] {TTConfig.TT_RESOURCE_CALCULATOR_PLUGIN});
     Configuration.addDeprecation("mapred.tasktracker.reduce.tasks.maximum", 
       new String[] {TTConfig.TT_REDUCE_SLOTS});
     Configuration.addDeprecation(
@@ -185,8 +187,6 @@ public class ConfigUtil {
       new String[] {JobContext.QUEUE_NAME});
     Configuration.addDeprecation("mapred.job.reuse.jvm.num.tasks", 
       new String[] {JobContext.JVM_NUMTASKS_TORUN});
-    Configuration.addDeprecation("mapred.job.split.file", 
-      new String[] {JobContext.SPLIT_FILE});
     Configuration.addDeprecation("mapred.map.tasks", 
       new String[] {JobContext.NUM_MAPS});
     Configuration.addDeprecation("mapred.max.tracker.failures", 
@@ -324,7 +324,7 @@ public class ConfigUtil {
     Configuration.addDeprecation("mapred.skip.map.max.skip.records", 
       new String[] {JobContext.MAP_SKIP_MAX_RECORDS});
     Configuration.addDeprecation("min.num.spills.for.combine", 
-      new String[] {JobContext.MAP_COMBINE_MIN_SPISS});
+      new String[] {JobContext.MAP_COMBINE_MIN_SPILLS});
     Configuration.addDeprecation("mapred.compress.map.output", 
       new String[] {JobContext.MAP_OUTPUT_COMPRESS});
     Configuration.addDeprecation("mapred.map.output.compression.codec", 

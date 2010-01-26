@@ -24,6 +24,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileUtil;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 /**
  * This class tests StreamXmlRecordReader
  * The test creates an XML file, uses StreamXmlRecordReader and compares
@@ -60,7 +63,8 @@ public class TestStreamXmlRecordReader extends TestStreaming
     };
   }
 
-  public void testCommandLine() {
+  @Test
+  public void testCommandLine() throws Exception {
     try {
       try {
         FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
@@ -73,8 +77,6 @@ public class TestStreamXmlRecordReader extends TestStreaming
       String output = StreamUtil.slurp(outFile);
       outFile.delete();
       assertEquals(input, output);
-    } catch (Exception e) {
-      e.printStackTrace();
     } finally {
       try {
         INPUT_FILE.delete();

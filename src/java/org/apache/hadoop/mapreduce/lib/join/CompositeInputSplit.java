@@ -128,7 +128,6 @@ public class CompositeInputSplit extends InputSplit implements Writable {
         factory.getSerializer(s.getClass());
       serializer.open((DataOutputStream)out);
       serializer.serialize(s);
-      serializer.close();
     }
   }
 
@@ -155,7 +154,6 @@ public class CompositeInputSplit extends InputSplit implements Writable {
         Deserializer deserializer = factory.getDeserializer(cls[i]);
         deserializer.open((DataInputStream)in);
         splits[i] = (InputSplit)deserializer.deserialize(splits[i]);
-        deserializer.close();
       }
     } catch (ClassNotFoundException e) {
       throw new IOException("Failed split init", e);

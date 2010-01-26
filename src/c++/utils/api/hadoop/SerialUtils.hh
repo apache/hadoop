@@ -19,6 +19,7 @@
 #define HADOOP_SERIAL_UTILS_HH
 
 #include <string>
+#include <stdint.h>
 
 namespace HadoopUtils {
 
@@ -57,7 +58,7 @@ namespace HadoopUtils {
     { \
       if (!(CONDITION)) { \
         throw HadoopUtils::Error((MESSAGE), __FILE__, __LINE__, \
-                                    __PRETTY_FUNCTION__); \
+                                    __func__); \
       } \
     }
 

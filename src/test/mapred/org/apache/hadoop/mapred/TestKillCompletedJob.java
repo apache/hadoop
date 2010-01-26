@@ -52,7 +52,7 @@ public class TestKillCompletedJob extends TestCase {
   @SuppressWarnings("deprecation")
   public void testKillCompletedJob() throws IOException, InterruptedException {
     job = new MyFakeJobInProgress(new JobConf(), jobTracker);
-    jobTracker.addJob(job.getJobID(), job);
+    jobTracker.addJob(job.getJobID(), (JobInProgress)job);
     job.status.setRunState(JobStatus.SUCCEEDED);
 
     jobTracker.killJob(job.getJobID());

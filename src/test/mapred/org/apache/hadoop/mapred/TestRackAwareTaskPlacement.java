@@ -31,8 +31,10 @@ import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.apache.hadoop.mapreduce.Job.RawSplit;
+import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.StaticMapping;
 
@@ -93,38 +95,36 @@ public class TestRackAwareTaskPlacement extends TestCase {
 
     @Override
     public void initTasks() throws IOException {
-      Job.RawSplit[] splits = createSplits();
-      numMapTasks = splits.length;
-      createMapTasks(null, splits);
-      nonRunningMapCache = createCache(splits, maxLevel);
+      TaskSplitMetaInfo[] taskSplitMetaInfo = createSplits(jobId);
+      numMapTasks = taskSplitMetaInfo.length;
+      createMapTasks(null, taskSplitMetaInfo);
+      nonRunningMapCache = createCache(taskSplitMetaInfo, maxLevel);
       tasksInited.set(true);
       this.status.setRunState(JobStatus.RUNNING);
 
     }
   
-
-    protected Job.RawSplit[] createSplits() throws IOException {
-      Job.RawSplit[] splits = new Job.RawSplit[numMaps];
+    @Override
+    protected TaskSplitMetaInfo [] createSplits(
+        org.apache.hadoop.mapreduce.JobID jobId) throws IOException {
+      TaskSplitMetaInfo[] splits = new TaskSplitMetaInfo[numMaps];
       // Hand code for now. 
       // M0,2,3 reside in Host1
       // M1 resides in Host3
       // M4 resides in Host4
       String[] splitHosts0 = new String[] { allHosts[0] };
 
-      for (int i = 0; i < numMaps; i++) {
-        splits[i] = new Job.RawSplit();
-        splits[i].setDataLength(0);
-      }
-
-      splits[0].setLocations(splitHosts0);
-      splits[2].setLocations(splitHosts0);
-      splits[3].setLocations(splitHosts0);
-      
       String[] splitHosts1 = new String[] { allHosts[2] };
-      splits[1].setLocations(splitHosts1);
-
       String[] splitHosts2 = new String[] { allHosts[3] };
-      splits[4].setLocations(splitHosts2);
+      for (int i = 0; i < numMaps; i++) {
+    	if (i == 0 || i == 2 || i == 3) {
+          splits[i] = new TaskSplitMetaInfo(splitHosts0, 0, 0);
+        } else if (i == 1) {
+          splits[i] = new TaskSplitMetaInfo(splitHosts1, 0, 0);
+        } else if (i == 4) {
+          splits[i] = new TaskSplitMetaInfo(splitHosts2, 0, 0);
+        }
+      }
 
       return splits;
     }

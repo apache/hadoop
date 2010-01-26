@@ -107,7 +107,7 @@ public class Shuffle<K, V> implements ExceptionReporter {
     for (int i=0; i < numFetchers; ++i) {
       fetchers[i] = new Fetcher<K,V>(jobConf, reduceId, scheduler, merger, 
                                      reporter, metrics, this, 
-                                     reduceTask.getJobTokens().getShuffleJobToken());
+                                     reduceTask.getJobTokenSecret());
       fetchers[i].start();
     }
     

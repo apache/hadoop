@@ -24,8 +24,11 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Plugin to calculate virtual and physical memories on the system.
- * 
+ * @deprecated Use
+ *             {@link org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin}
+ *             instead
  */
+@Deprecated
 public abstract class MemoryCalculatorPlugin extends Configured {
 
   /**

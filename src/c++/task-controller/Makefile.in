@@ -26,22 +26,22 @@ TESTOBJS=${testdir}/test-task-controller.o task-controller.o configuration.o
 TESTBINARY=${testdir}/test-task-controller
 
 all: $(OBJS)
-	$(CC) $(CFLAG) -o $(BINARY) $(OBJS)
+	$(CC) $(CFLAGS) -o $(BINARY) $(OBJS)
 
 main.o: main.c task-controller.h
-	$(CC) $(CFLAG) -o main.o -c main.c
+	$(CC) $(CFLAGS) -o main.o -c main.c
 
 task-controller.o: task-controller.c task-controller.h 
-	$(CC) $(CFLAG) -o task-controller.o -c task-controller.c
+	$(CC) $(CFLAGS) -o task-controller.o -c task-controller.c
 
 configuration.o: configuration.h configuration.c
-	$(CC) $(CFLAG) -o configuration.o -c configuration.c
+	$(CC) $(CFLAGS) -o configuration.o -c configuration.c
 
 ${testdir}/test-task-controller.o: task-controller.c task-controller.h
-	$(CC) $(CFLAG) -o ${testdir}/test-task-controller.o -c ${testdir}/test-task-controller.c
+	$(CC) $(CFLAGS) -o ${testdir}/test-task-controller.o -c ${testdir}/test-task-controller.c
 
 test: $(TESTOBJS)
-	$(CC) $(CFLAG) -o $(TESTBINARY) $(TESTOBJS)
+	$(CC) $(CFLAGS) -o $(TESTBINARY) $(TESTOBJS)
 
 clean:
 	rm -rf $(BINARY) $(OBJS) $(TESTOBJS)

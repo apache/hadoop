@@ -26,9 +26,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
+import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants;
+import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
+import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
 
 import org.apache.commons.logging.Log;
@@ -47,6 +54,7 @@ class JobFactory implements Gridmix.Component<Void> {
   public static final Log LOG = LogFactory.getLog(JobFactory.class);
 
   private final Path scratch;
+  private final float rateFactor;
   private final Configuration conf;
   private final ReaderThread rThread;
   private final AtomicInteger sequence;
@@ -83,11 +91,67 @@ class JobFactory implements Gridmix.Component<Void> {
       Path scratch, Configuration conf, CountDownLatch startFlag) {
     sequence = new AtomicInteger(0);
     this.scratch = scratch;
+    this.rateFactor = conf.getFloat(Gridmix.GRIDMIX_SUB_MUL, 1.0f);
     this.jobProducer = jobProducer;
     this.conf = new Configuration(conf);
     this.submitter = submitter;
     this.startFlag = startFlag;
     this.rThread = new ReaderThread();
+  }
+
+  static class MinTaskInfo extends TaskInfo {
+    public MinTaskInfo(TaskInfo info) {
+      super(info.getInputBytes(), info.getInputRecords(),
+            info.getOutputBytes(), info.getOutputRecords(),
+            info.getTaskMemory());
+    }
+    public long getInputBytes() {
+      return Math.max(0, super.getInputBytes());
+    }
+    public int getInputRecords() {
+      return Math.max(0, super.getInputRecords());
+    }
+    public long getOutputBytes() {
+      return Math.max(0, super.getOutputBytes());
+    }
+    public int getOutputRecords() {
+      return Math.max(0, super.getOutputRecords());
+    }
+    public long getTaskMemory() {
+      return Math.max(0, super.getTaskMemory());
+    }
+  }
+
+  static class FilterJobStory implements JobStory {
+
+    protected final JobStory job;
+
+    public FilterJobStory(JobStory job) {
+      this.job = job;
+    }
+    public JobConf getJobConf() { return job.getJobConf(); }
+    public String getName() { return job.getName(); }
+    public JobID getJobID() { return job.getJobID(); }
+    public String getUser() { return job.getUser(); }
+    public long getSubmissionTime() { return job.getSubmissionTime(); }
+    public InputSplit[] getInputSplits() { return job.getInputSplits(); }
+    public int getNumberMaps() { return job.getNumberMaps(); }
+    public int getNumberReduces() { return job.getNumberReduces(); }
+    public TaskInfo getTaskInfo(TaskType taskType, int taskNumber) {
+      return job.getTaskInfo(taskType, taskNumber);
+    }
+    public TaskAttemptInfo getTaskAttemptInfo(TaskType taskType, int taskNumber,
+        int taskAttemptNumber) {
+      return job.getTaskAttemptInfo(taskType, taskNumber, taskAttemptNumber);
+    }
+    public TaskAttemptInfo getMapTaskAttemptInfoAdjusted(
+        int taskNumber, int taskAttemptNumber, int locality) {
+      return job.getMapTaskAttemptInfoAdjusted(
+          taskNumber, taskAttemptNumber, locality);
+    }
+    public Values getOutcome() {
+      return job.getOutcome();
+    }
   }
 
   /**
@@ -107,7 +171,12 @@ class JobFactory implements Gridmix.Component<Void> {
       } while (job != null
           && (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS ||
               job.getSubmissionTime() < 0));
-      return job;
+      return null == job ? null : new FilterJobStory(job) {
+          @Override
+          public TaskInfo getTaskInfo(TaskType taskType, int taskNumber) {
+            return new MinTaskInfo(this.job.getTaskInfo(taskType, taskNumber));
+          }
+        };
     }
 
     @Override
@@ -133,11 +202,12 @@ class JobFactory implements Gridmix.Component<Void> {
             }
             final long current = job.getSubmissionTime();
             if (current < last) {
-              throw new IOException(
-                  "JobStories are not ordered by submission time.");
+              LOG.warn("Job " + job.getJobID() + " out of order");
+              continue;
             }
             last = current;
-            submitter.add(new GridmixJob(conf, initTime + (current - first),
+            submitter.add(new GridmixJob(conf, initTime +
+                  Math.round(rateFactor * (current - first)),
                 job, scratch, sequence.getAndIncrement()));
           } catch (IOException e) {
             JobFactory.this.error = e;
@@ -179,8 +249,8 @@ class JobFactory implements Gridmix.Component<Void> {
   /**
    * Wait for the reader thread to exhaust the job trace.
    */
-  public void join() throws InterruptedException {
-    rThread.join();
+  public void join(long millis) throws InterruptedException {
+    rThread.join(millis);
   }
 
   /**

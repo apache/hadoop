@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce;
 
-import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -26,6 +26,7 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,15 +36,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.codehaus.jackson.map.ObjectMapper;
 
 class JobSubmitter {
   protected static final Log LOG = LogFactory.getLog(JobSubmitter.class);
@@ -128,12 +129,7 @@ class JobSubmitter {
     String files = conf.get("tmpfiles");
     String libjars = conf.get("tmpjars");
     String archives = conf.get("tmparchives");
-      
-    /*
-     * set this user's id in job configuration, so later job files can be
-     * accessed using this user's id
-     */
-    job.setUGIAndUserGroupNames();
+    String jobJar = job.getJar();
 
     //
     // Figure out what fs the JobTracker is using.  Copy the
@@ -145,14 +141,18 @@ class JobSubmitter {
 
     // Create a number of filenames in the JobTracker's fs namespace
     LOG.debug("default FileSystem: " + jtFs.getUri());
-    jtFs.delete(submitJobDir, true);
+    if (jtFs.exists(submitJobDir)) {
+      throw new IOException("Not submitting job. Job directory " + submitJobDir
+          +" already exists!! This is unexpected.Please check what's there in" +
+          " that directory");
+    }
     submitJobDir = jtFs.makeQualified(submitJobDir);
     submitJobDir = new Path(submitJobDir.toUri().getPath());
-    FsPermission mapredSysPerms = new FsPermission(JOB_DIR_PERMISSION);
+    FsPermission mapredSysPerms = new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
     FileSystem.mkdirs(jtFs, submitJobDir, mapredSysPerms);
-    Path filesDir = new Path(submitJobDir, "files");
-    Path archivesDir = new Path(submitJobDir, "archives");
-    Path libjarsDir = new Path(submitJobDir, "libjars");
+    Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
+    Path archivesDir = JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
+    Path libjarsDir = JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
     // add all the command line files/ jars and archive
     // first copy them to jobtrackers filesystem 
       
@@ -185,7 +185,8 @@ class JobSubmitter {
       for (String tmpjars: libjarsArr) {
         Path tmp = new Path(tmpjars);
         Path newPath = copyRemoteFiles(libjarsDir, tmp, conf, replication);
-        DistributedCache.addFileToClassPath(newPath, conf);
+        DistributedCache.addFileToClassPath(
+            new Path(newPath.toUri().getPath()), conf);
       }
     }
       
@@ -212,11 +213,26 @@ class JobSubmitter {
         DistributedCache.createSymlink(conf);
       }
     }
-      
+
+    if (jobJar != null) {   // copy jar to JobTracker's fs
+      // use jar name if job is not named. 
+      if ("".equals(job.getJobName())){
+        job.setJobName(new Path(jobJar).getName());
+      }
+      copyJar(new Path(jobJar), JobSubmissionFiles.getJobJar(submitJobDir), 
+          replication);
+      job.setJar(JobSubmissionFiles.getJobJar(submitJobDir).toString());
+    } else {
+      LOG.warn("No job jar file set.  User classes may not be found. "+
+      "See Job or Job#setJar(String).");
+    }
+
     //  set the timestamps of the archives and files
     TrackerDistributedCacheManager.determineTimestamps(conf);
+    //  set the public/private visibility of the archives and files
+    TrackerDistributedCacheManager.determineCacheVisibilities(conf);
   }
-
+  
   private URI getPathURI(Path destPath, String fragment) 
       throws URISyntaxException {
     URI pathURI = destPath.toUri();
@@ -234,36 +250,20 @@ class JobSubmitter {
       short replication) throws IOException {
     jtFs.copyFromLocalFile(originalJarPath, submitJarFile);
     jtFs.setReplication(submitJarFile, replication);
-    jtFs.setPermission(submitJarFile, new FsPermission(JOB_FILE_PERMISSION));
+    jtFs.setPermission(submitJarFile, new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
   }
+  
   /**
    * configure the jobconf of the user with the command line options of 
    * -libjars, -files, -archives.
    * @param conf
    * @throws IOException
    */
-  private void configureCommandLineOptions(Job job, Path submitJobDir,
-      Path submitJarFile) throws IOException {
+  private void copyAndConfigureFiles(Job job, Path jobSubmitDir) 
+  throws IOException {
     Configuration conf = job.getConfiguration();
     short replication = (short)conf.getInt(Job.SUBMIT_REPLICATION, 10);
-    copyAndConfigureFiles(job, submitJobDir, replication);
-    
-    /* set this user's id in job configuration, so later job files can be
-     * accessed using this user's id
-     */
-    String originalJarPath = job.getJar();
-
-    if (originalJarPath != null) {           // copy jar to JobTracker's fs
-      // use jar name if job is not named. 
-      if ("".equals(job.getJobName())){
-        job.setJobName(new Path(originalJarPath).getName());
-      }
-      job.setJar(submitJarFile.toString());
-      copyJar(new Path(originalJarPath), submitJarFile, replication);
-    } else {
-      LOG.warn("No job jar file set.  User classes may not be found. "+
-               "See Job or Job#setJar(String).");
-    }
+    copyAndConfigureFiles(job, jobSubmitDir, replication);
 
     // Set the working directory
     if (job.getWorkingDirectory() == null) {
@@ -271,15 +271,6 @@ class JobSubmitter {
     }
 
   }
-
-  // job files are world-wide readable and owner writable
-  final private static FsPermission JOB_FILE_PERMISSION = 
-    FsPermission.createImmutable((short) 0644); // rw-r--r--
-
-  // job submission directory is world readable/writable/executable
-  final static FsPermission JOB_DIR_PERMISSION =
-    FsPermission.createImmutable((short) 0777); // rwx-rwx-rwx
-   
   /**
    * Internal method for submitting jobs to the system.
    * 
@@ -305,45 +296,79 @@ class JobSubmitter {
    *   </li>
    * </ol></p>
    * @param job the configuration to submit
+   * @param cluster the handle to the Cluster
    * @throws ClassNotFoundException
    * @throws InterruptedException
    * @throws IOException
    */
-  JobStatus submitJobInternal(Job job) throws ClassNotFoundException,
-      InterruptedException, IOException {
-    
+  @SuppressWarnings("unchecked")
+  JobStatus submitJobInternal(Job job, Cluster cluster) 
+  throws ClassNotFoundException, InterruptedException, IOException {
+    /*
+     * set this user's id in job configuration, so later job files can be
+     * accessed using this user's id
+     */
+    job.setUGIAndUserGroupNames();
+
+    Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, 
+                                                     job.getConfiguration());
     //configure the command line options correctly on the submitting dfs
     Configuration conf = job.getConfiguration();
     JobID jobId = submitClient.getNewJobID();
-    Path submitJobDir = new Path(submitClient.getSystemDir(), jobId.toString());
-    Path submitJarFile = new Path(submitJobDir, "job.jar");
-    Path submitSplitFile = new Path(submitJobDir, "job.split");
-    configureCommandLineOptions(job, submitJobDir, submitJarFile);
-    Path submitJobFile = new Path(submitJobDir, "job.xml");
-    
-    checkSpecs(job);
+    Path submitJobDir = new Path(jobStagingArea, jobId.toString());
+    JobStatus status = null;
+    try {
+      conf.set("mapreduce.job.dir", submitJobDir.toString());
+      LOG.debug("Configuring job " + jobId + " with " + submitJobDir 
+          + " as the submit dir");
+      copyAndConfigureFiles(job, submitJobDir);
+      Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
 
-    // Create the splits for the job
-    LOG.info("Creating splits at " + jtFs.makeQualified(submitSplitFile));
-    int maps = writeSplits(job, submitSplitFile);
-    conf.set("mapred.job.split.file", submitSplitFile.toString());
-    conf.setInt("mapred.map.tasks", maps);
-    LOG.info("number of splits:" + maps);
-    
-    // Write job file to JobTracker's fs
-    writeConf(conf, submitJobFile);
-    
-    //
-    // Now, actually submit the job (using the submit name)
-    //
-    JobStatus status = submitClient.submitJob(jobId);
-    if (status != null) {
-      return status;
-    } else {
-      throw new IOException("Could not launch job");
+      checkSpecs(job);
+      
+      // create TokenStorage object with user secretKeys
+      String tokensFileName = conf.get("tokenCacheFile");
+      TokenStorage tokenStorage = null;
+      if(tokensFileName != null) {
+        LOG.info("loading secret keys from " + tokensFileName);
+        String localFileName = new Path(tokensFileName).toUri().getPath();
+        tokenStorage = new TokenStorage();
+        // read JSON
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, String> nm = 
+          mapper.readValue(new File(localFileName), Map.class);
+        
+        for(Map.Entry<String, String> ent: nm.entrySet()) {
+          LOG.debug("adding secret key alias="+ent.getKey());
+          tokenStorage.addSecretKey(new Text(ent.getKey()), ent.getValue().getBytes());
+        }
+      }
+
+      // Create the splits for the job
+      LOG.debug("Creating splits at " + jtFs.makeQualified(submitJobDir));
+      int maps = writeSplits(job, submitJobDir);
+      conf.setInt("mapred.map.tasks", maps);
+      LOG.info("number of splits:" + maps);
+
+      // Write job file to submit dir
+      writeConf(conf, submitJobFile);
+      //
+      // Now, actually submit the job (using the submit name)
+      //
+      status = submitClient.submitJob(jobId, submitJobDir.toString(), tokenStorage);
+      if (status != null) {
+        return status;
+      } else {
+        throw new IOException("Could not launch job");
+      }
+    } finally {
+      if (status == null) {
+        LOG.info("Cleaning up the staging area " + submitJobDir);
+        jtFs.delete(submitJobDir, true);
+      }
     }
   }
-
+  
   private void checkSpecs(Job job) throws ClassNotFoundException, 
       InterruptedException, IOException {
     JobConf jConf = (JobConf)job.getConfiguration();
@@ -364,7 +389,7 @@ class JobSubmitter {
     // Write job file to JobTracker's fs        
     FSDataOutputStream out = 
       FileSystem.create(jtFs, jobFile, 
-                        new FsPermission(JOB_FILE_PERMISSION));
+                        new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
     try {
       conf.writeXml(out);
     } finally {
@@ -372,81 +397,42 @@ class JobSubmitter {
     }
   }
   
+
   @SuppressWarnings("unchecked")
-  private <T extends InputSplit> 
-  int writeNewSplits(JobContext job, Path submitSplitFile) throws IOException,
+  private <T extends InputSplit>
+  int writeNewSplits(JobContext job, Path jobSubmitDir) throws IOException,
       InterruptedException, ClassNotFoundException {
     Configuration conf = job.getConfiguration();
     InputFormat<?, ?> input =
       ReflectionUtils.newInstance(job.getInputFormatClass(), conf);
-    
+
     List<InputSplit> splits = input.getSplits(job);
     T[] array = (T[]) splits.toArray(new InputSplit[splits.size()]);
 
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(array, new SplitComparator());
-    DataOutputStream out = writeSplitsFileHeader(conf, submitSplitFile, 
-                                                 array.length);
-    try {
-      if (array.length != 0) {
-        DataOutputBuffer buffer = new DataOutputBuffer();
-        Job.RawSplit rawSplit = new Job.RawSplit();
-        SerializationFactory factory = new SerializationFactory(conf);
-        Serializer<T> serializer = 
-          factory.getSerializer((Class<T>) array[0].getClass());
-        serializer.open(buffer);
-        for (T split: array) {
-          rawSplit.setClassName(split.getClass().getName());
-          buffer.reset();
-          serializer.serialize(split);
-          rawSplit.setDataLength(split.getLength());
-          rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-          rawSplit.setLocations(split.getLocations());
-          rawSplit.write(out);
-        }
-        serializer.close();
-      }
-    } finally {
-      out.close();
-    }
+    JobSplitWriter.createSplitFiles(jobSubmitDir, conf, array);
     return array.length;
   }
-
-  static final int CURRENT_SPLIT_FILE_VERSION = 0;
-  static final byte[] SPLIT_FILE_HEADER = "SPL".getBytes();
-
-  private DataOutputStream writeSplitsFileHeader(Configuration conf,
-      Path filename, int length) throws IOException {
-    // write the splits to a file for the job tracker
-    FileSystem fs = filename.getFileSystem(conf);
-    FSDataOutputStream out = 
-      FileSystem.create(fs, filename, new FsPermission(JOB_FILE_PERMISSION));
-    out.write(SPLIT_FILE_HEADER);
-    WritableUtils.writeVInt(out, CURRENT_SPLIT_FILE_VERSION);
-    WritableUtils.writeVInt(out, length);
-    return out;
-  }
-
+  
   private int writeSplits(org.apache.hadoop.mapreduce.JobContext job,
-                  Path submitSplitFile) throws IOException,
+      Path jobSubmitDir) throws IOException,
       InterruptedException, ClassNotFoundException {
     JobConf jConf = (JobConf)job.getConfiguration();
-    // Create the splits for the job
-    LOG.debug("Creating splits at " + jtFs.makeQualified(submitSplitFile));
     int maps;
     if (jConf.getUseNewMapper()) {
-      maps = writeNewSplits(job, submitSplitFile);
+      maps = writeNewSplits(job, jobSubmitDir);
     } else {
-      maps = writeOldSplits(jConf, submitSplitFile);
+      maps = writeOldSplits(jConf, jobSubmitDir);
     }
     return maps;
   }
-
-  // method to write splits for old api mapper.
-  private int writeOldSplits(JobConf job, 
-      Path submitSplitFile) throws IOException {
-    org.apache.hadoop.mapred.InputSplit[] splits = 
+  
+  //method to write splits for old api mapper.
+  private int writeOldSplits(JobConf job, Path jobSubmitDir) 
+  throws IOException {
+    org.apache.hadoop.mapred.InputSplit[] splits =
     job.getInputFormat().getSplits(job, job.getNumMapTasks());
     // sort the splits into order based on size, so that the biggest
     // go first
@@ -468,24 +454,7 @@ class JobSubmitter {
         }
       }
     });
-    DataOutputStream out = writeSplitsFileHeader(job, submitSplitFile,
-      splits.length);
-
-    try {
-      DataOutputBuffer buffer = new DataOutputBuffer();
-      Job.RawSplit rawSplit = new Job.RawSplit();
-      for (org.apache.hadoop.mapred.InputSplit split: splits) {
-        rawSplit.setClassName(split.getClass().getName());
-        buffer.reset();
-        split.write(buffer);
-        rawSplit.setDataLength(split.getLength());
-        rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-        rawSplit.setLocations(split.getLocations());
-        rawSplit.write(out);
-      }
-    } finally {
-      out.close();
-    }
+    JobSplitWriter.createSplitFiles(jobSubmitDir, job, splits);
     return splits.length;
   }
   
@@ -505,7 +474,7 @@ class JobSubmitter {
       } catch (IOException ie) {
         throw new RuntimeException("exception in compare", ie);
       } catch (InterruptedException ie) {
-        throw new RuntimeException("exception in compare", ie);        
+        throw new RuntimeException("exception in compare", ie);
       }
     }
   }

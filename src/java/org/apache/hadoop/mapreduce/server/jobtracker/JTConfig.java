@@ -80,6 +80,8 @@ public interface JTConfig extends MRConfig {
   public static final String JT_AVG_BLACKLIST_THRESHOLD = 
     "mapreduce.jobtracker.blacklist.average.threshold";
   public static final String JT_SYSTEM_DIR = "mapreduce.jobtracker.system.dir";
+  public static final String JT_STAGING_AREA_ROOT = 
+    "mapreduce.jobtracker.staging.root.dir";
   public static final String JT_MAX_TRACKER_BLACKLISTS = 
     "mapreduce.jobtracker.tasktracker.maxblacklists";
   public static final String JT_JOBHISTORY_MAXAGE = 
@@ -88,4 +90,6 @@ public interface JTConfig extends MRConfig {
     "mapreduce.jobtracker.maxmapmemory.mb";
   public static final String JT_MAX_REDUCEMEMORY_MB = 
     "mapreduce.jobtracker.maxreducememory.mb";
+  public static final String MAX_JOB_SPLIT_METAINFO_SIZE = 
+  "mapreduce.job.split.metainfo.maxsize";
 }

@@ -24,6 +24,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
 /**
@@ -47,6 +48,7 @@ public class TestLostTracker extends TestCase {
     conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
     conf.set(JTConfig.JT_HTTP_ADDRESS, "0.0.0.0:0");
     conf.setLong(JTConfig.JT_TRACKER_EXPIRY_INTERVAL, 1000);
+    conf.set(JTConfig.JT_MAX_TRACKER_BLACKLISTS, "1");
     jobTracker = new FakeJobTracker(conf, (clock = new FakeClock()), trackers);
     jobTracker.startExpireTrackersThread();
   }
@@ -89,6 +91,141 @@ public class TestLostTracker extends TestCase {
         tid[0].getTaskID().toString(), tid[1].getTaskID().toString());
     
     job.finishTask(tid[1]);
+    
+  }
+  
+  /**
+   * Test whether the tracker gets blacklisted after its lost.
+   */
+  public void testLostTrackerBeforeBlacklisting() throws Exception {
+    FakeObjectUtilities.establishFirstContact(jobTracker, trackers[0]);
+    TaskAttemptID[] tid = new TaskAttemptID[3];
+    JobConf conf = new JobConf();
+    conf.setNumMapTasks(1);
+    conf.setNumReduceTasks(1);
+    conf.set(JobContext.MAX_TASK_FAILURES_PER_TRACKER, "1");
+    conf.set(JobContext.SETUP_CLEANUP_NEEDED, "false");
+    FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
+    job.initTasks();
+    job.setClusterSize(4);
+    
+    // Tracker 0 gets the map task
+    tid[0] = job.findMapTask(trackers[0]);
+
+    job.finishTask(tid[0]);
+
+    // validate the total tracker count
+    assertEquals("Active tracker count mismatch", 
+                 1, jobTracker.getClusterStatus(false).getTaskTrackers());
+    
+    // lose the tracker
+    clock.advance(1100);
+    jobTracker.checkExpiredTrackers();
+    assertFalse("Tracker 0 not lost", 
+        jobTracker.getClusterStatus(false).getActiveTrackerNames()
+                  .contains(trackers[0]));
+    
+    // validate the total tracker count
+    assertEquals("Active tracker count mismatch", 
+                 0, jobTracker.getClusterStatus(false).getTaskTrackers());
+    
+    // Tracker 1 establishes contact with JT 
+    FakeObjectUtilities.establishFirstContact(jobTracker, trackers[1]);
+    
+    // Tracker1 should get assigned the lost map task
+    tid[1] =  job.findMapTask(trackers[1]);
+
+    assertNotNull("Map Task from Lost Tracker did not get reassigned", tid[1]);
+    
+    assertEquals("Task ID of reassigned map task does not match",
+        tid[0].getTaskID().toString(), tid[1].getTaskID().toString());
+    
+    // finish the map task
+    job.finishTask(tid[1]);
+
+    // finish the reduce task
+    tid[2] =  job.findReduceTask(trackers[1]);
+    job.finishTask(tid[2]);
+    
+    // check if job is successful
+    assertEquals("Job not successful", 
+                 JobStatus.SUCCEEDED, job.getStatus().getRunState());
+    
+    // check if the tracker is lost
+    // validate the total tracker count
+    assertEquals("Active tracker count mismatch", 
+                 1, jobTracker.getClusterStatus(false).getTaskTrackers());
+    // validate blacklisted count .. since we lost one blacklisted tracker
+    assertEquals("Blacklisted tracker count mismatch", 
+                0, jobTracker.getClusterStatus(false).getBlacklistedTrackers());
+  }
+
+  /**
+   * Test whether the tracker gets lost after its blacklisted.
+   */
+  public void testLostTrackerAfterBlacklisting() throws Exception {
+    FakeObjectUtilities.establishFirstContact(jobTracker, trackers[0]);
+    clock.advance(600);
+    TaskAttemptID[] tid = new TaskAttemptID[2];
+    JobConf conf = new JobConf();
+    conf.setNumMapTasks(1);
+    conf.setNumReduceTasks(0);
+    conf.set(JobContext.MAX_TASK_FAILURES_PER_TRACKER, "1");
+    conf.set(JobContext.SETUP_CLEANUP_NEEDED, "false");
+    FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
+    job.initTasks();
+    job.setClusterSize(4);
+    
+    // check if the tracker count is correct
+    assertEquals("Active tracker count mismatch", 
+                 1, jobTracker.taskTrackers().size());
+    
+    // Tracker 0 gets the map task
+    tid[0] = job.findMapTask(trackers[0]);
+    // Fail the task
+    job.failTask(tid[0]);
+    
+    // Tracker 1 establishes contact with JT
+    FakeObjectUtilities.establishFirstContact(jobTracker, trackers[1]);
+    // check if the tracker count is correct
+    assertEquals("Active tracker count mismatch", 
+                 2, jobTracker.taskTrackers().size());
+    
+    // Tracker 1 gets the map task
+    tid[1] = job.findMapTask(trackers[1]);
+    // Finish the task and also the job
+    job.finishTask(tid[1]);
+
+    // check if job is successful
+    assertEquals("Job not successful", 
+                 JobStatus.SUCCEEDED, job.getStatus().getRunState());
+    
+    // check if the trackers 1 got blacklisted
+    assertTrue("Tracker 0 not blacklisted", 
+               jobTracker.getBlacklistedTrackers()[0].getTaskTrackerName()
+                 .equals(trackers[0]));
+    // check if the tracker count is correct
+    assertEquals("Active tracker count mismatch", 
+                 2, jobTracker.taskTrackers().size());
+    // validate blacklisted count
+    assertEquals("Blacklisted tracker count mismatch", 
+                1, jobTracker.getClusterStatus(false).getBlacklistedTrackers());
+    
+    // Advance clock. Tracker 0 should be lost
+    clock.advance(500);
+    jobTracker.checkExpiredTrackers();
+    
+    // check if the task tracker is lost
+    assertFalse("Tracker 0 not lost", 
+            jobTracker.getClusterStatus(false).getActiveTrackerNames()
+                      .contains(trackers[0]));
+    
+    // check if the lost tracker has removed from the jobtracker
+    assertEquals("Active tracker count mismatch", 
+                 1, jobTracker.taskTrackers().size());
+    // validate blacklisted count
+    assertEquals("Blacklisted tracker count mismatch", 
+                0, jobTracker.getClusterStatus(false).getBlacklistedTrackers());
     
   }
 }

@@ -35,9 +35,9 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  * Command-line arguments used by Sqoop
  */
-public class ImportOptions {
+public class SqoopOptions {
 
-  public static final Log LOG = LogFactory.getLog(ImportOptions.class.getName());
+  public static final Log LOG = LogFactory.getLog(SqoopOptions.class.getName());
 
   /**
    * Thrown when invalid cmdline options are given
@@ -66,7 +66,8 @@ public class ImportOptions {
     ListTables,     // list available tables and exit.
     GenerateOnly,   // generate ORM code but do not import.
     FullImport,     // generate code (as needed) and import.
-    DebugExec       // just execute a single sql command and print its results.
+    DebugExec,      // just execute a single sql command and print its results.
+    Export          // export a table from HDFS to a database.
   }
 
   // selects in-HDFS destination file format
@@ -101,9 +102,14 @@ public class ImportOptions {
   private boolean hiveImport;
   private String packageName; // package to prepend to auto-named classes.
   private String className; // package+class to apply to individual table import.
+                            // also used as an *input* class with existingJarFile.
+  private String existingJarFile; // Name of a jar containing existing table definition
+                                  // class to use.
   private int numMappers;
   private boolean useCompression;
   private long directSplitSize; // In direct mode, open a new stream every X bytes.
+
+  private String exportDir; // HDFS path to read from when performing an export
 
   private char inputFieldDelim;
   private char inputRecordDelim;
@@ -127,17 +133,17 @@ public class ImportOptions {
 
   private String [] extraArgs;
 
-  public ImportOptions() {
+  public SqoopOptions() {
     initDefaults();
   }
 
   /**
-   * Alternate ImportOptions interface used mostly for unit testing
+   * Alternate SqoopOptions interface used mostly for unit testing
    * @param connect JDBC connect string to use
    * @param database Database to read
    * @param table Table to read
    */
-  public ImportOptions(final String connect, final String table) {
+  public SqoopOptions(final String connect, final String table) {
     initDefaults();
 
     this.connectString = connect;
@@ -188,6 +194,8 @@ public class ImportOptions {
       this.hiveHome = props.getProperty("hive.home", this.hiveHome);
       this.className = props.getProperty("java.classname", this.className);
       this.packageName = props.getProperty("java.packagename", this.packageName);
+      this.existingJarFile = props.getProperty("java.jar.file", this.existingJarFile);
+      this.exportDir = props.getProperty("export.dir", this.exportDir);
 
       this.direct = getBooleanProperty(props, "direct.import", this.direct);
       this.hiveImport = getBooleanProperty(props, "hive.import", this.hiveImport);
@@ -303,6 +311,10 @@ public class ImportOptions {
     System.out.println("--direct-split-size (n)      Split the input stream every 'n' bytes");
     System.out.println("                             when importing in direct mode.");
     System.out.println("");
+    System.out.println("Export options:");
+    System.out.println("--export-dir (dir)           Export from an HDFS path into a table");
+    System.out.println("                             (set with --table)");
+    System.out.println("");
     System.out.println("Output line formatting options:");
     System.out.println("--fields-terminated-by (char)    Sets the field separator character");
     System.out.println("--lines-terminated-by (char)     Sets the end-of-line character");
@@ -326,6 +338,11 @@ public class ImportOptions {
     System.out.println("--package-name (name)        Put auto-generated classes in this package");
     System.out.println("--class-name (name)          When generating one class, use this name.");
     System.out.println("                             This overrides --package-name.");
+    System.out.println("");
+    System.out.println("Library loading options:");
+    System.out.println("--jar-file (file)            Disable code generation; use specified jar");
+    System.out.println("--class-name (name)          The class within the jar that represents");
+    System.out.println("                             the table to import/export");
     System.out.println("");
     System.out.println("Additional commands:");
     System.out.println("--list-tables                List tables in database and exit");
@@ -457,6 +474,9 @@ public class ImportOptions {
           this.action = ControlAction.ListTables;
         } else if (args[i].equals("--all-tables")) {
           this.allTables = true;
+        } else if (args[i].equals("--export-dir")) {
+          this.exportDir = args[++i];
+          this.action = ControlAction.Export;
         } else if (args[i].equals("--local")) {
           // TODO(aaron): Remove this after suitable deprecation time period.
           LOG.warn("--local is deprecated; use --direct instead.");
@@ -486,21 +506,21 @@ public class ImportOptions {
           String numMappersStr = args[++i];
           this.numMappers = Integer.valueOf(numMappersStr);
         } else if (args[i].equals("--fields-terminated-by")) {
-          this.outputFieldDelim = ImportOptions.toChar(args[++i]);
+          this.outputFieldDelim = SqoopOptions.toChar(args[++i]);
           this.areDelimsManuallySet = true;
         } else if (args[i].equals("--lines-terminated-by")) {
-          this.outputRecordDelim = ImportOptions.toChar(args[++i]);
+          this.outputRecordDelim = SqoopOptions.toChar(args[++i]);
           this.areDelimsManuallySet = true;
         } else if (args[i].equals("--optionally-enclosed-by")) {
-          this.outputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.outputEnclosedBy = SqoopOptions.toChar(args[++i]);
           this.outputMustBeEnclosed = false;
           this.areDelimsManuallySet = true;
         } else if (args[i].equals("--enclosed-by")) {
-          this.outputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.outputEnclosedBy = SqoopOptions.toChar(args[++i]);
           this.outputMustBeEnclosed = true;
           this.areDelimsManuallySet = true;
         } else if (args[i].equals("--escaped-by")) {
-          this.outputEscapedBy = ImportOptions.toChar(args[++i]);
+          this.outputEscapedBy = SqoopOptions.toChar(args[++i]);
           this.areDelimsManuallySet = true;
         } else if (args[i].equals("--mysql-delimiters")) {
           this.outputFieldDelim = ',';
@@ -510,17 +530,17 @@ public class ImportOptions {
           this.outputMustBeEnclosed = false;
           this.areDelimsManuallySet = true;
         } else if (args[i].equals("--input-fields-terminated-by")) {
-          this.inputFieldDelim = ImportOptions.toChar(args[++i]);
+          this.inputFieldDelim = SqoopOptions.toChar(args[++i]);
         } else if (args[i].equals("--input-lines-terminated-by")) {
-          this.inputRecordDelim = ImportOptions.toChar(args[++i]);
+          this.inputRecordDelim = SqoopOptions.toChar(args[++i]);
         } else if (args[i].equals("--input-optionally-enclosed-by")) {
-          this.inputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.inputEnclosedBy = SqoopOptions.toChar(args[++i]);
           this.inputMustBeEnclosed = false;
         } else if (args[i].equals("--input-enclosed-by")) {
-          this.inputEnclosedBy = ImportOptions.toChar(args[++i]);
+          this.inputEnclosedBy = SqoopOptions.toChar(args[++i]);
           this.inputMustBeEnclosed = true;
         } else if (args[i].equals("--input-escaped-by")) {
-          this.inputEscapedBy = ImportOptions.toChar(args[++i]);
+          this.inputEscapedBy = SqoopOptions.toChar(args[++i]);
         } else if (args[i].equals("--outdir")) {
           this.codeOutputDir = args[++i];
         } else if (args[i].equals("--as-sequencefile")) {
@@ -539,6 +559,8 @@ public class ImportOptions {
           this.useCompression = true;
         } else if (args[i].equals("--direct-split-size")) {
           this.directSplitSize = Long.parseLong(args[++i]);
+        } else if (args[i].equals("--jar-file")) {
+          this.existingJarFile = args[++i];
         } else if (args[i].equals("--list-databases")) {
           this.action = ControlAction.ListDatabases;
         } else if (args[i].equals("--generate-only")) {
@@ -606,6 +628,15 @@ public class ImportOptions {
         && this.tableName == null) {
       throw new InvalidOptionsException(
           "One of --table or --all-tables is required for import." + HELP_STR);
+    } else if (this.action == ControlAction.Export && this.allTables) {
+      throw new InvalidOptionsException("You cannot export with --all-tables." + HELP_STR);
+    } else if (this.action == ControlAction.Export && this.tableName == null) {
+      throw new InvalidOptionsException("Export requires a --table argument." + HELP_STR);
+    } else if (this.existingJarFile != null && this.className == null) {
+      throw new InvalidOptionsException("Jar specified with --jar-file, but no "
+          + "class specified with --class-name." + HELP_STR);
+    } else if (this.existingJarFile != null && this.action == ControlAction.GenerateOnly) {
+      throw new InvalidOptionsException("Cannot generate code using existing jar." + HELP_STR);
     }
 
     if (this.hiveImport) {
@@ -644,8 +675,20 @@ public class ImportOptions {
     return connectString;
   }
 
+  public void setConnectString(String connectStr) {
+    this.connectString = connectStr;
+  }
+
   public String getTableName() {
     return tableName;
+  }
+
+  public String getExportDir() {
+    return exportDir;
+  }
+
+  public String getExistingJarName() {
+    return existingJarFile;
   }
 
   public String[] getColumns() {

@@ -179,7 +179,7 @@ public class TestTaskTrackerBlacklisting extends TestCase {
     responseId++;
   }
 
-  public void AtestTrackerBlacklistingForJobFailures() throws Exception {
+  public void testTrackerBlacklistingForJobFailures() throws Exception {
     runBlackListingJob(jobTracker, trackers);
     assertEquals("Tracker 1 not blacklisted", jobTracker
         .getBlacklistedTrackerCount(), 1);

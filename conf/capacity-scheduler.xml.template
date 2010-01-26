@@ -1,77 +1,38 @@
 <?xml version="1.0"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
 
-<!-- This is the configuration file for the resource manager in Hadoop. -->
-<!-- You can configure various scheduling parameters related to queues. -->
-<!-- The properties for a queue follow a naming convention,such as, -->
-<!-- mapred.capacity-scheduler.queue.<queue-name>.property-name. -->
+       http://www.apache.org/licenses/LICENSE-2.0
 
-<configuration>
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.capacity</name>
-    <value>100</value>
-    <description>Percentage of the number of slots in the cluster that are
-      to be available for jobs in this queue.
-    </description>    
-  </property>
+<!-- This is one of the configuration files for capacity-scheduler
+     (org.apache.hadoop.mapred.CapacityTaskScheduler), a TaskScheduler
+     for Map/Reduce system. The other configuration file is
+     conf/mapred-queues.xml which it shares with the framework for
+     configuring queues in the system. -->
 
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.subQueues</name>
-    <value></value>
-    <description>Sub-queues are queues configured within queues. 
-       They provide a mechanism for administrators to link logically related queues
-       Sub-queues can be nested. So there can be queues within a sub-queue.
-    </description>    
-  </property>
+<!-- This file can be used to configure (1) job-initialization-poller
+     related properties and (2) the default values for various properties
+     for all the queues.-->
 
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.maximum-capacity</name>
-    <value>-1</value>
-    <description>
-	maximum-capacity-stretch defines a limit beyond which a sub-queue cannot use the capacity of its parent queue.
-	This provides a means to limit how much excess capacity a sub-queue can use. By default, there is no limit.
-	The maximum-capacity-stretch of a queue can only be greater than or equal to its minimum capacity.
-        Default value of 100 implies , sub-queue can use complete capacity of its parent.
-        This property could be to curtail certain jobs which are long running in nature from occupying more than a 
-        certain percentage of the cluster, which in the absence of pre-emption, could lead to capacity guarantees of 
-        other queues being affected.
-    </description>    
-  </property>
-  
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.supports-priority</name>
-    <value>false</value>
-    <description>If true, priorities of jobs will be taken into 
-      account in scheduling decisions.
-    </description>
-  </property>
+<configuration>   
+  <!-- The default configuration settings for the capacity task scheduler --> 
+  <!-- The default values would be applied to all the queues which don't have -->    
+  <!-- the appropriate property for the particular queue configured in the -->       
+  <!-- queue-configuration file conf/mapred-queues.xml -->                           
 
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.minimum-user-limit-percent</name>
-    <value>100</value>
-    <description> Each queue enforces a limit on the percentage of resources 
-    allocated to a user at any given time, if there is competition for them. 
-    This user limit can vary between a minimum and maximum value. The former
-    depends on the number of users who have submitted jobs, and the latter is
-    set to this property value. For example, suppose the value of this 
-    property is 25. If two users have submitted jobs to a queue, no single 
-    user can use more than 50% of the queue resources. If a third user submits
-    a job, no single user can use more than 33% of the queue resources. With 4 
-    or more users, no user can use more than 25% of the queue's resources. A 
-    value of 100 implies no user limits are imposed. 
-    </description>
-  </property>
-  <property>
-    <name>mapred.capacity-scheduler.queue.default.maximum-initialized-jobs-per-user</name>
-    <value>2</value>
-    <description>The maximum number of jobs to be pre-initialized for a user
-    of the job queue.
-    </description>
-  </property>
-
-  <!-- The default configuration settings for the capacity task scheduler -->
-  <!-- The default values would be applied to all the queues which don't have -->
-  <!-- the appropriate property for the particular queue -->
   <property>
     <name>mapred.capacity-scheduler.default-supports-priority</name>
     <value>false</value>

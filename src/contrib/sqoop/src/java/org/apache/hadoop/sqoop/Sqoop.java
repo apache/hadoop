@@ -19,6 +19,8 @@
 package org.apache.hadoop.sqoop;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,15 +31,17 @@ import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.sqoop.hive.HiveImport;
 import org.apache.hadoop.sqoop.manager.ConnManager;
+import org.apache.hadoop.sqoop.manager.ExportJobContext;
 import org.apache.hadoop.sqoop.manager.ImportJobContext;
 import org.apache.hadoop.sqoop.orm.ClassWriter;
 import org.apache.hadoop.sqoop.orm.CompilationManager;
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.util.ExportException;
+import org.apache.hadoop.sqoop.util.ImportException;
 
 /**
  * Main entry-point for Sqoop
  * Usage: hadoop jar (this_jar_name) org.apache.hadoop.sqoop.Sqoop (options)
- * See the ImportOptions class for options.
+ * See the SqoopOptions class for options.
  */
 public class Sqoop extends Configured implements Tool {
 
@@ -53,15 +57,25 @@ public class Sqoop extends Configured implements Tool {
     Configuration.addDefaultResource("sqoop-site.xml");
   }
 
-  private ImportOptions options;
+  private SqoopOptions options;
   private ConnManager manager;
   private HiveImport hiveImport;
+  private List<String> generatedJarFiles;
 
   public Sqoop() {
+    generatedJarFiles = new ArrayList<String>();
   }
 
-  public ImportOptions getOptions() {
+  public SqoopOptions getOptions() {
     return options;
+  }
+
+  /**
+   * @return a list of jar files generated as part of this im/export process
+   */
+  public List<String> getGeneratedJarFiles() {
+    ArrayList<String> out = new ArrayList<String>(generatedJarFiles);
+    return out;
   }
 
   /**
@@ -70,24 +84,31 @@ public class Sqoop extends Configured implements Tool {
    * @throws IOException
    */
   private String generateORM(String tableName) throws IOException {
+    String existingJar = options.getExistingJarName();
+    if (existingJar != null) {
+      // The user has pre-specified a jar and class to use. Don't generate.
+      LOG.info("Using existing jar: " + existingJar);
+      return existingJar;
+    }
+
     LOG.info("Beginning code generation");
     CompilationManager compileMgr = new CompilationManager(options);
     ClassWriter classWriter = new ClassWriter(options, manager, tableName, compileMgr);
     classWriter.generate();
     compileMgr.compile();
     compileMgr.jar();
-    return compileMgr.getJarFilename();
+    String jarFile = compileMgr.getJarFilename();
+    this.generatedJarFiles.add(jarFile);
+    return jarFile;
   }
 
-  private void importTable(String tableName) throws IOException, ImportError {
+  private void importTable(String tableName) throws IOException, ImportException {
     String jarFile = null;
 
     // Generate the ORM code for the tables.
-    // TODO(aaron): Allow this to be bypassed if the user has already generated code,
-    // or if they're using a non-MapReduce import method (e.g., mysqldump).
     jarFile = generateORM(tableName);
 
-    if (options.getAction() == ImportOptions.ControlAction.FullImport) {
+    if (options.getAction() == SqoopOptions.ControlAction.FullImport) {
       // Proceed onward to do the import.
       ImportJobContext context = new ImportJobContext(tableName, jarFile, options);
       manager.importTable(context);
@@ -99,17 +120,26 @@ public class Sqoop extends Configured implements Tool {
     }
   }
 
+  private void exportTable(String tableName) throws ExportException, IOException {
+    String jarFile = null;
+
+    // Generate the ORM code for the tables.
+    jarFile = generateORM(tableName);
+
+    ExportJobContext context = new ExportJobContext(tableName, jarFile, options);
+    manager.exportTable(context);
+  }
 
   /**
    * Actual main entry-point for the program
    */
   public int run(String [] args) {
-    options = new ImportOptions();
+    options = new SqoopOptions();
     options.setConf(getConf());
     try {
       options.parse(args);
       options.validate();
-    } catch (ImportOptions.InvalidOptionsException e) {
+    } catch (SqoopOptions.InvalidOptionsException e) {
       // display the error msg
       System.err.println(e.getMessage());
       return 1; // exit on exception here
@@ -131,8 +161,8 @@ public class Sqoop extends Configured implements Tool {
       hiveImport = new HiveImport(options, manager, getConf());
     }
 
-    ImportOptions.ControlAction action = options.getAction();
-    if (action == ImportOptions.ControlAction.ListTables) {
+    SqoopOptions.ControlAction action = options.getAction();
+    if (action == SqoopOptions.ControlAction.ListTables) {
       String [] tables = manager.listTables();
       if (null == tables) {
         System.err.println("Could not retrieve tables list from server");
@@ -143,7 +173,7 @@ public class Sqoop extends Configured implements Tool {
           System.out.println(tbl);
         }
       }
-    } else if (action == ImportOptions.ControlAction.ListDatabases) {
+    } else if (action == SqoopOptions.ControlAction.ListDatabases) {
       String [] databases = manager.listDatabases();
       if (null == databases) {
         System.err.println("Could not retrieve database list from server");
@@ -154,10 +184,29 @@ public class Sqoop extends Configured implements Tool {
           System.out.println(db);
         }
       }
-    } else if (action == ImportOptions.ControlAction.DebugExec) {
+    } else if (action == SqoopOptions.ControlAction.DebugExec) {
       // just run a SQL statement for debugging purposes.
       manager.execAndPrint(options.getDebugSqlCmd());
       return 0;
+    } else if (action == SqoopOptions.ControlAction.Export) {
+      // Export a table.
+      try {
+        exportTable(options.getTableName());
+      } catch (IOException ioe) {
+        LOG.error("Encountered IOException running export job: " + ioe.toString());
+        if (System.getProperty(SQOOP_RETHROW_PROPERTY) != null) {
+          throw new RuntimeException(ioe);
+        } else {
+          return 1;
+        }
+      } catch (ExportException ee) {
+        LOG.error("Error during export: " + ee.toString());
+        if (System.getProperty(SQOOP_RETHROW_PROPERTY) != null) {
+          throw new RuntimeException(ee);
+        } else {
+          return 1;
+        }
+      }
     } else {
       // This is either FullImport or GenerateOnly.
 
@@ -184,7 +233,7 @@ public class Sqoop extends Configured implements Tool {
         } else {
           return 1;
         }
-      } catch (ImportError ie) {
+      } catch (ImportException ie) {
         LOG.error("Error during import: " + ie.toString());
         if (System.getProperty(SQOOP_RETHROW_PROPERTY) != null) {
           throw new RuntimeException(ie);

@@ -619,38 +619,42 @@ public class ZombieJob implements JobStory {
     Values type = loggedTask.getTaskType();
     if ((type != Values.MAP) && (type != Values.REDUCE)) {
       throw new IllegalArgumentException(
-          "getTaskInfo only supports MAP or REDUCE tasks: " + type.toString() +
-          " for task = " + loggedTask.getTaskID());
+          "getTaskInfo only supports MAP or REDUCE tasks: " + type.toString()
+              + " for task = " + loggedTask.getTaskID());
     }
 
     for (LoggedTaskAttempt attempt : attempts) {
       attempt = sanitizeLoggedTaskAttempt(attempt);
       // ignore bad attempts or unsuccessful attempts.
-      if ((attempt == null)
-          || (attempt.getResult() != Values.SUCCESS)) {
+      if ((attempt == null) || (attempt.getResult() != Values.SUCCESS)) {
         continue;
       }
 
       if (type == Values.MAP) {
         inputBytes = attempt.getHdfsBytesRead();
         inputRecords = attempt.getMapInputRecords();
-        outputBytes = attempt.getMapOutputBytes();
+        outputBytes =
+            (job.getTotalReduces() > 0) ? attempt.getMapOutputBytes() : attempt
+                .getHdfsBytesWritten();
         outputRecords = attempt.getMapOutputRecords();
-        heapMegabytes = (job.getJobMapMB() > 0) ? job.getJobMapMB() 
-                                                : job.getHeapMegabytes();
+        heapMegabytes =
+            (job.getJobMapMB() > 0) ? job.getJobMapMB() : job
+                .getHeapMegabytes();
       } else {
         inputBytes = attempt.getReduceShuffleBytes();
         inputRecords = attempt.getReduceInputRecords();
         outputBytes = attempt.getHdfsBytesWritten();
         outputRecords = attempt.getReduceOutputRecords();
-        heapMegabytes = (job.getJobReduceMB() > 0) ? job.getJobReduceMB() 
-                                                   : job.getHeapMegabytes();
+        heapMegabytes =
+            (job.getJobReduceMB() > 0) ? job.getJobReduceMB() : job
+                .getHeapMegabytes();
       }
       break;
     }
 
-    TaskInfo taskInfo = new TaskInfo(inputBytes, (int) inputRecords,
-        outputBytes, (int) outputRecords, (int) heapMegabytes);
+    TaskInfo taskInfo =
+        new TaskInfo(inputBytes, (int) inputRecords, outputBytes,
+            (int) outputRecords, (int) heapMegabytes);
     return taskInfo;
   }
 
@@ -869,8 +873,9 @@ public class ZombieJob implements JobStory {
   private LoggedTaskAttempt getLoggedTaskAttempt(TaskType taskType,
       int taskNumber, int taskAttemptNumber) {
     buildMaps();
-    TaskAttemptID id = new TaskAttemptID(getMaskedTaskID(taskType, taskNumber),
-        taskAttemptNumber);
+    TaskAttemptID id =
+        new TaskAttemptID(getMaskedTaskID(taskType, taskNumber),
+            taskAttemptNumber);
     return loggedTaskAttemptMap.get(id);
   }
 

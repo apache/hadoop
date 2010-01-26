@@ -49,21 +49,34 @@ import org.apache.hadoop.record.Buffer;
 import org.apache.hadoop.record.RecRecord0;
 import org.apache.hadoop.record.RecRecord1;
 
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-public class TestIO extends TestCase {
+public class TestIO {
 
   private File tmpfile;
+  private File tmpdir;
 
-  protected void setUp() throws Exception {
-    this.tmpfile = new File(System.getProperty("test.build.data", "/tmp"),
-      "typedbytes.bin");
+  @Before
+  public void setUp() throws Exception {
+    this.tmpdir = new File(System.getProperty("test.build.data", "/tmp"));
+    if(this.tmpdir.exists() || this.tmpdir.mkdirs()) {
+      this.tmpfile = new File(this.tmpdir, 
+        "typedbytes.bin");
+    } else {
+      throw new IOException("Failed to create directory " + tmpdir.getAbsolutePath());	
+    }
   }
 
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     tmpfile.delete();
   }
 
+  @Test
   public void testIO() throws IOException {
     ArrayList<Object> vector = new ArrayList<Object>();
     vector.add("test");
@@ -121,6 +134,7 @@ public class TestIO extends TestCase {
     istream.close();
   }
 
+  @Test
   public void testCustomTypesIO() throws IOException {
     byte[] rawBytes = new byte[] { 100, 0, 0, 0, 3, 1, 2, 3 };
     
@@ -139,6 +153,7 @@ public class TestIO extends TestCase {
     istream.close();
   }
   
+  @Test
   public void testRecordIO() throws IOException {
     RecRecord1 r1 = new RecRecord1();
     r1.setBoolVal(true);
@@ -172,6 +187,7 @@ public class TestIO extends TestCase {
     assertEquals(r1, r2);
   }
 
+  @Test
   public void testWritableIO() throws IOException {
     Writable[] vectorValues = new Writable[] {
       new Text("test1"), new Text("test2"), new Text("test3")

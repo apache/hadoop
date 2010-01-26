@@ -341,8 +341,12 @@ ${build.ivy.report.dir}
       <arg value="diff" />
       <arg value="${trunk}/src" />
       <arg value="${branch}/src" />
-      <arg value="--changelist" />
-      <arg value="${issue}"/>
+      <arg value="${hadoop/mapred}/JobEndNotifier.java" />
+      <arg value="${hadoop/mapred}/JobTracker.java" />
+      <arg value="${hadoop/mapred}/TaskTracker.java" />
+      <arg value="${hadoop/mapred}/TaskTrackerAction.java" />
+      <arg value="${hadoop/mapred}/TaskTrackerStatus.java" />
+      <arg value="${test/mapred}/TestTaskTrackerLifecycle.java" />
     </svn>
   </target>
 

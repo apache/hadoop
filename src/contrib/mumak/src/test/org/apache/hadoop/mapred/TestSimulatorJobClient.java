@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -119,6 +120,7 @@ public class TestSimulatorJobClient {
     private long[] times;
     private int index = 0;
     private List<MockJobStory> jobs = new ArrayList<MockJobStory>();
+    private Random random = new Random();
     
     public MockJobStoryProducer(long[] times, long relativeStartTime) {
       super();
@@ -127,7 +129,7 @@ public class TestSimulatorJobClient {
       index = 0;
       
       for (long time: times) {
-        jobs.add(new MockJobStory(time - relativeStartTime));
+        jobs.add(new MockJobStory(random, time - relativeStartTime));
       }
     }
     
@@ -149,9 +151,11 @@ public class TestSimulatorJobClient {
   }
   
   static class MockJobStory implements JobStory {
+    private Random random;
     private long submissionTime;
     
-    public MockJobStory(long submissionTime) {
+    public MockJobStory(Random random, long submissionTime) {
+      this.random = random;
       this.submissionTime = submissionTime;
     }
     
@@ -183,12 +187,12 @@ public class TestSimulatorJobClient {
 
     @Override
     public int getNumberMaps() {
-      throw new UnsupportedOperationException();
+      return random.nextInt(10)+1;
     }
 
     @Override
     public int getNumberReduces() {
-      throw new UnsupportedOperationException();
+      return random.nextInt(5);
     }
 
     @Override

@@ -21,7 +21,7 @@ package org.apache.hadoop.sqoop.manager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 
 /**
  * Manages connections to hsqldb databases.
@@ -38,7 +38,7 @@ public class HsqldbManager extends GenericJdbcManager {
   // "PUBLIC";
   private static final String HSQL_SCHEMA_NAME = "PUBLIC";
 
-  public HsqldbManager(final ImportOptions opts) {
+  public HsqldbManager(final SqoopOptions opts) {
     super(DRIVER_CLASS, opts);
   }
 

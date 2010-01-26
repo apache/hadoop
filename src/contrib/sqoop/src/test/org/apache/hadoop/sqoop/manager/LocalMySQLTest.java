@@ -37,7 +37,8 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
+import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 import org.apache.hadoop.sqoop.util.FileListing;
 
@@ -77,7 +78,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
 
   @Before
   public void setUp() {
-    ImportOptions options = new ImportOptions(CONNECT_STRING, TABLE_NAME);
+    SqoopOptions options = new SqoopOptions(CONNECT_STRING, TABLE_NAME);
     options.setUsername(getCurrentUser());
     manager = new LocalMySQLManager(options);
 
@@ -181,19 +182,21 @@ public class LocalMySQLTest extends ImportJobTestCase {
     }
   }
 
-  private String [] getArgv(boolean mysqlOutputDelims, String... extraArgs) {
+  private String [] getArgv(boolean mysqlOutputDelims, boolean isDirect,
+      String tableName, String... extraArgs) {
     ArrayList<String> args = new ArrayList<String>();
 
-    args.add("-D");
-    args.add("fs.default.name=file:///");
+    CommonArgs.addHadoopFlags(args);
 
     args.add("--table");
-    args.add(TABLE_NAME);
+    args.add(tableName);
     args.add("--warehouse-dir");
     args.add(getWarehouseDir());
     args.add("--connect");
     args.add(CONNECT_STRING);
-    args.add("--direct");
+    if (isDirect) {
+      args.add("--direct");
+    }
     args.add("--username");
     args.add(getCurrentUser());
     args.add("--where");
@@ -214,12 +217,19 @@ public class LocalMySQLTest extends ImportJobTestCase {
     return args.toArray(new String[0]);
   }
 
-  private void doLocalBulkImport(boolean mysqlOutputDelims,
-      String [] expectedResults, String [] extraArgs) throws IOException {
+  private void doImport(boolean mysqlOutputDelims, boolean isDirect,
+      String tableName, String [] expectedResults, String [] extraArgs)
+      throws IOException {
 
     Path warehousePath = new Path(this.getWarehouseDir());
-    Path tablePath = new Path(warehousePath, TABLE_NAME);
-    Path filePath = new Path(tablePath, "data-00000");
+    Path tablePath = new Path(warehousePath, tableName);
+
+    Path filePath;
+    if (isDirect) {
+      filePath = new Path(tablePath, "data-00000");
+    } else {
+      filePath = new Path(tablePath, "part-m-00000");
+    }
 
     File tableFile = new File(tablePath.toString());
     if (tableFile.exists() && tableFile.isDirectory()) {
@@ -227,7 +237,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
       FileListing.recursiveDeleteDir(tableFile);
     }
 
-    String [] argv = getArgv(mysqlOutputDelims, extraArgs);
+    String [] argv = getArgv(mysqlOutputDelims, isDirect, tableName, extraArgs);
     try {
       runImport(argv);
     } catch (IOException ioe) {
@@ -237,7 +247,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
     }
 
     File f = new File(filePath.toString());
-    assertTrue("Could not find imported data file", f.exists());
+    assertTrue("Could not find imported data file: " + f, f.exists());
     BufferedReader r = null;
     try {
       // Read through the file and make sure it's all there.
@@ -262,7 +272,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
         "3,Fred,2009-01-23,15,marketing"
     };
 
-    doLocalBulkImport(false, expectedResults, null);
+    doImport(false, true, TABLE_NAME, expectedResults, null);
   }
 
   @Test
@@ -275,7 +285,7 @@ public class LocalMySQLTest extends ImportJobTestCase {
 
     String [] extraArgs = { "-", "--lock-tables" };
 
-    doLocalBulkImport(false, expectedResults, extraArgs);
+    doImport(false, true, TABLE_NAME, expectedResults, extraArgs);
   }
 
   @Test
@@ -286,6 +296,110 @@ public class LocalMySQLTest extends ImportJobTestCase {
         "3,'Fred','2009-01-23',15,'marketing'"
     };
 
-    doLocalBulkImport(true, expectedResults, null);
+    doImport(true, true, TABLE_NAME, expectedResults, null);
+  }
+
+  @Test
+  public void testMysqlJdbcImport() throws IOException {
+    String [] expectedResults = {
+        "2,Bob,2009-04-20,400.0,sales",
+        "3,Fred,2009-01-23,15.0,marketing"
+    };
+
+    doImport(false, false, TABLE_NAME, expectedResults, null);
+  }
+
+  @Test
+  public void testJdbcEscapedTableName() throws Exception {
+    // Test a JDBC-based import of a table whose name is
+    // a reserved sql keyword (and is thus `quoted`)
+    final String reservedTableName = "TABLE";
+    SqoopOptions options = new SqoopOptions(CONNECT_STRING,
+        reservedTableName);
+    options.setUsername(getCurrentUser());
+    ConnManager mgr = new MySQLManager(options);
+
+    Connection connection = null;
+    Statement st = null;
+
+    try {
+      connection = mgr.getConnection();
+      connection.setAutoCommit(false);
+      st = connection.createStatement();
+
+      // create the database table and populate it with data.
+      st.executeUpdate("DROP TABLE IF EXISTS `" + reservedTableName + "`");
+      st.executeUpdate("CREATE TABLE `" + reservedTableName + "` ("
+          + "id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, "
+          + "name VARCHAR(24) NOT NULL, "
+          + "start_date DATE, "
+          + "salary FLOAT, "
+          + "dept VARCHAR(32))");
+
+      st.executeUpdate("INSERT INTO `" + reservedTableName + "` VALUES("
+          + "2,'Aaron','2009-05-14',1000000.00,'engineering')");
+      connection.commit();
+    } finally {
+      if (null != st) {
+        st.close();
+      }
+
+      if (null != connection) {
+        connection.close();
+      }
+    }
+
+    String [] expectedResults = {
+        "2,Aaron,2009-05-14,1000000.0,engineering"
+    };
+
+    doImport(false, false, reservedTableName, expectedResults, null);
+  }
+
+  @Test
+  public void testJdbcEscapedColumnName() throws Exception {
+    // Test a JDBC-based import of a table with a column whose name is
+    // a reserved sql keyword (and is thus `quoted`)
+    final String tableName = "mysql_escaped_col_table";
+    SqoopOptions options = new SqoopOptions(CONNECT_STRING,
+        tableName);
+    options.setUsername(getCurrentUser());
+    ConnManager mgr = new MySQLManager(options);
+
+    Connection connection = null;
+    Statement st = null;
+
+    try {
+      connection = mgr.getConnection();
+      connection.setAutoCommit(false);
+      st = connection.createStatement();
+
+      // create the database table and populate it with data.
+      st.executeUpdate("DROP TABLE IF EXISTS " + tableName);
+      st.executeUpdate("CREATE TABLE " + tableName + " ("
+          + "id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, "
+          + "`table` VARCHAR(24) NOT NULL, "
+          + "`CREATE` DATE, "
+          + "salary FLOAT, "
+          + "dept VARCHAR(32))");
+
+      st.executeUpdate("INSERT INTO " + tableName + " VALUES("
+          + "2,'Aaron','2009-05-14',1000000.00,'engineering')");
+      connection.commit();
+    } finally {
+      if (null != st) {
+        st.close();
+      }
+
+      if (null != connection) {
+        connection.close();
+      }
+    }
+
+    String [] expectedResults = {
+        "2,Aaron,2009-05-14,1000000.0,engineering"
+    };
+
+    doImport(false, false, tableName, expectedResults, null);
   }
 }

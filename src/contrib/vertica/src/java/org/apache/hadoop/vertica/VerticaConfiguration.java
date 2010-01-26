@@ -55,6 +55,9 @@ import org.apache.hadoop.util.StringUtils;
  * @see VerticaOutputFormat#setOutput(Job, String, boolean, String...)
  */
 public class VerticaConfiguration {
+  /** Vertica Version Constants */
+  public static final Integer VERSION_3_5 = 305;
+  
   /** Class name for Vertica JDBC Driver */
   public static final String VERTICA_DRIVER_CLASS = "com.vertica.Driver";
 

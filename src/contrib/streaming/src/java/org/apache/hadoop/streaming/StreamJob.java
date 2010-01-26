@@ -25,10 +25,9 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -123,13 +122,13 @@ public class StreamJob implements Tool {
       postProcessArgs();
   
       setJobConf();
-      return submitAndMonitorJob();
     }catch (IllegalArgumentException ex) {
       //ignore, since log will already be printed
       // print the log in debug mode.
       LOG.debug("Error in streaming job", ex);
       return 1;
     }
+    return submitAndMonitorJob();
   }
   
   /**
@@ -191,9 +190,8 @@ public class StreamJob implements Tool {
     }
     msg("addTaskEnvironment=" + addTaskEnvironment_);
 
-    Iterator it = packageFiles_.iterator();
-    while (it.hasNext()) {
-      File f = new File((String) it.next());
+    for (final String packageFile : packageFiles_) {
+      File f = new File(packageFile);
       if (f.isFile()) {
         shippedCanonFiles_.add(f.getCanonicalPath());
       }
@@ -262,37 +260,44 @@ public class StreamJob implements Tool {
           inputSpecs_.add(input);
         }
       }
-      output_ = (String) cmdLine.getOptionValue("output"); 
+      output_ =  cmdLine.getOptionValue("output"); 
       
-      mapCmd_ = (String)cmdLine.getOptionValue("mapper"); 
-      comCmd_ = (String)cmdLine.getOptionValue("combiner"); 
-      redCmd_ = (String)cmdLine.getOptionValue("reducer"); 
+      mapCmd_ = cmdLine.getOptionValue("mapper"); 
+      comCmd_ = cmdLine.getOptionValue("combiner"); 
+      redCmd_ = cmdLine.getOptionValue("reducer"); 
       
       lazyOutput_ = cmdLine.hasOption("lazyOutput");
       
       values = cmdLine.getOptionValues("file");
       if (values != null && values.length > 0) {
+        StringBuilder unpackRegex = new StringBuilder(
+          config_.getPattern(JobContext.JAR_UNPACK_PATTERN,
+                             JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern());
         for (String file : values) {
           packageFiles_.add(file);
+          String fname = new File(file).getName();
+          unpackRegex.append("|(?:").append(Pattern.quote(fname)).append(")");
         }
+        config_.setPattern(JobContext.JAR_UNPACK_PATTERN,
+                           Pattern.compile(unpackRegex.toString()));
         validate(packageFiles_);
       }
          
-      String fsName = (String)cmdLine.getOptionValue("dfs");
+      String fsName = cmdLine.getOptionValue("dfs");
       if (null != fsName){
         LOG.warn("-dfs option is deprecated, please use -fs instead.");
         config_.set("fs.default.name", fsName);
       }
       
-      additionalConfSpec_ = (String)cmdLine.getOptionValue("additionalconfspec"); 
-      inputFormatSpec_ = (String)cmdLine.getOptionValue("inputformat"); 
-      outputFormatSpec_ = (String)cmdLine.getOptionValue("outputformat");
-      numReduceTasksSpec_ = (String)cmdLine.getOptionValue("numReduceTasks"); 
-      partitionerSpec_ = (String)cmdLine.getOptionValue("partitioner");
-      inReaderSpec_ = (String)cmdLine.getOptionValue("inputreader"); 
-      mapDebugSpec_ = (String)cmdLine.getOptionValue("mapdebug");    
-      reduceDebugSpec_ = (String)cmdLine.getOptionValue("reducedebug");
-      ioSpec_ = (String)cmdLine.getOptionValue("io");
+      additionalConfSpec_ = cmdLine.getOptionValue("additionalconfspec"); 
+      inputFormatSpec_ = cmdLine.getOptionValue("inputformat"); 
+      outputFormatSpec_ = cmdLine.getOptionValue("outputformat");
+      numReduceTasksSpec_ = cmdLine.getOptionValue("numReduceTasks"); 
+      partitionerSpec_ = cmdLine.getOptionValue("partitioner");
+      inReaderSpec_ = cmdLine.getOptionValue("inputreader"); 
+      mapDebugSpec_ = cmdLine.getOptionValue("mapdebug");    
+      reduceDebugSpec_ = cmdLine.getOptionValue("reducedebug");
+      ioSpec_ = cmdLine.getOptionValue("io");
       
       String[] car = cmdLine.getOptionValues("cacheArchive"); 
       if (null != car && car.length > 0){
@@ -582,7 +587,7 @@ public class StreamJob implements Tool {
   /** @return path to the created Jar file or null if no files are necessary.
    */
   protected String packageJobJar() throws IOException {
-    ArrayList unjarFiles = new ArrayList();
+    ArrayList<String> unjarFiles = new ArrayList<String>();
 
     // Runtime code: ship same version of code as self (job submitter code)
     // usually found in: build/contrib or build/hadoop-<version>-dev-streaming.jar
@@ -884,15 +889,11 @@ public class StreamJob implements Tool {
   protected void listJobConfProperties()
   {
     msg("==== JobConf properties:");
-    Iterator it = jobConf_.iterator();
-    TreeMap sorted = new TreeMap();
-    while(it.hasNext()) {
-      Map.Entry en = (Map.Entry)it.next();
+    TreeMap<String,String> sorted = new TreeMap<String,String>();
+    for (final Map.Entry<String, String> en : jobConf_)  {
       sorted.put(en.getKey(), en.getValue());
     }
-    it = sorted.entrySet().iterator();
-    while(it.hasNext()) {
-      Map.Entry en = (Map.Entry)it.next();
+    for (final Map.Entry<String,String> en: sorted.entrySet()) {
       msg(en.getKey() + "=" + en.getValue());
     }
     msg("====");
@@ -997,11 +998,11 @@ public class StreamJob implements Tool {
   protected JobClient jc_;
 
   // command-line arguments
-  protected ArrayList inputSpecs_ = new ArrayList(); // <String>
-  protected TreeSet seenPrimary_ = new TreeSet(); // <String>
+  protected ArrayList<String> inputSpecs_ = new ArrayList<String>();
+  protected TreeSet<String> seenPrimary_ = new TreeSet<String>();
   protected boolean hasSimpleInputSpecs_;
-  protected ArrayList packageFiles_ = new ArrayList(); // <String>
-  protected ArrayList shippedCanonFiles_ = new ArrayList(); // <String>
+  protected ArrayList<String> packageFiles_ = new ArrayList<String>(); 
+  protected ArrayList<String> shippedCanonFiles_ = new ArrayList<String>();
   //protected TreeMap<String, String> userJobConfProps_ = new TreeMap<String, String>(); 
   protected String output_;
   protected String mapCmd_;

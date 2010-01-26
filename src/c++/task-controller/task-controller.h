@@ -39,12 +39,14 @@
 enum command {
   INITIALIZE_USER,
   INITIALIZE_JOB,
-  INITIALIZE_DISTRIBUTEDCACHE,
+  INITIALIZE_DISTRIBUTEDCACHE_FILE,
   LAUNCH_TASK_JVM,
   INITIALIZE_TASK,
   TERMINATE_TASK_JVM,
   KILL_TASK_JVM,
   RUN_DEBUG_SCRIPT,
+  SIGQUIT_TASK_JVM,
+  ENABLE_TASK_FOR_CLEANUP
 };
 
 enum errorcodes {
@@ -66,16 +68,18 @@ enum errorcodes {
   PREPARE_TASK_LOGS_FAILED, //16
   INVALID_TT_LOG_DIR, //17
   OUT_OF_MEMORY, //18
-  INITIALIZE_DISTCACHE_FAILED, //19
+  INITIALIZE_DISTCACHEFILE_FAILED, //19
   INITIALIZE_USER_FAILED, //20
   UNABLE_TO_EXECUTE_DEBUG_SCRIPT, //21
+  INVALID_CONF_DIR, //22
+  UNABLE_TO_BUILD_PATH //23
 };
 
 #define USER_DIR_PATTERN "%s/taskTracker/%s"
 
 #define TT_JOB_DIR_PATTERN USER_DIR_PATTERN"/jobcache/%s"
 
-#define USER_DISTRIBUTED_CACHE_DIR_PATTERN USER_DIR_PATTERN"/distcache"
+#define USER_DISTRIBUTED_CACHE_DIR_PATTERN USER_DIR_PATTERN"/distcache/%s"
 
 #define JOB_DIR_TO_JOB_WORK_PATTERN "%s/work"
 
@@ -84,6 +88,8 @@ enum errorcodes {
 #define ATTEMPT_LOG_DIR_PATTERN "%s/userlogs/%s"
 
 #define TASK_SCRIPT_PATTERN "%s/%s/taskjvm.sh"
+
+#define TT_LOCAL_TASK_DIR_PATTERN    "%s/taskTracker/%s/jobcache/%s/%s"
 
 #define TT_SYS_DIR_KEY "mapreduce.cluster.local.dir"
 
@@ -110,9 +116,13 @@ int initialize_task(const char *jobid, const char *taskid, const char *user);
 
 int initialize_job(const char *jobid, const char *user);
 
-int initialize_distributed_cache(const char *user);
+int initialize_distributed_cache_file(const char *tt_root, 
+    const char* unique_string, const char *user);
 
 int kill_user_task(const char *user, const char *task_pid, int sig);
+
+int enable_task_for_cleanup(const char *tt_root, const char *user,
+                            const char *jobid, const char *dir_to_be_deleted);
 
 int prepare_attempt_directory(const char *attempt_dir, const char *user);
 

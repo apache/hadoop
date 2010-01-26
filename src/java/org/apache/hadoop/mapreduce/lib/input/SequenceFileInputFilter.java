@@ -47,11 +47,11 @@ public class SequenceFileInputFilter<K, V>
   public static final Log LOG = LogFactory.getLog(FileInputFormat.class);
   
   final public static String FILTER_CLASS = 
-    "mapreduce.input.mapreduce.input.mapreduce.input.sequencefileinputfilter.class";
+    "mapreduce.input.sequencefileinputfilter.class";
   final public static String FILTER_FREQUENCY = 
-    "mapreduce.input.mapreduce.input.mapreduce.input.sequencefileinputfilter.frequency";
+    "mapreduce.input.sequencefileinputfilter.frequency";
   final public static String FILTER_REGEX = 
-    "mapreduce.input.mapreduce.input.mapreduce.input.sequencefileinputfilter.regex";
+    "mapreduce.input.sequencefileinputfilter.regex";
     
   public SequenceFileInputFilter() {
   }

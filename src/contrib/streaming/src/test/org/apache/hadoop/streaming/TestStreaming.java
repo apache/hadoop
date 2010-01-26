@@ -18,21 +18,28 @@
 
 package org.apache.hadoop.streaming;
 
-import junit.framework.TestCase;
 import java.io.*;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
+
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
  */
-public class TestStreaming extends TestCase
+public class TestStreaming
 {
 
   // "map" command: grep -E (red|green|blue)
   // reduce command: uniq
-  protected File INPUT_FILE = new File("input.txt");
-  protected File OUTPUT_DIR = new File("out");
+  protected File TEST_DIR;
+  protected File INPUT_FILE;
+  protected File OUTPUT_DIR;
   protected String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
   // map behaves like "/usr/bin/tr . \\n"; (split words into lines)
   protected String map = StreamUtil.makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
@@ -48,13 +55,20 @@ public class TestStreaming extends TestCase
     UtilTest utilTest = new UtilTest(getClass().getName());
     utilTest.checkUserDir();
     utilTest.redirectIfAntJunit();
+    TEST_DIR = new File(getClass().getName()).getAbsoluteFile();
+    OUTPUT_DIR = new File(TEST_DIR, "out");
+    INPUT_FILE = new File(TEST_DIR, "input.txt");
+  }
+
+  protected String getInputData() {
+    return input;
   }
 
   protected void createInput() throws IOException
   {
-    DataOutputStream out = new DataOutputStream(
-                                                new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
-    out.write(input.getBytes("UTF-8"));
+    DataOutputStream out = getFileSystem().create(
+      new Path(INPUT_FILE.getAbsolutePath()));
+    out.write(getInputData().getBytes("UTF-8"));
     out.close();
   }
 
@@ -70,36 +84,43 @@ public class TestStreaming extends TestCase
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }
-  
-  public void testCommandLine() throws IOException
+
+  protected Configuration getConf() {
+    return new Configuration();
+  }
+
+  protected FileSystem getFileSystem() throws IOException {
+    return FileSystem.get(getConf());
+  }
+
+  protected String getExpectedOutput() {
+    return outputExpect;
+  }
+
+  protected void checkOutput() throws IOException {
+    Path outPath = new Path(OUTPUT_DIR.getAbsolutePath(), "part-00000");
+    FileSystem fs = getFileSystem();
+    String output = StreamUtil.slurpHadoop(outPath, fs);
+    fs.delete(outPath, true);
+    System.err.println("outEx1=" + getExpectedOutput());
+    System.err.println("  out1=" + output);
+    assertEquals(getExpectedOutput(), output);
+  }
+
+  @Test
+  public void testCommandLine() throws Exception
   {
-    try {
-      try {
-        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
-      } catch (Exception e) {
-      }
+    UtilTest.recursiveDelete(TEST_DIR);
+    assertTrue("Creating " + TEST_DIR, TEST_DIR.mkdirs());
+    createInput();
+    boolean mayExit = false;
 
-      createInput();
-      boolean mayExit = false;
-
-      // During tests, the default Configuration will use a local mapred
-      // So don't specify -config or -cluster
-      job = new StreamJob(genArgs(), mayExit);      
-      job.go();
-      File outFile = new File(OUTPUT_DIR, "part-00000").getAbsoluteFile();
-      String output = StreamUtil.slurp(outFile);
-      outFile.delete();
-      System.err.println("outEx1=" + outputExpect);
-      System.err.println("  out1=" + output);
-      assertEquals(outputExpect, output);
-    } finally {
-      try {
-        INPUT_FILE.delete();
-        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
+    // During tests, the default Configuration will use a local mapred
+    // So don't specify -config or -cluster
+    job = new StreamJob(genArgs(), mayExit);
+    int ret = job.go();
+    assertEquals(0, ret);
+    checkOutput();
   }
 
   public static void main(String[]args) throws Exception

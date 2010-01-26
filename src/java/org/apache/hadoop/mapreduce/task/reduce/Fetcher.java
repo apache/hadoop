@@ -28,6 +28,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
@@ -41,14 +43,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.security.JobTokens;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import org.apache.commons.codec.binary.Base64;
-import java.security.GeneralSecurityException;
 
 class Fetcher<K,V> extends Thread {
   
@@ -88,12 +86,12 @@ class Fetcher<K,V> extends Thread {
   // Decompression of map-outputs
   private final CompressionCodec codec;
   private final Decompressor decompressor;
-  private final byte[] shuffleJobToken;
+  private final SecretKey jobTokenSecret;
 
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
                  ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
-                 ExceptionReporter exceptionReporter, byte [] shuffleJobToken) {
+                 ExceptionReporter exceptionReporter, SecretKey jobTokenSecret) {
     this.reporter = reporter;
     this.scheduler = scheduler;
     this.merger = merger;
@@ -101,7 +99,7 @@ class Fetcher<K,V> extends Thread {
     this.exceptionReporter = exceptionReporter;
     this.id = ++nextId;
     this.reduce = reduceId.getTaskID().getId();
-    this.shuffleJobToken = shuffleJobToken;
+    this.jobTokenSecret = jobTokenSecret;
     ioErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
         ShuffleErrors.IO_ERROR.toString());
     wrongLengthErrs = reporter.getCounter(SHUFFLE_ERR_GRP_NAME,
@@ -196,9 +194,8 @@ class Fetcher<K,V> extends Thread {
       URLConnection connection = url.openConnection();
       
       // generate hash of the url
-      SecureShuffleUtils ssutil = new SecureShuffleUtils(shuffleJobToken);
       String msgToEncode = SecureShuffleUtils.buildMsgFrom(url);
-      String encHash = ssutil.hashFromString(msgToEncode);
+      String encHash = SecureShuffleUtils.hashFromString(msgToEncode, jobTokenSecret);
       
       // put url hash into http header
       connection.addRequestProperty(
@@ -215,7 +212,7 @@ class Fetcher<K,V> extends Thread {
       }
       LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
       // verify that replyHash is HMac of encHash
-      ssutil.verifyReply(replyHash, encHash);
+      SecureShuffleUtils.verifyReply(replyHash, encHash, jobTokenSecret);
       LOG.info("for url="+msgToEncode+" sent hash and receievd reply");
     } catch (IOException ie) {
       ioErrs.increment(1);

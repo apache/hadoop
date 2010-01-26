@@ -24,46 +24,43 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileOutputCommitter;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobContext;
-import org.apache.hadoop.mapred.OutputCommitter;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.TaskAttemptContext;
-import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 /**
  * An output format that writes the key and value appended together.
  */
 public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
-  static final String FINAL_SYNC_ATTRIBUTE = "terasort.final.sync";
+  static final String FINAL_SYNC_ATTRIBUTE = "mapreduce.terasort.final.sync";
+  private OutputCommitter committer = null;
 
   /**
    * Set the requirement for a final sync before the stream is closed.
    */
-  public static void setFinalSync(JobConf conf, boolean newValue) {
-    conf.setBoolean(FINAL_SYNC_ATTRIBUTE, newValue);
+  static void setFinalSync(JobContext job, boolean newValue) {
+    job.getConfiguration().setBoolean(FINAL_SYNC_ATTRIBUTE, newValue);
   }
 
   /**
    * Does the user want a final sync at close?
    */
-  public static boolean getFinalSync(JobConf conf) {
-    return conf.getBoolean(FINAL_SYNC_ATTRIBUTE, false);
+  public static boolean getFinalSync(JobContext job) {
+    return job.getConfiguration().getBoolean(FINAL_SYNC_ATTRIBUTE, false);
   }
 
-  static class TeraRecordWriter implements RecordWriter<Text,Text> {
+  static class TeraRecordWriter extends RecordWriter<Text,Text> {
     private boolean finalSync = false;
     private FSDataOutputStream out;
 
     public TeraRecordWriter(FSDataOutputStream out,
-                            JobConf conf) {
-      finalSync = getFinalSync(conf);
+                            JobContext job) {
+      finalSync = getFinalSync(job);
       this.out = out;
     }
 
@@ -73,7 +70,7 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
       out.write(value.getBytes(), 0, value.getLength());
     }
     
-    public void close(Reporter reporter) throws IOException {
+    public void close(TaskAttemptContext context) throws IOException {
       if (finalSync) {
         out.sync();
       }
@@ -82,37 +79,41 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
   }
 
   @Override
-  public void checkOutputSpecs(FileSystem ignored, 
-                               JobConf job
+  public void checkOutputSpecs(JobContext job
                               ) throws InvalidJobConfException, IOException {
-    // Ensure that the output directory is set and not already there
+    // Ensure that the output directory is set
     Path outDir = getOutputPath(job);
     if (outDir == null) {
       throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
   }
 
-  public RecordWriter<Text,Text> getRecordWriter(FileSystem ignored,
-                                                 JobConf job,
-                                                 String name,
-                                                 Progressable progress
+  public RecordWriter<Text,Text> getRecordWriter(TaskAttemptContext job
                                                  ) throws IOException {
-    Path dir = getWorkOutputPath(job);
-    FileSystem fs = dir.getFileSystem(job);
-    FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
+    Path file = getDefaultWorkFile(job, "");
+    FileSystem fs = file.getFileSystem(job.getConfiguration());
+     FSDataOutputStream fileOut = fs.create(file);
     return new TeraRecordWriter(fileOut, job);
   }
   
+  public OutputCommitter getOutputCommitter(TaskAttemptContext context) 
+      throws IOException {
+    if (committer == null) {
+      Path output = getOutputPath(context);
+      committer = new TeraOutputCommitter(output, context);
+    }
+    return committer;
+  }
+
   public static class TeraOutputCommitter extends FileOutputCommitter {
 
-    @Override
-    public void commitJob(JobContext jobContext) {
+    public TeraOutputCommitter(Path outputPath, TaskAttemptContext context)
+        throws IOException {
+      super(outputPath, context);
     }
 
     @Override
-    public boolean needsTaskCommit(TaskAttemptContext taskContext) {
-      return taskContext.getTaskAttemptID().getTaskID().getTaskType() ==
-               TaskType.REDUCE;
+    public void commitJob(JobContext jobContext) {
     }
 
     @Override

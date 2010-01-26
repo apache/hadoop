@@ -79,7 +79,7 @@ public class TestSimulatorJobTracker {
       FakeJobs job = new FakeJobs("job1", 0, numMaps, numReduces);
 
       SimulatorJobCache.put(org.apache.hadoop.mapred.JobID.downgrade(jobId), job);
-      jobTracker.submitJob(jobId);
+      jobTracker.submitJob(jobId, "dummy-path", null);
     }
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.Queue.QueueOperation;
 import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.SecurityUtil.AccessControlList;
@@ -87,9 +88,30 @@ class QueueConfigurationParser {
     
   }
 
-  QueueConfigurationParser(String file) {
+  QueueConfigurationParser(String confFile) {
+    File file = new File(confFile).getAbsoluteFile();
+    if (!file.exists()) {
+      throw new RuntimeException("Configuration file not found at " +
+                                 confFile);
+    }
+    InputStream in = null;
     try {
-      this.root = loadResource(file);
+      in = new BufferedInputStream(new FileInputStream(file));
+      loadFrom(in);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    } finally {
+      IOUtils.closeStream(in);
+    }
+  }
+
+  QueueConfigurationParser(InputStream xmlInput) {
+    loadFrom(xmlInput);
+  }
+
+  private void loadFrom(InputStream xmlInput) {
+    try {
+      this.root = loadResource(xmlInput);
     } catch (ParserConfigurationException e) {
       throw new RuntimeException(e);
     } catch (SAXException e) {
@@ -120,13 +142,13 @@ class QueueConfigurationParser {
    * Method to load the resource file.
    * generates the root.
    * 
-   * @param confFile
+   * @param resourceInput InputStream that provides the XML to parse
    * @return
    * @throws ParserConfigurationException
    * @throws SAXException
    * @throws IOException
    */
-  protected Queue loadResource(String confFile)
+  protected Queue loadResource(InputStream resourceInput)
     throws ParserConfigurationException, SAXException, IOException {
     DocumentBuilderFactory docBuilderFactory
       = DocumentBuilderFactory.newInstance();
@@ -146,19 +168,8 @@ class QueueConfigurationParser {
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
     Document doc = null;
     Element queuesNode = null;
-    File file = new File(confFile).getAbsoluteFile();
-    if (file.exists()) {
-      InputStream in = new BufferedInputStream(new FileInputStream(file));
-      try {
-        doc = builder.parse(in);
-      } finally {
-        in.close();
-      }
-    }
 
-    if (doc == null) {
-      throw new RuntimeException(file.getAbsolutePath() + " not found");
-    }
+    doc = builder.parse(resourceInput);
     queuesNode = doc.getDocumentElement();
     return this.parseResource(queuesNode);
   }

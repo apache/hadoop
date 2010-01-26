@@ -26,7 +26,10 @@
   import="java.util.*"
   import="java.text.DecimalFormat"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapreduce.TaskType"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.fs.Path"
+  import="org.apache.hadoop.mapreduce.jobhistory.JobHistory"
 %>
 
 <%!	private static final long serialVersionUID = 1L;
@@ -219,7 +222,14 @@
 
 <% 
     if (job == null) {
-      out.print("<b>Job " + jobId + " not found.</b><br>\n");
+      String historyFile = tracker.getJobHistory().getHistoryFilePath(jobIdObj);
+      if (historyFile == null) {
+        out.println("<h2>Job " + jobId + " not known!</h2>");
+        return;
+      }
+      String historyUrl = "/jobdetailshistory.jsp?jobid=" + 
+        jobId + "&logFile=" + historyFile;
+      response.sendRedirect(response.encodeRedirectURL(historyUrl));
       return;
     }
     JobProfile profile = job.getProfile();
@@ -231,7 +241,8 @@
     out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" 
               + profile.getJobFile() + "</a><br>\n");
     out.print("<b>Job Setup:</b>");
-    printJobLevelTaskSummary(out, jobId, "setup", job.getSetupTasks());
+    printJobLevelTaskSummary(out, jobId, "setup", 
+                             job.getTasks(TaskType.JOB_SETUP));
     out.print("<br>\n");
     if (runState == JobStatus.RUNNING) {
       out.print("<b>Status:</b> Running<br>\n");
@@ -263,7 +274,8 @@
       }
     }
     out.print("<b>Job Cleanup:</b>");
-    printJobLevelTaskSummary(out, jobId, "cleanup", job.getCleanupTasks());
+    printJobLevelTaskSummary(out, jobId, "cleanup", 
+                             job.getTasks(TaskType.JOB_CLEANUP));
     out.print("<br>\n");
     if (flakyTaskTrackers > 0) {
       out.print("<b>Black-listed TaskTrackers:</b> " + 
@@ -282,9 +294,9 @@
               "<th><a href=\"jobfailures.jsp?jobid=" + jobId + 
               "\">Failed/Killed<br>Task Attempts</a></th></tr>\n");
     printTaskSummary(out, jobId, "map", status.mapProgress(), 
-                     job.getMapTasks());
+                     job.getTasks(TaskType.MAP));
     printTaskSummary(out, jobId, "reduce", status.reduceProgress(),
-                     job.getReduceTasks());
+                     job.getTasks(TaskType.REDUCE));
     out.print("</table>\n");
     
     %>
@@ -359,7 +371,7 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
        style="width:100%" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/" />
 <%}%>
 
-<%if(job.getReduceTasks().length > 0) { %>
+<%if(job.getTasks(TaskType.REDUCE).length > 0) { %>
 <hr>Reduce Completion Graph -
 <%if("off".equals(session.getAttribute("reduce.graph"))) { %>
 <a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&reduce.graph=on" > open </a>

@@ -995,6 +995,41 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  /**
+   * verify that -delete option works for other {@link FileSystem}
+   * implementations. See MAPREDUCE-1285 */
+  public void testDeleteLocal() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      final FileSystem localfs = FileSystem.get(LOCAL_FS, conf);
+      cluster = new MiniDFSCluster(conf, 1, true, null);
+      final FileSystem hdfs = cluster.getFileSystem();
+      final String namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
+        MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
+        String destdir = TEST_ROOT_DIR + "/destdat";
+        MyFile[] localFiles = createFiles(localfs, destdir);
+        ToolRunner.run(new DistCp(conf), new String[] {
+                                         "-delete",
+                                         "-update",
+                                         "-log",
+                                         "/logs",
+                                         namenode+"/srcdat",
+                                         "file:///"+TEST_ROOT_DIR+"/destdat"});
+        assertTrue("Source and destination directories do not match.",
+                   checkFiles(localfs, destdir, files));
+        assertTrue("Log directory does not exist.",
+                    hdfs.exists(new Path("/logs")));
+        deldir(localfs, destdir);
+        deldir(hdfs, "/logs");
+        deldir(hdfs, "/srcdat");
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
   /** test globbing  */
   public void testGlobbing() throws Exception {
     String namenode = null;

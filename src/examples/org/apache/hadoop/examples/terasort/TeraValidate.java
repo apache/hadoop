@@ -19,23 +19,20 @@
 package org.apache.hadoop.examples.terasort;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.zip.Checksum;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Partitioner;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.Cluster;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -63,10 +60,8 @@ public class TeraValidate extends Configured implements Tool {
     return b.toString();
   }
 
-  static class ValidateMapper extends MapReduceBase 
-      implements Mapper<Text,Text,Text,Text> {
+  static class ValidateMapper extends Mapper<Text,Text,Text,Text> {
     private Text lastKey;
-    private OutputCollector<Text,Text> output;
     private String filename;
     private Unsigned16 checksum = new Unsigned16();
     private Unsigned16 tmp = new Unsigned16();
@@ -75,27 +70,22 @@ public class TeraValidate extends Configured implements Tool {
     /**
      * Get the final part of the input name
      * @param split the input split
-     * @return the "part-00000" for the input
+     * @return the "part-r-00000" for the input
      */
     private String getFilename(FileSplit split) {
       return split.getPath().getName();
     }
 
-    private int getPartition(FileSplit split) {
-      return Integer.parseInt(split.getPath().getName().substring(5));
-    }
-
-    public void map(Text key, Text value, OutputCollector<Text,Text> output,
-                    Reporter reporter) throws IOException {
+    public void map(Text key, Text value, Context context) 
+        throws IOException, InterruptedException {
       if (lastKey == null) {
-        FileSplit fs = (FileSplit) reporter.getInputSplit();
+        FileSplit fs = (FileSplit) context.getInputSplit();
         filename = getFilename(fs);
-        output.collect(new Text(filename + ":begin"), key);
+        context.write(new Text(filename + ":begin"), key);
         lastKey = new Text();
-        this.output = output;
       } else {
         if (key.compareTo(lastKey) < 0) {
-          output.collect(ERROR, new Text("misorder in " + filename + 
+          context.write(ERROR, new Text("misorder in " + filename + 
                                          " between " + textifyBytes(lastKey) + 
                                          " and " + textifyBytes(key)));
         }
@@ -109,10 +99,11 @@ public class TeraValidate extends Configured implements Tool {
       lastKey.set(key);
     }
     
-    public void close() throws IOException {
+    public void cleanup(Context context) 
+        throws IOException, InterruptedException  {
       if (lastKey != null) {
-        output.collect(new Text(filename + ":end"), lastKey);
-        output.collect(CHECKSUM, new Text(checksum.toString()));
+        context.write(new Text(filename + ":end"), lastKey);
+        context.write(CHECKSUM, new Text(checksum.toString()));
       }
     }
   }
@@ -122,34 +113,31 @@ public class TeraValidate extends Configured implements Tool {
    * boundary keys are always increasing.
    * Also passes any error reports along intact.
    */
-  static class ValidateReducer extends MapReduceBase 
-      implements Reducer<Text,Text,Text,Text> {
+  static class ValidateReducer extends Reducer<Text,Text,Text,Text> {
     private boolean firstKey = true;
     private Text lastKey = new Text();
     private Text lastValue = new Text();
-    public void reduce(Text key, Iterator<Text> values,
-                       OutputCollector<Text, Text> output, 
-                       Reporter reporter) throws IOException {
+    public void reduce(Text key, Iterable<Text> values,
+        Context context) throws IOException, InterruptedException  {
       if (ERROR.equals(key)) {
-        while(values.hasNext()) {
-          output.collect(key, values.next());
+        for (Text val : values) {
+          context.write(key, val);
         }
       } else if (CHECKSUM.equals(key)) {
         Unsigned16 tmp = new Unsigned16();
         Unsigned16 sum = new Unsigned16();
-        while (values.hasNext()) {
-          String val = values.next().toString();
-          tmp.set(val);
+        for (Text val : values) {
+          tmp.set(val.toString());
           sum.add(tmp);
         }
-        output.collect(CHECKSUM, new Text(sum.toString()));
+        context.write(CHECKSUM, new Text(sum.toString()));
       } else {
-        Text value = values.next();
+        Text value = values.iterator().next();
         if (firstKey) {
           firstKey = false;
         } else {
           if (value.compareTo(lastValue) < 0) {
-            output.collect(ERROR, 
+            context.write(ERROR, 
                            new Text("bad key partitioning:\n  file " + 
                                     lastKey + " key " + 
                                     textifyBytes(lastValue) +
@@ -169,7 +157,7 @@ public class TeraValidate extends Configured implements Tool {
   }
 
   public int run(String[] args) throws Exception {
-    JobConf job = (JobConf) getConf();
+    Job job = Job.getInstance(new Cluster(getConf()), getConf());
     if (args.length != 2) {
       usage();
       return 1;
@@ -185,18 +173,16 @@ public class TeraValidate extends Configured implements Tool {
     // force a single reducer
     job.setNumReduceTasks(1);
     // force a single split 
-    job.setLong(org.apache.hadoop.mapreduce.lib.input.
-                FileInputFormat.SPLIT_MINSIZE, Long.MAX_VALUE);
-    job.setInputFormat(TeraInputFormat.class);
-    JobClient.runJob(job);
-    return 0;
+    FileInputFormat.setMinInputSplitSize(job, Long.MAX_VALUE);
+    job.setInputFormatClass(TeraInputFormat.class);
+    return job.waitForCompletion(true) ? 0 : 1;
   }
 
   /**
    * @param args
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new JobConf(), new TeraValidate(), args);
+    int res = ToolRunner.run(new Configuration(), new TeraValidate(), args);
     System.exit(res);
   }
 

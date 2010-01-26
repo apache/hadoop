@@ -43,6 +43,7 @@ import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobHistory;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 import org.apache.hadoop.net.Node;
 
 public class TestFairScheduler extends TestCase {
@@ -111,12 +112,14 @@ public class TestFairScheduler extends TestCase {
       // create maps
       numMapTasks = conf.getNumMapTasks();
       maps = new TaskInProgress[numMapTasks];
+      // empty format
+      JobSplit.TaskSplitMetaInfo split = JobSplit.EMPTY_TASK_SPLIT;
       for (int i = 0; i < numMapTasks; i++) {
         String[] inputLocations = null;
         if (mapInputLocations != null)
           inputLocations = mapInputLocations[i];
         maps[i] = new FakeTaskInProgress(getJobID(), i,
-            getJobConf(), this, inputLocations);
+            getJobConf(), this, inputLocations, split);
         if (mapInputLocations == null) // Job has no locality info
           nonLocalMaps.add(maps[i]);
       }
@@ -137,7 +140,8 @@ public class TestFairScheduler extends TestCase {
         if (!tip.isRunning() && !tip.isComplete() &&
             getLocalityLevel(tip, tts) < localityLevel) {
           TaskAttemptID attemptId = getTaskAttemptID(tip);
-          Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), 1) {
+          JobSplit.TaskSplitMetaInfo split = JobSplit.EMPTY_TASK_SPLIT;
+          Task task = new MapTask("", attemptId, 0, split.getSplitIndex(), 1) {
             @Override
             public String toString() {
               return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -231,8 +235,9 @@ public class TestFairScheduler extends TestCase {
     
     // Constructor for map
     FakeTaskInProgress(JobID jId, int id, JobConf jobConf,
-        FakeJobInProgress job, String[] inputLocations) {
-      super(jId, "", new Job.RawSplit(), null, jobConf, job, id, 1);
+        FakeJobInProgress job, String[] inputLocations, 
+        JobSplit.TaskSplitMetaInfo split) {
+      super(jId, "", split, null, jobConf, job, id, 1);
       this.isMap = true;
       this.fakeJob = job;
       this.inputLocations = inputLocations;
@@ -829,7 +834,8 @@ public class TestFairScheduler extends TestCase {
     // Finish up the tasks and advance time again. Note that we must finish
     // the task since FakeJobInProgress does not properly maintain running
     // tasks, so the scheduler will always get an empty task list from
-    // the JobInProgress's getMapTasks/getReduceTasks and think they finished.
+    // the JobInProgress's getTasks(TaskType.MAP)/getTasks(TaskType.REDUCE) and 
+    // think they finished.
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000000_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0002_m_000000_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_r_000000_0");
@@ -937,7 +943,8 @@ public class TestFairScheduler extends TestCase {
     // Finish up the tasks and advance time again. Note that we must finish
     // the task since FakeJobInProgress does not properly maintain running
     // tasks, so the scheduler will always get an empty task list from
-    // the JobInProgress's getMapTasks/getReduceTasks and think they finished.
+    // the JobInProgress's getTasks(TaskType.MAP)/getTasks(TaskType.REDUCE) and
+    // think they finished.
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000000_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0002_m_000000_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_r_000000_0");
@@ -1638,6 +1645,45 @@ public class TestFairScheduler extends TestCase {
     assertEquals(1.33,  info2.reduceSchedulable.getFairShare(), 0.01);
     assertEquals(4,     info3.mapSchedulable.getFairShare(), 0.01);
     assertEquals(1.33,  info3.reduceSchedulable.getFairShare(), 0.01);
+  }
+
+  public void testPoolMaxMapsReduces() throws Exception {
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    // Pool with upper bound
+    out.println("<pool name=\"poolLimited\">");
+    out.println("<weight>1.0</weight>");
+    out.println("<maxMaps>2</maxMaps>");
+    out.println("<maxReduces>1</maxReduces>");
+    out.println("</pool>");
+    out.println("</allocations>");
+    out.close();
+    scheduler.getPoolManager().reloadAllocs();
+    // Create two jobs with ten maps
+    JobInProgress job1 = submitJob(JobStatus.RUNNING, 10, 5, "poolLimited");
+    advanceTime(10);
+    JobInProgress job2 = submitJob(JobStatus.RUNNING, 10, 5);
+    checkAssignment("tt1", "attempt_test_0002_m_000000_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0002_r_000000_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_m_000000_0 on tt1");
+    checkAssignment("tt1", "attempt_test_0001_r_000000_0 on tt1");
+    checkAssignment("tt2", "attempt_test_0002_m_000001_0 on tt2");
+    checkAssignment("tt2", "attempt_test_0002_r_000001_0 on tt2");
+    checkAssignment("tt2", "attempt_test_0001_m_000001_0 on tt2");
+    checkAssignment("tt2", "attempt_test_0002_r_000002_0 on tt2");
+
+    Pool limited = scheduler.getPoolManager().getPool("poolLimited");
+    assertEquals(2, limited.getSchedulable(TaskType.MAP).getRunningTasks());
+    assertEquals(1, limited.getSchedulable(TaskType.REDUCE).getRunningTasks());
+    Pool defaultPool = scheduler.getPoolManager().getPool("default");
+    assertEquals(2, defaultPool.getSchedulable(TaskType.MAP).getRunningTasks());
+    assertEquals(3, defaultPool.getSchedulable(TaskType.REDUCE)
+        .getRunningTasks());
+    assertEquals(2, job1.runningMapTasks);
+    assertEquals(1, job1.runningReduceTasks);
+    assertEquals(2, job2.runningMapTasks);
+    assertEquals(3, job2.runningReduceTasks);
   }
 
   /**

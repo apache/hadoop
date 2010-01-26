@@ -30,6 +30,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 
 public class TestJobQueueTaskScheduler extends TestCase {
   
@@ -81,7 +82,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(TaskType.MAP);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), 1) {
+      Task task = new MapTask("", attemptId, 0, new JobSplit.TaskSplitIndex(), 1) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());

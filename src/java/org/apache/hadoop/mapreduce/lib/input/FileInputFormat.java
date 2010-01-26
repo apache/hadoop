@@ -238,6 +238,14 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     return result;
   }
   
+  /**
+   * A factory that makes the split for this class. It can be overridden
+   * by sub-classes to make sub-types
+   */
+  protected FileSplit makeSplit(Path file, long start, long length, 
+                                String[] hosts) {
+    return new FileSplit(file, start, length, hosts);
+  }
 
   /** 
    * Generate the list of files and make them into FileSplits.
@@ -261,20 +269,20 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         long bytesRemaining = length;
         while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
           int blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);
-          splits.add(new FileSplit(path, length-bytesRemaining, splitSize, 
+          splits.add(makeSplit(path, length-bytesRemaining, splitSize, 
                                    blkLocations[blkIndex].getHosts()));
           bytesRemaining -= splitSize;
         }
         
         if (bytesRemaining != 0) {
-          splits.add(new FileSplit(path, length-bytesRemaining, bytesRemaining, 
+          splits.add(makeSplit(path, length-bytesRemaining, bytesRemaining, 
                      blkLocations[blkLocations.length-1].getHosts()));
         }
       } else if (length != 0) {
-        splits.add(new FileSplit(path, 0, length, blkLocations[0].getHosts()));
+        splits.add(makeSplit(path, 0, length, blkLocations[0].getHosts()));
       } else { 
         //Create empty hosts array for zero length files
-        splits.add(new FileSplit(path, 0, length, new String[0]));
+        splits.add(makeSplit(path, 0, length, new String[0]));
       }
     }
     LOG.debug("Total # of splits: " + splits.size());

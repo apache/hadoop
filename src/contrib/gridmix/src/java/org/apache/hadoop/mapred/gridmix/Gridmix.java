@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Job;
@@ -73,12 +72,11 @@ public class Gridmix extends Configured implements Tool {
     "gridmix.client.pending.queue.depth";
 
   /**
-   * Size of key data in synthetic jobs. At present, key length is not
-   * available in job traces. Since all solutions are equally bad, globally
-   * specifying the amount of each record that is key data is the simplest
-   * to implement and the method chosen.
+   * Multiplier to accelerate or decelerate job submission. As a crude means of
+   * sizing a job trace to a cluster, the time separating two jobs is
+   * multiplied by this factor.
    */
-  public static final String GRIDMIX_KEY_LEN = "gridmix.min.key.length";
+  public static final String GRIDMIX_SUB_MUL = "gridmix.submit.multiplier";
 
   // Submit data structures
   private JobFactory factory;
@@ -135,7 +133,7 @@ public class Gridmix extends Configured implements Tool {
     submitter = createJobSubmitter(monitor,
         conf.getInt(GRIDMIX_SUB_THR,
           Runtime.getRuntime().availableProcessors() + 1),
-        conf.getInt(GRIDMIX_QUE_DEP, 100),
+        conf.getInt(GRIDMIX_QUE_DEP, 5),
         new FilePool(conf, ioPath));
     factory = createJobFactory(submitter, traceIn, scratchDir, conf, startFlag);
     monitor.start();
@@ -182,12 +180,10 @@ public class Gridmix extends Configured implements Tool {
       printUsage(System.err);
       return 1;
     }
-    FileSystem fs = null;
     InputStream trace = null;
     try {
       final Configuration conf = getConf();
       Path scratchDir = new Path(ioPath, conf.get(GRIDMIX_OUT_DIR, "gridmix"));
-      fs = scratchDir.getFileSystem(conf);
       // add shutdown hook for SIGINT, etc.
       Runtime.getRuntime().addShutdownHook(sdh);
       CountDownLatch startFlag = new CountDownLatch(1);
@@ -210,7 +206,7 @@ public class Gridmix extends Configured implements Tool {
 
       if (factory != null) {
         // wait for input exhaustion
-        factory.join();
+        factory.join(Long.MAX_VALUE);
         final Throwable badTraceException = factory.error();
         if (null != badTraceException) {
           LOG.error("Error in trace", badTraceException);
@@ -218,10 +214,10 @@ public class Gridmix extends Configured implements Tool {
         }
         // wait for pending tasks to be submitted
         submitter.shutdown();
-        submitter.join();
+        submitter.join(Long.MAX_VALUE);
         // wait for running tasks to complete
         monitor.shutdown();
-        monitor.join();
+        monitor.join(Long.MAX_VALUE);
       }
     } finally {
       IOUtils.cleanup(LOG, trace);
@@ -236,13 +232,17 @@ public class Gridmix extends Configured implements Tool {
    */
   class Shutdown extends Thread {
 
-    private void killComponent(Component<?> component) {
+    static final long FAC_SLEEP = 1000;
+    static final long SUB_SLEEP = 4000;
+    static final long MON_SLEEP = 15000;
+
+    private void killComponent(Component<?> component, long maxwait) {
       if (component == null) {
         return;
       }
-      component.abort();   // read no more tasks
+      component.abort();
       try {
-        component.join();
+        component.join(maxwait);
       } catch (InterruptedException e) {
         LOG.warn("Interrupted waiting for " + component);
       }
@@ -253,9 +253,9 @@ public class Gridmix extends Configured implements Tool {
     public void run() {
       LOG.info("Exiting...");
       try {
-        killComponent(factory);   // read no more tasks
-        killComponent(submitter); // submit no more tasks
-        killComponent(monitor);   // process remaining jobs in this thread
+        killComponent(factory, FAC_SLEEP);   // read no more tasks
+        killComponent(submitter, SUB_SLEEP); // submit no more tasks
+        killComponent(monitor, MON_SLEEP);   // process remaining jobs here
       } finally {
         if (monitor == null) {
           return;
@@ -306,7 +306,8 @@ public class Gridmix extends Configured implements Tool {
     out.printf("       %-40s : Output directory\n", GRIDMIX_OUT_DIR);
     out.printf("       %-40s : Submitting threads\n", GRIDMIX_SUB_THR);
     out.printf("       %-40s : Queued job desc\n", GRIDMIX_QUE_DEP);
-    out.printf("       %-40s : Key size\n", GRIDMIX_KEY_LEN);
+    out.printf("       %-40s : Key fraction of rec\n",
+        AvgRecordFactory.GRIDMIX_KEY_FRC);
   }
 
   /**
@@ -331,7 +332,7 @@ public class Gridmix extends Configured implements Tool {
      * Wait until the service completes. It is assumed that either a
      * {@link #shutdown} or {@link #abort} has been requested.
      */
-    void join() throws InterruptedException;
+    void join(long millis) throws InterruptedException;
 
     /**
      * Shut down gracefully, finishing all pending work. Reject new requests.

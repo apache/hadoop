@@ -59,6 +59,8 @@ include::direct.txt[]
 
 include::hive.txt[]
 
+include::export.txt[]
+
 include::supported-dbs.txt[]
 
 include::api-reference.txt[]

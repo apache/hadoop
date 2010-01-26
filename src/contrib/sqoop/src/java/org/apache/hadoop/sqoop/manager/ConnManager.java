@@ -26,7 +26,8 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.util.ExportException;
+import org.apache.hadoop.sqoop.util.ImportException;
 
 /**
  * Abstract interface that manages connections to a database.
@@ -54,6 +55,20 @@ public abstract class ConnManager {
    * Return the name of the primary key for a table, or null if there is none.
    */
   public abstract String getPrimaryKey(String tableName);
+
+  /**
+   * Return java type for SQL type
+   * @param sqlType     sql type
+   * @return            java type
+   */
+  public abstract String toJavaType(int sqlType);
+
+    /**
+     * Return hive type for SQL type
+     * @param sqlType   sql type
+     * @return          hive type
+     */
+  public abstract String toHiveType(int sqlType);
 
   /**
    * Return an unordered mapping from colname to sqltype for
@@ -91,11 +106,43 @@ public abstract class ConnManager {
    * Perform an import of a table from the database into HDFS
    */
   public abstract void importTable(ImportJobContext context)
-      throws IOException, ImportError;
+      throws IOException, ImportException;
+
+  /**
+   * When using a column name in a generated SQL query, how (if at all)
+   * should we escape that column name? e.g., a column named "table"
+   * may need to be quoted with backtiks: "`table`".
+   *
+   * @param colName the column name as provided by the user, etc.
+   * @return how the column name should be rendered in the sql text.
+   */
+  public String escapeColName(String colName) {
+    return colName;
+  }
+
+  /**
+   * When using a table name in a generated SQL query, how (if at all)
+   * should we escape that column name? e.g., a table named "table"
+   * may need to be quoted with backtiks: "`table`".
+   *
+   * @param tableName the table name as provided by the user, etc.
+   * @return how the table name should be rendered in the sql text.
+   */
+  public String escapeTableName(String tableName) {
+    return tableName;
+  }
 
   /**
    * Perform any shutdown operations on the connection.
    */
   public abstract void close() throws SQLException;
+
+  /**
+   * Export data stored in HDFS into a table in a database
+   */
+  public void exportTable(ExportJobContext context)
+      throws IOException, ExportException {
+    throw new ExportException("This database does not support exports");
+  }
 }
 

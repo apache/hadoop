@@ -31,10 +31,12 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.typedbytes.TypedBytesOutput;
 import org.apache.hadoop.typedbytes.TypedBytesWritable;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestLoadTypedBytes extends TestCase {
+public class TestLoadTypedBytes {
 
+  @Test
   public void testLoading() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);

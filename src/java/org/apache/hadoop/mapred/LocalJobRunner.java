@@ -23,32 +23,32 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Job.RawSplit;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
-import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.State;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 public class LocalJobRunner implements ClientProtocol {
@@ -60,40 +60,14 @@ public class LocalJobRunner implements ClientProtocol {
   private JobConf conf;
   private int map_tasks = 0;
   private int reduce_tasks = 0;
-
+  final Random rand = new Random();
+  
   private JobTrackerInstrumentation myMetrics = null;
 
   private static final String jobDir =  "localRunner/";
   
   public long getProtocolVersion(String protocol, long clientVersion) {
     return ClientProtocol.versionID;
-  }
-  
-  @SuppressWarnings("unchecked")
-  static RawSplit[] getRawSplits(JobContext jContext, JobConf job)
-      throws Exception {
-    JobConf jobConf = jContext.getJobConf();
-    org.apache.hadoop.mapreduce.InputFormat<?,?> input =
-      ReflectionUtils.newInstance(jContext.getInputFormatClass(), jobConf);
-
-    List<org.apache.hadoop.mapreduce.InputSplit> splits = input.getSplits(jContext);
-    RawSplit[] rawSplits = new RawSplit[splits.size()];
-    DataOutputBuffer buffer = new DataOutputBuffer();
-    SerializationFactory factory = new SerializationFactory(jobConf);
-    Serializer serializer = 
-      factory.getSerializer(splits.get(0).getClass());
-    serializer.open(buffer);
-    for (int i = 0; i < splits.size(); i++) {
-      buffer.reset();
-      serializer.serialize(splits.get(i));
-      RawSplit rawSplit = new RawSplit();
-      rawSplit.setClassName(splits.get(i).getClass().getName());
-      rawSplit.setDataLength(splits.get(i).getLength());
-      rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-      rawSplit.setLocations(splits.get(i).getLocations());
-      rawSplits[i] = rawSplit;
-    }
-    return rawSplits;
   }
 
   private class Job extends Thread implements TaskUmbilicalProtocol {
@@ -130,8 +104,8 @@ public class LocalJobRunner implements ClientProtocol {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public Job(JobID jobid) throws IOException {
-      this.systemJobDir = new Path(getSystemDir(), jobid.toString());
+    public Job(JobID jobid, String jobSubmitDir) throws IOException {
+      this.systemJobDir = new Path(jobSubmitDir);
       this.systemJobFile = new Path(systemJobDir, "job.xml");
       this.id = jobid;
       JobConf conf = new JobConf(systemJobFile);
@@ -142,13 +116,13 @@ public class LocalJobRunner implements ClientProtocol {
       // Manage the distributed cache.  If there are files to be copied,
       // this will trigger localFile to be re-written again.
       this.trackerDistributerdCacheManager =
-          new TrackerDistributedCacheManager(conf);
+          new TrackerDistributedCacheManager(conf, new DefaultTaskController());
       this.taskDistributedCacheManager = 
           trackerDistributerdCacheManager.newTaskDistributedCacheManager(conf);
       taskDistributedCacheManager.setup(
           new LocalDirAllocator(MRConfig.LOCAL_DIR), 
           new File(systemJobDir.toString()),
-          "archive");
+          "archive", "archive");
       
       if (DistributedCache.getSymlink(conf)) {
         // This is not supported largely because, 
@@ -202,26 +176,10 @@ public class LocalJobRunner implements ClientProtocol {
       JobContext jContext = new JobContextImpl(job, jobId);
       OutputCommitter outputCommitter = job.getOutputCommitter();
       try {
-        // split input into minimum number of splits
-        RawSplit[] rawSplits;
-        if (job.getUseNewMapper()) {
-          rawSplits = getRawSplits(jContext, job);
-        } else {
-          InputSplit[] splits = job.getInputFormat().getSplits(job, 1);
-          rawSplits = new RawSplit[splits.length];
-          DataOutputBuffer buffer = new DataOutputBuffer();
-          for (int i = 0; i < splits.length; i++) {
-            buffer.reset();
-            splits[i].write(buffer);
-            RawSplit rawSplit = new RawSplit();
-            rawSplit.setClassName(splits[i].getClass().getName());
-            rawSplit.setDataLength(splits[i].getLength());
-            rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-            rawSplit.setLocations(splits[i].getLocations());
-            rawSplits[i] = rawSplit;
-          }
-        }
+        TaskSplitMetaInfo[] taskSplitMetaInfos = 
+          SplitMetaInfoReader.readSplitMetaInfo(jobId, localFs, conf, systemJobDir);
         
+    
         int numReduceTasks = job.getNumReduceTasks();
         if (numReduceTasks > 1 || numReduceTasks < 0) {
           // we only allow 0 or 1 reducer in local mode
@@ -233,15 +191,14 @@ public class LocalJobRunner implements ClientProtocol {
 
         Map<TaskAttemptID, MapOutputFile> mapOutputFiles =
             new HashMap<TaskAttemptID, MapOutputFile>();
-        for (int i = 0; i < rawSplits.length; i++) {
+        for (int i = 0; i < taskSplitMetaInfos.length; i++) {
           if (!this.isInterrupted()) {
             TaskAttemptID mapId = new TaskAttemptID(
                 new TaskID(jobId, TaskType.MAP, i),0);  
             mapIds.add(mapId);
             MapTask map = new MapTask(systemJobFile.toString(),  
                                       mapId, i,
-                                      rawSplits[i].getClassName(),
-                                      rawSplits[i].getBytes(), 1);
+                                      taskSplitMetaInfos[i].getSplitIndex(), 1);
             JobConf localConf = new JobConf(job);
             TaskRunner.setupChildMapredLocalDirs(map, localConf);
 
@@ -459,9 +416,10 @@ public class LocalJobRunner implements ClientProtocol {
   }
 
   public org.apache.hadoop.mapreduce.JobStatus submitJob(
-      org.apache.hadoop.mapreduce.JobID jobid) 
+      org.apache.hadoop.mapreduce.JobID jobid, String jobSubmitDir, TokenStorage ts) 
       throws IOException {
-    return new Job(JobID.downgrade(jobid)).status;
+    TokenCache.setTokenStorage(ts);
+    return new Job(JobID.downgrade(jobid), jobSubmitDir).status;
   }
 
   public void killJob(org.apache.hadoop.mapreduce.JobID id) {
@@ -564,6 +522,22 @@ public class LocalJobRunner implements ClientProtocol {
     return fs.makeQualified(sysDir).toString();
   }
 
+  /**
+   * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getStagingAreaDir()
+   */
+  public String getStagingAreaDir() {
+    Path stagingRootDir = new Path(conf.get(JTConfig.JT_STAGING_AREA_ROOT, 
+        "/tmp/hadoop/mapred/staging"));
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+    String user;
+    if (ugi != null) {
+      user = ugi.getUserName() + rand.nextInt();
+    } else {
+      user = "dummy" + rand.nextInt();
+    }
+    return fs.makeQualified(new Path(stagingRootDir, user+"/.staging")).toString();
+  }
+  
   public String getJobHistoryDir() {
     return null;
   }

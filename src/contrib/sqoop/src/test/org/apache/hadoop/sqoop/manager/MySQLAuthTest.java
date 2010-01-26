@@ -39,7 +39,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 
@@ -79,7 +79,7 @@ public class MySQLAuthTest extends ImportJobTestCase {
 
   @Before
   public void setUp() {
-    ImportOptions options = new ImportOptions(AUTH_CONNECT_STRING, AUTH_TABLE_NAME);
+    SqoopOptions options = new SqoopOptions(AUTH_CONNECT_STRING, AUTH_TABLE_NAME);
     options.setUsername(AUTH_TEST_USER);
     options.setPassword(AUTH_TEST_PASS);
 
@@ -131,7 +131,8 @@ public class MySQLAuthTest extends ImportJobTestCase {
     }
   }
 
-  private String [] getArgv(boolean includeHadoopFlags) {
+  private String [] getArgv(boolean includeHadoopFlags,
+      boolean useDirect, String connectString, String tableName) {
     ArrayList<String> args = new ArrayList<String>();
 
     if (includeHadoopFlags) {
@@ -139,12 +140,14 @@ public class MySQLAuthTest extends ImportJobTestCase {
     }
 
     args.add("--table");
-    args.add(AUTH_TABLE_NAME);
+    args.add(tableName);
     args.add("--warehouse-dir");
     args.add(getWarehouseDir());
     args.add("--connect");
-    args.add(AUTH_CONNECT_STRING);
-    args.add("--direct");
+    args.add(connectString);
+    if (useDirect) {
+      args.add("--direct");
+    }
     args.add("--username");
     args.add(AUTH_TEST_USER);
     args.add("--password");
@@ -162,7 +165,7 @@ public class MySQLAuthTest extends ImportJobTestCase {
    */
   @Test
   public void testAuthAccess() {
-    String [] argv = getArgv(true);
+    String [] argv = getArgv(true, true, AUTH_CONNECT_STRING, AUTH_TABLE_NAME);
     try {
       runImport(argv);
     } catch (IOException ioe) {
@@ -188,6 +191,117 @@ public class MySQLAuthTest extends ImportJobTestCase {
       fail(ioe.toString());
     } finally {
       IOUtils.closeStream(r);
+    }
+  }
+
+  @Test
+  public void testZeroTimestamp() throws IOException, SQLException {
+    // MySQL timestamps can hold values whose range causes problems
+    // for java.sql.Timestamp. The MySQLManager adds settings to the
+    // connect string which configure the driver's handling of
+    // zero-valued timestamps. Check that all of these modifications
+    // to the connect string are successful.
+
+    try {
+      // A connect string with a null 'query' component.
+      doZeroTimestampTest(0, true, AUTH_CONNECT_STRING);
+
+      // A connect string with a zero-length query component.
+      doZeroTimestampTest(1, true, AUTH_CONNECT_STRING + "?");
+
+      // A connect string with another argument
+      doZeroTimestampTest(2, true, AUTH_CONNECT_STRING + "?connectTimeout=0");
+      doZeroTimestampTest(3, true, AUTH_CONNECT_STRING + "?connectTimeout=0&");
+
+      // A connect string with the zero-timestamp behavior already
+      // configured.
+      doZeroTimestampTest(4, true, AUTH_CONNECT_STRING
+          + "?zeroDateTimeBehavior=convertToNull");
+
+      // And finally, behavior already configured in such a way as to
+      // cause the timestamp import to fail.
+      doZeroTimestampTest(5, false, AUTH_CONNECT_STRING
+          + "?zeroDateTimeBehavior=exception");
+    } finally {
+      // Clean up our mess on the way out.
+      dropTimestampTables();
+    }
+  }
+
+  private void dropTimestampTables() throws SQLException {
+    SqoopOptions options = new SqoopOptions(AUTH_CONNECT_STRING, null);
+    options.setUsername(AUTH_TEST_USER);
+    options.setPassword(AUTH_TEST_PASS);
+
+    manager = new LocalMySQLManager(options);
+
+    Connection connection = null;
+    Statement st = null;
+
+    connection = manager.getConnection();
+    connection.setAutoCommit(false);
+    st = connection.createStatement();
+
+    st.executeUpdate("DROP TABLE IF EXISTS mysqlTimestampTable0");
+    st.executeUpdate("DROP TABLE IF EXISTS mysqlTimestampTable1");
+    st.executeUpdate("DROP TABLE IF EXISTS mysqlTimestampTable2");
+    st.executeUpdate("DROP TABLE IF EXISTS mysqlTimestampTable3");
+    st.executeUpdate("DROP TABLE IF EXISTS mysqlTimestampTable4");
+    st.executeUpdate("DROP TABLE IF EXISTS mysqlTimestampTable5");
+    connection.commit();
+    st.close();
+    connection.close();
+  }
+
+  public void doZeroTimestampTest(int testNum, boolean expectSuccess,
+      String connectString) throws IOException, SQLException {
+
+    final String tableName = "mysqlTimestampTable" + Integer.toString(testNum);
+
+    // Create a table containing a full-zeros timestamp.
+    SqoopOptions options = new SqoopOptions(connectString, tableName);
+    options.setUsername(AUTH_TEST_USER);
+    options.setPassword(AUTH_TEST_PASS);
+
+    manager = new LocalMySQLManager(options);
+
+    Connection connection = null;
+    Statement st = null;
+
+    connection = manager.getConnection();
+    connection.setAutoCommit(false);
+    st = connection.createStatement();
+
+    // create the database table and populate it with data. 
+    st.executeUpdate("DROP TABLE IF EXISTS " + tableName);
+    st.executeUpdate("CREATE TABLE " + tableName + " ("
+        + "id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, "
+        + "ts TIMESTAMP NOT NULL)");
+
+    st.executeUpdate("INSERT INTO " + tableName + " VALUES("
+        + "NULL,'0000-00-00 00:00:00.0')");
+    connection.commit();
+    st.close();
+    connection.close();
+
+    // Run the import.
+    String [] argv = getArgv(true, false, connectString, tableName);
+    runImport(argv);
+
+    // Make sure the result file is there.
+    Path warehousePath = new Path(this.getWarehouseDir());
+    Path tablePath = new Path(warehousePath, tableName);
+    Path filePath = new Path(tablePath, "part-m-00000");
+
+    File f = new File(filePath.toString());
+    if (expectSuccess) {
+      assertTrue("Could not find imported data file", f.exists());
+      BufferedReader r = new BufferedReader(new InputStreamReader(
+          new FileInputStream(f)));
+      assertEquals("1,null", r.readLine());
+      IOUtils.closeStream(r);
+    } else {
+      assertFalse("Imported data when expected failure", f.exists());
     }
   }
 }

@@ -94,6 +94,14 @@
                rev="${lucene-core.version}" conf="javadoc->default"/>
    <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" 
                conf="common->default"/>
+   <dependency org="org.mockito" name="mockito-all" rev="${mockito-all.version}" 
+               conf="test->default"/>
+   <!-- dependency addition for the fault injection -->
+   <dependency org="org.aspectj" name="aspectjrt" rev="${aspectj.version}"
+               conf="common->default"/>
+   <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}"
+               conf="common->default"/>
+
  </dependencies>
   
 </ivy-module>

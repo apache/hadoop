@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.sqoop.manager;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +31,7 @@ public final class DefaultManagerFactory extends ManagerFactory {
 
   public static final Log LOG = LogFactory.getLog(DefaultManagerFactory.class.getName());
 
-  public ConnManager accept(ImportOptions options) {
+  public ConnManager accept(SqoopOptions options) {
     String manualDriver = options.getDriverClassName();
     if (manualDriver != null) {
       // User has manually specified JDBC implementation with --driver.

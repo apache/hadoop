@@ -30,15 +30,22 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskController;
+import org.apache.hadoop.mapred.TaskController.DistributedCacheFileContext;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.RunJar;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Manages a single machine's instance of a cross-job
@@ -46,9 +53,8 @@ import org.apache.hadoop.util.RunJar;
  * by a TaskTracker (or something that emulates it,
  * like LocalJobRunner).
  * 
- * <b>This class is internal to Hadoop, and should not be treated as a public
- * interface.</b>
  */
+@InterfaceAudience.Private
 public class TrackerDistributedCacheManager {
   // cacheID to cacheStatus mapping
   private TreeMap<String, CacheStatus> cachedArchives = 
@@ -66,14 +72,32 @@ public class TrackerDistributedCacheManager {
   
   private LocalDirAllocator lDirAllocator;
   
+  private TaskController taskController;
+  
   private Configuration trackerConf;
   
   private Random random = new Random();
 
-  public TrackerDistributedCacheManager(Configuration conf) throws IOException {
+  private MRAsyncDiskService asyncDiskService;
+  
+  public TrackerDistributedCacheManager(Configuration conf,
+      TaskController taskController) throws IOException {
     this.localFs = FileSystem.getLocal(conf);
     this.trackerConf = conf;
     this.lDirAllocator = new LocalDirAllocator(TTConfig.LOCAL_DIR);
+    this.taskController = taskController;
+  }
+
+  /**
+   * Creates a TrackerDistributedCacheManager with a MRAsyncDiskService.
+   * @param asyncDiskService Provides a set of ThreadPools for async disk 
+   *                         operations.  
+   */
+  public TrackerDistributedCacheManager(Configuration conf,
+      TaskController taskController, MRAsyncDiskService asyncDiskService)
+      throws IOException {
+    this(conf, taskController);
+    this.asyncDiskService = asyncDiskService;
   }
 
   /**
@@ -101,6 +125,7 @@ public class TrackerDistributedCacheManager {
    * launches
    * NOTE: This is effectively always on since r696957, since there is no code
    * path that does not use this.
+   * @param isPublic to know the cache file is accessible to public or private
    * @return the path to directory where the archives are unjarred in case of
    * archives, the path to the file where the file is copied locally
    * @throws IOException
@@ -108,7 +133,7 @@ public class TrackerDistributedCacheManager {
   Path getLocalCache(URI cache, Configuration conf,
       String subDir, FileStatus fileStatus,
       boolean isArchive, long confFileStamp,
-      Path currentWorkDir, boolean honorSymLinkConf)
+      Path currentWorkDir, boolean honorSymLinkConf, boolean isPublic)
       throws IOException {
     String key = getKey(cache, conf, confFileStamp);
     CacheStatus lcacheStatus;
@@ -117,13 +142,13 @@ public class TrackerDistributedCacheManager {
       lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
         // was never localized
+        String uniqueString = String.valueOf(random.nextLong());
         String cachePath = new Path (subDir, 
-          new Path(String.valueOf(random.nextLong()),
-            makeRelative(cache, conf))).toString();
+          new Path(uniqueString, makeRelative(cache, conf))).toString();
         Path localPath = lDirAllocator.getLocalPathForWrite(cachePath,
           fileStatus.getLen(), trackerConf);
-        lcacheStatus = new CacheStatus(
-          new Path(localPath.toString().replace(cachePath, "")), localPath); 
+        lcacheStatus = new CacheStatus(new Path(localPath.toString().replace(
+          cachePath, "")), localPath, new Path(subDir), uniqueString);
         cachedArchives.put(key, lcacheStatus);
       }
 
@@ -137,7 +162,7 @@ public class TrackerDistributedCacheManager {
       synchronized (lcacheStatus) {
         if (!lcacheStatus.isInited()) {
           localizedPath = localizeCache(conf, cache, confFileStamp,
-              lcacheStatus, fileStatus, isArchive);
+              lcacheStatus, fileStatus, isArchive, isPublic);
           lcacheStatus.initComplete();
         } else {
           localizedPath = checkCacheStatusValidity(conf, cache, confFileStamp,
@@ -242,23 +267,47 @@ public class TrackerDistributedCacheManager {
     // do the deletion, after releasing the global lock
     for (CacheStatus lcacheStatus : deleteSet) {
       synchronized (lcacheStatus) {
-        FileSystem.getLocal(conf).delete(lcacheStatus.localLoadPath, true);
-        LOG.info("Deleted path " + lcacheStatus.localLoadPath);
+        deleteLocalPath(asyncDiskService,
+            FileSystem.getLocal(conf), lcacheStatus.localizedLoadPath);
         // decrement the size of the cache from baseDirSize
         synchronized (baseDirSize) {
-          Long dirSize = baseDirSize.get(lcacheStatus.baseDir);
+          Long dirSize = baseDirSize.get(lcacheStatus.localizedBaseDir);
           if ( dirSize != null ) {
             dirSize -= lcacheStatus.size;
-            baseDirSize.put(lcacheStatus.baseDir, dirSize);
+            baseDirSize.put(lcacheStatus.localizedBaseDir, dirSize);
           } else {
             LOG.warn("Cannot find record of the baseDir: " + 
-                     lcacheStatus.baseDir + " during delete!");
+                     lcacheStatus.localizedBaseDir + " during delete!");
           }
         }
       }
     }
   }
 
+  /**
+   * Delete a local path with asyncDiskService if available,
+   * or otherwise synchronously with local file system.
+   */
+  private static void deleteLocalPath(MRAsyncDiskService asyncDiskService,
+      LocalFileSystem fs, Path path) throws IOException {
+    boolean deleted = false;
+    if (asyncDiskService != null) {
+      // Try to delete using asyncDiskService
+      String localPathToDelete = 
+        path.toUri().getPath();
+      deleted = asyncDiskService.moveAndDeleteAbsolutePath(localPathToDelete);
+      if (!deleted) {
+        LOG.warn("Cannot find DistributedCache path " + localPathToDelete
+            + " on any of the asyncDiskService volumes!");
+      }
+    }
+    if (!deleted) {
+      // If no asyncDiskService, we will delete the files synchronously
+      fs.delete(path, true);
+    }
+    LOG.info("Deleted path " + path);
+  }
+  
   /*
    * Returns the relative path of the dir this cache will be localized in
    * relative path that this cache will be localized in. For
@@ -305,6 +354,51 @@ public class TrackerDistributedCacheManager {
 
     return fileSystem.getFileStatus(filePath).getModificationTime();
   }
+  
+  /**
+   * Returns a boolean to denote whether a cache file is visible to all(public)
+   * or not
+   * @param conf
+   * @param uri
+   * @return true if the path in the uri is visible to all, false otherwise
+   * @throws IOException
+   */
+  static boolean isPublic(Configuration conf, URI uri) throws IOException {
+    FileSystem fs = FileSystem.get(uri, conf);
+    Path current = new Path(uri.getPath());
+    //the leaf level file should be readable by others
+    if (!checkPermissionOfOther(fs, current, FsAction.READ)) {
+      return false;
+    }
+    current = current.getParent();
+    while (current != null) {
+      //the subdirs in the path should have execute permissions for others
+      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE)) {
+        return false;
+      }
+      current = current.getParent();
+    }
+    return true;
+  }
+  /**
+   * Checks for a given path whether the Other permissions on it 
+   * imply the permission in the passed FsAction
+   * @param fs
+   * @param path
+   * @param action
+   * @return true if the path in the uri is visible to all, false otherwise
+   * @throws IOException
+   */
+  private static boolean checkPermissionOfOther(FileSystem fs, Path path,
+      FsAction action) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    FsPermission perms = status.getPermission();
+    FsAction otherAction = perms.getOtherAction();
+    if (otherAction.implies(action)) {
+      return true;
+    }
+    return false;
+  }
 
   private Path checkCacheStatusValidity(Configuration conf,
       URI cache, long confFileStamp,
@@ -316,13 +410,13 @@ public class TrackerDistributedCacheManager {
     // Has to be 
     if (!ifExistsAndFresh(conf, fs, cache, confFileStamp,
                           cacheStatus, fileStatus)) {
-      throw new IOException("Stale cache file: " + cacheStatus.localLoadPath + 
+      throw new IOException("Stale cache file: " + cacheStatus.localizedLoadPath + 
                             " for cache-file: " + cache);
     }
 
     LOG.info(String.format("Using existing cache of %s->%s",
-        cache.toString(), cacheStatus.localLoadPath));
-    return cacheStatus.localLoadPath;
+        cache.toString(), cacheStatus.localizedLoadPath));
+    return cacheStatus.localizedLoadPath;
   }
   
   private void createSymlink(Configuration conf, URI cache,
@@ -337,7 +431,7 @@ public class TrackerDistributedCacheManager {
     File flink = new File(link);
     if (doSymlink){
       if (!flink.exists()) {
-        FileUtil.symLink(cacheStatus.localLoadPath.toString(), link);
+        FileUtil.symLink(cacheStatus.localizedLoadPath.toString(), link);
       }
     }
   }
@@ -348,21 +442,21 @@ public class TrackerDistributedCacheManager {
                                     URI cache, long confFileStamp,
                                     CacheStatus cacheStatus,
                                     FileStatus fileStatus,
-                                    boolean isArchive)
+                                    boolean isArchive, boolean isPublic)
   throws IOException {
     FileSystem fs = FileSystem.get(cache, conf);
     FileSystem localFs = FileSystem.getLocal(conf);
     Path parchive = null;
     if (isArchive) {
-      parchive = new Path(cacheStatus.localLoadPath,
-        new Path(cacheStatus.localLoadPath.getName()));
+      parchive = new Path(cacheStatus.localizedLoadPath,
+        new Path(cacheStatus.localizedLoadPath.getName()));
     } else {
-      parchive = cacheStatus.localLoadPath;
+      parchive = cacheStatus.localizedLoadPath;
     }
 
     if (!localFs.mkdirs(parchive.getParent())) {
       throw new IOException("Mkdirs failed to create directory " +
-          cacheStatus.localLoadPath.toString());
+          cacheStatus.localizedLoadPath.toString());
     }
 
     String cacheId = cache.getPath();
@@ -392,29 +486,45 @@ public class TrackerDistributedCacheManager {
       FileUtil.getDU(new File(parchive.getParent().toString()));
     cacheStatus.size = cacheSize;
     synchronized (baseDirSize) {
-      Long dirSize = baseDirSize.get(cacheStatus.baseDir);
+      Long dirSize = baseDirSize.get(cacheStatus.localizedBaseDir);
       if( dirSize == null ) {
         dirSize = Long.valueOf(cacheSize);
       } else {
         dirSize += cacheSize;
       }
-      baseDirSize.put(cacheStatus.baseDir, dirSize);
+      baseDirSize.put(cacheStatus.localizedBaseDir, dirSize);
     }
 
-    // do chmod here
-    try {
-      //Setting recursive permission to grant everyone read and execute
-      FileUtil.chmod(cacheStatus.baseDir.toString(), "ugo+rx",true);
-    } catch(InterruptedException e) {
-      LOG.warn("Exception in chmod" + e.toString());
-    }
+    // set proper permissions for the localized directory
+    setPermissions(conf, cacheStatus, isPublic);
 
     // update cacheStatus to reflect the newly cached file
     cacheStatus.mtime = getTimestamp(conf, cache);
 
     LOG.info(String.format("Cached %s as %s",
-             cache.toString(), cacheStatus.localLoadPath));
-    return cacheStatus.localLoadPath;
+             cache.toString(), cacheStatus.localizedLoadPath));
+    return cacheStatus.localizedLoadPath;
+  }
+
+  private void setPermissions(Configuration conf, CacheStatus cacheStatus,
+      boolean isPublic) throws IOException {
+    if (isPublic) {
+      Path localizedUniqueDir = cacheStatus.getLocalizedUniqueDir();
+      LOG.info("Doing chmod on localdir :" + localizedUniqueDir);
+      try {
+        FileUtil.chmod(localizedUniqueDir.toString(), "ugo+rx", true);
+      } catch (InterruptedException e) {
+        LOG.warn("Exception in chmod" + e.toString());
+        throw new IOException(e);
+      }
+    } else {
+      // invoke taskcontroller to set permissions
+      DistributedCacheFileContext context = new DistributedCacheFileContext(
+          conf.get(JobContext.USER_NAME), new File(cacheStatus.localizedBaseDir
+              .toString()), cacheStatus.localizedBaseDir,
+          cacheStatus.uniqueString);
+      taskController.initializeDistributedCacheFile(context);
+    }
   }
 
   private static boolean isTarFile(String filename) {
@@ -485,10 +595,10 @@ public class TrackerDistributedCacheManager {
 
   static class CacheStatus {
     // the local load path of this cache
-    Path localLoadPath;
+    Path localizedLoadPath;
 
     //the base dir where the cache lies
-    Path baseDir;
+    Path localizedBaseDir;
 
     //the size of this cache
     long size;
@@ -501,18 +611,28 @@ public class TrackerDistributedCacheManager {
 
     // is it initialized ?
     boolean inited = false;
+
+    // The sub directory (tasktracker/archive or tasktracker/user/archive),
+    // under which the file will be localized
+    Path subDir;
     
-    public CacheStatus(Path baseDir, Path localLoadPath) {
+    // unique string used in the construction of local load path
+    String uniqueString;
+
+    public CacheStatus(Path baseDir, Path localLoadPath, Path subDir,
+        String uniqueString) {
       super();
-      this.localLoadPath = localLoadPath;
+      this.localizedLoadPath = localLoadPath;
       this.refcount = 0;
       this.mtime = -1;
-      this.baseDir = baseDir;
+      this.localizedBaseDir = baseDir;
       this.size = 0;
+      this.subDir = subDir;
+      this.uniqueString = uniqueString;
     }
     
     Path getBaseDir(){
-      return this.baseDir;
+      return this.localizedBaseDir;
     }
     
     // mark it as initialized
@@ -523,6 +643,10 @@ public class TrackerDistributedCacheManager {
     // is it initialized?
     boolean isInited() {
       return inited;
+    }
+    
+    Path getLocalizedUniqueDir() {
+      return new Path(localizedBaseDir, new Path(subDir, uniqueString));
     }
   }
 
@@ -535,7 +659,7 @@ public class TrackerDistributedCacheManager {
     synchronized (cachedArchives) {
       for (Map.Entry<String,CacheStatus> f: cachedArchives.entrySet()) {
         try {
-          localFs.delete(f.getValue().localLoadPath, true);
+          deleteLocalPath(asyncDiskService, localFs, f.getValue().localizedLoadPath);
         } catch (IOException ie) {
           LOG.debug("Error cleaning up cache", ie);
         }
@@ -585,7 +709,59 @@ public class TrackerDistributedCacheManager {
       setFileTimestamps(job, fileTimestamps.toString());
     }
   }
+  /**
+   * Determines the visibilities of the distributed cache files and 
+   * archives. The visibility of a cache path is "public" if the leaf component
+   * has READ permissions for others, and the parent subdirs have 
+   * EXECUTE permissions for others
+   * @param job
+   * @throws IOException
+   */
+  public static void determineCacheVisibilities(Configuration job) 
+  throws IOException {
+    URI[] tarchives = DistributedCache.getCacheArchives(job);
+    if (tarchives != null) {
+      StringBuffer archiveVisibilities = 
+        new StringBuffer(String.valueOf(isPublic(job, tarchives[0])));
+      for (int i = 1; i < tarchives.length; i++) {
+        archiveVisibilities.append(",");
+        archiveVisibilities.append(String.valueOf(isPublic(job, tarchives[i])));
+      }
+      setArchiveVisibilities(job, archiveVisibilities.toString());
+    }
+    URI[] tfiles = DistributedCache.getCacheFiles(job);
+    if (tfiles != null) {
+      StringBuffer fileVisibilities = 
+        new StringBuffer(String.valueOf(isPublic(job, tfiles[0])));
+      for (int i = 1; i < tfiles.length; i++) {
+        fileVisibilities.append(",");
+        fileVisibilities.append(String.valueOf(isPublic(job, tfiles[i])));
+      }
+      setFileVisibilities(job, fileVisibilities.toString());
+    }
+  }
   
+  /**
+   * Get the booleans on whether the files are public or not.  Used by 
+   * internal DistributedCache and MapReduce code.
+   * @param conf The configuration which stored the timestamps
+   * @return a string array of booleans 
+   * @throws IOException
+   */
+  static String[] getFileVisibilities(Configuration conf) {
+    return conf.getStrings(JobContext.CACHE_FILE_VISIBILITIES);
+  }
+
+  /**
+   * Get the booleans on whether the archives are public or not.  Used by 
+   * internal DistributedCache and MapReduce code.
+   * @param conf The configuration which stored the timestamps
+   * @return a string array of booleans 
+   */
+  static String[] getArchiveVisibilities(Configuration conf) {
+    return conf.getStrings(JobContext.CACHE_ARCHIVES_VISIBILITIES);
+  }
+
   /**
    * This method checks if there is a conflict in the fragment names 
    * of the uris. Also makes sure that each uri has a fragment. It 
@@ -630,6 +806,28 @@ public class TrackerDistributedCacheManager {
       }
     }
     return true;
+  }
+  /**
+   * This is to check the public/private visibility of the archives to be
+   * localized.
+   * 
+   * @param conf Configuration which stores the timestamp's
+   * @param booleans comma separated list of booleans (true - public)
+   * The order should be the same as the order in which the archives are added.
+   */
+  static void setArchiveVisibilities(Configuration conf, String booleans) {
+    conf.set(JobContext.CACHE_ARCHIVES_VISIBILITIES, booleans);
+  }
+
+  /**
+   * This is to check the public/private visibility of the files to be localized
+   * 
+   * @param conf Configuration which stores the timestamp's
+   * @param booleans comma separated list of booleans (true - public)
+   * The order should be the same as the order in which the files are added.
+   */
+  static void setFileVisibilities(Configuration conf, String booleans) {
+    conf.set(JobContext.CACHE_FILE_VISIBILITIES, booleans);
   }
 
   /**

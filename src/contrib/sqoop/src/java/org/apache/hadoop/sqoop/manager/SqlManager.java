@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.sqoop.manager;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
+import org.apache.hadoop.sqoop.hive.HiveTypes;
 import org.apache.hadoop.sqoop.mapreduce.DataDrivenImportJob;
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.mapreduce.ExportJob;
+import org.apache.hadoop.sqoop.util.ExportException;
+import org.apache.hadoop.sqoop.util.ImportException;
 import org.apache.hadoop.sqoop.util.ResultSetPrinter;
 
 import java.io.IOException;
@@ -49,14 +52,14 @@ public abstract class SqlManager extends ConnManager {
 
   public static final Log LOG = LogFactory.getLog(SqlManager.class.getName());
 
-  protected ImportOptions options;
+  protected SqoopOptions options;
 
   /**
    * Constructs the SqlManager
    * @param opts
    * @param specificMgr
    */
-  public SqlManager(final ImportOptions opts) {
+  public SqlManager(final SqoopOptions opts) {
     this.options = opts;
   }
 
@@ -65,7 +68,8 @@ public abstract class SqlManager extends ConnManager {
    * be tuned per-database, but the main extraction loop is still inheritable.
    */
   protected String getColNamesQuery(String tableName) {
-    return "SELECT t.* FROM " + tableName + " AS t";
+    // adding where clause to prevent loading a big table
+    return "SELECT t.* FROM " + escapeTableName(tableName) + " AS t WHERE 1=0";
   }
 
   @Override
@@ -167,13 +171,13 @@ public abstract class SqlManager extends ConnManager {
       if (!first) {
         sb.append(", ");
       }
-      sb.append(col);
+      sb.append(escapeColName(col));
       first = false;
     }
     sb.append(" FROM ");
-    sb.append(tableName);
+    sb.append(escapeTableName(tableName));
     sb.append(" AS ");   // needed for hsqldb; doesn't hurt anyone else.
-    sb.append(tableName);
+    sb.append(escapeTableName(tableName));
 
     return execute(sb.toString());
   }
@@ -261,10 +265,10 @@ public abstract class SqlManager extends ConnManager {
    * via DataDrivenImportJob to read the table with DataDrivenDBInputFormat.
    */
   public void importTable(ImportJobContext context)
-      throws IOException, ImportError {
+      throws IOException, ImportException {
     String tableName = context.getTableName();
     String jarFile = context.getJarFile();
-    ImportOptions options = context.getOptions();
+    SqoopOptions options = context.getOptions();
     DataDrivenImportJob importer = new DataDrivenImportJob(options);
     String splitCol = options.getSplitByCol();
     if (null == splitCol) {
@@ -274,7 +278,7 @@ public abstract class SqlManager extends ConnManager {
 
     if (null == splitCol) {
       // Can't infer a primary key.
-      throw new ImportError("No primary key could be found for table " + tableName
+      throw new ImportException("No primary key could be found for table " + tableName
           + ". Please specify one with --split-by.");
     }
 
@@ -305,7 +309,7 @@ public abstract class SqlManager extends ConnManager {
    * @param sqlType
    * @return the name of a Java type to hold the sql datatype, or null if none.
    */
-  public static String toJavaType(int sqlType) {
+  public String toJavaType(int sqlType) {
     // mappings from http://java.sun.com/j2se/1.3/docs/guide/jdbc/getstart/mapping.html
     if (sqlType == Types.INTEGER) {
       return "Integer";
@@ -344,10 +348,19 @@ public abstract class SqlManager extends ConnManager {
     } else {
       // TODO(aaron): Support BINARY, VARBINARY, LONGVARBINARY, DISTINCT, CLOB, BLOB, ARRAY,
       // STRUCT, REF, JAVA_OBJECT.
+      // return database specific java data type
       return null;
     }
   }
 
+  /**
+   * Resolve a database-specific type to Hive data type
+   * @param sqlType     sql type
+   * @return            hive type
+   */
+  public String toHiveType(int sqlType) {
+    return HiveTypes.toHiveType(sqlType);
+  }
 
   public void close() throws SQLException {
   }
@@ -423,5 +436,14 @@ public abstract class SqlManager extends ConnManager {
     connection.setAutoCommit(false);
 
     return connection;
+  }
+
+  /**
+   * Export data stored in HDFS into a table in a database
+   */
+  public void exportTable(ExportJobContext context)
+      throws IOException, ExportException {
+    ExportJob exportJob = new ExportJob(context);
+    exportJob.runExport();
   }
 }

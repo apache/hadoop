@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred.gridmix;
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
@@ -52,10 +52,30 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 // TODO can replace with form of GridmixJob
 class GenerateData extends GridmixJob {
 
+  /**
+   * Total bytes to write.
+   */
+  public static final String GRIDMIX_GEN_BYTES = "gridmix.gen.bytes";
+
+  /**
+   * Maximum size per file written.
+   */
+  public static final String GRIDMIX_GEN_CHUNK = "gridmix.gen.bytes.per.file";
+
+  /**
+   * Size of writes to output file.
+   */
+  public static final String GRIDMIX_VAL_BYTES = "gendata.val.bytes";
+
+  /**
+   * Status reporting interval, in megabytes.
+   */
+  public static final String GRIDMIX_GEN_INTERVAL = "gendata.interval.mb";
+
   public GenerateData(Configuration conf, Path outdir, long genbytes)
       throws IOException {
     super(conf, 0L, "GRIDMIX_GENDATA");
-    job.getConfiguration().setLong("gridmix.gendata.bytes", genbytes);
+    job.getConfiguration().setLong(GRIDMIX_GEN_BYTES, genbytes);
     FileOutputFormat.setOutputPath(job, outdir);
   }
 
@@ -84,7 +104,7 @@ class GenerateData extends GridmixJob {
     protected void setup(Context context)
         throws IOException, InterruptedException {
       val = new BytesWritable(new byte[
-          context.getConfiguration().getInt("gendata.val.bytes", 1024 * 1024)]);
+          context.getConfiguration().getInt(GRIDMIX_VAL_BYTES, 1024 * 1024)]);
     }
 
     @Override
@@ -106,7 +126,7 @@ class GenerateData extends GridmixJob {
       final JobClient client = new JobClient(jobCtxt.getConfiguration());
       ClusterStatus stat = client.getClusterStatus(true);
       final long toGen =
-        jobCtxt.getConfiguration().getLong("gridmix.gendata.bytes", -1);
+        jobCtxt.getConfiguration().getLong(GRIDMIX_GEN_BYTES, -1);
       if (toGen < 0) {
         throw new IOException("Invalid/missing generation bytes: " + toGen);
       }
@@ -144,7 +164,7 @@ class GenerateData extends GridmixJob {
             throws IOException, InterruptedException {
           toWrite = split.getLength();
           RINTERVAL = ctxt.getConfiguration().getInt(
-              "gendata.report.interval.mb", 10) << 20;
+              GRIDMIX_GEN_INTERVAL, 10) << 20;
         }
         @Override
         public boolean nextKeyValue() throws IOException {
@@ -219,20 +239,52 @@ class GenerateData extends GridmixJob {
     public RecordWriter<NullWritable,BytesWritable> getRecordWriter(
         TaskAttemptContext job) throws IOException {
 
-      Path file = getDefaultWorkFile(job, "");
-      FileSystem fs = file.getFileSystem(job.getConfiguration());
-      final FSDataOutputStream fileOut = fs.create(file, false);
-      return new RecordWriter<NullWritable,BytesWritable>() {
-        @Override
-        public void write(NullWritable key, BytesWritable value)
-            throws IOException {
-          fileOut.write(value.getBytes(), 0, value.getLength());
-        }
-        @Override
-        public void close(TaskAttemptContext ctxt) throws IOException {
+      return new ChunkWriter(getDefaultWorkFile(job, ""),
+          job.getConfiguration());
+    }
+
+    static class ChunkWriter extends RecordWriter<NullWritable,BytesWritable> {
+      private final Path outDir;
+      private final FileSystem fs;
+      private final long maxFileBytes;
+
+      private long accFileBytes = 0L;
+      private long fileIdx = -1L;
+      private OutputStream fileOut = null;
+
+      public ChunkWriter(Path outDir, Configuration conf) throws IOException {
+        this.outDir = outDir;
+        fs = outDir.getFileSystem(conf);
+        maxFileBytes = conf.getLong(GRIDMIX_GEN_CHUNK, 1L << 30);
+        nextDestination();
+      }
+      private void nextDestination() throws IOException {
+        if (fileOut != null) {
           fileOut.close();
         }
-      };
+        fileOut = fs.create(new Path(outDir, "segment-" + (++fileIdx)), false);
+        accFileBytes = 0L;
+      }
+      @Override
+      public void write(NullWritable key, BytesWritable value)
+          throws IOException {
+        int written = 0;
+        final int total = value.getLength();
+        while (written < total) {
+          final int write = (int)
+            Math.min(total - written, maxFileBytes - accFileBytes);
+          fileOut.write(value.getBytes(), written, write);
+          written += write;
+          accFileBytes += write;
+          if (accFileBytes >= maxFileBytes) {
+            nextDestination();
+          }
+        }
+      }
+      @Override
+      public void close(TaskAttemptContext ctxt) throws IOException {
+        fileOut.close();
+      }
     }
   }
 

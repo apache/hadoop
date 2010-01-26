@@ -23,18 +23,25 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.TimeZone;
+import java.lang.reflect.Method;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A RecordReader that reads records from an Oracle SQL table.
  */
 public class OracleDBRecordReader<T extends DBWritable> extends DBRecordReader<T> {
 
+  private static final Log LOG = LogFactory.getLog(OracleDBRecordReader.class);
+
   public OracleDBRecordReader(DBInputFormat.DBInputSplit split, 
       Class<T> inputClass, Configuration conf, Connection conn, DBConfiguration dbConfig,
       String cond, String [] fields, String table) throws SQLException {
     super(split, inputClass, conf, conn, dbConfig, cond, fields, table);
+    setSessionTimeZone(conn);
   }
 
   /** Returns the query for selecting the records from an Oracle DB. */
@@ -85,5 +92,44 @@ public class OracleDBRecordReader<T extends DBWritable> extends DBRecordReader<T
     }		      
 
     return query.toString();
+  }
+
+  /**
+   * Set session time zone
+   * @param conn      Connection object
+   * @throws          SQLException instance
+   */
+  private void setSessionTimeZone(Connection conn) throws SQLException {
+    // need to use reflection to call the method setSessionTimeZone on the OracleConnection class
+    // because oracle specific java libraries are not accessible in this context
+    Method method;
+    try {
+      method = conn.getClass().getMethod(
+              "setSessionTimeZone", new Class [] {String.class});
+    } catch (Exception ex) {
+      LOG.error("Could not find method setSessionTimeZone in " + conn.getClass().getName(), ex);
+      // rethrow SQLException
+      throw new SQLException(ex);
+    }
+
+    // Need to set the time zone in order for Java
+    // to correctly access the column "TIMESTAMP WITH LOCAL TIME ZONE"
+    String clientTimeZone = TimeZone.getDefault().getID();
+    try {
+      method.setAccessible(true);
+      method.invoke(conn, clientTimeZone);
+      LOG.info("Time zone has been set");
+    } catch (Exception ex) {
+      LOG.warn("Time zone " + clientTimeZone +
+               " could not be set on oracle database.");
+      LOG.info("Setting default time zone: UTC");
+      try {
+        method.invoke(conn, "UTC");
+      } catch (Exception ex2) {
+        LOG.error("Could not set time zone for oracle connection", ex2);
+        // rethrow SQLException
+        throw new SQLException(ex);
+      }
+    }
   }
 }

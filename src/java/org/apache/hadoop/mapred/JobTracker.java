@@ -22,11 +22,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -64,6 +62,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
@@ -76,9 +75,14 @@ import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
+import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.util.ConfigUtil;
+import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -87,6 +91,7 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.PermissionChecker;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -100,8 +105,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Service;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.apache.hadoop.mapreduce.util.ConfigUtil;
 
 /*******************************************************
  * JobTracker is the central location for submitting and 
@@ -110,7 +113,7 @@ import org.apache.hadoop.mapreduce.util.ConfigUtil;
  *******************************************************/
 public class JobTracker extends Service 
     implements MRConstants, InterTrackerProtocol,
-    ClientProtocol, TaskTrackerManager,
+    ClientProtocol, TaskTrackerManager, RefreshUserToGroupMappingsProtocol,
     RefreshAuthorizationPolicyProtocol, AdminOperationsProtocol, JTConfig {
 
   static{
@@ -145,6 +148,8 @@ public class JobTracker extends Service
   
   public static enum State { INITIALIZING, RUNNING }
   private static final int FS_ACCESS_RETRY_PERIOD = 10000;
+  
+  static final String JOB_INFO_FILE = "job-info";
 
   private DNSToSwitchMapping dnsToSwitchMapping;
   NetworkTopology clusterMap = new NetworkTopology();
@@ -154,9 +159,9 @@ public class JobTracker extends Service
   private final List<JobInProgressListener> jobInProgressListeners =
     new CopyOnWriteArrayList<JobInProgressListener>();
 
-  // system directories are world-wide readable and owner readable
+  // system directory is completely owned by the JobTracker
   final static FsPermission SYSTEM_DIR_PERMISSION =
-    FsPermission.createImmutable((short) 0733); // rwx-wx-wx
+    FsPermission.createImmutable((short) 0700); // rwx------
 
   // system files should have 700 permission
   final static FsPermission SYSTEM_FILE_PERMISSION =
@@ -167,7 +172,18 @@ public class JobTracker extends Service
   static final Clock DEFAULT_CLOCK = new Clock();
 
   private JobHistory jobHistory;
+  
+  private final JobTokenSecretManager jobTokenSecretManager 
+    = new JobTokenSecretManager();
+  
+  JobTokenSecretManager getJobTokenSecretManager() {
+    return jobTokenSecretManager;
+  }
 
+  private MRAsyncDiskService asyncDiskService;
+  
+  private String defaultStagingBaseDir;
+  
   /**
    * A client tried to submit a job before the Job Tracker was ready.
    */
@@ -269,6 +285,8 @@ public class JobTracker extends Service
       return RefreshAuthorizationPolicyProtocol.versionID;
     } else if (protocol.equals(AdminOperationsProtocol.class.getName())){
       return AdminOperationsProtocol.versionID;
+    } else if (protocol.equals(RefreshUserToGroupMappingsProtocol.class.getName())){
+      return RefreshUserToGroupMappingsProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to job tracker: " + protocol);
     }
@@ -441,6 +459,7 @@ public class JobTracker extends Service
     }
   }
 
+  // Assumes JobTracker, taskTrackers and trackerExpiryQueue are locked on entry
   private void removeTracker(TaskTracker tracker) {
     lostTaskTracker(tracker);
     String trackerName = tracker.getStatus().getTrackerName();
@@ -460,19 +479,10 @@ public class JobTracker extends Service
       if (job != null) {
         JobStatus status = job.getStatus();
         
-        //set the historyfile and update the tracking url
-        String trackingUrl = "";
+        //set the historyfile
         if (historyFile != null) {
           status.setHistoryFile(historyFile);
-          try {
-            trackingUrl = "http://" + getJobTrackerMachine() + ":" + 
-              getInfoPort() + "/jobdetailshistory.jsp?jobid=" + 
-              jobid + "&logFile=" + URLEncoder.encode(historyFile, "UTF-8");
-          } catch (UnsupportedEncodingException e) {
-            LOG.warn("Could not create trackingUrl", e);
-          }
         }
-        status.setTrackingUrl(trackingUrl);
         // clean up job files from the local disk
         job.cleanupLocalizedJobConf(job.getProfile().getJobID());
 
@@ -639,6 +649,7 @@ public class JobTracker extends Service
      * Increments faults(blacklist by job) for the tracker by one.
      * 
      * Adds the tracker to the potentially faulty list. 
+     * Assumes JobTracker is locked on the entry.
      * 
      * @param hostName 
      */
@@ -729,13 +740,17 @@ public class JobTracker extends Service
       }
     }
     
+    // Assumes JobTracker is locked on entry.
     private FaultInfo getFaultInfo(String hostName, 
         boolean createIfNeccessary) {
-      FaultInfo fi = potentiallyFaultyTrackers.get(hostName);
-      long now = clock.getTime();
-      if (fi == null && createIfNeccessary) {
-        fi = new FaultInfo(now);
-        potentiallyFaultyTrackers.put(hostName, fi);
+      FaultInfo fi = null;
+      synchronized (potentiallyFaultyTrackers) {
+        fi = potentiallyFaultyTrackers.get(hostName);
+        long now = clock.getTime();
+        if (fi == null && createIfNeccessary) {
+          fi = new FaultInfo(now);
+          potentiallyFaultyTrackers.put(hostName, fi);
+        }
       }
       return fi;
     }
@@ -773,6 +788,8 @@ public class JobTracker extends Service
      * Removes the tracker from blacklist and
      * from potentially faulty list, when it is restarted.
      * 
+     * Assumes JobTracker is locked on the entry.
+     * 
      * @param hostName
      */
     void markTrackerHealthy(String hostName) {
@@ -791,6 +808,7 @@ public class JobTracker extends Service
      * One fault of the tracker is discarded if there
      * are no faults during one day. So, the tracker will get a 
      * chance again to run tasks of a job.
+     * Assumes JobTracker is locked on the entry.
      * 
      * @param hostName The tracker name
      * @param now The current time
@@ -819,17 +837,21 @@ public class JobTracker extends Service
     private void removeHostCapacity(String hostName) {
       synchronized (taskTrackers) {
         // remove the capacity of trackers on this host
+        int numTrackersOnHost = 0;
         for (TaskTrackerStatus status : getStatusesOnHost(hostName)) {
           int mapSlots = status.getMaxMapSlots();
           totalMapTaskCapacity -= mapSlots;
           int reduceSlots = status.getMaxReduceSlots();
           totalReduceTaskCapacity -= reduceSlots;
+          ++numTrackersOnHost;
           getInstrumentation().addBlackListedMapSlots(
               mapSlots);
           getInstrumentation().addBlackListedReduceSlots(
               reduceSlots);
         }
-        incrBlackListedTrackers(uniqueHostsMap.remove(hostName));
+        // remove the host
+        uniqueHostsMap.remove(hostName);
+        incrBlackListedTrackers(numTrackersOnHost);
       }
     }
     
@@ -856,6 +878,7 @@ public class JobTracker extends Service
     /**
      * Whether a host is blacklisted across all the jobs. 
      * 
+     * Assumes JobTracker is locked on the entry.
      * @param hostName
      * @return
      */
@@ -869,6 +892,7 @@ public class JobTracker extends Service
       return false;
     }
     
+    // Assumes JobTracker is locked on the entry.
     int getFaultCount(String hostName) {
       synchronized (potentiallyFaultyTrackers) {
         FaultInfo fi = null;
@@ -879,6 +903,7 @@ public class JobTracker extends Service
       return 0;
     }
     
+    // Assumes JobTracker is locked on the entry.
     Set<ReasonForBlackListing> getReasonForBlackListing(String hostName) {
       synchronized (potentiallyFaultyTrackers) {
         FaultInfo fi = null;
@@ -890,6 +915,7 @@ public class JobTracker extends Service
     }
 
 
+    // Assumes JobTracker is locked on the entry.
     void setNodeHealthStatus(String hostName, boolean isHealthy, String reason) {
       FaultInfo fi = null;
       // If tracker is not healthy, create a fault info object
@@ -947,6 +973,7 @@ public class JobTracker extends Service
   /**
    * Get all task tracker statuses on given host
    * 
+   * Assumes JobTracker is locked on the entry
    * @param hostName
    * @return {@link java.util.List} of {@link TaskTrackerStatus}
    */
@@ -996,36 +1023,10 @@ public class JobTracker extends Service
       return jobsToRecover;
     }
 
-    /** Check if the given string represents a job-id or not 
-     */
-    private boolean isJobNameValid(String str) {
-      if(str == null) {
-        return false;
-      }
-      String[] parts = str.split("_");
-      if(parts.length == 3) {
-        if(parts[0].equals("job")) {
-            // other 2 parts should be parseable
-            return JobTracker.validateIdentifier(parts[1])
-                   && JobTracker.validateJobNumber(parts[2]);
-        }
-      }
-      return false;
-    }
-    
-    // checks if the job dir has the required files
-    public void checkAndAddJob(FileStatus status) throws IOException {
-      String fileName = status.getPath().getName();
-      if (isJobNameValid(fileName)) {
-        if (JobClient.isJobDirValid(status.getPath(), fs)) {
-          recoveryManager.addJobForRecovery(JobID.forName(fileName));
-          shouldRecover = true; // enable actual recovery if num-files > 1
-        } else {
-          LOG.info("Found an incomplete job directory " + fileName + "." 
-                   + " Deleting it!!");
-          fs.delete(status.getPath(), true);
-        }
-      }
+    // add the job
+    void addJobForRecovery(FileStatus status) throws IOException {
+      recoveryManager.addJobForRecovery(JobID.forName(status.getPath().getName()));
+      shouldRecover = true; // enable actual recovery if num-files > 1
     }
 
    
@@ -1132,7 +1133,16 @@ public class JobTracker extends Service
       for (JobID jobId : jobsToRecover) {
         LOG.info("Submitting job "+ jobId);
         try {
-          submitJob(jobId, restartCount);
+          Path jobInfoFile = getSystemFileForJob(jobId);
+          FSDataInputStream in = fs.open(jobInfoFile);
+          JobInfo token = new JobInfo();
+          token.readFields(in);
+          in.close();
+          UnixUserGroupInformation ugi = new UnixUserGroupInformation(
+              token.getUser().toString(), 
+              new String[]{UnixUserGroupInformation.DEFAULT_GROUP});
+          submitJob(token.getJobID(), restartCount, 
+              ugi, token.getJobSubmitDir().toString(), true, null);
           recovered++;
         } catch (Exception e) {
           LOG.warn("Could not recover job " + jobId, e);
@@ -1300,6 +1310,26 @@ public class JobTracker extends Service
 
   private final QueueManager queueManager;
 
+  //TO BE USED BY TEST CLASSES ONLY
+  //ONLY BUILD THE STATE WHICH IS REQUIRED BY TESTS
+  JobTracker() {
+    hostsReader = null;
+    retiredJobsCacheSize = 0;
+    infoServer = null;
+    queueManager = null;
+    supergroup = null;
+    taskScheduler = null;
+    trackerIdentifier = null;
+    recoveryManager = null;
+    jobHistory = null;
+    completedJobStatusStore = null;
+    tasktrackerExpiryInterval = 0;
+    myInstrumentation = new JobTrackerMetricsInst(this, new JobConf());
+    mrOwner = null;
+    defaultStagingBaseDir = "/Users"; 
+  }
+
+  
   JobTracker(JobConf conf) 
   throws IOException,InterruptedException, LoginException {
     this(conf, new Clock());
@@ -1482,6 +1512,18 @@ public class JobTracker extends Service
         if(systemDir == null) {
           systemDir = new Path(getSystemDir());    
         }
+        try {
+          FileStatus systemDirStatus = fs.getFileStatus(systemDir);
+          if (!systemDirStatus.getOwner().equals(mrOwner.getUserName())) {
+            throw new AccessControlException("The systemdir " + systemDir + 
+                " is not owned by " + mrOwner.getUserName());
+          }
+          if (!systemDirStatus.getPermission().equals(SYSTEM_DIR_PERMISSION)) {
+            LOG.warn("Incorrect permissions on " + systemDir + 
+                ". Setting it to " + SYSTEM_DIR_PERMISSION);
+            fs.setPermission(systemDir, SYSTEM_DIR_PERMISSION);
+          }
+        } catch (FileNotFoundException fnf) {} //ignore
         // Make sure that the backup data is preserved
         FileStatus[] systemDirData;
         try {
@@ -1496,7 +1538,7 @@ public class JobTracker extends Service
             && systemDirData != null) {
           for (FileStatus status : systemDirData) {
             try {
-              recoveryManager.checkAndAddJob(status);
+              recoveryManager.addJobForRecovery(status);
             } catch (Throwable t) {
               LOG.warn("Failed to add the job " + status.getPath().getName(), 
                        t);
@@ -1539,7 +1581,8 @@ public class JobTracker extends Service
     }
     
     // Same with 'localDir' except it's always on the local disk.
-    jobConf.deleteLocalFiles(SUBDIR);
+    asyncDiskService = new MRAsyncDiskService(FileSystem.getLocal(conf), conf.getLocalDirs());
+    asyncDiskService.moveAndDeleteFromEachVolume(SUBDIR);
 
     // Initialize history DONE folder
     jobHistory.initDone(conf, fs);
@@ -1561,6 +1604,8 @@ public class JobTracker extends Service
     synchronized (this) {
       completedJobStatusStore = new CompletedJobStatusStore(conf);
     }
+    Path homeDir = fs.getHomeDirectory();
+    defaultStagingBaseDir = homeDir.getParent().toString();
   }
 
   private static SimpleDateFormat getDateFormat() {
@@ -1860,8 +1905,7 @@ public class JobTracker extends Service
   // and TaskInProgress
   ///////////////////////////////////////////////////////
   void createTaskEntry(TaskAttemptID taskid, String taskTracker, TaskInProgress tip) {
-    LOG.info("Adding task " + 
-      (tip.isCleanupAttempt(taskid) ? "(cleanup)" : "") + 
+    LOG.info("Adding task (" + tip.getAttemptType(taskid) + ") " + 
       "'"  + taskid + "' to tip " + 
       tip.getTIPId() + ", for tracker '" + taskTracker + "'");
 
@@ -1894,9 +1938,10 @@ public class JobTracker extends Service
     }
 
     // taskid --> TIP
-    taskidToTIPMap.remove(taskid);
-        
-    LOG.debug("Removing task '" + taskid + "'");
+    if (taskidToTIPMap.remove(taskid) != null) {
+      // log the task removal in case of success
+      LOG.info("Removing task '" + taskid + "'");
+    }
   }
     
   /**
@@ -1925,7 +1970,7 @@ public class JobTracker extends Service
    * @param job the completed job
    */
   void markCompletedJob(JobInProgress job) {
-    for (TaskInProgress tip : job.getSetupTasks()) {
+    for (TaskInProgress tip : job.getTasks(TaskType.JOB_SETUP)) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
@@ -1935,7 +1980,7 @@ public class JobTracker extends Service
         }
       }
     }
-    for (TaskInProgress tip : job.getMapTasks()) {
+    for (TaskInProgress tip : job.getTasks(TaskType.MAP)) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
@@ -1947,7 +1992,7 @@ public class JobTracker extends Service
         }
       }
     }
-    for (TaskInProgress tip : job.getReduceTasks()) {
+    for (TaskInProgress tip : job.getTasks(TaskType.REDUCE)) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING &&
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
@@ -1975,8 +2020,10 @@ public class JobTracker extends Service
     if (markedTaskSet != null) {
       for (TaskAttemptID taskid : markedTaskSet) {
         removeTaskEntry(taskid);
-        LOG.info("Removed completed task '" + taskid + "' from '" + 
-                 taskTracker + "'");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Removed marked completed task '" + taskid + "' from '" + 
+                    taskTracker + "'");
+        }
       }
       // Clear
       trackerToMarkedTasksMap.remove(taskTracker);
@@ -1990,15 +2037,16 @@ public class JobTracker extends Service
    * 
    * @param job the job about to be 'retired'
    */
-  synchronized private void removeJobTasks(JobInProgress job) { 
-    for (TaskInProgress tip : job.getMapTasks()) {
-      for (TaskStatus taskStatus : tip.getTaskStatuses()) {
-        removeTaskEntry(taskStatus.getTaskID());
-      }
-    }
-    for (TaskInProgress tip : job.getReduceTasks()) {
-      for (TaskStatus taskStatus : tip.getTaskStatuses()) {
-        removeTaskEntry(taskStatus.getTaskID());
+  synchronized void removeJobTasks(JobInProgress job) { 
+    // iterate over all the task types
+    for (TaskType type : TaskType.values()) {
+      // iterate over all the tips of the type under consideration
+      for (TaskInProgress tip : job.getTasks(type)) {
+        // iterate over all the task-ids in the tip under consideration
+        for (TaskAttemptID id : tip.getAllTaskAttemptIDs()) {
+          // remove the task-id entry from the jobtracker
+          removeTaskEntry(id);
+        }
       }
     }
   }
@@ -2134,7 +2182,8 @@ public class JobTracker extends Service
    * 
    * @return {@link Collection} of {@link TaskTrackerStatus} 
    */
-  public Collection<TaskTrackerStatus> taskTrackers() {
+  // lock to taskTrackers should hold JT lock first.
+  public synchronized Collection<TaskTrackerStatus> taskTrackers() {
     Collection<TaskTrackerStatus> ttStatuses;
     synchronized (taskTrackers) {
       ttStatuses = 
@@ -2151,7 +2200,10 @@ public class JobTracker extends Service
    *  
    * @return {@link Collection} of active {@link TaskTrackerStatus} 
    */
-  public Collection<TaskTrackerStatus> activeTaskTrackers() {
+  // This method is synchronized to make sure that the locking order 
+  // "taskTrackers lock followed by faultyTrackers.potentiallyFaultyTrackers 
+  // lock" is under JobTracker lock to avoid deadlocks.
+  synchronized public Collection<TaskTrackerStatus> activeTaskTrackers() {
     Collection<TaskTrackerStatus> activeTrackers = 
       new ArrayList<TaskTrackerStatus>();
     synchronized (taskTrackers) {
@@ -2171,7 +2223,10 @@ public class JobTracker extends Service
    * The second element in the returned list contains the list of blacklisted
    * tracker names. 
    */
-  public List<List<String>> taskTrackerNames() {
+  // This method is synchronized to make sure that the locking order 
+  // "taskTrackers lock followed by faultyTrackers.potentiallyFaultyTrackers 
+  // lock" is under JobTracker lock to avoid deadlocks.
+  synchronized public List<List<String>> taskTrackerNames() {
     List<String> activeTrackers = 
       new ArrayList<String>();
     List<String> blacklistedTrackers = 
@@ -2197,7 +2252,10 @@ public class JobTracker extends Service
    *  
    * @return {@link Collection} of blacklisted {@link TaskTrackerStatus} 
    */
-  public Collection<TaskTrackerStatus> blacklistedTaskTrackers() {
+  // This method is synchronized to make sure that the locking order 
+  // "taskTrackers lock followed by faultyTrackers.potentiallyFaultyTrackers 
+  // lock" is under JobTracker lock to avoid deadlocks.
+  synchronized public Collection<TaskTrackerStatus> blacklistedTaskTrackers() {
     Collection<TaskTrackerStatus> blacklistedTrackers = 
       new ArrayList<TaskTrackerStatus>();
     synchronized (taskTrackers) {
@@ -2211,7 +2269,7 @@ public class JobTracker extends Service
     return blacklistedTrackers;
   }
 
-  int getFaultCount(String hostName) {
+  synchronized int getFaultCount(String hostName) {
     return faultyTrackers.getFaultCount(hostName);
   }
   
@@ -2231,7 +2289,7 @@ public class JobTracker extends Service
    * 
    * @return true if blacklisted, false otherwise
    */
-  public boolean isBlacklisted(String trackerID) {
+  synchronized public boolean isBlacklisted(String trackerID) {
     TaskTrackerStatus status = getTaskTrackerStatus(trackerID);
     if (status != null) {
       return faultyTrackers.isBlacklisted(status.getHost());
@@ -2239,7 +2297,8 @@ public class JobTracker extends Service
     return false;
   }
   
-  public TaskTrackerStatus getTaskTrackerStatus(String trackerID) {
+  // lock to taskTrackers should hold JT lock first.
+  synchronized public TaskTrackerStatus getTaskTrackerStatus(String trackerID) {
     TaskTracker taskTracker;
     synchronized (taskTrackers) {
       taskTracker = taskTrackers.get(trackerID);
@@ -2247,7 +2306,8 @@ public class JobTracker extends Service
     return (taskTracker == null) ? null : taskTracker.getStatus();
   }
 
-  public TaskTracker getTaskTracker(String trackerID) {
+  // lock to taskTrackers should hold JT lock first.
+  synchronized public TaskTracker getTaskTracker(String trackerID) {
     synchronized (taskTrackers) {
       return taskTrackers.get(trackerID);
     }
@@ -2260,7 +2320,7 @@ public class JobTracker extends Service
    * Adds a new node to the jobtracker. It involves adding it to the expiry
    * thread and adding it for resolution
    * 
-   * Assuming trackerExpiryQueue is locked on entry
+   * Assumes JobTracker, taskTrackers and trackerExpiryQueue are locked on entry
    * 
    * @param status Task Tracker's status
    */
@@ -2596,12 +2656,14 @@ public class JobTracker extends Service
         taskTrackers.remove(trackerName);
         Integer numTaskTrackersInHost = 
           uniqueHostsMap.get(oldStatus.getHost());
-        numTaskTrackersInHost --;
-        if (numTaskTrackersInHost > 0)  {
-          uniqueHostsMap.put(oldStatus.getHost(), numTaskTrackersInHost);
-        }
-        else {
-          uniqueHostsMap.remove(oldStatus.getHost());
+        if (numTaskTrackersInHost != null) {
+          numTaskTrackersInHost --;
+          if (numTaskTrackersInHost > 0)  {
+            uniqueHostsMap.put(oldStatus.getHost(), numTaskTrackersInHost);
+          }
+          else {
+            uniqueHostsMap.remove(oldStatus.getHost());
+          }
         }
       }
     }
@@ -2987,8 +3049,9 @@ public class JobTracker extends Service
    * the JobTracker alone.
    */
   public synchronized org.apache.hadoop.mapreduce.JobStatus submitJob(
-      org.apache.hadoop.mapreduce.JobID jobId) throws IOException {
-    return submitJob(JobID.downgrade(jobId));
+    org.apache.hadoop.mapreduce.JobID jobId,String jobSubmitDir, TokenStorage ts) 
+  throws IOException {  
+    return submitJob(JobID.downgrade(jobId), jobSubmitDir, ts);
   }
   
   /**
@@ -2999,46 +3062,53 @@ public class JobTracker extends Service
    * of the JobTracker.  But JobInProgress adds info that's useful for
    * the JobTracker alone.
    * @deprecated Use 
-   * {@link #submitJob(org.apache.hadoop.mapreduce.JobID)} instead
+   * {@link #submitJob(org.apache.hadoop.mapreduce.JobID, String, TokenStorage)}
+   *  instead
    */
   @Deprecated
-  public synchronized JobStatus submitJob(JobID jobId) throws IOException {
-    verifyServiceState(ServiceState.LIVE);
-    return submitJob(jobId, 0);
+  public synchronized JobStatus submitJob(
+      JobID jobId, String jobSubmitDir, TokenStorage ts) 
+  throws IOException {
+    return submitJob(jobId, 0, 
+        UserGroupInformation.getCurrentUGI(), 
+        jobSubmitDir, false, ts);
   }
 
   /**
    * Submits either a new job or a job from an earlier run.
    */
-  private synchronized JobStatus submitJob(JobID jobId, 
-      int restartCount) throws IOException {
+  private synchronized JobStatus submitJob(org.apache.hadoop.mapreduce.JobID jobID, 
+      int restartCount, UserGroupInformation ugi, String jobSubmitDir, 
+      boolean recovered, TokenStorage ts) throws IOException {
+    verifyServiceState(ServiceState.LIVE);
+    JobID jobId = JobID.downgrade(jobID);
     if(jobs.containsKey(jobId)) {
       //job already running, don't start twice
       return jobs.get(jobId).getStatus();
     }
-    
-    JobInProgress job = new JobInProgress(jobId, this, this.conf, restartCount);
+
+    //the conversion from String to Text for the UGI's username will
+    //not be required when we have the UGI to return us the username as
+    //Text.
+    JobInfo jobInfo = new JobInfo(jobId, new Text(ugi.getUserName()), 
+        new Path(jobSubmitDir));
+    JobInProgress job = 
+      new JobInProgress(this, this.conf, restartCount, jobInfo, ts);
     
     String queue = job.getProfile().getQueueName();
     if(!(queueManager.getLeafQueueNames().contains(queue))) {
-      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw new IOException("Queue \"" + queue + "\" does not exist");        
     }
     
     //check if queue is RUNNING
     if(!queueManager.isRunning(queue)) {
-      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));      
       throw new IOException("Queue \"" + queue + "\" is not running");
     }
     try {
-      // check for access
-      UserGroupInformation ugi =
-        UserGroupInformation.readFrom(job.getJobConf());
       checkAccess(job, Queue.QueueOperation.SUBMIT_JOB, ugi);
     } catch (IOException ioe) {
-       LOG.warn("Access denied for user " + job.getJobConf().getUser() 
-                + ". Ignoring job " + jobId, ioe);
-      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
+      LOG.warn("Access denied for user " + job.getJobConf().getUser() 
+          + ". Ignoring job " + jobId, ioe);
       throw ioe;
     }
 
@@ -3047,11 +3117,19 @@ public class JobTracker extends Service
     try {
       checkMemoryRequirements(job);
     } catch (IOException ioe) {
-      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw ioe;
     }
 
-   return addJob(jobId, job); 
+    if (!recovered) {
+      //Store the information in a file so that the job can be recovered
+      //later (if at all)
+      Path jobDir = getSystemDirectoryForJob(jobId);
+      FileSystem.mkdirs(fs, jobDir, new FsPermission(SYSTEM_DIR_PERMISSION));
+      FSDataOutputStream out = fs.create(getSystemFileForJob(jobId));
+      jobInfo.write(out);
+      out.close();
+    }
+    return addJob(jobId, job); 
   }
 
   /**
@@ -3076,6 +3154,9 @@ public class JobTracker extends Service
       }
     }
     myInstrumentation.submitJob(job.getJobConf(), jobId);
+    LOG.info("Job " + jobId + " added successfully for user '" 
+             + job.getJobConf().getUser() + "' to queue '" 
+             + job.getJobConf().getQueueName() + "'");
     return job.getStatus();
   }
 
@@ -3726,6 +3807,17 @@ public class JobTracker extends Service
   }
   
   /**
+   * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getStagingAreaDir()
+   */
+  public String getStagingAreaDir() {
+    Path stagingRootDir = new Path(conf.get(JTConfig.JT_STAGING_AREA_ROOT, 
+        defaultStagingBaseDir));
+    String user = UserGroupInformation.getCurrentUGI().getUserName();
+    return fs.makeQualified(new Path(stagingRootDir, 
+                                user+"/.staging")).toString();
+  }
+  
+  /**
    * @see 
    * org.apache.hadoop.mapreduce.protocol.ClientProtocol#getJobHistoryDir()
    */
@@ -3740,9 +3832,14 @@ public class JobTracker extends Service
     return jobs.get(jobid);
   }
 
-  // Get the job directory in system directory
+  //Get the job directory in system directory
   Path getSystemDirectoryForJob(JobID id) {
     return new Path(getSystemDir(), id.toString());
+  }
+  
+  //Get the job token file in system directory
+  Path getSystemFileForJob(JobID id) {
+    return new Path(getSystemDirectoryForJob(id)+"/" + JOB_INFO_FILE);
   }
 
   /**
@@ -3980,8 +4077,8 @@ public class JobTracker extends Service
           Set<TaskTracker> trackers = hostnameToTaskTracker.remove(host);
           if (trackers != null) {
             for (TaskTracker tracker : trackers) {
-              LOG.info("Decommission: Losing tracker " + tracker + 
-                       " on host " + host);
+              LOG.info("Decommission: Losing tracker " 
+                       + tracker.getTrackerName() + " on host " + host);
               removeTracker(tracker);
             }
             trackersDecommissioned += trackers.size();
@@ -4105,7 +4202,9 @@ public class JobTracker extends Service
   @Override
   public QueueInfo getQueue(String queue) throws IOException {
     JobQueueInfo jqueue = queueManager.getJobQueueInfo(queue);
-    jqueue.setJobStatuses(getJobsFromQueue(jqueue.getQueueName()));
+    if (jqueue != null) {
+      jqueue.setJobStatuses(getJobsFromQueue(jqueue.getQueueName()));
+    }
     return jqueue;
   }
 
@@ -4221,6 +4320,15 @@ public class JobTracker extends Service
             limitMaxMemForReduceTasks).append(")"));
   }
 
+   
+  @Override
+  public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
+    LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
+             UserGroupInformation.getCurrentUGI().getUserName());
+    
+    SecurityUtil.getUserToGroupsMappingService(conf).refresh();
+  }
+  
   private boolean perTaskMemoryConfigurationSetOnJT() {
     if (limitMaxMemForMapTasks == JobConf.DISABLED_MEMORY_LIMIT
         || limitMaxMemForReduceTasks == JobConf.DISABLED_MEMORY_LIMIT
@@ -4273,7 +4381,7 @@ public class JobTracker extends Service
     }
   }
   
-  String getFaultReport(String host) {
+  synchronized String getFaultReport(String host) {
     FaultInfo fi = faultyTrackers.getFaultInfo(host, false);
     if (fi == null) {
       return "";
@@ -4281,7 +4389,7 @@ public class JobTracker extends Service
     return fi.getTrackerFaultReport();
   }
 
-  Set<ReasonForBlackListing> getReasonForBlackList(String host) {
+  synchronized Set<ReasonForBlackListing> getReasonForBlackList(String host) {
     FaultInfo fi = faultyTrackers.getFaultInfo(host, false);
     if (fi == null) {
       return new HashSet<ReasonForBlackListing>();
@@ -4289,7 +4397,7 @@ public class JobTracker extends Service
     return fi.getReasonforblacklisting();
   }
   
-  Collection<BlackListInfo> getBlackListedTrackers() {
+  synchronized Collection<BlackListInfo> getBlackListedTrackers() {
     Collection<BlackListInfo> blackListedTrackers = 
       new ArrayList<BlackListInfo>();
     for(TaskTrackerStatus tracker : blacklistedTaskTrackers()) {
@@ -4314,9 +4422,12 @@ public class JobTracker extends Service
     return blackListedTrackers;
   }
   
-  /** Test method to increment the fault*/
-  
-  void incrementFaults(String hostName) {
+  /** Test method to increment the fault
+   * This method is synchronized to make sure that the locking order 
+   * "faultyTrackers.potentiallyFaultyTrackers lock followed by taskTrackers 
+   * lock" is under JobTracker lock to avoid deadlocks.
+   */
+  synchronized void incrementFaults(String hostName) {
     faultyTrackers.incrementFaults(hostName);
   }
 
@@ -4419,6 +4530,8 @@ public class JobTracker extends Service
 
     //initializes the job status store
     completedJobStatusStore = new CompletedJobStatusStore(conf);
+    Path homeDir = fs.getHomeDirectory();
+    defaultStagingBaseDir = homeDir.getParent().toString();
   }
 
   /**

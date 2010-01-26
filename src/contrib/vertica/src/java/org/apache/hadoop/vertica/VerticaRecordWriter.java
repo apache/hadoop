@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -99,8 +100,9 @@ public class VerticaRecordWriter extends RecordWriter<Text, VerticaRecord> {
   @Override
   public void close(TaskAttemptContext context) throws IOException {
     try {
-      if (statement != null)
+      if (statement != null) {
         finishCopyIn.invoke(statement); // statement.finishCopyIn();
+      }
     } catch (Exception e) {
       throw new IOException(e);
     }

@@ -25,4 +25,12 @@ to call at top-level: ant deploy-contrib compile-core-test
 
   <import file="../build-contrib.xml"/>
 
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+  	<copy file="src/java/mapred-queues.xml.template"
+  	      tofile="${build.docs}/mapred-queues-capacity-scheduler.xml"/>
+    <xslt in="${conf.dir}/capacity-scheduler.xml.template"
+    	out="${build.docs}/capacity-scheduler-conf.html"
+    	style="${conf.dir}/configuration.xsl"/>
+  </target>
+
 </project>

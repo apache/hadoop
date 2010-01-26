@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import junit.extensions.TestSetup;
@@ -28,7 +29,10 @@ import junit.framework.TestSuite;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -178,4 +182,56 @@ public class TestMiniMRDFSSort extends TestCase {
   public void testNoJvmReuse() throws Exception {
     runJvmReuseTest(mrCluster.createJobConf(), false);
   }
+
+  private static class BadPartitioner
+      implements Partitioner<LongWritable,Text> {
+    boolean low;
+    public void configure(JobConf conf) {
+      low = conf.getBoolean("test.testmapred.badpartition", true);
+    }
+    public int getPartition(LongWritable k, Text v, int numPartitions) {
+      return low ? -1 : numPartitions;
+    }
+  }
+
+  public void testPartitioner() throws Exception {
+    JobConf conf = mrCluster.createJobConf();
+    conf.setPartitionerClass(BadPartitioner.class);
+    conf.setNumReduceTasks(3);
+    FileSystem fs = FileSystem.get(conf);
+    Path testdir =
+      new Path("blah").makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    Path inFile = new Path(testdir, "blah");
+    DataOutputStream f = fs.create(inFile);
+    f.writeBytes("blah blah blah\n");
+    f.close();
+    FileInputFormat.setInputPaths(conf, inFile);
+    FileOutputFormat.setOutputPath(conf, new Path(testdir, "out"));
+    conf.setMapperClass(IdentityMapper.class);
+    conf.setReducerClass(IdentityReducer.class);
+    conf.setOutputKeyClass(LongWritable.class);
+    conf.setOutputValueClass(Text.class);
+    conf.setMaxMapAttempts(1);
+
+    // partition too low
+    conf.setBoolean("test.testmapred.badpartition", true);
+    boolean pass = true;
+    try {
+      JobClient.runJob(conf);
+    } catch (IOException e) {
+      pass = false;
+    }
+    assertFalse("should fail for partition < 0", pass);
+
+    // partition too high
+    conf.setBoolean("test.testmapred.badpartition", false);
+    pass = true;
+    try {
+      JobClient.runJob(conf);
+    } catch (IOException e) {
+      pass = false;
+    }
+    assertFalse("should fail for partition >= numPartitions", pass);
+  }
+
 }

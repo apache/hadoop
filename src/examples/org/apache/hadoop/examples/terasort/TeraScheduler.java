@@ -25,21 +25,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.terasort.TeraInputFormat.TeraFileSplit;
-import org.apache.hadoop.mapred.FileSplit;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
 class TeraScheduler {
+  static String USE = "mapreduce.terasort.use.terascheduler";
   private static final Log LOG = LogFactory.getLog(TeraScheduler.class);
-  private InputSplit[] splits;
+  private Split[] splits;
   private List<Host> hosts = new ArrayList<Host>();
   private int slotsPerHost;
   private int remainingSplits = 0;
   private FileSplit[] realSplits = null;
 
-  static class InputSplit {
+  static class Split {
     String filename;
     boolean isAssigned = false;
     List<Host> locations = new ArrayList<Host>();
-    InputSplit(String filename) {
+    Split(String filename) {
       this.filename = filename;
     }
     public String toString() {
@@ -55,7 +58,7 @@ class TeraScheduler {
   }
   static class Host {
     String hostname;
-    List<InputSplit> splits = new ArrayList<InputSplit>();
+    List<Split> splits = new ArrayList<Split>();
     Host(String hostname) {
       this.hostname = hostname;
     }
@@ -92,11 +95,11 @@ class TeraScheduler {
     }
     // read the blocks
     List<String> splitLines = readFile(splitFilename);
-    splits = new InputSplit[splitLines.size()];
+    splits = new Split[splitLines.size()];
     remainingSplits = 0;
     for(String line: splitLines) {
       StringTokenizer itr = new StringTokenizer(line);
-      InputSplit newSplit = new InputSplit(itr.nextToken());
+      Split newSplit = new Split(itr.nextToken());
       splits[remainingSplits++] = newSplit;
       while (itr.hasMoreTokens()) {
         Host host = hostIds.get(itr.nextToken());
@@ -109,11 +112,11 @@ class TeraScheduler {
   public TeraScheduler(FileSplit[] realSplits,
                        Configuration conf) throws IOException {
     this.realSplits = realSplits;
-    this.slotsPerHost = conf.getInt("mapred.tasktracker.map.tasks.maximum", 4);
+    this.slotsPerHost = conf.getInt(TTConfig.TT_MAP_SLOTS, 4);
     Map<String, Host> hostTable = new HashMap<String, Host>();
-    splits = new InputSplit[realSplits.length];
+    splits = new Split[realSplits.length];
     for(FileSplit realSplit: realSplits) {
-      InputSplit split = new InputSplit(realSplit.getPath().toString());
+      Split split = new Split(realSplit.getPath().toString());
       splits[remainingSplits++] = split;
       for(String hostname: realSplit.getLocations()) {
         Host host = hostTable.get(hostname);
@@ -148,8 +151,8 @@ class TeraScheduler {
     int tasksToPick = Math.min(slotsPerHost, 
                                (int) Math.ceil((double) remainingSplits / 
                                                hosts.size()));
-    InputSplit[] best = new InputSplit[tasksToPick];
-    for(InputSplit cur: host.splits) {
+    Split[] best = new Split[tasksToPick];
+    for(Split cur: host.splits) {
       LOG.debug("  examine: " + cur.filename + " " + cur.locations.size());
       int i = 0;
       while (i < tasksToPick && best[i] != null && 
@@ -177,7 +180,7 @@ class TeraScheduler {
       }
     }
     // for the non-chosen blocks, remove this host
-    for(InputSplit cur: host.splits) {
+    for(Split cur: host.splits) {
       if (!cur.isAssigned) {
         cur.locations.remove(host);
       }
@@ -200,7 +203,7 @@ class TeraScheduler {
    *    best host as the only host.
    * @throws IOException
    */
-  public FileSplit[] getNewFileSplits() throws IOException {
+  public List<InputSplit> getNewFileSplits() throws IOException {
     solve();
     FileSplit[] result = new FileSplit[realSplits.length];
     int left = 0;
@@ -215,7 +218,11 @@ class TeraScheduler {
         result[right--] = realSplits[i];
       }
     }
-    return result;
+    List<InputSplit> ret = new ArrayList<InputSplit>();
+    for (FileSplit fs : result) {
+      ret.add(fs);
+    }
+    return ret;
   }
 
   public static void main(String[] args) throws IOException {
@@ -225,7 +232,7 @@ class TeraScheduler {
     }
     LOG.info("starting solve");
     problem.solve();
-    List<InputSplit> leftOvers = new ArrayList<InputSplit>();
+    List<Split> leftOvers = new ArrayList<Split>();
     for(int i=0; i < problem.splits.length; ++i) {
       if (problem.splits[i].isAssigned) {
         System.out.println("sched: " + problem.splits[i]);        
@@ -233,7 +240,7 @@ class TeraScheduler {
         leftOvers.add(problem.splits[i]);
       }
     }
-    for(InputSplit cur: leftOvers) {
+    for(Split cur: leftOvers) {
       System.out.println("left: " + cur);
     }
     System.out.println("left over: " + leftOvers.size());

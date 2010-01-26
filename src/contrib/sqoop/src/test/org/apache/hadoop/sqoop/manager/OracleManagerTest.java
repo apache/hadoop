@@ -27,7 +27,13 @@ import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
+import java.util.Calendar;
+import java.util.TimeZone;
 import java.util.ArrayList;
+import java.text.ParseException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 import junit.framework.TestCase;
 
@@ -39,7 +45,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.ImportJobTestCase;
 import org.apache.hadoop.sqoop.util.FileListing;
@@ -78,7 +84,7 @@ public class OracleManagerTest extends ImportJobTestCase {
 
   @Before
   public void setUp() {
-    ImportOptions options = new ImportOptions(CONNECT_STRING, TABLE_NAME);
+    SqoopOptions options = new SqoopOptions(CONNECT_STRING, TABLE_NAME);
     options.setUsername(ORACLE_USER_NAME);
     options.setPassword(ORACLE_USER_PASS);
 
@@ -101,14 +107,16 @@ public class OracleManagerTest extends ImportJobTestCase {
           + "start_date DATE, "
           + "salary FLOAT, "
           + "dept VARCHAR2(32), "
+          + "timestamp_tz TIMESTAMP WITH TIME ZONE, "
+          + "timestamp_ltz TIMESTAMP WITH LOCAL TIME ZONE, "
           + "PRIMARY KEY (id))");
 
       st.executeUpdate("INSERT INTO " + TABLE_NAME + " VALUES("
-          + "1,'Aaron',to_date('2009-05-14','yyyy-mm-dd'),1000000.00,'engineering')");
+          + "1,'Aaron',to_date('2009-05-14','yyyy-mm-dd'),1000000.00,'engineering','29-DEC-09 12.00.00.000000000 PM','29-DEC-09 12.00.00.000000000 PM')");
       st.executeUpdate("INSERT INTO " + TABLE_NAME + " VALUES("
-          + "2,'Bob',to_date('2009-04-20','yyyy-mm-dd'),400.00,'sales')");
+          + "2,'Bob',to_date('2009-04-20','yyyy-mm-dd'),400.00,'sales','30-DEC-09 12.00.00.000000000 PM','30-DEC-09 12.00.00.000000000 PM')");
       st.executeUpdate("INSERT INTO " + TABLE_NAME + " VALUES("
-          + "3,'Fred',to_date('2009-01-23','yyyy-mm-dd'),15.00,'marketing')");
+          + "3,'Fred',to_date('2009-01-23','yyyy-mm-dd'),15.00,'marketing','31-DEC-09 12.00.00.000000000 PM','31-DEC-09 12.00.00.000000000 PM')");
       connection.commit();
     } catch (SQLException sqlE) {
       LOG.error("Encountered SQL Exception: " + sqlE);
@@ -180,7 +188,7 @@ public class OracleManagerTest extends ImportJobTestCase {
       ioe.printStackTrace();
       fail(ioe.toString());
     }
-
+      
     File f = new File(filePath.toString());
     assertTrue("Could not find imported data file", f.exists());
     BufferedReader r = null;
@@ -188,7 +196,7 @@ public class OracleManagerTest extends ImportJobTestCase {
       // Read through the file and make sure it's all there.
       r = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
       for (String expectedLine : expectedResults) {
-        assertEquals(expectedLine, r.readLine());
+        compareRecords(expectedLine, r.readLine());
       }
     } catch (IOException ioe) {
       LOG.error("Got IOException verifying results: " + ioe.toString());
@@ -208,11 +216,80 @@ public class OracleManagerTest extends ImportJobTestCase {
     // a strict DATE type. Thus we include HH:MM:SS.mmmmm below.
     // See http://www.oracle.com/technology/tech/java/sqlj_jdbc/htdocs/jdbc_faq.html#08_01
     String [] expectedResults = {
-        "1,Aaron,2009-05-14 00:00:00.0,1000000,engineering",
-        "2,Bob,2009-04-20 00:00:00.0,400,sales",
-        "3,Fred,2009-01-23 00:00:00.0,15,marketing"
+        "1,Aaron,2009-05-14 00:00:00.0,1000000,engineering,2009-12-29 12:00:00.0,2009-12-29 12:00:00.0",
+        "2,Bob,2009-04-20 00:00:00.0,400,sales,2009-12-30 12:00:00.0,2009-12-30 12:00:00.0",
+        "3,Fred,2009-01-23 00:00:00.0,15,marketing,2009-12-31 12:00:00.0,2009-12-31 12:00:00.0"
     };
 
     runOracleTest(expectedResults);
+  }
+
+  /**
+   * Compare two lines
+   * @param expectedLine    expected line
+   * @param receivedLine    received line
+   * @throws IOException    exception during lines comparison
+   */
+  private void compareRecords(String expectedLine, String receivedLine) throws IOException {
+    // handle null case
+    if (expectedLine == null || receivedLine == null) {
+      return;
+    }
+
+    // check if lines are equal
+    if (expectedLine.equals(receivedLine)) {
+      return;
+    }
+
+    // check if size is the same
+    String [] expectedValues = expectedLine.split(",");
+    String [] receivedValues = receivedLine.split(",");
+    if (expectedValues.length != 7 || receivedValues.length != 7) {
+      LOG.error("Number of expected fields did not match number of received fields");
+      throw new IOException("Number of expected fields did not match number of received fields");
+    }
+
+    // check first 5 values
+    boolean mismatch = false;
+    for (int i = 0; !mismatch && i < 5; i++) {
+      mismatch = !expectedValues[i].equals(receivedValues[i]);
+    }
+    if (mismatch) {
+      throw new IOException("Expected:<" + expectedLine + "> but was:<" + receivedLine + ">");
+    }
+
+    Date expectedDate = null;
+    Date receivedDate = null;
+    DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+    int offset = TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 3600000;
+    for (int i = 5; i < 7; i++) {
+      // parse expected timestamp
+      try {
+        expectedDate = df.parse(expectedValues[i]);
+      } catch (ParseException ex) {
+        LOG.error("Could not parse expected timestamp: " + expectedValues[i]);
+        throw new IOException("Could not parse expected timestamp: " + expectedValues[i]);
+      }
+
+      // parse received timestamp
+      try {
+        receivedDate = df.parse(receivedValues[i]);
+      } catch (ParseException ex) {
+        LOG.error("Could not parse received timestamp: " + receivedValues[i]);
+        throw new IOException("Could not parse received timestamp: " + receivedValues[i]);
+      }
+
+      // compare two timestamps considering timezone offset
+      Calendar expectedCal = Calendar.getInstance();
+      expectedCal.setTime(expectedDate);
+      expectedCal.add(Calendar.HOUR, offset);
+
+      Calendar receivedCal = Calendar.getInstance();
+      receivedCal.setTime(receivedDate);
+
+      if (!expectedCal.equals(receivedCal)) {
+        throw new IOException("Expected:<" + expectedLine + "> but was:<" + receivedLine + ">, while timezone offset is: " + offset);
+      }
+    }
   }
 }

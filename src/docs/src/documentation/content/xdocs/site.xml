@@ -34,6 +34,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   
    <docs label="Getting Started"> 
 		<overview   				label="Overview" 					href="index.html" />
+		<setup label="Cluster Setup" href="cluster_setup.html"/>
 		<mapred    				label="MapReduce Tutorial" 	href="mapred_tutorial.html" />
 		 <streaming 				label="Hadoop Streaming"  href="streaming.html" />
    </docs>	
@@ -71,11 +72,18 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <jira      href="http://hadoop.apache.org/mapreduce/issue_tracking.html"/>
     <wiki      href="http://wiki.apache.org/hadoop/MapReduce" />
     <faq       href="http://wiki.apache.org/hadoop/MapReduce/FAQ" />
-    
     <common-default href="http://hadoop.apache.org/common/docs/current/common-default.html" />
     <hdfs-default href="http://hadoop.apache.org/hdfs/docs/current/hdfs-default.html" />
     <mapred-default href="http://hadoop.apache.org/mapreduce/docs/current/mapred-default.html" />
-    
+    <mapred-queues href="http://hadoop.apache.org/mapreduce/docs/current/mapred-queues.xml" />
+    <mapred-queues-capacity-scheduler href="http://hadoop.apache.org/mapreduce/docs/current/mapred-queues-capacity-scheduler.xml" />
+    <capacity-scheduler-conf href="http://hadoop.apache.org/mapreduce/docs/current/capacity-scheduler-conf.html" />
+
+    <single-node-setup href="http://hadoop.apache.org/common/docs/current/single_node_setup.html">
+      <PreReqs href="#PreReqs" />
+      <Download href="#Download" />
+    </single-node-setup>
+
     <zlib      href="http://www.zlib.net/" />
     <gzip      href="http://www.gzip.org/" />
     <bzip      href="http://www.bzip.org/" />

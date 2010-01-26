@@ -580,8 +580,8 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
     -D map.output.key.field.separa=. \
     -D mapreduce.partition.keypartitioner.options=-k1,2 \
     -D mapreduce.fieldsel.data.field.separator=. \
-    -D mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec=6,5,1-3:0- \
-    -D mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec=0-2:5- \
+    -D mapreduce.fieldsel.map.output.key.value.fields.spec=6,5,1-3:0- \
+    -D mapreduce.fieldsel.reduce.output.key.value.fields.spec=0-2:5- \
     -D mapreduce.job.reduces=12 \
     -input myInputDirs \
     -output myOutputDir \
@@ -591,13 +591,13 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 </source>
 
 <p>
-The option "-D mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec=6,5,1-3:0-" specifies key/value selection for the map outputs. 
+The option "-D mapreduce.fieldsel.map.output.key.value.fields.spec=6,5,1-3:0-" specifies key/value selection for the map outputs. 
 Key selection spec and value selection spec are separated by ":". 
 In this case, the map output key will consist of fields 6, 5, 1, 2, and 3. 
 The map output value will consist of all fields (0- means field 0 and all the subsequent fields). 
 </p>
 <p>
-The option "-D mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec=0-2:5-" specifies 
+The option "-D mapreduce.fieldsel.reduce.output.key.value.fields.spec=0-2:5-" specifies 
 key/value selection for the reduce outputs. In this case, the reduce 
 output key will consist of fields 0, 1, 2 (corresponding to the original 
 fields 6, 5, 1). The reduce output value will consist of all fields starting

@@ -92,6 +92,8 @@ public class TestSeveral extends TestCase {
 
         TestMiniMRWithDFSWithDistinctUsers.mkdir(fs, "/user");
         TestMiniMRWithDFSWithDistinctUsers.mkdir(fs, "/mapred");
+        TestMiniMRWithDFSWithDistinctUsers.mkdir(fs, 
+            conf.get(JTConfig.JT_STAGING_AREA_ROOT));
 
         UnixUserGroupInformation MR_UGI = 
           TestMiniMRWithDFSWithDistinctUsers.createUGI(
@@ -105,6 +107,10 @@ public class TestSeveral extends TestCase {
         mrCluster =   new MiniMRCluster(0, 0,
             numTT, dfs.getFileSystem().getUri().toString(), 
             1, null, null, MR_UGI, new JobConf());
+        // make cleanup inline sothat validation of existence of these directories
+        // can be done
+        mrCluster.setInlineCleanupThreads();
+
         mrCluster.getJobTrackerRunner().getJobTracker()
         .addJobInProgressListener(myListener);
       }

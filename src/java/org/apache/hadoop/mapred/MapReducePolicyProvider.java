@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.Service;
@@ -36,6 +37,8 @@ public class MapReducePolicyProvider extends PolicyProvider {
                   TaskUmbilicalProtocol.class),
       new Service("security.refresh.policy.protocol.acl", 
                   RefreshAuthorizationPolicyProtocol.class),
+      new Service("security.refresh.usertogroups.mappings.protocol.acl", 
+                  RefreshUserToGroupMappingsProtocol.class),
   };
   
   @Override

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.sqoop.manager;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 
 /**
  * A set of parameters describing an import operation; this is passed to
@@ -28,9 +28,9 @@ public class ImportJobContext {
 
   private String tableName;
   private String jarFile;
-  private ImportOptions options;
+  private SqoopOptions options;
 
-  public ImportJobContext(final String table, final String jar, final ImportOptions opts) {
+  public ImportJobContext(final String table, final String jar, final SqoopOptions opts) {
     this.tableName = table;
     this.jarFile = jar;
     this.options = opts;
@@ -48,8 +48,8 @@ public class ImportJobContext {
     return jarFile;
   }
 
-  /** @return the ImportOptions configured by the user */
-  public ImportOptions getOptions() {
+  /** @return the SqoopOptions configured by the user */
+  public SqoopOptions getOptions() {
     return options;
   }
 }

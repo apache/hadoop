@@ -20,7 +20,6 @@
 <project name="vaidya" default="jar">
 
 	<import file="../build-contrib.xml" />
-        <import file="../../../build.xml" />
 
 	<target name="init">
 		<mkdir dir="${build.dir}" />

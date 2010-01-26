@@ -28,11 +28,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 
 import junit.framework.TestCase;
 
@@ -48,7 +51,10 @@ import junit.framework.TestCase;
  * <li>Make the built binary to setuid executable</li>
  * <li>Execute following targets:
  * <code>ant test -Dcompile.c++=true -Dtaskcontroller-path=<em>path to built binary</em> 
- * -Dtaskcontroller-ugi=<em>user,group</em></code></li>
+ * -Dtaskcontroller-ugi=<em>user,group</em></code>
+ *  <br/>(Note that "path to built binary" means the directory containing task-controller -
+ *  not the actual complete path of the binary itself. This path must end in ".../bin")
+ *  </li>
  * </ol>
  * 
  */
@@ -71,6 +77,24 @@ public class ClusterWithLinuxTaskController extends TestCase {
 
     void setTaskControllerExe(String execPath) {
       this.taskControllerExePath = execPath;
+    }
+
+    volatile static int attemptedSigQuits = 0;
+    volatile static int failedSigQuits = 0;
+
+    /** Work like LinuxTaskController, but also count the number of
+      * attempted and failed SIGQUIT sends via the task-controller
+      * executable.
+      */
+    @Override
+    void dumpTaskStack(TaskControllerContext context) {
+      attemptedSigQuits++;
+      try {
+        signalTask(context, TaskCommands.SIGQUIT_TASK_JVM);
+      } catch (Exception e) {
+        LOG.warn("Execution sending SIGQUIT: " + StringUtils.stringifyException(e));
+        failedSigQuits++;
+      }
     }
   }
 
@@ -120,10 +144,10 @@ public class ClusterWithLinuxTaskController extends TestCase {
     String[] splits = ugi.split(",");
     taskControllerUser = new UnixUserGroupInformation(splits);
     clusterConf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
-    createHomeDirectory(clusterConf);
+    createHomeAndStagingDirectory(clusterConf);
   }
 
-  private void createHomeDirectory(JobConf conf)
+  private void createHomeAndStagingDirectory(JobConf conf)
       throws IOException {
     FileSystem fs = dfsCluster.getFileSystem();
     String path = "/user/" + taskControllerUser.getUserName();
@@ -131,6 +155,10 @@ public class ClusterWithLinuxTaskController extends TestCase {
     LOG.info("Creating Home directory : " + homeDirectory);
     fs.mkdirs(homeDirectory);
     changePermission(conf, homeDirectory);
+    Path stagingArea = new Path(conf.get(JTConfig.JT_STAGING_AREA_ROOT));
+    LOG.info("Creating Staging root directory : " + stagingArea);
+    fs.mkdirs(stagingArea);
+    fs.setPermission(stagingArea, new FsPermission((short)0777));
   }
 
   private void changePermission(JobConf conf, Path p)

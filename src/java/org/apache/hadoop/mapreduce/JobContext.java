@@ -55,6 +55,7 @@ public interface JobContext {
   public static final String JAR = "mapreduce.job.jar";
   public static final String ID = "mapreduce.job.id";
   public static final String JOB_NAME = "mapreduce.job.name";
+  public static final String JAR_UNPACK_PATTERN = "mapreduce.job.jar.unpack.pattern";
   public static final String USER_NAME = "mapreduce.job.user.name";
   public static final String PRIORITY = "mapreduce.job.priority";
   public static final String QUEUE_NAME = "mapreduce.job.queuename";
@@ -106,6 +107,10 @@ public interface JobContext {
     "mapreduce.job.cache.files.timestamps";
   public static final String CACHE_ARCHIVES_TIMESTAMPS = 
     "mapreduce.job.cache.archives.timestamps";
+  public static final String CACHE_FILE_VISIBILITIES = 
+    "mapreduce.job.cache.files.visibilities";
+  public static final String CACHE_ARCHIVES_VISIBILITIES = 
+    "mapreduce.job.cache.archives.visibilities";
   public static final String CACHE_SYMLINK = 
     "mapreduce.job.cache.symlink.create";
   
@@ -162,7 +167,7 @@ public interface JobContext {
     "mapreduce.map.skip.proc-count.auto-incr";
   public static final String MAP_SKIP_MAX_RECORDS = 
     "mapreduce.map.skip.maxrecords";
-  public static final String MAP_COMBINE_MIN_SPISS = 
+  public static final String MAP_COMBINE_MIN_SPILLS = 
     "mapreduce.map.combine.minspills";
   public static final String MAP_OUTPUT_COMPRESS = 
     "mapreduce.map.output.compress";
@@ -212,6 +217,10 @@ public interface JobContext {
     "mapreduce.reduce.shuffle.connect.timeout";
   public static final String SHUFFLE_READ_TIMEOUT = 
     "mapreduce.reduce.shuffle.read.timeout";
+  public static final String SHUFFLE_FETCH_FAILURES = 
+    "mapreduce.reduce.shuffle.maxfetchfailures";
+  public static final String SHUFFLE_NOTIFY_READERROR = 
+    "mapreduce.reduce.shuffle.notify.readerror";
   public static final String REDUCE_SKIP_INCR_PROC_COUNT = 
     "mapreduce.reduce.skip.proc-count.auto-incr";
   public static final String REDUCE_SKIP_MAXGROUPS = 

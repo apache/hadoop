@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat;
 import org.apache.hadoop.mapreduce.lib.db.DBWritable;
 
 import org.apache.hadoop.sqoop.ConnFactory;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.orm.TableClassName;
 import org.apache.hadoop.sqoop.util.ClassLoaderStack;
@@ -53,9 +53,9 @@ public class DataDrivenImportJob {
 
   public static final Log LOG = LogFactory.getLog(DataDrivenImportJob.class.getName());
 
-  private ImportOptions options;
+  private SqoopOptions options;
 
-  public DataDrivenImportJob(final ImportOptions opts) {
+  public DataDrivenImportJob(final SqoopOptions opts) {
     this.options = opts;
   }
 
@@ -74,7 +74,8 @@ public class DataDrivenImportJob {
 
     String tableClassName = new TableClassName(options).getClassForTable(tableName);
 
-    boolean isLocal = "local".equals(conf.get("mapred.job.tracker"));
+    boolean isLocal = "local".equals(conf.get("mapreduce.jobtracker.address"))
+        || "local".equals(conf.get("mapred.job.tracker"));
     ClassLoader prevClassLoader = null;
     if (isLocal) {
       // If we're using the LocalJobRunner, then instead of using the compiled jar file
@@ -100,7 +101,7 @@ public class DataDrivenImportJob {
         outputPath = new Path(tableName);
       }
 
-      if (options.getFileLayout() == ImportOptions.FileLayout.TextFile) {
+      if (options.getFileLayout() == SqoopOptions.FileLayout.TextFile) {
         job.setOutputFormatClass(RawKeyTextOutputFormat.class);
         job.setMapperClass(TextImportMapper.class);
         job.setOutputKeyClass(Text.class);
@@ -109,7 +110,7 @@ public class DataDrivenImportJob {
           FileOutputFormat.setCompressOutput(job, true);
           FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
         }
-      } else if (options.getFileLayout() == ImportOptions.FileLayout.SequenceFile) {
+      } else if (options.getFileLayout() == SqoopOptions.FileLayout.SequenceFile) {
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
         job.setMapperClass(AutoProgressMapper.class);
         if (options.shouldUseCompression()) {
@@ -123,7 +124,7 @@ public class DataDrivenImportJob {
 
       int numMapTasks = options.getNumMappers();
       if (numMapTasks < 1) {
-        numMapTasks = ImportOptions.DEFAULT_NUM_MAPPERS;
+        numMapTasks = SqoopOptions.DEFAULT_NUM_MAPPERS;
         LOG.warn("Invalid mapper count; using " + numMapTasks + " mappers.");
       }
       job.getConfiguration().setInt("mapred.map.tasks", numMapTasks);
@@ -148,14 +149,23 @@ public class DataDrivenImportJob {
         colNames = mgr.getColumnNames(tableName);
       }
 
+      String [] sqlColNames = null;
+      if (null != colNames) {
+        sqlColNames = new String[colNames.length];
+        for (int i = 0; i < colNames.length; i++) {
+          sqlColNames[i] = mgr.escapeColName(colNames[i]);
+        }
+      }
+
       // It's ok if the where clause is null in DBInputFormat.setInput.
       String whereClause = options.getWhereClause();
 
       // We can't set the class properly in here, because we may not have the
       // jar loaded in this JVM. So we start by calling setInput() with DBWritable,
       // and then overriding the string manually.
-      DataDrivenDBInputFormat.setInput(job, DBWritable.class, tableName, whereClause,
-          splitByCol, colNames);
+      DataDrivenDBInputFormat.setInput(job, DBWritable.class,
+          mgr.escapeTableName(tableName), whereClause,
+          mgr.escapeColName(splitByCol), sqlColNames);
       job.getConfiguration().set(DBConfiguration.INPUT_CLASS_PROPERTY, tableClassName);
 
       PerfCounters counters = new PerfCounters();

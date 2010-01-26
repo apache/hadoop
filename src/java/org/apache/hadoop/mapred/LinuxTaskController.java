@@ -29,7 +29,9 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -83,12 +85,14 @@ class LinuxTaskController extends TaskController {
   enum TaskCommands {
     INITIALIZE_USER,
     INITIALIZE_JOB,
-    INITIALIZE_DISTRIBUTEDCACHE,
+    INITIALIZE_DISTRIBUTEDCACHE_FILE,
     LAUNCH_TASK_JVM,
     INITIALIZE_TASK,
     TERMINATE_TASK_JVM,
     KILL_TASK_JVM,
     RUN_DEBUG_SCRIPT,
+    SIGQUIT_TASK_JVM,
+    ENABLE_TASK_FOR_CLEANUP
   }
 
   /**
@@ -228,10 +232,73 @@ class LinuxTaskController extends TaskController {
   @Override
   void initializeTask(TaskControllerContext context)
       throws IOException {
-    LOG.debug("Going to do " + TaskCommands.INITIALIZE_TASK.toString()
-        + " for " + context.task.getTaskID().toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Going to do " + TaskCommands.INITIALIZE_TASK.toString()
+                + " for " + context.task.getTaskID().toString());
+    }
     runCommand(TaskCommands.INITIALIZE_TASK, context.env.conf.getUser(),
         buildInitializeTaskArgs(context), context.env.workDir, context.env.env);
+  }
+
+  /**
+   * Builds the args to be passed to task-controller for enabling of task for
+   * cleanup. Last arg in this List is either $attemptId or $attemptId/work
+   */
+  private List<String> buildTaskCleanupArgs(
+      TaskControllerPathDeletionContext context) {
+    List<String> commandArgs = new ArrayList<String>(3);
+    commandArgs.add(context.mapredLocalDir.toUri().getPath());
+    commandArgs.add(context.task.getJobID().toString());
+
+    String workDir = "";
+    if (context.isWorkDir) {
+      workDir = "/work";
+    }
+    if (context.task.isTaskCleanupTask()) {
+      commandArgs.add(context.task.getTaskID() + TaskTracker.TASK_CLEANUP_SUFFIX
+                      + workDir);
+    } else {
+      commandArgs.add(context.task.getTaskID() + workDir);
+    }
+
+    return commandArgs;
+  }
+
+  /**
+   * Enables the task for cleanup by changing permissions of the specified path
+   * in the local filesystem
+   */
+  @Override
+  void enableTaskForCleanup(PathDeletionContext context)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Going to do " + TaskCommands.ENABLE_TASK_FOR_CLEANUP.toString()
+                + " for " + context.fullPath);
+    }
+
+    if (context instanceof TaskControllerPathDeletionContext) {
+      TaskControllerPathDeletionContext tContext =
+        (TaskControllerPathDeletionContext) context;
+    
+      if (tContext.task.getUser() != null &&
+          tContext.fs instanceof LocalFileSystem) {
+        try {
+          runCommand(TaskCommands.ENABLE_TASK_FOR_CLEANUP,
+                   tContext.task.getUser(),
+                   buildTaskCleanupArgs(tContext), null, null);
+        } catch(IOException e) {
+          LOG.warn("Uanble to change permissions for " + tContext.fullPath);
+        }
+      }
+      else {
+        throw new IllegalArgumentException("Either user is null or the "  +
+                               "file system is not local file system.");
+      }
+    }
+    else {
+      throw new IllegalArgumentException("PathDeletionContext provided is not "
+          + "TaskControllerPathDeletionContext.");
+    }
   }
 
   private void logOutput(String output) {
@@ -408,12 +475,21 @@ class LinuxTaskController extends TaskController {
   }
 
   @Override
-  public void initializeDistributedCache(InitializationContext context)
+  public void initializeDistributedCacheFile(DistributedCacheFileContext context)
       throws IOException {
-    LOG.debug("Going to initialize distributed cache for " + context.user
-        + " on the TT");
-    runCommand(TaskCommands.INITIALIZE_DISTRIBUTEDCACHE, context.user,
-        new ArrayList<String>(), context.workDir, null);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Going to initialize distributed cache for " + context.user
+          + " with localizedBaseDir " + context.localizedBaseDir + 
+          " and uniqueString " + context.uniqueString);
+    }
+    List<String> args = new ArrayList<String>();
+    // Here, uniqueString might start with '-'. Adding -- in front of the 
+    // arguments indicates that they are non-option parameters.
+    args.add("--");
+    args.add(context.localizedBaseDir.toString());
+    args.add(context.uniqueString);
+    runCommand(TaskCommands.INITIALIZE_DISTRIBUTEDCACHE_FILE, context.user,
+        args, context.workDir, null);
   }
 
   @Override
@@ -443,21 +519,22 @@ class LinuxTaskController extends TaskController {
   }
   
   /**
-   * Convenience method used to sending appropriate Kill signal to the task 
+   * Convenience method used to sending appropriate signal to the task
    * VM
    * @param context
    * @param command
    * @throws IOException
    */
-  private void finishTask(TaskControllerContext context,
+  protected void signalTask(TaskControllerContext context,
       TaskCommands command) throws IOException{
     if(context.task == null) {
-      LOG.info("Context task null not killing the JVM");
+      LOG.info("Context task is null; not signaling the JVM");
       return;
     }
     ShellCommandExecutor shExec = buildTaskControllerExecutor(
         command, context.env.conf.getUser(), 
-        buildKillTaskCommandArgs(context), context.env.workDir, context.env.env);
+        buildKillTaskCommandArgs(context), context.env.workDir,
+        context.env.env);
     try {
       shExec.execute();
     } catch (Exception e) {
@@ -469,7 +546,7 @@ class LinuxTaskController extends TaskController {
   @Override
   void terminateTask(TaskControllerContext context) {
     try {
-      finishTask(context, TaskCommands.TERMINATE_TASK_JVM);
+      signalTask(context, TaskCommands.TERMINATE_TASK_JVM);
     } catch (Exception e) {
       LOG.warn("Exception thrown while sending kill to the Task VM " + 
           StringUtils.stringifyException(e));
@@ -479,9 +556,19 @@ class LinuxTaskController extends TaskController {
   @Override
   void killTask(TaskControllerContext context) {
     try {
-      finishTask(context, TaskCommands.KILL_TASK_JVM);
+      signalTask(context, TaskCommands.KILL_TASK_JVM);
     } catch (Exception e) {
       LOG.warn("Exception thrown while sending destroy to the Task VM " + 
+          StringUtils.stringifyException(e));
+    }
+  }
+
+  @Override
+  void dumpTaskStack(TaskControllerContext context) {
+    try {
+      signalTask(context, TaskCommands.SIGQUIT_TASK_JVM);
+    } catch (Exception e) {
+      LOG.warn("Exception thrown while sending SIGQUIT to the Task VM " +
           StringUtils.stringifyException(e));
     }
   }

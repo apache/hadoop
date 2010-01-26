@@ -369,13 +369,13 @@
           <th> COMMAND_OPTION </th><th> Description </th>
         </tr>
         <tr>
-          <td><code>-list</code> </td>
+          <td><anchor id="QueuesList"/><code>-list</code> </td>
           <td>Gets list of Job Queues configured in the system. Along with scheduling information
           associated with the job queues.
           </td>
         </tr>
         <tr>
-          <td><code>-info &lt;job-queue-name&gt; [-showJobs]</code></td>
+          <td><anchor id="QueuesInfo"/><code>-info &lt;job-queue-name&gt; [-showJobs]</code></td>
           <td>
            Displays the job queue information and associated scheduling information of particular
            job queue. If -showJobs options is present a list of jobs submitted to the particular job
@@ -581,16 +581,61 @@
         <p>Runs MR admin client</p>
         <p><code>Usage: hadoop mradmin  [</code>
         <a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a>
-        <code>] [-refreshQueueAcls] </code></p>
+        <code>] [-refreshServiceAcl] [-refreshQueues] [-refreshNodes] [-help [cmd]] </code></p>
         <table>
         <tr>
         <th> COMMAND_OPTION </th><th> Description </th>
         </tr>
         <tr>
-        <td><code>-refreshQueueAcls</code></td>
-        <td> Refresh the queue acls used by Hadoop, to check access during submissions
-        and administration of the job by the user. The properties present in
-        <code>mapred-queue-acls.xml</code> is reloaded by the queue manager.</td>
+        <td><code>-refreshServiceAcl</code></td>
+        <td> Reload the service-level authorization policies. Jobtracker
+         will reload the authorization policy file.</td>
+        </tr>
+        <tr>
+        <td><anchor id="RefreshQueues"/><code>-refreshQueues</code></td>
+        <td><p> Reload the queues' configuration at the JobTracker.
+          Most of the configuration of the queues can be refreshed/reloaded
+          without restarting the Map/Reduce sub-system. Administrators
+          typically own the
+          <a href="cluster_setup.html#mapred-queues.xml">
+          <em>conf/mapred-queues.xml</em></a>
+          file, can edit it while the JobTracker is still running, and can do
+          a reload by running this command.</p>
+          <p>It should be noted that while trying to refresh queues'
+          configuration, one cannot change the hierarchy of queues itself.
+          This means no operation that involves a change in either the
+          hierarchy structure itself or the queues' names will be allowed.
+          Only selected properties of queues can be changed during refresh.
+          For example, new queues cannot be added dynamically, neither can an
+          existing queue be deleted.</p>
+          <p>If during a reload of queue configuration,
+          a syntactic or semantic error in made during the editing of the
+          configuration file, the refresh command fails with an exception that
+          is printed on the standard output of this command, thus informing the
+          requester with any helpful messages of what has gone wrong during
+          the edit/reload. Importantly, the existing queue configuration is
+          untouched and the system is left in a consistent state.
+          </p>
+          <p>As described in the
+          <a href="cluster_setup.html#mapred-queues.xml"><em>
+          conf/mapred-queues.xml</em></a> section, the
+          <a href="cluster_setup.html#properties_tag"><em>
+          &lt;properties&gt;</em></a> tag in the queue configuration file can
+          also be used to specify per-queue properties needed by the scheduler.
+           When the framework's queue configuration is reloaded using this
+          command, this scheduler specific configuration will also be reloaded
+          , provided the scheduler being configured supports this reload.
+          Please see the documentation of the particular scheduler in use.</p>
+          </td>
+        </tr>
+        <tr>
+        <td><code>-refreshNodes</code></td>
+        <td> Refresh the hosts information at the jobtracker.</td>
+        </tr>
+        <tr>
+        <td><code>-help [cmd]</code></td>
+        <td>Displays help for the given command or all commands if none
+                is specified.</td>
         </tr>
         </table>
       </section>

@@ -30,10 +30,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JvmTask;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
 
 /**
  * IsolationRunner is intended to facilitate debugging by re-running a specific
@@ -180,19 +179,21 @@ public class IsolationRunner {
     Thread.currentThread().setContextClassLoader(classLoader);
     conf.setClassLoader(classLoader);
 
-    // split.dta file is used only by IsolationRunner. The file can now be in
-    // any of the configured local disks, so use LocalDirAllocator to find out
-    // where it is.
-    Path localSplit =
+    // split.dta/split.meta files are used only by IsolationRunner. 
+    // The file can now be in any of the configured local disks, 
+    // so use LocalDirAllocator to find out where it is.
+    Path localMetaSplit =
         new LocalDirAllocator(MRConfig.LOCAL_DIR).getLocalPathToRead(
-            TaskTracker.getLocalSplitFile(conf.getUser(), taskId.getJobID()
-                .toString(), taskId.toString()), conf);
-    DataInputStream splitFile = FileSystem.getLocal(conf).open(localSplit);
-    String splitClass = Text.readString(splitFile);
-    BytesWritable split = new BytesWritable();
-    split.readFields(splitFile);
+            TaskTracker.getLocalSplitMetaFile(conf.getUser(), 
+              taskId.getJobID().toString(), taskId
+                .toString()), conf);
+    DataInputStream splitFile = FileSystem.getLocal(conf).open(localMetaSplit);
+    TaskSplitIndex splitIndex = new TaskSplitIndex(); 
+    splitIndex.readFields(splitFile);
     splitFile.close();
-    Task task = new MapTask(jobFilename.toString(), taskId, partition, splitClass, split, 1);
+
+    Task task = 
+      new MapTask(jobFilename.toString(), taskId, partition, splitIndex, 1);
     task.setConf(conf);
     task.run(conf, new FakeUmbilical());
     return true;

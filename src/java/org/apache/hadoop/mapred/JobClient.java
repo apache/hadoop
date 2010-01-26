@@ -476,6 +476,13 @@ public class JobClient extends CLI {
   }
   
   /**
+   * Get a handle to the Cluster
+   */
+  public Cluster getClusterHandle() {
+    return cluster;
+  }
+  
+  /**
    * Submit a job to the MR system.
    * 
    * This returns a handle to the {@link RunningJob} which can be used to track
@@ -521,37 +528,6 @@ public class JobClient extends CLI {
     } catch (ClassNotFoundException cnfe) {
       throw new IOException("class not found", cnfe);
     }
-  }
-
-  /** 
-   * Checks if the job directory is clean and has all the required components 
-   * for (re) starting the job
-   */
-  public static boolean isJobDirValid(Path jobDirPath, FileSystem fs) 
-  throws IOException {
-    FileStatus[] contents = null;
-    
-    try {
-      contents = fs.listStatus(jobDirPath);
-    } catch(FileNotFoundException fnfe) {
-      return false;
-    }
-    
-    int matchCount = 0;
-    if (contents.length >=2) {
-      for (FileStatus status : contents) {
-        if ("job.xml".equals(status.getPath().getName())) {
-          ++matchCount;
-        }
-        if ("job.split".equals(status.getPath().getName())) {
-          ++matchCount;
-        }
-      }
-      if (matchCount == 2) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -1001,8 +977,12 @@ public class JobClient extends CLI {
   
   public JobStatus[] getJobsFromQueue(String queueName) throws IOException {
     try {
+      QueueInfo queue = cluster.getQueue(queueName);
+      if (queue == null) {
+        return null;
+      }
       org.apache.hadoop.mapreduce.JobStatus[] stats = 
-        cluster.getQueue(queueName).getJobStatuses();
+        queue.getJobStatuses();
       JobStatus[] ret = new JobStatus[stats.length];
       for (int i = 0 ; i < stats.length; i++ ) {
         ret[i] = JobStatus.downgrade(stats[i]);
@@ -1022,7 +1002,11 @@ public class JobClient extends CLI {
    */
   public JobQueueInfo getQueueInfo(String queueName) throws IOException {
     try {
-      return new JobQueueInfo(cluster.getQueue(queueName));
+      QueueInfo queueInfo = cluster.getQueue(queueName);
+      if (queueInfo != null) {
+        return new JobQueueInfo(queueInfo);
+      }
+      return null;
     } catch (InterruptedException ie) {
       throw new IOException(ie);
     }

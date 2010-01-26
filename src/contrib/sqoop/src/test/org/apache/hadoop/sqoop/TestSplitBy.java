@@ -26,7 +26,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.apache.hadoop.sqoop.ImportOptions.InvalidOptionsException;
+import org.apache.hadoop.sqoop.SqoopOptions.InvalidOptionsException;
 import org.apache.hadoop.sqoop.orm.CompilationManager;
 import org.apache.hadoop.sqoop.testutil.CommonArgs;
 import org.apache.hadoop.sqoop.testutil.HsqldbTestServer;
@@ -98,7 +98,7 @@ public class TestSplitBy extends ImportJobTestCase {
     String [] argv = getArgv(true, columns, splitByCol);
     runImport(argv);
     try {
-      ImportOptions opts = new ImportOptions();
+      SqoopOptions opts = new SqoopOptions();
       opts.parse(getArgv(false, columns, splitByCol));
 
       CompilationManager compileMgr = new CompilationManager(opts);

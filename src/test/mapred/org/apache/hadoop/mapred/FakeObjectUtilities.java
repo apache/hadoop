@@ -29,11 +29,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.Job.RawSplit;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
+import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 
 /** 
  * Utilities used in unit test.
@@ -67,8 +67,10 @@ public class FakeObjectUtilities {
     }
     @Override
     public ClusterStatus getClusterStatus(boolean detailed) {
-      return new ClusterStatus(trackers.length,
-          0, 0, 0, 0, totalSlots/2, totalSlots/2, JobTracker.State.RUNNING, 0);
+      return new ClusterStatus(
+          taskTrackers().size() - getBlacklistedTrackerCount(),
+          getBlacklistedTrackerCount(), 0, 0, 0, totalSlots/2, totalSlots/2, 
+           JobTracker.State.RUNNING, 0);
     }
 
     public void setNumSlots(int totalSlots) {
@@ -77,7 +79,6 @@ public class FakeObjectUtilities {
   }
 
   static class FakeJobInProgress extends JobInProgress {
-    Job.RawSplit[] rawSplits;
     @SuppressWarnings("deprecation")
     FakeJobInProgress(JobConf jobConf, JobTracker tracker) throws IOException {
       super(new JobID(jtIdentifier, ++jobCounter), jobConf, tracker);
@@ -91,27 +92,27 @@ public class FakeObjectUtilities {
     @Override
     public synchronized void initTasks() throws IOException {
      
-      Job.RawSplit[] splits = createSplits();
-      numMapTasks = splits.length;
-      createMapTasks(null, splits);
-      nonRunningMapCache = createCache(splits, maxLevel);
+      TaskSplitMetaInfo[] taskSplitMetaInfo = createSplits(jobId);
+      numMapTasks = taskSplitMetaInfo.length;
+      createMapTasks(null, taskSplitMetaInfo);
+      nonRunningMapCache = createCache(taskSplitMetaInfo, maxLevel);
       createReduceTasks(null);
       tasksInited.set(true);
       this.status.setRunState(JobStatus.RUNNING);
     }
     
     @Override
-    Job.RawSplit[] createSplits(){
-      Job.RawSplit[] splits = new Job.RawSplit[numMapTasks];
+    TaskSplitMetaInfo [] createSplits(org.apache.hadoop.mapreduce.JobID jobId){
+      TaskSplitMetaInfo[] splits = 
+        new TaskSplitMetaInfo[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
-        splits[i] = new Job.RawSplit();
-        splits[i].setLocations(new String[0]);
+        splits[i] = JobSplit.EMPTY_TASK_SPLIT;
       }
       return splits;
     }
     
     @Override
-    protected void createMapTasks(String ignored, Job.RawSplit[] splits) {
+    protected void createMapTasks(String ignored, TaskSplitMetaInfo[] splits) {
       maps = new TaskInProgress[numMapTasks];
       for (int i = 0; i < numMapTasks; i++) {
         maps[i] = new TaskInProgress(getJobID(), "test", 
@@ -218,6 +219,15 @@ public class FakeObjectUtilities {
       updateTaskStatus(tip, status);
     }
 
+    public void killTask(TaskAttemptID taskId) {
+      TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
+      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId,
+          1.0f, 1, TaskStatus.State.KILLED, "", "", tip
+              .machineWhereTaskRan(taskId), tip.isMapTask() ? Phase.MAP
+              : Phase.REDUCE, new Counters());
+      updateTaskStatus(tip, status);
+    }
+
     public void cleanUpMetrics() {
     }
     
@@ -253,7 +263,7 @@ public class FakeObjectUtilities {
           numSlotsRequired);
     }
 
-    public FakeTaskInProgress(JobID jobId, String jobFile, RawSplit emptySplit,
+    public FakeTaskInProgress(JobID jobId, String jobFile, TaskSplitMetaInfo emptySplit,
         JobTracker jobTracker, JobConf jobConf,
         JobInProgress job, int partition, int numSlotsRequired) {
       super(jobId, jobFile, emptySplit, jobTracker, jobConf, job,

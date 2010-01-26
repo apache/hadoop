@@ -23,6 +23,8 @@ import junit.extensions.TestSetup;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
@@ -40,6 +42,8 @@ public class TestSpeculativeExecution extends TestCase {
     }
   };
   static SpecFakeClock clock;
+  static final Log LOG = LogFactory.getLog(TestSpeculativeExecution.class);
+
   
   static String trackers[] = new String[] {"tracker_tracker1:1000", 
       "tracker_tracker2:1000", "tracker_tracker3:1000",
@@ -63,6 +67,68 @@ public class TestSpeculativeExecution extends TestCase {
       }
     };
     return setup;
+  }
+
+  public void testRunningTaskCountWithSpeculation() throws IOException {
+    TaskAttemptID[] taskAttemptID = new TaskAttemptID[8];
+    JobConf conf = new JobConf();
+    conf.setSpeculativeExecution(true);
+    conf.setNumMapTasks(3);
+    conf.setNumReduceTasks(3);
+    conf.setFloat(JobContext.SPECULATIVE_SLOWTASK_THRESHOLD, 0.5f);
+    FakeJobInProgress job = new FakeJobInProgress(conf, jobTracker);
+    job.initTasks();
+
+    //Check for runningMap counts first
+    //schedule maps
+    taskAttemptID[0] = job.findMapTask(trackers[0]);
+    taskAttemptID[1] = job.findMapTask(trackers[1]);
+    taskAttemptID[2] = job.findMapTask(trackers[2]);
+
+    clock.advance(5000);
+    job.finishTask(taskAttemptID[0]);
+    clock.advance(1000);
+    job.finishTask(taskAttemptID[1]);
+    clock.advanceBySpeculativeLag();
+
+    //we should get a speculative task now
+    taskAttemptID[3] = job.findMapTask(trackers[3]);
+    int oldRunningMap = job.runningMaps();
+    LOG.info("No of running maps before fail was " + oldRunningMap);
+    job.failTask(taskAttemptID[2]);
+    assertEquals(
+      "Running maps count should be updated from " + oldRunningMap + " to " +
+        (oldRunningMap - 1), job.runningMaps(), oldRunningMap - 1);
+    LOG.info(" Job running maps after fail " + job.runningMaps());
+
+    clock.advance(5000);
+    job.finishTask(taskAttemptID[3]);
+
+    //check for runningReduce count.
+    taskAttemptID[4] = job.findReduceTask(trackers[0]);
+    taskAttemptID[5] = job.findReduceTask(trackers[1]);
+    taskAttemptID[6] = job.findReduceTask(trackers[2]);
+
+    clock.advance(5000);
+    job.finishTask(taskAttemptID[4]);
+    clock.advance(1000);
+    job.finishTask(taskAttemptID[5]);
+
+    clock.advanceBySpeculativeLag();
+    taskAttemptID[7] = job.findReduceTask(trackers[4]);
+
+    int oldRunningReduces = job.runningReduces();
+    job.failTask(taskAttemptID[6]);
+    LOG.info(
+      " No of running Reduces before fail " + oldRunningReduces);
+    LOG.info(
+      " No of runing reduces after fail " + job.runningReduces());
+    assertEquals(
+      "Running reduces count should be updated from " + oldRunningReduces +
+        " to " + (oldRunningReduces - 1), job.runningReduces(),
+      oldRunningReduces - 1);
+    
+    job.finishTask(taskAttemptID[7]);
   }
 
   public void testIsSlowTracker() throws IOException {
@@ -171,7 +237,7 @@ public class TestSpeculativeExecution extends TestCase {
     taskAttemptID[5] = job.findMapTask(trackers[4]);
     assertEquals(taskAttemptID[5].getTaskID().getId(),4);
   }
-  
+
   /*
    * Tests the fact that we only launch a limited number of speculative tasks,
    * even though we have a lot of tasks in RUNNING state
@@ -219,7 +285,7 @@ public class TestSpeculativeExecution extends TestCase {
       taskAttemptID[i] = job.findMapTask(trackers[1]);
       clock.advance(2000);
       if (taskAttemptID[i] != null) {
-        //add some good progress constantly for the different 
+        //add some good progress constantly for the different
         //task-attempts so that
         //the tasktracker doesn't get into the slow trackers category
         job.progressMade(taskAttemptID[i], 0.99f);

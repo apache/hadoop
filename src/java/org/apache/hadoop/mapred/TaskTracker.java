@@ -38,11 +38,11 @@ import java.util.Random;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
-import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
 
+import javax.crypto.SecretKey;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -67,14 +67,19 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.TaskController.DebugScriptContext;
 import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
+import org.apache.hadoop.mapred.TaskController.TaskControllerPathDeletionContext;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapred.pipes.Submitter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
-import org.apache.hadoop.mapreduce.security.JobTokens;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader;
@@ -86,13 +91,16 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.authorize.ConfiguredPolicy;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.mapreduce.util.MemoryCalculatorPlugin;
+import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.mapreduce.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.Service;
@@ -100,7 +108,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -122,6 +130,7 @@ public class TaskTracker extends Service
   @Deprecated
   static final String MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY =
     "mapred.tasktracker.pmem.reserved";
+
 
   static final long WAIT_FOR_DONE = 3 * 1000;
   int httpPort;
@@ -194,6 +203,8 @@ public class TaskTracker extends Service
    */
   Map<TaskAttemptID, TaskInProgress> runningTasks = null;
   Map<JobID, RunningJob> runningJobs = new TreeMap<JobID, RunningJob>();
+  private final JobTokenSecretManager jobTokenSecretManager 
+    = new JobTokenSecretManager();
 
   volatile int mapTotal = 0;
   volatile int reduceTotal = 0;
@@ -221,13 +232,14 @@ public class TaskTracker extends Service
   static final String OUTPUT = "output";
   private static final String JARSDIR = "jars";
   static final String LOCAL_SPLIT_FILE = "split.dta";
+  static final String LOCAL_SPLIT_META_FILE = "split.info";
   static final String JOBFILE = "job.xml";
   static final String JOB_TOKEN_FILE="jobToken"; //localized file
 
   static final String JOB_LOCAL_DIR = JobContext.JOB_LOCAL_DIR;
 
   private JobConf fConf;
-  FileSystem localFs;
+  private FileSystem localFs;
 
   private Localizer localizer;
 
@@ -254,9 +266,7 @@ public class TaskTracker extends Service
   private long mapSlotMemorySizeOnTT = JobConf.DISABLED_MEMORY_LIMIT;
   private long reduceSlotSizeMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
   private long totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
-
-  static final String MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY =
-      TT_MEMORY_CALCULATOR_PLUGIN;
+  private ResourceCalculatorPlugin resourceCalculatorPlugin = null;
 
   /**
    * the minimum interval between jobtracker polls
@@ -269,6 +279,8 @@ public class TaskTracker extends Service
 
   private IndexCache indexCache;
 
+  private MRAsyncDiskService asyncDiskService;
+  
   /**
   * Handle to the specific instance of the {@link TaskController} class
   */
@@ -365,6 +377,11 @@ public class TaskTracker extends Service
     return taskController;
   }
   
+  // Currently this is used only by tests
+  void setTaskController(TaskController t) {
+    taskController = t;
+  }
+  
   private RunningJob addTaskToJob(JobID jobId, 
                                   TaskInProgress tip) {
     synchronized (runningJobs) {
@@ -398,6 +415,10 @@ public class TaskTracker extends Service
     }
   }
 
+  JobTokenSecretManager getJobTokenSecretManager() {
+    return jobTokenSecretManager;
+  }
+
   Localizer getLocalizer() {
     return localizer;
   }
@@ -410,8 +431,12 @@ public class TaskTracker extends Service
     return TaskTracker.SUBDIR + Path.SEPARATOR + user;
   }
 
-  public static String getDistributedCacheDir(String user) {
+  public static String getPrivateDistributedCacheDir(String user) {
     return getUserDir(user) + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
+  }
+  
+  public static String getPublicDistributedCacheDir() {
+    return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
   }
 
   public static String getJobCacheSubdir(String user) {
@@ -449,11 +474,16 @@ public class TaskTracker extends Service
     return getLocalJobDir(user, jobid) + Path.SEPARATOR + MRConstants.WORKDIR;
   }
 
-  static String getLocalSplitFile(String user, String jobid, String taskid) {
+  static String getLocalSplitMetaFile(String user, String jobid, String taskid){
     return TaskTracker.getLocalTaskDir(user, jobid, taskid) + Path.SEPARATOR
-        + TaskTracker.LOCAL_SPLIT_FILE;
+        + TaskTracker.LOCAL_SPLIT_META_FILE;
   }
 
+  static String getLocalSplitFile(String user, String jobid, String taskid) {
+    return TaskTracker.getLocalTaskDir(user, jobid, taskid) + Path.SEPARATOR
+           + TaskTracker.LOCAL_SPLIT_FILE;
+  }
+  
   static String getIntermediateOutputDir(String user, String jobid,
       String taskid) {
     return getLocalTaskDir(user, jobid, taskid) + Path.SEPARATOR
@@ -475,10 +505,7 @@ public class TaskTracker extends Service
 
   static String getTaskWorkDir(String user, String jobid, String taskid,
       boolean isCleanupAttempt) {
-    String dir = getLocalJobDir(user, jobid) + Path.SEPARATOR + taskid;
-    if (isCleanupAttempt) {
-      dir = dir + TASK_CLEANUP_SUFFIX;
-    }
+    String dir = getLocalTaskDir(user, jobid, taskid, isCleanupAttempt);
     return dir + Path.SEPARATOR + MRConstants.WORKDIR;
   }
 
@@ -529,9 +556,11 @@ public class TaskTracker extends Service
        fConf.get(TT_DNS_NAMESERVER,"default"));
     }
  
-    //check local disk
+    // Check local disk, start async disk service, and clean up all 
+    // local directories.
     checkLocalDirs(this.fConf.getLocalDirs());
-    fConf.deleteLocalFiles(SUBDIR);
+    asyncDiskService = new MRAsyncDiskService(fConf);
+    asyncDiskService.cleanupAllVolumes();
 
     // Clear out state tables
     this.tasks.clear();
@@ -597,12 +626,19 @@ public class TaskTracker extends Service
     this.taskTrackerName = "tracker_" + localHostname + ":" + taskReportAddress;
     LOG.info("Starting tracker " + taskTrackerName);
 
-    // Initialize DistributedCache and
-    // clear out temporary files that might be lying around
+    Class<? extends TaskController> taskControllerClass = fConf.getClass(
+        TT_TASK_CONTROLLER, DefaultTaskController.class, TaskController.class);
+    taskController = (TaskController) ReflectionUtils.newInstance(
+        taskControllerClass, fConf);
+
+
+    // setup and create jobcache directory with appropriate permissions
+    taskController.setup();
+
+    // Initialize DistributedCache
     this.distributedCacheManager = 
-        new TrackerDistributedCacheManager(this.fConf);
-    this.distributedCacheManager.purgeCache();
-    cleanupStorage();
+        new TrackerDistributedCacheManager(this.fConf, taskController,
+        asyncDiskService);
 
     //mark as just started; this is used in heartbeats
     this.justStarted = true;
@@ -625,6 +661,12 @@ public class TaskTracker extends Service
                              taskTrackerName);
     mapEventsFetcher.start();
 
+    Class<? extends ResourceCalculatorPlugin> clazz =
+        fConf.getClass(TT_RESOURCE_CALCULATOR_PLUGIN,
+            null, ResourceCalculatorPlugin.class);
+    resourceCalculatorPlugin = ResourceCalculatorPlugin
+            .getResourceCalculatorPlugin(clazz, fConf);
+    LOG.info(" Using ResourceCalculatorPlugin : " + resourceCalculatorPlugin);
     initializeMemoryManagement();
 
     this.indexCache = new IndexCache(this.fConf);
@@ -633,15 +675,6 @@ public class TaskTracker extends Service
     reduceLauncher = new TaskLauncher(TaskType.REDUCE, maxReduceSlots);
     mapLauncher.start();
     reduceLauncher.start();
-    Class<? extends TaskController> taskControllerClass 
-                          = fConf.getClass(TT_TASK_CONTROLLER,
-                                            DefaultTaskController.class, 
-                                            TaskController.class); 
-    taskController = (TaskController)ReflectionUtils.newInstance(
-                                                      taskControllerClass, fConf);
-    
-    //setup and create jobcache directory with appropriate permissions
-    taskController.setup();
 
     // create a localizer instance
     setLocalizer(new Localizer(localFs, fConf.getLocalDirs(), taskController));
@@ -667,10 +700,14 @@ public class TaskTracker extends Service
         t, TaskTrackerInstrumentation.class);
   }
   
-  /** 
-   * Removes all contents of temporary storage.  Called upon 
+  /**
+   * Removes all contents of temporary storage.  Called upon
    * startup, to remove any leftovers from previous run.
+   * 
+   * Use MRAsyncDiskService.moveAndDeleteAllVolumes instead.
+   * @see org.apache.hadoop.mapreduce.util.MRAsyncDiskService#cleanupAllVolumes()
    */
+  @Deprecated
   public void cleanupStorage() throws IOException {
     if (fConf != null) {
       fConf.deleteLocalFiles();
@@ -880,18 +917,22 @@ public class TaskTracker extends Service
         rjob.jobConf = localJobConf;
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
-        FSDataInputStream in = localFs.open(new Path(
-            rjob.jobConf.get(JobContext.JOB_TOKEN_FILE)));
-        JobTokens jt = new JobTokens();
-        jt.readFields(in); 
-        rjob.jobTokens = jt; // store JobToken object per job
-        
+        TokenStorage ts = TokenCache.loadTokens(rjob.jobConf);
+        Token<JobTokenIdentifier> jt = (Token<JobTokenIdentifier>)ts.getJobToken(); 
+        getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
         rjob.localized = true;
       }
     }
     launchTaskForJob(tip, new JobConf(rjob.jobConf)); 
   }
 
+  private void setUgi(String user, Configuration conf) {
+    //The dummy-group used here will not be required once we have UGI
+    //object creation with just the user name.
+    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, 
+        user+","+UnixUserGroupInformation.DEFAULT_GROUP);
+  }
+  
   /**
    * Localize the job on this tasktracker. Specifically
    * <ul>
@@ -934,6 +975,7 @@ public class TaskTracker extends Service
     }
     System.setProperty(JOB_LOCAL_DIR, workDir.toUri().getPath());
     localJobConf.set(JOB_LOCAL_DIR, workDir.toUri().getPath());
+    setUgi(userName, localJobConf);
 
     // Download the job.jar for this job from the system FS
     localizeJobJarFile(userName, jobId, localFs, localJobConf);
@@ -952,12 +994,17 @@ public class TaskTracker extends Service
    */
   private Path localizeJobConfFile(Path jobFile, String user, JobID jobId)
       throws IOException {
-    // Get sizes of JobFile and JarFile
+    JobConf conf = new JobConf(getJobConf());
+    setUgi(user, conf);
+    
+    FileSystem userFs = jobFile.getFileSystem(conf);
+    // Get sizes of JobFile
     // sizes are -1 if they are not present.
     FileStatus status = null;
     long jobFileSize = -1;
     try {
-      status = systemFS.getFileStatus(jobFile);
+      
+      status = userFs.getFileStatus(jobFile);
       jobFileSize = status.getLen();
     } catch(FileNotFoundException fe) {
       jobFileSize = -1;
@@ -968,7 +1015,7 @@ public class TaskTracker extends Service
             jobFileSize, fConf);
 
     // Download job.xml
-    systemFS.copyToLocalFile(jobFile, localJobFile);
+    userFs.copyToLocalFile(jobFile, localJobFile);
     return localJobFile;
   }
 
@@ -990,8 +1037,9 @@ public class TaskTracker extends Service
     long jarFileSize = -1;
     if (jarFile != null) {
       Path jarFilePath = new Path(jarFile);
+      FileSystem fs = jarFilePath.getFileSystem(localJobConf);
       try {
-        status = systemFS.getFileStatus(jarFilePath);
+        status = fs.getFileStatus(jarFilePath);
         jarFileSize = status.getLen();
       } catch (FileNotFoundException fe) {
         jarFileSize = -1;
@@ -1003,14 +1051,15 @@ public class TaskTracker extends Service
               getJobJarFile(user, jobId.toString()), 5 * jarFileSize, fConf);
 
       // Download job.jar
-      systemFS.copyToLocalFile(jarFilePath, localJarFile);
+      fs.copyToLocalFile(jarFilePath, localJarFile);
 
       localJobConf.setJar(localJarFile.toString());
 
-      // Also un-jar the job.jar files. We un-jar it so that classes inside
-      // sub-directories, for e.g., lib/, classes/ are available on class-path
-      RunJar.unJar(new File(localJarFile.toString()), new File(localJarFile
-          .getParent().toString()));
+      // Un-jar the parts of the job.jar that need to be added to the classpath
+      RunJar.unJar(
+        new File(localJarFile.toString()),
+        new File(localJarFile.getParent().toString()),
+        localJobConf.getJarUnpackPattern());
     }
   }
 
@@ -1081,9 +1130,23 @@ public class TaskTracker extends Service
 
     this.running = false;
 
-    // Clear local storage
-    cleanupStorage();
-        
+    if (asyncDiskService != null) {
+      // Clear local storage
+      asyncDiskService.cleanupAllVolumes();
+      
+      // Shutdown all async deletion threads with up to 10 seconds of delay
+      asyncDiskService.shutdown();
+      try {
+        if (!asyncDiskService.awaitTermination(10000)) {
+          asyncDiskService.shutdownNow();
+          asyncDiskService = null;
+        }
+      } catch (InterruptedException e) {
+        asyncDiskService.shutdownNow();
+        asyncDiskService = null;
+      }
+    }
+    
     // Shutdown the fetcher thread
     if (mapEventsFetcher != null) {
       mapEventsFetcher.interrupt();
@@ -1227,6 +1290,16 @@ public class TaskTracker extends Service
     taskCleanupThread.setDaemon(true);
     taskCleanupThread.start();
     directoryCleanupThread = new CleanupQueue();
+  }
+
+
+  // only used by tests
+  void setCleanupThread(CleanupQueue c) {
+    directoryCleanupThread = c;
+  }
+  
+  CleanupQueue getCleanupThread() {
+    return directoryCleanupThread;
   }
 
   /**
@@ -1429,7 +1502,7 @@ public class TaskTracker extends Service
    * @return false if the tracker was unknown
    * @throws IOException
    */
-  private HeartbeatResponse transmitHeartBeat(long now) throws IOException {
+  HeartbeatResponse transmitHeartBeat(long now) throws IOException {
     // Send Counters in the status once every COUNTER_UPDATE_INTERVAL
     boolean sendCounters;
     if (now > (previousUpdate + COUNTER_UPDATE_INTERVAL)) {
@@ -1478,6 +1551,12 @@ public class TaskTracker extends Service
       long freeDiskSpace = getFreeSpace();
       long totVmem = getTotalVirtualMemoryOnTT();
       long totPmem = getTotalPhysicalMemoryOnTT();
+      long availableVmem = getAvailableVirtualMemoryOnTT();
+      long availablePmem = getAvailablePhysicalMemoryOnTT();
+      long cumuCpuTime = getCumulativeCpuTimeOnTT();
+      long cpuFreq = getCpuFrequencyOnTT();
+      int numCpu = getNumProcessorsOnTT();
+      float cpuUsage = getCpuUsageOnTT();
 
       status.getResourceStatus().setAvailableSpace(freeDiskSpace);
       status.getResourceStatus().setTotalVirtualMemory(totVmem);
@@ -1486,6 +1565,12 @@ public class TaskTracker extends Service
           mapSlotMemorySizeOnTT);
       status.getResourceStatus().setReduceSlotMemorySizeOnTT(
           reduceSlotSizeMemoryOnTT);
+      status.getResourceStatus().setAvailableVirtualMemory(availableVmem); 
+      status.getResourceStatus().setAvailablePhysicalMemory(availablePmem);
+      status.getResourceStatus().setCumulativeCpuTime(cumuCpuTime);
+      status.getResourceStatus().setCpuFrequency(cpuFreq);
+      status.getResourceStatus().setNumProcessors(numCpu);
+      status.getResourceStatus().setCpuUsage(cpuUsage);
     }
     //add node health information
     
@@ -1562,6 +1647,80 @@ public class TaskTracker extends Service
     return totalPhysicalMemoryOnTT;
   }
 
+  /**
+   * Return the free virtual memory available on this TaskTracker.
+   * @return total size of free virtual memory.
+   */
+  long getAvailableVirtualMemoryOnTT() {
+    long availableVirtualMemoryOnTT = TaskTrackerStatus.UNAVAILABLE;
+    if (resourceCalculatorPlugin != null) {
+      availableVirtualMemoryOnTT =
+              resourceCalculatorPlugin.getAvailableVirtualMemorySize();
+    }
+    return availableVirtualMemoryOnTT;
+  }
+
+  /**
+   * Return the free physical memory available on this TaskTracker.
+   * @return total size of free physical memory in bytes
+   */
+  long getAvailablePhysicalMemoryOnTT() {
+    long availablePhysicalMemoryOnTT = TaskTrackerStatus.UNAVAILABLE;
+    if (resourceCalculatorPlugin != null) {
+      availablePhysicalMemoryOnTT =
+              resourceCalculatorPlugin.getAvailablePhysicalMemorySize();
+    }
+    return availablePhysicalMemoryOnTT;
+  }
+
+  /**
+   * Return the cumulative CPU used time on this TaskTracker since system is on
+   * @return cumulative CPU used time in millisecond
+   */
+  long getCumulativeCpuTimeOnTT() {
+    long cumulativeCpuTime = TaskTrackerStatus.UNAVAILABLE;
+    if (resourceCalculatorPlugin != null) {
+      cumulativeCpuTime = resourceCalculatorPlugin.getCumulativeCpuTime();
+    }
+    return cumulativeCpuTime;
+  }
+
+  /**
+   * Return the number of Processors on this TaskTracker
+   * @return number of processors
+   */
+  int getNumProcessorsOnTT() {
+    int numProcessors = TaskTrackerStatus.UNAVAILABLE;
+    if (resourceCalculatorPlugin != null) {
+      numProcessors = resourceCalculatorPlugin.getNumProcessors();
+    }
+    return numProcessors;
+  }
+
+  /**
+   * Return the CPU frequency of this TaskTracker
+   * @return CPU frequency in kHz
+   */
+  long getCpuFrequencyOnTT() {
+    long cpuFrequency = TaskTrackerStatus.UNAVAILABLE;
+    if (resourceCalculatorPlugin != null) {
+      cpuFrequency = resourceCalculatorPlugin.getCpuFrequency();
+    }
+    return cpuFrequency;
+  }
+
+  /**
+   * Return the CPU usage in % of this TaskTracker
+   * @return CPU usage in %
+   */
+  float getCpuUsageOnTT() {
+    float cpuUsage = TaskTrackerStatus.UNAVAILABLE;
+    if (resourceCalculatorPlugin != null) {
+      cpuUsage = resourceCalculatorPlugin.getCpuUsage();
+    }
+    return cpuUsage;
+  }
+  
   long getTotalMemoryAllottedForTasksOnTT() {
     return totalMemoryAllottedForTasks;
   }
@@ -1613,10 +1772,65 @@ public class TaskTracker extends Service
           ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
           tip.reportDiagnosticInfo(msg);
           myInstrumentation.timedoutTask(tip.getTask().getTaskID());
+          dumpTaskStack(tip);
           purgeTask(tip, true);
         }
       }
     }
+  }
+
+  /**
+   * Builds list of PathDeletionContext objects for the given paths
+   */
+  private static PathDeletionContext[] buildPathDeletionContexts(FileSystem fs,
+      Path[] paths) {
+    int i = 0;
+    PathDeletionContext[] contexts = new PathDeletionContext[paths.length];
+
+    for (Path p : paths) {
+      contexts[i++] = new PathDeletionContext(fs, p.toUri().getPath());
+    }
+    return contexts;
+  }
+
+  /**
+   * Builds list of TaskControllerPathDeletionContext objects for a task
+   * @param fs    : FileSystem in which the dirs to be deleted
+   * @param paths : mapred-local-dirs
+   * @param task  : the task whose taskDir or taskWorkDir is going to be deleted
+   * @param isWorkDir : the dir to be deleted is workDir or taskDir
+   * @param taskController : the task-controller to be used for deletion of
+   *                         taskDir or taskWorkDir
+   */
+  static PathDeletionContext[] buildTaskControllerPathDeletionContexts(
+      FileSystem fs, Path[] paths, Task task, boolean isWorkDir,
+      TaskController taskController)
+      throws IOException {
+    int i = 0;
+    PathDeletionContext[] contexts =
+                          new TaskControllerPathDeletionContext[paths.length];
+
+    for (Path p : paths) {
+      contexts[i++] = new TaskControllerPathDeletionContext(fs, p, task,
+                          isWorkDir, taskController);
+    }
+    return contexts;
+  }
+
+  /**
+   * Send a signal to a stuck task commanding it to dump stack traces
+   * to stderr before we kill it with purgeTask().
+   *
+   * @param tip {@link TaskInProgress} to dump stack traces.
+   */
+  private void dumpTaskStack(TaskInProgress tip) {
+    TaskRunner runner = tip.getTaskRunner();
+    if (null == runner) {
+      return; // tip is already abandoned.
+    }
+
+    JvmManager jvmMgr = runner.getJvmManager();
+    jvmMgr.dumpStack(runner);
   }
 
   /**
@@ -1657,6 +1871,7 @@ public class TaskTracker extends Service
     synchronized(runningJobs) {
       runningJobs.remove(jobId);
     }
+    getJobTokenSecretManager().removeTokenForJob(jobId.toString());
   }
 
   /**
@@ -1667,8 +1882,9 @@ public class TaskTracker extends Service
    */
   void removeJobFiles(String user, String jobId)
       throws IOException {
-    directoryCleanupThread.addToQueue(localFs, getLocalFiles(fConf,
-        getLocalJobDir(user, jobId)));
+    PathDeletionContext[] contexts = buildPathDeletionContexts(localFs,
+        getLocalFiles(fConf, getLocalJobDir(user, jobId)));
+    directoryCleanupThread.addToQueue(contexts);
   }
 
   /**
@@ -2739,29 +2955,33 @@ public class TaskTracker extends Service
           runner.close();
         }
 
-        String localTaskDir =
-            getLocalTaskDir(task.getUser(), task.getJobID().toString(), taskId
-                .toString(), task.isTaskCleanupTask());
         if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
           // No jvm reuse, remove everything
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-              defaultJobConf, localTaskDir));
+          PathDeletionContext[] contexts =
+            buildTaskControllerPathDeletionContexts(localFs,
+                getLocalFiles(fConf, ""), task, false/* not workDir */,
+                taskController);
+          directoryCleanupThread.addToQueue(contexts);
         } else {
           // Jvm reuse. We don't delete the workdir since some other task
           // (running in the same JVM) might be using the dir. The JVM
           // running the tasks would clean the workdir per a task in the
           // task process itself.
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-              defaultJobConf, localTaskDir + Path.SEPARATOR
-                  + TaskTracker.JOBFILE));
+          String localTaskDir =
+            getLocalTaskDir(task.getUser(), task.getJobID().toString(), taskId
+                .toString(), task.isTaskCleanupTask());
+          PathDeletionContext[] contexts = buildPathDeletionContexts(
+              localFs, getLocalFiles(defaultJobConf, localTaskDir +
+                         Path.SEPARATOR + TaskTracker.JOBFILE));
+          directoryCleanupThread.addToQueue(contexts);
         }
       } else {
         if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-          String taskWorkDir =
-              getTaskWorkDir(task.getUser(), task.getJobID().toString(),
-                  taskId.toString(), task.isTaskCleanupTask());
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-              defaultJobConf, taskWorkDir));
+          PathDeletionContext[] contexts =
+            buildTaskControllerPathDeletionContexts(localFs,
+              getLocalFiles(fConf, ""), task, true /* workDir */,
+              taskController);
+          directoryCleanupThread.addToQueue(contexts);
         }
       }
     }
@@ -3001,7 +3221,6 @@ public class TaskTracker extends Service
     boolean localized;
     boolean keepJobFiles;
     FetchStatus f;
-    JobTokens jobTokens;
     RunningJob(JobID jobid) {
       this.jobid = jobid;
       localized = false;
@@ -3379,14 +3598,8 @@ public class TaskTracker extends Service
     private void verifyRequest(HttpServletRequest request, 
         HttpServletResponse response, TaskTracker tracker, String jobId) 
     throws IOException {
-      JobTokens jt = null;
-      synchronized (tracker.runningJobs) {
-        RunningJob rjob = tracker.runningJobs.get(JobID.forName(jobId));
-        if (rjob == null) {
-          throw new IOException("Unknown job " + jobId + "!!");
-        }
-        jt = rjob.jobTokens;
-      }
+      SecretKey tokenSecret = tracker.getJobTokenSecretManager()
+          .retrieveTokenSecret(jobId);
       // string to encrypt
       String enc_str = SecureShuffleUtils.buildMsgFrom(request);
       
@@ -3400,17 +3613,16 @@ public class TaskTracker extends Service
       LOG.debug("verifying request. enc_str="+enc_str+"; hash=..."+
           urlHashStr.substring(len-len/2, len-1)); // half of the hash for debug
 
-      SecureShuffleUtils ssutil = new SecureShuffleUtils(jt.getShuffleJobToken());
       // verify - throws exception
       try {
-        ssutil.verifyReply(urlHashStr, enc_str);
+        SecureShuffleUtils.verifyReply(urlHashStr, enc_str, tokenSecret);
       } catch (IOException ioe) {
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         throw ioe;
       }
       
       // verification passed - encode the reply
-      String reply = ssutil.generateHash(urlHashStr.getBytes());
+      String reply = SecureShuffleUtils.generateHash(urlHashStr.getBytes(), tokenSecret);
       response.addHeader(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH, reply);
       
       len = reply.length();
@@ -3419,17 +3631,27 @@ public class TaskTracker extends Service
     }
   }
   
-
   // get the full paths of the directory in all the local disks.
-  private Path[] getLocalFiles(JobConf conf, String subdir) throws IOException{
+  Path[] getLocalFiles(JobConf conf, String subdir) throws IOException{
     String[] localDirs = conf.getLocalDirs();
     Path[] paths = new Path[localDirs.length];
     FileSystem localFs = FileSystem.getLocal(conf);
+    boolean subdirNeeded = (subdir != null) && (subdir.length() > 0);
     for (int i = 0; i < localDirs.length; i++) {
-      paths[i] = new Path(localDirs[i], subdir);
+      paths[i] = (subdirNeeded) ? new Path(localDirs[i], subdir)
+                                : new Path(localDirs[i]);
       paths[i] = paths[i].makeQualified(localFs);
     }
     return paths;
+  }
+
+  FileSystem getLocalFileSystem(){
+    return localFs;
+  }
+
+  // only used by tests
+  void setLocalFileSystem(FileSystem fs){
+    localFs = fs;
   }
 
   int getMaxCurrentMapTasks() {
@@ -3515,22 +3737,24 @@ public class TaskTracker extends Service
           JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY));
     }
 
-    Class<? extends MemoryCalculatorPlugin> clazz =
-        fConf.getClass(TT_MEMORY_CALCULATOR_PLUGIN,
-            null, MemoryCalculatorPlugin.class);
-    MemoryCalculatorPlugin memoryCalculatorPlugin =
-        MemoryCalculatorPlugin
-            .getMemoryCalculatorPlugin(clazz, fConf);
-    LOG.info(" Using MemoryCalculatorPlugin : " + memoryCalculatorPlugin);
-
-    if (memoryCalculatorPlugin != null) {
-      totalVirtualMemoryOnTT = memoryCalculatorPlugin.getVirtualMemorySize();
+    // Use TT_MEMORY_CALCULATOR_PLUGIN if it is configured.
+    Class<? extends MemoryCalculatorPlugin> clazz = 
+        fConf.getClass(TT_MEMORY_CALCULATOR_PLUGIN, 
+            null, MemoryCalculatorPlugin.class); 
+    MemoryCalculatorPlugin memoryCalculatorPlugin = (clazz == null ?
+        null : MemoryCalculatorPlugin.getMemoryCalculatorPlugin(clazz, fConf)); 
+    if (memoryCalculatorPlugin != null || resourceCalculatorPlugin != null) {
+      totalVirtualMemoryOnTT = (memoryCalculatorPlugin == null ?
+          resourceCalculatorPlugin.getVirtualMemorySize() :
+          memoryCalculatorPlugin.getVirtualMemorySize());
       if (totalVirtualMemoryOnTT <= 0) {
         LOG.warn("TaskTracker's totalVmem could not be calculated. "
             + "Setting it to " + JobConf.DISABLED_MEMORY_LIMIT);
         totalVirtualMemoryOnTT = JobConf.DISABLED_MEMORY_LIMIT;
       }
-      totalPhysicalMemoryOnTT = memoryCalculatorPlugin.getPhysicalMemorySize();
+      totalPhysicalMemoryOnTT = (memoryCalculatorPlugin == null ?
+          resourceCalculatorPlugin.getPhysicalMemorySize() :
+          memoryCalculatorPlugin.getPhysicalMemorySize());
       if (totalPhysicalMemoryOnTT <= 0) {
         LOG.warn("TaskTracker's totalPmem could not be calculated. "
             + "Setting it to " + JobConf.DISABLED_MEMORY_LIMIT);
@@ -3662,7 +3886,7 @@ public class TaskTracker extends Service
         throws IOException {
       // check if the tokenJob file is there..
       Path skPath = new Path(systemDirectory,
-          jobId.toString()+"/"+JobTokens.JOB_TOKEN_FILENAME);
+          jobId.toString()+"/"+SecureShuffleUtils.JOB_TOKEN_FILENAME);
 
       FileStatus status = null;
       long jobTokenSize = -1;

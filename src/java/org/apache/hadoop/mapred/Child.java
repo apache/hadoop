@@ -26,21 +26,22 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.mapred.JvmTask;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
-import org.apache.log4j.LogManager;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.LogManager;
 
 /** 
  * The main() for child processes. 
@@ -70,11 +71,12 @@ class Child {
     JVMId jvmId = new JVMId(firstTaskid.getJobID(),
         firstTaskid.getTaskType() == TaskType.MAP,jvmIdInt);
     
-    // file name is passed thru env
+    //load token cache storage
     String jobTokenFile = System.getenv().get("JOB_TOKEN_FILE");
-    FileSystem localFs = FileSystem.getLocal(defaultConf);
-    JobTokens jt = loadJobTokens(jobTokenFile, localFs);
-    LOG.debug("Child: got jobTokenfile=" + jobTokenFile);
+    defaultConf.set(JobContext.JOB_TOKEN_FILE, jobTokenFile);
+    TokenStorage ts = TokenCache.loadTaskTokenStorage(defaultConf);
+    LOG.debug("loading token. # keys =" +ts.numberOfSecretKeys() + 
+        "; from file=" + jobTokenFile);
     
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
@@ -153,8 +155,10 @@ class Child {
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
         
+        // set job shuffle token
+        Token<JobTokenIdentifier> jt = (Token<JobTokenIdentifier>)ts.getJobToken();
         // set the jobTokenFile into task
-        task.setJobTokens(jt);
+        task.setJobTokenSecret(JobTokenSecretManager.createSecretKey(jt.getPassword()));
         
         // setup the child's Configs.LOCAL_DIR. The child is now sandboxed and
         // can only see files down and under attemtdir only.
@@ -223,23 +227,5 @@ class Child {
       // there is no more logging done.
       LogManager.shutdown();
     }
-  }
-  
-  /**
-   * load secret keys from a file
-   * @param jobTokenFile
-   * @param conf
-   * @throws IOException
-   */
-  private static JobTokens loadJobTokens(String jobTokenFile, FileSystem localFS) 
-  throws IOException {
-    Path localJobTokenFile = new Path (jobTokenFile);
-    FSDataInputStream in = localFS.open(localJobTokenFile);
-    JobTokens jt = new JobTokens();
-    jt.readFields(in);
-        
-    LOG.debug("Loaded jobTokenFile from: "+localJobTokenFile.toUri().getPath());
-    in.close();
-    return jt;
   }
 }

@@ -747,7 +747,7 @@ public class Merger {
      * calculating mergeProgress. This simulates the above merge() method and
      * tries to obtain the number of bytes that are going to be merged in all
      * merges(assuming that there is no combiner called while merging).
-     * @param factor mapreduce.task.mapreduce.task.io.sort.factor
+     * @param factor mapreduce.task.io.sort.factor
      * @param inMem  number of segments in memory to be merged
      */
     long computeBytesInMerges(int factor, int inMem) {

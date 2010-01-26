@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.sqoop.orm;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.manager.ConnManager;
 import org.apache.hadoop.sqoop.manager.SqlManager;
 import org.apache.hadoop.sqoop.lib.BigDecimalSerializer;
@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -40,13 +41,56 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * Creates an ORM class to represent a table from a database
- *
- * 
- *
  */
 public class ClassWriter {
 
   public static final Log LOG = LogFactory.getLog(ClassWriter.class.getName());
+
+  // The following are keywords and cannot be used for class, method, or field
+  // names.
+  public static final HashSet<String> JAVA_RESERVED_WORDS;
+
+  static {
+    JAVA_RESERVED_WORDS = new HashSet<String>();
+
+    JAVA_RESERVED_WORDS.add("abstract");
+    JAVA_RESERVED_WORDS.add("else");
+    JAVA_RESERVED_WORDS.add("int");
+    JAVA_RESERVED_WORDS.add("strictfp");
+    JAVA_RESERVED_WORDS.add("assert");
+    JAVA_RESERVED_WORDS.add("enum");
+    JAVA_RESERVED_WORDS.add("interface");
+    JAVA_RESERVED_WORDS.add("super");
+    JAVA_RESERVED_WORDS.add("boolean");
+    JAVA_RESERVED_WORDS.add("extends");
+    JAVA_RESERVED_WORDS.add("long");
+    JAVA_RESERVED_WORDS.add("switch");
+    JAVA_RESERVED_WORDS.add("break");
+    JAVA_RESERVED_WORDS.add("false");
+    JAVA_RESERVED_WORDS.add("native");
+    JAVA_RESERVED_WORDS.add("synchronized");
+    JAVA_RESERVED_WORDS.add("byte");
+    JAVA_RESERVED_WORDS.add("final");
+    JAVA_RESERVED_WORDS.add("new");
+    JAVA_RESERVED_WORDS.add("this");
+    JAVA_RESERVED_WORDS.add("case");
+    JAVA_RESERVED_WORDS.add("finally");
+    JAVA_RESERVED_WORDS.add("null");
+    JAVA_RESERVED_WORDS.add("throw");
+    JAVA_RESERVED_WORDS.add("catch");
+    JAVA_RESERVED_WORDS.add("float");
+    JAVA_RESERVED_WORDS.add("package");
+    JAVA_RESERVED_WORDS.add("throws");
+    JAVA_RESERVED_WORDS.add("char");
+    JAVA_RESERVED_WORDS.add("for");
+    JAVA_RESERVED_WORDS.add("private");
+    JAVA_RESERVED_WORDS.add("transient");
+    JAVA_RESERVED_WORDS.add("class");
+    JAVA_RESERVED_WORDS.add("goto");
+    JAVA_RESERVED_WORDS.add("protected");
+    JAVA_RESERVED_WORDS.add("true");
+    JAVA_RESERVED_WORDS.add("const");
+  }
 
   /**
    * This version number is injected into all generated Java classes to denote
@@ -57,7 +101,7 @@ public class ClassWriter {
    */
   public static final int CLASS_WRITER_VERSION = 2;
 
-  private ImportOptions options;
+  private SqoopOptions options;
   private ConnManager connManager;
   private String tableName;
   private CompilationManager compileManager;
@@ -68,7 +112,7 @@ public class ClassWriter {
    * @param connMgr the connection manager used to describe the table.
    * @param table the name of the table to read.
    */
-  public ClassWriter(final ImportOptions opts, final ConnManager connMgr,
+  public ClassWriter(final SqoopOptions opts, final ConnManager connMgr,
       final String table, final CompilationManager compMgr) {
     this.options = opts;
     this.connManager = connMgr;
@@ -76,6 +120,87 @@ public class ClassWriter {
     this.compileManager = compMgr;
   }
 
+  /**
+   * Given some character that can't be in an identifier,
+   * try to map it to a string that can.
+   *
+   * @param c a character that can't be in a Java identifier
+   * @return a string of characters that can, or null if there's
+   * no good translation.
+   */
+  static String getIdentifierStrForChar(char c) {
+    if (Character.isJavaIdentifierPart(c)) {
+      return "" + c;
+    } else if (Character.isWhitespace(c)) {
+      // Eliminate whitespace.
+      return null;
+    } else {
+      // All other characters map to underscore.
+      return "_";
+    }
+  }
+
+  /**
+   * @param word a word to test.
+   * @return true if 'word' is reserved the in Java language.
+   */
+  private static boolean isReservedWord(String word) {
+    return JAVA_RESERVED_WORDS.contains(word);
+  }
+
+  /**
+   * Coerce a candidate name for an identifier into one which will
+   * definitely compile.
+   *
+   * Ensures that the returned identifier matches [A-Za-z_][A-Za-z0-9_]*
+   * and is not a reserved word.
+   *
+   * @param candidate A string we want to use as an identifier
+   * @return A string naming an identifier which compiles and is
+   *   similar to the candidate.
+   */
+  public static String toIdentifier(String candidate) {
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (char c : candidate.toCharArray()) {
+      if (Character.isJavaIdentifierStart(c) && first) {
+        // Ok for this to be the first character of the identifier.
+        sb.append(c);
+        first = false;
+      } else if (Character.isJavaIdentifierPart(c) && !first) {
+        // Ok for this character to be in the output identifier.
+        sb.append(c);
+      } else {
+        // We have a character in the original that can't be
+        // part of this identifier we're building.
+        // If it's just not allowed to be the first char, add a leading '_'.
+        // If we have a reasonable translation (e.g., '-' -> '_'), do that.
+        // Otherwise, drop it.
+        if (first && Character.isJavaIdentifierPart(c)
+            && !Character.isJavaIdentifierStart(c)) {
+          sb.append("_");
+          sb.append(c);
+          first = false;
+        } else {
+          // Try to map this to a different character or string.
+          // If we can't just give up.
+          String translated = getIdentifierStrForChar(c);
+          if (null != translated) {
+            sb.append(translated);
+            first = false;
+          }
+        }
+      }
+    }
+
+    String output = sb.toString();
+    if (isReservedWord(output)) {
+      // e.g., 'class' -> '_class';
+      return "_" + output;
+    }
+
+    return output;
+  }
 
   /**
    * @param javaType
@@ -251,7 +376,7 @@ public class ClassWriter {
 
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = SqlManager.toJavaType(sqlType);
+      String javaType = connManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("Cannot resolve SQL type " + sqlType);
         continue;
@@ -281,7 +406,7 @@ public class ClassWriter {
       fieldNum++;
 
       int sqlType = columnTypes.get(col);
-      String javaType = SqlManager.toJavaType(sqlType);
+      String javaType = connManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -318,7 +443,7 @@ public class ClassWriter {
       fieldNum++;
 
       int sqlType = columnTypes.get(col);
-      String javaType = SqlManager.toJavaType(sqlType);
+      String javaType = connManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -351,7 +476,7 @@ public class ClassWriter {
 
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = SqlManager.toJavaType(sqlType);
+      String javaType = connManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -407,7 +532,7 @@ public class ClassWriter {
     boolean first = true;
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = SqlManager.toJavaType(sqlType);
+      String javaType = connManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -472,7 +597,7 @@ public class ClassWriter {
   private void parseColumn(String colName, int colType, StringBuilder sb) {
     // assume that we have __it and __cur_str vars, based on __loadFromFields() code.
     sb.append("    __cur_str = __it.next();\n");
-    String javaType = SqlManager.toJavaType(colType);
+    String javaType = connManager.toJavaType(colType);
 
     parseNullVal(colName, sb);
     if (javaType.equals("String")) {
@@ -565,7 +690,7 @@ public class ClassWriter {
 
     for (String col : colNames) {
       int sqlType = columnTypes.get(col);
-      String javaType = SqlManager.toJavaType(sqlType);
+      String javaType = connManager.toJavaType(sqlType);
       if (null == javaType) {
         LOG.error("No Java type for SQL type " + sqlType);
         continue;
@@ -593,8 +718,21 @@ public class ClassWriter {
       colNames = connManager.getColumnNames(tableName);
     }
 
+    // Translate all the column names into names that are safe to
+    // use as identifiers.
+    String [] cleanedColNames = new String[colNames.length];
+    for (int i = 0; i < colNames.length; i++) {
+      String col = colNames[i];
+      String identifier = toIdentifier(col);
+      cleanedColNames[i] = identifier;
+
+      // make sure the col->type mapping holds for the 
+      // new identifier name, too.
+      columnTypes.put(identifier, columnTypes.get(col));
+    }
+
     // Generate the Java code
-    StringBuilder sb = generateClassForColumns(columnTypes, colNames);
+    StringBuilder sb = generateClassForColumns(columnTypes, cleanedColNames);
 
     // Write this out to a file.
     String codeOutDir = options.getCodeOutputDir();
@@ -605,16 +743,18 @@ public class ClassWriter {
     String sourceFilename = className.replace('.', File.separatorChar) + ".java";
     String filename = codeOutDir + sourceFilename;
 
-    LOG.debug("Writing source file: " + filename);
-    LOG.debug("Table name: " + tableName);
-    StringBuilder sbColTypes = new StringBuilder();
-    for (String col : colNames) {
-      Integer colType = columnTypes.get(col);
-      sbColTypes.append(col + ":" + colType + ", ");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Writing source file: " + filename);
+      LOG.debug("Table name: " + tableName);
+      StringBuilder sbColTypes = new StringBuilder();
+      for (String col : colNames) {
+        Integer colType = columnTypes.get(col);
+        sbColTypes.append(col + ":" + colType + ", ");
+      }
+      String colTypeStr = sbColTypes.toString();
+      LOG.debug("Columns: " + colTypeStr);
+      LOG.debug("sourceFilename is " + sourceFilename);
     }
-    String colTypeStr = sbColTypes.toString();
-    LOG.debug("Columns: " + colTypeStr);
-    LOG.debug("sourceFilename is " + sourceFilename);
 
     compileManager.addSourceFile(sourceFilename);
 

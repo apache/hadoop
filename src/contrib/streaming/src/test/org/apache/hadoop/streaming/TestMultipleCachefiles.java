@@ -25,7 +25,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +41,7 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
  * This test case tests the symlink creation
  * utility provided by distributed caching 
  */
-public class TestMultipleCachefiles extends TestCase
+public class TestMultipleCachefiles
 {
   String INPUT_FILE = "/testing-streaming/input.txt";
   String OUTPUT_DIR = "/testing-streaming/out";
@@ -59,98 +60,87 @@ public class TestMultipleCachefiles extends TestCase
   {
   }
 
-  public void testMultipleCachefiles()
+  @Test
+  public void testMultipleCachefiles() throws Exception
   {
-    try {
-      boolean mayExit = false;
-      MiniMRCluster mr = null;
-      MiniDFSCluster dfs = null; 
-      try{
-        Configuration conf = new Configuration();
-        dfs = new MiniDFSCluster(conf, 1, true, null);
-        FileSystem fileSys = dfs.getFileSystem();
-        String namenode = fileSys.getUri().toString();
+    boolean mayExit = false;
+    MiniMRCluster mr = null;
+    MiniDFSCluster dfs = null; 
+    try{
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 1, true, null);
+      FileSystem fileSys = dfs.getFileSystem();
+      String namenode = fileSys.getUri().toString();
 
-        mr  = new MiniMRCluster(1, namenode, 3);
-        // During tests, the default Configuration will use a local mapred
-        // So don't specify -config or -cluster
-        String strJobtracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.getJobTrackerPort();
-        String strNamenode = "fs.default.name=" + namenode;
-        String argv[] = new String[] {
-          "-input", INPUT_FILE,
-          "-output", OUTPUT_DIR,
-          "-mapper", map,
-          "-reducer", reduce,
-          //"-verbose",
-          //"-jobconf", "stream.debug=set"
-          "-jobconf", strNamenode,
-          "-jobconf", strJobtracker,
-          "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-          "-jobconf", 
-            JobConf.MAPRED_MAP_TASK_JAVA_OPTS + "=" +
-              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
-              "-Dbuild.test=" + System.getProperty("build.test") + " " +
-              conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
-                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
-          "-jobconf", 
-            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + "=" +
-              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
-              "-Dbuild.test=" + System.getProperty("build.test") + " " +
-              conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
-                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
-          "-cacheFile", fileSys.getUri() + CACHE_FILE + "#" + mapString,
-          "-cacheFile", fileSys.getUri() + CACHE_FILE_2 + "#" + mapString2
-        };
+      mr  = new MiniMRCluster(1, namenode, 3);
+      // During tests, the default Configuration will use a local mapred
+      // So don't specify -config or -cluster
+      String strJobtracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.getJobTrackerPort();
+      String strNamenode = "fs.default.name=" + namenode;
+      String argv[] = new String[] {
+        "-input", INPUT_FILE,
+        "-output", OUTPUT_DIR,
+        "-mapper", map,
+        "-reducer", reduce,
+        //"-verbose",
+        //"-jobconf", "stream.debug=set"
+        "-jobconf", strNamenode,
+        "-jobconf", strJobtracker,
+        "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
+        "-jobconf", 
+          JobConf.MAPRED_MAP_TASK_JAVA_OPTS + "=" +
+            "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+            "-Dbuild.test=" + System.getProperty("build.test") + " " +
+            conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+                     conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
+        "-jobconf", 
+          JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + "=" +
+            "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+            "-Dbuild.test=" + System.getProperty("build.test") + " " +
+            conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
+                     conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
+        "-cacheFile", fileSys.getUri() + CACHE_FILE + "#" + mapString,
+        "-cacheFile", fileSys.getUri() + CACHE_FILE_2 + "#" + mapString2
+      };
 
-        fileSys.delete(new Path(OUTPUT_DIR), true);
-        
-        DataOutputStream file = fileSys.create(new Path(INPUT_FILE));
-        file.writeBytes(mapString + "\n");
-        file.writeBytes(mapString2 + "\n");
-        file.close();
-        file = fileSys.create(new Path(CACHE_FILE));
-        file.writeBytes(cacheString + "\n");
-        file.close();
-        file = fileSys.create(new Path(CACHE_FILE_2));
-        file.writeBytes(cacheString2 + "\n");
-        file.close();
-          
-        job = new StreamJob(argv, mayExit);     
-        job.go();
-
-        fileSys = dfs.getFileSystem();
-        String line = null;
-        String line2 = null;
-        Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
-                                     new Path(OUTPUT_DIR),
-                                     new Utils.OutputFileUtils
-                                              .OutputFilesFilter()));
-        for (int i = 0; i < fileList.length; i++){
-          System.out.println(fileList[i].toString());
-          BufferedReader bread =
-            new BufferedReader(new InputStreamReader(fileSys.open(fileList[i])));
-          line = bread.readLine();
-          System.out.println(line);
-          line2 = bread.readLine();
-          System.out.println(line2);
-        }
-        assertEquals(cacheString + "\t", line);
-        assertEquals(cacheString2 + "\t", line2);
-      } finally{
-        if (dfs != null) { dfs.shutdown(); }
-        if (mr != null) { mr.shutdown();}
-      }
+      fileSys.delete(new Path(OUTPUT_DIR), true);
       
-    } catch(Exception e) {
-      failTrace(e);
-    }
-  }
+      DataOutputStream file = fileSys.create(new Path(INPUT_FILE));
+      file.writeBytes(mapString + "\n");
+      file.writeBytes(mapString2 + "\n");
+      file.close();
+      file = fileSys.create(new Path(CACHE_FILE));
+      file.writeBytes(cacheString + "\n");
+      file.close();
+      file = fileSys.create(new Path(CACHE_FILE_2));
+      file.writeBytes(cacheString2 + "\n");
+      file.close();
+        
+      job = new StreamJob(argv, mayExit);     
+      job.go();
 
-  void failTrace(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
+      fileSys = dfs.getFileSystem();
+      String line = null;
+      String line2 = null;
+      Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
+                                   new Path(OUTPUT_DIR),
+                                   new Utils.OutputFileUtils
+                                            .OutputFilesFilter()));
+      for (int i = 0; i < fileList.length; i++){
+        System.out.println(fileList[i].toString());
+        BufferedReader bread =
+          new BufferedReader(new InputStreamReader(fileSys.open(fileList[i])));
+        line = bread.readLine();
+        System.out.println(line);
+        line2 = bread.readLine();
+        System.out.println(line2);
+      }
+      assertEquals(cacheString + "\t", line);
+      assertEquals(cacheString2 + "\t", line2);
+    } finally{
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown();}
+    }
   }
 
   public static void main(String[]args) throws Exception

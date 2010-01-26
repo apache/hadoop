@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -91,5 +92,31 @@ public class TestJobExecutionAsDifferentUser extends
         fail("Output directory does not exist" + outDir.toString());
       }
     }
+  }
+
+  /** Ensure that SIGQUIT can be properly sent by the LinuxTaskController
+   * if a task times out.
+   */
+  public void testTimeoutStackTrace() throws Exception {
+    if (!shouldRun()) {
+      return;
+    }
+
+    // Run a job that should timeout and trigger a SIGQUIT.
+    startCluster();
+    JobConf conf = getClusterConf();
+    conf.setInt(JobContext.TASK_TIMEOUT, 10000);
+    conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 50);
+    SleepJob sleepJob = new SleepJob();
+    sleepJob.setConf(conf);
+    Job job = sleepJob.createJob(1, 0, 30000, 1, 0, 0);
+    job.setMaxMapAttempts(1);
+    int prevNumSigQuits = MyLinuxTaskController.attemptedSigQuits;
+    job.waitForCompletion(true);
+    assertTrue("Did not detect a new SIGQUIT!",
+        prevNumSigQuits < MyLinuxTaskController.attemptedSigQuits);
+    assertEquals("A SIGQUIT attempt failed!", 0,
+        MyLinuxTaskController.failedSigQuits);
+
   }
 }

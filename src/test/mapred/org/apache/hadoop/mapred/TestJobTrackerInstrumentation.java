@@ -186,8 +186,13 @@ public class TestJobTrackerInstrumentation extends TestCase {
     job1.finishTask(taskAttemptID[2]);
     jobTracker.finalizeJob(job1);
 
+    assertEquals("Mismatch in number of failed map tasks",
+        1, mi.numMapTasksFailed);
+    assertEquals("Mismatch in number of failed reduce tasks",
+        1, mi.numReduceTasksFailed);
+    
     assertEquals("Mismatch in number of blacklisted trackers",
-        mi.numTrackersBlackListed, 1);
+        1, mi.numTrackersBlackListed);
 
     assertEquals("Mismatch in blacklisted map slots", 
         mi.numBlackListedMapSlots, 
@@ -319,6 +324,41 @@ public class TestJobTrackerInstrumentation extends TestCase {
         1, mi.numTrackersDecommissioned);
     assertEquals("Mismatch in number of trackers",
         trackers.length - 1, mi.numTrackers);
+  }
+  
+  public void testKillTasks() throws IOException {
+    int numMaps, numReds;
+    JobConf conf = new JobConf();
+    conf.setSpeculativeExecution(false);
+    conf.setMaxTaskFailuresPerTracker(1);
+    conf.setBoolean(JobContext.SETUP_CLEANUP_NEEDED, false);
+    TaskAttemptID[] taskAttemptID = new TaskAttemptID[2];
+
+    numMaps = 1;
+    numReds = 1;
+    conf.setNumMapTasks(numMaps);
+    conf.setNumReduceTasks(numReds);
+    conf.setBoolean(JobContext.SETUP_CLEANUP_NEEDED, false);
+
+    assertEquals("Mismatch in number of killed map tasks",
+        0, mi.numMapTasksKilled);
+    assertEquals("Mismatch in number of killed reduce tasks",
+        0, mi.numReduceTasksKilled);
+    
+    FakeJobInProgress job1 = new FakeJobInProgress(conf, jobTracker);
+    job1.setClusterSize(trackers.length);
+    job1.initTasks();
+    jobTracker.addJob(job1.getJobID(), job1);
+    taskAttemptID[0] = job1.findMapTask(trackers[0]);
+    job1.killTask(taskAttemptID[0]);
+    taskAttemptID[1] = job1.findReduceTask(trackers[0]);
+    job1.killTask(taskAttemptID[1]);
+    jobTracker.finalizeJob(job1);
+
+    assertEquals("Mismatch in number of killed map tasks",
+        1, mi.numMapTasksKilled);
+    assertEquals("Mismatch in number of killed reduce tasks",
+        1, mi.numReduceTasksKilled);
   }
   
   static class FakeTaskScheduler extends JobQueueTaskScheduler {

@@ -31,13 +31,29 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.conf.Configuration;
 
 public class VerticaUtil {
   private static final Log LOG = LogFactory.getLog(VerticaUtil.class);
 
+  public static int verticaVersion(Configuration conf, boolean output) throws IOException {
+    int ver = -1;
+    try {
+    VerticaConfiguration vtconfig = new VerticaConfiguration(conf);
+    Connection conn = vtconfig.getConnection(output);
+    DatabaseMetaData dbmd = conn.getMetaData();
+    ver = dbmd.getDatabaseMajorVersion() * 100;
+    ver += dbmd.getDatabaseMinorVersion();
+    } catch(ClassNotFoundException e) { 
+      throw new IOException("Vertica Driver required to use Vertica Input or Output Formatters"); 
+    } catch (SQLException e) { throw new IOException(e); }
+    return ver;
+  }
+  
   public static void checkOutputSpecs(Configuration conf) throws IOException {
     VerticaConfiguration vtconfig = new VerticaConfiguration(conf);
 
@@ -67,20 +83,24 @@ public class VerticaUtil {
       stmt = conn.createStatement();
 
       if (tableExists && dropTable) {
-        // TODO: need truncate support
-        // for now drop the table if it exists
-        // if def is empty, grab the columns first
-        if (def == null) {
-          rs = dbmd.getColumns(null, schema, table, null);
-          ArrayList<String> defs = new ArrayList<String>();
-          while (rs.next())
-            defs.add(rs.getString(4) + " " + rs.getString(5));
-          def = defs.toArray(new String[0]);
+        if(verticaVersion(conf, true) >= 305) {
+          stmt = conn.createStatement();
+          stmt.execute("TRUNCATE TABLE " + writerTable);
+        } else {
+          // for version < 3.0 drop the table if it exists
+          // if def is empty, grab the columns first to redfine the table
+          if (def == null) {
+            rs = dbmd.getColumns(null, schema, table, null);
+            ArrayList<String> defs = new ArrayList<String>();
+            while (rs.next())
+              defs.add(rs.getString(4) + " " + rs.getString(5));
+            def = defs.toArray(new String[0]);
+          }
+  
+          stmt = conn.createStatement();
+          stmt.execute("DROP TABLE " + writerTable + " CASCADE");
+          tableExists = false; // force create
         }
-
-        stmt = conn.createStatement();
-        stmt.execute("DROP TABLE " + writerTable + " CASCADE");
-        tableExists = false; // force create
       }
 
       // create table if it doesn't exist
@@ -120,7 +140,7 @@ public class VerticaUtil {
   public static List<InputSplit> getSplits(JobContext context)
       throws IOException {
     Configuration conf = context.getConfiguration();
-    int numSplits = conf.getInt("mapred.map.tasks", 1);
+    int numSplits = conf.getInt("mapreduce.job.maps", 1);
     LOG.debug("creating splits up to " + numSplits);
     List<InputSplit> splits = new ArrayList<InputSplit>();
     int i = 0;

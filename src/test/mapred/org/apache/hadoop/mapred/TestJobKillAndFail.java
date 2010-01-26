@@ -18,12 +18,20 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.SleepJob;
 
 /**
  * A JUnit test to test Kill Job & Fail Job functionality with local file
@@ -31,38 +39,96 @@ import org.apache.hadoop.fs.Path;
  */
 public class TestJobKillAndFail extends TestCase {
 
+  static final Log LOG = LogFactory.getLog(TestJobKillAndFail.class);
+
   private static String TEST_ROOT_DIR = new File(System.getProperty(
       "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
 
-  public void testJobFailAndKill() throws IOException {
+  /**
+   * TaskController instance that just sets a flag when a stack dump
+   * is performed in a child thread.
+   */
+  static class MockStackDumpTaskController extends DefaultTaskController {
+
+    static volatile int numStackDumps = 0;
+
+    static final Log LOG = LogFactory.getLog(TestJobKillAndFail.class);
+
+    public MockStackDumpTaskController() {
+      LOG.info("Instantiated MockStackDumpTC");
+    }
+
+    @Override
+    void dumpTaskStack(TaskControllerContext context) {
+      LOG.info("Got stack-dump request in TaskController");
+      MockStackDumpTaskController.numStackDumps++;
+      super.dumpTaskStack(context);
+    }
+
+  }
+
+  /** If a task was killed, then dumpTaskStack() should have been
+    * called. Test whether or not the counter was incremented
+    * and succeed/fail based on this. */
+  private void checkForStackDump(boolean expectDump, int lastNumDumps) {
+    int curNumDumps = MockStackDumpTaskController.numStackDumps;
+
+    LOG.info("curNumDumps=" + curNumDumps + "; lastNumDumps=" + lastNumDumps
+        + "; expect=" + expectDump);
+
+    if (expectDump) {
+      assertTrue("No stack dump recorded!", lastNumDumps < curNumDumps);
+    } else {
+      assertTrue("Stack dump happened anyway!", lastNumDumps == curNumDumps);
+    }
+  }
+
+  public void testJobFailAndKill() throws Exception {
     MiniMRCluster mr = null;
     try {
       JobConf jtConf = new JobConf();
       jtConf.set("mapred.jobtracker.instrumentation", 
           JTInstrumentation.class.getName());
+      jtConf.set("mapreduce.tasktracker.taskcontroller",
+          MockStackDumpTaskController.class.getName());
       mr = new MiniMRCluster(2, "file:///", 3, null, null, jtConf);
       JTInstrumentation instr = (JTInstrumentation) 
         mr.getJobTrackerRunner().getJobTracker().getInstrumentation();
 
       // run the TCs
       JobConf conf = mr.createJobConf();
+      conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 50);
       
       Path inDir = new Path(TEST_ROOT_DIR + "/failkilljob/input");
       Path outDir = new Path(TEST_ROOT_DIR + "/failkilljob/output");
-      RunningJob job = UtilsForTests.runJobFail(conf, inDir, outDir);
+      RunningJob runningJob = UtilsForTests.runJobFail(conf, inDir, outDir);
       // Checking that the Job got failed
-      assertEquals(job.getJobState(), JobStatus.FAILED);
+      assertEquals(runningJob.getJobState(), JobStatus.FAILED);
       assertTrue(instr.verifyJob());
       assertEquals(1, instr.failed);
       instr.reset();
 
-      
-      job = UtilsForTests.runJobKill(conf, inDir, outDir);
+      int prevNumDumps = MockStackDumpTaskController.numStackDumps;
+      runningJob = UtilsForTests.runJobKill(conf, inDir, outDir);
       // Checking that the Job got killed
-      assertTrue(job.isComplete());
-      assertEquals(job.getJobState(), JobStatus.KILLED);
+      assertTrue(runningJob.isComplete());
+      assertEquals(runningJob.getJobState(), JobStatus.KILLED);
       assertTrue(instr.verifyJob());
       assertEquals(1, instr.killed);
+      // check that job kill does not put a stacktrace in task logs.
+      checkForStackDump(false, prevNumDumps);
+
+      // Test that a task that times out does have a stack trace
+      conf = mr.createJobConf();
+      conf.setInt(JobContext.TASK_TIMEOUT, 10000);
+      conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 50);
+      SleepJob sleepJob = new SleepJob();
+      sleepJob.setConf(conf);
+      Job job = sleepJob.createJob(1, 0, 30000, 1,0, 0);
+      job.setMaxMapAttempts(1);
+      prevNumDumps = MockStackDumpTaskController.numStackDumps;
+      job.waitForCompletion(true);
+      checkForStackDump(true, prevNumDumps);
     } finally {
       if (mr != null) {
         mr.shutdown();

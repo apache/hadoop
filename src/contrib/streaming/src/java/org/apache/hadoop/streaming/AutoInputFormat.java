@@ -52,7 +52,7 @@ public class AutoInputFormat extends FileInputFormat {
   public RecordReader getRecordReader(InputSplit split, JobConf job,
     Reporter reporter) throws IOException {
     FileSplit fileSplit = (FileSplit) split;
-    FileSystem fs = FileSystem.get(job);
+    FileSystem fs = FileSystem.get(fileSplit.getPath().toUri(), job);
     FSDataInputStream is = fs.open(fileSplit.getPath());
     byte[] header = new byte[3];
     RecordReader reader = null;

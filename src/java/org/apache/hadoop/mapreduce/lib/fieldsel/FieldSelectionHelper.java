@@ -34,7 +34,8 @@ import org.apache.hadoop.io.Text;
  * 
  * The field separator is under attribute "mapreduce.fieldsel.data.field.separator"
  * 
- * The map output field list spec is under attribute "mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec".
+ * The map output field list spec is under attribute 
+ * "mapreduce.fieldsel.map.output.key.value.fields.spec".
  * The value is expected to be like "keyFieldsSpec:valueFieldsSpec"
  * key/valueFieldsSpec are comma (,) separated field spec: fieldSpec,fieldSpec,fieldSpec ...
  * Each field spec can be a simple number (e.g. 5) specifying a specific field, or a range
@@ -45,7 +46,8 @@ import org.apache.hadoop.io.Text;
  * Here is an example: "4,3,0,1:6,5,1-3,7-". It specifies to use fields 4,3,0 and 1 for keys,
  * and use fields 6,5,1,2,3,7 and above for values.
  * 
- * The reduce output field list spec is under attribute "mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec".
+ * The reduce output field list spec is under attribute 
+ * "mapreduce.fieldsel.reduce.output.key.value.fields.spec".
  * 
  * The reducer extracts output key/value pairs in a similar manner, except that
  * the key is never ignored.
@@ -57,9 +59,9 @@ public class FieldSelectionHelper {
   public static final String DATA_FIELD_SEPERATOR = 
     "mapreduce.fieldsel.data.field.separator";
   public static final String MAP_OUTPUT_KEY_VALUE_SPEC = 
-    "mapreduce.fieldsel.mapreduce.fieldsel.mapreduce.fieldsel.map.output.key.value.fields.spec";
+    "mapreduce.fieldsel.map.output.key.value.fields.spec";
   public static final String REDUCE_OUTPUT_KEY_VALUE_SPEC = 
-    "mapreduce.fieldsel.mapreduce.fieldsel.mapreduce.fieldsel.reduce.output.key.value.fields.spec";
+    "mapreduce.fieldsel.reduce.output.key.value.fields.spec";
 
 
   /**

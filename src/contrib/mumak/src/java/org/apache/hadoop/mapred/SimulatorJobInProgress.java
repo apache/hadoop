@@ -28,11 +28,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Job.RawSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.Node;
@@ -48,10 +48,10 @@ public class SimulatorJobInProgress extends JobInProgress {
   // cache
   private final JobStory jobStory;
 
-  RawSplit[] splits;
+  TaskSplitMetaInfo[] taskSplitMetaInfo;
 
   @SuppressWarnings("deprecation")
-  public SimulatorJobInProgress(JobID jobid, JobTracker jobtracker,
+  public SimulatorJobInProgress(JobID jobid, String jobSubmitDir, JobTracker jobtracker,
       JobConf default_conf, JobStory jobStory) {
     super();
     // jobSetupCleanupNeeded set to false in parent cstr, though
@@ -63,7 +63,7 @@ public class SimulatorJobInProgress extends JobInProgress {
     this.jobtracker = jobtracker;
     this.conf = jobStory.getJobConf();
     this.priority = conf.getJobPriority();
-    Path jobDir = jobtracker.getSystemDirectoryForJob(jobid);
+    Path jobDir = new Path(jobSubmitDir);
     this.jobFile = new Path(jobDir, "job.xml");
     this.status = new JobStatus(jobid, 0.0f, 0.0f, 0.0f, 0.0f, JobStatus.PREP,
         priority, conf.getUser(), conf.getJobName(), jobFile.toString(), url);
@@ -127,16 +127,17 @@ public class SimulatorJobInProgress extends JobInProgress {
     }
 
     final String jobFile = "default";
-    splits = getRawSplits(jobStory.getInputSplits());
+    taskSplitMetaInfo = createSplits(jobStory);
     if (loggingEnabled) {
       LOG.debug("(initTasks@SJIP) Created splits for job = " + jobId
-          + " number of splits = " + splits.length);
+          + " number of splits = " + taskSplitMetaInfo.length);
     }
 
-    createMapTasks(jobFile, splits);
+    createMapTasks(jobFile, taskSplitMetaInfo);
 
     if (numMapTasks > 0) {
-      nonRunningMapCache = createCache(splits, maxLevel);
+      nonRunningMapCache = createCache(taskSplitMetaInfo,
+          maxLevel);
       if (loggingEnabled) {
         LOG.debug("initTasks:numMaps=" + numMapTasks
             + " Size of nonRunningMapCache=" + nonRunningMapCache.size()
@@ -167,25 +168,25 @@ public class SimulatorJobInProgress extends JobInProgress {
     }
   }
 
-  RawSplit[] getRawSplits(InputSplit[] splits) throws IOException {
+  
+  TaskSplitMetaInfo[] createSplits(JobStory story) throws IOException {
+    InputSplit[] splits = story.getInputSplits();
     if (splits == null || splits.length != numMapTasks) {
       throw new IllegalArgumentException("Input split size mismatch: expected="
           + numMapTasks + ", actual=" + ((splits == null) ? -1 : splits.length));
     }
 
-    RawSplit rawSplits[] = new RawSplit[splits.length];
-    for (int i = 0; i < splits.length; i++) {
+    TaskSplitMetaInfo[] splitMetaInfo = 
+      new TaskSplitMetaInfo[story.getNumberMaps()];
+    int i = 0;
+    for (InputSplit split : splits) {
       try {
-        rawSplits[i] = new RawSplit();
-        rawSplits[i].setClassName(splits[i].getClass().getName());
-        rawSplits[i].setDataLength(splits[i].getLength());
-        rawSplits[i].setLocations(splits[i].getLocations());
+        splitMetaInfo[i++] = new TaskSplitMetaInfo(split,0);
       } catch (InterruptedException ie) {
         throw new IOException(ie);
       }
     }
-
-    return rawSplits;
+    return splitMetaInfo;
   }
 
   /**
@@ -208,7 +209,8 @@ public class SimulatorJobInProgress extends JobInProgress {
     assert (jobid == getJobID());
 
     // Get splits for the TaskAttempt
-    RawSplit split = splits[taskAttemptID.getTaskID().getId()];
+    TaskSplitMetaInfo split = 
+     taskSplitMetaInfo[taskAttemptID.getTaskID().getId()];
     int locality = getClosestLocality(taskTracker, split);
 
     TaskID taskId = taskAttemptID.getTaskID();
@@ -232,7 +234,7 @@ public class SimulatorJobInProgress extends JobInProgress {
     return taskAttemptInfo;
   }
 
-  private int getClosestLocality(TaskTracker taskTracker, RawSplit split) {
+  private int getClosestLocality(TaskTracker taskTracker, TaskSplitMetaInfo split) {
     int locality = 2;
 
     Node taskTrackerNode = jobtracker

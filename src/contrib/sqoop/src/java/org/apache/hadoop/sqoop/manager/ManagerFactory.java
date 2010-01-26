@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.sqoop.manager;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 
 /**
  * Interface for factory classes for ConnManager implementations.
@@ -28,6 +28,6 @@ import org.apache.hadoop.sqoop.ImportOptions;
  * one such call returns a non-null ConnManager instance.
  */
 public abstract class ManagerFactory {
-  public abstract ConnManager accept(ImportOptions options);
+  public abstract ConnManager accept(SqoopOptions options);
 }
 

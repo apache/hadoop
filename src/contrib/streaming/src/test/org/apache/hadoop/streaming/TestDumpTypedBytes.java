@@ -31,10 +31,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.streaming.DumpTypedBytes;
 import org.apache.hadoop.typedbytes.TypedBytesInput;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestDumpTypedBytes extends TestCase {
+public class TestDumpTypedBytes {
 
+  @Test
   public void testDumping() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);

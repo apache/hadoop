@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.io.SplittingOutputStream;
 import org.apache.hadoop.sqoop.io.SplittableBufferedWriter;
 import org.apache.hadoop.util.Shell;
@@ -70,7 +70,7 @@ public final class DirectImportUtils {
    * returned stream.
    */
   public static SplittableBufferedWriter createHdfsSink(Configuration conf,
-      ImportOptions options, String tableName) throws IOException {
+      SqoopOptions options, String tableName) throws IOException {
 
     FileSystem fs = FileSystem.get(conf);
     String warehouseDir = options.getWarehouseDir();

@@ -40,10 +40,9 @@ import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobInProgress;
 import org.apache.hadoop.mapred.FakeObjectUtilities.FakeJobTracker;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.apache.hadoop.mapreduce.Job.RawSplit;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.StaticMapping;
@@ -101,16 +100,14 @@ public class TestJobInProgress extends TestCase {
     }
 
     @Override
-    Job.RawSplit[] createSplits() {
+    TaskSplitMetaInfo[] createSplits(org.apache.hadoop.mapreduce.JobID jobId) {
       // Set all splits to reside on one host. This will ensure that 
       // one tracker gets data local, one gets rack local and two others
       // get non-local maps
-      Job.RawSplit[] splits = new Job.RawSplit[numMapTasks];
+      TaskSplitMetaInfo[] splits = new TaskSplitMetaInfo[numMapTasks];
       String[] splitHosts0 = new String[] { hosts[0] };
       for (int i = 0; i < numMapTasks; i++) {
-        splits[i] = new Job.RawSplit();
-        splits[i].setDataLength(0);
-        splits[i].setLocations(splitHosts0);
+        splits[i] = new TaskSplitMetaInfo(splitHosts0, 0, 0);
       }
       return splits;
     }

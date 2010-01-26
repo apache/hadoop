@@ -223,7 +223,6 @@ class FilePool {
         return getSize();
       }
 
-      // TODO sort, pick rand pairs of kth large/small in dir
       IndexMapper mapping;
       if ((curdir.size() < 200) || ((double) targetSize / getSize() > 0.5)) {
         mapping = new DenseIndexMapper(curdir.size());
@@ -234,13 +233,13 @@ class FilePool {
       ArrayList<Integer> selected = new ArrayList<Integer>();
       long ret = 0L;
       int poolSize = curdir.size();
-      while (ret < targetSize) {
+      do {
         int pos = rand.nextInt(poolSize);
         int index = mapping.get(pos);
         selected.add(index);
         ret += curdir.get(index).getLen();
         mapping.swap(pos, --poolSize);
-      }
+      } while (ret < targetSize);
 
       for (Integer i : selected) {
         files.add(curdir.get(i));

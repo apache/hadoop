@@ -19,6 +19,8 @@
 package org.apache.hadoop.sqoop.manager;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,8 +30,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.sqoop.ImportOptions;
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.SqoopOptions;
+import org.apache.hadoop.sqoop.util.ImportException;
 
 /**
  * Manages connections to MySQL databases
@@ -44,11 +46,11 @@ public class MySQLManager extends GenericJdbcManager {
   // set to true after we warn the user that we can use direct fastpath.
   private static boolean warningPrinted = false;
 
-  public MySQLManager(final ImportOptions opts) {
+  public MySQLManager(final SqoopOptions opts) {
     super(DRIVER_CLASS, opts);
   }
 
-  protected MySQLManager(final ImportOptions opts, boolean ignored) {
+  protected MySQLManager(final SqoopOptions opts, boolean ignored) {
     // constructor used by subclasses to avoid the --direct warning.
     super(DRIVER_CLASS, opts);
   }
@@ -56,7 +58,7 @@ public class MySQLManager extends GenericJdbcManager {
   @Override
   protected String getColNamesQuery(String tableName) {
     // Use mysql-specific hints and LIMIT to return fast
-    return "SELECT t.* FROM " + tableName + " AS t LIMIT 1";
+    return "SELECT t.* FROM " + escapeTableName(tableName) + " AS t LIMIT 1";
   }
 
   @Override
@@ -93,7 +95,7 @@ public class MySQLManager extends GenericJdbcManager {
 
   @Override
   public void importTable(ImportJobContext context)
-        throws IOException, ImportError {
+        throws IOException, ImportException {
 
     // Check that we're not doing a MapReduce from localhost. If we are, point
     // out that we could use mysqldump.
@@ -113,8 +115,60 @@ public class MySQLManager extends GenericJdbcManager {
       }
     }
 
+    checkDateTimeBehavior(context);
+
     // Then run the normal importTable() method.
     super.importTable(context);
+  }
+
+  /**
+   * MySQL allows TIMESTAMP fields to have the value '0000-00-00 00:00:00',
+   * which causes errors in import. If the user has not set the
+   * zeroDateTimeBehavior property already, we set it for them to coerce
+   * the type to null.
+   */
+  private void checkDateTimeBehavior(ImportJobContext context) {
+    final String zeroBehaviorStr = "zeroDateTimeBehavior";
+    final String convertToNull = "=convertToNull";
+
+    String connectStr = context.getOptions().getConnectString();
+    if (connectStr.indexOf("jdbc:") != 0) {
+      // This connect string doesn't have the prefix we expect.
+      // We can't parse the rest of it here.
+      return;
+    }
+
+    // This starts with 'jdbc:mysql://' ... let's remove the 'jdbc:'
+    // prefix so that java.net.URI can parse the rest of the line.
+    String uriComponent = connectStr.substring(5);
+    try {
+      URI uri = new URI(uriComponent);
+      String query = uri.getQuery(); // get the part after a '?'
+
+      // If they haven't set the zeroBehavior option, set it to
+      // squash-null for them.
+      if (null == query) {
+        connectStr = connectStr + "?" + zeroBehaviorStr + convertToNull;
+        LOG.info("Setting zero DATETIME behavior to convertToNull (mysql)");
+      } else if (query.length() == 0) {
+        connectStr = connectStr + zeroBehaviorStr + convertToNull;
+        LOG.info("Setting zero DATETIME behavior to convertToNull (mysql)");
+      } else if (query.indexOf(zeroBehaviorStr) == -1) {
+        if (!connectStr.endsWith("&")) {
+          connectStr = connectStr + "&";
+        }
+        connectStr = connectStr + zeroBehaviorStr + convertToNull;
+        LOG.info("Setting zero DATETIME behavior to convertToNull (mysql)");
+      }
+
+      LOG.debug("Rewriting connect string to " + connectStr);
+      context.getOptions().setConnectString(connectStr);
+    } catch (URISyntaxException use) {
+      // Just ignore this. If we can't parse the URI, don't attempt
+      // to add any extra flags to it.
+      LOG.debug("mysql: Couldn't parse connect str in checkDateTimeBehavior: "
+          + use);
+    }
   }
 
   /**
@@ -140,6 +194,36 @@ public class MySQLManager extends GenericJdbcManager {
 
     LOG.info("Executing SQL statement: " + stmt);
     return statement.executeQuery();
+  }
+
+  /**
+   * When using a column name in a generated SQL query, how (if at all)
+   * should we escape that column name? e.g., a column named "table"
+   * may need to be quoted with backtiks: "`table`".
+   *
+   * @param colName the column name as provided by the user, etc.
+   * @return how the column name should be rendered in the sql text.
+   */
+  public String escapeColName(String colName) {
+    if (null == colName) {
+      return null;
+    }
+    return "`" + colName + "`";
+  }
+
+  /**
+   * When using a table name in a generated SQL query, how (if at all)
+   * should we escape that column name? e.g., a table named "table"
+   * may need to be quoted with backtiks: "`table`".
+   *
+   * @param tableName the table name as provided by the user, etc.
+   * @return how the table name should be rendered in the sql text.
+   */
+  public String escapeTableName(String tableName) {
+    if (null == tableName) {
+      return null;
+    }
+    return "`" + tableName + "`";
   }
 }
 

@@ -34,7 +34,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 import org.apache.hadoop.sqoop.io.SplittableBufferedWriter;
 import org.apache.hadoop.sqoop.lib.FieldFormatter;
 import org.apache.hadoop.sqoop.lib.RecordParser;
@@ -42,7 +42,7 @@ import org.apache.hadoop.sqoop.util.AsyncSink;
 import org.apache.hadoop.sqoop.util.DirectImportUtils;
 import org.apache.hadoop.sqoop.util.ErrorableAsyncSink;
 import org.apache.hadoop.sqoop.util.ErrorableThread;
-import org.apache.hadoop.sqoop.util.ImportError;
+import org.apache.hadoop.sqoop.util.ImportException;
 import org.apache.hadoop.sqoop.util.JdbcUrl;
 import org.apache.hadoop.sqoop.util.LoggingAsyncSink;
 import org.apache.hadoop.sqoop.util.PerfCounters;
@@ -154,11 +154,11 @@ public class LocalMySQLManager extends MySQLManager {
    */
   static class ReparsingAsyncSink extends ErrorableAsyncSink {
     private final SplittableBufferedWriter writer;
-    private final ImportOptions options;
+    private final SqoopOptions options;
     private final PerfCounters counters;
 
     ReparsingAsyncSink(final SplittableBufferedWriter w,
-        final ImportOptions opts, final PerfCounters ctrs) {
+        final SqoopOptions opts, final PerfCounters ctrs) {
       this.writer = w;
       this.options = opts;
       this.counters = ctrs;
@@ -174,12 +174,12 @@ public class LocalMySQLManager extends MySQLManager {
           ReparsingStreamThread.class.getName());
 
       private final SplittableBufferedWriter writer;
-      private final ImportOptions options;
+      private final SqoopOptions options;
       private final InputStream stream;
       private final PerfCounters counters;
 
       ReparsingStreamThread(final InputStream is,
-          final SplittableBufferedWriter w, final ImportOptions opts,
+          final SplittableBufferedWriter w, final SqoopOptions opts,
           final PerfCounters ctrs) {
         this.writer = w;
         this.options = opts;
@@ -291,7 +291,7 @@ public class LocalMySQLManager extends MySQLManager {
   }
 
 
-  public LocalMySQLManager(final ImportOptions options) {
+  public LocalMySQLManager(final SqoopOptions options) {
     super(options, false);
   }
 
@@ -343,15 +343,15 @@ public class LocalMySQLManager extends MySQLManager {
    * the database and upload the files directly to HDFS.
    */
   public void importTable(ImportJobContext context)
-      throws IOException, ImportError {
+      throws IOException, ImportException {
 
     String tableName = context.getTableName();
     String jarFile = context.getJarFile();
-    ImportOptions options = context.getOptions();
+    SqoopOptions options = context.getOptions();
 
     LOG.info("Beginning mysqldump fast path import");
 
-    if (options.getFileLayout() != ImportOptions.FileLayout.TextFile) {
+    if (options.getFileLayout() != SqoopOptions.FileLayout.TextFile) {
       // TODO(aaron): Support SequenceFile-based load-in
       LOG.warn("File import layout " + options.getFileLayout()
           + " is not supported by");
@@ -370,7 +370,7 @@ public class LocalMySQLManager extends MySQLManager {
     int port = JdbcUrl.getPort(connectString);
 
     if (null == databaseName) {
-      throw new ImportError("Could not determine database name");
+      throw new ImportException("Could not determine database name");
     }
 
     LOG.info("Performing import of table " + tableName + " from database " + databaseName);

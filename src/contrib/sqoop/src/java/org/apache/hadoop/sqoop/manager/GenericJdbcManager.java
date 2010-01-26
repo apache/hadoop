@@ -24,7 +24,7 @@ import java.sql.SQLException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.sqoop.ImportOptions;
+import org.apache.hadoop.sqoop.SqoopOptions;
 
 /**
  * Database manager that is connects to a generic JDBC-compliant
@@ -38,7 +38,7 @@ public class GenericJdbcManager extends SqlManager {
   private String jdbcDriverClass;
   private Connection connection;
 
-  public GenericJdbcManager(final String driverClass, final ImportOptions opts) {
+  public GenericJdbcManager(final String driverClass, final SqoopOptions opts) {
     super(opts);
 
     this.jdbcDriverClass = driverClass;

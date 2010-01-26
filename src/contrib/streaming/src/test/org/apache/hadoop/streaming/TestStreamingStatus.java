@@ -22,7 +22,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.File;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,12 +33,13 @@ import org.apache.hadoop.mapred.TaskReport;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 
+
 /**
  * Tests for the ability of a streaming task to set the status
  * by writing "reporter:status:" lines to stderr. Uses MiniMR
  * since the local jobtracker doesn't track status.
  */
-public class TestStreamingStatus extends TestCase {
+public class TestStreamingStatus {
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data","/tmp"))
     .toURI().toString().replace(' ', '+');
@@ -78,6 +80,7 @@ public class TestStreamingStatus extends TestCase {
     } catch (Exception e) {}
   }
   
+  @Test
   public void testStreamingStatus() throws Exception {
     MiniMRCluster mr = null;
     FileSystem fs = null;

@@ -69,6 +69,10 @@ public class PoolManager {
   private Map<String, Integer> mapAllocs = new HashMap<String, Integer>();
   private Map<String, Integer> reduceAllocs = new HashMap<String, Integer>();
 
+  // If set, cap number of map and reduce tasks in a pool
+  private Map<String, Integer> poolMaxMaps = new HashMap<String, Integer>();
+  private Map<String, Integer> poolMaxReduces = new HashMap<String, Integer>();
+
   // Sharing weights for each pool
   private Map<String, Double> poolWeights = new HashMap<String, Double>();
   
@@ -221,6 +225,8 @@ public class PoolManager {
     Map<String, Integer> reduceAllocs = new HashMap<String, Integer>();
     Map<String, Integer> poolMaxJobs = new HashMap<String, Integer>();
     Map<String, Integer> userMaxJobs = new HashMap<String, Integer>();
+    Map<String, Integer> poolMaxMaps = new HashMap<String, Integer>();
+    Map<String, Integer> poolMaxReduces = new HashMap<String, Integer>();
     Map<String, Double> poolWeights = new HashMap<String, Double>();
     Map<String, SchedulingMode> poolModes = new HashMap<String, SchedulingMode>();
     Map<String, Long> minSharePreemptionTimeouts = new HashMap<String, Long>();
@@ -271,6 +277,14 @@ public class PoolManager {
             String text = ((Text)field.getFirstChild()).getData().trim();
             int val = Integer.parseInt(text);
             reduceAllocs.put(poolName, val);
+          } else if ("maxMaps".equals(field.getTagName())) {
+            String text = ((Text)field.getFirstChild()).getData().trim();
+            int val = Integer.parseInt(text);
+            poolMaxMaps.put(poolName, val);
+          } else if ("maxReduces".equals(field.getTagName())) {
+            String text = ((Text)field.getFirstChild()).getData().trim();
+            int val = Integer.parseInt(text);
+            poolMaxReduces.put(poolName, val);
           } else if ("maxRunningJobs".equals(field.getTagName())) {
             String text = ((Text)field.getFirstChild()).getData().trim();
             int val = Integer.parseInt(text);
@@ -287,6 +301,16 @@ public class PoolManager {
             String text = ((Text)field.getFirstChild()).getData().trim();
             poolModes.put(poolName, parseSchedulingMode(text));
           }
+        }
+        if (poolMaxMaps.containsKey(poolName) && mapAllocs.containsKey(poolName)
+            && poolMaxMaps.get(poolName) < mapAllocs.get(poolName)) {
+          LOG.warn(String.format("Pool %s has max maps %d less than min maps %d",
+              poolName, poolMaxMaps.get(poolName), mapAllocs.get(poolName)));        
+        }
+        if(poolMaxReduces.containsKey(poolName) && reduceAllocs.containsKey(poolName)
+            && poolMaxReduces.get(poolName) < reduceAllocs.get(poolName)) {
+          LOG.warn(String.format("Pool %s has max reduces %d less than min reduces %d",
+              poolName, poolMaxReduces.get(poolName), reduceAllocs.get(poolName)));        
         }
       } else if ("user".equals(element.getTagName())) {
         String userName = element.getAttribute("name");
@@ -331,6 +355,8 @@ public class PoolManager {
     synchronized(this) {
       this.mapAllocs = mapAllocs;
       this.reduceAllocs = reduceAllocs;
+      this.poolMaxMaps = poolMaxMaps;
+      this.poolMaxReduces = poolMaxReduces;
       this.poolMaxJobs = poolMaxJobs;
       this.userMaxJobs = userMaxJobs;
       this.poolWeights = poolWeights;
@@ -349,6 +375,25 @@ public class PoolManager {
         }
       }
     }
+  }
+
+  /**
+   * Does the pool have incompatible max and min allocation set.
+   * 
+   * @param type
+   *          {@link TaskType#MAP} or {@link TaskType#REDUCE}
+   * @param pool
+   *          the pool name
+   * @return true if the max is less than the min
+   */
+  boolean invertedMinMax(TaskType type, String pool) {
+    Map<String, Integer> max = TaskType.MAP == type ? poolMaxMaps : poolMaxReduces;
+    Map<String, Integer> min = TaskType.MAP == type ? mapAllocs : reduceAllocs;
+    if (max.containsKey(pool) && min.containsKey(pool)
+        && max.get(pool) < min.get(pool)) {
+      return true;
+    }
+    return false;
   }
 
   private SchedulingMode parseSchedulingMode(String text)
@@ -373,7 +418,20 @@ public class PoolManager {
     Integer alloc = allocationMap.get(pool);
     return (alloc == null ? 0 : alloc);
   }
-  
+
+  /**
+   * Get the maximum map or reduce slots for the given pool.
+   * @return the cap set on this pool, or Integer.MAX_VALUE if not set.
+   */
+  int getMaxSlots(String poolName, TaskType taskType) {
+    Map<String, Integer> maxMap = (taskType == TaskType.MAP ? poolMaxMaps : poolMaxReduces);
+    if (maxMap.containsKey(poolName)) {
+      return maxMap.get(poolName);
+    } else {
+      return Integer.MAX_VALUE;
+    }
+  }
+ 
   /**
    * Add a job in the appropriate pool
    */

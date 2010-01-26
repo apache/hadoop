@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -306,56 +305,6 @@ public class TestMapRed extends Configured implements Tool {
       }
     }
       
-  }
-
-  private static class BadPartitioner
-      implements Partitioner<LongWritable,Text> {
-    boolean low;
-    public void configure(JobConf conf) {
-      low = conf.getBoolean("test.testmapred.badpartition", true);
-    }
-    public int getPartition(LongWritable k, Text v, int numPartitions) {
-      return low ? -1 : numPartitions;
-    }
-  }
-
-  @Test
-  public void testPartitioner() throws Exception {
-    JobConf conf = new JobConf(TestMapRed.class);
-    conf.setPartitionerClass(BadPartitioner.class);
-    FileSystem fs = FileSystem.getLocal(conf);
-    Path testdir = new Path(
-        System.getProperty("test.build.data","/tmp")).makeQualified(fs);
-    Path inFile = new Path(testdir, "blah/blah");
-    DataOutputStream f = fs.create(inFile);
-    f.writeBytes("blah blah blah\n");
-    f.close();
-    FileInputFormat.setInputPaths(conf, inFile);
-    FileOutputFormat.setOutputPath(conf, new Path(testdir, "out"));
-    conf.setMapperClass(IdentityMapper.class);
-    conf.setReducerClass(IdentityReducer.class);
-    conf.setOutputKeyClass(LongWritable.class);
-    conf.setOutputValueClass(Text.class);
-
-    // partition too low
-    conf.setBoolean("test.testmapred.badpartition", true);
-    boolean pass = true;
-    try {
-      JobClient.runJob(conf);
-    } catch (IOException e) {
-      pass = false;
-    }
-    assertFalse("should fail for partition < 0", pass);
-
-    // partition too high
-    conf.setBoolean("test.testmapred.badpartition", false);
-    pass = true;
-    try {
-      JobClient.runJob(conf);
-    } catch (IOException e) {
-      pass = false;
-    }
-    assertFalse("should fail for partition >= numPartitions", pass);
   }
 
   public static class NullMapper

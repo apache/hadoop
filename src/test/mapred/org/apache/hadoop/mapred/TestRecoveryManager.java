@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.File;
 import java.io.IOException;
 
 import junit.framework.TestCase;
@@ -48,10 +49,11 @@ public class TestRecoveryManager extends TestCase {
   /**
    * Tests the {@link JobTracker} against the exceptions thrown in 
    * {@link JobTracker.RecoveryManager}. It does the following :
-   *  - submits 2 jobs
+   *  - submits 3 jobs
    *  - kills the jobtracker
    *  - Garble job.xml for one job causing it to fail in constructor 
    *    and job.split for another causing it to fail in init.
+   *  - delete the job temp/submit dir
    *  - restarts the jobtracker
    *  - checks if the jobtraker starts normally
    */
@@ -79,7 +81,7 @@ public class TestRecoveryManager extends TestCase {
     
     // wait for 50%
     UtilsForTests.waitForJobHalfDone(rJob1);
-    
+        
     JobConf job2 = mr.createJobConf();
     
     UtilsForTests.configureWaitingJobConf(job2, 
@@ -101,26 +103,15 @@ public class TestRecoveryManager extends TestCase {
     // delete the job.xml of job #1 causing the job to fail in submit Job
     //while recovery itself
     Path jobFile = 
-      new Path(sysDir, rJob1.getID().toString() + Path.SEPARATOR + "job.xml");
-    LOG.info("Deleting job.xml file : " + jobFile.toString());
+      new Path(sysDir, rJob1.getID().toString() + "/" + JobTracker.JOB_INFO_FILE);
+    LOG.info("Deleting job token file : " + jobFile.toString());
     fs.delete(jobFile, false); // delete the job.xml file
     
-    // create the job.xml file with 0 bytes
+    // create the job token file with 1 byte
     FSDataOutputStream out = fs.create(jobFile);
     out.write(1);
     out.close();
-
-    // delete the job.split of job #2 causing the job to fail in initTasks
-    Path jobSplitFile = 
-      new Path(sysDir, rJob2.getID().toString() + Path.SEPARATOR + "job.split");
-    LOG.info("Deleting job.split file : " + jobSplitFile.toString());
-    fs.delete(jobSplitFile, false); // delete the job.split file
     
-    // create the job.split file with 0 bytes
-    out = fs.create(jobSplitFile);
-    out.write(1);
-    out.close();
-
     // make sure that the jobtracker is in recovery mode
     mr.getJobTrackerConf().setBoolean(JTConfig.JT_RESTART_ENABLED, true);
     // start the jobtracker
@@ -290,7 +281,7 @@ public class TestRecoveryManager extends TestCase {
     conf.set(JTConfig.JT_IPC_ADDRESS, "localhost:0");
     conf.set(JTConfig.JT_HTTP_ADDRESS, "127.0.0.1:0");
 
-    JobTracker jobtracker = new JobTracker(conf);
+    JobTracker jobtracker = JobTracker.startTracker(conf);
 
     // now check if the update restart count works fine or not
     boolean failed = false;

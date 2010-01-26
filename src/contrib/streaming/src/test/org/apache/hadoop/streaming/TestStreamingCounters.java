@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.streaming;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -30,11 +33,11 @@ import org.apache.hadoop.mapred.Counters.Group;
  * This class tests streaming counters in MapReduce local mode.
  */
 public class TestStreamingCounters extends TestStreaming {
-
   public TestStreamingCounters() throws IOException {
     super();
   }
 
+  @Test
   public void testCommandLine() throws IOException
   {
     try {

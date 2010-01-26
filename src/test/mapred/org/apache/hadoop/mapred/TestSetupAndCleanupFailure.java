@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 
@@ -155,7 +156,7 @@ public class TestSetupAndCleanupFailure extends TestCase {
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
     JobInProgress jip = jt.getJob(job.getID());
     // get the running setup task id
-    TaskAttemptID setupID = getRunningTaskID(jip.getSetupTasks());
+    TaskAttemptID setupID = getRunningTaskID(jip.getTasks(TaskType.JOB_SETUP));
     if (commandLineKill) {
       killTaskFromCommandLine(job, setupID, jt);
     } else {
@@ -172,7 +173,8 @@ public class TestSetupAndCleanupFailure extends TestCase {
       } catch (InterruptedException ie) {}
     }
     // get the running cleanup task id
-    TaskAttemptID cleanupID = getRunningTaskID(jip.getCleanupTasks());
+    TaskAttemptID cleanupID = 
+      getRunningTaskID(jip.getTasks(TaskType.JOB_CLEANUP));
     if (commandLineKill) {
       killTaskFromCommandLine(job, cleanupID, jt);
     } else {

@@ -927,14 +927,15 @@ public class FairScheduler extends TaskScheduler {
       for (JobInProgress job: jobs) {
         JobProfile profile = job.getProfile();
         JobInfo info = infos.get(job);
-        // TODO: Fix
-        /*eventLog.log("JOB",
+        Schedulable ms = info.mapSchedulable;
+        Schedulable rs = info.reduceSchedulable;
+        eventLog.log("JOB",
             profile.getJobID(), profile.name, profile.user,
             job.getPriority(), poolMgr.getPoolName(job),
-            job.numMapTasks, info.runningMaps, info.neededMaps, 
-            info.mapFairShare, info.mapWeight, info.mapDeficit,
-            job.numReduceTasks, info.runningReduces, info.neededReduces, 
-            info.reduceFairShare, info.reduceWeight, info.reduceDeficit);*/
+            job.numMapTasks, ms.getRunningTasks(),
+            ms.getDemand(), ms.getFairShare(), ms.getWeight(),
+            job.numReduceTasks, rs.getRunningTasks(),
+            rs.getDemand(), rs.getFairShare(), rs.getWeight());
       }
       // List pools in alphabetical order
       List<Pool> pools = new ArrayList<Pool>(poolMgr.getPools());

@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.streaming;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+
 import java.io.*;
 
 import org.apache.hadoop.fs.FileUtil;
@@ -30,7 +31,7 @@ import org.apache.hadoop.fs.FileUtil;
  * was hanging forever. Now this issue is solved. Similarly reducer is also
  * checked for task completion with empty input and nonempty output.
  */
-public class TestStreamingEmptyInpNonemptyOut extends TestCase
+public class TestStreamingEmptyInpNonemptyOut
 {
 
   protected File INPUT_FILE = new File("emptyInputFile.txt");
@@ -74,7 +75,8 @@ public class TestStreamingEmptyInpNonemptyOut extends TestCase
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
     };
   }
-  
+
+  @Test
   public void testEmptyInputNonemptyOutput() throws IOException
   {
     try {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -96,6 +97,10 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
               " (" + job.getJob().getID() + ")");
         } catch (IOException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName(), e);
+          if (e.getCause() instanceof ClosedByInterruptException) {
+            throw new InterruptedException("Failed to submit " +
+                job.getJob().getJobName());
+          }
         } catch (ClassNotFoundException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName(), e);
         }
@@ -144,11 +149,11 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
    * Continue running until all queued jobs have been submitted to the
    * cluster.
    */
-  public void join() throws InterruptedException {
+  public void join(long millis) throws InterruptedException {
     if (!shutdown) {
       throw new IllegalStateException("Cannot wait for active submit thread");
     }
-    sched.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+    sched.awaitTermination(millis, TimeUnit.MILLISECONDS);
   }
 
   /**
