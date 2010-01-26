@@ -41,7 +41,7 @@ import org.junit.BeforeClass;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
-;
+
 import static org.junit.Assert.*;
 
 public class TestClientBlockVerification {

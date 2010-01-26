@@ -105,6 +105,9 @@ Trunk (unreleased changes)
               exclude specific datanodes when locating the next block.
               (Cosmin Lehene via Stack)
 
+    HDFS-922. Remove unnecessary semicolon added by HDFS-877 that causes
+    problems for Eclipse compilation. (jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
