@@ -42,25 +42,16 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
 
 public class JspHelper {
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
 
   public static final Configuration conf = new HdfsConfiguration();
-  public static final UnixUserGroupInformation webUGI
-  = UnixUserGroupInformation.createImmutable(
-      conf.getStrings(WEB_UGI_PROPERTY_NAME));
-
+  
   private static final int defaultChunkSizeToView = 
     conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
   static final Random rand = new Random();
-
-  static {
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, webUGI);
-  }
 
   /** Private constructor for preventing creating JspHelper object. */
   private JspHelper() {} 

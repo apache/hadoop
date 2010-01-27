@@ -33,8 +33,6 @@ import java.util.EnumSet;
 import java.util.Random;
 import java.util.TimeZone;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -48,10 +46,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.StringUtils;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -96,12 +92,7 @@ public class HftpFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     setConf(conf);
-    try {
-      this.ugi = UnixUserGroupInformation.login(conf, true);
-    } catch (LoginException le) {
-      throw new IOException(StringUtils.stringifyException(le));
-    }
-
+    this.ugi = UserGroupInformation.getCurrentUser(); 
     nnAddr = NetUtils.createSocketAddr(name.toString());
   }
   
@@ -121,7 +112,7 @@ public class HftpFileSystem extends FileSystem {
     Construct URL pointing to file on namenode
   */
   URL getNamenodeFileURL(Path f) throws IOException {
-    return getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi);
+    return getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi.getUserName());
   }
 
   /* 
@@ -156,7 +147,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
-    URL u = getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi);
+    URL u = getNamenodeURL("/data" + f.toUri().getPath(), "ugi=" + ugi.getUserName());
     return new FSDataInputStream(new ByteRangeInputStream(u));
   }
 
@@ -206,7 +197,7 @@ public class HftpFileSystem extends FileSystem {
         XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
         HttpURLConnection connection = openConnection("/listPaths" + path,
-            "ugi=" + ugi + (recur? "&recursive=yes" : ""));
+            "ugi=" + ugi.getUserName() + (recur? "&recursive=yes" : ""));
 
         InputStream resp = connection.getInputStream();
         xr.parse(new InputSource(resp));
@@ -270,7 +261,7 @@ public class HftpFileSystem extends FileSystem {
 
     private FileChecksum getFileChecksum(String f) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/fileChecksum" + f, "ugi=" + ugi);
+          "/fileChecksum" + f, "ugi=" + ugi.getUserName());
       try {
         final XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);

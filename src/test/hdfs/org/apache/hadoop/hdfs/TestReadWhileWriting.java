@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +30,6 @@ import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -123,16 +123,17 @@ public class TestReadWhileWriting {
 
   static private int userCount = 0;
   //check the file
-  static void checkFile(Path p, int expectedsize, Configuration conf
-      ) throws IOException {
+  static void checkFile(Path p, int expectedsize, final Configuration conf
+      ) throws IOException, InterruptedException {
     //open the file with another user account
-    final Configuration conf2 = new HdfsConfiguration(conf);
-    final String username = UserGroupInformation.getCurrentUGI().getUserName()
+    final String username = UserGroupInformation.getCurrentUser().getUserName()
         + "_" + ++userCount;
-    UnixUserGroupInformation.saveToConf(conf2,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(username, new String[]{"supergroup"}));
-    final FileSystem fs = FileSystem.get(conf2);
+
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(username, 
+                                 new String[] {"supergroup"});
+    
+    final FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, conf);
+    
     final DFSDataInputStream in = (DFSDataInputStream)fs.open(p);
 
     //Check visible length

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.Enumeration;
 import java.util.List;
 import javax.servlet.ServletException;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.mortbay.jetty.InclusiveByteRange;
 
 public class StreamFile extends DfsServlet {
@@ -50,11 +50,18 @@ public class StreamFile extends DfsServlet {
   
   /** getting a client for connecting to dfs */
   protected DFSClient getDFSClient(HttpServletRequest request)
-      throws IOException {
-    Configuration conf = new HdfsConfiguration(masterConf);
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
-    return new DFSClient(nameNodeAddr, conf);
+      throws IOException, InterruptedException {
+    final Configuration conf = new HdfsConfiguration(masterConf);
+    
+    DFSClient client = 
+      getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
+      @Override
+      public DFSClient run() throws IOException {
+        return new DFSClient(nameNodeAddr, conf);
+      }
+    });
+    
+    return client;
   }
   
   public void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -72,7 +79,14 @@ public class StreamFile extends DfsServlet {
     if (reqRanges != null && !reqRanges.hasMoreElements())
       reqRanges = null;
 
-    DFSClient dfs = getDFSClient(request);  
+    DFSClient dfs;
+    try {
+      dfs = getDFSClient(request);
+    } catch (InterruptedException e) {
+      response.sendError(400, e.getMessage());
+      return;
+    }
+    
     long fileLen = dfs.getFileInfo(filename).getLen();
     FSInputStream in = dfs.open(filename);
     OutputStream os = response.getOutputStream();

@@ -569,7 +569,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that all open files are closed when client dies abnormally.
    */
-  public void testDFSClientDeath() throws IOException {
+  public void testDFSClientDeath() throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     System.out.println("Testing adbornal client death.");
     if (simulatedStorage) {

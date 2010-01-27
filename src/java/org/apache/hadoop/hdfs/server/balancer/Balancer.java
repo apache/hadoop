@@ -25,7 +25,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.Class;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -81,7 +80,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
@@ -923,11 +921,7 @@ public class Balancer implements Tool {
     methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
 
     UserGroupInformation ugi;
-    try {
-      ugi = UnixUserGroupInformation.login(conf);
-    } catch (javax.security.auth.login.LoginException e) {
-      throw new IOException(StringUtils.stringifyException(e));
-    }
+    ugi = UserGroupInformation.getCurrentUser();
 
     return (NamenodeProtocol) RetryProxy.create(
         NamenodeProtocol.class,

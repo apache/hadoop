@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -45,7 +45,7 @@ public class TestFcHdfsPermission extends FileContextPermissionBase {
     cluster = new MiniDFSCluster(conf, 2, true, null);
     fc = FileContext.getFileContext(cluster.getURI(), conf);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UnixUserGroupInformation.login().getUserName()));
+        UserGroupInformation.getCurrentUser().getUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 

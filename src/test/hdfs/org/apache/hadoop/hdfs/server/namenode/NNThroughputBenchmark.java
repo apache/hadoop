@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
@@ -86,13 +85,8 @@ public class NNThroughputBenchmark {
   static Configuration config;
   static NameNode nameNode;
 
-  private final UserGroupInformation ugi;
-
   NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
-    ugi = UnixUserGroupInformation.login(config);
-    UserGroupInformation.setCurrentUser(ugi);
-
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
     config.setInt("dfs.namenode.handler.count", 1);
@@ -341,7 +335,6 @@ public class NNThroughputBenchmark {
     }
 
     public void run() {
-      UserGroupInformation.setCurrentUser(ugi);
       localNumOpsExecuted = 0;
       localCumulativeTime = 0;
       arg1 = statsOp.getExecutionArgument(daemonId);

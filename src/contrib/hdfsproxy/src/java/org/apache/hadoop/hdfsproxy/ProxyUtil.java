@@ -64,7 +64,7 @@ public class ProxyUtil {
   // warning
 
   private static enum UtilityOption {
-    RELOAD("-reloadPermFiles"), CLEAR("-clearUgiCache"), GET("-get"), CHECKCERTS(
+    RELOAD("-reloadPermFiles"), GET("-get"), CHECKCERTS(
         "-checkcerts");
 
     private String name = null;
@@ -303,13 +303,12 @@ public class ProxyUtil {
   public static void main(String[] args) throws Exception {
     if (args.length < 1
         || (!UtilityOption.RELOAD.getName().equalsIgnoreCase(args[0])
-            && !UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0])
             && !UtilityOption.GET.getName().equalsIgnoreCase(args[0]) && !UtilityOption.CHECKCERTS
             .getName().equalsIgnoreCase(args[0]))
         || (UtilityOption.GET.getName().equalsIgnoreCase(args[0]) && args.length != 4)
         || (UtilityOption.CHECKCERTS.getName().equalsIgnoreCase(args[0]) && args.length != 3)) {
       System.err.println("Usage: ProxyUtil [" + UtilityOption.RELOAD.getName()
-          + "] | [" + UtilityOption.CLEAR.getName() + "] | ["
+          + "] | ["
           + UtilityOption.GET.getName() + " <hostname> <#port> <path> ] | ["
           + UtilityOption.CHECKCERTS.getName() + " <hostname> <#port> ]");
       System.exit(0);
@@ -321,9 +320,6 @@ public class ProxyUtil {
     if (UtilityOption.RELOAD.getName().equalsIgnoreCase(args[0])) {
       // reload user-certs.xml and user-permissions.xml files
       sendCommand(conf, "/reloadPermFiles");
-    } else if (UtilityOption.CLEAR.getName().equalsIgnoreCase(args[0])) {
-      // clear UGI caches
-      sendCommand(conf, "/clearUgiCache");
     } else if (UtilityOption.CHECKCERTS.getName().equalsIgnoreCase(args[0])) {
       checkServerCertsExpirationDays(conf, args[1], Integer.parseInt(args[2]));
     } else {

@@ -24,7 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** {@inheritDoc} */
 public class ProxyListPathsServlet extends ListPathsServlet {
@@ -42,18 +42,9 @@ public class ProxyListPathsServlet extends ListPathsServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request) {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    String groupName = (String) request
-        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
-    UnixUserGroupInformation ugi;
-    if (groupName != null) {
-      // group info stored in ldap
-      ugi = new UnixUserGroupInformation(userID, groupName.split(","));
-    } else {// stronger ugi management
-      ugi = ProxyUgiManager.getUgiForUser(userID);
-    }
-    return ugi;
+    return UserGroupInformation.createRemoteUser(userID);
   }
 }

@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -102,7 +102,7 @@ public class TestHDFSConcat {
    * @throws IOException
    */
   @Test
-  public void testConcat() throws IOException {
+  public void testConcat() throws IOException, InterruptedException {
     final int numFiles = 10;
     long fileLen = blockSize*3;
     FileStatus fStatus;
@@ -142,9 +142,10 @@ public class TestHDFSConcat {
     }
     
     // check permissions -try the operation with the "wrong" user
-    final UnixUserGroupInformation user1 = new UnixUserGroupInformation(
+    final UserGroupInformation user1 = UserGroupInformation.createUserForTesting(
         "theDoctor", new String[] { "tardis" });
-    DistributedFileSystem hdfs = (DistributedFileSystem)logonAs(user1, conf, dfs);
+    DistributedFileSystem hdfs = 
+      (DistributedFileSystem)DFSTestUtil.getFileSystemAs(user1, conf);
     try {
       hdfs.concat(trgPath, files);
       fail("Permission exception expected");
@@ -237,19 +238,6 @@ public class TestHDFSConcat {
         break;
     }
     assertFalse("File content of concatenated file is different", mismatch);
-  }
-
-  /***
-   * Create a new configuration for the specified user and return a filesystem
-   * accessed by that user
-   */
-  static private FileSystem logonAs(UnixUserGroupInformation user,
-      Configuration conf, FileSystem hdfs) throws IOException {
-    Configuration conf2 = new Configuration(conf);
-    UnixUserGroupInformation.saveToConf(conf2,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, user);
-
-    return FileSystem.get(conf2);
   }
 
   // test case when final block is not of a full length

@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
@@ -93,9 +94,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.authorize.ConfiguredPolicy;
-import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
@@ -227,19 +226,25 @@ public class DataNode extends Configured
    * Create the DataNode given a configuration and an array of dataDirs.
    * 'dataDirs' is where the blocks are stored.
    */
-  DataNode(Configuration conf, 
-           AbstractList<File> dataDirs) throws IOException {
+  DataNode(final Configuration conf, 
+           final AbstractList<File> dataDirs) throws IOException {
     super(conf);
+
+    UserGroupInformation.setConfiguration(conf);
+    DFSUtil.login(conf, 
+        DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
+    
     DataNode.setDataNode(this);
+    
     try {
       startDataNode(conf, dataDirs);
     } catch (IOException ie) {
       shutdown();
-      throw ie;
-    }
+     throw ie;
+   }
   }
-    
-  
+
   /**
    * This method starts the data node with the specified conf.
    * 
@@ -392,13 +397,8 @@ public class DataNode extends Configured
     // set service-level authorization security policy
     if (conf.getBoolean(
           ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
-      PolicyProvider policyProvider = 
-        (PolicyProvider)(ReflectionUtils.newInstance(
-            conf.getClass(PolicyProvider.POLICY_PROVIDER_CONFIG, 
-                HDFSPolicyProvider.class, PolicyProvider.class), 
-            conf));
-      SecurityUtil.setPolicy(new ConfiguredPolicy(conf, policyProvider));
-    }
+      ServiceAuthorizationManager.refresh(conf, new HDFSPolicyProvider());
+       }
 
     //init ipc server
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(

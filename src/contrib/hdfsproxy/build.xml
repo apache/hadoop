@@ -238,7 +238,7 @@
 				<sysproperty key="javax.net.ssl.keyStorePassword" value="changeme"/>
 				<sysproperty key="javax.net.ssl.keyPassword" value="changeme"/>			
 				<sysproperty key="javax.net.ssl.clientCert" value="${ssl.client.cert}"/>
-        <formatter type="xml" />
+        <formatter type="plain" />
         <batchtest todir="${test.build.dir}" unless="testcase">
            <fileset dir="${src.test}">
              <include name="**/TestHdfsProxy.java"/>

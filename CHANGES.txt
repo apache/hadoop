@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HDFS-905. Use the new UserGroupInformation from HDFS-6299. 
+    (jghoman via omalley)
+
   NEW FEATURES
 
     HDFS-654. Add support new atomic rename functionality in HDFS for 

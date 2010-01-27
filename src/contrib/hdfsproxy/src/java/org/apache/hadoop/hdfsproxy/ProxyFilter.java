@@ -47,7 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.net.NetUtils;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -58,9 +58,6 @@ public class ProxyFilter implements Filter {
   /** Pattern for triggering reload of user permissions */
   protected static final Pattern RELOAD_PATTERN = Pattern
       .compile("^(/reloadPermFiles)$");
-  /** Pattern for triggering clearing of ugi Cache */
-  protected static final Pattern CLEAR_PATTERN = Pattern
-      .compile("^(/clearUgiCache)$");
   /** Pattern for a filter to find out if a request is HFTP/HSFTP request */
   protected static final Pattern HFTP_PATTERN = Pattern
       .compile("^(/listPaths|/data|/streamFile|/file)$");
@@ -301,12 +298,6 @@ public class ProxyFilter implements Filter {
         LOG.info("User permissions and user certs files reloaded");
         rsp.setStatus(HttpServletResponse.SC_OK);
         return;
-      } else if (CLEAR_PATTERN.matcher(servletPath).matches()
-          && checkUser("Admin", certs[0])) {
-        ProxyUgiManager.clearCache();
-        LOG.info("Ugi cache cleared");
-        rsp.setStatus(HttpServletResponse.SC_OK);
-        return;
       } 
 
       if (!isAuthorized) {
@@ -315,25 +306,14 @@ public class ProxyFilter implements Filter {
       }
       
       // request is authorized, set ugi for servlets
-      UnixUserGroupInformation ugi = ProxyUgiManager
-          .getUgiForUser(userID);
-      if (ugi == null) {
-        LOG.info("Can't retrieve ugi for user " + userID);
-        rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-            "Can't retrieve ugi for user " + userID);
-        return;
-      }
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(userID);
       rqst.setAttribute("authorized.ugi", ugi);
       rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", userID);
     } else if(rqst.getScheme().equalsIgnoreCase("http")) { // http request, set ugi for servlets, only for testing purposes
       String ugi = rqst.getParameter("ugi");
       if (ugi != null) {
-        rqst.setAttribute("authorized.ugi", new UnixUserGroupInformation(ugi
-          .split(",")));
-        String[] ugiStr = ugi.split(",");
-        if(ugiStr.length > 0) {
-          rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", ugiStr[0]);
-        }
+        rqst.setAttribute("authorized.ugi", UserGroupInformation.createRemoteUser(ugi));
+        rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", ugi);
       } 
     }
     chain.doFilter(request, response);

@@ -16329,17 +16329,17 @@
           <expected-output></expected-output>
         </comparator>
       </comparators>
-    </test>
+    </test><!--
     
-    <test> <!--Tested -->
+    <test> Tested 
       <description>refreshServiceAcl: verifying error message while refreshing security authorization policy for namenode</description>
       <test-commands>
-        <!-- hadoop-policy.xml for tests has 
-             security.refresh.policy.protocol.acl = ${user.name} -->
+         hadoop-policy.xml for tests has 
+             security.refresh.policy.protocol.acl = ${user.name} 
         <dfs-admin-command>-fs NAMENODE -Dhadoop.job.ugi=blah,blah -refreshServiceAcl </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
-        <!-- No cleanup -->
+         No cleanup 
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -16349,7 +16349,7 @@
       </comparators>
     </test>
    
-    <!-- Test for safemode -->
+    --><!-- Test for safemode -->
     <test> <!-- TESTED -->
       <description>safemode: Test for enter - Namenode is not in safemode</description>
       <test-commands>

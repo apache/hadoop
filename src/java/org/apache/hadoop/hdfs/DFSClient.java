@@ -110,7 +110,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -138,7 +137,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   private final ClientProtocol namenode;
   private final ClientProtocol rpcNamenode;
-  final UnixUserGroupInformation ugi;
+  final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
@@ -166,16 +165,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   public static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
       Configuration conf) throws IOException {
-    try {
-      return createNamenode(createRPCNamenode(nameNodeAddr, conf,
-        UnixUserGroupInformation.login(conf, true)));
-    } catch (LoginException e) {
-      throw (IOException)(new IOException().initCause(e));
-    }
+    return createNamenode(createRPCNamenode(nameNodeAddr, conf,
+        UserGroupInformation.getCurrentUser()));
+    
   }
 
   private static ClientProtocol createRPCNamenode(InetSocketAddress nameNodeAddr,
-      Configuration conf, UnixUserGroupInformation ugi) 
+      Configuration conf, UserGroupInformation ugi) 
     throws IOException {
     return (ClientProtocol)RPC.getProxy(ClientProtocol.class,
         ClientProtocol.versionID, nameNodeAddr, ugi, conf,
@@ -269,12 +265,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
 
-    try {
-      this.ugi = UnixUserGroupInformation.login(conf, true);
-    } catch (LoginException e) {
-      throw (IOException)(new IOException().initCause(e));
-    }
-
+    this.ugi = UserGroupInformation.getCurrentUser();
+    
     String taskId = conf.get("mapred.task.id");
     if (taskId != null) {
       this.clientName = "DFSClient_" + taskId; 
@@ -1146,7 +1138,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                          diskspaceQuota);
                                          
     }
-    
     try {
       namenode.setQuota(src, namespaceQuota, diskspaceQuota);
     } catch(RemoteException re) {

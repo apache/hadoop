@@ -24,8 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
@@ -45,7 +43,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -716,16 +714,9 @@ public class DFSAdmin extends FsShell {
     return 0;
   }
   
-  private static UnixUserGroupInformation getUGI(Configuration conf) 
+  private static UserGroupInformation getUGI() 
   throws IOException {
-    UnixUserGroupInformation ugi = null;
-    try {
-      ugi = UnixUserGroupInformation.login(conf, true);
-    } catch (LoginException e) {
-      throw (IOException)(new IOException(
-          "Failed to get the current user's information.").initCause(e));
-    }
-    return ugi;
+    return UserGroupInformation.getCurrentUser();
   }
 
   /**
@@ -742,7 +733,7 @@ public class DFSAdmin extends FsShell {
       (RefreshAuthorizationPolicyProtocol) 
       RPC.getProxy(RefreshAuthorizationPolicyProtocol.class, 
                    RefreshAuthorizationPolicyProtocol.versionID, 
-                   NameNode.getAddress(conf), getUGI(conf), conf,
+                   NameNode.getAddress(conf), getUGI(), conf,
                    NetUtils.getSocketFactory(conf, 
                                              RefreshAuthorizationPolicyProtocol.class));
     
@@ -766,7 +757,7 @@ public class DFSAdmin extends FsShell {
       (RefreshUserToGroupMappingsProtocol) 
       RPC.getProxy(RefreshUserToGroupMappingsProtocol.class, 
                    RefreshUserToGroupMappingsProtocol.versionID, 
-                   NameNode.getAddress(conf), getUGI(conf), conf,
+                   NameNode.getAddress(conf), getUGI(), conf,
                    NetUtils.getSocketFactory(conf, 
                                              RefreshUserToGroupMappingsProtocol.class));
     

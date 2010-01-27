@@ -19,8 +19,6 @@ package org.apache.hadoop.fs.permission;
 
 import java.io.IOException;
 
-import javax.security.auth.login.LoginException;
-
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,25 +26,26 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestStickyBit extends TestCase {
 
-  static UnixUserGroupInformation user1 = new UnixUserGroupInformation(
-      "theDoctor", new String[] { "tardis" });
-  static UnixUserGroupInformation user2 = new UnixUserGroupInformation("rose",
-      new String[] { "powellestates" });
-
+  static UserGroupInformation user1 = 
+    UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
+  static UserGroupInformation user2 = 
+    UserGroupInformation.createUserForTesting("rose", new String[] {"powellestates"});
+  
   /**
    * Ensure that even if a file is in a directory with the sticky bit on,
    * another user can write to that file (assuming correct permissions).
    */
   private void confirmCanAppend(Configuration conf, FileSystem hdfs,
-      Path baseDir) throws IOException {
+      Path baseDir) throws IOException, InterruptedException {
     // Create a tmp directory with wide-open permissions and sticky bit
     Path p = new Path(baseDir, "tmp");
 
@@ -54,13 +53,13 @@ public class TestStickyBit extends TestCase {
     hdfs.setPermission(p, new FsPermission((short) 01777));
 
     // Write a file to the new tmp directory as a regular user
-    hdfs = logonAs(user1, conf, hdfs);
+    hdfs = DFSTestUtil.getFileSystemAs(user1, conf);
     Path file = new Path(p, "foo");
     writeFile(hdfs, file);
     hdfs.setPermission(file, new FsPermission((short) 0777));
 
     // Log onto cluster as another user and attempt to append to file
-    hdfs = logonAs(user2, conf, hdfs);
+    hdfs = DFSTestUtil.getFileSystemAs(user2, conf);
     Path file2 = new Path(p, "foo");
     FSDataOutputStream h = hdfs.append(file2);
     h.write("Some more data".getBytes());
@@ -72,13 +71,13 @@ public class TestStickyBit extends TestCase {
    * set.
    */
   private void confirmDeletingFiles(Configuration conf, FileSystem hdfs,
-      Path baseDir) throws IOException {
+      Path baseDir) throws IOException, InterruptedException {
     Path p = new Path(baseDir, "contemporary");
     hdfs.mkdirs(p);
     hdfs.setPermission(p, new FsPermission((short) 01777));
 
     // Write a file to the new temp directory as a regular user
-    hdfs = logonAs(user1, conf, hdfs);
+    hdfs = DFSTestUtil.getFileSystemAs(user1, conf);
     Path file = new Path(p, "foo");
     writeFile(hdfs, file);
 
@@ -86,7 +85,7 @@ public class TestStickyBit extends TestCase {
     assertEquals(user1.getUserName(), hdfs.getFileStatus(file).getOwner());
 
     // Log onto cluster as another user and attempt to delete the file
-    FileSystem hdfs2 = logonAs(user2, conf, hdfs);
+    FileSystem hdfs2 = DFSTestUtil.getFileSystemAs(user2, conf);
 
     try {
       hdfs2.delete(file, false);
@@ -159,7 +158,7 @@ public class TestStickyBit extends TestCase {
     assertFalse(hdfs.getFileStatus(f).getPermission().getStickyBit());
   }
 
-  public void testGeneralSBBehavior() throws IOException {
+  public void testGeneralSBBehavior() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new HdfsConfiguration();
@@ -197,7 +196,7 @@ public class TestStickyBit extends TestCase {
    * Test that one user can't rename/move another user's file when the sticky
    * bit is set.
    */
-  public void testMovingFiles() throws IOException, LoginException {
+  public void testMovingFiles() throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
 
     try {
@@ -220,12 +219,12 @@ public class TestStickyBit extends TestCase {
       // Write a file to the new tmp directory as a regular user
       Path file = new Path(tmpPath, "foo");
 
-      FileSystem hdfs2 = logonAs(user1, conf, hdfs);
+      FileSystem hdfs2 = DFSTestUtil.getFileSystemAs(user1, conf);
 
       writeFile(hdfs2, file);
 
       // Log onto cluster as another user and attempt to move the file
-      FileSystem hdfs3 = logonAs(user2, conf, hdfs);
+      FileSystem hdfs3 = DFSTestUtil.getFileSystemAs(user2, conf);
 
       try {
         hdfs3.rename(file, new Path(tmpPath2, "renamed"));
@@ -287,19 +286,6 @@ public class TestStickyBit extends TestCase {
       if (cluster != null)
         cluster.shutdown();
     }
-  }
-
-  /***
-   * Create a new configuration for the specified user and return a filesystem
-   * accessed by that user
-   */
-  static private FileSystem logonAs(UnixUserGroupInformation user,
-      Configuration conf, FileSystem hdfs) throws IOException {
-    Configuration conf2 = new HdfsConfiguration(conf);
-    UnixUserGroupInformation.saveToConf(conf2,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, user);
-
-    return FileSystem.get(conf2);
   }
 
   /***

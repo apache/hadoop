@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -52,7 +52,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UnixUserGroupInformation.login().getUserName()));
+        UserGroupInformation.getCurrentUser().getUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 
@@ -65,7 +65,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UnixUserGroupInformation.login().getUserName()));
+        UserGroupInformation.getCurrentUser().getUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
       

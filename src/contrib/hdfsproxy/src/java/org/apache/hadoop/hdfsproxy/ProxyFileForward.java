@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfsproxy;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 
 public class ProxyFileForward extends ProxyForwardServlet {
@@ -31,9 +31,10 @@ public class ProxyFileForward extends ProxyForwardServlet {
   protected String buildForwardPath(HttpServletRequest request, String pathInfo) {
     String path = "/streamFile";
     path += "?filename=" + request.getPathInfo();
-    UnixUserGroupInformation ugi = (UnixUserGroupInformation)request.getAttribute("authorized.ugi");
+    UserGroupInformation ugi = 
+                   (UserGroupInformation)request.getAttribute("authorized.ugi");
     if (ugi != null) {
-      path += "&ugi=" + ugi.toString();
+      path += "&ugi=" + ugi.getUserName();
     }
     return path;
   }

@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
@@ -49,28 +49,19 @@ public class ProxyFileDataServlet extends FileDataServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected URI createUri(FileStatus i, UnixUserGroupInformation ugi,
+  protected URI createUri(FileStatus i, UserGroupInformation ugi,
       ClientProtocol nnproxy, HttpServletRequest request) throws IOException,
       URISyntaxException {
     return new URI(request.getScheme(), null, request.getServerName(), request
         .getServerPort(), "/streamFile", "filename=" + i.getPath() + "&ugi="
-        + ugi, null);
+        + ugi.getUserName(), null);
   }
 
   /** {@inheritDoc} */
   @Override
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request) {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    String groupName = (String) request
-        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
-    UnixUserGroupInformation ugi;
-    if (groupName != null) {
-      // get group info from ldap
-      ugi = new UnixUserGroupInformation(userID, groupName.split(","));
-    } else {// stronger ugi management
-      ugi = ProxyUgiManager.getUgiForUser(userID);
-    }
-    return ugi;
+    return UserGroupInformation.createRemoteUser(userID);
   }
 }

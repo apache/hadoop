@@ -46,7 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
@@ -195,8 +195,7 @@ public class LdapIpDirFilter implements Filter {
           "User not authorized to access path");
       return;
     }
-    UnixUserGroupInformation ugi = new UnixUserGroupInformation(userId,
-        groupName.split(","));
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(userId);
     rqst.setAttribute("authorized.ugi", ugi);
     // since we cannot pass ugi object cross context as they are from different
     // classloaders in different war file, we have to use String attribute.

@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -80,7 +79,7 @@ public class TestFileAppend2 extends TestCase {
    * @throws IOException an exception might be thrown
    */ 
   public void testSimpleAppend() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    final Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
@@ -153,16 +152,16 @@ public class TestFileAppend2 extends TestCase {
         fs.close();
 
         // login as a different user
-        final UserGroupInformation superuser = UserGroupInformation.getCurrentUGI();
+        final UserGroupInformation superuser = 
+          UserGroupInformation.getCurrentUser();
         String username = "testappenduser";
         String group = "testappendgroup";
         assertFalse(superuser.getUserName().equals(username));
         assertFalse(Arrays.asList(superuser.getGroupNames()).contains(group));
-        UnixUserGroupInformation appenduser = UnixUserGroupInformation.createImmutable(
-            new String[]{username, group});
-        UnixUserGroupInformation.saveToConf(conf,
-            UnixUserGroupInformation.UGI_PROPERTY_NAME, appenduser);
-        fs = FileSystem.get(conf);
+        UserGroupInformation appenduser = 
+          UserGroupInformation.createUserForTesting(username, new String[]{group});
+        
+        fs = DFSTestUtil.getFileSystemAs(appenduser, conf);
 
         // create a file
         Path dir = new Path(root, getClass().getSimpleName());
