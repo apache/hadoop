@@ -34,7 +34,7 @@ public interface RefreshUserToGroupMappingsProtocol extends VersionedProtocol {
   public static final long versionID = 1L;
 
   /**
-   * Refresh {@link User} to {@link Group} mappings.
+   * Refresh user to group mappings.
    * @param conf
    * @throws IOException
    */

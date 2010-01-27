@@ -35,7 +35,8 @@
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Core/test/ftplet-api-1.0.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Core/test/ftpserver-core-1.0.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Core/test/ftpserver-deprecated-1.0.0-M2.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Core/test/mina-core-2.0.0-M5.jar"/>
+  <classpathentry kind="lib" path="build/ivy/lib/Hadoop-Core/test/mina-core-2.0.0-M5.jar"/>
+  <classpathentry kind="lib" path="build/ivy/lib/Hadoop-Core/test/mockito-all-1.8.0.jar"/>
 	<classpathentry kind="lib" path="build/test/core/classes"/>
 	<classpathentry kind="lib" path="build/classes"/>
 	<classpathentry kind="lib" path="conf"/>

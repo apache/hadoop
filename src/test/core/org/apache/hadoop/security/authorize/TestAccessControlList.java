@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.security;
+package org.apache.hadoop.security.authorize;
 
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.hadoop.security.SecurityUtil.AccessControlList;
+import org.apache.hadoop.security.authorize.AccessControlList;
+
 
 import junit.framework.TestCase;
 
@@ -30,16 +31,16 @@ public class TestAccessControlList extends TestCase {
     AccessControlList acl;
     
     acl = new AccessControlList("*");
-    assertTrue(acl.allAllowed());
+    assertTrue(acl.isAllAllowed());
     
     acl = new AccessControlList("  * ");
-    assertTrue(acl.allAllowed());
+    assertTrue(acl.isAllAllowed());
     
     acl = new AccessControlList(" *");
-    assertTrue(acl.allAllowed());
+    assertTrue(acl.isAllAllowed());
     
     acl = new AccessControlList("*  ");
-    assertTrue(acl.allAllowed());
+    assertTrue(acl.isAllAllowed());
   }
   
   public void testAccessControlList() throws Exception {

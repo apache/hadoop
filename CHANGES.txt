@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-6299. Reimplement the UserGroupInformation to use the OS
+    specific and Kerberos JAAS login. (omalley)
+
   NEW FEATURES
 
     HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to

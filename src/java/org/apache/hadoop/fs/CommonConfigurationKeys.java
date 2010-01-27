@@ -128,5 +128,6 @@ public class CommonConfigurationKeys {
   public static final String  HADOOP_UTIL_HASH_TYPE_DEFAULT = "murmur";
   public static final String  HADOOP_SECURITY_GROUP_MAPPING = "hadoop.security.group.mapping";
   public static final String  HADOOP_SECURITY_GROUPS_CACHE_SECS = "hadoop.security.groups.cache.secs";
+  public static final String  HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
 }
 

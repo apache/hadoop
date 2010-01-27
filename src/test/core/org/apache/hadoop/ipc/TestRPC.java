@@ -34,9 +34,7 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.authorize.ConfiguredPolicy;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -338,7 +336,7 @@ public class TestRPC extends TestCase {
   }
   
   private void doRPCs(Configuration conf, boolean expectFailure) throws Exception {
-    SecurityUtil.setPolicy(new ConfiguredPolicy(conf, new TestPolicyProvider()));
+    ServiceAuthorizationManager.refresh(conf, new TestPolicyProvider());
     
     Server server = RPC.getServer(TestProtocol.class,
                                   new TestImpl(), ADDRESS, 0, 5, true, conf);

@@ -24,23 +24,17 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.io.*;
 import java.util.Map;
 import java.util.HashMap;
 
 import javax.net.SocketFactory;
-import javax.security.auth.Subject;
-import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
@@ -291,7 +285,6 @@ class WritableRpcEngine implements RpcEngine {
   public static class Server extends RPC.Server {
     private Object instance;
     private boolean verbose;
-    private boolean authorize = false;
 
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -325,9 +318,6 @@ class WritableRpcEngine implements RpcEngine {
       super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
       this.instance = instance;
       this.verbose = verbose;
-      this.authorize = 
-        conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
-                        false);
     }
 
     public Writable call(Class<?> protocol, Writable param, long receivedTime) 
@@ -388,21 +378,6 @@ class WritableRpcEngine implements RpcEngine {
         IOException ioe = new IOException(e.toString());
         ioe.setStackTrace(e.getStackTrace());
         throw ioe;
-      }
-    }
-
-    @Override
-    public void authorize(Subject user, ConnectionHeader connection) 
-    throws AuthorizationException {
-      if (authorize) {
-        Class<?> protocol = null;
-        try {
-          protocol = getProtocolClass(connection.getProtocol(), getConf());
-        } catch (ClassNotFoundException cfne) {
-          throw new AuthorizationException("Unknown protocol: " + 
-                                           connection.getProtocol());
-        }
-        ServiceAuthorizationManager.authorize(user, protocol);
       }
     }
   }

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.HashMap;
 
 import javax.net.SocketFactory;
-import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.*;
 
@@ -205,12 +204,7 @@ public class RPC {
   public static Object getProxy(Class protocol, long clientVersion,
                                 InetSocketAddress addr, Configuration conf,
                                 SocketFactory factory) throws IOException {
-    UserGroupInformation ugi = null;
-    try {
-      ugi = UserGroupInformation.login(conf);
-    } catch (LoginException le) {
-      throw new RuntimeException("Couldn't login!");
-    }
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     return getProxy(protocol, clientVersion, addr, ugi, conf, factory);
   }
   

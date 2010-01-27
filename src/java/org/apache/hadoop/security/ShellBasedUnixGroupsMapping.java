@@ -30,9 +30,9 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
 /**
- * A simple shell-based implementation of {@link GroupMappingServiceProvider} which
- * exec's the <code>groups</code> shell command to fetch the {@link Group}
- * memberships of a given {@link User}.
+ * A simple shell-based implementation of {@link GroupMappingServiceProvider} 
+ * that exec's the <code>groups</code> shell command to fetch the group
+ * memberships of a given user.
  */
 public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider {
   Map<String, List<String>> userGroups = 

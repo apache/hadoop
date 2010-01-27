@@ -27,10 +27,10 @@ import java.util.List;
 interface GroupMappingServiceProvider {
   
   /**
-   * Get all various {@link Group} memberships of a given {@link User}.
+   * Get all various group memberships of a given user.
    * Returns EMPTY list in case of non-existing user
-   * @param user <code>User</code> name
-   * @return <code>Group</code> memberships of <code>user</code>
+   * @param user User's name
+   * @return group memberships of user
    * @throws IOException
    */
   public List<String> getGroups(String user) throws IOException;

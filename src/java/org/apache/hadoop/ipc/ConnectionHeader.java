@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -36,7 +35,7 @@ class ConnectionHeader implements Writable {
   public static final Log LOG = LogFactory.getLog(ConnectionHeader.class);
   
   private String protocol;
-  private UserGroupInformation ugi = new UnixUserGroupInformation();
+  private UserGroupInformation ugi = null;
   
   public ConnectionHeader() {}
   
@@ -60,9 +59,10 @@ class ConnectionHeader implements Writable {
       protocol = null;
     }
     
-    boolean ugiPresent = in.readBoolean();
-    if (ugiPresent) {
-      ugi.readFields(in);
+    boolean ugiUsernamePresent = in.readBoolean();
+    if (ugiUsernamePresent) {
+      String username = in.readUTF();
+      ugi = UserGroupInformation.createRemoteUser(username);
     } else {
       ugi = null;
     }
@@ -73,7 +73,7 @@ class ConnectionHeader implements Writable {
     Text.writeString(out, (protocol == null) ? "" : protocol);
     if (ugi != null) {
       out.writeBoolean(true);
-      ugi.write(out);
+      out.writeUTF(ugi.getUserName());
     } else {
       out.writeBoolean(false);
     }
