@@ -80,7 +80,17 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   public Put(byte [] row, RowLock rowLock) {
       this(row, HConstants.LATEST_TIMESTAMP, rowLock);
   }
-  
+
+  /**
+   * Create a Put operation for the specified row, using a given timestamp.
+   * 
+   * @param row row key
+   * @param ts timestamp
+   */
+  public Put(byte[] row, long ts) {
+    this(row, ts, null);
+  }
+
   /**
    * Create a Put operation for the specified row, using a given timestamp, and an existing row lock.
    * @param row row key
