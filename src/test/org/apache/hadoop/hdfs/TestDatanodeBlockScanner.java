@@ -50,12 +50,15 @@ public class TestDatanodeBlockScanner extends TestCase {
   
   private static Pattern pattern = 
              Pattern.compile(".*?(blk_[-]*\\d+).*?scan time\\s*:\\s*(\\d+)");
+  
+  private static Pattern pattern_blockVerify = 
+             Pattern.compile(".*?(SCAN_PERIOD)\\s*:\\s*(\\d+.*?)");
   /**
    * This connects to datanode and fetches block verification data.
    * It repeats this until the given block has a verification time > 0.
    */
   private static long waitForVerification(DatanodeInfo dn, FileSystem fs, 
-                                          Path file) throws IOException {
+                                          Path file, int blocksValidated) throws IOException {
     URL url = new URL("http://localhost:" + dn.getInfoPort() +
                       "/blockScannerReport?listblocks");
     long lastWarnTime = System.currentTimeMillis();
@@ -65,6 +68,14 @@ public class TestDatanodeBlockScanner extends TestCase {
     
     while (verificationTime <= 0) {
       String response = DFSTestUtil.urlGet(url);
+      if(blocksValidated >= 0) {
+        for(Matcher matcher = pattern_blockVerify.matcher(response); matcher.find();) {
+          if (block.equals(matcher.group(1))) {
+            assertEquals("Wrong number of blocks reported for validation.", blocksValidated, Long.parseLong(matcher.group(2)));
+            break;
+          }
+        }
+      }
       for(Matcher matcher = pattern.matcher(response); matcher.find();) {
         if (block.equals(matcher.group(1))) {
           verificationTime = Long.parseLong(matcher.group(2));
@@ -115,7 +126,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     /*
      * The cluster restarted. The block should be verified by now.
      */
-    assertTrue(waitForVerification(dn, fs, file1) > startTime);
+    assertTrue(waitForVerification(dn, fs, file1, 1) > startTime);
     
     /*
      * Create a new file and read the block. The block should be marked 
@@ -124,7 +135,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     DFSTestUtil.createFile(fs, file2, 10, (short)1, 0);
     IOUtils.copyBytes(fs.open(file2), new IOUtils.NullOutputStream(), 
                       conf, true); 
-    assertTrue(waitForVerification(dn, fs, file2) > startTime);
+    assertTrue(waitForVerification(dn, fs, file2, 2) > startTime);
     
     cluster.shutdown();
   }
