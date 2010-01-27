@@ -46,6 +46,8 @@ Trunk (unreleased changes)
      and corresponding changes in Namenode and DFS Api to issue, 
     renew and cancel delegation tokens. (jnp via boryas)
 
+    HDFS-844. Log the filename when file locking fails. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
