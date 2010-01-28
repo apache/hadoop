@@ -100,6 +100,9 @@ Release 0.20.2 - Unreleased
     HADOOP-6498. IPC client bug may cause rpc call hang. (Ruyue Ma and
     hairong via hairong)
 
+    HADOOP-6596. Failing tests prevent the rest of test targets from
+    execution. (cos)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
