@@ -198,8 +198,6 @@ public class UserGroupInformation {
   private static String keytabFile = null;
 
   private final Subject subject;
-  private final Set<Token<? extends TokenIdentifier>> tokens =
-                  new LinkedHashSet<Token<? extends TokenIdentifier>>();
   
   private static final String OS_LOGIN_MODULE_NAME;
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -443,7 +441,7 @@ public class UserGroupInformation {
    * @return true on successful add of new token
    */
   public synchronized boolean addToken(Token<? extends TokenIdentifier> token) {
-    return tokens.add(token);
+    return subject.getPrivateCredentials().add(token);
   }
   
   /**
@@ -451,8 +449,16 @@ public class UserGroupInformation {
    * 
    * @return an unmodifiable collection of tokens associated with user
    */
-  public synchronized Collection<Token<? extends TokenIdentifier>> getTokens() {
-    return Collections.unmodifiableSet(tokens);
+  public synchronized
+  Collection<Token<? extends TokenIdentifier>> getTokens() {
+    Set<Object> creds = subject.getPrivateCredentials();
+    List<Token<?>> result = new ArrayList<Token<?>>(creds.size());
+    for(Object o: creds) {
+      if (o instanceof Token<?>) {
+        result.add((Token<?>) o);
+      }
+    }
+    return Collections.unmodifiableList(result);
   }
 
   /**

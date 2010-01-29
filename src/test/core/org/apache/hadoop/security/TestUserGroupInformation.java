@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -164,12 +165,12 @@ public class TestUserGroupInformation {
   
   @SuppressWarnings("unchecked") // from Mockito mocks
   @Test
-  public void testUGITokens() {
+  public <T extends TokenIdentifier> void testUGITokens() throws Exception {
     UserGroupInformation ugi = 
       UserGroupInformation.createUserForTesting("TheDoctor", 
                                                 new String [] { "TheTARDIS"});
-    Token t1 = mock(Token.class);
-    Token t2 = mock(Token.class);
+    Token<T> t1 = mock(Token.class);
+    Token<T> t2 = mock(Token.class);
     
     ugi.addToken(t1);
     ugi.addToken(t2);
@@ -185,5 +186,15 @@ public class TestUserGroupInformation {
     } catch(UnsupportedOperationException uoe) {
       // Can't modify tokens
     }
+    
+    // ensure that the tokens are passed through doAs
+    Collection<Token<? extends TokenIdentifier>> otherSet = 
+      ugi.doAs(new PrivilegedExceptionAction<Collection<Token<?>>>(){
+        public Collection<Token<?>> run() throws IOException {
+          return UserGroupInformation.getCurrentUser().getTokens();
+        }
+      });
+    assertTrue(otherSet.contains(t1));
+    assertTrue(otherSet.contains(t2));
   }
 }

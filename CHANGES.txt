@@ -152,6 +152,9 @@ Trunk (unreleased changes)
 
     HADOOP-6489. Fix 3 findbugs warnings. (Erik Steffl via suresh)
 
+    HADOOP-6517. Fix UserGroupInformation so that tokens are saved/retrieved
+    to/from the embedded Subject (Owen O'Malley & Kan Zhang via ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
