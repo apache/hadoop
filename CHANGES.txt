@@ -43,6 +43,11 @@ Trunk (unreleased changes)
 
     HADOOP-6464. Write a Rackspace cloud provider. (tomwhite)
 
+    HADOOP-6520. Adds APIs to read/write Token and secret keys. Also
+    adds the automatic loading of tokens into UserGroupInformation
+    upon login. The tokens are read from a file specified in the
+    environment variable. (ddas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
