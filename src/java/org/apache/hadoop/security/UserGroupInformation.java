@@ -241,6 +241,10 @@ public class UserGroupInformation {
     static {
       USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
       USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+      String ticketCache = System.getenv("KRB5CCNAME");
+      if (ticketCache != null) {
+        USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+      }
     }
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
       new AppConfigurationEntry(Krb5LoginModule.class.getName(),

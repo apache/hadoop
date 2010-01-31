@@ -119,6 +119,9 @@ Trunk (unreleased changes)
     HADOOP-6495.  Identifier should be serialized after the password is
      created In Token constructor (jnp via boryas)
 
+    HADOOP-6518. Makes the UGI honor the env var KRB5CCNAME. 
+    (Owen O'Malley via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
