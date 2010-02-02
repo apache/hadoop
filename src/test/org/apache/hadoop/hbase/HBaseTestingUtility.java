@@ -62,14 +62,22 @@ import org.apache.zookeeper.ZooKeeper;
 public class HBaseTestingUtility {
   
   private final Log LOG = LogFactory.getLog(getClass());
-  
-  private final Configuration conf = HBaseConfiguration.create();
+
+  private final Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
   private MiniDFSCluster dfsCluster = null;
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
   private File clusterTestBuildDir = null;
   private HBaseAdmin hbaseAdmin = null;
+
+  public HBaseTestingUtility() {
+    this(HBaseConfiguration.create());
+  }
+
+  public HBaseTestingUtility(Configuration conf) {
+    this.conf = conf;
+  }
   
   /** System property key to get test directory value.
    */
@@ -104,6 +112,15 @@ public class HBaseTestingUtility {
    */
   public void startMiniCluster() throws Exception {
     startMiniCluster(1);
+  }
+
+  public void startMiniZKCluster() throws Exception {
+    // Note that this is done before we create the MiniHBaseCluster because we
+    // need to edit the config to add the ZooKeeper servers.
+    this.zkCluster = new MiniZooKeeperCluster();
+    int clientPort = this.zkCluster.startup(this.clusterTestBuildDir);
+    this.conf.set("hbase.zookeeper.property.clientPort",
+      Integer.toString(clientPort));
   }
 
   /**
@@ -156,12 +173,10 @@ public class HBaseTestingUtility {
     this.conf.set("fs.defaultFS", fs.getUri().toString());
     this.dfsCluster.waitClusterUp();
 
-    // Note that this is done before we create the MiniHBaseCluster because we
-    // need to edit the config to add the ZooKeeper servers.
-    this.zkCluster = new MiniZooKeeperCluster();
-    int clientPort = this.zkCluster.startup(this.clusterTestBuildDir);
-    this.conf.set("hbase.zookeeper.property.clientPort",
-      Integer.toString(clientPort));
+    // It could be created before the cluster
+    if(this.zkCluster == null) {
+      startMiniZKCluster();
+    }
 
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
     Path hbaseRootdir = fs.makeQualified(fs.getHomeDirectory());
@@ -302,6 +317,23 @@ public class HBaseTestingUtility {
     }
     (new HBaseAdmin(getConfiguration())).createTable(desc);
     return new HTable(getConfiguration(), tableName);
+  }
+
+  /**
+   * Provide an existing table name to truncate
+   * @param tableName existing table
+   * @return HTable to that new table
+   * @throws IOException
+   */
+  public HTable truncateTable(byte [] tableName) throws IOException {
+    HTable table = new HTable(getConfiguration(), tableName);
+    Scan scan = new Scan();
+    ResultScanner resScan = table.getScanner(scan);
+    for(Result res : resScan) {
+      Delete del = new Delete(res.getRow());
+      table.delete(del);
+    }
+    return table;
   }
 
   /**
@@ -574,5 +606,17 @@ public class HBaseTestingUtility {
   public void closeRegionByRow(byte[] row, HTable table) throws IOException {
     HRegionLocation hrl = table.getRegionLocation(row);
     closeRegion(hrl.getRegionInfo().getRegionName());
+  }
+
+  public MiniZooKeeperCluster getZkCluster() {
+    return zkCluster;
+  }
+
+  public void setZkCluster(MiniZooKeeperCluster zkCluster) {
+    this.zkCluster = zkCluster;
+  }
+
+  public MiniDFSCluster getDFSCluster() {
+    return dfsCluster;
   }
 }

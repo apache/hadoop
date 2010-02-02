@@ -19,22 +19,22 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -43,8 +43,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
 
   @Override
   public void setUp() throws Exception {
-    // Enable append for these tests.
-    this.conf.setBoolean("dfs.support.append", true);
     // Make block sizes small.
     this.conf.setInt("dfs.blocksize", 1024 * 1024);
     this.conf.setInt("hbase.regionserver.flushlogentries", 1);
@@ -74,14 +72,21 @@ public class TestHLog extends HBaseTestCase implements HConstants {
    * @throws IOException
    */
   public void testSplit() throws IOException {
+
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
     HLog log = new HLog(this.fs, this.dir, this.conf, null);
     final int howmany = 3;
+    HRegionInfo[] infos = new HRegionInfo[3];
+    for(int i = 0; i < howmany; i++) {
+      infos[i] = new HRegionInfo(new HTableDescriptor(tableName),
+                Bytes.toBytes("" + i), Bytes.toBytes("" + (i+1)), false);
+    }
     // Add edits for three regions.
     try {
       for (int ii = 0; ii < howmany; ii++) {
         for (int i = 0; i < howmany; i++) {
+
           for (int j = 0; j < howmany; j++) {
             List<KeyValue> edit = new ArrayList<KeyValue>();
             byte [] family = Bytes.toBytes("column");
@@ -90,10 +95,11 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             edit.add(new KeyValue(rowName, family, qualifier, 
                 System.currentTimeMillis(), column));
             System.out.println("Region " + i + ": " + edit);
-            log.append(Bytes.toBytes("" + i), tableName, edit,
+            log.append(infos[i], tableName, edit,
               System.currentTimeMillis());
           }
         }
+        log.hflush();
         log.rollWriter();
       }
       List<Path> splits =
@@ -128,10 +134,14 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     Path subdir = new Path(this.dir, "hlogdir");
     HLog wal = new HLog(this.fs, subdir, this.conf, null);
     final int total = 20;
+
+    HRegionInfo info = new HRegionInfo(new HTableDescriptor(bytes),
+                null,null, false);
+
     for (int i = 0; i < total; i++) {
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
-      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
+      wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
     // Now call sync and try reading.  Opening a Reader before you sync just
     // gives you EOFE.
@@ -149,7 +159,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     for (int i = 0; i < total; i++) {
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
-      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
+      wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
     reader = HLog.getReader(fs, walPath, conf);
     count = 0;
@@ -168,7 +178,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     for (int i = 0; i < total; i++) {
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, value));
-      wal.append(bytes, bytes, kvs, System.currentTimeMillis());
+      wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
     // Now I should have written out lots of blocks.  Sync then read.
     wal.sync();
@@ -248,7 +258,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
    */
   public void testEditAdd() throws IOException {
     final int COL_COUNT = 10;
-    final byte [] regionName = Bytes.toBytes("regionname");
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
     HLog.Reader reader = null;
@@ -263,7 +272,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
-      log.append(regionName, tableName, cols, System.currentTimeMillis());
+      HRegionInfo info = new HRegionInfo(new HTableDescriptor(tableName),
+                row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
+      final byte [] regionName = info.getRegionName();
+      log.append(info, tableName, cols, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();

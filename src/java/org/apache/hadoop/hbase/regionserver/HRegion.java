@@ -1177,7 +1177,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       
       if (writeToWAL) {
-        this.log.append(regionInfo.getRegionName(),
+        this.log.append(regionInfo,
           regionInfo.getTableDesc().getName(), kvs, now);
       }
       flush = isFlushSize(size);
@@ -1450,7 +1450,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     try {
       if (writeToWAL) {
         long now = System.currentTimeMillis();
-        this.log.append(regionInfo.getRegionName(),
+        this.log.append(regionInfo,
           regionInfo.getTableDesc().getName(), edits, now);
       }
       long size = 0;
@@ -2355,7 +2355,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         long now = System.currentTimeMillis();
         List<KeyValue> edits = new ArrayList<KeyValue>(1);
         edits.add(newKv);
-        this.log.append(regionInfo.getRegionName(),
+        this.log.append(regionInfo,
           regionInfo.getTableDesc().getName(), edits, now);
       }
 

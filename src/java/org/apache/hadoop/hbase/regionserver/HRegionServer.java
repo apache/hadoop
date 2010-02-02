@@ -1182,7 +1182,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    * Wait on all threads to finish.
    * Presumption is that all closes and stops have already been called.
    */
-  void join() {
+  protected void join() {
     Threads.shutdown(this.majorCompactionChecker);
     Threads.shutdown(this.workerThread);
     Threads.shutdown(this.cacheFlusher);
@@ -2392,6 +2392,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
     if(!region.getTableDesc().isDeferredLogFlush()) {
       this.hlog.sync(region.getRegionInfo().isMetaRegion());
     }
+  }
+
+  /**
+   * Interval at which threads should run
+   * @return the interval
+   */
+  public int getThreadWakeFrequency() {
+    return threadWakeFrequency;
   }
 
   /**

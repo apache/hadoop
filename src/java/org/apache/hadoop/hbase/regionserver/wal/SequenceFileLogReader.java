@@ -107,4 +107,14 @@ public class SequenceFileLogReader implements HLog.Reader {
     return null;
   }
 
+  @Override
+  public void seek(long pos) throws IOException {
+    reader.seek(pos);
+  }
+
+  @Override
+  public long getPosition() throws IOException {
+    return reader.getPosition();
+  }
+
 }

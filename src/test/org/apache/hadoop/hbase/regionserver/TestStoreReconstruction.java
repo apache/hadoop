@@ -115,7 +115,7 @@ public class TestStoreReconstruction {
       byte[] column = Bytes.toBytes("column:" + Integer.toString(j));
       edit.add(new KeyValue(rowName, family, qualifier,
           System.currentTimeMillis(), column));
-      log.append(regionName, tableName, edit,
+      log.append(info, tableName, edit,
           System.currentTimeMillis());
       edit.clear();
     }
@@ -126,7 +126,7 @@ public class TestStoreReconstruction {
     // Add an edit to another family, should be skipped.
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
           System.currentTimeMillis(), rowName));
-      log.append(regionName, tableName, edit,
+      log.append(info, tableName, edit,
           System.currentTimeMillis());
     log.sync();
 

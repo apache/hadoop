@@ -168,11 +168,12 @@ public class HConnectionManager implements HConstants {
    */
   public static synchronized ClientZKWatcher getClientZooKeeperWatcher(
       Configuration conf) throws IOException {
-    if (!ZK_WRAPPERS.containsKey(conf.get(HConstants.ZOOKEEPER_QUORUM))) {
-      ZK_WRAPPERS.put(conf.get(HConstants.ZOOKEEPER_QUORUM),
+    if (!ZK_WRAPPERS.containsKey(
+        ZooKeeperWrapper.getZookeeperClusterKey(conf))) {
+      ZK_WRAPPERS.put(ZooKeeperWrapper.getZookeeperClusterKey(conf),
           new ClientZKWatcher(conf));
     }
-    return ZK_WRAPPERS.get(conf.get(HConstants.ZOOKEEPER_QUORUM));
+    return ZK_WRAPPERS.get(ZooKeeperWrapper.getZookeeperClusterKey(conf));
   }
   
   /**

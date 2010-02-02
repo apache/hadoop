@@ -342,6 +342,7 @@ Release 0.21.0 - Unreleased
    HBASE-1373  Update Thrift to use compact/framed protocol (Lars Francke via Stack)
    HBASE-2172  Add constructor to Put for row key and timestamp
                (Lars Francke via Stack)
+   HBASE-2178  Hooks for replication
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

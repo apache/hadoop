@@ -19,18 +19,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Map.Entry;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,10 +30,22 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
 import org.apache.zookeeper.data.Stat;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Properties;
 
 /**
  * Wraps a ZooKeeper instance and adds HBase specific functionality.
@@ -93,7 +93,8 @@ public class ZooKeeperWrapper implements HConstants {
       throw new IOException(e);
     }
 
-    parentZNode = conf.get("zookeeper.znode.parent", "/hbase");
+    parentZNode = conf.get(ZOOKEEPER_ZNODE_PARENT,
+        DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
     String rootServerZNodeName = conf.get("zookeeper.znode.rootserver",
                                           "root-region-server");
@@ -579,18 +580,7 @@ public class ZooKeeperWrapper implements HConstants {
    * @return A list of server addresses
    */
   public List<HServerAddress> scanRSDirectory() {
-    List<HServerAddress> addresses = new ArrayList<HServerAddress>();
-    try {
-      List<String> nodes = zooKeeper.getChildren(rsZNode, false);
-      for (String node : nodes) {
-        addresses.add(readAddress(rsZNode + ZNODE_PATH_SEPARATOR + node, null));
-      }
-    } catch (KeeperException e) {
-      LOG.warn("Failed to read " + rsZNode + " znode in ZooKeeper: " + e);
-    } catch (InterruptedException e) {
-      LOG.warn("Failed to read " + rsZNode + " znode in ZooKeeper: " + e);
-    }
-    return addresses;
+    return scanAddressDirectory(rsZNode, null);
   }
   
   /**
@@ -636,7 +626,7 @@ public class ZooKeeperWrapper implements HConstants {
     }
   }
   
-  private String getZNode(String parentZNode, String znodeName) {
+  public String getZNode(String parentZNode, String znodeName) {
     return znodeName.charAt(0) == ZNODE_PATH_SEPARATOR ?
         znodeName : joinPath(parentZNode, znodeName);
   }
@@ -651,6 +641,90 @@ public class ZooKeeperWrapper implements HConstants {
    */
   public String getMasterElectionZNode() {
     return masterElectionZNode;
+  }
+
+  /**
+   * Get the path of the parent ZNode
+   * @return path of that znode
+   */
+  public String getParentZNode() {
+    return parentZNode;
+  }
+
+  /**
+   * Scan a directory of address data.
+   * @param znode The parent node
+   * @param watcher The watcher to put on the found znodes, if not null
+   * @return The directory contents
+   */
+  public List<HServerAddress> scanAddressDirectory(String znode,
+      Watcher watcher) {
+    List<HServerAddress> list = new ArrayList<HServerAddress>();
+    List<String> nodes = this.listZnodes(znode, watcher);
+    if(nodes == null) {
+      return list;
+    }
+    for (String node : nodes) {
+      String path = joinPath(znode, node);
+      list.add(readAddress(path, watcher));
+    }
+    return list;
+  }
+
+  public List<String> listZnodes(String znode, Watcher watcher) {
+    List<String> nodes = null;
+    try {
+      if (checkExistenceOf(znode)) {
+        nodes = zooKeeper.getChildren(znode, watcher);
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Failed to read " + znode + " znode in ZooKeeper: " + e);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to read " + znode + " znode in ZooKeeper: " + e);
+    }
+    return nodes;
+  }
+
+  public String getData(String parentZNode, String znode) {
+    return getDataAndWatch(parentZNode, znode, null);
+  }
+
+  public String getDataAndWatch(String parentZNode,
+                                String znode, Watcher watcher) {
+    String data = null;
+    try {
+      String path = joinPath(parentZNode, znode);
+      if (checkExistenceOf(path)) {
+        data = Bytes.toString(zooKeeper.getData(path, watcher, null));
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Failed to read " + znode + " znode in ZooKeeper: " + e);
+    } catch (InterruptedException e) {
+      LOG.warn("Failed to read " + znode + " znode in ZooKeeper: " + e);
+    }
+    return data;
+  }
+
+  public void writeZNode(String parentPath, String child, String strData)
+      throws InterruptedException, KeeperException {
+    String path = joinPath(parentPath, child);
+    if (!ensureExists(parentPath)) {
+      LOG.error("unable to ensure parent exists: " + parentPath);
+    }
+    byte[] data = Bytes.toBytes(strData);
+    try {
+      this.zooKeeper.create(path, data,
+          Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      LOG.debug("Created " + path);
+      } catch (KeeperException.NodeExistsException ex) {
+        this.zooKeeper.setData(path, data, -1);
+        LOG.debug("Updated " + path);
+      }
+  }
+
+  public static String getZookeeperClusterKey(Configuration conf) {
+    return conf.get(ZOOKEEPER_QUORUM)+":"+
+          conf.get(ZOOKEEPER_ZNODE_PARENT);
   }
   
   

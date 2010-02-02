@@ -19,6 +19,29 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.io.Writable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,26 +64,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
@@ -124,6 +127,10 @@ public class HLog implements HConstants, Syncable {
     Entry next() throws IOException;
 
     Entry next(Entry reuse) throws IOException;
+
+    void seek(long pos) throws IOException;
+
+    long getPosition() throws IOException;
 
   }
 
@@ -649,7 +656,7 @@ public class HLog implements HConstants, Syncable {
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
-      doWrite(logKey, logEdit, logKey.getWriteTime());
+      doWrite(regionInfo, logKey, logEdit, logKey.getWriteTime());
       this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
     }
@@ -677,15 +684,16 @@ public class HLog implements HConstants, Syncable {
    * synchronized prevents appends during the completion of a cache flush or for
    * the duration of a log roll.
    *
-   * @param regionName
+   * @param info
    * @param tableName
    * @param edits
    * @param now
    * @throws IOException
    */
-  public void append(byte [] regionName, byte [] tableName, List<KeyValue> edits,
+  public void append(HRegionInfo info, byte [] tableName, List<KeyValue> edits,
     final long now)
   throws IOException {
+    byte[] regionName = info.getRegionName();
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
@@ -700,7 +708,7 @@ public class HLog implements HConstants, Syncable {
       int counter = 0;
       for (KeyValue kv: edits) {
         HLogKey logKey = makeKey(regionName, tableName, seqNum[counter++], now);
-        doWrite(logKey, kv, now);
+        doWrite(info, logKey, kv, now);
         this.numEntries.incrementAndGet();
       }
 
@@ -847,7 +855,7 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-  private void doWrite(HLogKey logKey, KeyValue logEdit, final long now)
+  protected void doWrite(HRegionInfo info, HLogKey logKey, KeyValue logEdit, final long now)
   throws IOException {
     if (!this.enabled) {
       return;
@@ -1243,7 +1251,7 @@ public class HLog implements HConstants, Syncable {
    * Utility class that lets us keep track of the edit with it's key
    * Only used when splitting logs
    */
-  public static class Entry {
+  public static class Entry implements Writable {
     private KeyValue edit;
     private HLogKey key;
 
@@ -1280,6 +1288,18 @@ public class HLog implements HConstants, Syncable {
     @Override
     public String toString() {
       return this.key + "=" + this.edit;
+    }
+
+    @Override
+    public void write(DataOutput dataOutput) throws IOException {
+      this.key.write(dataOutput);
+      this.edit.write(dataOutput);
+    }
+
+    @Override
+    public void readFields(DataInput dataInput) throws IOException {
+      this.key.readFields(dataInput);
+      this.edit.readFields(dataInput);
     }
   }
 

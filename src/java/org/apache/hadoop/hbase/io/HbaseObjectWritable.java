@@ -52,6 +52,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
@@ -151,6 +153,9 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(FirstKeyOnlyFilter.class, code++);
 
     addToMap(Delete [].class, code++);
+    addToMap(HLog.Entry.class, code++);
+    addToMap(HLog.Entry[].class, code++);
+    addToMap(HLogKey.class, code++);
   }
   
   private Class<?> declaredClass;
