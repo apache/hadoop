@@ -259,9 +259,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
 		                       DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
-    this.maxBlockAcquireFailures = 
-                          conf.getInt("dfs.client.max.block.acquire.failures",
-                                      MAX_BLOCK_ACQUIRE_FAILURES);
+    this.maxBlockAcquireFailures = getMaxBlockAcquireFailures(conf);
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
 
@@ -330,6 +328,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           StringUtils.stringifyException(ie));
       throw ie;
     }
+  }
+
+  static int getMaxBlockAcquireFailures(Configuration conf) {
+    return conf.getInt("dfs.client.max.block.acquire.failures",
+                       MAX_BLOCK_ACQUIRE_FAILURES);
   }
 
   /**
@@ -1751,7 +1754,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * DFSInputStream provides bytes from a named file.  It handles 
    * negotiation of the namenode and various datanodes as necessary.
    ****************************************************************/
-  private class DFSInputStream extends FSInputStream {
+  class DFSInputStream extends FSInputStream {
     private Socket s = null;
     private boolean closed = false;
 
@@ -1765,6 +1768,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private Block currentBlock = null;
     private long pos = 0;
     private long blockEnd = -1;
+
+    /**
+     * This variable tracks the number of failures since the start of the
+     * most recent user-facing operation. That is to say, it should be reset
+     * whenever the user makes a call on this stream, and if at any point
+     * during the retry logic, the failure count exceeds a threshold,
+     * the errors will be thrown back to the operation.
+     *
+     * Specifically this counts the number of times the client has gone
+     * back to the namenode to get a new list of block locations, and is
+     * capped at maxBlockAcquireFailures
+     */
     private int failures = 0;
     private int timeWindow = 3000; // wait time window (in msec) if BlockMissingException is caught
 
@@ -2027,7 +2042,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       //
       DatanodeInfo chosenNode = null;
       int refetchToken = 1; // only need to get a new access token once
-      failures = 0;
       
       while (true) {
         //
@@ -2178,6 +2192,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (closed) {
         throw new IOException("Stream closed");
       }
+      failures = 0;
       if (pos < getFileLength()) {
         int retries = 2;
         while (retries > 0) {
@@ -2270,7 +2285,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       //
       Socket dn = null;
       int refetchToken = 1; // only need to get a new access token once
-      failures = 0;
       
       while (true) {
         // cached block locations may have been updated by chooseDataNode()
@@ -2347,6 +2361,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (closed) {
         throw new IOException("Stream closed");
       }
+      failures = 0;
       long filelen = getFileLength();
       if ((position < 0) || (position >= filelen)) {
         return -1;

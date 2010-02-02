@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-922. Remove unnecessary semicolon added by HDFS-877 that causes
     problems for Eclipse compilation. (jghoman)
 
+    HDFS-927  DFSInputStream retries too many times for new block locations
+    (Todd Lipcon via Stack)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
