@@ -86,7 +86,7 @@ public class TestGroupMappingServiceRefresh {
     DFSAdmin admin = new DFSAdmin(config);
     String [] args =  new String[]{"-refreshUserToGroupsMappings"};
     Groups groups = Groups.getUserToGroupsMappingService(config);
-    String user = UserGroupInformation.getCurrentUser().getUserName();
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
     System.out.println("first attempt:");
     List<String> g1 = groups.getGroups(user);
     String [] str_groups = new String [g1.size()];

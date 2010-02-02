@@ -33,7 +33,7 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
     cluster = new MiniDFSCluster(conf, 2, true, null);
     fs = cluster.getFileSystem();
     defaultWorkingDirectory = "/user/" + 
-           UserGroupInformation.getCurrentUser().getUserName();
+           UserGroupInformation.getCurrentUser().getShortUserName();
   }
   
   @Override

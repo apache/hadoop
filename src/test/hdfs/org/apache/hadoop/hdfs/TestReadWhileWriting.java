@@ -126,7 +126,7 @@ public class TestReadWhileWriting {
   static void checkFile(Path p, int expectedsize, final Configuration conf
       ) throws IOException, InterruptedException {
     //open the file with another user account
-    final String username = UserGroupInformation.getCurrentUser().getUserName()
+    final String username = UserGroupInformation.getCurrentUser().getShortUserName()
         + "_" + ++userCount;
 
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(username, 

@@ -57,7 +57,7 @@ public class FileDataServlet extends DfsServlet {
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
             "/streamFile", "filename=" + i.getPath() + 
-            "&ugi=" + ugi.getUserName(), null);
+            "&ugi=" + ugi.getShortUserName(), null);
   }
 
   /** Select a datanode to service this request.

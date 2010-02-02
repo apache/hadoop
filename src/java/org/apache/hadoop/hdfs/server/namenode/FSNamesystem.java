@@ -404,7 +404,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     short filePermission = (short)conf.getInt(DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
                                               DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);
     this.defaultPermission = PermissionStatus.createImmutable(
-        fsOwner.getUserName(), supergroup, new FsPermission(filePermission));
+        fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
 
     long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
     this.heartbeatRecheckInterval = conf.getInt(
@@ -3858,7 +3858,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   PermissionStatus createFsOwnerPermissions(FsPermission permission) {
-    return new PermissionStatus(fsOwner.getUserName(), supergroup, permission);
+    return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
   }
 
   private FSPermissionChecker checkOwner(String path) throws AccessControlException {
@@ -3900,7 +3900,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
       FsAction subAccess) throws AccessControlException {
     FSPermissionChecker pc = new FSPermissionChecker(
-        fsOwner.getUserName(), supergroup);
+        fsOwner.getShortUserName(), supergroup);
     if (!pc.isSuper) {
       dir.waitForReady();
       pc.checkPermission(path, dir.rootDir, doCheckOwner,
@@ -4341,7 +4341,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    String user = UserGroupInformation.getCurrentUser().getUserName();
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
     Text owner = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner, renewer);
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
@@ -4349,13 +4349,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
-    String renewer = UserGroupInformation.getCurrentUser().getUserName();
+    String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
     return dtSecretManager.renewToken(token, renewer);
   }
 
   public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    String canceller = UserGroupInformation.getCurrentUser().getUserName();
+    String canceller = UserGroupInformation.getCurrentUser().getShortUserName();
     return dtSecretManager.cancelToken(token, canceller);
   }
 }

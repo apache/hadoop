@@ -34,7 +34,7 @@ public class ProxyFileForward extends ProxyForwardServlet {
     UserGroupInformation ugi = 
                    (UserGroupInformation)request.getAttribute("authorized.ugi");
     if (ugi != null) {
-      path += "&ugi=" + ugi.getUserName();
+      path += "&ugi=" + ugi.getShortUserName();
     }
     return path;
   }

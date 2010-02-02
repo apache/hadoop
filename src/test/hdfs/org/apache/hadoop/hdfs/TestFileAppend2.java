@@ -156,7 +156,7 @@ public class TestFileAppend2 extends TestCase {
           UserGroupInformation.getCurrentUser();
         String username = "testappenduser";
         String group = "testappendgroup";
-        assertFalse(superuser.getUserName().equals(username));
+        assertFalse(superuser.getShortUserName().equals(username));
         assertFalse(Arrays.asList(superuser.getGroupNames()).contains(group));
         UserGroupInformation appenduser = 
           UserGroupInformation.createUserForTesting(username, new String[]{group});

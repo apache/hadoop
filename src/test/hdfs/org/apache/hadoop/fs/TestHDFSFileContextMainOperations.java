@@ -52,7 +52,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UserGroupInformation.getCurrentUser().getUserName()));
+        UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 
@@ -65,7 +65,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UserGroupInformation.getCurrentUser().getUserName()));
+        UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
       

@@ -45,7 +45,7 @@ public class TestFcHdfsCreateMkdir extends
     cluster = new MiniDFSCluster(conf, 2, true, null);
     fc = FileContext.getFileContext(cluster.getURI(), conf);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UserGroupInformation.getCurrentUser().getUserName()));
+        UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 

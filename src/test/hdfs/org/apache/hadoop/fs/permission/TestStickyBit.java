@@ -82,7 +82,7 @@ public class TestStickyBit extends TestCase {
     writeFile(hdfs, file);
 
     // Make sure the correct user is the owner
-    assertEquals(user1.getUserName(), hdfs.getFileStatus(file).getOwner());
+    assertEquals(user1.getShortUserName(), hdfs.getFileStatus(file).getOwner());
 
     // Log onto cluster as another user and attempt to delete the file
     FileSystem hdfs2 = DFSTestUtil.getFileSystemAs(user2, conf);

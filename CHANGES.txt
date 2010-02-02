@@ -116,6 +116,9 @@ Trunk (unreleased changes)
     HDFS-927  DFSInputStream retries too many times for new block locations
     (Todd Lipcon via Stack)
 
+    HDFS-938. Replace calls to UGI.getUserName() with UGI.getShortUserName()
+    (jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

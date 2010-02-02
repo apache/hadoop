@@ -261,15 +261,15 @@ public class TestDFSPermission extends TestCase {
     fs = FileSystem.get(conf);
     create(op, FILE_DIR_PATH, DEFAULT_UMASK,
         new FsPermission(DEFAULT_PERMISSION));
-    checkOwnership(FILE_DIR_PATH, SUPERUSER.getUserName(),
+    checkOwnership(FILE_DIR_PATH, SUPERUSER.getShortUserName(),
         getGroup(FILE_DIR_PATH.getParent()));
 
     // case 2: superuser changes FILE_DIR_PATH's owner to be <user1, group3>
-    setOwner(FILE_DIR_PATH, USER1.getUserName(), GROUP3_NAME, false);
+    setOwner(FILE_DIR_PATH, USER1.getShortUserName(), GROUP3_NAME, false);
 
     // case 3: user1 changes FILE_DIR_PATH's owner to be user2
     login(USER1);
-    setOwner(FILE_DIR_PATH, USER2.getUserName(), null, true);
+    setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // case 4: user1 changes FILE_DIR_PATH's group to be group1 which it belongs
     // to
@@ -284,7 +284,7 @@ public class TestDFSPermission extends TestCase {
     setOwner(FILE_DIR_PATH, null, GROUP3_NAME, true);
 
     // case 7: user2 (non-owner) changes FILE_DIR_PATH's user to be user2
-    setOwner(FILE_DIR_PATH, USER2.getUserName(), null, true);
+    setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // delete the file/directory
     login(SUPERUSER);
