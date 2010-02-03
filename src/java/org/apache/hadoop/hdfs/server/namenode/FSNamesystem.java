@@ -284,13 +284,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       accessTokenHandler = new AccessTokenHandler(true,
           accessKeyUpdateInterval, accessTokenLifetime);
     }
-    dtSecretManager.startThreads();
   }
 
   /**
    * Activate FSNamesystem daemons.
    */
   void activate(Configuration conf) throws IOException {
+    dtSecretManager.startThreads();
     setBlockTotal();
     blockManager.activate();
     this.hbthread = new Daemon(new HeartbeatMonitor());

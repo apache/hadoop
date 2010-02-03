@@ -15,6 +15,9 @@ Trunk (unreleased changes)
     HDFS-222. Support for concatenating of files into a single file
     without copying. (Boris Shkolnik via hairong)
 
+    HDFS-933. Adds Delegation token based authentication in the NameNode.
+    (Kan Zhang via ddas)
+
   IMPROVEMENTS
     
     HDFS-703. Replace current fault injection implementation with one

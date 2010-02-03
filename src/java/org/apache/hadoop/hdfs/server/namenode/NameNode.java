@@ -295,16 +295,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       ServiceAuthorizationManager.refresh(conf, new HDFSPolicyProvider());
     }
 
+    NameNode.initMetrics(conf, this.getRole());
+    loadNamesystem(conf);
     // create rpc server 
-    this.server = RPC.getServer(this, socAddr.getHostName(), socAddr.getPort(),
-                                handlerCount, false, conf);
+    this.server = RPC.getServer(this.getClass(), this, socAddr.getHostName(),
+        socAddr.getPort(), handlerCount, false, conf, namesystem
+            .getDelegationTokenSecretManager());
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     setRpcServerAddress(conf);
 
-    NameNode.initMetrics(conf, this.getRole());
-    loadNamesystem(conf);
     activate(conf);
     LOG.info(getRole() + " up at: " + rpcAddress);
   }
