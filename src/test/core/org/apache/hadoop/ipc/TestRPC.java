@@ -68,7 +68,7 @@ public class TestRPC extends TestCase {
     int[] exchange(int[] values) throws IOException;
   }
 
-  public class TestImpl implements TestProtocol {
+  public static class TestImpl implements TestProtocol {
     int fastPingCounter = 0;
     
     public long getProtocolVersion(String protocol, long clientVersion) {
@@ -189,7 +189,7 @@ public class TestRPC extends TestCase {
     System.out.println("Testing Slow RPC");
     // create a server with two handlers
     Server server = RPC.getServer(TestProtocol.class,
-                                  new TestImpl(), ADDRESS, 0, 2, false, conf);
+                                  new TestImpl(), ADDRESS, 0, 2, false, conf, null);
     TestProtocol proxy = null;
     
     try {
@@ -339,7 +339,7 @@ public class TestRPC extends TestCase {
     ServiceAuthorizationManager.refresh(conf, new TestPolicyProvider());
     
     Server server = RPC.getServer(TestProtocol.class,
-                                  new TestImpl(), ADDRESS, 0, 5, true, conf);
+                                  new TestImpl(), ADDRESS, 0, 5, true, conf, null);
 
     TestProtocol proxy = null;
 

@@ -33,6 +33,8 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.net.NetUtils;
 
 import org.apache.avro.*;
@@ -192,10 +194,13 @@ class AvroRpcEngine implements RpcEngine {
    * port and address. */
   public RPC.Server getServer(Class iface, Object impl, String bindAddress,
                               int port, int numHandlers, boolean verbose,
-                              Configuration conf) throws IOException {
+                              Configuration conf, 
+                       SecretManager<? extends TokenIdentifier> secretManager
+                              ) throws IOException {
     return ENGINE.getServer(TunnelProtocol.class,
                             new TunnelResponder(iface, impl),
-                            bindAddress, port, numHandlers, verbose, conf);
+                            bindAddress, port, numHandlers, verbose, conf, 
+                            secretManager);
   }
 
 }

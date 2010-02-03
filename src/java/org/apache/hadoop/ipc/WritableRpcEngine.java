@@ -36,6 +36,8 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
@@ -246,7 +248,7 @@ class WritableRpcEngine implements RpcEngine {
   public Object[] call(Method method, Object[][] params,
                        InetSocketAddress[] addrs, 
                        UserGroupInformation ticket, Configuration conf)
-    throws IOException {
+    throws IOException, InterruptedException {
 
     Invocation[] invocations = new Invocation[params.length];
     for (int i = 0; i < params.length; i++)
@@ -276,9 +278,11 @@ class WritableRpcEngine implements RpcEngine {
    * port and address. */
   public Server getServer(Class protocol,
                           Object instance, String bindAddress, int port,
-                          int numHandlers, boolean verbose, Configuration conf) 
+                          int numHandlers, boolean verbose, Configuration conf,
+                      SecretManager<? extends TokenIdentifier> secretManager) 
     throws IOException {
-    return new Server(instance, conf, bindAddress, port, numHandlers, verbose);
+    return new Server(instance, conf, bindAddress, port, numHandlers, 
+        verbose, secretManager);
   }
 
   /** An RPC Server. */
@@ -294,7 +298,7 @@ class WritableRpcEngine implements RpcEngine {
      */
     public Server(Object instance, Configuration conf, String bindAddress, int port) 
       throws IOException {
-      this(instance, conf,  bindAddress, port, 1, false);
+      this(instance, conf,  bindAddress, port, 1, false, null);
     }
     
     private static String classNameBase(String className) {
@@ -314,8 +318,11 @@ class WritableRpcEngine implements RpcEngine {
      * @param verbose whether each call should be logged
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
-                  int numHandlers, boolean verbose) throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
+                  int numHandlers, boolean verbose, 
+                  SecretManager<? extends TokenIdentifier> secretManager) 
+        throws IOException {
+      super(bindAddress, port, Invocation.class, numHandlers, conf, 
+          classNameBase(instance.getClass().getName()), secretManager);
       this.instance = instance;
       this.verbose = verbose;
     }

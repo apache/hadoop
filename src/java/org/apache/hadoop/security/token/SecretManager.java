@@ -62,6 +62,12 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   public abstract byte[] retrievePassword(T identifier) throws InvalidToken;
   
   /**
+   * Create an empty token identifier.
+   * @return the newly created empty token identifier
+   */
+  public abstract T createIdentifier();
+  
+  /**
    * The name of the hashing algorithm.
    */
   private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA1";

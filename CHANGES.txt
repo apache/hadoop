@@ -48,6 +48,9 @@ Trunk (unreleased changes)
     upon login. The tokens are read from a file specified in the
     environment variable. (ddas)
 
+    HADOOP-6419. Adds SASL based authentication to RPC.
+    (Kan Zhang via ddas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by

@@ -37,6 +37,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -254,7 +256,7 @@ public class RPC {
   @Deprecated
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, Configuration conf)
-    throws IOException {
+    throws IOException, InterruptedException {
     return call(method, params, addrs, null, conf);
   }
   
@@ -262,7 +264,7 @@ public class RPC {
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, 
                               UserGroupInformation ticket, Configuration conf)
-    throws IOException {
+    throws IOException, InterruptedException {
 
     return getProtocolEngine(method.getDeclaringClass(), conf)
       .call(method, params, addrs, ticket, conf);
@@ -288,7 +290,7 @@ public class RPC {
                                  final boolean verbose, Configuration conf) 
     throws IOException {
     return getServer(instance.getClass(),         // use impl class for protocol
-                     instance, bindAddress, port, numHandlers, false, conf);
+                     instance, bindAddress, port, numHandlers, false, conf, null);
   }
 
   /** Construct a server for a protocol implementation instance. */
@@ -296,19 +298,34 @@ public class RPC {
                                  Object instance, String bindAddress,
                                  int port, Configuration conf) 
     throws IOException {
-    return getServer(protocol, instance, bindAddress, port, 1, false, conf);
+    return getServer(protocol, instance, bindAddress, port, 1, false, conf, null);
   }
 
-  /** Construct a server for a protocol implementation instance. */
+  /** Construct a server for a protocol implementation instance.
+   * @deprecated secretManager should be passed.
+   */
+  @Deprecated
   public static Server getServer(Class protocol,
                                  Object instance, String bindAddress, int port,
                                  int numHandlers,
                                  boolean verbose, Configuration conf) 
     throws IOException {
     
+    return getServer(protocol, instance, bindAddress, port, numHandlers, verbose,
+                 conf, null);
+  }
+  
+  /** Construct a server for a protocol implementation instance. */
+  public static Server getServer(Class<?> protocol,
+                                 Object instance, String bindAddress, int port,
+                                 int numHandlers,
+                                 boolean verbose, Configuration conf,
+                                 SecretManager<? extends TokenIdentifier> secretManager) 
+    throws IOException {
+    
     return getProtocolEngine(protocol, conf)
       .getServer(protocol, instance, bindAddress, port, numHandlers, verbose,
-                 conf);
+                 conf, secretManager);
   }
 
   /** An RPC Server. */
@@ -316,8 +333,9 @@ public class RPC {
   
     protected Server(String bindAddress, int port, 
                      Class<? extends Writable> paramClass, int handlerCount, 
-                     Configuration conf, String serverName) throws IOException {
-      super(bindAddress, port, paramClass, handlerCount, conf, serverName);
+                     Configuration conf, String serverName, 
+                     SecretManager<? extends TokenIdentifier> secretManager) throws IOException {
+      super(bindAddress, port, paramClass, handlerCount, conf, serverName, secretManager);
     }
   }
 

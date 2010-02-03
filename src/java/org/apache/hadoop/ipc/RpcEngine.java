@@ -24,6 +24,8 @@ import java.net.InetSocketAddress;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.Configuration;
 
 /** An RPC implementation. */
@@ -41,11 +43,13 @@ interface RpcEngine {
   /** Expert: Make multiple, parallel calls to a set of servers. */
   Object[] call(Method method, Object[][] params, InetSocketAddress[] addrs,
                 UserGroupInformation ticket, Configuration conf)
-    throws IOException;
+    throws IOException, InterruptedException;
 
   /** Construct a server for a protocol implementation instance. */
   RPC.Server getServer(Class protocol, Object instance, String bindAddress,
                        int port, int numHandlers, boolean verbose,
-                       Configuration conf) throws IOException;
+                       Configuration conf, 
+                       SecretManager<? extends TokenIdentifier> secretManager
+                       ) throws IOException;
 
 }
