@@ -125,6 +125,9 @@ Trunk (unreleased changes)
     HADOOP-6518. Makes the UGI honor the env var KRB5CCNAME. 
     (Owen O'Malley via ddas)
 
+    HADOOP-6531. Enhance FileUtil with an API to delete all contents of a
+    directory. (Amareshwari Sriramadasu via yhemanth)
+
   OPTIMIZATIONS
 
   BUG FIXES

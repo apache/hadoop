@@ -71,6 +71,17 @@ public class FileUtil {
    * we return false, the directory may be partially-deleted.
    */
   public static boolean fullyDelete(File dir) throws IOException {
+    if (!fullyDeleteContents(dir)) {
+      return false;
+    }
+    return dir.delete();
+  }
+
+  /**
+   * Delete the contents of a directory, not the directory itself.  If
+   * we return false, the directory may be partially-deleted.
+   */
+  public static boolean fullyDeleteContents(File dir) throws IOException {
     File contents[] = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
@@ -95,7 +106,7 @@ public class FileUtil {
         }
       }
     }
-    return dir.delete();
+    return true;
   }
 
   /**
