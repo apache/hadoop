@@ -169,6 +169,9 @@ Trunk (unreleased changes)
     HADOOP-6517. Fix UserGroupInformation so that tokens are saved/retrieved
     to/from the embedded Subject (Owen O'Malley & Kan Zhang via ddas)
 
+    HADOOP-6538. Sets hadoop.security.authentication to simple by default.
+    (ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
