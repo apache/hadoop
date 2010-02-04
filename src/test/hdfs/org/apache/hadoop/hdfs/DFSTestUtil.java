@@ -263,7 +263,7 @@ public class DFSTestUtil {
   }
 
   public static BlockAccessToken getAccessToken(FSDataOutputStream out) {
-    return ((DFSClient.DFSOutputStream) out.getWrappedStream()).getAccessToken();
+    return ((DFSOutputStream) out.getWrappedStream()).getAccessToken();
   }
 
   static void setLogLevel2All(org.apache.commons.logging.Log log) {

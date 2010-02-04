@@ -32,7 +32,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -236,7 +236,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     throws IOException {
     InetSocketAddress targetAddr = null;
     Socket s = null;
-    DFSClient.BlockReader blockReader = null; 
+    BlockReader blockReader = null; 
     Block block = lblock.getBlock(); 
    
     targetAddr = NetUtils.createSocketAddr(datanode.getName());
@@ -246,7 +246,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
     blockReader = 
-      DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
+      BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
           block.getBlockId(), 
           block.getBlockId(), 
           lblock.getAccessToken(),

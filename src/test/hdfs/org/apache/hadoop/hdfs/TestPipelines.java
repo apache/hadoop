@@ -94,7 +94,7 @@ public class TestPipelines {
     LOG.debug("Invoking append but doing nothing otherwise...");
     FSDataOutputStream ofs = fs.append(filePath);
     ofs.writeBytes("Some more stuff to write");
-    ((DFSClient.DFSOutputStream) ofs.getWrappedStream()).hflush();
+    ((DFSOutputStream) ofs.getWrappedStream()).hflush();
 
     List<LocatedBlock> lb = cluster.getNameNode().getBlockLocations(
       filePath.toString(), FILE_SIZE - 1, FILE_SIZE).getLocatedBlocks();

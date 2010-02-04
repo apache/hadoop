@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
     HDFS-844. Log the filename when file locking fails. (tomwhite)
 
+    HDFS-914. Refactor DFSOutputStream and DFSInputStream out of DFSClient.
+    (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

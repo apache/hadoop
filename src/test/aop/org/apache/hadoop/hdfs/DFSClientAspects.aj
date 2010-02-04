@@ -22,8 +22,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fi.DataTransferTestUtil;
 import org.apache.hadoop.fi.PipelineTest;
 import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
-import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
-import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream.DataStreamer;
+import org.apache.hadoop.hdfs.DFSOutputStream;
+import org.apache.hadoop.hdfs.DFSOutputStream.DataStreamer;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
 import org.junit.Assert;
 
@@ -66,7 +66,7 @@ privileged public aspect DFSClientAspects {
 
   pointcut pipelineErrorAfterInit(DataStreamer datastreamer):
     call(* processDatanodeError())
-    && within (DFSClient.DFSOutputStream.DataStreamer)
+    && within (DFSOutputStream.DataStreamer)
     && target(datastreamer);
 
   before(DataStreamer datastreamer) : pipelineErrorAfterInit(datastreamer) {
@@ -86,13 +86,13 @@ privileged public aspect DFSClientAspects {
     LOG.info("FI: before pipelineClose:");
   }
 
-  pointcut checkAckQueue(DFSClient.DFSOutputStream.Packet cp):
-    call (void DFSClient.DFSOutputStream.waitAndQueuePacket(
-            DFSClient.DFSOutputStream.Packet))
-    && withincode (void DFSClient.DFSOutputStream.writeChunk(..))
+  pointcut checkAckQueue(DFSOutputStream.Packet cp):
+    call (void DFSOutputStream.waitAndQueuePacket(
+            DFSOutputStream.Packet))
+    && withincode (void DFSOutputStream.writeChunk(..))
     && args(cp);
 
-  after(DFSClient.DFSOutputStream.Packet cp) : checkAckQueue (cp) {
+  after(DFSOutputStream.Packet cp) : checkAckQueue (cp) {
     PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
     if (pTest != null && pTest instanceof PipelinesTest) {
       LOG.debug("FI: Recording packet # " + cp.seqno

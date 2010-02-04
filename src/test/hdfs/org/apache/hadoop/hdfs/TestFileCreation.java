@@ -528,12 +528,12 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // instruct the dfsclient to use a new filename when it requests
       // new blocks for files that were renamed.
-      DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
+      DFSOutputStream dfstream = (DFSOutputStream)
                                                  (stm.getWrappedStream());
       dfstream.setTestFilename(file1.toString());
-      dfstream = (DFSClient.DFSOutputStream) (stm3.getWrappedStream());
+      dfstream = (DFSOutputStream) (stm3.getWrappedStream());
       dfstream.setTestFilename(file3new.toString());
-      dfstream = (DFSClient.DFSOutputStream) (stm4.getWrappedStream());
+      dfstream = (DFSOutputStream) (stm4.getWrappedStream());
       dfstream.setTestFilename(file4new.toString());
 
       // write 1 byte to file.  This should succeed because the 

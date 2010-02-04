@@ -89,7 +89,7 @@ public class TestDatanodeDeath extends TestCase {
         try {
           System.out.println("Workload processing file " + filename);
           FSDataOutputStream stm = createFile(fs, filename, replication);
-          DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
+          DFSOutputStream dfstream = (DFSOutputStream)
                                                  (stm.getWrappedStream());
           dfstream.setArtificialSlowdown(1000);
           writeFile(stm, myseed);
@@ -357,7 +357,7 @@ public class TestDatanodeDeath extends TestCase {
       // create a file and write one block of data
       System.out.println("SimpleTest creating file " + filename);
       FSDataOutputStream stm = createFile(fs, filename, repl);
-      DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
+      DFSOutputStream dfstream = (DFSOutputStream)
                                              (stm.getWrappedStream());
 
       // these are test settings

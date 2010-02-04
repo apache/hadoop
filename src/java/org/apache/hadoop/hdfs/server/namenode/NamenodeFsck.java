@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -399,7 +400,7 @@ public class NamenodeFsck {
     InetSocketAddress targetAddr = null;
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     Socket s = null;
-    DFSClient.BlockReader blockReader = null; 
+    BlockReader blockReader = null; 
     Block block = lblock.getBlock(); 
 
     while (s == null) {
@@ -427,7 +428,7 @@ public class NamenodeFsck {
         s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
         
         blockReader = 
-          DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
+          BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
                                                block.getBlockId(), 
                                                block.getBlockId(), 
                                                lblock.getAccessToken(),

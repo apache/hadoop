@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSClient.DFSInputStream;
+import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
@@ -302,15 +302,15 @@ public class TestDFSClientRetries extends TestCase {
     conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
 
-    int maxBlockAcquires = DFSClient.getMaxBlockAcquireFailures(conf);
-    assertTrue(maxBlockAcquires > 0);
-
     try {
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       NameNode preSpyNN = cluster.getNameNode();
       NameNode spyNN = spy(preSpyNN);
       DFSClient client = new DFSClient(null, spyNN, conf, null);
+      int maxBlockAcquires = client.getMaxBlockAcquireFailures();
+      assertTrue(maxBlockAcquires > 0);
+
 
       DFSTestUtil.createFile(fs, file, fileSize, (short)1, 12345L /*seed*/);
 

@@ -26,6 +26,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -123,7 +124,7 @@ public class TestAccessTokenWithDFS extends TestCase {
       boolean shouldSucceed) {
     InetSocketAddress targetAddr = null;
     Socket s = null;
-    DFSClient.BlockReader blockReader = null;
+    BlockReader blockReader = null;
     Block block = lblock.getBlock();
     try {
       DatanodeInfo[] nodes = lblock.getLocations();
@@ -132,7 +133,7 @@ public class TestAccessTokenWithDFS extends TestCase {
       s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
       s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-      blockReader = DFSClient.BlockReader.newBlockReader(s, targetAddr
+      blockReader = BlockReader.newBlockReader(s, targetAddr
           .toString()
           + ":" + block.getBlockId(), block.getBlockId(), lblock
           .getAccessToken(), block.getGenerationStamp(), 0, -1, conf.getInt(

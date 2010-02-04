@@ -26,7 +26,6 @@ import java.util.List;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSClient.BlockReader;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -91,7 +90,7 @@ public class TestClientBlockVerification {
     s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-    return DFSClient.BlockReader.newBlockReader(
+    return BlockReader.newBlockReader(
       s, targetAddr.toString()+ ":" + block.getBlockId(), block.getBlockId(),
       testBlock.getAccessToken(), block.getGenerationStamp(),
       offset, lenToRead,

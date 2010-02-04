@@ -117,7 +117,7 @@ public class TestHFlush {
         // write to the file
         stm.write(fileContent, tenth * i, tenth);
         // Wait while hflush() pushes all packets through built pipeline
-        ((DFSClient.DFSOutputStream)stm.getWrappedStream()).hflush();
+        ((DFSOutputStream)stm.getWrappedStream()).hflush();
         byte [] toRead = new byte[tenth];
         byte [] expected = new byte[tenth];
         System.arraycopy(fileContent, tenth * i, expected, 0, tenth);

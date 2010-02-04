@@ -77,7 +77,7 @@ public class TestReadWhileWriting {
         write(out, 0, half);
 
         //hflush
-        ((DFSClient.DFSOutputStream)out.getWrappedStream()).hflush();
+        ((DFSOutputStream)out.getWrappedStream()).hflush();
       }
 
       //b. On another machine M2, open file and verify that the half-block
