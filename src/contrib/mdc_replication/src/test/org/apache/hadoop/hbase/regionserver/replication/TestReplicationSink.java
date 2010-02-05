@@ -1,0 +1,219 @@
+/*
+ * Copyright 2010 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.regionserver.replication;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import org.junit.*;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.fs.Path;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public class TestReplicationSink {
+
+  protected static final Log LOG =
+      LogFactory.getLog(TestReplicationSink.class);
+
+  private static final int BATCH_SIZE = 10;
+
+  private static final long SLEEP_TIME = 500;
+
+  private final static Configuration conf = HBaseConfiguration.create();
+
+  private final static HBaseTestingUtility TEST_UTIL =
+      new HBaseTestingUtility();
+
+  private static ReplicationSink SINK;
+
+  private static final byte[] TABLE_NAME1 =
+      Bytes.toBytes("table1");
+  private static final byte[] TABLE_NAME2 =
+      Bytes.toBytes("table2");
+
+  private static final byte[] FAM_NAME1 = Bytes.toBytes("info1");
+  private static final byte[] FAM_NAME2 = Bytes.toBytes("info2");
+
+  private static final AtomicBoolean STOPPER = new AtomicBoolean(false);
+
+  private static HTable table1;
+
+  private static HTable table2;
+
+   /**
+   * @throws java.lang.Exception
+   */
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+
+    TEST_UTIL.startMiniCluster(3);
+    Path repLogPath = new Path(TEST_UTIL.getTestDir(),
+        ReplicationSink.getRepLogPath("test_rep_sink"));
+    SINK = new ReplicationSink(conf,STOPPER,
+        TEST_UTIL.getTestDir(),
+        TEST_UTIL.getDFSCluster().getFileSystem(), 1000);
+    SINK.start();
+    table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
+    table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    STOPPER.set(true);
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @Before
+  public void setUp() throws Exception {
+    table1 = TEST_UTIL.truncateTable(TABLE_NAME1);
+    table2 = TEST_UTIL.truncateTable(TABLE_NAME2);
+    Thread.sleep(SLEEP_TIME);
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @After
+  public void tearDown() throws Exception {}
+
+  @Test
+  public void testBatchSink() throws Exception {
+    HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE];
+    for(int i = 0; i < BATCH_SIZE; i++) {
+      entries[i] = createEntry(TABLE_NAME1, i, KeyValue.Type.Put);
+    }
+    SINK.replicateEntries(entries);
+    Thread.sleep(SLEEP_TIME);
+    Scan scan = new Scan();
+    ResultScanner scanRes = table1.getScanner(scan);
+    assertEquals(scanRes.next(BATCH_SIZE).length, BATCH_SIZE);
+  }
+
+  @Test
+  public void testMixedPutDelete() throws Exception {
+    HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE/2];
+    for(int i = 0; i < BATCH_SIZE; i+=2) {
+      entries[i/2] = createEntry(TABLE_NAME1, i, KeyValue.Type.Put);
+    }
+    SINK.replicateEntries(entries);
+    Thread.sleep(SLEEP_TIME);
+
+    entries = new HLog.Entry[BATCH_SIZE];
+    for(int i = 0; i < BATCH_SIZE; i++) {
+      entries[i] = createEntry(TABLE_NAME1, i,
+          i % 2 != 0 ? KeyValue.Type.Put: KeyValue.Type.DeleteColumn);
+    }
+
+    SINK.replicateEntries(entries);
+    Thread.sleep(SLEEP_TIME);
+    Scan scan = new Scan();
+    ResultScanner scanRes = table1.getScanner(scan);
+    assertEquals(BATCH_SIZE/2,scanRes.next(BATCH_SIZE).length);
+  }
+
+  @Test
+  public void testMixedPutTables() throws Exception {
+    HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE];
+    for(int i = 0; i < BATCH_SIZE; i++) {
+      entries[i] =
+          createEntry( i % 2 == 0 ? TABLE_NAME2 : TABLE_NAME1,
+              i, KeyValue.Type.Put);
+    }
+
+    SINK.replicateEntries(entries);
+    Thread.sleep(SLEEP_TIME);
+    Scan scan = new Scan();
+    ResultScanner scanRes = table2.getScanner(scan);
+    for(Result res : scanRes) {
+      assertTrue(Bytes.toInt(res.getRow()) % 2 == 0);
+    }
+  }
+
+  @Test
+  public void testMixedDeletes() throws Exception {
+    HLog.Entry[] entries = new HLog.Entry[3];
+    for(int i = 0; i < 3; i++) {
+      entries[i] = createEntry(TABLE_NAME1, i, KeyValue.Type.Put);
+    }
+    SINK.replicateEntries(entries);
+    Thread.sleep(SLEEP_TIME);
+    entries = new HLog.Entry[3];
+
+    entries[0] = createEntry(TABLE_NAME1, 0, KeyValue.Type.DeleteColumn);
+    entries[1] = createEntry(TABLE_NAME1, 1, KeyValue.Type.DeleteFamily);
+    entries[2] = createEntry(TABLE_NAME1, 2, KeyValue.Type.DeleteColumn);
+
+    SINK.replicateEntries(entries);
+    Thread.sleep(SLEEP_TIME);
+    
+    Scan scan = new Scan();
+    ResultScanner scanRes = table1.getScanner(scan);
+    assertEquals(0, scanRes.next(3).length);
+  }
+
+  @Test
+  public void testRolling() throws Exception {
+    testMixedDeletes();
+    SINK.rollLog();
+    testMixedDeletes();
+    SINK.rollLog();
+    testMixedPutTables();
+  }
+
+  private HLog.Entry createEntry(byte [] table, int row,  KeyValue.Type type) {
+    byte[] fam = Bytes.equals(table, TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
+    byte[] rowBytes = Bytes.toBytes(row);
+    final long now = System.currentTimeMillis();
+    KeyValue kv = null;
+    if(type.getCode() == KeyValue.Type.Put.getCode()) {
+      kv = new KeyValue(rowBytes, fam, fam, now,
+          KeyValue.Type.Put, Bytes.toBytes(row));
+    } else if (type.getCode() == KeyValue.Type.DeleteColumn.getCode()) {
+        kv = new KeyValue(rowBytes, fam, fam,
+            now, KeyValue.Type.DeleteColumn);
+    } else if (type.getCode() == KeyValue.Type.DeleteFamily.getCode()) {
+        kv = new KeyValue(rowBytes, fam, null,
+            now, KeyValue.Type.DeleteFamily);
+    }
+
+    HLogKey key = new HLogKey(table, table, now, now);
+
+    return new HLog.Entry(key, kv);
+  }
+}

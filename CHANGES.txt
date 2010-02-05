@@ -362,6 +362,7 @@ Release 0.21.0 - Unreleased
                hfiles direct) uploader
    HBASE-1433  Update hbase build to match core, use ivy, publish jars to maven
                repo, etc. (Kay Kay via Stack)
+   HBASE-2129  Simple Master/Slave replication
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
