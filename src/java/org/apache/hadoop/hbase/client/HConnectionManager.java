@@ -590,7 +590,7 @@ public class HConnectionManager implements HConstants {
         return HTableDescriptor.META_TABLEDESC;
       }
       HTableDescriptorFinder finder = new HTableDescriptorFinder(tableName);
-      MetaScanner.metaScan(conf, finder);
+      MetaScanner.metaScan(conf, finder, tableName);
       HTableDescriptor result = finder.getResult();
       if (result == null) {
         throw new TableNotFoundException(Bytes.toString(tableName));

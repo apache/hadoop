@@ -194,6 +194,8 @@ Release 0.21.0 - Unreleased
    HBASE-2163  ZK dependencies - explicitly add them until ZK artifacts are
                published to mvn repository (Kay Kay via Stack)
    HBASE-2164  Ivy nit - clean up configs (Kay Kay via Stack)
+   HBASE-2184  Calling HTable.getTableDescriptor().* on a full cluster takes
+               a long time (Cristian Ivascu via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
