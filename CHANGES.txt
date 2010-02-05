@@ -678,6 +678,9 @@ Release 0.20.2 - Unreleased
 
     HDFS-919. Create test to validate the BlocksVerified metric (Gary Murry
     via cos)
+
+    HDFS-907. Add tests for getBlockLocations and totalLoad metrics.
+    (Ravi Phulari via cos)
     
   BUG FIXES
 
