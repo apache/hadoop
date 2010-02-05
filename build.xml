@@ -439,6 +439,7 @@
         </classpath>
       <packageset dir="src/contrib/transactional/src/java"/>
       <packageset dir="src/contrib/stargate/src/java"/>
+      <packageset dir="src/contrib/mdc_replication/src/java"/>
     </javadoc>
   </target> 
 
