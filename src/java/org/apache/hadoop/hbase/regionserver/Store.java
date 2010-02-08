@@ -875,8 +875,8 @@ public class Store implements HConstants, HeapSize {
         LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
         continue;
       }
-      // Instantiate HFile.Reader.Scanner to not cache blocks
-      scanners[i] = new StoreFileScanner(r.getScanner(false));
+      // Instantiate HFile.Reader.Scanner to not cache blocks and not use pread
+      scanners[i] = new StoreFileScanner(r.getScanner(false, false));
     }
 
     // Make the instantiation lazy in case compaction produces no product; i.e.
@@ -1117,7 +1117,8 @@ public class Store implements HConstants, HeapSize {
       // last key. TODO: Cache last and first key rather than make each time.
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
-    HFileScanner scanner = r.getScanner();
+    // Get a scanner that caches blocks and that uses pread.
+    HFileScanner scanner = r.getScanner(true, true);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
@@ -1429,7 +1430,8 @@ public class Store implements HConstants, HeapSize {
           LOG.warn("StoreFile " + sf + " has a null Reader");
           continue;
         }
-        storefileScanners.add(r.getScanner());
+        // Get a scanner that caches the block and uses pread
+        storefileScanners.add(r.getScanner(true, true));
       }
     
       // StoreFileGetScan will handle reading this store's storefiles

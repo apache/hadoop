@@ -126,7 +126,7 @@ public class TestStoreFile extends HBaseTestCase {
     StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf, false);
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
-    HFileScanner s = refHsf.getReader().getScanner();
+    HFileScanner s = refHsf.getReader().getScanner(false, false);
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = s.getKey();
       kv = KeyValue.createKeyValueFromKey(bb);
@@ -171,7 +171,7 @@ public class TestStoreFile extends HBaseTestCase {
       // Now test reading from the top.
       boolean first = true;
       ByteBuffer key = null;
-      HFileScanner topScanner = top.getScanner();
+      HFileScanner topScanner = top.getScanner(false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           (topScanner.isSeeked() && topScanner.next())) {
         key = topScanner.getKey();
@@ -186,7 +186,7 @@ public class TestStoreFile extends HBaseTestCase {
       LOG.info("Last in top: " + Bytes.toString(Bytes.toBytes(key)));
       
       first = true;
-      HFileScanner bottomScanner = bottom.getScanner();
+      HFileScanner bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
         previous = bottomScanner.getKey();
@@ -214,7 +214,7 @@ public class TestStoreFile extends HBaseTestCase {
         Range.bottom);
       top = new StoreFile(this.fs, topPath, true, conf, false).getReader();
       bottom = new StoreFile(this.fs, bottomPath, true, conf, false).getReader();
-      bottomScanner = bottom.getScanner();
+      bottomScanner = bottom.getScanner(false, false);
       int count = 0;
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
@@ -224,7 +224,7 @@ public class TestStoreFile extends HBaseTestCase {
       assertTrue(count == 0);
       // Now read from the top.
       first = true;
-      topScanner = top.getScanner();
+      topScanner = top.getScanner(false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           topScanner.next()) {
         key = topScanner.getKey();
@@ -259,7 +259,7 @@ public class TestStoreFile extends HBaseTestCase {
       top = new StoreFile(this.fs, topPath, true, conf, false).getReader();
       bottom = new StoreFile(this.fs, bottomPath, true, conf, false).getReader();
       first = true;
-      bottomScanner = bottom.getScanner();
+      bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
         key = bottomScanner.getKey();
@@ -279,7 +279,7 @@ public class TestStoreFile extends HBaseTestCase {
         assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');
       }
       count = 0;
-      topScanner = top.getScanner();
+      topScanner = top.getScanner(false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           (topScanner.isSeeked() && topScanner.next())) {
         count++;

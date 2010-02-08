@@ -792,7 +792,7 @@ public class HFile {
     public boolean inMemory() {
       return this.inMemory;
     }
-       
+
     /**
      * Read in the index and file info.
      * @return A map of fileinfo data.
@@ -867,21 +867,13 @@ public class HFile {
      * Call {@link HFileScanner#seekTo(byte[])} to position an start the read.
      * There is nothing to clean up in a Scanner. Letting go of your references
      * to the scanner is sufficient.
+     * @param pread Use positional read rather than seek+read if true (pread is
+     * better for random reads, seek+read is better scanning).
+     * @param cacheBlocks True if we should cache blocks read in by this scanner.
      * @return Scanner on this file.
      */
-    public HFileScanner getScanner() {
-      return new Scanner(this, true);
-    }
-
-    /**
-     * Create a Scanner on this file.  No seeks or reads are done on creation.
-     * Call {@link HFileScanner#seekTo(byte[])} to position an start the read.
-     * There is nothing to clean up in a Scanner. Letting go of your references
-     * to the scanner is sufficient.
-     * @return Scanner on this file.
-     */
-    public HFileScanner getScanner(boolean cacheBlocks) {
-      return new Scanner(this, cacheBlocks);
+    public HFileScanner getScanner(boolean cacheBlocks, final boolean pread) {
+      return new Scanner(this, cacheBlocks, pread);
     }
 
     /**
@@ -919,7 +911,7 @@ public class HFile {
       }
       
       ByteBuffer buf = decompress(metaIndex.blockOffsets[block],
-        longToInt(blockSize), metaIndex.blockDataSizes[block]);
+        longToInt(blockSize), metaIndex.blockDataSizes[block], true);
       byte [] magic = new byte[METABLOCKMAGIC.length];
       buf.get(magic, 0, magic.length);
 
@@ -936,10 +928,13 @@ public class HFile {
     /**
      * Read in a file block.
      * @param block Index of block to read.
+     * @param pread Use positional read instead of seek+read (positional is
+     * better doing random reads whereas seek+read is better scanning).
      * @return Block wrapped in a ByteBuffer.
      * @throws IOException
      */
-    ByteBuffer readBlock(int block, boolean cacheBlock) throws IOException {
+    ByteBuffer readBlock(int block, boolean cacheBlock, final boolean pread)
+    throws IOException {
       if (blockIndex == null) {
         throw new IOException("Block index not loaded");
       }
@@ -979,7 +974,8 @@ public class HFile {
           blockIndex.blockOffsets[block];
         }
         ByteBuffer buf = decompress(blockIndex.blockOffsets[block],
-            longToInt(onDiskBlockSize), this.blockIndex.blockDataSizes[block]);
+          longToInt(onDiskBlockSize), this.blockIndex.blockDataSizes[block],
+          pread);
 
         byte [] magic = new byte[DATABLOCKMAGIC.length];
         buf.get(magic, 0, magic.length);
@@ -1009,11 +1005,12 @@ public class HFile {
      * @param offset
      * @param compressedSize
      * @param decompressedSize
+     * 
      * @return
      * @throws IOException
      */
     private ByteBuffer decompress(final long offset, final int compressedSize,
-      final int decompressedSize) 
+      final int decompressedSize, final boolean pread) 
     throws IOException {
       Decompressor decompressor = null;
       ByteBuffer buf = null;
@@ -1024,7 +1021,8 @@ public class HFile {
         // bunch of data w/o regard to whether decompressor is coming to end of a
         // decompression.
         InputStream is = this.compressAlgo.createDecompressionStream(
-          new BoundedRangeFileInputStream(this.istream, offset, compressedSize),
+          new BoundedRangeFileInputStream(this.istream, offset, compressedSize,
+            pread),
           decompressor, 0);
         buf = ByteBuffer.allocate(decompressedSize);
         IOUtils.readFully(is, buf.array(), 0, buf.capacity());
@@ -1036,7 +1034,7 @@ public class HFile {
       }
       return buf;
     }
-
+ 
     /**
      * @return First key in the file.  May be null if file has no entries.
      */
@@ -1106,16 +1104,18 @@ public class HFile {
       private ByteBuffer block;
       private int currBlock;
       
-      private boolean cacheBlocks = false;
+      private final boolean cacheBlocks;
+      private final boolean pread;
 
       private int currKeyLen = 0;
       private int currValueLen = 0;
 
       public int blockFetches = 0;
 
-      public Scanner(Reader r, boolean cacheBlocks) {
+      public Scanner(Reader r, boolean cacheBlocks, final boolean pread) {
         this.reader = r;
         this.cacheBlocks = cacheBlocks;
+        this.pread = pread;
       }
       
       public KeyValue getKeyValue() {
@@ -1166,7 +1166,7 @@ public class HFile {
             block = null;
             return false;
           }
-          block = reader.readBlock(currBlock, cacheBlocks);
+          block = reader.readBlock(this.currBlock, this.cacheBlocks, this.pread);
           currKeyLen = block.getInt();
           currValueLen = block.getInt();
           blockFetches++;
@@ -1298,7 +1298,7 @@ public class HFile {
           return true;
         }
         currBlock = 0;
-        block = reader.readBlock(currBlock, cacheBlocks);
+        block = reader.readBlock(this.currBlock, this.cacheBlocks, this.pread);
         currKeyLen = block.getInt();
         currValueLen = block.getInt();
         blockFetches++;
@@ -1307,12 +1307,12 @@ public class HFile {
       
       private void loadBlock(int bloc) throws IOException {
         if (block == null) {
-          block = reader.readBlock(bloc, cacheBlocks);
+          block = reader.readBlock(bloc, this.cacheBlocks, this.pread);
           currBlock = bloc;
           blockFetches++;
         } else {
           if (bloc != currBlock) {
-            block = reader.readBlock(bloc, cacheBlocks);
+            block = reader.readBlock(bloc, this.cacheBlocks, this.pread);
             currBlock = bloc;
             blockFetches++;
           } else {
@@ -1746,7 +1746,7 @@ public class HFile {
         HFile.Reader reader = new HFile.Reader(fs, file, null, false);
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
         // scan over file and read key/value's and check if requested
-        HFileScanner scanner = reader.getScanner();
+        HFileScanner scanner = reader.getScanner(false, false);
         scanner.seekTo();
         KeyValue pkv = null;
         int count = 0;

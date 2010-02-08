@@ -227,7 +227,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         LOG.warn("StoreFile " + sf + " has null Reader");
         continue;
       }
-      s.add(r.getScanner(cacheBlocks));
+      // Get a scanner that does not use pread.
+      s.add(r.getScanner(this.cacheBlocks, false));
     }
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(s.size()+1);

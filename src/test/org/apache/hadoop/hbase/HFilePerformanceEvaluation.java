@@ -246,7 +246,7 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       super.setUp();
-      this.scanner = this.reader.getScanner();
+      this.scanner = this.reader.getScanner(false, false);
       this.scanner.seekTo();
     }
 
@@ -278,7 +278,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner();
+      HFileScanner scanner = this.reader.getScanner(false, true);
       byte [] b = getRandomRow();
       scanner.seekTo(b);
       ByteBuffer k = scanner.getKey();
@@ -302,7 +302,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner();
+      HFileScanner scanner = this.reader.getScanner(false, false);
       byte [] b = getRandomRow();
       if (scanner.seekTo(b) != 0) {
         System.out.println("Nonexistent row: " + new String(b));
@@ -336,7 +336,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner();
+      HFileScanner scanner = this.reader.getScanner(false, true);
       scanner.seekTo(getGaussianRandomRowBytes());
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {

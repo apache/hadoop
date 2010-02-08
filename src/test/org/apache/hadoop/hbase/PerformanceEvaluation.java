@@ -565,7 +565,8 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     protected int getReportingPeriod() {
-      return this.perClientRunRows / 10;
+      int period = this.perClientRunRows / 10;
+      return period == 0? this.perClientRunRows: period;
     }
     
     void testSetup() throws IOException {
@@ -634,8 +635,8 @@ public class PerformanceEvaluation implements HConstants {
  
     @Override
     protected int getReportingPeriod() {
-      // 
-      return this.perClientRunRows / 100;
+      int period = this.perClientRunRows / 100;
+      return period == 0? this.perClientRunRows: period;
     }
 
     @Override
@@ -659,8 +660,8 @@ public class PerformanceEvaluation implements HConstants {
 
     @Override
     protected int getReportingPeriod() {
-      // 
-      return this.perClientRunRows / 100;
+      int period = this.perClientRunRows / 100;
+      return period == 0? this.perClientRunRows: period;
     }
 
     @Override
@@ -958,12 +959,10 @@ public class PerformanceEvaluation implements HConstants {
     if(start + 1 > args.length) {
       throw new IllegalArgumentException("must supply the number of clients");
     }
-    
     N = Integer.parseInt(args[start]);
     if (N < 1) {
       throw new IllegalArgumentException("Number of clients must be > 1");
     }
-   
     // Set total number of rows to write.
     this.R = this.R * N;
   }

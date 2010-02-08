@@ -79,13 +79,8 @@ public class HalfHFileReader extends HFile.Reader {
   }
 
   @Override
-  public HFileScanner getScanner() {
-    return this.getScanner(true);
-  }
-  
-  @Override
-  public HFileScanner getScanner(boolean cacheBlocks) {
-    final HFileScanner s = super.getScanner(cacheBlocks);
+  public HFileScanner getScanner(final boolean cacheBlocks, final boolean pread) {
+    final HFileScanner s = super.getScanner(cacheBlocks, pread);
     return new HFileScanner() {
       final HFileScanner delegate = s;
       public boolean atEnd = false;
@@ -222,7 +217,8 @@ public class HalfHFileReader extends HFile.Reader {
     if (top) {
       return super.getLastKey(); 
     }
-    HFileScanner scanner = getScanner();
+    // Get a scanner that caches the block and that uses pread.
+    HFileScanner scanner = getScanner(true, true);
     try {
       if (scanner.seekBefore(this.splitkey)) {
         return Bytes.toBytes(scanner.getKey());
