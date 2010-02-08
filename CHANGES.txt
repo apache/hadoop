@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     HDFS-933. Adds Delegation token based authentication in the NameNode.
     (Kan Zhang via ddas)
 
+    HDFS-935. Adds a real user component in Delegation token.
+    (Jitendra Nath Pandey via ddas)
+
   IMPROVEMENTS
     
     HDFS-703. Replace current fault injection implementation with one
