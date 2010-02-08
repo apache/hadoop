@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     HADOOP-6419. Adds SASL based authentication to RPC.
     (Kan Zhang via ddas)
 
+    HADOOP-6510. Adds a way for superusers to impersonate other users
+    in a secure environment. (Jitendra Nath Pandey via ddas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by

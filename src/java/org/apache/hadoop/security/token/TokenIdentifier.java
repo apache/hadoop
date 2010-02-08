@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * An identifier that identifies a token, may contain public information 
@@ -35,12 +36,14 @@ public abstract class TokenIdentifier implements Writable {
    * @return the kind of the token
    */
   public abstract Text getKind();
-  
+
   /**
-   * Get the username encoded in the token identifier
-   * @return the username
+   * Get the Ugi with the username encoded in the token identifier
+   * 
+   * @return the username. null is returned if username in the identifier is
+   *         empty or null.
    */
-  public abstract Text getUsername();
+  public abstract UserGroupInformation getUser();
 
   /**
    * Get the bytes for the token identifier
