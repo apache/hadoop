@@ -256,6 +256,10 @@
       rev="${slf4j-log4j12.version}"
       conf="common->master">
     </dependency>
-    </dependencies>
+    <dependency org="org.mockito"
+      name="mockito-all"
+      rev="${mockito-all.version}"
+      conf="common->master"/>
+</dependencies>
   
 </ivy-module>
