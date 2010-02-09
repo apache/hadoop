@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -445,12 +446,7 @@ public class HTable implements HTableInterface {
    * @since 0.20.0
    */
   public synchronized void put(final Put put) throws IOException {
-    validatePut(put);
-    writeBuffer.add(put);
-    currentWriteBufferSize += put.heapSize();
-    if(autoFlush || currentWriteBufferSize > writeBufferSize) {
-      flushCommits();
-    }
+    doPut(Arrays.asList(put));
   }
 
   /**
@@ -462,6 +458,19 @@ public class HTable implements HTableInterface {
    * @since 0.20.0
    */
   public synchronized void put(final List<Put> puts) throws IOException {
+    doPut(puts);
+  }
+
+  /**
+   * Internal helper method. 
+   * Need to synchronize this instance to prevent race conditions on the internal 
+   * data structures.
+   * <p>
+   * If autoFlush is false, the update is buffered.
+   * @param puts
+   * @throws IOException
+   */
+  private  void doPut(final List<Put> puts) throws IOException {
     for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
@@ -471,7 +480,7 @@ public class HTable implements HTableInterface {
       flushCommits();
     }
   }
-
+  
   /**
    * Atomically increments a column value. If the column value already exists
    * and is not a big-endian long, this could throw an exception.<p>

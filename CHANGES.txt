@@ -348,6 +348,7 @@ Release 0.21.0 - Unreleased
                (Lars Francke via Stack)
    HBASE-2178  Hooks for replication
    HBASE-2180  Bad random read performance from synchronizing hfile.fddatainputstream
+   HBASE-2194  HTable - put(Put) , put(List<Put) code duplication (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
