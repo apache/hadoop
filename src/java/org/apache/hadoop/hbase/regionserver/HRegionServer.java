@@ -268,7 +268,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.numRegionsToReport =                                        
       conf.getInt("hbase.regionserver.numregionstoreport", 10);      
 
-    this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
+    this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
 
     reinitialize();
   }
@@ -332,7 +332,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       this.threadWakeFrequency * multiplier,  this.stopRequested);
 
     this.leases = new Leases(
-        conf.getInt("hbase.regionserver.lease.period", 60 * 1000),
+        (int) conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
         this.threadWakeFrequency);
   }
 

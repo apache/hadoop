@@ -295,7 +295,7 @@ public class HConnectionManager implements HConstants {
       this.pause = conf.getLong("hbase.client.pause", 1 * 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
-      this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
+      this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
       
       this.master = null;
       this.masterChecked = false;

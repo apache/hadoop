@@ -118,7 +118,7 @@ public class HTable implements HTableInterface {
     }
     this.connection = HConnectionManager.getConnection(conf);
     this.scannerTimeout =
-      conf.getInt("hbase.regionserver.lease.period", 60 * 1000);
+      (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
     this.configuration = conf;
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
     this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);

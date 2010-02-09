@@ -304,5 +304,18 @@ public interface HConstants {
    * The default value is unlimited.
    */
   public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+  
+  
+  /**
+   * HRegion server lease period in milliseconds. Clients must report in within this period
+   * else they are considered dead. Unit measured in ms (milliseconds).
+   */
+  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY   = "hbase.regionserver.lease.period";
+  
+  
+  /**
+   * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}. 
+   */
+  public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
 
 }

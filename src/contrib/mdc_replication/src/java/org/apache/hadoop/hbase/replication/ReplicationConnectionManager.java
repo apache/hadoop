@@ -56,7 +56,7 @@ public class ReplicationConnectionManager implements HConstants {
         conf.get(REGION_SERVER_CLASS, DEFAULT_REGION_SERVER_CLASS);
     this.numRetries = conf.getInt("hbase.client.retries.number", 10);
     this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
-    this.rpcTimeout = conf.getLong("hbase.regionserver.lease.period", 60000);
+    this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
     try {
       this.serverInterfaceClass =
         (Class<? extends ReplicationRegionInterface>)

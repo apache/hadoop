@@ -196,6 +196,8 @@ Release 0.21.0 - Unreleased
    HBASE-2164  Ivy nit - clean up configs (Kay Kay via Stack)
    HBASE-2184  Calling HTable.getTableDescriptor().* on a full cluster takes
                a long time (Cristian Ivascu via Stack)
+   HBASE-2193  Better readability of - hbase.regionserver.lease.period
+               (Kay Kay via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
