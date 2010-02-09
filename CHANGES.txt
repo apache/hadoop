@@ -60,6 +60,9 @@ Trunk (unreleased changes)
     HDFS-914. Refactor DFSOutputStream and DFSInputStream out of DFSClient.
     (Todd Lipcon via tomwhite)
 
+    HDFS-949. Move DelegationToken into Common so that it can be used by
+    MapReduce. (omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES

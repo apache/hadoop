@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 
 
@@ -34,10 +34,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

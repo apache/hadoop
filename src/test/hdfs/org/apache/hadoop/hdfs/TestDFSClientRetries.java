@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.*;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -44,6 +43,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 
 import junit.framework.TestCase;
 

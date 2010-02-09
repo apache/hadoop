@@ -16,37 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security.token;
-
-import java.util.Collection;
+package org.apache.hadoop.hdfs.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
 /**
- * Look through tokens to find the first delegation token that matches the
- * service and return it.
+ * A delegation token identifier that is specific to HDFS.
  */
 @InterfaceAudience.Private
-public class DelegationTokenSelector implements
-    TokenSelector<DelegationTokenIdentifier> {
+public class DelegationTokenIdentifier 
+    extends AbstractDelegationTokenIdentifier {
+  static final Text HDFS_DELEGATION_KIND = new Text("HDFS_DELEGATION_TOKEN");
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public Token<DelegationTokenIdentifier> selectToken(Text service,
-      Collection<Token<? extends TokenIdentifier>> tokens) {
-    if (service == null) {
-      return null;
-    }
-    for (Token<? extends TokenIdentifier> token : tokens) {
-      if (DelegationTokenIdentifier.KIND_NAME.equals(token.getKind())
-          && service.equals(token.getService())) {
-        return (Token<DelegationTokenIdentifier>) token;
-      }
-    }
-    return null;
+  /**
+   * Create an empty delegation token identifier for reading into.
+   */
+  public DelegationTokenIdentifier() {
   }
+
+  /**
+   * Create a new delegation token identifier
+   * @param owner the effective username of the token owner
+   * @param renewer the username of the renewer
+   * @param realUser the real username of the token owner
+   */
+  public DelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
+    super(owner, renewer, realUser);
+  }
+
+  @Override
+  public Text getKind() {
+    return HDFS_DELEGATION_KIND;
+  }
+
 }
