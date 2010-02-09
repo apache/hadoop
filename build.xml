@@ -53,6 +53,7 @@
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
   <property name="build.docs" value="${build.dir}/docs"/>
+  <property name="build.docinput" value="${build.dir}/docinput" />
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
   <property name="build.src" value="${build.dir}/src"/>
@@ -396,12 +397,23 @@
   <!-- ================================================================== -->
   <target name="docs" depends="forrest.check"
       description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
-    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest" failonerror="true" />
+	<mkdir dir="${build.docinput}" />
+    <copy todir="${build.docinput}" >
+      <fileset dir="${docs.src}" />  	
+    </copy>	
+    <property name="conf.html.output" value="${build.docinput}/src/documentation/content/xdocs/hbase-conf.xml" />
+    <xslt in="${basedir}/conf/hbase-default.xml" out="${conf.html.output}" 
+  	    style="${basedir}/conf/tohtml.xsl" >
+      <xmlcatalog>
+  		  <dtd
+  		    publicId="-//APACHE//DTD Documentation V2.0//EN"
+  		    location="http://forrest.apache.org/dtd/document-v20.dtd"/>
+      </xmlcatalog> 		
+    </xslt>	
+    <exec dir="${build.docinput}" executable="${forrest.home}/bin/forrest" failonerror="true" />
     <copy todir="${build.docs}">
-      <fileset dir="${docs.src}/build/site/" />
+      <fileset dir="${build.docinput}/build/site/" />
     </copy>
-    <style basedir="${conf.dir}" destdir="${build.docs}"
-           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
     <!--Copy to $HBASE_HOME/docs ... need to check it in to persist it.-->
     <copy todir="${docs.dir}">
       <fileset dir="${build.docs}" />

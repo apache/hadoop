@@ -1,0 +1,254 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2008 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+  <header>
+    <title>Installing HBase on Windows using Cygwin</title>
+  </header>
+
+<body>
+<section>
+<title>Introduction</title>
+<p><a title="HBase project" href="http://hadoop.apache.org/hbase" target="_blank">HBase</a> is a distributed, column-oriented store, modeled after Google's <a title="Google's BigTable" href="http://labs.google.com/papers/bigtable.html" target="_blank">BigTable</a>. HBase is built on top of <a title="Hadoop project" href="http://hadoop.apache.org">Hadoop</a> for its <a title="Hadoop MapReduce project" href="http://hadoop.apache.org/mapreduce" target="_blank">MapReduce </a>and <a title="Hadoop DFS project" href="http://hadoop.apache.org/hdfs">distributed file system</a> implementation. All these projects are open-source and part of the <a title="The Apache Software Foundation" href="http://www.apache.org/" target="_blank">Apache Software Foundation</a>.</p>
+
+<p style="text-align: justify; ">As being distributed, large scale platforms, the Hadoop and HBase projects mainly focus on <em><strong>*nix</strong></em><strong> environments</strong> for production installations. However, being developed in <strong>Java</strong>, both projects are fully <strong>portable</strong> across platforms and, hence, also to the <strong>Windows operating system</strong>. For ease of development the projects rely on <a title="Cygwin site" href="http://www.cygwin.com/" target="_blank">Cygwin</a> to have a *nix-like environment on Windows to run the shell scripts.</p>
+</section>
+<section>
+<title>Purpose</title>
+<p style="text-align: justify; ">This document explains the <strong>intricacies of running HBase on Windows using Cygwin</strong> as an all-in-one single-node installation for testing and development. The HBase <a title="HBase Overview" href="http://hadoop.apache.org/hbase/docs/current/api/overview-summary.html#overview_description" target="_blank">Overview</a> and <a title="HBase QuickStart" href="http://hadoop.apache.org/common/docs/current/quickstart.html" target="_blank">QuickStart</a> guides on the other hand go a long way in explaning how to setup <a title="HBase project" href="http://hadoop.apache.org/hbase" target="_blank">HBase</a> in more complex deployment scenario's.</p>
+</section>
+
+<section>
+<title >Installation</title>
+<p style="text-align: justify; ">For running HBase on Windows, 3 technologies are required: <strong>Java, Cygwin and SSH</strong>. The following paragraphs detail the installation of each of the aforementioned technologies.</p>
+<section>
+<title>Java</title>
+<p style="text-align: justify; ">HBase depends on the <a title="Java Platform, Standard Edition, 6 Release" href="http://java.sun.com/javase/6/" target="_blank">Java Platform, Standard Edition, 6 Release</a>. So the target system has to be provided with at least the Java Runtime Environment (JRE); however if the system will also be used for development, the Jave Development Kit (JDK) is preferred. You can download the latest versions for both from <a title="Java SE Downloads" href="http://java.sun.com/javase/downloads/index.jsp" target="_blank">Sun's download page</a>. Installation is a simple GUI wizard that guides you through the process.</p>
+</section>
+<section>
+<title>Cygwin</title>
+<p style="text-align: justify; ">Cygwin is probably the oddest technology in this solution stack. It provides a dynamic link library that emulates most of a *nix environment on Windows. On top of that a whole bunch of the most common *nix tools are supplied. Combined, the DLL with the tools form a very *nix-alike environment on Windows.</p>
+
+<p style="text-align: justify; ">For installation, Cygwin provides the <a title="Cygwin Setup Utility" href="http://cygwin.com/setup.exe" target="_blank"><strong><code>setup.exe</code> utility</strong></a> that tracks the versions of all installed components on the target system and provides the mechanism for <strong>installing</strong> or <strong>updating </strong>everything from the mirror sites of Cygwin.</p>
+
+<p style="text-align: justify; ">To support installation, the <code>setup.exe</code> utility uses 2 directories on the target system. The <strong>Root</strong> directory for Cygwin (defaults to <code>C:\cygwin)</code> which will become <code>/</code> within the eventual Cygwin installation; and the <strong>Local Package </strong>directory (e.g. <code>C:\cygsetup</code> that is the cache where <code>setup.exe</code> stores the packages before they are installed. The cache must not be the same folder as the Cygwin root.</p>
+
+<p style="text-align: justify; ">Perform following steps to install Cygwin, which are elaboratly detailed in the <a title="Setting Up Cygwin" href="http://cygwin.com/cygwin-ug-net/setup-net.html" target="_self">2nd chapter</a> of the <a title="Cygwin User's Guide" href="http://cygwin.com/cygwin-ug-net/cygwin-ug-net.html" target="_blank">Cygwin User's Guide</a>:</p>
+
+<ol style="text-align: justify; ">
+	<li>Make sure you have <code>Administrator</code> privileges on the target system.</li>
+	<li>Choose and create you <strong>Root</strong> and <strong>Local Package</strong> directories. A good suggestion is to use <code>C:\cygwin\root</code> and <code>C:\cygwin\setup</code> folders.</li>
+	<li>Download the <code>setup.exe</code> utility and save it to the <strong>Local Package</strong> directory.</li>
+	<li>Run the <code>setup.exe</code> utility,
+<ol>
+	<li>Choose  the <code>Install from Internet</code> option,</li>
+	<li>Choose your <strong>Root</strong> and <strong>Local Package</strong> folders</li>
+	<li>and select an appropriate mirror.</li>
+	<li>Don't select any additional packages yet, as we only want to install Cygwin for now.</li>
+	<li>Wait for download and install</li>
+	<li>Finish the installation</li>
+</ol>
+</li>
+	<li>Optionally, you can now also add a shortcut to your Start menu pointing to the <code>setup.exe</code> utility in the <strong>Local Package </strong>folder.</li>
+	<li>Add <code>CYGWIN_HOME</code> system-wide environment variable that points to your <strong>Root </strong>directory.</li>
+	<li>Add <code>%CYGWIN_HOME%\bin</code> to the end of your <code>PATH</code> environment variable.</li>
+	<li>Reboot the sytem after making changes to the environment variables otherwise the OS will not be able to find the Cygwin utilities.</li>
+	<li>Test your installation by running your freshly created shortcuts or the <code>Cygwin.bat</code> command in the <strong>Root</strong> folder. You should end up in a terminal window that is running a <a title="Bash Reference Manual" href="http://www.gnu.org/software/bash/manual/bashref.html" target="_blank">Bash shell</a>. Test the shell by issuing following commands:
+<ol>
+	<li><code>cd /</code> should take you to thr <strong>Root</strong> directory in Cygwin;</li>
+	<li>the <code>LS</code> commands that should list all files and folders in the current directory.</li>
+	<li>Use the <code>exit</code> command to end the terminal.</li>
+</ol>
+</li>
+	<li>When needed, to <strong>uninstall</strong> Cygwin you can simply delete the <strong>Root</strong> and <strong>Local Package</strong> directory, and the <strong>shortcuts</strong> that were created during installation.</li>
+</ol>
+</section>
+<section><title>SSH</title>
+<p style="text-align: justify; ">HBase (and Hadoop) rely on <a title="Secure Shell" href="http://nl.wikipedia.org/wiki/Secure_Shell" target="_blank"><strong>SSH</strong></a> for interprocess/-node <strong>communication</strong> and launching<strong> remote commands</strong>. SSH will be provisioned on the target system via Cygwin, which supports running Cygwin programs as <strong>Windows services</strong>!</p>
+
+<ol style="text-align: justify; ">
+	<li>Rerun the <code><strong>setup.exe</strong></code><strong> utility</strong>.</li>
+	<li>Leave all parameters as is, skipping through the wizard using the <code>Next</code> button until the <code>Select Packages</code> panel is shown.</li>
+	<li>Maximize the window and click the <code>View</code> button to toggle to the list view, which is ordered alfabetically on <code>Package</code>, making it easier to find the packages we'll need.</li>
+	<li>Select the following packages by clicking the status word (normally <code>Skip</code>) so it's marked for installation. Use the <code>Next </code>button to download and install the packages.
+<ol>
+	<li>OpenSSH</li>
+	<li>tcp_wrappers</li>
+	<li>diffutils</li>
+	<li>zlib</li>
+</ol>
+</li>
+	<li>Wait for the install to complete and finish the installation.</li>
+</ol>
+</section>
+<section>
+<title>HBase</title>
+<p style="text-align: justify; ">Download the <strong>latest release </strong>of HBase from the <a title="HBase Releases" href="http://hadoop.apache.org/hbase/releases.html" target="_blank">website</a>. As the HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final <strong>installation</strong> directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use <code>/usr/local/</code> (or [<code><strong>Root</strong> directory]\usr\local</code> in Windows slang). You should end up with a <code>/usr/local/hbase-<em>&lt;version&gt;</em></code> installation in Cygwin.</p>
+
+This finishes installation. We go on with the configuration.
+</section>
+</section>
+<section>
+<title>Configuration</title>
+<p style="text-align: justify; ">There are 3 parts left to configure: <strong>Java, SSH and HBase</strong> itself. Following paragraphs explain eacht topic in detail.</p>
+<section>
+<title>Java</title>
+<p style="text-align: justify; ">One important thing to remember in shell scripting in general (i.e. *nix and Windows) is that managing, manipulating and assembling path names that contains spaces can be very hard, due to the need to escape and quote those characters and strings. So we try to stay away from spaces in path names. *nix environments can help us out here very easily by using <strong>symbolic links</strong>.</p>
+
+<ol style="text-align: justify; ">
+	<li style="text-align: justify; ">Create a link in <code>/usr/local</code> to the Java home directory by using the following command and substituting the name of your chosen Java environment:
+<pre>LN -s /cygdrive/c/Program\ Files/Java/<em>&lt;jre name&gt; </em>/usr/local/<em>&lt;jre name&gt;</em></pre>
+</li>
+	<li>Test your java installation by changing directories to your Java folder <code>CD /usr/local/<em>&lt;jre name&gt;</em></code> and issueing the command <code>./bin/java -version</code>. This should output your version of the chosen JRE.</li>
+</ol>
+</section>
+<section>
+<title>SSH</title>
+<p style="text-align: justify; ">Configuring <strong>SSH </strong>is quite elaborate, but primarily a question of launching it by default as a<strong> Windows service</strong>.</p>
+
+<ol style="text-align: justify; ">
+	<li style="text-align: justify; ">On Windows Vista and above make sure you run the Cygwin shell with <strong>elevated privileges</strong>, by right-clicking on the shortcut an using <code>Run as Administrator</code>.</li>
+	<li style="text-align: justify; ">First of all, we have to make sure the <strong>rights on some crucial files</strong> are correct. Use the commands underneath. You can verify all rights by using the <code>LS -L</code> command on the different files. Also, notice the auto-completion feature in the shell using <code>&lt;TAB&gt;</code> is extremely handy in these situations.
+<ol>
+	<li><code>chmod +r /etc/passwd</code> to make the passwords file readable for all</li>
+	<li><code>chmod u+w /etc/passwd</code> to make the passwords file writable for the owner</li>
+	<li><code>chmod +r /etc/group</code> to make the groups file readable for all</li>
+</ol>
+<ol>
+	<li><code>chmod u+w /etc/group</code> to make the groups file writable for the owner</li>
+</ol>
+<ol>
+	<li><code>chmod 755 /var</code> to make the var folder writable to owner and readable and executable to all</li>
+</ol>
+</li>
+	<li>Edit the <strong>/etc/hosts.allow</strong> file using your favorite editor (why not VI in the shell!) and make sure the following two lines are in there before the <code>PARANOID</code> line:
+<ol>
+	<li><code>ALL : localhost 127.0.0.1/32 : allow</code></li>
+	<li><code>ALL : [::1]/128 : allow</code></li>
+</ol>
+</li>
+	<li>Next we have to <strong>configure SSH</strong> by using the script <code>ssh-host-config</code>
+<ol>
+	<li>If this script asks to overwrite an existing <code>/etc/ssh_config</code>, answer <code>yes</code>.</li>
+	<li>If this script asks to overwrite an existing <code>/etc/sshd_config</code>, answer <code>yes</code>.</li>
+	<li>If this script asks to use privilege separation, answer <code>yes</code>.</li>
+	<li>If this script asks to install <code>sshd</code> as a service, answer <code>yes</code>. Make sure you started your shell as Adminstrator!</li>
+	<li>If this script asks for the CYGWIN value, just <code>&lt;enter&gt;</code> as the default is <code>ntsec</code>.</li>
+	<li>If this script asks to create the <code>sshd</code> account, answer <code>yes</code>.</li>
+	<li>If this script asks to use a different user name as service account, answer <code>no</code> as the default will suffice.</li>
+	<li>If this script asks to create the <code>cyg_server</code> account, answer <code>yes</code>. Enter a password for the account.</li>
+</ol>
+</li>
+	<li><strong>Start the SSH service</strong> using <code>net start sshd</code> or <code>cygrunsrv  --start  sshd</code>. Notice that <code>cygrunsrv</code> is the utility that make the process run as a Windows service. Confirm that you see a message stating that <code>the CYGWIN sshd service  was started succesfully.</code></li>
+	<li>Harmonize Windows and Cygwin<strong> user account</strong> by using the commands:
+<ol>
+	<li><code>mkpasswd -cl &gt; /etc/passwd</code></li>
+	<li><code>mkgroup --local &gt; /etc/group</code></li>
+</ol>
+</li>
+	<li><strong>Test </strong>the installation of SSH:
+<ol>
+	<li>Open a new Cygwin terminal</li>
+	<li>Use the command <code>whoami</code> to verify your userID</li>
+	<li>Issue an <code>ssh localhost</code> to connect to the system itself
+<ol>
+	<li>Answer <code>yes</code> when presented with the server's fingerprint</li>
+	<li>Issue your password when prompted</li>
+	<li>test a few commands in the remote session</li>
+	<li>The <code>exit</code> command should take you back to your first shell in Cygwin</li>
+</ol>
+</li>
+	<li><code>Exit</code> should terminate the Cygwin shell.</li>
+</ol>
+</li>
+</ol>
+</section>
+<section>
+<title>HBase</title>
+If all previous configurations are working properly, we just need some tinkering at the <strong>HBase config</strong> files to properly resolve on Windows/Cygwin. All files and paths referenced here start from the HBase <code>[<strong>installation</strong> directory]</code> as working directory.
+<ol>
+	<li>HBase uses the <code>./conf/<strong>hbase-env.sh</strong></code> to configure its dependencies on the runtime environment. Copy and uncomment following lines just underneath their original, change them to fit your environemnt. They should read something like:
+<ol>
+	<li><code>export JAVA_HOME=/usr/local/<em>&lt;jre name&gt;</em></code></li>
+	<li><code>export HBASE_IDENT_STRING=$HOSTNAME</code> as this most likely does not inlcude spaces.</li>
+</ol>
+</li>
+	<li>HBase uses the ./conf/<code><strong>hbase-default.xml</strong></code> file for configuration. Some properties do not resolve to existing directories because the JVM runs on Windows. This is the major issue to keep in mind when working with Cygwin: within the shell all paths are *nix-alike, hence relative to the root <code>/</code>. However, every parameter that is to be consumed within the windows processes themself, need to be Windows settings, hence <code>C:\</code>-alike. Change following propeties in the configuration file, adjusting paths where necessary to conform with your own installation:
+<ol>
+	<li><code>hbase.rootdir</code> must read e.g. <code>file:///C:/cygwin/root/tmp/hbase/data</code></li>
+	<li><code>hbase.tmp.dir</code> must read <code>C:/cygwin/root/tmp/hbase/tmp</code></li>
+	<li><code>hbase.zookeeper.quorum</code> must read <code>127.0.0.1</code> because for some reason <code>localhost</code> doesn't seem to resolve properly on Cygwin.</li>
+</ol>
+</li>
+	<li>Make sure the configured <code>hbase.rootdir</code> and <code>hbase.tmp.dir</code> <strong>directories exist</strong> and have the proper<strong> rights</strong> set up e.g. by issuing a <code>chmod 777</code> on them.</li>
+</ol>
+</section>
+</section>
+<section>
+<title>Testing</title>
+<p>
+This should conclude the installation and configuration of HBase on Windows using Cygwin. So it's time <strong>to test it</strong>.
+<ol>
+	<li>Start a Cygwin<strong> terminal</strong>, if you haven't already.</li>
+	<li>Change directory to HBase <strong>installation</strong> using <code>CD /usr/local/hbase-<em>&lt;version&gt;</em></code>, preferably using auto-completion.</li>
+	<li><strong>Start HBase</strong> using the command <code>./bin/start-hbase.sh</code>
+<ol>
+	<li>When prompted to accept the SSH fingerprint, answer <code>yes</code>.</li>
+	<li>When prompted, provide your password. Maybe multiple times.</li>
+	<li>When the command completes, the HBase server should have started.</li>
+	<li>However, to be absolutely certain, check the logs in the <code>./logs</code> directory for any exceptions.</li>
+</ol>
+</li>
+	<li>Next we <strong>start the HBase shell</strong> using the command <code>./bin/hbase shell</code></li>
+	<li>We run some simple <strong>test commands</strong>
+<ol>
+	<li>Create a simple table using command <code>create 'test', 'data'</code></li>
+	<li>Verify the table exists using the command <code>list</code></li>
+	<li>Insert data into the table using e.g.
+<pre>put 'test', 'row1', 'data:1', 'value1'
+put 'test', 'row2', 'data:2', 'value2'
+put 'test', 'row3', 'data:3', 'value3'</pre>
+</li>
+	<li>List all rows in the table using the command <code>scan 'test'</code> that should list all the rows previously inserted. Notice how 3 new columns where added without changing the schema!</li>
+	<li>Finally we get rid of the table by issuing <code>disable 'test'</code> followed by <code>drop 'test'</code> and verified by <code>list</code> which should give an empty listing.</li>
+</ol>
+</li>
+	<li><strong>Leave the shell</strong> by <code>exit</code></li>
+	<li>To <strong>stop the HBase server</strong> issue the <code>./bin/stop-hbase.sh</code> command. And wait for it to complete!!! Killing the process might corrupt your data on disk.</li>
+	<li>In case of <strong>problems</strong>,
+<ol>
+	<li>verify the HBase logs in the <code>./logs</code> directory.</li>
+	<li>Try to fix the problem</li>
+	<li>Get help on the forums or IRC (<code>#hbase@freenode.net</code>). People are very active and keen to help out!</li>
+	<li>Stopr, restart and retest the server.</li>
+</ol>
+</li>
+</ol>
+</p>
+</section>
+
+<section>
+<title>Conclusion</title>
+<p>
+Now your <strong>HBase </strong>server is running, <strong>start coding</strong> and build that next killer app on this particular, but scalable datastore!
+</p>
+</section>
+</body>
+</document>
