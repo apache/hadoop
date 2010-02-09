@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-6538. Sets hadoop.security.authentication to simple by default.
     (ddas)
 
+    HADOOP-6540. Contrib unit tests have invalid XML for core-site, etc.
+    (Aaron Kimball via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
