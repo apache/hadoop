@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     HADOOP-6531. Enhance FileUtil with an API to delete all contents of a
     directory. (Amareshwari Sriramadasu via yhemanth)
 
+    HADOOP-6547. Move DelegationToken into Common, so that it can be used by
+    MapReduce also. (devaraj via omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
