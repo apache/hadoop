@@ -1147,6 +1147,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6290. Prevent duplicate slf4j-simple jar via Avro's classpath.
     (Owen O'Malley via cdouglas)
 
+    HADOOP-6522. Fix decoding of codepoint zero in UTF8. (cutting)
+
 Release 0.20.2 - Unreleased
 
   NEW FEATURES
