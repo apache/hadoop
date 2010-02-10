@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-6547. Move DelegationToken into Common, so that it can be used by
     MapReduce also. (devaraj via omalley)
 
+    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab
+    kerberos options. (ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
