@@ -28,6 +28,7 @@ import java.util.Arrays;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,7 +45,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * long value), then you can pass in your own comparator instead.
  * <p>
  * You must also specify a family and qualifier.  Only the value of this column 
- * will be tested.
+ * will be tested. When using this filter on a {@link Scan} with specified 
+ * inputs, the column to be tested should also be added as input (otherwise 
+ * the filter will regard the column as missing).
  * <p>
  * To prevent the entire row from being emitted if the column is not found
  * on a row, use {@link #setFilterIfMissing}.

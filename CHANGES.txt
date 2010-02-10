@@ -350,6 +350,9 @@ Release 0.21.0 - Unreleased
    HBASE-2180  Bad random read performance from synchronizing hfile.fddatainputstream
    HBASE-2194  HTable - put(Put) , put(List<Put) code duplication (Kay Kay via Stack)
    HBASE-2185  Add html version of default hbase-site.xml (Kay Kay via Stack)
+   HBASE-2198  SingleColumnValueFilter should be able to find the column value
+               even when it's not specifically added as input on the sc
+               (Ferdy via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
