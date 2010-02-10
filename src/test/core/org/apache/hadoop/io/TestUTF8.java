@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 import java.util.Random;
 
 /** Unit tests for UTF8. */
+@SuppressWarnings("deprecation")
 public class TestUTF8 extends TestCase {
   public TestUTF8(String name) { super(name); }
 
@@ -37,13 +38,13 @@ public class TestUTF8 extends TestCase {
   }
 
   public void testWritable() throws Exception {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10000; i++) {
       TestWritable.testWritable(new UTF8(getTestString()));
     }
   }
 
   public void testGetBytes() throws Exception {
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10000; i++) {
 
       // generate a random string
       String before = getTestString();
@@ -57,7 +58,7 @@ public class TestUTF8 extends TestCase {
     DataOutputBuffer out = new DataOutputBuffer();
     DataInputBuffer in = new DataInputBuffer();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10000; i++) {
       // generate a random string
       String before = getTestString();
 
@@ -81,6 +82,15 @@ public class TestUTF8 extends TestCase {
 
     }
 
+  }
+
+  public void testNullEncoding() throws Exception {
+    String s = new String(new char[] { 0 });
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    new UTF8(s).write(dob);
+
+    assertEquals(s, new String(dob.getData(), 2, dob.getLength()-2, "UTF-8"));
   }
 	
 }

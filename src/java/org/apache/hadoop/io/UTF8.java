@@ -253,7 +253,7 @@ public class UTF8 implements WritableComparable {
     int utf8Length = 0;
     for (int i = 0; i < stringLength; i++) {
       int c = string.charAt(i);
-      if ((c >= 0x0001) && (c <= 0x007F)) {
+      if (c <= 0x007F) {
         utf8Length++;
       } else if (c > 0x07FF) {
         utf8Length += 3;
@@ -270,7 +270,7 @@ public class UTF8 implements WritableComparable {
     final int end = start + length;
     for (int i = start; i < end; i++) {
       int code = s.charAt(i);
-      if (code >= 0x01 && code <= 0x7F) {
+      if (code <= 0x7F) {
         out.writeByte((byte)code);
       } else if (code <= 0x07FF) {
         out.writeByte((byte)(0xC0 | ((code >> 6) & 0x1F)));

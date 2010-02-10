@@ -184,6 +184,8 @@ Trunk (unreleased changes)
     HADOOP-6540. Contrib unit tests have invalid XML for core-site, etc.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-6522. Fix decoding of codepoint zero in UTF8. (cutting)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
