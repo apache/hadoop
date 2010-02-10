@@ -307,7 +307,9 @@ public interface DataTransferProtocol {
     protected final Op readOp(DataInputStream in) throws IOException {
       final short version = in.readShort();
       if (version != DATA_TRANSFER_VERSION) {
-        throw new IOException( "Version Mismatch" );
+        throw new IOException( "Version Mismatch (Expected: " +
+            DataTransferProtocol.DATA_TRANSFER_VERSION  +
+            ", Received: " +  version + " )");
       }
       return Op.read(in);
     }

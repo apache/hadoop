@@ -63,6 +63,9 @@ Trunk (unreleased changes)
     HDFS-949. Move DelegationToken into Common so that it can be used by
     MapReduce. (omalley)
 
+    HDFS-930. Better error message for DATA_TRANSFER_VERSION mismatched.
+    (Kay Kay via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
