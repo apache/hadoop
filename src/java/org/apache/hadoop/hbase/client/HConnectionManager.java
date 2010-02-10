@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
@@ -737,12 +739,15 @@ public class HConnectionManager implements HConstants {
                 this.numRetries + " failed; retrying after sleep of " +
                 getPauseTime(tries) + " because: " + e.getMessage());
             }
-            relocateRegion(parentTable, metaKey);
           } else {
             throw e;
           }
+          // Only relocate the parent region if necessary
+          if(!(e instanceof RegionOfflineException ||
+              e instanceof NoServerForRegionException)) {
+            relocateRegion(parentTable, metaKey);
+          }
         }
-      
         try{
           Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e){

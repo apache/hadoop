@@ -353,6 +353,7 @@ Release 0.21.0 - Unreleased
    HBASE-2198  SingleColumnValueFilter should be able to find the column value
                even when it's not specifically added as input on the sc
                (Ferdy via Stack)
+   HBASE-2189  HCM trashes meta cache even when not needed
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
