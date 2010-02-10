@@ -130,6 +130,14 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
   <value>$MASTER_HOST:8021</value>
 </property>
 <property>
+  <name>mapred.output.compress</name>
+  <value>true</value>
+</property>
+<property>
+  <name>mapred.output.compression.type</name>
+  <value>BLOCK</value>
+</property>
+<property>
   <name>io.compression.codecs</name>
   <value>org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.BZip2Codec,com.hadoop.compression.lzo.LzoCodec,com.hadoop.compression.lzo.LzopCodec</value>
 </property>
