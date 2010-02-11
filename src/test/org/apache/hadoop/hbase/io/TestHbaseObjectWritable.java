@@ -25,6 +25,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.TestCase;
 
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
+import org.junit.Assert;
 
 public class TestHbaseObjectWritable extends TestCase {
 
@@ -74,6 +77,22 @@ public class TestHbaseObjectWritable extends TestCase {
     // Do 'known' Writable type.
     obj = doType(conf, new Text(""), Text.class);
     assertTrue(obj instanceof Text);
+    //List.class
+    List<String> list = new ArrayList<String>();
+    list.add("hello");
+    list.add("world");
+    list.add("universe");
+    obj = doType(conf, list, List.class);
+    assertTrue(obj instanceof List);
+    Assert.assertArrayEquals(list.toArray(), ((List)obj).toArray() );
+    //ArrayList.class
+    ArrayList<String> arr = new ArrayList<String>();
+    arr.add("hello");
+    arr.add("world");
+    arr.add("universe");
+    obj = doType(conf,  arr, ArrayList.class);
+    assertTrue(obj instanceof ArrayList);
+    Assert.assertArrayEquals(list.toArray(), ((ArrayList)obj).toArray() );
     // Check that filters can be serialized
     obj = doType(conf, new PrefixFilter(HConstants.EMPTY_BYTE_ARRAY),
       PrefixFilter.class);
@@ -94,4 +113,5 @@ public class TestHbaseObjectWritable extends TestCase {
     dis.close();
     return product;
   }
+ 
 }

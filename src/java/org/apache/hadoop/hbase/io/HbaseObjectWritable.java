@@ -22,7 +22,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -156,6 +160,9 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(HLog.Entry.class, code++);
     addToMap(HLog.Entry[].class, code++);
     addToMap(HLogKey.class, code++);
+    
+    // List 
+    addToMap(List.class, code++);
   }
   
   private Class<?> declaredClass;
@@ -248,6 +255,11 @@ public class HbaseObjectWritable implements Writable, Configurable {
   static void writeClassCode(final DataOutput out, final Class<?> c)
   throws IOException {
     Byte code = CLASS_TO_CODE.get(c);
+    if (code == null ) {
+      if ( List.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(List.class);
+      }
+    }
     if (code == null) {
       LOG.error("Unsupported type " + c);
       StackTraceElement[] els = new Exception().getStackTrace();
@@ -298,6 +310,14 @@ public class HbaseObjectWritable implements Writable, Configurable {
           writeObject(out, Array.get(instanceObj, i),
                     declClass.getComponentType(), conf);
         }
+      }
+    } else if (List.class.isAssignableFrom(declClass)) {
+      List list = (List)instanceObj;
+      int length = list.size();
+      out.writeInt(length);
+      for (int i = 0; i < length; i++) {
+        writeObject(out, list.get(i),
+                  list.get(i).getClass(), conf);
       }
     } else if (declClass == String.class) {   // String
       Text.writeString(out, (String)instanceObj);
@@ -401,6 +421,12 @@ public class HbaseObjectWritable implements Writable, Configurable {
         for (int i = 0; i < length; i++) {
           Array.set(instance, i, readObject(in, conf));
         }
+      }
+    } else if (List.class.isAssignableFrom(declaredClass)) {              // List
+      int length = in.readInt();
+      instance = new ArrayList(length);
+      for (int i = 0; i < length; i++) {
+        ((ArrayList)instance).add(readObject(in, conf));
       }
     } else if (declaredClass == String.class) {        // String
       instance = Text.readString(in);
