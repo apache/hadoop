@@ -354,6 +354,7 @@ Release 0.21.0 - Unreleased
                even when it's not specifically added as input on the sc
                (Ferdy via Stack)
    HBASE-2189  HCM trashes meta cache even when not needed
+   HBASE-2190  HRS should report to master when HMsg are available
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

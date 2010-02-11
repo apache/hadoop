@@ -116,6 +116,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
+  private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};
   
   // Set when a report to the master comes back with a message asking us to
   // shutdown.  Also set by call to stop when debugging or running unit tests
@@ -149,8 +150,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     new ConcurrentHashMap<Integer, HRegion>();
 
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private final List<HMsg> outboundMsgs =
-    Collections.synchronizedList(new ArrayList<HMsg>());
+  private final LinkedBlockingQueue<HMsg> outboundMsgs =
+    new LinkedBlockingQueue<HMsg>();
 
   final int numRetries;
   protected final int threadWakeFrequency;
@@ -426,7 +427,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         LOG.warn("No response from master on reportForDuty. Sleeping and " +
           "then trying again.");
       }
-      HMsg outboundArray[] = null;
+      List<HMsg> outboundMessages = new ArrayList<HMsg>();
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
       for (int tries = 0; !stopRequested.get() && isHealthy();) {
@@ -442,10 +443,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
           }
         }
         long now = System.currentTimeMillis();
-        // Send messages to the master IF this.msgInterval has elapsed OR if
-        // we have something to tell (and we didn't just fail sending master).
-        if ((now - lastMsg) >= msgInterval ||
-            ((outboundArray == null || outboundArray.length == 0) && !this.outboundMsgs.isEmpty())) {
+        // Drop into the send loop if msgInterval has elapsed or if something
+        // to send.  If we fail talking to the master, then we'll sleep below
+        // on poll of the outboundMsgs blockingqueue.
+        if ((now - lastMsg) >= msgInterval || !outboundMessages.isEmpty()) {
           try {
             doMetrics();
             MemoryUsage memory =
@@ -458,11 +459,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
             }
             this.serverInfo.setLoad(hsl);
             this.requestCount.set(0);
-            outboundArray = getOutboundMsgs(outboundArray);
-            HMsg msgs[] = hbaseMaster.regionServerReport(
-              serverInfo, outboundArray, getMostLoadedRegions());
+            addOutboundMsgs(outboundMessages);
+            HMsg msgs[] = this.hbaseMaster.regionServerReport(
+              serverInfo, outboundMessages.toArray(EMPTY_HMSG_ARRAY),
+              getMostLoadedRegions());
             lastMsg = System.currentTimeMillis();
-            outboundArray = updateOutboundMsgs(outboundArray);
+            updateOutboundMsgs(outboundMessages);
+            outboundMessages.clear();
             if (this.quiesced.get() && onlineRegions.size() == 0) {
               // We've just told the master we're exiting because we aren't
               // serving any regions. So set the stop bit and exit.
@@ -565,9 +568,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
             lastMsg = System.currentTimeMillis();
           }
         }
-        // Do some housekeeping before going to sleep
+        now = System.currentTimeMillis();
+        HMsg msg = this.outboundMsgs.poll((msgInterval - (now - lastMsg)), 
+          TimeUnit.MILLISECONDS);
+        // If we got something, add it to list of things to send.
+        if (msg != null) outboundMessages.add(msg);
+        // Do some housekeeping before going back around
         housekeeping();
-        sleeper.sleep(lastMsg);
       } // for
     } catch (Throwable t) {
       if (!checkOOME(t)) {
@@ -655,31 +662,39 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   /*
-   * @param msgs Current outboundMsgs array
-   * @return Messages to send or returns current outboundMsgs if it already had
-   * content to send.
+   * Add to the passed <code>msgs</code> messages to pass to the master.
+   * @param msgs Current outboundMsgs array; we'll add messages to this List.
    */
-  private HMsg [] getOutboundMsgs(final HMsg [] msgs) {
-    // If passed msgs are not null, means we haven't passed them to master yet.
-    if (msgs != null) return msgs;
-    synchronized(this.outboundMsgs) {
-      return this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
+  private void addOutboundMsgs(final List<HMsg> msgs) {
+    if (msgs.isEmpty()) {
+      this.outboundMsgs.drainTo(msgs);
+      return;
+    }
+    OUTER: for (HMsg m: this.outboundMsgs) {
+      for (HMsg mm: msgs) {
+        // Be careful don't add duplicates.
+        if (mm.equals(m)) {
+          continue OUTER;
+        }
+      }
+      msgs.add(m);
     }
   }
 
   /*
+   * Remove from this.outboundMsgs those messsages we sent the master.
    * @param msgs Messages we sent the master.
-   * @return Null
    */
-  private HMsg [] updateOutboundMsgs(final HMsg [] msgs) {
-    if (msgs == null) return null;
-    synchronized(this.outboundMsgs) {
-      for (HMsg m: msgs) {
-        int index = this.outboundMsgs.indexOf(m);
-        if (index != -1) this.outboundMsgs.remove(index);
+  private void updateOutboundMsgs(final List<HMsg> msgs) {
+    if (msgs.isEmpty()) return;
+    for (HMsg m: this.outboundMsgs) {
+      for (HMsg mm: msgs) {
+        if (mm.equals(m)) {
+          this.outboundMsgs.remove(m);
+          break;
+        }
       }
     }
-    return null;
   }
 
   /*
@@ -1120,8 +1135,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   /*
-   * Run some housekeeping tasks before we go into 'hibernation' sleeping at
-   * the end of the main HRegionServer run loop.
+   * Run some housekeeping tasks.
    */
   private void housekeeping() {
     // If the todo list has > 0 messages, iterate looking for open region
@@ -1267,7 +1281,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   /* Add to the outbound message buffer */
   private void reportOpen(HRegionInfo region) {
-    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, region));
+    this.outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, region));
   }
 
   /* Add to the outbound message buffer */
@@ -1277,7 +1291,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   /* Add to the outbound message buffer */
   private void reportClose(final HRegionInfo region, final byte[] message) {
-    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
+    this.outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
   }
   
   /**
@@ -1292,12 +1306,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
       HRegionInfo newRegionB) {
-    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT, oldRegion,
-      ("Daughters; " +
-        newRegionA.getRegionNameAsString() + ", " +
-        newRegionB.getRegionNameAsString()).getBytes()));
-    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionA));
-    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionB));
+    this.outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS,
+      oldRegion, newRegionA, newRegionB,
+      Bytes.toBytes("Daughters; " +
+          newRegionA.getRegionNameAsString() + ", " +
+          newRegionB.getRegionNameAsString())));
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2240,7 +2253,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /**
    * @return Queue to which you can add outbound messages.
    */
-  protected List<HMsg> getOutboundMsgs() {
+  protected LinkedBlockingQueue<HMsg> getOutboundMsgs() {
     return this.outboundMsgs;
   }
 

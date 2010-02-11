@@ -19,12 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.util.Bytes;
-
 import junit.framework.TestCase;
+
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 public class TestHMsg extends TestCase {
   public void testList() {
@@ -51,5 +53,30 @@ public class TestHMsg extends TestCase {
     hmsg = new HMsg(HMsg.Type.MSG_REGION_OPEN,
      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b));
     assertNotSame(-1, msgs.indexOf(hmsg));
+  }
+  
+  public void testSerialization() throws IOException {
+    // Check out new HMsg that carries two daughter split regions.
+    byte [] abytes = Bytes.toBytes("a");
+    byte [] bbytes = Bytes.toBytes("b");
+    byte [] parentbytes = Bytes.toBytes("parent");
+    HRegionInfo parent =
+      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("parent")),
+      parentbytes, parentbytes);
+    // Assert simple HMsg serializes
+    HMsg hmsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, parent);
+    byte [] bytes = Writables.getBytes(hmsg);
+    HMsg close = (HMsg)Writables.getWritable(bytes, new HMsg());
+    assertTrue(close.equals(hmsg));
+    // Assert split serializes
+    HRegionInfo daughtera =
+      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("a")), abytes, abytes);
+    HRegionInfo daughterb =
+      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("b")), bbytes, bbytes);
+    HMsg splithmsg = new HMsg(HMsg.Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS,
+      parent, daughtera, daughterb, Bytes.toBytes("split"));
+    bytes = Writables.getBytes(splithmsg);
+    hmsg = (HMsg)Writables.getWritable(bytes, new HMsg());
+    assertTrue(splithmsg.equals(hmsg));
   }
 }

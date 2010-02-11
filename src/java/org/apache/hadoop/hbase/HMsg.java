@@ -91,6 +91,7 @@ public class HMsg implements Writable {
      * 
      * Note that this message is immediately followed by two MSG_REPORT_OPEN
      * messages, one for each of the new regions resulting from the split
+     * @deprecated See MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS
      */
     MSG_REPORT_SPLIT,
 
@@ -116,11 +117,21 @@ public class HMsg implements Writable {
      * Run Major Compaction
      */
     MSG_REGION_MAJOR_COMPACT,
+
+    /**
+     * Region server split the region associated with this message.
+     * 
+     * Its like MSG_REPORT_SPLIT only it carries the daughters in the message
+     * rather than send them individually in MSG_REPORT_OPEN messages.
+     */
+    MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS,
   }
 
   private Type type = null;
   private HRegionInfo info = null;
   private byte[] message = null;
+  private HRegionInfo daughterA = null;
+  private HRegionInfo daughterB = null;
 
   /** Default constructor. Used during deserialization */
   public HMsg() {
@@ -153,6 +164,21 @@ public class HMsg implements Writable {
    * @param msg Optional message (Stringified exception, etc.)
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri, final byte[] msg) {
+    this(type, hri, null, null, msg);
+  }
+
+  /**
+   * Construct a message with the specified message and HRegionInfo
+   * 
+   * @param type Message type
+   * @param hri Region to which message <code>type</code> applies.  Cannot be
+   * null.  If no info associated, used other Constructor.
+   * @param daughterA
+   * @param daughterB
+   * @param msg Optional message (Stringified exception, etc.)
+   */
+  public HMsg(final HMsg.Type type, final HRegionInfo hri,
+      final HRegionInfo daughterA, final HRegionInfo daughterB, final byte[] msg) {
     if (type == null) {
       throw new NullPointerException("Message type cannot be null");
     }
@@ -162,6 +188,8 @@ public class HMsg implements Writable {
     }
     this.info = hri;
     this.message = msg;
+    this.daughterA = daughterA;
+    this.daughterB = daughterB;
   }
 
   /**
@@ -187,6 +215,22 @@ public class HMsg implements Writable {
   /** @return the message type */
   public byte[] getMessage() {
     return this.message;
+  }
+
+  /**
+   * @return First daughter if Type is MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS else
+   * null
+   */
+  public HRegionInfo getDaughterA() {
+    return this.daughterA;
+  }
+
+  /**
+   * @return Second daughter if Type is MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS else
+   * null
+   */
+  public HRegionInfo getDaughterB() {
+    return this.daughterB;
   }
 
   /**
@@ -255,6 +299,10 @@ public class HMsg implements Writable {
        out.writeBoolean(true);
        Bytes.writeByteArray(out, this.message);
      }
+     if (this.type.equals(Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS)) {
+       this.daughterA.write(out);
+       this.daughterB.write(out);
+     }
    }
 
   /**
@@ -267,6 +315,12 @@ public class HMsg implements Writable {
      boolean hasMessage = in.readBoolean();
      if (hasMessage) {
        this.message = Bytes.readByteArray(in);
+     }
+     if (this.type.equals(Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS)) {
+       this.daughterA = new HRegionInfo();
+       this.daughterB = new HRegionInfo();
+       this.daughterA.readFields(in);
+       this.daughterB.readFields(in);
      }
    }
 }
