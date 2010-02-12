@@ -200,6 +200,8 @@ Release 0.21.0 - Unreleased
                a long time (Cristian Ivascu via Stack)
    HBASE-2193  Better readability of - hbase.regionserver.lease.period
                (Kay Kay via Stack)
+   HBASE-2199  hbase.client.tableindexed.IndexSpecification, lines 72-73
+               should be reversed (Adrian Popescu via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -366,6 +368,8 @@ Release 0.21.0 - Unreleased
                11 attempts".
    HBASE-2220  Add a binary comparator that only compares up to the length
                of the supplied byte array (Bruno Dumon via Stack)
+   HBASE-2211  Add a new Filter that checks a single column value but does not
+               emit it. (Ferdy via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

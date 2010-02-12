@@ -79,9 +79,9 @@ public class IndexSpecification implements Writable {
     this.indexId = indexId;
     this.indexedColumns = indexedColumns;
     this.keyGenerator = keyGenerator;
-    this.makeAllColumns();
     this.additionalColumns = (additionalColumns == null)? new byte[0][0] :
                                                           additionalColumns;
+    this.makeAllColumns();
   }
 
   public IndexSpecification() {
