@@ -364,6 +364,8 @@ Release 0.21.0 - Unreleased
    HBASE-2222  Improve log "Trying to contact region server Some server for
                region, row 'ip_info_100,,1263329969690', but failed after
                11 attempts".
+   HBASE-2220  Add a binary comparator that only compares up to the length
+               of the supplied byte array (Bruno Dumon via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
