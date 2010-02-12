@@ -358,6 +358,7 @@ Release 0.21.0 - Unreleased
    HBASE-2209  Support of List [ ] in HBaseOutputWritable for serialization
                (Kay Kay via Stack)
    HBASE-2177  Add timestamping to gc logging option
+   HBASE-2066  Perf: parallelize puts
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

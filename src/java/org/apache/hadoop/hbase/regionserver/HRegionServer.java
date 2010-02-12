@@ -82,6 +82,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -1701,17 +1703,17 @@ public class HRegionServer implements HConstants, HRegionInterface,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      Integer[] locks = new Integer[puts.length];
       for (i = 0; i < puts.length; i++) {
         this.requestCount.incrementAndGet();
-        locks[i] = getLockFromId(puts[i].getLockId());
-        region.put(puts[i], locks[i]);
+        Integer lock = getLockFromId(puts[i].getLockId());
+        region.put(puts[i], lock);
       }
 
     } catch (WrongRegionException ex) {
       LOG.debug("Batch puts: " + i, ex);
       return i;
     } catch (NotServingRegionException ex) {
+      LOG.debug("Batch puts: " + i, ex);
       return i;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -2425,6 +2427,22 @@ public class HRegionServer implements HConstants, HRegionInterface,
       (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,
         HRegionServer.class);
     doMain(args, regionServerClass);
+  }
+
+
+  @Override
+  public MultiPutResponse multiPut(MultiPut puts) throws IOException {
+    MultiPutResponse resp = new MultiPutResponse();
+
+    // do each region as it's own.
+    for( Map.Entry<byte[],List<Put>> e: puts.puts.entrySet()) {
+      int result = put(e.getKey(), e.getValue().toArray(new Put[]{}));
+      resp.addResult(e.getKey(), result);
+
+      e.getValue().clear(); // clear some RAM
+    }
+
+    return resp;
   }
 
 }

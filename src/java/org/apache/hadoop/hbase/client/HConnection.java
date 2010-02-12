@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -214,4 +215,9 @@ public interface HConnection {
    */
   public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
   throws IOException;
+  
+  public void processBatchOfPuts(List<Put> list,
+                                 final byte[] tableName, ExecutorService pool) throws IOException;
+
+  
 }

@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.filter.*;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -157,6 +159,10 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(FirstKeyOnlyFilter.class, code++);
 
     addToMap(Delete [].class, code++);
+
+    addToMap(MultiPut.class, code++);
+    addToMap(MultiPutResponse.class, code++);
+
     addToMap(HLog.Entry.class, code++);
     addToMap(HLog.Entry[].class, code++);
     addToMap(HLogKey.class, code++);

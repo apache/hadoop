@@ -29,6 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -260,7 +264,7 @@ public class HConnectionManager implements HConstants {
     private final Object userRegionLock = new Object();
         
     private volatile Configuration conf;
-    
+
     // Known region HServerAddress.toString() -> HRegionInterface 
     private final Map<String, HRegionInterface> servers =
       new ConcurrentHashMap<String, HRegionInterface>();
@@ -830,37 +834,40 @@ public class HConnectionManager implements HConstants {
      * requirements.
      */
     private void deleteCachedLocation(final byte [] tableName,
-        final byte [] row) {
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
-        getTableLocations(tableName);
+                                      final byte [] row) {
+      synchronized (this.cachedRegionLocations) {
+        SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+            getTableLocations(tableName);
 
-      // start to examine the cache. we can only do cache actions
-      // if there's something in the cache for this table.
-      if (!tableLocations.isEmpty()) {
-        // cut the cache so that we only get the part that could contain
-        // regions that match our key
-        SoftValueSortedMap<byte [], HRegionLocation> matchingRegions =
-          tableLocations.headMap(row);
+        // start to examine the cache. we can only do cache actions
+        // if there's something in the cache for this table.
+        if (!tableLocations.isEmpty()) {
+          // cut the cache so that we only get the part that could contain
+          // regions that match our key
+          SoftValueSortedMap<byte [], HRegionLocation> matchingRegions =
+              tableLocations.headMap(row);
 
-        // if that portion of the map is empty, then we're done. otherwise,
-        // we need to examine the cached location to verify that it is 
-        // a match by end key as well.
-        if (!matchingRegions.isEmpty()) {
-          HRegionLocation possibleRegion =
-            matchingRegions.get(matchingRegions.lastKey());
-          byte [] endKey = possibleRegion.getRegionInfo().getEndKey();
+          // if that portion of the map is empty, then we're done. otherwise,
+          // we need to examine the cached location to verify that it is
+          // a match by end key as well.
+          if (!matchingRegions.isEmpty()) {
+            HRegionLocation possibleRegion =
+                matchingRegions.get(matchingRegions.lastKey());
+            byte [] endKey = possibleRegion.getRegionInfo().getEndKey();
 
-          // by nature of the map, we know that the start key has to be < 
-          // otherwise it wouldn't be in the headMap. 
-          if (KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
-              row, 0, row.length) <= 0) {
-            // delete any matching entry
-            HRegionLocation rl =
-              tableLocations.remove(matchingRegions.lastKey());
-            if (rl != null && LOG.isDebugEnabled()) {
-              LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
-                " for tableName=" + Bytes.toString(tableName) + " from cache " +
-                "because of " + Bytes.toStringBinary(row));
+            // by nature of the map, we know that the start key has to be <
+            // otherwise it wouldn't be in the headMap.
+            if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
+                KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
+                    row, 0, row.length) > 0) {
+              // delete any matching entry
+              HRegionLocation rl =
+                  tableLocations.remove(matchingRegions.lastKey());
+              if (rl != null && LOG.isDebugEnabled()) {
+                LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
+                    " for tableName=" + Bytes.toString(tableName) + " from cache " +
+                    "because of " + Bytes.toStringBinary(row));
+              }
             }
           }
         }
@@ -909,7 +916,7 @@ public class HConnectionManager implements HConstants {
             " is " + location.getServerAddress());
       }
     }
-    
+
     public HRegionInterface getHRegionConnection(
         HServerAddress regionServer, boolean getMaster) 
     throws IOException {
@@ -1295,5 +1302,127 @@ public class HConnectionManager implements HConstants {
         }
       }
     }
-  } 
+
+    public void processBatchOfPuts(List<Put> list,
+                                   final byte[] tableName, ExecutorService pool) throws IOException {
+      for ( int tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
+        Collections.sort(list);
+        Map<HServerAddress, MultiPut> regionPuts =
+            new HashMap<HServerAddress, MultiPut>();
+        // step 1:
+        //  break up into regionserver-sized chunks and build the data structs
+        for ( Put put : list ) {
+          byte [] row = put.getRow();
+
+          HRegionLocation loc = locateRegion(tableName, row, true);
+          HServerAddress address = loc.getServerAddress();
+          byte [] regionName = loc.getRegionInfo().getRegionName();
+
+          MultiPut mput = regionPuts.get(address);
+          if (mput == null) {
+            mput = new MultiPut(address);
+            regionPuts.put(address, mput);
+          }
+          mput.add(regionName, put);
+        }
+
+        // step 2:
+        //  make the requests
+        // Discard the map, just use a list now, makes error recovery easier.
+        List<MultiPut> multiPuts = new ArrayList<MultiPut>(regionPuts.values());
+
+        List<Future<MultiPutResponse>> futures =
+            new ArrayList<Future<MultiPutResponse>>(regionPuts.size());
+        for ( MultiPut put : multiPuts ) {
+          futures.add(pool.submit(createPutCallable(put.address,
+              put,
+              tableName)));
+        }
+        // RUN!
+        List<Put> failed = new ArrayList<Put>();
+
+        // step 3:
+        //  collect the failures and tries from step 1.
+        for (int i = 0; i < futures.size(); i++ ) {
+          Future<MultiPutResponse> future = futures.get(i);
+          MultiPut request = multiPuts.get(i);
+          try {
+            MultiPutResponse resp = future.get();
+
+            // For each region
+            for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
+              Integer result = resp.getAnswer(e.getKey());
+              if (result == null) {
+                // failed
+                LOG.debug("Failed all for region: " +
+                    Bytes.toStringBinary(e.getKey()) + ", removing from cache");
+                failed.addAll(e.getValue());
+              } else if (result >= 0) {
+                // some failures
+                List<Put> lst = e.getValue();
+                failed.addAll(lst.subList(result, lst.size()));
+                LOG.debug("Failed past " + result + " for region: " +
+                    Bytes.toStringBinary(e.getKey()) + ", removing from cache");
+              }
+            }
+          } catch (InterruptedException e) {
+            // go into the failed list.
+            LOG.debug("Failed all from " + request.address, e);
+            failed.addAll(request.allPuts());
+          } catch (ExecutionException e) {
+            System.out.println(e);
+            // all go into the failed list.
+            LOG.debug("Failed all from " + request.address, e);
+            failed.addAll(request.allPuts());
+          }
+        }
+        list.clear();
+        if (!failed.isEmpty()) {
+          for (Put failedPut: failed) {
+            deleteCachedLocation(tableName, failedPut.getRow());
+          }
+
+          list.addAll(failed);
+
+          long sleepTime = getPauseTime(tries);
+          LOG.debug("processBatchOfPuts had some failures, sleeping for " + sleepTime +
+              " ms!");
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) {
+
+          }
+        }
+      }
+      if (!list.isEmpty()) {
+        // ran out of retries and didnt succeed everything!
+        throw new RetriesExhaustedException("Still had " + list.size() + " puts left after retrying " +
+            numRetries + " times. Should have detail on which Regions failed the most");
+      }
+    }
+
+
+    private Callable<MultiPutResponse> createPutCallable(
+        final HServerAddress address, final MultiPut puts,
+        final byte [] tableName) {
+      final HConnection connection = this;
+      return new Callable<MultiPutResponse>() {
+        public MultiPutResponse call() throws IOException {
+          return getRegionServerWithRetries(
+              new ServerCallable<MultiPutResponse>(connection, tableName, null) {
+                public MultiPutResponse call() throws IOException {
+                  MultiPutResponse resp = server.multiPut(puts);
+                  resp.request = puts;
+                  return resp;
+                }
+                @Override
+                public void instantiateServer(boolean reload) throws IOException {
+                  server = connection.getHRegionConnection(address);
+                }
+              }
+          );
+        }
+      };
+    }
+  }
 }

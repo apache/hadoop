@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
@@ -245,4 +247,15 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException
    */
   public HServerInfo getHServerInfo() throws IOException;
+
+
+  /**
+   * Multi put for putting multiple regions worth of puts at once.
+   *
+   * @param puts the request
+   * @return the reply
+   * @throws IOException
+   */
+  public MultiPutResponse multiPut(MultiPut puts) throws IOException;
+
 }

@@ -27,6 +27,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,9 +71,10 @@ public class HTable implements HTableInterface {
   private boolean autoFlush;
   private long currentWriteBufferSize;
   protected int scannerCaching;
-  private long maxScannerResultSize;
   private int maxKeyValueSize;
 
+  private long maxScannerResultSize;
+  
   /**
    * Creates an object to access a HBase table
    *
@@ -102,6 +109,7 @@ public class HTable implements HTableInterface {
     this(conf, Bytes.toBytes(tableName));
   }
 
+
   /**
    * Creates an object to access a HBase table.
    *
@@ -126,11 +134,36 @@ public class HTable implements HTableInterface {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);
+    
     this.maxScannerResultSize = conf.getLong(
       HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
+
+    int nrHRS = getCurrentNrHRS();
+    int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
+
+    // Unfortunately Executors.newCachedThreadPool does not allow us to
+    // set the maximum size of the pool, so we have to do it ourselves.
+    this.pool = new ThreadPoolExecutor(0, nrThreads,
+        60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(),
+        new DaemonThreadFactory());
   }
+
+  /**
+   * TODO Might want to change this to public, would be nice if the number
+   * of threads would automatically change when servers were added and removed
+   * @return the number of region servers that are currently running
+   * @throws IOException
+   */
+  private int getCurrentNrHRS() throws IOException {
+    HBaseAdmin admin = new HBaseAdmin(this.configuration);
+    return admin.getClusterStatus().getServers();
+  }
+
+  // For multiput
+  private ExecutorService pool;
 
   /**
    * @param tableName name of table to check
@@ -591,11 +624,11 @@ public class HTable implements HTableInterface {
    * @throws IOException
    */
   public void flushCommits() throws IOException {
-    int last = 0;
     try {
-      last = connection.processBatchOfRows(writeBuffer, tableName);
+      connection.processBatchOfPuts(writeBuffer,
+          tableName, pool);
     } finally {
-      writeBuffer.subList(0, last).clear();
+      // the write buffer was adjsuted by processBatchOfPuts
       currentWriteBufferSize = 0;
       for (int i = 0; i < writeBuffer.size(); i++) {
         currentWriteBufferSize += writeBuffer.get(i).heapSize();
@@ -716,7 +749,7 @@ public class HTable implements HTableInterface {
   public ArrayList<Put> getWriteBuffer() {
     return writeBuffer;
   }
-
+  
   /**
    * Implements the scanner interface for the HBase client.
    * If there are multiple regions in a table, this scanner will iterate
@@ -1015,5 +1048,32 @@ public class HTable implements HTableInterface {
         }
       };
     }
+  }
+
+  static class DaemonThreadFactory implements ThreadFactory {
+    static final AtomicInteger poolNumber = new AtomicInteger(1);
+        final ThreadGroup group;
+        final AtomicInteger threadNumber = new AtomicInteger(1);
+        final String namePrefix;
+
+        DaemonThreadFactory() {
+            SecurityManager s = System.getSecurityManager();
+            group = (s != null)? s.getThreadGroup() :
+                                 Thread.currentThread().getThreadGroup();
+            namePrefix = "pool-" +
+                          poolNumber.getAndIncrement() +
+                         "-thread-";
+        }
+
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(group, r,
+                                  namePrefix + threadNumber.getAndIncrement(),
+                                  0);
+            if (!t.isDaemon())
+                t.setDaemon(true);
+            if (t.getPriority() != Thread.NORM_PRIORITY)
+                t.setPriority(Thread.NORM_PRIORITY);
+            return t;
+        }
   }
 }

@@ -74,7 +74,8 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 20: Backed Transaction HBase out of HBase core.</li>
    * <li>Version 21: HBASE-1665.</li>
    * <li>Version 22: HBASE-2209. Added List support to RPC</li>
+   * <li>Version 23: HBASE-2066, multi-put.</li>
    * </ul>
    */
-  public static final long versionID = 22L;
+  public static final long versionID = 23L;
 }
