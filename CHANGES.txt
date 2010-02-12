@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
+    HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
+    via tomwhite)
+
+    MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via tomwhite)
+
 Release 0.20.2 - 2010-2-10
 
   NEW FEATURES
@@ -109,11 +114,6 @@ Release 0.20.2 - 2010-2-10
     execution. (cos)
 
     HADOOP-6524. Contrib tests are failing Clover'ed build. (cos)
-
-    HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
-    via tomwhite)
-
-    MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via tomwhite)
 
 Release 0.20.1 - 2009-09-01
 
