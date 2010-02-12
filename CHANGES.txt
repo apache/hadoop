@@ -359,6 +359,9 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2177  Add timestamping to gc logging option
    HBASE-2066  Perf: parallelize puts
+   HBASE-2222  Improve log "Trying to contact region server Some server for
+               region, row 'ip_info_100,,1263329969690', but failed after
+               11 attempts".
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

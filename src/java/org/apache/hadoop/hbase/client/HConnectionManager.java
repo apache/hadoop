@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
@@ -1096,8 +1094,8 @@ public class HConnectionManager implements HConstants {
     }
 
     private HRegionLocation
-    getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey, 
-      boolean reload)
+      getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey,
+        boolean reload)
     throws IOException {
       boolean reloadFlag = reload;
       List<Throwable> exceptions = new ArrayList<Throwable>();
@@ -1121,7 +1119,9 @@ public class HConnectionManager implements HConstants {
         }
       }
       if (location == null) {
-        throw new RetriesExhaustedException("Some server",
+        throw new RetriesExhaustedException(" -- nothing found, no 'location' returned," +
+          " tableName=" + Bytes.toString(tableName) +
+          ", reload=" + reload + " --",
           HConstants.EMPTY_BYTE_ARRAY, rowKey, tries, exceptions);
       }
       return location;
