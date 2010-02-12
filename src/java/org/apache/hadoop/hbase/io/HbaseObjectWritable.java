@@ -149,6 +149,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(InclusiveStopFilter.class, code++);
     addToMap(ColumnCountGetFilter.class, code++);
     addToMap(SingleColumnValueFilter.class, code++);
+    addToMap(SingleColumnValueExcludeFilter.class, code++);
     addToMap(BinaryComparator.class, code++);
     addToMap(CompareFilter.class, code++);
     addToMap(RowFilter.class, code++);

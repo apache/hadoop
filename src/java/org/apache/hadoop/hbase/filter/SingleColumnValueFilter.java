@@ -63,8 +63,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class SingleColumnValueFilter implements Filter {
   static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
 
-  private byte [] columnFamily;
-  private byte [] columnQualifier; 
+  protected byte [] columnFamily;
+  protected byte [] columnQualifier; 
   private CompareOp compareOp;
   private WritableByteArrayComparable comparator;
   private boolean foundColumn = false;
