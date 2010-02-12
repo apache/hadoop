@@ -53,7 +53,7 @@
     <!--Private configurations. -->
 
     <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation"
-      extends="common,mandatory,lucene"/>
+      extends="common,mandatory"/>
 
     <conf name="releaseaudit" visibility="private"
   description="Artifacts required for releaseaudit target"/>
@@ -61,7 +61,6 @@
     <conf name="commons-logging" visibility="private"/>
     <conf name="httpclient" visibility="private" extends="commons-logging"/>
     <conf name="log4j" visibility="private"/>
-    <conf name="lucene" visibility="private"/>
     <conf name="jdiff" visibility="private" extends="log4j,server"/>
     <conf name="checkstyle" visibility="private"/>
 
@@ -85,8 +84,6 @@
                rev="${hadoop-mapred.version}" conf="common->default" changing="true" >
       <exclude conf="test"/>  
    </dependency>            
-   <dependency org="org.apache.lucene" name="lucene-core"
-               rev="${lucene.version}" conf="common->default" />      
    <dependency org="log4j" name="log4j" 
                rev="${log4j.version}" conf="common->master">
       <exclude conf="jmx,mail,jms"/>  
