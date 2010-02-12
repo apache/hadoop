@@ -37,7 +37,7 @@
 export HBASE_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode"
 
 # Uncomment below to enable java garbage collection logging.
-# export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log"
+# export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails XX:+PrintGCDateStamps -Xloggc:$HBASE_HOME/logs/gc-hbase.log" 
 
 # Uncomment and adjust to enable JMX exporting
 # See jmxremote.password and jmxremote.access in $JRE_HOME/lib/management to configure remote password access.
