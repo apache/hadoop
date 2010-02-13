@@ -1009,9 +1009,6 @@ Release 0.21.0 - Unreleased
     HADOOP-5715. Add conf/mapred-queue-acls.xml to the ignore lists.
     (szetszwo)
 
-    HADOOP-5612. Some c++ scripts are not chmodded before ant execution.
-    (Todd Lipcon via tomwhite)
-
     HADOOP-5592. Fix typo in Streaming doc in reference to GzipCodec.
     (Corinne Chandel via tomwhite)
 
@@ -1326,7 +1323,15 @@ Release 0.21.0 - Unreleased
     HADOOP-6290. Prevent duplicate slf4j-simple jar via Avro's classpath.
     (Owen O'Malley via cdouglas)
 
-Release 0.20.2 - Unreleased
+Release 0.20.3 - Unreleased
+
+    HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
+    via tomwhite)
+
+    HADOOP-5612. Some c++ scripts are not chmodded before ant execution.
+    (Todd Lipcon via tomwhite)
+
+Release 0.20.2 - 2010-2-10
 
   NEW FEATURES
 
@@ -1356,9 +1361,6 @@ Release 0.20.2 - Unreleased
 
     HADOOP-6498. IPC client bug may cause rpc call hang. (Ruyue Ma and
     hairong via hairong)
-
-    HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
-    via tomwhite)
 
 Release 0.20.1 - 2009-09-01
 
