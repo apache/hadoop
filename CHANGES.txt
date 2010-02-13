@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab
     kerberos options. (ddas)
 
+    HADOOP-6534. Trim whitespace from directory lists initializing
+    LocalDirAllocator. (Todd Lipcon via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
