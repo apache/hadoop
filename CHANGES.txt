@@ -189,6 +189,8 @@ Trunk (unreleased changes)
     HADOOP-6505. Use tr rather than sed to effect literal substitution in the
     build script. (Allen Wittenauer via cdouglas)
 
+    HADOOP-6548. Replace mortbay imports with commons logging. (cdouglas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

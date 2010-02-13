@@ -27,12 +27,17 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.mortbay.log.Log;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A collection of file-processing util methods
  */
 public class FileUtil {
+
+  private static final Log LOG = LogFactory.getLog(FileUtil.class);
+
   /**
    * convert an array of FileStatus to an array of Path
    * 
@@ -752,8 +757,8 @@ public class FileUtil {
     try {
       shExec.execute();
     }catch(Exception e) {
-      if(Log.isDebugEnabled()) {
-        Log.debug("Error while changing permission : " + filename 
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Error while changing permission : " + filename 
             +" Exception: " + StringUtils.stringifyException(e));
       }
     }

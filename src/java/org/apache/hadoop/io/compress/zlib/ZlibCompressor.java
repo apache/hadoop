@@ -25,7 +25,9 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.mortbay.log.Log;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A {@link Compressor} based on the popular 
@@ -34,6 +36,9 @@ import org.mortbay.log.Log;
  * 
  */
 public class ZlibCompressor implements Compressor {
+
+  private static final Log LOG = LogFactory.getLog(ZlibCompressor.class);
+
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
 
   // HACK - Use this as a global lock in the JNI layer
@@ -248,7 +253,7 @@ public class ZlibCompressor implements Compressor {
     stream = init(level.compressionLevel(), 
                   strategy.compressionStrategy(), 
                   windowBits.windowBits());
-    Log.debug("Reinit compressor with new compression configuration");
+    LOG.debug("Reinit compressor with new compression configuration");
   }
 
   public synchronized void setInput(byte[] b, int off, int len) {
