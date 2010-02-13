@@ -141,6 +141,10 @@ public class HTable implements HTableInterface {
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
 
     int nrHRS = getCurrentNrHRS();
+    if (nrHRS == 0) {
+      // No servers running -- set default of 10 threads.
+      nrHRS = 10;
+    }
     int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
 
     // Unfortunately Executors.newCachedThreadPool does not allow us to

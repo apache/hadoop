@@ -202,6 +202,7 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2199  hbase.client.tableindexed.IndexSpecification, lines 72-73
                should be reversed (Adrian Popescu via Stack)
+   HBASE-2224  Broken build: TestGetRowVersions.testGetRowMultipleVersions
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
