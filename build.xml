@@ -138,7 +138,7 @@
     <copy todir="${build.lib}">
       <fileset dir="${lib.dir}" >
       	<include name="zookeeper*" />
-      	<include name="libthrift* "/>
+      	<include name="libthrift*"/>
       </fileset>	
     </copy>
     <mkdir dir="${build.conf}"/>
@@ -312,6 +312,9 @@
     <mkdir dir="${dist.dir}/lib"/>
     <copy todir="${dist.dir}/lib">
       <fileset dir="${build.lib}" />
+      <fileset dir="${common.ivy.lib.dir}" />
+      <fileset dir="${build.dir}/contrib/stargate/ivy/lib/common" />
+      <fileset dir="${build.dir}/contrib/transactional/ivy/lib/common" />
     </copy>
     <mkdir dir="${dist.dir}/conf" />
     <copy todir="${dist.dir}/conf">
