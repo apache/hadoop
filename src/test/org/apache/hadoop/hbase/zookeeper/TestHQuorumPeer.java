@@ -33,7 +33,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 /**
  * Test for HQuorumPeer.
  */
-public class HQuorumPeerTest extends HBaseTestCase {
+public class TestHQuorumPeer extends HBaseTestCase {
   private Path dataDir;
 
   @Override
@@ -63,7 +63,7 @@ public class HQuorumPeerTest extends HBaseTestCase {
   /** */
   public void testMakeZKProps() {
     Properties properties = HQuorumPeer.makeZKProps(conf);
-    assertEquals(2000, Integer.parseInt(properties.getProperty("tickTime")));
+    assertEquals(3000, Integer.parseInt(properties.getProperty("tickTime")));
     assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
     assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
     assertEquals(dataDir.toString(), properties.get("dataDir"));
@@ -74,7 +74,7 @@ public class HQuorumPeerTest extends HBaseTestCase {
     String oldValue = conf.get(HConstants.ZOOKEEPER_QUORUM);
     conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
     properties = HQuorumPeer.makeZKProps(conf);
-    assertEquals(2000, Integer.parseInt(properties.getProperty("tickTime")));
+    assertEquals(3000, Integer.parseInt(properties.getProperty("tickTime")));
     assertEquals(Integer.valueOf(10), Integer.valueOf(properties.getProperty("initLimit")));
     assertEquals(Integer.valueOf(5), Integer.valueOf(properties.getProperty("syncLimit")));
     assertEquals(dataDir.toString(), properties.get("dataDir"));
