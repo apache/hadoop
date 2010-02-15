@@ -140,6 +140,10 @@ Trunk (unreleased changes)
     HADOOP-6534. Trim whitespace from directory lists initializing
     LocalDirAllocator. (Todd Lipcon via cdouglas)
 
+    HADOOP-6559. Makes the RPC client automatically re-login when the SASL 
+    connection setup fails. This is applicable only to keytab based logins.
+    (Devaraj Das)
+
   OPTIMIZATIONS
 
   BUG FIXES
