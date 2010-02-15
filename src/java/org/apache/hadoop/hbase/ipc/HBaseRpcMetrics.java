@@ -54,7 +54,6 @@ public class HBaseRpcMetrics implements Updater {
 
     context.registerUpdater(this);
     
-    this.initMethods();
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }
   
@@ -71,16 +70,6 @@ public class HBaseRpcMetrics implements Updater {
 
   //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
 
-  /**
-   * Register metrics for all know RPC methods ahead of time.  This helps with
-   * JMX usage, where trying to retrieve the RPC-method metrics before they're
-   * incremented could otherwise cause spurious AttributeNotFoundExceptions.
-   */
-  private void initMethods() {
-    for (String name : HBaseRPC.getMappedMethodNames()) {
-      create(name);
-    }
-  }
 
   private MetricsTimeVaryingRate get(String key) {
     return (MetricsTimeVaryingRate) registry.get(key);

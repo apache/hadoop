@@ -85,59 +85,8 @@ public class HBaseRPC {
     super();
   }                                  // no public ctor
 
-  // Special code that means 'not-encoded'.
-  private static final byte NOT_ENCODED = 0;
-  private static byte code = NOT_ENCODED + 1;
-  
-  /** Add a new interface to the ipc map.
-   * @param c Class whose methods we'll add to the map of methods to codes
-   * (and vice versa).
-   * @param startCode Current state of the byte code.
-   * @return State of <code>code</code> when this method is done.
-   */
-  public static byte addToMap(final Class<?> c, final byte startCode) {
-    if (Invocation.CODE_TO_METHODNAME.get(startCode) != null) {
-      throw new IllegalArgumentException("Code " + startCode +
-        "already had entry");
-    }
-    byte localCode = startCode;
-    Method [] methods = c.getMethods();
-    // There are no guarantees about the order in which items are returned in
-    // so do a sort (Was seeing that sort was one way on one server and then
-    // another on different server).
-    Arrays.sort(methods, new Comparator<Method>() {
-      public int compare(Method left, Method right) {
-        return left.getName().compareTo(right.getName());
-      }
-    });
-    for (int i = 0; i < methods.length; i++) {
-      Invocation.addToMap(methods[i].getName(), localCode++);
-    }
-    return localCode;
-  }
-  
-  static Collection<String> getMappedMethodNames() {
-    return Invocation.CODE_TO_METHODNAME.values();
-  }
-
-  static {
-    code = HBaseRPC.addToMap(VersionedProtocol.class, code);
-    code = HBaseRPC.addToMap(HMasterInterface.class, code);
-    code = HBaseRPC.addToMap(HMasterRegionInterface.class, code);
-    code = HBaseRPC.addToMap(HRegionInterface.class, code);
-  }
-
   /** A method invocation, including the method name and its parameters.*/
   private static class Invocation implements Writable, Configurable {
-    // Here, for hbase, we maintain two static maps of method names to code and
-    // vice versa.
-    static final Map<Byte, String> CODE_TO_METHODNAME =
-      new HashMap<Byte, String>();
-    private static final Map<String, Byte> METHODNAME_TO_CODE =
-      new HashMap<String, Byte>();
-    
-    // End of hbase modifications.
-
     private String methodName;
     @SuppressWarnings("unchecked")
     private Class[] parameterClasses;
@@ -170,8 +119,7 @@ public class HBaseRPC {
     public Object[] getParameters() { return parameters; }
 
     public void readFields(DataInput in) throws IOException {
-      byte code = in.readByte();
-      methodName = CODE_TO_METHODNAME.get(Byte.valueOf(code));
+      methodName = in.readUTF();
       parameters = new Object[in.readInt()];
       parameterClasses = new Class[parameters.length];
       HbaseObjectWritable objectWritable = new HbaseObjectWritable();
@@ -183,7 +131,7 @@ public class HBaseRPC {
     }
 
     public void write(DataOutput out) throws IOException {
-      writeMethodNameCode(out, this.methodName);
+      out.writeUTF(this.methodName);
       out.writeInt(parameterClasses.length);
       for (int i = 0; i < parameterClasses.length; i++) {
         HbaseObjectWritable.writeObject(out, parameters[i], parameterClasses[i],
@@ -212,34 +160,6 @@ public class HBaseRPC {
     public Configuration getConf() {
       return this.conf;
     }
-    
-    // Hbase additions.
-    static void addToMap(final String name, final byte code) {
-      if (METHODNAME_TO_CODE.containsKey(name)) {
-        return;
-      }
-      METHODNAME_TO_CODE.put(name, Byte.valueOf(code));
-      CODE_TO_METHODNAME.put(Byte.valueOf(code), name);
-    }
-    
-
-    /*
-     * Write out the code byte for passed Class.
-     * @param out
-     * @param c
-     * @throws IOException
-     */
-    static void writeMethodNameCode(final DataOutput out, final String methodname)
-    throws IOException {
-      Byte code = METHODNAME_TO_CODE.get(methodname);
-      if (code == null) {
-        LOG.error("Unsupported type " + methodname);
-        throw new UnsupportedOperationException("No code for unexpected " +
-          methodname);
-      }
-      out.writeByte(code.byteValue());
-    }
-    // End of hbase additions.
   }
 
   /* Cache a client using its socket factory as the hash key */

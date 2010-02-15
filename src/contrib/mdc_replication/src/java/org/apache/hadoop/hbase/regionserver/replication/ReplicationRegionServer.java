@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.ReplicationRPC;
 import org.apache.hadoop.hbase.ipc.ReplicationRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -42,10 +41,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ReplicationRegionServer extends HRegionServer
     implements ReplicationRegionInterface {
-
-  static {
-    ReplicationRPC.initialize();
-  }
 
   protected static final Log LOG =
       LogFactory.getLog(ReplicationRegionServer.class);

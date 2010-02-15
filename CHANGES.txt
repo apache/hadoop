@@ -10,6 +10,7 @@ Release 0.21.0 - Unreleased
    HBASE-1360  move up to Thrift 0.2.0 (Kay Kay and Lars Francke via Stack)
    HBASE-2212  Refactor out lucene dependencies from HBase
                (Kay Kay via Stack)
+   HBASE-2219  stop using code mapping for method names in the RPC
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
