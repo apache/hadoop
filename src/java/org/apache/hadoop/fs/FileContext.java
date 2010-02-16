@@ -40,7 +40,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.CreateOpts;
-import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
@@ -142,7 +141,8 @@ import org.apache.hadoop.io.IOUtils;
  *  Generally you should not need use a config unless you are doing
  *   <ul> 
  *   <li> configX = someConfigSomeOnePassedToYou.
- *   <li> myFContext = getFileContext(configX); //configX not changed but passeddown
+ *   <li> myFContext = getFileContext(configX); // configX is not changed,
+ *                                              // is passed down 
  *   <li> myFContext.create(path, ...);
  *   <li>...
  *  </ul>                                          
@@ -213,15 +213,15 @@ public final class FileContext {
    * 
    * Applications that use FileContext should use #makeQualified() since
    * they really want a fully qualified URI.
-   * Hence this method os not called makeAbsolute() and 
+   * Hence this method is not called makeAbsolute() and 
    * has been deliberately declared private.
    */
 
-  private Path fixRelativePart(Path f) {
-    if (f.isUriPathAbsolute()) {
-      return f;
+  private Path fixRelativePart(Path p) {
+    if (p.isUriPathAbsolute()) {
+      return p;
     } else {
-      return new Path(workingDir, f);
+      return new Path(workingDir, p);
     }
   }
 
@@ -429,12 +429,14 @@ public final class FileContext {
    */
   public void setWorkingDirectory(final Path newWDir) throws IOException {
     checkNotSchemeWithRelative(newWDir);
-    // wd is stored as fully qualified path. 
-
-    final Path newWorkingDir =  new Path(workingDir, newWDir);
+    /* wd is stored as a fully qualified path. We check if the given 
+     * path is not relative first since resolve requires and returns 
+     * an absolute path.
+     */  
+    final Path newWorkingDir = resolve(new Path(workingDir, newWDir));
     FileStatus status = getFileStatus(newWorkingDir);
     if (!status.isDir()) {
-      throw new FileNotFoundException(" Cannot setWD to a file");
+      throw new FileNotFoundException("Cannot setWD to a file");
     }
     workingDir = newWorkingDir;
   }
@@ -510,7 +512,6 @@ public final class FileContext {
                                    Options.CreateOpts... opts)
     throws IOException {
     Path absF = fixRelativePart(f);
-    AbstractFileSystem fsOfAbsF = getFSofPath(absF);
 
     // If one of the options is a permission, extract it & apply umask
     // If not, add a default Perms and apply umask;
@@ -522,9 +523,14 @@ public final class FileContext {
                                       FsPermission.getDefault();
     permission = permission.applyUMask(umask);
 
-    CreateOpts[] updatedOpts = 
+    final CreateOpts[] updatedOpts = 
                       CreateOpts.setOpt(CreateOpts.perms(permission), opts);
-    return fsOfAbsF.create(absF, createFlag, updatedOpts);
+    return new FSLinkResolver<FSDataOutputStream>() {
+      public FSDataOutputStream next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.create(p, createFlag, updatedOpts);
+      }
+    }.resolve(this, absF);
   }
   
   /**
@@ -541,10 +547,16 @@ public final class FileContext {
   public void mkdir(final Path dir, final FsPermission permission,
       final boolean createParent)
     throws IOException {
-    Path absDir = fixRelativePart(dir);
-    FsPermission absFerms = (permission == null ? 
+    final Path absDir = fixRelativePart(dir);
+    final FsPermission absFerms = (permission == null ? 
           FsPermission.getDefault() : permission).applyUMask(umask);
-    getFSofPath(absDir).mkdir(absDir, absFerms, createParent);
+    new FSLinkResolver<Void>() {
+      public Void next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        fs.mkdir(p, absFerms, createParent);
+        return null;
+      }
+    }.resolve(this, absDir);
   }
 
   /**
@@ -559,7 +571,12 @@ public final class FileContext {
   public boolean delete(final Path f, final boolean recursive) 
     throws IOException {
     Path absF = fixRelativePart(f);
-    return getFSofPath(absF).delete(absF, recursive);
+    return new FSLinkResolver<Boolean>() {
+      public Boolean next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return Boolean.valueOf(fs.delete(p, recursive));
+      }
+    }.resolve(this, absF);
   }
  
   /**
@@ -569,7 +586,12 @@ public final class FileContext {
    */
   public FSDataInputStream open(final Path f) throws IOException {
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).open(absF);
+    return new FSLinkResolver<FSDataInputStream>() {
+      public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.open(p);
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -577,10 +599,15 @@ public final class FileContext {
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
    */
-  public FSDataInputStream open(final Path f, int bufferSize)
+  public FSDataInputStream open(final Path f, final int bufferSize)
     throws IOException {
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).open(absF, bufferSize);
+    return new FSLinkResolver<FSDataInputStream>() {
+      public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.open(p, bufferSize);
+      }
+    }.resolve(this, absF);
   }
 
  /**
@@ -595,7 +622,12 @@ public final class FileContext {
   public boolean setReplication(final Path f, final short replication)
     throws IOException {
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).setReplication(absF, replication);
+    return new FSLinkResolver<Boolean>() {
+      public Boolean next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return Boolean.valueOf(fs.setReplication(p, replication));
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -633,7 +665,22 @@ public final class FileContext {
     if(!srcFS.getUri().equals(dstFS.getUri())) {
       throw new IOException("Renames across AbstractFileSystems not supported");
     }
-    srcFS.rename(absSrc, absDst, options);
+    try {
+      srcFS.rename(absSrc, absDst, options);
+    } catch (UnresolvedLinkException e) {
+      /* We do not know whether the source or the destination path
+       * was unresolved. Resolve the source path completely, then
+       * resolve the destination. 
+       */
+      final Path source = resolve(absSrc);    
+      new FSLinkResolver<Void>() {
+        public Void next(final AbstractFileSystem fs, final Path p) 
+          throws IOException, UnresolvedLinkException {
+          fs.rename(source, p, options);
+          return null;
+        }
+      }.resolve(this, absDst);
+    }
   }
   
   /**
@@ -644,7 +691,13 @@ public final class FileContext {
   public void setPermission(final Path f, final FsPermission permission)
     throws IOException {
     final Path absF = fixRelativePart(f);
-    getFSofPath(absF).setPermission(absF, permission);
+    new FSLinkResolver<Void>() {
+      public Void next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        fs.setPermission(p, permission);
+        return null;
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -655,13 +708,19 @@ public final class FileContext {
    * @param groupname If it is null, the original groupname remains unchanged.
    */
   public void setOwner(final Path f, final String username,
-                        final String groupname) throws IOException {
+                       final String groupname) throws IOException {
     if ((username == null) && (groupname == null)) {
       throw new IllegalArgumentException(
-          "usernme and groupname cannot both be null");
+          "username and groupname cannot both be null");
     }
     final Path absF = fixRelativePart(f);
-    getFSofPath(absF).setOwner(absF, username, groupname);
+    new FSLinkResolver<Void>() {
+      public Void next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        fs.setOwner(p, username, groupname);
+        return null;
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -677,7 +736,13 @@ public final class FileContext {
   public void setTimes(final Path f, final long mtime, final long atime)
     throws IOException {
     final Path absF = fixRelativePart(f);
-    getFSofPath(absF).setTimes(absF, mtime, atime);
+    new FSLinkResolver<Void>() {
+      public Void next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        fs.setTimes(p, mtime, atime);
+        return null;
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -690,7 +755,12 @@ public final class FileContext {
    */
   public FileChecksum getFileChecksum(final Path f) throws IOException {
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).getFileChecksum(absF);
+    return new FSLinkResolver<FileChecksum>() {
+      public FileChecksum next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.getFileChecksum(p);
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -704,10 +774,8 @@ public final class FileContext {
 
   public void setVerifyChecksum(final boolean verifyChecksum, final Path f)
     throws IOException {
-    final Path absF = fixRelativePart(f);
+    final Path absF = resolve(fixRelativePart(f));
     getFSofPath(absF).setVerifyChecksum(verifyChecksum);
-    
-    //TBD need to be changed when we add symlinks.
   }
 
   /**
@@ -719,7 +787,84 @@ public final class FileContext {
    */
   public FileStatus getFileStatus(final Path f) throws IOException {
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).getFileStatus(absF);
+    return new FSLinkResolver<FileStatus>() {
+      public FileStatus next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.getFileStatus(p);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Return a fully qualified version of the given symlink target if it
+   * has no scheme and authority. Partially and fully qualified paths 
+   * are returned unmodified.
+   * @param linkFS The AbstractFileSystem of link 
+   * @param link   The path of the symlink
+   * @param target The symlink's target
+   * @return Fully qualified version of the target.
+   */
+  private Path qualifySymlinkTarget(final AbstractFileSystem linkFS, 
+      Path link, Path target) {
+    /* NB: makeQualified uses link's scheme/authority, if specified, 
+     * and the scheme/authority of linkFS, if not. If link does have
+     * a scheme and authority they should match those of linkFS since
+     * resolve updates the path and file system of a path that contains
+     * links each time a link is encountered.
+     */
+    final String linkScheme = link.toUri().getScheme();
+    final String linkAuth   = link.toUri().getAuthority();
+    if (linkScheme != null && linkAuth != null) {
+      assert linkScheme.equals(linkFS.getUri().getScheme());
+      assert linkAuth.equals(linkFS.getUri().getAuthority());
+    }
+    final boolean justPath = (target.toUri().getScheme() == null &&
+                              target.toUri().getAuthority() == null);
+    return justPath ? target.makeQualified(linkFS.getUri(), link.getParent()) 
+                    : target;
+  }
+  
+  /**
+   * Return a file status object that represents the path. If the path 
+   * refers to a symlink then the FileStatus of the symlink is returned.
+   * The behavior is equivalent to #getFileStatus() if the underlying
+   * file system does not support symbolic links.
+   * @param  f The path we want information from.
+   * @return A FileStatus object
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation.
+   */
+  public FileStatus getFileLinkStatus(final Path f) throws IOException {
+    final Path absF = fixRelativePart(f);
+    return new FSLinkResolver<FileStatus>() {
+      public FileStatus next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        FileStatus fi = fs.getFileLinkStatus(p);
+        if (fi.isSymlink()) {
+          fi.setSymlink(qualifySymlinkTarget(fs, p, fi.getSymlink()));
+        }
+        return fi;
+      }
+    }.resolve(this, absF);
+  }
+  
+  /**
+   * Returns the un-interpreted target of the given symbolic link.
+   * Transparently resolves all links up to the final path component.
+   * @param f
+   * @return The un-interpreted target of the symbolic link.
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException if the last path component of f is not a symlink.
+   */
+  public Path getLinkTarget(final Path f) throws IOException {
+    final Path absF = fixRelativePart(f);
+    return new FSLinkResolver<Path>() {
+      public Path next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        FileStatus fi = fs.getFileLinkStatus(p);
+        return fi.getSymlink();
+      }
+    }.resolve(this, absF);
   }
   
   /**
@@ -740,12 +885,18 @@ public final class FileContext {
   @InterfaceStability.Evolving
   public BlockLocation[] getFileBlockLocations(final Path p, 
     final long start, final long len) throws IOException {
-    return getFSofPath(p).getFileBlockLocations(p, start, len);
+    final Path absF = fixRelativePart(p);
+    return new FSLinkResolver<BlockLocation[]>() {
+      public BlockLocation[] next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.getFileBlockLocations(p, start, len);
+      }
+    }.resolve(this, absF);
   }
   
   /**
    * Returns a status object describing the use and capacity of the
-   * filesystem denoted by the Parh argument p.
+   * filesystem denoted by the Path argument p.
    * If the filesystem has multiple partitions, the
    * use and capacity of the partition pointed to by the specified
    * path is reflected.
@@ -758,12 +909,99 @@ public final class FileContext {
    */
   public FsStatus getFsStatus(final Path f) throws IOException {
     if (f == null) {
-      return defaultFS.getFsStatus(null);
+      return defaultFS.getFsStatus();
     }
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).getFsStatus(absF);
+    return new FSLinkResolver<FsStatus>() {
+      public FsStatus next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.getFsStatus(p);
+      }
+    }.resolve(this, absF);
   }
-  
+
+  /**
+   * Creates a symbolic link to an existing file. An exception is thrown if 
+   * the symlink exits, the user does not have permission to create symlink,
+   * or the underlying file system does not support symlinks.
+   * 
+   * Symlink permissions are ignored, access to a symlink is determined by
+   * the permissions of the symlink target.
+   * 
+   * Symlinks in paths leading up to the final path component are resolved 
+   * transparently. If the final path component refers to a symlink some 
+   * functions operate on the symlink itself, these are:
+   * - delete(f) and deleteOnExit(f) - Deletes the symlink.
+   * - rename(src, dst) - If src refers to a symlink, the symlink is 
+   *   renamed. If dst refers to a symlink, the symlink is over-written.
+   * - getLinkTarget(f) - Returns the target of the symlink. 
+   * - getFileLinkStatus(f) - Returns a FileStatus object describing
+   *   the symlink.
+   * Some functions, create() and mkdir(), expect the final path component
+   * does not exist. If they are given a path that refers to a symlink that 
+   * does exist they behave as if the path referred to an existing file or 
+   * directory. All other functions fully resolve, ie follow, the symlink. 
+   * These are: open, setReplication, setOwner, setTimes, setWorkingDirectory,
+   * setPermission, getFileChecksum, setVerifyChecksum, getFileBlockLocations,
+   * getFsStatus, getFileStatus, isDirectory, isFile, exists, and listStatus.
+   * 
+   * Symlink targets are stored as given to createSymlink, assuming the 
+   * underlying file system is capable of storign a fully qualified URI. 
+   * Dangling symlinks are permitted. FileContext supports four types of 
+   * symlink targets, and resolves them as follows
+   * <pre>
+   * Given a path referring to a symlink of form:
+   * 
+   *   <---X---> 
+   *   fs://host/A/B/link 
+   *   <-----Y----->
+   * 
+   * In this path X is the scheme and authority that identify the file system,
+   * and Y is the path leading up to the final path component "link". If Y is
+   * a symlink  itself then let Y' be the target of Y and X' be the scheme and
+   * authority of Y'. Symlink targets may:
+   * 
+   * 1. Fully qualified URIs
+   * 
+   * fs://hostX/A/B/file  Resolved according to the target file system.
+   * 
+   * 2. Partially qualified URIs (eg scheme but no host)
+   * 
+   * fs:///A/B/file  Resolved according to the target file sytem. Eg resolving
+   *                 a symlink to hdfs:///A results in an exception because
+   *                 HDFS URIs must be fully qualified, while a symlink to 
+   *                 file:///A will not since Hadoop's local file systems 
+   *                 require partially qualified URIs.
+   * 
+   * 3. Relative paths
+   * 
+   * path  Resolves to [Y'][path]. Eg if Y resolves to hdfs://host/A and path 
+   *       is "../B/file" then [Y'][path] is hdfs://host/B/file
+   * 
+   * 4. Absolute paths
+   * 
+   * path  Resolves to [X'][path]. Eg if Y resolves hdfs://host/A/B and path
+   *       is "/file" then [X][path] is hdfs://host/file
+   * </pre>
+   * 
+   * @param target the target of the symbolic link
+   * @param link the path to be created that points to target
+   * @param createParent if true then missing parent dirs are created if 
+   *                     false then parent must exist
+   * @throws IOException
+   */
+  public void createSymlink(final Path target, final Path link, 
+    final boolean createParent) throws IOException { 
+    final Path nonRelLink = fixRelativePart(link);
+    new FSLinkResolver<Void>() {
+      public Void next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        fs.createSymlink(target, p, createParent);
+        return null;
+      }
+    }.resolve(this, nonRelLink);
+  }
+
   /**
    * Does the file exist?
    * Note: Avoid using this method if you already have FileStatus in hand.
@@ -821,7 +1059,12 @@ public final class FileContext {
    */
   public FileStatus[] listStatus(final Path f) throws IOException {
     final Path absF = fixRelativePart(f);
-    return getFSofPath(absF).listStatus(absF);
+    return new FSLinkResolver<FileStatus[]>() {
+      public FileStatus[] next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.listStatus(p);
+      }
+    }.resolve(this, absF);
   }
 
   /**
@@ -920,8 +1163,7 @@ public final class FileContext {
      *         applying the filter default Path filter
      * @exception IOException
      */
-    public FileStatus[] listStatus(Path[] files)
-      throws IOException {
+    public FileStatus[] listStatus(Path[] files) throws IOException {
       return listStatus(files, DEFAULT_FILTER);
     }
      
@@ -1264,9 +1506,6 @@ public final class FileContext {
     /** Default pattern character: Character set close. */
     private static final char  PAT_SET_CLOSE = ']';
       
-    GlobFilter() {
-    }
-      
     GlobFilter(final String filePattern) throws IOException {
       setRegex(filePattern);
     }
@@ -1439,6 +1678,75 @@ public final class FileContext {
   static class FileContextFinalizer extends Thread {
     public synchronized void run() {
       processDeleteOnExit();
+    }
+  }
+
+  /**
+   * Resolves all symbolic links in the specified path.
+   * Returns the new path object.
+   */
+  protected Path resolve(final Path f) throws IOException {
+    return new FSLinkResolver<FileStatus>() {
+      public FileStatus next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.getFileStatus(p);
+      }
+    }.resolve(this, f).getPath();
+  }
+
+  /**
+   * Class used to perform an operation on and resolve symlinks in a
+   * path. The operation may potentially span multiple file systems.  
+   */
+  protected abstract class FSLinkResolver<T> {
+    // The maximum number of symbolic link components in a path
+    private static final int MAX_PATH_LINKS = 32;
+
+    /**
+     * Generic helper function overridden on instantiation to perform a 
+     * specific operation on the given file system using the given path
+     * which may result in an UnresolvedLinkException. 
+     * @param fs AbstractFileSystem to perform the operation on.
+     * @param p Path given the file system.
+     * @return Generic type determined by the specific implementation.
+     * @throws IOException on error.
+     * @throws UnresolvedLinkException when a symlink is encountered.
+     */
+    public abstract T next(final AbstractFileSystem fs, final Path p) 
+      throws IOException, UnresolvedLinkException;  
+        
+    /**
+     * Performs the operation specified by the next function, calling it
+     * repeatedly until all symlinks in the given path are resolved.
+     * @param fc FileContext used to access file systems.
+     * @param p The path to resolve symlinks in.
+     * @return Generic type determined by the implementation of next.
+     * @throws IOException
+     */
+    public T resolve(final FileContext fc, Path p) throws IOException {
+      int count = 0;
+      T in = null;
+      Path first = p;
+      // NB: More than one AbstractFileSystem can match a scheme, eg 
+      // "file" resolves to LocalFs but could have come by RawLocalFs.
+      AbstractFileSystem fs = fc.getFSofPath(p);      
+      
+      // Loop until all symlinks are resolved or the limit is reached
+      for (boolean isLink = true; isLink;) {
+        try {
+          in = next(fs, p);
+          isLink = false;
+        } catch (UnresolvedLinkException e) {
+          if (count++ > MAX_PATH_LINKS) {
+            throw new IOException("Possible cyclic loop while " +
+                                  "following symbolic link " + first);
+          }
+          // Resolve the first unresolved path component
+          p = qualifySymlinkTarget(fs, p, fs.getLinkTarget(p));
+          fs = fc.getFSofPath(p);
+        }
+      }
+      return in;
     }
   }
 }

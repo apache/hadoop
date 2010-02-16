@@ -61,6 +61,10 @@ public class TestPath extends TestCase {
 
   public void testNormalize() {
     assertEquals("/", new Path("//").toString());
+    assertEquals("/", new Path("///").toString());
+    assertEquals("//foo/", new Path("//foo/").toString());
+    assertEquals("//foo/", new Path("//foo//").toString());
+    assertEquals("//foo/bar", new Path("//foo//bar").toString());
     assertEquals("/foo", new Path("/foo/").toString());
     assertEquals("/foo", new Path("/foo/").toString());
     assertEquals("foo", new Path("foo/").toString());
@@ -176,6 +180,19 @@ public class TestPath extends TestCase {
     // if the child uri is absolute path
     assertEquals("foo://bar/fud#boo", new Path(new Path(new URI(
         "foo://bar/baz#bud")), new Path(new URI("/fud#boo"))).toString());
+  }
+  
+  public void testMakeQualified() throws URISyntaxException {
+    URI defaultUri = new URI("hdfs://host1/dir1");
+    URI wd         = new URI("hdfs://host2/dir2");
+
+    // The scheme from defaultUri is used but the path part is not
+    assertEquals(new Path("hdfs://host1/dir/file"),
+        new Path("file").makeQualified(defaultUri, new Path("/dir")));
+
+    // The defaultUri is only used if the path + wd has no scheme    
+    assertEquals(new Path("hdfs://host2/dir2/file"),
+                 new Path("file").makeQualified(defaultUri, new Path(wd)));
  }
 
 }

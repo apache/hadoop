@@ -191,7 +191,7 @@ public class Path implements Comparable {
     return uri.getPath().startsWith(SEPARATOR, start);
    }
   
-  /** True if the directory of this path is absolute. */
+  /** True if the path component of this URI is absolute. */
   /**
    * There is some ambiguity here. An absolute path is a slash
    * relative name without a scheme or an authority.

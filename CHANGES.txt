@@ -54,6 +54,10 @@ Trunk (unreleased changes)
     HADOOP-6510. Adds a way for superusers to impersonate other users
     in a secure environment. (Jitendra Nath Pandey via ddas)
 
+    HADOOP-6421 Adds Symbolic links to FileContext, AbstractFileSystem.
+    It also adds a limited implementation for the local file system
+     (RawLocalFs) that allows local symlinks. (Eli Collins via Sanjay Radia)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by

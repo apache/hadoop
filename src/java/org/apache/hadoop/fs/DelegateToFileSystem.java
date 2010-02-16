@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
@@ -107,6 +108,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
+  protected FileStatus getFileLinkStatus(final Path f) throws IOException {
+    return getFileStatus(f);
+  }
+
+  @Override
   protected FsStatus getFsStatus() throws IOException {
     return fsImpl.getStatus();
   }
@@ -148,7 +154,6 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
     checkPath(src);
     checkPath(dst);
     fsImpl.rename(src, dst, Options.Rename.NONE);
-    
   }
 
   @Override
@@ -156,7 +161,6 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       throws IOException {
     checkPath(f);
     fsImpl.setOwner(f, username, groupname);
-    
   }
 
   @Override
@@ -177,11 +181,30 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   protected void setTimes(Path f, long mtime, long atime) throws IOException {
     checkPath(f);
     fsImpl.setTimes(f, mtime, atime);
-    
   }
 
   @Override
   protected void setVerifyChecksum(boolean verifyChecksum) throws IOException {
     fsImpl.setVerifyChecksum(verifyChecksum);
+  }
+
+  @Override
+  protected boolean supportsSymlinks() {
+    return false;
+  }  
+  
+  @Override
+  protected void createSymlink(Path target, Path link, boolean createParent) 
+      throws IOException { 
+    throw new IOException("File system does not support symlinks");
+  } 
+  
+  @Override
+  protected Path getLinkTarget(final Path f) throws IOException {
+    /* We should never get here. Any file system that threw an 
+     * UnresolvedLinkException, causing this function to be called,
+     * should override getLinkTarget. 
+     */
+    throw new AssertionError();
   }
 }

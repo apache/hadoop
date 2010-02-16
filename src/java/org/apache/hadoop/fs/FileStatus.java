@@ -39,6 +39,7 @@ public class FileStatus implements Writable, Comparable {
   private FsPermission permission;
   private String owner;
   private String group;
+  private Path symlink;
   
   public FileStatus() { this(0, false, 0, 0, 0, 0, null, null, null, null); }
   
@@ -49,10 +50,24 @@ public class FileStatus implements Writable, Comparable {
     this(length, isdir, block_replication, blocksize, modification_time,
          0, null, null, null, path);
   }
-  
-  public FileStatus(long length, boolean isdir, int block_replication,
+
+  /**
+   * Constructor for file systems on which symbolic links are not supported
+   */
+  public FileStatus(long length, boolean isdir,
+                    int block_replication,
                     long blocksize, long modification_time, long access_time,
                     FsPermission permission, String owner, String group, 
+                    Path path) {
+    this(length, isdir, block_replication, blocksize, modification_time,
+         access_time, permission, owner, group, null, path);
+  }
+
+  public FileStatus(long length, boolean isdir,
+                    int block_replication,
+                    long blocksize, long modification_time, long access_time,
+                    FsPermission permission, String owner, String group, 
+                    Path symlink,
                     Path path) {
     this.length = length;
     this.isdir = isdir;
@@ -64,6 +79,7 @@ public class FileStatus implements Writable, Comparable {
                       FsPermission.getDefault() : permission;
     this.owner = (owner == null) ? "" : owner;
     this.group = (group == null) ? "" : group;
+    this.symlink = symlink;
     this.path = path;
   }
 
@@ -182,6 +198,28 @@ public class FileStatus implements Writable, Comparable {
     this.group = (group == null) ? "" :  group;
   }
 
+  /**
+   * Is this a symbolic link?
+   * @return true if this is a symbolic link
+   */
+  public boolean isSymlink() {
+    return symlink != null;
+  }
+
+  /**
+   * @return The contents of the symbolic link.
+   */
+  public Path getSymlink() throws IOException {
+    if (!isSymlink()) {
+      throw new IOException("Path " + path + " is not a symbolic link");
+    }
+    return symlink;
+  }
+
+  public void setSymlink(final Path p) {
+    symlink = p;
+  }
+  
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
@@ -196,6 +234,10 @@ public class FileStatus implements Writable, Comparable {
     permission.write(out);
     Text.writeString(out, owner);
     Text.writeString(out, group);
+    out.writeBoolean(isSymlink());
+    if (isSymlink()) {
+      Text.writeString(out, symlink.toString());
+    }
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -210,6 +252,11 @@ public class FileStatus implements Writable, Comparable {
     permission.readFields(in);
     owner = Text.readString(in);
     group = Text.readString(in);
+    if (in.readBoolean()) {
+      this.symlink = new Path(Text.readString(in));
+    } else {
+      this.symlink = null;
+    }
   }
 
   /**

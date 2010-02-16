@@ -57,6 +57,10 @@ abstract public class Shell {
   /** a Unix command to set owner */
   public static final String SET_OWNER_COMMAND = "chown";
   public static final String SET_GROUP_COMMAND = "chgrp";
+  /** a Unix command to create a link */
+  public static final String LINK_COMMAND = "ln";
+  /** a Unix command to get a link target */
+  public static final String READ_LINK_COMMAND = "readlink";
   /** Return a Unix command to get permission information. */
   public static String[] getGET_PERMISSION_COMMAND() {
     //force /bin/ls, except on windows.

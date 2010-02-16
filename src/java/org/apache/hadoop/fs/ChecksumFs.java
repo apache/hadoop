@@ -115,12 +115,12 @@ public abstract class ChecksumFs extends FilterFs {
     private long fileLen = -1L;
     
     public ChecksumFSInputChecker(ChecksumFs fs, Path file)
-      throws IOException {
+      throws IOException, UnresolvedLinkException {
       this(fs, file, fs.getServerDefaults().getFileBufferSize());
     }
     
     public ChecksumFSInputChecker(ChecksumFs fs, Path file, int bufferSize)
-      throws IOException {
+      throws IOException, UnresolvedLinkException {
       super(file, fs.getFileStatus(file).getReplication());
       this.datas = fs.getRawFs().open(file, bufferSize);
       this.fs = fs;
@@ -160,7 +160,7 @@ public abstract class ChecksumFs extends FilterFs {
     }
     
     public int read(long position, byte[] b, int off, int len)
-      throws IOException {
+      throws IOException, UnresolvedLinkException {
       // parameter check
       if ((off | len | (off + len) | (b.length - (off + len))) < 0) {
         throw new IndexOutOfBoundsException();
@@ -236,7 +236,7 @@ public abstract class ChecksumFs extends FilterFs {
     }
     
     /* Return the file length */
-    private long getFileLength() throws IOException {
+    private long getFileLength() throws IOException, UnresolvedLinkException {
       if (fileLen==-1L) {
         fileLen = fs.getFileStatus(file).getLen();
       }
@@ -257,7 +257,7 @@ public abstract class ChecksumFs extends FilterFs {
      * @exception  IOException  if an I/O error occurs.
      *             ChecksumException if the chunk to skip to is corrupted
      */
-    public synchronized long skip(long n) throws IOException {
+    public synchronized long skip(long n) throws IOException { 
       final long curPos = getPos();
       final long fileLength = getFileLength();
       if (n+curPos > fileLength) {
@@ -278,7 +278,7 @@ public abstract class ChecksumFs extends FilterFs {
      *             ChecksumException if the chunk to seek to is corrupted
      */
 
-    public synchronized void seek(long pos) throws IOException {
+    public synchronized void seek(long pos) throws IOException { 
       if (pos>getFileLength()) {
         throw new IOException("Cannot seek after EOF");
       }
@@ -293,7 +293,8 @@ public abstract class ChecksumFs extends FilterFs {
    * @param bufferSize the size of the buffer to be used.
    */
   @Override
-  public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  public FSDataInputStream open(Path f, int bufferSize) 
+    throws IOException, UnresolvedLinkException {
     return new FSDataInputStream(
         new ChecksumFSInputChecker(this, f, bufferSize));
   }
@@ -371,7 +372,8 @@ public abstract class ChecksumFs extends FilterFs {
   /** Check if exists.
    * @param f source file
    */
-  private boolean exists(Path f) throws IOException {
+  private boolean exists(Path f) 
+    throws IOException, UnresolvedLinkException {
     try {
       return getMyFs().getFileStatus(f) != null;
     } catch (FileNotFoundException e) {
@@ -383,7 +385,8 @@ public abstract class ChecksumFs extends FilterFs {
    * Note: Avoid using this method. Instead reuse the FileStatus 
    * returned by getFileStatus() or listStatus() methods.
    */
-  private boolean isDirectory(Path f) throws IOException {
+  private boolean isDirectory(Path f) 
+    throws IOException, UnresolvedLinkException {
     try {
       return getMyFs().getFileStatus(f).isDir();
     } catch (FileNotFoundException e) {
@@ -401,7 +404,7 @@ public abstract class ChecksumFs extends FilterFs {
    */
   @Override
   public boolean setReplication(Path src, short replication)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     boolean value = getMyFs().setReplication(src, replication);
     if (!value) {
       return false;
@@ -417,7 +420,8 @@ public abstract class ChecksumFs extends FilterFs {
    * Rename files/dirs.
    */
   @Override
-  public void renameInternal(Path src, Path dst) throws IOException {
+  public void renameInternal(Path src, Path dst) 
+    throws IOException, UnresolvedLinkException {
     if (isDirectory(src)) {
       getMyFs().rename(src, dst);
     } else {
@@ -438,7 +442,8 @@ public abstract class ChecksumFs extends FilterFs {
    * Implement the delete(Path, boolean) in checksum
    * file system.
    */
-  public boolean delete(Path f, boolean recursive) throws IOException{
+  public boolean delete(Path f, boolean recursive) 
+    throws IOException, UnresolvedLinkException {
     FileStatus fstatus = null;
     try {
       fstatus = getMyFs().getFileStatus(f);

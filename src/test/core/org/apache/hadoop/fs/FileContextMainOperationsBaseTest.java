@@ -967,6 +967,31 @@ public abstract class FileContextMainOperationsBaseTest  {
     out.close();
   }
 
+  @Test
+  /** Test FileContext APIs when symlinks are not supported */
+  public void testUnsupportedSymlink() throws IOException {
+    Path file = getTestRootPath(fc, "file");
+    Path link = getTestRootPath(fc, "linkToFile");
+    if (!fc.getDefaultFileSystem().supportsSymlinks()) {
+      try {
+        fc.createSymlink(file, link, false);
+        Assert.fail("Created a symlink on a file system that "+
+                    "does not support symlinks.");
+      } catch (IOException e) {
+        // Expected
+      }
+      createFile(file);
+      try {
+        fc.getLinkTarget(file);
+        Assert.fail("Got a link target on a file system that "+
+                    "does not support symlinks.");
+      } catch (IOException e) {
+        // Expected
+      }
+      Assert.assertEquals(fc.getFileStatus(file), fc.getFileLinkStatus(file));
+    }
+  }
+  
   protected void createFile(Path path) throws IOException {
     FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
         Options.CreateOpts.createParent());

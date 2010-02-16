@@ -60,37 +60,48 @@ public abstract class FilterFs extends AbstractFileSystem {
   protected FSDataOutputStream createInternal(Path f,
     EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
     short replication, long blockSize, Progressable progress,
-    int bytesPerChecksum, boolean createParent) throws IOException {
+    int bytesPerChecksum, boolean createParent) 
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.createInternal(f, flag, absolutePermission, bufferSize,
         replication, blockSize, progress, bytesPerChecksum, createParent);
   }
 
   @Override
-  protected boolean delete(Path f, boolean recursive) throws IOException {
+  protected boolean delete(Path f, boolean recursive) 
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.delete(f, recursive);
   }
 
   @Override
   protected BlockLocation[] getFileBlockLocations(Path f, long start, long len)
-    throws IOException {
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileBlockLocations(f, start, len);
   }
 
   @Override
-  protected FileChecksum getFileChecksum(Path f) throws IOException {
+  protected FileChecksum getFileChecksum(Path f) 
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileChecksum(f);
   }
 
   @Override
-  protected FileStatus getFileStatus(Path f) throws IOException {
+  protected FileStatus getFileStatus(Path f) 
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileStatus(f);
   }
 
+  @Override
+  protected FileStatus getFileLinkStatus(final Path f) 
+    throws IOException, UnresolvedLinkException {
+    checkPath(f);
+    return myFs.getFileLinkStatus(f);
+  }
+  
   @Override
   protected FsStatus getFsStatus() throws IOException {
     return myFs.getFsStatus();
@@ -107,36 +118,38 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
-  protected FileStatus[] listStatus(Path f) throws IOException {
+  protected FileStatus[] listStatus(Path f) 
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.listStatus(f);
   }
 
   @Override
   protected void mkdir(Path dir, FsPermission permission, boolean createParent)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     checkPath(dir);
     myFs.mkdir(dir, permission, createParent);
     
   }
 
   @Override
-  protected FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  protected FSDataInputStream open(Path f, int bufferSize) 
+    throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.open(f, bufferSize);
   }
 
   @Override
-  protected void renameInternal(Path src, Path dst) throws IOException {
+  protected void renameInternal(Path src, Path dst) 
+    throws IOException, UnresolvedLinkException {
     checkPath(src);
     checkPath(dst);
     myFs.rename(src, dst, Options.Rename.NONE);
-    
   }
 
   @Override
   protected void setOwner(Path f, String username, String groupname)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     checkPath(f);
     myFs.setOwner(f, username, groupname);
     
@@ -144,27 +157,44 @@ public abstract class FilterFs extends AbstractFileSystem {
 
   @Override
   protected void setPermission(Path f, FsPermission permission)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     checkPath(f);
     myFs.setPermission(f, permission);
   }
 
   @Override
   protected boolean setReplication(Path f, short replication)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.setReplication(f, replication);
   }
 
   @Override
-  protected void setTimes(Path f, long mtime, long atime) throws IOException {
+  protected void setTimes(Path f, long mtime, long atime) 
+      throws IOException, UnresolvedLinkException {
     checkPath(f);
     myFs.setTimes(f, mtime, atime);
-    
   }
 
   @Override
-  protected void setVerifyChecksum(boolean verifyChecksum) throws IOException {
+  protected void setVerifyChecksum(boolean verifyChecksum) 
+      throws IOException, UnresolvedLinkException {
     myFs.setVerifyChecksum(verifyChecksum);
+  }
+
+  @Override
+  protected boolean supportsSymlinks() {
+    return myFs.supportsSymlinks();
+  }
+
+  @Override
+  protected void createSymlink(Path target, Path link, boolean createParent) 
+    throws IOException, UnresolvedLinkException {
+    myFs.createSymlink(target, link, createParent);
+  }
+
+  @Override
+  protected Path getLinkTarget(final Path f) throws IOException {
+    return myFs.getLinkTarget(f);
   }
 }

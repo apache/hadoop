@@ -77,7 +77,7 @@ public abstract class AbstractFileSystem {
   }
   
   /**
-   * Prohibits names which contain a ".", "..". ":" or "/" 
+   * Prohibits names which contain a ".", "..", ":" or "/" 
    */
   private static boolean isValidName(String src) {
     // Check for ".." "." ":" "/"
@@ -352,7 +352,7 @@ public abstract class AbstractFileSystem {
    * @return server default configuration values
    * @throws IOException
    */
-  protected abstract FsServerDefaults getServerDefaults() throws IOException;
+  protected abstract FsServerDefaults getServerDefaults() throws IOException; 
 
   /**
    * The specification of this method matches that of
@@ -362,7 +362,7 @@ public abstract class AbstractFileSystem {
    */
   protected final FSDataOutputStream create(final Path f,
     final EnumSet<CreateFlag> createFlag, Options.CreateOpts... opts)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     checkPath(f);
     int bufferSize = -1;
     short replication = -1;
@@ -457,7 +457,8 @@ public abstract class AbstractFileSystem {
   protected abstract FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
       short replication, long blockSize, Progressable progress,
-      int bytesPerChecksum, boolean createParent) throws IOException;
+      int bytesPerChecksum, boolean createParent) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -467,7 +468,7 @@ public abstract class AbstractFileSystem {
    */
   protected abstract void mkdir(final Path dir,
       final FsPermission permission, final boolean createParent)
-    throws IOException;
+    throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -475,14 +476,15 @@ public abstract class AbstractFileSystem {
    * this filesystem.
    */
   protected abstract boolean delete(final Path f, final boolean recursive)
-    throws IOException;
+    throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
    * {@link FileContext#open(Path)} except that Path f must be for this
    * filesystem.
    */
-  protected FSDataInputStream open(final Path f) throws IOException {
+  protected FSDataInputStream open(final Path f) 
+    throws IOException, UnresolvedLinkException {
     return open(f, getServerDefaults().getFileBufferSize());
   }
 
@@ -490,9 +492,10 @@ public abstract class AbstractFileSystem {
    * The specification of this method matches that of
    * {@link FileContext#open(Path, int)} except that Path f must be for this
    * filesystem.
+   * @throws UnresolvedLinkException 
    */
   protected abstract FSDataInputStream open(final Path f, int bufferSize)
-    throws IOException;
+    throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -500,7 +503,7 @@ public abstract class AbstractFileSystem {
    * for this filesystem.
    */
   protected abstract boolean setReplication(final Path f,
-    final short replication) throws IOException;
+    final short replication) throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -508,7 +511,8 @@ public abstract class AbstractFileSystem {
    * f must be for this filesystem.
    */
   protected final void rename(final Path src, final Path dst,
-    final Options.Rename... options) throws IOException {
+    final Options.Rename... options) 
+    throws IOException, UnresolvedLinkException {
     boolean overwrite = false;
     if (null != options) {
       for (Rename option : options) {
@@ -530,7 +534,7 @@ public abstract class AbstractFileSystem {
    * {@link #renameInternal(Path, Path, boolean)}
    */
   protected abstract void renameInternal(final Path src, final Path dst)
-    throws IOException;
+    throws IOException, UnresolvedLinkException;
   
   /**
    * The specification of this method matches that of
@@ -538,16 +542,16 @@ public abstract class AbstractFileSystem {
    * f must be for this filesystem.
    */
   protected void renameInternal(final Path src, final Path dst,
-    boolean overwrite) throws IOException {
+    boolean overwrite) throws IOException, UnresolvedLinkException {
     // Default implementation deals with overwrite in a non-atomic way
-    final FileStatus srcStatus = getFileStatus(src);
+    final FileStatus srcStatus = getFileLinkStatus(src);
     if (srcStatus == null) {
       throw new FileNotFoundException("rename source " + src + " not found.");
     }
 
     FileStatus dstStatus;
     try {
-      dstStatus = getFileStatus(dst);
+      dstStatus = getFileLinkStatus(dst);
     } catch (IOException e) {
       dstStatus = null;
     }
@@ -571,12 +575,12 @@ public abstract class AbstractFileSystem {
       delete(dst, false);
     } else {
       final Path parent = dst.getParent();
-      final FileStatus parentStatus = getFileStatus(parent);
+      final FileStatus parentStatus = getFileLinkStatus(parent);
       if (parentStatus == null) {
         throw new FileNotFoundException("rename destination parent " + parent
             + " not found.");
       }
-      if (!parentStatus.isDir()) {
+      if (!parentStatus.isDir() && !parentStatus.isSymlink()) {
         throw new ParentNotDirectoryException("rename destination parent "
             + parent + " is a file.");
       }
@@ -585,12 +589,41 @@ public abstract class AbstractFileSystem {
   }
   
   /**
+   * Returns true if the file system supports symlinks, false otherwise.
+   */
+  protected boolean supportsSymlinks() {
+    return false;
+  }
+  
+  /**
+   * The specification of this method matches that of  
+   * {@link FileContext#createSymlink(Path, Path, boolean)};
+   */
+  protected void createSymlink(final Path target, final Path link,
+      final boolean createParent) throws IOException, UnresolvedLinkException {
+    throw new IOException("File system does not support symlinks");    
+  }
+
+  /**
+   * The specification of this method matches that of  
+   * {@link FileContext#getLinkTarget(Path)};
+   */
+  protected Path getLinkTarget(final Path f) throws IOException {
+    /* We should never get here. Any file system that threw an
+     * UnresolvedLinkException, causing this function to be called,
+     * needs to override this method.
+     */
+    throw new AssertionError();
+  }
+    
+  /**
    * The specification of this method matches that of
    * {@link FileContext#setPermission(Path, FsPermission)} except that Path f
    * must be for this filesystem.
    */
   protected abstract void setPermission(final Path f,
-      final FsPermission permission) throws IOException;
+      final FsPermission permission) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -598,7 +631,7 @@ public abstract class AbstractFileSystem {
    * be for this filesystem.
    */
   protected abstract void setOwner(final Path f, final String username,
-      final String groupname) throws IOException;
+      final String groupname) throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -606,7 +639,7 @@ public abstract class AbstractFileSystem {
    * for this filesystem.
    */
   protected abstract void setTimes(final Path f, final long mtime,
-    final long atime) throws IOException;
+    final long atime) throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
@@ -614,14 +647,29 @@ public abstract class AbstractFileSystem {
    * this filesystem.
    */
   protected abstract FileChecksum getFileChecksum(final Path f)
-    throws IOException;
+    throws IOException, UnresolvedLinkException;
   
   /**
    * The specification of this method matches that of
-   * {@link FileContext#setVerifyChecksum(boolean, Path)} except that Path f
-   * must be for this filesystem.
+   * {@link FileContext#getFileStatus(Path)} 
+   * except that an UnresolvedLinkException may be thrown if a symlink is 
+   * encountered in the path.
    */
-  protected abstract FileStatus getFileStatus(final Path f) throws IOException;
+  protected abstract FileStatus getFileStatus(final Path f) 
+    throws IOException, UnresolvedLinkException;
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext#getFileLinkStatus(Path)}
+   * except that an UnresolvedLinkException may be thrown if a symlink is  
+   * encountered in the path leading up to the final path component.
+   * If the file system does not support symlinks then the behavior is
+   * equivalent to {@link AbstractFileSystem#getFileStatus(Path)}.
+   */
+  protected FileStatus getFileLinkStatus(final Path f)
+    throws IOException, UnresolvedLinkException {
+    return getFileStatus(f);
+  }
 
   /**
    * The specification of this method matches that of
@@ -629,22 +677,23 @@ public abstract class AbstractFileSystem {
    * Path f must be for this filesystem.
    */
   protected abstract BlockLocation[] getFileBlockLocations(final Path f,
-    final long start, final long len) throws IOException;
+    final long start, final long len) 
+    throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
    * {@link FileContext#getFsStatus(Path)} except that Path f must be for this
    * filesystem.
    */
-  protected FsStatus getFsStatus(final Path f) throws IOException {
+  protected FsStatus getFsStatus(final Path f) 
+    throws IOException, UnresolvedLinkException {
     // default impl gets FsStatus of root
     return getFsStatus();
   }
   
   /**
    * The specification of this method matches that of
-   * {@link FileContext#getFsStatus(Path)} except that Path f must be for this
-   * filesystem.
+   * {@link FileContext#getFsStatus(Path)}.
    */
   protected abstract FsStatus getFsStatus() throws IOException;
 
@@ -653,7 +702,8 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#listStatus(Path)} except that Path f must be for this
    * filesystem.
    */
-  protected abstract FileStatus[] listStatus(final Path f) throws IOException;
+  protected abstract FileStatus[] listStatus(final Path f) 
+    throws IOException, UnresolvedLinkException;
 
   /**
    * The specification of this method matches that of
