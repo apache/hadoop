@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HDFS-938. Replace calls to UGI.getUserName() with UGI.getShortUserName()
     (jghoman)
 
+    HDFS-894. DatanodeID.ipcPort is not updated when existing node re-registers.
+    (Todd Lipcon via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
