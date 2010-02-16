@@ -206,6 +206,7 @@ Release 0.21.0 - Unreleased
    HBASE-2224  Broken build: TestGetRowVersions.testGetRowMultipleVersions
    HBASE-2129  ant tar build broken since switch to Ivy (Kay Kay via Stack)
    HBASE-2226  HQuorumPeerTest doesnt run because it doesnt start with the word Test
+   HBASE-2230  SingleColumnValueFilter has an ungaurded debug log message
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

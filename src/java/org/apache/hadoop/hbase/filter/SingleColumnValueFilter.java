@@ -149,7 +149,9 @@ public class SingleColumnValueFilter implements Filter {
     // byte array copy?
     int compareResult =
       this.comparator.compareTo(Arrays.copyOfRange(data, offset, offset + length));
-    LOG.debug("compareResult=" + compareResult + " " + Bytes.toString(data, offset, length));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("compareResult=" + compareResult + " " + Bytes.toString(data, offset, length));
+    }
     switch (this.compareOp) {
     case LESS:
       return compareResult <= 0;
