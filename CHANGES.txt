@@ -2,28 +2,12 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
-    HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
-    via tomwhite)
-
-    MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via tomwhite)
-
-    HADOOP-5612. Some c++ scripts are not chmodded before ant execution.
-    (Todd Lipcon via tomwhite)
-
-Release 0.20.2 - 2010-2-10
+Release 0.20.2 - 2010-2-16
 
   NEW FEATURES
 
     HADOOP-6218. Adds a feature where TFile can be split by Record
     Sequence number. (Hong Tang and Raghu Angadi via ddas)
-
-  IMPROVEMENTS
-
-    HDFS-919. Create test to validate the BlocksVerified metric (Gary Murry
-    via cos)
-
-    HDFS-907. Add tests for getBlockLocations and totalLoad metrics.
-    (Ravi Phulari via cos)
 
   BUG FIXES
 
@@ -73,6 +57,11 @@ Release 0.20.2 - 2010-2-10
     HDFS-761. Fix failure to process rename operation from edits log due to 
     quota verification. (suresh)
 
+  IMPROVEMENTS
+
+    HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
+    via tomwhite)
+
     MAPREDUCE-1068. Fix streaming job to show proper message if file is 
     is not present. (Amareshwari Sriramadasu via sharad)
 
@@ -117,6 +106,17 @@ Release 0.20.2 - 2010-2-10
     execution. (cos)
 
     HADOOP-6524. Contrib tests are failing Clover'ed build. (cos)
+
+    HDFS-919. Create test to validate the BlocksVerified metric (Gary Murry
+    via cos)
+
+    HDFS-907. Add tests for getBlockLocations and totalLoad metrics.
+    (Ravi Phulari via cos)
+
+    MAPREDUCE-1251. c++ utils doesn't compile. (Eli Collins via tomwhite)
+
+    HADOOP-5612. Some c++ scripts are not chmodded before ant execution.
+    (Todd Lipcon via tomwhite)
 
 Release 0.20.1 - 2009-09-01
 
