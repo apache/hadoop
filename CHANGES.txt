@@ -202,6 +202,8 @@ Trunk (unreleased changes)
 
     HADOOP-6548. Replace mortbay imports with commons logging. (cdouglas)
 
+    HADOOP-6560. Handle invalid har:// uri in HarFileSystem.  (szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
