@@ -286,7 +286,8 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_COMPRESSION,
           HColumnDescriptor.DEFAULT_IN_MEMORY,
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL, false);
+          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+          false, HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
     (new HBaseAdmin(getConfiguration())).createTable(desc);
@@ -311,7 +312,8 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_COMPRESSION,
           HColumnDescriptor.DEFAULT_IN_MEMORY,
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL, false);
+          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+          false, HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
       i++;
     }

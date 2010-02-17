@@ -32,7 +32,7 @@ public class TestWideScanner extends HBaseTestCase {
     TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY,
       10,  // Ten is arbitrary number.  Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      HConstants.FOREVER, false));
+      HConstants.FOREVER, false, HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
   }
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =

@@ -59,6 +59,7 @@ public class ReplicationSource extends Chore implements HConstants {
   private final float ratio;
   private final Random random;
   private final AtomicBoolean isReplicating;
+  private final byte clusterId;
 
   private List<HServerAddress> currentPeers;
 
@@ -80,6 +81,7 @@ public class ReplicationSource extends Chore implements HConstants {
     this.ratio = this.conf.getFloat("replication.ratio", 0.1f);
     currentPeers = new ArrayList<HServerAddress>();
     this.random = new Random();
+    this.clusterId = zkHelper.getClusterId();
     this.isReplicating = isReplicating;
   }
 
@@ -120,6 +122,7 @@ public class ReplicationSource extends Chore implements HConstants {
    */
   public void enqueueLog(HLog.Entry logEntry) {
     if(this.isReplicating.get()) {
+      logEntry.getKey().setClusterId(this.clusterId);
       this.queue.add(logEntry);
     }
   }

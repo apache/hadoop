@@ -89,7 +89,8 @@ public class ReplicationRegion extends HRegion {
         // complete log flush.
         if(!(Bytes.equals(key.getTablename(),ROOT_TABLE_NAME) ||
             Bytes.equals(key.getTablename(),META_TABLE_NAME)) &&
-            !Bytes.equals(val.getFamily(), HLog.METAFAMILY)) {
+            !Bytes.equals(val.getFamily(), HLog.METAFAMILY)   &&
+            key.getScope() == REPLICATION_SCOPE_GLOBAL) {
           this.replicationSource.enqueueLog(entry);
         }
 

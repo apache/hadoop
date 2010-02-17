@@ -48,14 +48,15 @@ public class ReplicationZookeeperHelper implements HConstants, Watcher {
 
   private final String replicationZNode;
   private final String peersZNode;
-
   private final String replicationStateNodeName;
 
-  private final boolean isMaster;
+  private final boolean master;
 
   private final Configuration conf;
 
   private final AtomicBoolean isReplicating;
+
+  private final byte clusterId;
 
   /**
    * Constructor used by region servers
@@ -77,13 +78,15 @@ public class ReplicationZookeeperHelper implements HConstants, Watcher {
         conf.get("zookeeper.znode.master", "master");
     this.replicationStateNodeName =
         conf.get("zookeeper.znode.state", "state");
-
+    String clusterIdName =
+            conf.get("zookeeper.znode.clusterId", "clusterId");
 
     this.peerClusters = new ArrayList<ZooKeeperWrapper>();
     this.replicationZNode = zookeeperWrapper.getZNode(
         zookeeperWrapper.getParentZNode(),replicationZNodeName);
     this.peersZNode =
         zookeeperWrapper.getZNode(replicationZNode,peersZNodeName);
+
     
     List<String> znodes =
         this.zookeeperWrapper.listZnodes(this.peersZNode, this);
@@ -94,15 +97,19 @@ public class ReplicationZookeeperHelper implements HConstants, Watcher {
     }
     String address = this.zookeeperWrapper.getData(this.replicationZNode,
         repMasterZNodeName);
+    String idResult = this.zookeeperWrapper.getData(this.replicationZNode,
+        clusterIdName);
+    this.clusterId =
+        idResult == null ? DEFAULT_CLUSTER_ID : Byte.valueOf(idResult);
 
     String thisCluster = this.conf.get(ZOOKEEPER_QUORUM)+":"+
         this.conf.get("hbase.zookeeper.property.clientPort") +":" +
         this.conf.get(ZOOKEEPER_ZNODE_PARENT);
 
-    this.isMaster = thisCluster.equals(address);
+    this.master = thisCluster.equals(address);
     
     LOG.info("This cluster (" + thisCluster + ") is a "
-        + (this.isMaster ? "master" : "slave") + " for replication" +
+        + (this.master ? "master" : "slave") + " for replication" +
         ", compared with (" + address + ")");
 
     this.isReplicating = isReplicating;
@@ -139,10 +146,18 @@ public class ReplicationZookeeperHelper implements HConstants, Watcher {
 
   /**
    * Tells if this cluster replicates or not
-   * @return
+   * @return if this is a master
    */
   public boolean isMaster() {
-    return isMaster;
+    return master;
+  }
+
+  /**
+   * Get the identification of the cluster
+   * @return the id for the cluster
+   */
+  public byte getClusterId() {
+    return this.clusterId;
   }
 
   @Override

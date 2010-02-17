@@ -289,6 +289,24 @@ public interface HConstants {
     TABLE_SET_HTD, 
     TABLE_SPLIT
   }
+
+  /**
+   * Scope tag for locally scoped data.
+   * This data will not be replicated.
+   */
+  public static final int REPLICATION_SCOPE_LOCAL = 0;
+
+  /**
+   * Scope tag for globally scoped data.
+   * This data will be replicated to all peers.
+   */
+  public static final int REPLICATION_SCOPE_GLOBAL = 1;
+
+  /**
+   * Default cluster ID, cannot be used to identify a cluster so a key with
+   * this value means it wasn't meant for replication.
+   */
+  public static final byte DEFAULT_CLUSTER_ID = 0;
   
     /**
      * Parameter name for maximum number of bytes returned when calling a

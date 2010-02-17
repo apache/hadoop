@@ -77,6 +77,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String FOREVER = "FOREVER";
   public static final String MAPFILE_INDEX_INTERVAL =
       "MAPFILE_INDEX_INTERVAL";
+  public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
 
   /**
    * Default compression type.
@@ -120,6 +121,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Default time to live of cell contents.
    */
   public static final int DEFAULT_TTL = HConstants.FOREVER;
+
+  /**
+   * Default scope.
+   */
+  public static final int DEFAULT_REPLICATION_SCOPE = HConstants.REPLICATION_SCOPE_LOCAL;
 
   // Column family name
   private byte [] name;
@@ -203,7 +209,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       final boolean blockCacheEnabled,
       final int timeToLive, final boolean bloomFilter) {
     this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
-      DEFAULT_BLOCKSIZE, timeToLive, bloomFilter);
+      DEFAULT_BLOCKSIZE, timeToLive, bloomFilter, DEFAULT_REPLICATION_SCOPE);
   }
   
   /**
@@ -219,6 +225,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
+   * @param scope The scope tag for this column
    * 
    * @throws IllegalArgumentException if passed a family name that is made of 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
@@ -228,7 +235,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
-      final int timeToLive, final boolean bloomFilter) {
+      final int timeToLive, final boolean bloomFilter, final int scope) {
     isLegalFamilyName(familyName);
     this.name = familyName;
 
@@ -245,6 +252,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       valueOf(compression.toUpperCase()));
     setBloomfilter(bloomFilter);
     setBlocksize(blocksize);
+    setScope(scope);
   }
 
   /**
@@ -480,6 +488,24 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public void setMapFileIndexInterval(int interval) {
     setValue(MAPFILE_INDEX_INTERVAL, Integer.toString(interval));
+  }
+
+   /**
+    * @return the scope tag
+    */
+  public int getScope() {
+    String value = getValue(REPLICATION_SCOPE);
+    if (value != null) {
+      return Integer.valueOf(value).intValue();
+    }
+    return DEFAULT_REPLICATION_SCOPE;
+  }
+
+ /**
+  * @param scope the scope tag
+  */
+  public void setScope(int scope) {
+    setValue(REPLICATION_SCOPE, Integer.toString(scope));
   }
 
   /**

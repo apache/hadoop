@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.replication.ReplicationSource;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -68,8 +69,10 @@ public class ReplicationHLog extends HLog {
   protected void doWrite(HRegionInfo info, HLogKey logKey,
                          KeyValue logEdit, long now)
       throws IOException {
+    logKey.setScope(info.getTableDesc().getFamily(logEdit.getFamily()).getScope());
     super.doWrite(info, logKey, logEdit, now);
-    if(this.isReplicator && ! (info.isMetaRegion() || info.isRootRegion())) {
+    if(this.isReplicator && ! (info.isMetaRegion() || info.isRootRegion()) &&
+        logKey.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL) {
       this.replicationSource.enqueueLog(new Entry(logKey, logEdit));
     }
 

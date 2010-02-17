@@ -43,8 +43,11 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   private long logSeqNum;
   // Time at which this edit was written.
   private long writeTime;
+
+  private byte clusterId;
+  private int scope;
   private int HEAP_TAX = ClassSize.OBJECT + (2 * ClassSize.ARRAY) +
-    (2 * Bytes.SIZEOF_LONG);
+    (2 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT;
 
   /** Writable Consructor -- Do not use. */
   public HLogKey() {
@@ -67,6 +70,8 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
     this.tablename = tablename;
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
+    this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
+    this.scope = HConstants.REPLICATION_SCOPE_LOCAL;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -99,6 +104,38 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
     return this.writeTime;
   }
 
+  /**
+   * Get the id of the original cluster
+   * @return
+   */
+  public byte getClusterId() {
+    return clusterId;
+  }
+
+  /**
+   * Set the cluster id of this key
+   * @param clusterId
+   */
+  public void setClusterId(byte clusterId) {
+    this.clusterId = clusterId;
+  }
+
+  /**
+   * Get the replication scope of this key
+   * @return replication scope
+   */
+  public int getScope() {
+    return this.scope;
+  }
+
+  /**
+   * Set the replication scope of this key
+   * @param scope The new scope
+   */
+  public void setScope(int scope) {
+    this.scope = scope;
+  }
+
   @Override
   public String toString() {
     return Bytes.toString(tablename) + "/" + Bytes.toString(regionName) + "/" +
@@ -121,6 +158,8 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
     int result = Bytes.hashCode(this.regionName);
     result ^= this.logSeqNum;
     result ^= this.writeTime;
+    result ^= this.clusterId;
+    result ^= this.scope;
     return result;
   }
 
@@ -146,8 +185,10 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.regionName);
     Bytes.writeByteArray(out, this.tablename);
-    out.writeLong(logSeqNum);
+    out.writeLong(this.logSeqNum);
     out.writeLong(this.writeTime);
+    out.writeByte(this.clusterId);
+    out.writeInt(this.scope);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -155,6 +196,12 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
     this.tablename = Bytes.readByteArray(in);
     this.logSeqNum = in.readLong();
     this.writeTime = in.readLong();
+    try {
+      this.clusterId = in.readByte();
+      this.scope = in.readInt();
+    } catch(EOFException e) {
+      // Means it's an old key, just continue
+    }
   }
 
   public long heapSize() {

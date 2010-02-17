@@ -36,8 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.util.List;
-
 public class TestReplication implements HConstants{
 
   protected static final Log LOG = LogFactory.getLog(TestReplication.class);
@@ -53,7 +51,7 @@ public class TestReplication implements HConstants{
 
   private final int NB_ROWS_IN_BATCH = 100;
   private final long SLEEP_TIME = 500;
-  private final int NB_RETRIES = 10;
+  private final int NB_RETRIES = 5;
 
 
   /**
@@ -133,10 +131,14 @@ public class TestReplication implements HConstants{
 
     byte[] tableName = Bytes.toBytes("test");
     byte[] famName = Bytes.toBytes("f");
+    byte[] noRepfamName = Bytes.toBytes("norep");
     byte[] row = Bytes.toBytes("row");
 
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
+    fam.setScope(REPLICATION_SCOPE_GLOBAL);
+    table.addFamily(fam);
+    fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
 
     HBaseAdmin admin1 = new HBaseAdmin(conf1);
@@ -257,6 +259,24 @@ public class TestReplication implements HConstants{
       } else {
         assertArrayEquals(res.value(), row);
         break;
+      }
+    }
+
+    put = new Put(Bytes.toBytes("do not rep"));
+    put.add(noRepfamName, row, row);
+    table1.put(put);
+
+    get = new Get(Bytes.toBytes("do not rep"));
+    for(int i = 0; i < NB_RETRIES; i++) {
+      if(i == NB_RETRIES-1) {
+        break;
+      }
+      Result res = table2.get(get);
+      if(res.size() >= 1) {
+        fail("Not supposed to be replicated");
+      } else {
+        LOG.info("Row not replicated, let's wait a bit more...");
+        Thread.sleep(SLEEP_TIME);
       }
     }
 
