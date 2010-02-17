@@ -122,7 +122,10 @@ public class TestReplication implements HConstants{
    * @throws java.lang.Exception
    */
   @After
-  public void tearDown() throws Exception {}
+  public void tearDown() throws Exception {
+    utility1.shutdownMiniCluster();
+    utility2.shutdownMiniCluster();
+  }
 
   @Test
   public void testReplication() throws Exception {
