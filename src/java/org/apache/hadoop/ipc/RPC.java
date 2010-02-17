@@ -244,8 +244,9 @@ public class RPC {
    * @param proxy the proxy to be stopped
    */
   public static void stopProxy(Object proxy) {
-    if (proxy!=null) {
-      getProxyEngine(proxy).stopProxy(proxy);
+    RpcEngine rpcEngine;
+    if (proxy!=null && (rpcEngine = getProxyEngine(proxy)) != null) {
+      rpcEngine.stopProxy(proxy);
     }
   }
 

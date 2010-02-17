@@ -39,6 +39,8 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 
+import static org.mockito.Mockito.*;
+
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
   private static final String ADDRESS = "0.0.0.0";
@@ -391,6 +393,14 @@ public class TestRPC extends TestCase {
     Configuration conf = new Configuration();
     conf.setBoolean("ipc.client.ping", false);
     new TestRPC("testnoPings").testCalls(conf);
+  }
+
+  /**
+   * Test stopping a non-registered proxy
+   * @throws Exception
+   */
+  public void testStopNonRegisteredProxy() throws Exception {
+    RPC.stopProxy(mock(TestProtocol.class));
   }
   
   public static void main(String[] args) throws Exception {
