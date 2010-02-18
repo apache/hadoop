@@ -129,6 +129,9 @@ public interface HConstants {
    * Use '.' as a special character to seperate the log files from table data */
   static final String HREGION_LOGDIR_NAME = ".logs";
 
+  /** Like the previous, but for old logs that are about to be deleted */
+  static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
+
   /** Name of old log file for reconstruction */
   static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";
   

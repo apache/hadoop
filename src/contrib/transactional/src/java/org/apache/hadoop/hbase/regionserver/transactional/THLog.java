@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
  */
 class THLog extends HLog {
 
-  public THLog(FileSystem fs, Path dir, Configuration conf,
+  public THLog(FileSystem fs, Path dir, Path oldLogDir, Configuration conf,
       LogRollListener listener) throws IOException {
-    super(fs, dir, conf, listener);
+    super(fs, dir, oldLogDir, conf, listener);
   }
 
   @Override

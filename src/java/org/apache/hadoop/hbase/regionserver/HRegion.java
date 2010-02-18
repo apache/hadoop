@@ -1860,7 +1860,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     HRegion region = new HRegion(tableDir,
-      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
+      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME),
+          new Path(regionDir, HREGION_OLDLOGDIR_NAME), conf, null),
       fs, conf, info, null);
     region.initialize(null, null);
     return region;
@@ -2533,7 +2534,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     FileSystem fs = FileSystem.get(c);
     Path logdir = new Path(c.get("hbase.tmp.dir"),
       "hlog" + tableDir.getName() + System.currentTimeMillis());
-    HLog log = new HLog(fs, logdir, c, null);
+    Path oldLogDir = new Path(c.get("hbase.tmp.dir"), HREGION_OLDLOGDIR_NAME);
+    HLog log = new HLog(fs, logdir, oldLogDir, c, null);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
      } finally {

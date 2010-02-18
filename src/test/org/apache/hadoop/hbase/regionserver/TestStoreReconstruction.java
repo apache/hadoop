@@ -95,7 +95,9 @@ public class TestStoreReconstruction {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HLog log = new HLog(cluster.getFileSystem(), this.dir,conf, null);
+    Path oldLogDir = new Path(this.dir, HConstants.HREGION_OLDLOGDIR_NAME);
+    HLog log = new HLog(cluster.getFileSystem(),
+        this.dir, oldLogDir, conf, null);
     HRegion region = new HRegion(dir, log,
         cluster.getFileSystem(),conf, info, null);
     List<KeyValue> result = new ArrayList<KeyValue>();
@@ -132,7 +134,7 @@ public class TestStoreReconstruction {
 
     List<Path> splits =
         HLog.splitLog(new Path(conf.get(HConstants.HBASE_DIR)),
-            this.dir, cluster.getFileSystem(),conf);
+            this.dir, oldLogDir, cluster.getFileSystem(), conf);
 
     // Split should generate only 1 file since there's only 1 region
     assertTrue(splits.size() == 1);

@@ -96,7 +96,9 @@ public class MetaUtils {
     if (this.log == null) {
       Path logdir = new Path(this.fs.getHomeDirectory(),
           HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis());
-      this.log = new HLog(this.fs, logdir, this.conf, null);
+      Path oldLogDir = new Path(this.fs.getHomeDirectory(),
+          HConstants.HREGION_OLDLOGDIR_NAME);
+      this.log = new HLog(this.fs, logdir, oldLogDir, this.conf, null);
     }
     return this.log;
   }

@@ -11,6 +11,7 @@ Release 0.21.0 - Unreleased
    HBASE-2212  Refactor out lucene dependencies from HBase
                (Kay Kay via Stack)
    HBASE-2219  stop using code mapping for method names in the RPC
+   HBASE-1728  Column family scoping and cluster identification
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -393,6 +394,7 @@ Release 0.21.0 - Unreleased
    HBASE-1433  Update hbase build to match core, use ivy, publish jars to maven
                repo, etc. (Kay Kay via Stack)
    HBASE-2129  Simple Master/Slave replication
+   HBASE-2070  Collect HLogs and delete them after a period of time
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

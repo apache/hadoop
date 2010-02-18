@@ -248,7 +248,8 @@ public class TestMergeTool extends HBaseTestCase {
     Path logPath = new Path("/tmp", HConstants.HREGION_LOGDIR_NAME + "_" +
       System.currentTimeMillis());
     LOG.info("Creating log " + logPath.toString());
-    HLog log = new HLog(this.fs, logPath, this.conf, null);
+    Path oldLogDir = new Path("/tmp", HConstants.HREGION_OLDLOGDIR_NAME);
+    HLog log = new HLog(this.fs, logPath, oldLogDir, this.conf, null);
     try {
        // Merge Region 0 and Region 1
       HRegion merged = mergeAndVerify("merging regions 0 and 1",

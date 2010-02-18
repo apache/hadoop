@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /** 
  * Instantiated when a server's lease has expired, meaning it has crashed.
@@ -47,7 +48,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private boolean isRootServer;
   private List<MetaRegion> metaRegions;
 
-  private Path oldLogDir;
+  private Path rsLogDir;
   private boolean logSplit;
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
@@ -73,7 +74,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.deadServerAddress = serverInfo.getServerAddress();
     this.logSplit = false;
     this.rootRescanned = false;
-    this.oldLogDir =
+    this.rsLogDir =
       new Path(master.getRootDir(), HLog.getHLogDirectoryName(serverInfo));
 
     // check to see if I am responsible for either ROOT or any of the META tables.
@@ -275,13 +276,13 @@ class ProcessServerShutdown extends RegionServerOperation {
       master.getRegionManager().numOnlineMetaRegions());
     if (!logSplit) {
       // Process the old log file
-      if (this.master.getFileSystem().exists(oldLogDir)) {
+      if (this.master.getFileSystem().exists(rsLogDir)) {
         if (!master.getRegionManager().splitLogLock.tryLock()) {
           return false;
         }
         try {
-          HLog.splitLog(master.getRootDir(), oldLogDir,
-            this.master.getFileSystem(),
+          HLog.splitLog(master.getRootDir(), rsLogDir,
+              this.master.getOldLogDir(), this.master.getFileSystem(),
             this.master.getConfiguration());
         } finally {
           master.getRegionManager().splitLogLock.unlock();

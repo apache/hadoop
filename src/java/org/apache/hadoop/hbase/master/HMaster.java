@@ -138,6 +138,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private final FileSystem fs;
   // Is the fileystem ok?
   private volatile boolean fsOk = true;
+  // The Path to the old logs dir
+  private final Path oldLogDir;
 
   // Queues for RegionServerOperation events.  Includes server open, shutdown,
   // and region open and close.
@@ -171,6 +173,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.conf.set("fs.defaultFS", this.rootdir.toString());
     this.fs = FileSystem.get(this.conf);
     checkRootDir(this.rootdir, this.conf, this.fs);
+
+    // Make sure the region servers can archive their old logs
+    this.oldLogDir = new Path(this.rootdir, HREGION_OLDLOGDIR_NAME);
+    if(!this.fs.exists(this.oldLogDir)) {
+      this.fs.mkdirs(this.oldLogDir);
+    }
 
     // Get my address and create an rpc server instance.  The rpc-server port
     // can be ephemeral...ensure we have the correct info
@@ -393,6 +401,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   public double getAverageLoad() {
     return this.serverManager.getAverageLoad();
+  }
+
+  /**
+   * Get the directory where old logs go
+   * @return the dir
+   */
+  public Path getOldLogDir() {
+    return this.oldLogDir;
   }
 
   /**
@@ -630,7 +646,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         Path logDir =
           new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
         try {
-          HLog.splitLog(this.rootdir, logDir, this.fs, getConfiguration());
+          HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs, getConfiguration());
         } catch (IOException e) {
           LOG.error("Failed splitting " + logDir.toString(), e);
         } finally {

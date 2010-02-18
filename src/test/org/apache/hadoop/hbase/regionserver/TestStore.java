@@ -5,12 +5,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Progressable;
 
@@ -72,6 +73,7 @@ public class TestStore extends TestCase {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
     Path logdir = new Path(DIR+methodName+"/logs");
+    Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     HBaseConfiguration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
@@ -83,7 +85,7 @@ public class TestStore extends TestCase {
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HLog hlog = new HLog(fs, logdir, conf, null);
+    HLog hlog = new HLog(fs, logdir, oldLogDir, conf, null);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
     
     store = new Store(basedir, region, hcd, fs, reconstructionLog, conf,

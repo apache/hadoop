@@ -283,6 +283,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.master.logcleaner.ttl</name>
+    <value>600000</value>
+    <description>Maximum time a log can stay in the .oldlogdir directory,
+    after which it will be cleaned by a master thread.
+    </description>
+  </property>
+  <property>
     <name>hbase.regions.percheckin</name>
     <value>10</value>
     <description>Maximum number of regions that can be assigned in a single go

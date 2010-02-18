@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -94,6 +95,8 @@ public class ServerManager implements HConstants {
   private final ServerMonitor serverMonitorThread;
 
   private int minimumServerCount;
+
+  private final OldLogsCleaner oldLogCleaner;
 
   /*
    * Dumps into log current stats on dead servers and number of servers
@@ -143,6 +146,13 @@ public class ServerManager implements HConstants {
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval,
       this.master.getShutdownRequested());
     this.serverMonitorThread.start();
+    this.oldLogCleaner = new OldLogsCleaner(
+      c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
+        this.master.getShutdownRequested(), c,
+        master.getFileSystem(), master.getOldLogDir());
+    Threads.setDaemonThreadRunning(oldLogCleaner,
+      "ServerManager.oldLogCleaner");
+
   }
 
   /**

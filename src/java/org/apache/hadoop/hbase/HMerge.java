@@ -115,8 +115,9 @@ class HMerge implements HConstants {
       );
       Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
           HREGION_LOGDIR_NAME);
+      Path oldLogDir = new Path(tabledir, HREGION_OLDLOGDIR_NAME);
       this.hlog =
-        new HLog(fs, logdir, conf, null);
+        new HLog(fs, logdir, oldLogDir, conf, null);
     }
     
     void process() throws IOException {

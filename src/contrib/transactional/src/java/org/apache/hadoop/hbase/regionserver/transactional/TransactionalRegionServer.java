@@ -102,10 +102,11 @@ public class TransactionalRegionServer extends HRegionServer implements
   }
 
   @Override
-  protected HLog instantiateHLog(Path logdir) throws IOException {
+  protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
     conf.set("hbase.regionserver.hlog.keyclass",
         THLogKey.class.getCanonicalName());
-    HLog newlog = new THLog(super.getFileSystem(), logdir, conf, super.getLogRoller());
+    HLog newlog = new THLog(super.getFileSystem(), logdir, oldLogDir,
+        conf, super.getLogRoller());
     return newlog;
   }
   

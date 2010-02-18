@@ -963,7 +963,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     
   private HLog setupHLog() throws RegionServerRunningException,
     IOException {
-    
+    Path oldLogDir = new Path(rootDir, HREGION_OLDLOGDIR_NAME);
     Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Log dir " + logdir);
@@ -973,13 +973,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
         "running at " + this.serverInfo.getServerAddress().toString() +
         " because logdir " + logdir.toString() + " exists");
     }
-    HLog newlog = instantiateHLog(logdir);
+    HLog newlog = instantiateHLog(logdir, oldLogDir);
     return newlog;
   }
 
   // instantiate 
-  protected HLog instantiateHLog(Path logdir) throws IOException {
-    HLog newlog = new HLog(fs, logdir, conf, hlogRoller);
+  protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
+    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller);
     return newlog;
   }
 

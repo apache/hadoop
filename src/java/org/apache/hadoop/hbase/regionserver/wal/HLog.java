@@ -117,6 +117,7 @@ public class HLog implements HConstants, Syncable {
   private final long blocksize;
   private final int flushlogentries;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
+  private final Path oldLogDir;
 
   public interface Reader {
 
@@ -255,8 +256,8 @@ public class HLog implements HConstants, Syncable {
    * @param listener
    * @throws IOException
    */
-  public HLog(final FileSystem fs, final Path dir, final Configuration conf,
-    final LogRollListener listener)
+  public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
+              final Configuration conf, final LogRollListener listener)
   throws IOException {
     super();
     this.fs = fs;
@@ -276,6 +277,10 @@ public class HLog implements HConstants, Syncable {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
     fs.mkdirs(dir);
+    this.oldLogDir = oldLogDir;
+    if(!fs.exists(oldLogDir)) {
+      fs.mkdirs(this.oldLogDir);
+    }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
     LOG.info("HLog configuration: blocksize=" + this.blocksize +
@@ -370,7 +375,7 @@ public class HLog implements HConstants, Syncable {
             // flushed (and removed from the lastSeqWritten map). Means can
             // remove all but currently open log file.
             for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
-              deleteLogFile(e.getValue(), e.getKey());
+              archiveLogFile(e.getValue(), e.getKey());
             }
             this.outputfiles.clear();
           } else {
@@ -459,7 +464,7 @@ public class HLog implements HConstants, Syncable {
           " from region " + Bytes.toString(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
-        deleteLogFile(this.outputfiles.remove(seq), seq);
+        archiveLogFile(this.outputfiles.remove(seq), seq);
       }
     }
 
@@ -552,10 +557,12 @@ public class HLog implements HConstants, Syncable {
     return oldFile;
   }
 
-  private void deleteLogFile(final Path p, final Long seqno) throws IOException {
-    LOG.info("removing old hlog file " + FSUtils.getPath(p) +
-      " whose highest sequence/edit id is " + seqno);
-    this.fs.delete(p, true);
+  private void archiveLogFile(final Path p, final Long seqno) throws IOException {
+    Path newPath = getHLogArchivePath(this.oldLogDir, p);
+    LOG.info("moving old hlog file " + FSUtils.getPath(p) +
+      " whose highest sequence/edit id is " + seqno + " to " +
+      FSUtils.getPath(newPath));
+    this.fs.rename(p, newPath);
   }
 
   /**
@@ -576,6 +583,13 @@ public class HLog implements HConstants, Syncable {
    */
   public void closeAndDelete() throws IOException {
     close();
+    FileStatus[] files = fs.listStatus(this.dir);
+    for(FileStatus file : files) {
+      fs.rename(file.getPath(),
+          getHLogArchivePath(this.oldLogDir, file.getPath()));
+    }
+    LOG.debug("Moved " + files.length + " log files to " +
+        FSUtils.getPath(this.oldLogDir));
     fs.delete(dir, true);
   }
 
@@ -991,13 +1005,15 @@ public class HLog implements HConstants, Syncable {
    * @param rootDir qualified root directory of the HBase instance
    * @param srcDir Directory of log files to split: e.g.
    *                <code>${ROOTDIR}/log_HOST_PORT</code>
+   * @param oldLogDir
    * @param fs FileSystem
    * @param conf HBaseConfiguration
    * @throws IOException
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
-      final FileSystem fs, final Configuration conf)
-  throws IOException {
+    Path oldLogDir, final FileSystem fs, final Configuration conf)
+    throws IOException {
+    
     long millis = System.currentTimeMillis();
     List<Path> splits = null;
     if (!fs.exists(srcDir)) {
@@ -1011,8 +1027,17 @@ public class HLog implements HConstants, Syncable {
     }
     LOG.info("Splitting " + logfiles.length + " hlog(s) in " +
       srcDir.toString());
-    splits = splitLog(rootDir, logfiles, fs, conf);
+    splits = splitLog(rootDir, oldLogDir, logfiles, fs, conf);
     try {
+      FileStatus[] files = fs.listStatus(srcDir);
+      for(FileStatus file : files) {
+        Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
+        LOG.debug("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
+                   FSUtils.getPath(newPath));
+        fs.rename(file.getPath(), newPath);
+      }
+      LOG.debug("Moved " + files.length + " log files to " +
+        FSUtils.getPath(oldLogDir));
       fs.delete(srcDir, true);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
@@ -1062,9 +1087,8 @@ public class HLog implements HConstants, Syncable {
    * @return List of splits made.
    */
   private static List<Path> splitLog(final Path rootDir,
-    final FileStatus [] logfiles, final FileSystem fs,
-    final Configuration conf)
-  throws IOException {
+    Path oldLogDir, final FileStatus[] logfiles, final FileSystem fs,
+    final Configuration conf) throws IOException {
     final Map<byte [], WriterAndPath> logWriters =
       new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR);
     List<Path> splits = null;
@@ -1139,12 +1163,13 @@ public class HLog implements HConstants, Syncable {
             } catch (IOException e) {
               LOG.warn("Close in finally threw exception -- continuing", e);
             }
-            // Delete the input file now so we do not replay edits. We could
+            // Archive the input file now so we do not replay edits. We could
             // have gotten here because of an exception. If so, probably
             // nothing we can do about it. Replaying it, it could work but we
             // could be stuck replaying for ever. Just continue though we
             // could have lost some edits.
-            fs.delete(logfiles[i].getPath(), true);
+            fs.rename(logfiles[i].getPath(),
+                getHLogArchivePath(oldLogDir, logfiles[i].getPath()));
           }
         }
         ExecutorService threadPool =
@@ -1342,6 +1367,12 @@ public class HLog implements HConstants, Syncable {
     return dirName.toString();
   }
 
+  // We create a new file name with a ts in front of it to make sure we almost
+  // certainly don't have a file name conflict.
+  private static Path getHLogArchivePath(Path oldLogDir, Path p) {
+    return new Path(oldLogDir, System.currentTimeMillis() + "." + p.getName());
+  }
+
   private static void usage() {
     System.err.println("Usage: java org.apache.hbase.HLog" +
         " {--dump <logfile>... | --split <logdir>...}");
@@ -1372,6 +1403,7 @@ public class HLog implements HConstants, Syncable {
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     Path baseDir = new Path(conf.get(HBASE_DIR));
+    Path oldLogDir = new Path(baseDir, HREGION_OLDLOGDIR_NAME);
     for (int i = 1; i < args.length; i++) {
       Path logPath = new Path(args[i]);
       if (!fs.exists(logPath)) {
@@ -1394,7 +1426,7 @@ public class HLog implements HConstants, Syncable {
         if (!fs.getFileStatus(logPath).isDir()) {
           throw new IOException(args[i] + " is not a directory");
         }
-        splitLog(baseDir, logPath, fs, conf);
+        splitLog(baseDir, logPath, oldLogDir, fs, conf);
       }
     }
   }

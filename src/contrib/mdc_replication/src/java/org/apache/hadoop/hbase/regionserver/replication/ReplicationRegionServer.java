@@ -72,9 +72,10 @@ public class ReplicationRegionServer extends HRegionServer
   }
 
   @Override
-  protected HLog instantiateHLog(Path logdir) throws IOException {
+  protected HLog instantiateHLog(Path logdir, Path oldLogDir)
+      throws IOException {
     HLog newlog = new ReplicationHLog(super.getFileSystem(),
-        logdir, conf, super.getLogRoller(),
+        logdir, oldLogDir, conf, super.getLogRoller(),
         this.replicationSource);
     return newlog;
   }

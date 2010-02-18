@@ -56,11 +56,11 @@ public class ReplicationHLog extends HLog {
    * @throws IOException
    */
   public ReplicationHLog(final FileSystem fs, final Path dir,
-                         final Configuration conf,
+                         final Path oldLogDir, final Configuration conf,
                          final LogRollListener listener,
                          ReplicationSource replicationSource)
                          throws IOException {
-    super(fs, dir, conf, listener);
+    super(fs, dir, oldLogDir, conf, listener);
     this.replicationSource = replicationSource;
     this.isReplicator = this.replicationSource != null;
   }

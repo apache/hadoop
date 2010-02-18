@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public class TestTHLog extends HBaseTestCase implements
     HConstants {
   private Path dir;
+  private Path oldLogdir;
   private MiniDFSCluster cluster;
 
   final byte[] tableName = Bytes.toBytes("tablename");
@@ -62,6 +63,8 @@ public class TestTHLog extends HBaseTestCase implements
         THLogKey.class.getCanonicalName());
     super.setUp();
     this.dir = new Path("/hbase", getName());
+    this.oldLogdir = new Path("/hbase", getName()+"_old");
+
     if (fs.exists(dir)) {
       fs.delete(dir, true);
     }
@@ -81,7 +84,7 @@ public class TestTHLog extends HBaseTestCase implements
    */
   public void testSingleCommit() throws IOException {
 
-    THLog log = new THLog(fs, dir, this.conf, null);
+    THLog log = new THLog(fs, dir, oldLogdir, this.conf, null);
     THLogRecoveryManager logRecoveryMangaer = new THLogRecoveryManager(fs,
         regionInfo, conf);
 
@@ -114,7 +117,7 @@ public class TestTHLog extends HBaseTestCase implements
    */
   public void testSingleAbort() throws IOException {
 
-    THLog log = new THLog(fs, dir, this.conf, null);
+    THLog log = new THLog(fs, dir, oldLogdir, this.conf, null);
     THLogRecoveryManager logRecoveryMangaer = new THLogRecoveryManager(fs,
         regionInfo, conf);
 
@@ -143,7 +146,7 @@ public class TestTHLog extends HBaseTestCase implements
    */
   public void testInterlievedCommits() throws IOException {
 
-    THLog log = new THLog(fs, dir, this.conf, null);
+    THLog log = new THLog(fs, dir, oldLogdir, this.conf, null);
     THLogRecoveryManager logMangaer = new THLogRecoveryManager(fs, regionInfo,
         conf);
 
@@ -178,7 +181,7 @@ public class TestTHLog extends HBaseTestCase implements
    */
   public void testInterlievedAbortCommit() throws IOException {
 
-    THLog log = new THLog(fs, dir, this.conf, null);
+    THLog log = new THLog(fs, dir, oldLogdir, this.conf, null);
     THLogRecoveryManager logMangaer = new THLogRecoveryManager(fs, regionInfo,
         conf);
 
@@ -213,7 +216,7 @@ public class TestTHLog extends HBaseTestCase implements
    */
   public void testInterlievedCommitAbort() throws IOException {
 
-    THLog log = new THLog(fs, dir, this.conf, null);
+    THLog log = new THLog(fs, dir, oldLogdir, this.conf, null);
     THLogRecoveryManager logMangaer = new THLogRecoveryManager(fs, regionInfo,
         conf);
 

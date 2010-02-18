@@ -39,6 +39,7 @@ import java.util.Map;
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
   private Path dir;
+  private Path oldLogDir;
   private MiniDFSCluster cluster;
 
   @Override
@@ -55,6 +56,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     if (fs.exists(dir)) {
       fs.delete(dir, true);
     }
+    this.oldLogDir = new Path("/hbase", HConstants.HREGION_OLDLOGDIR_NAME);
+
   }
 
   @Override
@@ -75,7 +78,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
 
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
-    HLog log = new HLog(this.fs, this.dir, this.conf, null);
+    HLog log = new HLog(this.fs, this.dir, this.oldLogDir, this.conf, null);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
     for(int i = 0; i < howmany; i++) {
@@ -103,7 +106,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         log.rollWriter();
       }
       List<Path> splits =
-        HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+        HLog.splitLog(this.testDir, this.dir, this.oldLogDir, this.fs, this.conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -132,7 +135,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     out.close();
     in.close();
     Path subdir = new Path(this.dir, "hlogdir");
-    HLog wal = new HLog(this.fs, subdir, this.conf, null);
+    HLog wal = new HLog(this.fs, subdir, this.oldLogDir, this.conf, null);
     final int total = 20;
 
     HRegionInfo info = new HRegionInfo(new HTableDescriptor(bytes),
@@ -261,7 +264,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
     HLog.Reader reader = null;
-    HLog log = new HLog(fs, dir, this.conf, null);
+    HLog log = new HLog(fs, dir, this.oldLogDir, this.conf, null);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
