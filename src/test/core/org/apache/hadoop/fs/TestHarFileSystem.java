@@ -45,4 +45,11 @@ public class TestHarFileSystem {
       e.printStackTrace(System.out);
     }
   }
+
+  @Test
+  public void testFileChecksum() {
+    final Path p = new Path("har://file-localhost/foo.har/file1");
+    final HarFileSystem harfs = new HarFileSystem();
+    Assert.assertEquals(null, harfs.getFileChecksum(p));
+  }
 }

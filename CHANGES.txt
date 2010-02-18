@@ -210,6 +210,9 @@ Trunk (unreleased changes)
     HADOOP-6570. RPC#stopProxy throws NPE if getProxyEngine(proxy) returns
     null. (hairong)
 
+    HADOOP-6558. Return null in HarFileSystem.getFileChecksum(..) since no
+    checksum algorithm is implemented.  (szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
