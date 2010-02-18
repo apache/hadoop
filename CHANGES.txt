@@ -2,6 +2,9 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
+    MAPREDUCE-623. Resolve javac warnings in mapreduce. (Jothi Padmanabhan
+    via sharad)
+
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES

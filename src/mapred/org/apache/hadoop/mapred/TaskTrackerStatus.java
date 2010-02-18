@@ -253,8 +253,8 @@ class TaskTrackerStatus implements Writable {
    */
   public int countMapTasks() {
     int mapCount = 0;
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
+    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
+      TaskStatus ts = it.next();
       TaskStatus.State state = ts.getRunState();
       if (ts.getIsMap() &&
           ((state == TaskStatus.State.RUNNING) ||
@@ -271,8 +271,8 @@ class TaskTrackerStatus implements Writable {
    */
   public int countReduceTasks() {
     int reduceCount = 0;
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
+    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
+      TaskStatus ts = it.next();
       TaskStatus.State state = ts.getRunState();
       if ((!ts.getIsMap()) &&
           ((state == TaskStatus.State.RUNNING) ||  

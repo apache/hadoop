@@ -134,6 +134,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * A client tried to submit a job before the Job Tracker was ready.
    */
   public static class IllegalStateException extends IOException {
+ 
+    private static final long serialVersionUID = 1L;
+
     public IllegalStateException(String msg) {
       super(msg);
     }
@@ -3299,13 +3302,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       Vector<TaskInProgress> completeTasks = job.reportCleanupTIPs(true);
       for (Iterator<TaskInProgress> it = completeTasks.iterator();
            it.hasNext();) {
-        TaskInProgress tip = (TaskInProgress) it.next();
+        TaskInProgress tip = it.next();
         reports.add(tip.generateSingleReport());
       }
       Vector<TaskInProgress> incompleteTasks = job.reportCleanupTIPs(false);
       for (Iterator<TaskInProgress> it = incompleteTasks.iterator(); 
            it.hasNext();) {
-        TaskInProgress tip = (TaskInProgress) it.next();
+        TaskInProgress tip = it.next();
         reports.add(tip.generateSingleReport());
       }
       return reports.toArray(new TaskReport[reports.size()]);
@@ -3322,13 +3325,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       Vector<TaskInProgress> completeTasks = job.reportSetupTIPs(true);
       for (Iterator<TaskInProgress> it = completeTasks.iterator();
            it.hasNext();) {
-        TaskInProgress tip = (TaskInProgress) it.next();
+        TaskInProgress tip =  it.next();
         reports.add(tip.generateSingleReport());
       }
       Vector<TaskInProgress> incompleteTasks = job.reportSetupTIPs(false);
       for (Iterator<TaskInProgress> it = incompleteTasks.iterator(); 
            it.hasNext();) {
-        TaskInProgress tip = (TaskInProgress) it.next();
+        TaskInProgress tip =  it.next();
         reports.add(tip.generateSingleReport());
       }
       return reports.toArray(new TaskReport[reports.size()]);
@@ -3740,7 +3743,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         jobStatusList.add(status);
       }
     }
-    return (JobStatus[]) jobStatusList.toArray(
+    return  jobStatusList.toArray(
         new JobStatus[jobStatusList.size()]);
   }
 

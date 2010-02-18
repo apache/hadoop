@@ -9,6 +9,8 @@
   import="java.text.SimpleDateFormat"
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <jsp:include page="loadhistory.jsp">
   <jsp:param name="jobid" value="<%=request.getParameter("jobid") %>"/>
   <jsp:param name="logFile" value="<%=request.getParameter("logFile") %>"/>

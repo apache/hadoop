@@ -1089,6 +1089,7 @@ abstract class Task implements Writable, Configurable {
                          ) throws IOException, InterruptedException, 
                                   ClassNotFoundException;
 
+    @SuppressWarnings("unchecked")
     static <K,V> 
     CombinerRunner<K,V> create(JobConf job,
                                TaskAttemptID taskId,
@@ -1098,6 +1099,7 @@ abstract class Task implements Writable, Configurable {
                               ) throws ClassNotFoundException {
       Class<? extends Reducer<K,V,K,V>> cls = 
         (Class<? extends Reducer<K,V,K,V>>) job.getCombinerClass();
+
       if (cls != null) {
         return new OldCombinerRunner(cls, job, inputCounter, reporter);
       }
@@ -1122,6 +1124,7 @@ abstract class Task implements Writable, Configurable {
     private final Class<V> valueClass;
     private final RawComparator<K> comparator;
 
+    @SuppressWarnings("unchecked")
     protected OldCombinerRunner(Class<? extends Reducer<K,V,K,V>> cls,
                                 JobConf conf,
                                 Counters.Counter inputCounter,
@@ -1164,6 +1167,7 @@ abstract class Task implements Writable, Configurable {
     private final Class<V> valueClass;
     private final org.apache.hadoop.mapreduce.OutputCommitter committer;
 
+    @SuppressWarnings("unchecked")
     NewCombinerRunner(Class reducerClass,
                       JobConf job,
                       org.apache.hadoop.mapreduce.TaskAttemptID taskId,
@@ -1198,6 +1202,7 @@ abstract class Task implements Writable, Configurable {
       }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     void combine(RawKeyValueIterator iterator, 
                  OutputCollector<K,V> collector

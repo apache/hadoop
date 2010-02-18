@@ -14,6 +14,8 @@
       "d-MMM-yyyy HH:mm:ss");
 
   private static final String PRIVATE_ACTIONS_KEY = "webinterface.private.actions";%>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%!private void printConfirm(JspWriter out, String jobid, String tipid,
       String taskid, String action) throws IOException {
     String url = "taskdetails.jsp?jobid=" + jobid + "&tipid=" + tipid
@@ -38,7 +40,7 @@
     TaskID tipidObj = TaskID.forName(tipid);
     TaskAttemptID taskidObj = TaskAttemptID.forName(taskid);
     
-    JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
+    JobInProgress job = tracker.getJob(jobidObj);
     
     boolean privateActions = JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY,
         false);

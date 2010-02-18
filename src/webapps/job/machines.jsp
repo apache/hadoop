@@ -8,6 +8,8 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 

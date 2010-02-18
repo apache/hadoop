@@ -8,6 +8,9 @@
   import="org.apache.hadoop.util.*"
 %>
 
+<%!	private static final long serialVersionUID = 1L;
+%>
+
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
@@ -83,7 +86,7 @@
                              JobID jobId,
                              String kind, 
                              String cause) throws IOException {
-    JobInProgress job = (JobInProgress) tracker.getJob(jobId);
+    JobInProgress job =  tracker.getJob(jobId);
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
       return;

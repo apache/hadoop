@@ -10,6 +10,8 @@
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
@@ -21,7 +23,7 @@
   TaskID tipidObj = TaskID.forName(tipid);
   TaskAttemptID taskidObj = TaskAttemptID.forName(taskid);
   
-  JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
+  JobInProgress job = tracker.getJob(jobidObj);
   
   Format decimal = new DecimalFormat();
   Counters counters;
