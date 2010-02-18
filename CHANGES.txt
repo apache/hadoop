@@ -2,12 +2,6 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
-    MAPREDUCE-623. Resolve javac warnings in mapreduce. (Jothi Padmanabhan
-    via sharad)
-
-    HADOOP-6575. Remove call to fault injection tests not present in 0.20.
-    (cdouglas)
-
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES
@@ -62,6 +56,12 @@ Release 0.20.2 - 2010-2-16
 
     HDFS-761. Fix failure to process rename operation from edits log due to 
     quota verification. (suresh)
+
+    MAPREDUCE-623. Resolve javac warnings in mapreduce. (Jothi Padmanabhan
+    via sharad)
+
+    HADOOP-6575. Remove call to fault injection tests not present in 0.20.
+    (cdouglas)
 
   IMPROVEMENTS
 
