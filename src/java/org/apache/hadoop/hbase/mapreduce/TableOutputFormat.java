@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -33,6 +34,7 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Convert Map/Reduce output and write it to an HBase table. The KEY is ignored
@@ -46,6 +48,14 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
   private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
   /** Job parameter that specifies the output table. */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
+  /** Optional job parameter to specify a peer cluster */
+  public static final String QUORUM_ADDRESS = "hbase.mapred.output.quorum";
+  /** Optional specification of the rs class name of the peer cluster */
+  public static final String
+      REGION_SERVER_CLASS = "hbase.mapred.output.rs.class";
+  /** Optional specification of the rs impl name of the peer cluster */
+  public static final String
+      REGION_SERVER_IMPL = "hbase.mapred.output.rs.impl";
 
   /**
    * Writes the reducer output to an HBase table.
@@ -111,12 +121,25 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Writable> {
     TaskAttemptContext context) 
   throws IOException, InterruptedException {
     // expecting exactly one path
-    String tableName = context.getConfiguration().get(OUTPUT_TABLE);
+    Configuration conf = new Configuration(context.getConfiguration());
+    String tableName = conf.get(OUTPUT_TABLE);
+    String address = conf.get(QUORUM_ADDRESS);
+    String serverClass = conf.get(REGION_SERVER_CLASS);
+    String serverImpl = conf.get(REGION_SERVER_IMPL);
     HTable table = null;
     try {
-      HBaseConfiguration.addHbaseResources(context.getConfiguration());
-      table = new HTable(context.getConfiguration(), 
-        tableName);
+      HBaseConfiguration.addHbaseResources(conf);
+      if (address != null) {
+        // Check is done in TMRU
+        String[] parts = address.split(":");
+        conf.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
+        conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[1]);
+      }
+      if (serverClass != null) {
+        conf.set(HConstants.REGION_SERVER_CLASS, serverClass);
+        conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
+      }
+      table = new HTable(conf, tableName);
     } catch(IOException e) {
       LOG.error(e);
       throw e;

@@ -26,6 +26,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -112,26 +114,61 @@ public class TableMapReduceUtil {
   /**
    * Use this before submitting a TableReduce job. It will
    * appropriately set up the JobConf.
+   *
+   * @param table  The output table.
+   * @param reducer  The reducer class to use.
+   * @param job  The current job to adjust.
+   * @param partitioner  Partitioner to use. Pass <code>null</code> to use
+   * default partitioner.
+   * @throws IOException When determining the region count fails.
+   */
+  public static void initTableReducerJob(String table,
+    Class<? extends TableReducer> reducer, Job job,
+    Class partitioner) throws IOException {
+    initTableReducerJob(table, reducer, job, null, null, null, null);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will
+   * appropriately set up the JobConf.
    * 
    * @param table  The output table.
    * @param reducer  The reducer class to use.
    * @param job  The current job to adjust.
    * @param partitioner  Partitioner to use. Pass <code>null</code> to use 
    * default partitioner.
+   * @param quorumAddress Distant cluster to write to
+   * @param serverClass redefined hbase.regionserver.class
+   * @param serverImpl redefined hbase.regionserver.impl
    * @throws IOException When determining the region count fails. 
    */
   public static void initTableReducerJob(String table,
-    Class<? extends TableReducer> reducer, Job job, Class partitioner)
-  throws IOException {
+    Class<? extends TableReducer> reducer, Job job,
+    Class partitioner, String quorumAddress, String serverClass,
+    String serverImpl) throws IOException {
+
+    Configuration conf = job.getConfiguration();
     job.setOutputFormatClass(TableOutputFormat.class);
     if (reducer != null) job.setReducerClass(reducer);
-    job.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, table);
+    conf.set(TableOutputFormat.OUTPUT_TABLE, table);
+    if (quorumAddress != null) {
+      if (quorumAddress.split(":").length == 2) {
+        conf.set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
+      } else {
+        throw new IOException("Please specify the peer cluster as " +
+            HConstants.ZOOKEEPER_QUORUM+":"+HConstants.ZOOKEEPER_ZNODE_PARENT);
+      }
+    }
+    if (serverClass != null && serverImpl != null) {
+      conf.set(TableOutputFormat.REGION_SERVER_CLASS, serverClass);
+      conf.set(TableOutputFormat.REGION_SERVER_IMPL, serverImpl);
+    }
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
-      HBaseConfiguration.addHbaseResources(job.getConfiguration());
+      HBaseConfiguration.addHbaseResources(conf);
       job.setPartitionerClass(HRegionPartitioner.class);
-      HTable outputTable = new HTable(job.getConfiguration(), table);
+      HTable outputTable = new HTable(conf, table);
       int regions = outputTable.getRegionsInfo().size();
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(outputTable.getRegionsInfo().size());
