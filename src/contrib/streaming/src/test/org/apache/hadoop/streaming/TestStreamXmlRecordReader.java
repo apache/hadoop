@@ -58,7 +58,7 @@ public class TestStreamXmlRecordReader extends TestStreaming
     };
   }
 
-  public void testCommandLine() {
+  public void testCommandLine() throws IOException {
     try {
       try {
         OUTPUT_DIR.getAbsoluteFile().delete();
@@ -71,8 +71,6 @@ public class TestStreamXmlRecordReader extends TestStreaming
       String output = StreamUtil.slurp(outFile);
       outFile.delete();
       assertEquals(input, output);
-    } catch (Exception e) {
-      e.printStackTrace();
     } finally {
       INPUT_FILE.delete();
       File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();

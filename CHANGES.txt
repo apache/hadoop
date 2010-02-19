@@ -63,6 +63,8 @@ Release 0.20.2 - 2010-2-18
     HADOOP-6575. Remove call to fault injection tests not present in 0.20.
     (cdouglas)
 
+    HADOOP-6576. Fix streaming test failures on 0.20. (Todd Lipcon via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon

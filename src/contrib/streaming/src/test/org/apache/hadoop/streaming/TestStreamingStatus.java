@@ -92,7 +92,7 @@ public class TestStreamingStatus extends TestCase {
 
       TaskReport[] reports = job.jc_.getMapTaskReports(job.jobId_);
       assertEquals(1, reports.length);
-      assertEquals("starting echo > sort", reports[0].getState());
+      assertEquals("starting echo", reports[0].getState());
     } finally {
       if (fs != null) { clean(fs); }
       if (mr != null) { mr.shutdown(); }

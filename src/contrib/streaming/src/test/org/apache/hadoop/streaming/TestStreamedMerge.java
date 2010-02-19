@@ -104,24 +104,16 @@ public class TestStreamedMerge extends TestCase {
     return c;
   }
 
-  void lsr() {
-    try {
-      System.out.println("lsr /");
-      ToolRunner.run(conf_, new FsShell(), new String[]{ "-lsr", "/" });
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+  void lsr() throws Exception  {
+    System.out.println("lsr /");
+    ToolRunner.run(conf_, new FsShell(), new String[]{ "-lsr", "/" });
   }
 
-  void printSampleInput() {
-    try {
-      System.out.println("cat /input/part-00");
-      String content = StreamUtil.slurpHadoop(new Path("/input/part-00"), fs_);
-      System.out.println(content);
-      System.out.println("cat done.");
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+  void printSampleInput() throws IOException {
+    System.out.println("cat /input/part-00");
+    String content = StreamUtil.slurpHadoop(new Path("/input/part-00"), fs_);
+    System.out.println(content);
+    System.out.println("cat done.");
   }
 
   void callStreaming(String argSideOutput, boolean inputTagged) throws IOException {
@@ -210,7 +202,7 @@ public class TestStreamedMerge extends TestCase {
     StringBuffer buf_;
   }
 
-  public void testMain() throws IOException {
+  public void testMain() throws Exception {
     boolean success = false;
     String base = new File(".").getAbsolutePath();
     System.setProperty("hadoop.log.dir", base + "/logs");
@@ -228,8 +220,6 @@ public class TestStreamedMerge extends TestCase {
       }
       doAllTestJobs();
       success = true;
-    } catch (IOException io) {
-      io.printStackTrace();
     } finally {
       try {
         fs_.close();
@@ -243,14 +233,14 @@ public class TestStreamedMerge extends TestCase {
     }
   }
 
-  void doAllTestJobs() throws IOException
+  void doAllTestJobs() throws Exception 
   {
     goSocketTagged(true, false);
     goSocketTagged(false, false);
     goSocketTagged(true, true);
   }
   
-  void goSocketTagged(boolean socket, boolean inputTagged) throws IOException {
+  void goSocketTagged(boolean socket, boolean inputTagged) throws Exception {
     System.out.println("***** goSocketTagged: " + socket + ", " + inputTagged);
     String expect = createInputs(inputTagged);
     lsr();

@@ -70,7 +70,7 @@ public class TestStreamAggregate extends TestCase
     };
   }
   
-  public void testCommandLine()
+  public void testCommandLine() throws Exception
   {
     try {
       try {
@@ -91,21 +91,12 @@ public class TestStreamAggregate extends TestCase
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
-    } catch(Exception e) {
-      failTrace(e);
     } finally {
       File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
       INPUT_FILE.delete();
       outFileCRC.delete();
       OUTPUT_DIR.getAbsoluteFile().delete();
     }
-  }
-
-  private void failTrace(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
   }
 
   public static void main(String[]args) throws Exception

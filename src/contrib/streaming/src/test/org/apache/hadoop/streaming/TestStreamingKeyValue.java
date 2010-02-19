@@ -72,7 +72,7 @@ public class TestStreamingKeyValue extends TestCase
     };
   }
   
-  public void testCommandLine()
+  public void testCommandLine() throws Exception
   {
     String outFileName = "part-00000";
     File outFile = null;
@@ -94,8 +94,6 @@ public class TestStreamingKeyValue extends TestCase
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
-    } catch(Exception e) {
-      failTrace(e);
     } finally {
       outFile.delete();
       File outFileCRC = new File(OUTPUT_DIR,
@@ -104,13 +102,6 @@ public class TestStreamingKeyValue extends TestCase
       outFileCRC.delete();
       OUTPUT_DIR.getAbsoluteFile().delete();
     }
-  }
-
-  private void failTrace(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
   }
 
   public static void main(String[]args) throws Exception
