@@ -383,9 +383,9 @@
   </property>
   <property>
     <name>hbase.regions.slop</name>
-    <value>0.1</value>
+    <value>0.3</value>
     <description>Rebalance if regionserver has average + (average * slop) regions.
-    Default is 10% slop.
+    Default is 30% slop.
     </description>
   </property>
   <property>

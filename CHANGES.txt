@@ -376,6 +376,7 @@ Release 0.21.0 - Unreleased
                of the supplied byte array (Bruno Dumon via Stack)
    HBASE-2211  Add a new Filter that checks a single column value but does not
                emit it. (Ferdy via Stack)
+   HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
