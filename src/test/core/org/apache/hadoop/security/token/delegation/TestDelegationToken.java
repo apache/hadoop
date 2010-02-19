@@ -23,26 +23,28 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 import static org.junit.Assert.*;
 
 public class TestDelegationToken {
+  private static final Log LOG = LogFactory.getLog(TestDelegationToken.class);
   private static final Text KIND = new Text("MY KIND");
 
   public static class TestDelegationTokenIdentifier 
@@ -137,25 +139,44 @@ public class TestDelegationToken {
         owner), new Text(renewer), null);
     return new Token<TestDelegationTokenIdentifier>(dtId, dtSecretManager);
   }
+  
+  private void shouldThrow(PrivilegedExceptionAction<Object> action,
+                           Class<? extends Throwable> except) {
+    try {
+      action.run();
+      Assert.fail("action did not throw " + except);
+    } catch (Throwable th) {
+      LOG.info("Caught an exception: " + StringUtils.stringifyException(th));
+      assertEquals("action threw wrong exception", except, th.getClass());
+    }
+  }
+
   @Test
   public void testDelegationTokenSecretManager() throws Exception {
-    TestDelegationTokenSecretManager dtSecretManager = 
+    final TestDelegationTokenSecretManager dtSecretManager = 
       new TestDelegationTokenSecretManager(24*60*60*1000,
           3*1000,1*1000,3600000);
     try {
       dtSecretManager.startThreads();
-      Token<TestDelegationTokenIdentifier> token = generateDelegationToken(
+      final Token<TestDelegationTokenIdentifier> token = 
+        generateDelegationToken(
           dtSecretManager, "SomeUser", "JobTracker");
       // Fake renewer should not be able to renew
-      Assert.assertFalse(dtSecretManager.renewToken(token, "FakeRenewer"));
-      Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
+      shouldThrow(new PrivilegedExceptionAction<Object>() {
+        public Object run() throws Exception {
+          dtSecretManager.renewToken(token, "FakeRenewer");
+          return null;
+        }
+      }, AccessControlException.class);
+      long time = dtSecretManager.renewToken(token, "JobTracker");
+      assertTrue("renew time is in future", time > System.currentTimeMillis());
       TestDelegationTokenIdentifier identifier = 
         new TestDelegationTokenIdentifier();
       byte[] tokenId = token.getIdentifier();
       identifier.readFields(new DataInputStream(
           new ByteArrayInputStream(tokenId)));
       Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
-      Log.info("Sleep to expire the token");
+      LOG.info("Sleep to expire the token");
       Thread.sleep(2000);
       //Token should be expired
       try {
@@ -165,31 +186,49 @@ public class TestDelegationToken {
       } catch (InvalidToken e) {
         //Success
       }
-      Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
-      Log.info("Sleep beyond the max lifetime");
+      dtSecretManager.renewToken(token, "JobTracker");
+      LOG.info("Sleep beyond the max lifetime");
       Thread.sleep(2000);
-      Assert.assertFalse(dtSecretManager.renewToken(token, "JobTracker"));
+      
+      shouldThrow(new PrivilegedExceptionAction<Object>() {
+        public Object run() throws Exception {
+          dtSecretManager.renewToken(token, "JobTracker");
+          return null;
+        }
+      }, InvalidToken.class);
     } finally {
       dtSecretManager.stopThreads();
     }
   }
+
   @Test 
   public void testCancelDelegationToken() throws Exception {
-    TestDelegationTokenSecretManager dtSecretManager = 
+    final TestDelegationTokenSecretManager dtSecretManager = 
       new TestDelegationTokenSecretManager(24*60*60*1000,
         10*1000,1*1000,3600000);
     try {
       dtSecretManager.startThreads();
-      Token<TestDelegationTokenIdentifier> token = generateDelegationToken(
-          dtSecretManager, "SomeUser", "JobTracker");
+      final Token<TestDelegationTokenIdentifier> token = 
+        generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
       //Fake renewer should not be able to renew
-      Assert.assertFalse(dtSecretManager.cancelToken(token, "FakeCanceller"));
-      Assert.assertTrue(dtSecretManager.cancelToken(token, "JobTracker"));
-      Assert.assertFalse(dtSecretManager.renewToken(token, "JobTracker"));
+      shouldThrow(new PrivilegedExceptionAction<Object>() {
+        public Object run() throws Exception {
+          dtSecretManager.renewToken(token, "FakeCanceller");
+          return null;
+        }
+      }, AccessControlException.class);
+      dtSecretManager.cancelToken(token, "JobTracker");
+      shouldThrow(new PrivilegedExceptionAction<Object>() {
+        public Object run() throws Exception {
+          dtSecretManager.renewToken(token, "JobTracker");
+          return null;
+        }
+      }, InvalidToken.class);
     } finally {
       dtSecretManager.stopThreads();
     }
   }
+
   @Test
   public void testRollMasterKey() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager = 
@@ -226,6 +265,7 @@ public class TestDelegationToken {
       dtSecretManager.stopThreads();
     }
   }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testDelegationTokenSelector() throws Exception {
