@@ -34,6 +34,8 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -80,8 +82,13 @@ public class TestDelegationToken {
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     // Fake renewer should not be able to renew
-	  Assert.assertFalse(dtSecretManager.renewToken(token, "FakeRenewer"));
-	  Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
+    try {
+  	  dtSecretManager.renewToken(token, "FakeRenewer");
+  	  Assert.fail("should have failed");
+    } catch (AccessControlException ace) {
+      // PASS
+    }
+	  dtSecretManager.renewToken(token, "JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
@@ -97,10 +104,15 @@ public class TestDelegationToken {
 	  } catch (InvalidToken e) {
 	    //Success
 	  }
-	  Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
+	  dtSecretManager.renewToken(token, "JobTracker");
 	  Log.info("Sleep beyond the max lifetime");
 	  Thread.sleep(5000);
-	  Assert.assertFalse(dtSecretManager.renewToken(token, "JobTracker"));
+	  try {
+  	  dtSecretManager.renewToken(token, "JobTracker");
+  	  Assert.fail("should have been expired");
+	  } catch (InvalidToken it) {
+	    // PASS
+	  }
   }
   
   @Test 
@@ -110,9 +122,19 @@ public class TestDelegationToken {
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     //Fake renewer should not be able to renew
-    Assert.assertFalse(dtSecretManager.cancelToken(token, "FakeCanceller"));
-    Assert.assertTrue(dtSecretManager.cancelToken(token, "JobTracker"));
-    Assert.assertFalse(dtSecretManager.renewToken(token, "JobTracker"));
+    try {
+      dtSecretManager.cancelToken(token, "FakeCanceller");
+      Assert.fail("should have failed");
+    } catch (AccessControlException ace) {
+      // PASS
+    }
+    dtSecretManager.cancelToken(token, "JobTracker");
+    try {
+      dtSecretManager.renewToken(token, "JobTracker");
+      Assert.fail("should have failed");
+    } catch (InvalidToken it) {
+      // PASS
+    }
   }
   
   @Test
@@ -126,6 +148,7 @@ public class TestDelegationToken {
              new ByteArrayInputStream(tokenId)));
     Log.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
-    Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
-  } 
+    dtSecretManager.renewToken(token, "JobTracker");
+  }
+ 
 }

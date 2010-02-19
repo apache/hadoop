@@ -4354,15 +4354,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
   }
 
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
     return dtSecretManager.renewToken(token, renewer);
   }
 
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     String canceller = UserGroupInformation.getCurrentUser().getShortUserName();
-    return dtSecretManager.cancelToken(token, canceller);
+    dtSecretManager.cancelToken(token, canceller);
   }
 }

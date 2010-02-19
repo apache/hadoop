@@ -66,6 +66,10 @@ Trunk (unreleased changes)
     HDFS-930. Better error message for DATA_TRANSFER_VERSION mismatched.
     (Kay Kay via szetszwo)
 
+    HDFS-986. Delegation token renewing and cancelling should provide
+    meaningful exceptions when there are failures instead of returning 
+    false. (omalley)
+
   OPTIMIZATIONS
 
   BUG FIXES
