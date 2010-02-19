@@ -1321,7 +1321,7 @@ public class RegionManager implements HConstants {
     private final int maxRegToClose;    // hbase.regions.close.max
     
     LoadBalancer(Configuration conf) {
-      this.slop = conf.getFloat("hbase.regions.slop", (float)0.1);
+      this.slop = conf.getFloat("hbase.regions.slop", (float)0.3);
       if (this.slop <= 0) this.slop = 1;
       //maxRegToClose to constrain balance closing per one iteration
       // -1 to turn off 
