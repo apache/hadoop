@@ -2,7 +2,7 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
-Release 0.20.2 - 2010-2-18
+Release 0.20.2 - 2010-2-19
 
   NEW FEATURES
 
