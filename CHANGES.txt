@@ -217,6 +217,9 @@ Trunk (unreleased changes)
     HADOOP-6558. Return null in HarFileSystem.getFileChecksum(..) since no
     checksum algorithm is implemented.  (szetszwo)
 
+    HADOOP-6572. Makes sure that SASL encryption and push to responder
+    queue for the RPC response happens atomically. (Kan Zhang via ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
