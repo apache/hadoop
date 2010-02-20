@@ -1854,7 +1854,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     static class Key {
       final String scheme;
       final String authority;
-      final String username;
+      final UserGroupInformation ugi;
       final long unique;   // an artificial way to make a key unique
 
       Key(URI uri, Configuration conf) throws IOException {
@@ -1866,13 +1866,12 @@ public abstract class FileSystem extends Configured implements Closeable {
         authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
         this.unique = unique;
         
-        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-        username = ugi.getUserName();
+        this.ugi = UserGroupInformation.getCurrentUser();
       }
 
       /** {@inheritDoc} */
       public int hashCode() {
-        return (scheme + authority + username).hashCode() + (int)unique;
+        return (scheme + authority).hashCode() + ugi.hashCode() + (int)unique;
       }
 
       static boolean isEqual(Object a, Object b) {
@@ -1888,7 +1887,7 @@ public abstract class FileSystem extends Configured implements Closeable {
           Key that = (Key)obj;
           return isEqual(this.scheme, that.scheme)
                  && isEqual(this.authority, that.authority)
-                 && isEqual(this.username, that.username)
+                 && isEqual(this.ugi, that.ugi)
                  && (this.unique == that.unique);
         }
         return false;        
@@ -1896,7 +1895,7 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       /** {@inheritDoc} */
       public String toString() {
-        return username + "@" + scheme + "://" + authority;        
+        return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
       }
     }
   }

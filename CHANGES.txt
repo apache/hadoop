@@ -224,6 +224,8 @@ Trunk (unreleased changes)
     HADOOP-6572. Makes sure that SASL encryption and push to responder
     queue for the RPC response happens atomically. (Kan Zhang via ddas)
 
+    HADOOP-6545. Changes the Key for the FileSystem cache to be UGI (ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
