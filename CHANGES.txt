@@ -54,9 +54,13 @@ Trunk (unreleased changes)
     HADOOP-6510. Adds a way for superusers to impersonate other users
     in a secure environment. (Jitendra Nath Pandey via ddas)
 
-    HADOOP-6421 Adds Symbolic links to FileContext, AbstractFileSystem.
+    HADOOP-6421. Adds Symbolic links to FileContext, AbstractFileSystem.
     It also adds a limited implementation for the local file system
      (RawLocalFs) that allows local symlinks. (Eli Collins via Sanjay Radia)
+
+    HADOOP-6577. Add hidden configuration option "ipc.server.max.response.size"
+    to change the default 1 MB, the maximum size when large IPC handler 
+    response buffer is reset. (suresh)
 
   IMPROVEMENTS
 

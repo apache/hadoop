@@ -119,6 +119,10 @@ public class CommonConfigurationKeys {
   public static final int     IPC_CLIENT_IDLETHRESHOLD_DEFAULT = 4000;
   public static final String  IPC_SERVER_TCPNODELAY_KEY = "ipc.server.tcpnodelay";
   public static final boolean IPC_SERVER_TCPNODELAY_DEFAULT = false;
+  public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY = 
+                                       "ipc.server.max.response.size";
+  public static final int     IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT = 
+                                        1024*1024;
 
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY = 
                                        "hadoop.rpc.socket.factory.class.default";

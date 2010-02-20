@@ -59,6 +59,7 @@ import javax.security.sasl.SaslServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
@@ -104,8 +105,7 @@ public abstract class Server {
    * Initial and max size of response buffer
    */
   static int INITIAL_RESP_BUF_SIZE = 10240;
-  static int MAX_RESP_BUF_SIZE = 1024*1024;
-    
+
   public static final Log LOG = LogFactory.getLog(Server.class);
 
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
@@ -174,6 +174,7 @@ public abstract class Server {
   private SecretManager<TokenIdentifier> secretManager;
 
   private int maxQueueSize;
+  private final int maxRespSize;
   private int socketSendBufferSize;
   private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
@@ -1207,7 +1208,7 @@ public abstract class Server {
                 : Status.ERROR, value, errorClass, error);
             // Discard the large buf and reset it back to
             // smaller size to freeup heap
-            if (buf.size() > MAX_RESP_BUF_SIZE) {
+            if (buf.size() > maxRespSize) {
               LOG.warn("Large response size " + buf.size() + " for call "
                   + call.toString());
               buf = new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
@@ -1253,6 +1254,8 @@ public abstract class Server {
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
     this.maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
+    this.maxRespSize = conf.getInt(IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
+                                   IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);

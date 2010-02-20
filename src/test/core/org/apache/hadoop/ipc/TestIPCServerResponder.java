@@ -27,6 +27,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
@@ -116,8 +117,10 @@ public class TestIPCServerResponder extends TestCase {
 
   public void testResponseBuffer() throws Exception {
     Server.INITIAL_RESP_BUF_SIZE = 1;
-    Server.MAX_RESP_BUF_SIZE = 1;
+    conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
+                1);
     testServerResponder(1, true, 1, 1, 5);
+    conf = new Configuration(); // reset configuration
   }
 
   public void testServerResponder() throws Exception {
