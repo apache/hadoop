@@ -27,6 +27,7 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
@@ -79,7 +80,14 @@ public class RpcMetrics implements Updater {
           new MetricsIntValue("NumOpenConnections", registry);
   public MetricsIntValue callQueueLen = 
           new MetricsIntValue("callQueueLen", registry);
-  
+  public MetricsTimeVaryingInt authenticationFailures = 
+          new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
+  public MetricsTimeVaryingInt authenticationSuccesses = 
+          new MetricsTimeVaryingInt("rpcAuthenticationSuccesses", registry);
+  public MetricsTimeVaryingInt authorizationFailures = 
+          new MetricsTimeVaryingInt("rpcAuthorizationFailures", registry);
+  public MetricsTimeVaryingInt authorizationSuccesses = 
+         new MetricsTimeVaryingInt("rpcAuthorizationSuccesses", registry);
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
    */

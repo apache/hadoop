@@ -156,6 +156,8 @@ Trunk (unreleased changes)
     meaningful exceptions when there are failures instead of returning 
     false. (omalley)
 
+    HADOOP-6583. Captures authentication and authorization metrics. (ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
