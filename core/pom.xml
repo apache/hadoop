@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hbase</groupId>
+  <artifactId>hbase-core</artifactId>
+  <packaging>jar</packaging>
+  <name>HBase Core</name>
+  <parent>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase</artifactId>
+    <version>0.20.2-SNAPSHOT</version>
+  </parent>
+
+  <!-- TODO still need Repositories defined-->
+  <build>
+    <!--  TODO this may affect the contrib dependency resolution, commenting out for now
+    <finalName>hbase-${project.version}</finalName>
+    -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/</directory>
+        <includes>
+          <include>webapps/**/*.gif</include>
+          <include>webapps/**/*.css</include>
+          <include>webapps/**/*.html</include>
+          <include>webapps/**/*.xml</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running tests (this is needed for upstream projects whose tests need this jar simply for compilation)-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
+            </manifest>
+          </archive>
+          <!-- Exclude these 2 packages, because their dependency _binary_ files include the sources, and Maven 2.2 appears to add them to the sources to compile, weird-->
+          <excludes>
+            <exclude>org/apache/jute/**</exclude>
+            <exclude>org/apache/zookeeper/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.1.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkMode>always</forkMode>
+          <argLine>-Xmx512m</argLine>
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <excludes>
+            <exclude>**/SoftValueSortedMapTest.java</exclude>
+            <exclude>**/*$*</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>JSPC</id>
+            <phase>generate-sources</phase>
+            <configuration>n
+              <tasks><taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/><jspcompiler uriroot="${basedir}/src/main/resources/webapps/master" outputdir="${project.build.directory}/jspc" package="org.apache.hadoop.hbase.generated.master" webxml="${basedir}/src/main/resources/webapps/master/WEB-INF/web.xml"/><jspcompiler uriroot="${basedir}/src/main/resources/webapps/regionserver" outputdir="${project.build.directory}/jspc" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${basedir}/src/main/resources/webapps/regionserver/WEB-INF/web.xml"/></tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>package-info</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <tasks>
+                <exec executable="sh">
+                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${project.build.directory}/generated-sources"/>
+                </exec>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-jspc-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${basedir}/target/jspc</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-package-info</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <dependencies>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>${log4j.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.jms</groupId>
+          <artifactId>jms</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jmx</groupId>
+          <artifactId>jmxri</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jdmk</groupId>
+          <artifactId>jmxtools</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapred</artifactId>
+      <version>${hadoop-mapred.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapred-test</artifactId>
+      <version>${hadoop-mapred.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <version>${hadoop-hdfs.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-test</artifactId>
+      <version>${hadoop-hdfs.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-core</artifactId>
+      <version>${hadoop-core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-core-test</artifactId>
+      <version>${hadoop-core.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>thrift</artifactId>
+      <version>${thrift.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+      <version>${zookeeper.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math</artifactId>
+      <version>${commons-math.version}</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>${commons-lang.version}</version>
+    </dependency>
+    
+    <!-- 
+    
+      TODO mention to Hbase team to tell the avro team about this problem,
+      hbase-core depends on hadoop, which then:
+      [INFO] |  \- org.apache.hadoop:avro:jar:1.2.0:compile
+      [INFO] |     +- org.slf4j:slf4j-simple:jar:1.5.8:compile
+      [INFO] |     |  \- org.slf4j:slf4j-api:jar:1.5.2:compile
+      
+      see: https://forum.hibernate.org/viewtopic.php?p=2400801 and http://old.nabble.com/org.slf4j.impl.StaticLoggerBinder.SINGLETON-td20987705.html
+      
+      upgrading to 1.5.6 will fix this
+    -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.5.8</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <!-- TODO not sure jruby is needed for Hbase-core per se, maybe just for stargate? 
+    <dependency>
+      <groupId>org.jruby</groupId>
+      <artifactId>jruby-complete</artifactId>
+      <version>${jruby.version}</version>
+    </dependency>
+    -->
+  </dependencies>
+</project>

@@ -12,6 +12,7 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2219  stop using code mapping for method names in the RPC
    HBASE-1728  Column family scoping and cluster identification
+   HBASE-2099  Move build to Maven (Paul Smith via Stack)
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
