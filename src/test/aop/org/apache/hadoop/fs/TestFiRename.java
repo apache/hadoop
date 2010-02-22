@@ -47,8 +47,8 @@ import org.junit.Test;
  * 
  * This test uses AspectJ to simulate failures.
  */
-public class TestRename {
-  private static final Log LOG = LogFactory.getLog(TestRename.class);
+public class TestFiRename {
+  private static final Log LOG = LogFactory.getLog(TestFiRename.class);
   private static String removeChild = "";
   private static String addChild = "";
   private static byte[] data = { 0 };
@@ -149,11 +149,11 @@ public class TestRename {
     createFile(src);
 
     // During rename, while removing src, an exception is thrown
-    TestRename.exceptionOnRemove(src.toString());
+    TestFiRename.exceptionOnRemove(src.toString());
     rename(src, dst, true, true, false, Rename.NONE);
 
     // During rename, while adding dst an exception is thrown
-    TestRename.exceptionOnAdd(dst.toString());
+    TestFiRename.exceptionOnAdd(dst.toString());
     rename(src, dst, true, true, false, Rename.NONE);
   }
 
@@ -166,15 +166,15 @@ public class TestRename {
     createFile(dst);
 
     // During rename, while removing src, an exception is thrown
-    TestRename.exceptionOnRemove(src.toString());
+    TestFiRename.exceptionOnRemove(src.toString());
     rename(src, dst, true, true, true, Rename.OVERWRITE);
 
     // During rename, while removing dst, an exception is thrown
-    TestRename.exceptionOnRemove(dst.toString());
+    TestFiRename.exceptionOnRemove(dst.toString());
     rename(src, dst, true, true, true, Rename.OVERWRITE);
 
     // During rename, while adding dst an exception is thrown
-    TestRename.exceptionOnAdd(dst.toString());
+    TestFiRename.exceptionOnAdd(dst.toString());
     rename(src, dst, true, true, true, Rename.OVERWRITE);
   }
 

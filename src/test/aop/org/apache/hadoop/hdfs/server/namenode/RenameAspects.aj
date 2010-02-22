@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.TestRename;
+import org.apache.hadoop.fs.TestFiRename;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 
 /**
@@ -41,7 +41,7 @@ public privileged aspect RenameAspects {
   before(INode[] inodes, int pos) throws RuntimeException :
     callRemove(inodes, pos) {
     LOG.info("FI: callRenameRemove");
-    if (TestRename.throwExceptionOnRemove(inodes[pos].getLocalName())) {
+    if (TestFiRename.throwExceptionOnRemove(inodes[pos].getLocalName())) {
       throw new RuntimeException("RenameAspects - on remove " + 
           inodes[pos].getLocalName());
     }
@@ -58,7 +58,7 @@ public privileged aspect RenameAspects {
       throws RuntimeException : 
       callAddChildNoQuotaCheck(inodes, pos, node, diskspace, flag) {
     LOG.info("FI: callAddChildNoQuotaCheck");
-    if (TestRename.throwExceptionOnAdd(inodes[pos].getLocalName())) {
+    if (TestFiRename.throwExceptionOnAdd(inodes[pos].getLocalName())) {
       throw new RuntimeException("RenameAspects on add " + 
           inodes[pos].getLocalName());
     }
