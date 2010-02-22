@@ -25,9 +25,8 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -49,12 +48,12 @@ public class ProxyFileDataServlet extends FileDataServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected URI createUri(FileStatus i, UserGroupInformation ugi,
+  protected URI createUri(String parent, HdfsFileStatus i, UserGroupInformation ugi,
       ClientProtocol nnproxy, HttpServletRequest request) throws IOException,
       URISyntaxException {
     return new URI(request.getScheme(), null, request.getServerName(), request
-        .getServerPort(), "/streamFile", "filename=" + i.getPath() + "&ugi="
-        + ugi.getShortUserName(), null);
+        .getServerPort(), "/streamFile", "filename=" + i.getFullName(parent) 
+        + "&ugi=" + ugi.getShortUserName(), null);
   }
 
   /** {@inheritDoc} */

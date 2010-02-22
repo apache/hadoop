@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Progressable;
 
@@ -99,14 +100,23 @@ public class Hdfs extends AbstractFileSystem {
 
   @Override
   protected FileStatus getFileStatus(Path f) throws IOException {
-    FileStatus fi = dfs.getFileInfo(getUriPath(f));
+    HdfsFileStatus fi = dfs.getFileInfo(getUriPath(f));
     if (fi != null) {
-      fi.setPath(fi.getPath().makeQualified(getUri(), null));
-      return fi;
+      return makeQualified(fi, f);
     } else {
       throw new FileNotFoundException("File does not exist: " + f.toString());
     }
   }
+
+  private FileStatus makeQualified(HdfsFileStatus f, Path parent) {
+    return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
+        f.getBlockSize(), f.getModificationTime(),
+        f.getAccessTime(),
+        f.getPermission(), f.getOwner(), f.getGroup(),
+        (f.getFullPath(parent)).makeQualified(
+            getUri(), null)); // fully-qualify path
+  }
+
 
   @Override
   protected FsStatus getFsStatus() throws IOException {
@@ -120,14 +130,15 @@ public class Hdfs extends AbstractFileSystem {
 
   @Override
   protected FileStatus[] listStatus(Path f) throws IOException {
-    FileStatus[] infos = dfs.listPaths(getUriPath(f));
+    HdfsFileStatus[] infos = dfs.listPaths(getUriPath(f));
     if (infos == null)
       throw new FileNotFoundException("File " + f + " does not exist.");
 
+    FileStatus [] stats = new FileStatus[infos.length]; 
     for (int i = 0; i < infos.length; i++) {
-      infos[i].setPath(infos[i].getPath().makeQualified(getUri(), null));
+      stats[i] = makeQualified(infos[i], f);
     }
-    return infos;
+    return stats;
   }
 
   @Override

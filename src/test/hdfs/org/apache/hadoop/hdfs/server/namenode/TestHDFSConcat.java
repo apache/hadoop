@@ -32,12 +32,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -105,7 +104,7 @@ public class TestHDFSConcat {
   public void testConcat() throws IOException, InterruptedException {
     final int numFiles = 10;
     long fileLen = blockSize*3;
-    FileStatus fStatus;
+    HdfsFileStatus fStatus;
     FSDataInputStream stm;
     
     String trg = new String("/trg");
@@ -252,7 +251,7 @@ public class TestHDFSConcat {
     Path filePath1 = new Path(name1);
     DFSTestUtil.createFile(dfs, filePath1, trgFileLen, REPL_FACTOR, 1);
     
-    FileStatus fStatus = cluster.getNameNode().getFileInfo(name1);
+    HdfsFileStatus fStatus = cluster.getNameNode().getFileInfo(name1);
     long fileLen = fStatus.getLen();
     assertEquals(fileLen, trgFileLen);
     

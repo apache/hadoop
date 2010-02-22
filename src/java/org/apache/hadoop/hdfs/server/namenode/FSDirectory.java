@@ -28,7 +28,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Options;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -1018,7 +1018,7 @@ class FSDirectory implements Closeable {
    * This function is admittedly very inefficient right now.  We'll
    * make it better later.
    */
-  FileStatus[] getListing(String src) {
+  HdfsFileStatus[] getListing(String src) {
     String srcs = normalizePath(src);
 
     synchronized (rootDir) {
@@ -1026,15 +1026,14 @@ class FSDirectory implements Closeable {
       if (targetNode == null)
         return null;
       if (!targetNode.isDirectory()) {
-        return new FileStatus[]{createFileStatus(srcs, targetNode)};
+        return new HdfsFileStatus[]{createFileStatus(
+            HdfsFileStatus.EMPTY_NAME, targetNode)};
       }
       List<INode> contents = ((INodeDirectory)targetNode).getChildren();
-      FileStatus listing[] = new FileStatus[contents.size()];
-      if(! srcs.endsWith(Path.SEPARATOR))
-        srcs += Path.SEPARATOR;
+      HdfsFileStatus listing[] = new HdfsFileStatus[contents.size()];
       int i = 0;
       for (INode cur : contents) {
-        listing[i] = createFileStatus(srcs+cur.getLocalName(), cur);
+        listing[i] = createFileStatus(cur.name, cur);
         i++;
       }
       return listing;
@@ -1046,7 +1045,7 @@ class FSDirectory implements Closeable {
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  FileStatus getFileInfo(String src) {
+  HdfsFileStatus getFileInfo(String src) {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
@@ -1054,7 +1053,7 @@ class FSDirectory implements Closeable {
         return null;
       }
       else {
-        return createFileStatus(srcs, targetNode);
+        return createFileStatus(HdfsFileStatus.EMPTY_NAME, targetNode);
       }
     }
   }
@@ -1708,9 +1707,10 @@ class FSDirectory implements Closeable {
   /**
    * Create FileStatus by file INode 
    */
-   private static FileStatus createFileStatus(String path, INode node) {
+   private static HdfsFileStatus createFileStatus(byte[] path, INode node) {
     // length is zero for directories
-    return new FileStatus(node.isDirectory() ? 0 : node.computeContentSummary().getLength(), 
+    return new HdfsFileStatus(
+        node instanceof INodeFile ? ((INodeFile)node).computeFileSize(true) : 0, 
         node.isDirectory(), 
         node.isDirectory() ? 0 : ((INodeFile)node).getReplication(), 
         node.isDirectory() ? 0 : ((INodeFile)node).getPreferredBlockSize(),
@@ -1719,6 +1719,6 @@ class FSDirectory implements Closeable {
         node.getFsPermission(),
         node.getUserName(),
         node.getGroupName(),
-        new Path(path));
+        path);
   }
 }

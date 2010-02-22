@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -577,7 +577,7 @@ public class FSEditLog {
           String s = FSImage.readString(in);
           String d = FSImage.readString(in);
           timestamp = readLong(in);
-          FileStatus dinfo = fsDir.getFileInfo(d);
+          HdfsFileStatus dinfo = fsDir.getFileInfo(d);
           fsDir.unprotectedRenameTo(s, d, timestamp);
           fsNamesys.changeLease(s, d, dinfo);
           break;
@@ -714,7 +714,7 @@ public class FSEditLog {
           String d = FSImage.readString(in);
           timestamp = readLong(in);
           Rename[] options = readRenameOptions(in);
-          FileStatus dinfo = fsDir.getFileInfo(d);
+          HdfsFileStatus dinfo = fsDir.getFileInfo(d);
           fsDir.unprotectedRenameTo(s, d, timestamp, options);
           fsNamesys.changeLease(s, d, dinfo);
           break;

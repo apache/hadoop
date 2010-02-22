@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
@@ -67,6 +66,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -649,7 +649,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   OutputStream append(String src, int buffersize, Progressable progress
       ) throws IOException {
     checkOpen();
-    FileStatus stat = null;
+    HdfsFileStatus stat = null;
     LocatedBlock lastBlock = null;
     try {
       stat = getFileInfo(src);
@@ -763,7 +763,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return getFileInfo(src) != null;
   }
 
-  public FileStatus[] listPaths(String src) throws IOException {
+  public HdfsFileStatus[] listPaths(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getListing(src);
@@ -772,7 +772,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
-  public FileStatus getFileInfo(String src) throws IOException {
+  public HdfsFileStatus getFileInfo(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getFileInfo(src);

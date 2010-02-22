@@ -29,11 +29,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -59,7 +59,7 @@ class DatanodeJspHelper {
     final DFSClient dfs = new DFSClient(datanode.getNameNodeAddr(),
         JspHelper.conf);
     String target = dir;
-    final FileStatus targetStatus = dfs.getFileInfo(target);
+    final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
       out.print("<h3>File or directory : " + target + " does not exist</h3>");
       JspHelper.printGotoForm(out, namenodeInfoPort, target);
@@ -95,7 +95,7 @@ class DatanodeJspHelper {
         return;
       }
       // directory
-      FileStatus[] files = dfs.listPaths(target);
+      HdfsFileStatus[] files = dfs.listPaths(target);
       // generate a table and dump the info
       String[] headings = { "Name", "Type", "Size", "Replication",
           "Block Size", "Modification Time", "Permission", "Owner", "Group" };
@@ -120,8 +120,9 @@ class DatanodeJspHelper {
         JspHelper.addTableRow(out, headings, row++);
         String cols[] = new String[headings.length];
         for (int i = 0; i < files.length; i++) {
+          String localFileName = files[i].getLocalName();
           // Get the location of the first block of the file
-          if (files[i].getPath().toString().endsWith(".crc"))
+          if (localFileName.endsWith(".crc"))
             continue;
           if (!files[i].isDir()) {
             cols[1] = "file";
@@ -135,10 +136,10 @@ class DatanodeJspHelper {
             cols[4] = "";
           }
           String datanodeUrl = req.getRequestURL() + "?dir="
-              + URLEncoder.encode(files[i].getPath().toString(), "UTF-8")
+              + URLEncoder.encode(files[i].getFullName(target), "UTF-8")
               + "&namenodeInfoPort=" + namenodeInfoPort;
           cols[0] = "<a href=\"" + datanodeUrl + "\">"
-              + files[i].getPath().getName() + "</a>";
+              + localFileName + "</a>";
           cols[5] = FsShell.dateForm.format(new Date((files[i]
               .getModificationTime())));
           cols[6] = files[i].getPermission().toString();

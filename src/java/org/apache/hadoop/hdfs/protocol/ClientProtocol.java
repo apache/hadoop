@@ -21,8 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
@@ -55,9 +53,11 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 55: Adding Delegation Token related APIs
+   * 57: getFileInfo returns HDFSFileStatus;
+   *     getListing returns HDFSFileStatus[].
+   * 
    */
-  public static final long versionID = 55L;
+  public static final long versionID = 57L;
   
   ///////////////////////////////////////
   // File contents
@@ -334,7 +334,7 @@ public interface ClientProtocol extends VersionedProtocol {
   /**
    * Get a listing of the indicated directory
    */
-  public FileStatus[] getListing(String src) throws IOException;
+  public HdfsFileStatus[] getListing(String src) throws IOException;
 
   ///////////////////////////////////////
   // System issues and management
@@ -511,7 +511,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  public FileStatus getFileInfo(String src) throws IOException;
+  public HdfsFileStatus getFileInfo(String src) throws IOException;
 
   /**
    * Get {@link ContentSummary} rooted at the specified directory.

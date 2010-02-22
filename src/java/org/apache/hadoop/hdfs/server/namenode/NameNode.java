@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
@@ -828,8 +828,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /**
    */
-  public FileStatus[] getListing(String src) throws IOException {
-    FileStatus[] files = namesystem.getListing(src);
+  public HdfsFileStatus[] getListing(String src) throws IOException {
+    HdfsFileStatus[] files = namesystem.getListing(src);
     if (files != null) {
       myMetrics.numGetListingOps.inc();
       myMetrics.numFilesInGetListingOps.inc(files.length);
@@ -844,7 +844,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  public FileStatus getFileInfo(String src)  throws IOException {
+  public HdfsFileStatus getFileInfo(String src)  throws IOException {
     myMetrics.numFileInfoOps.inc();
     return namesystem.getFileInfo(src);
   }

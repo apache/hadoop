@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
@@ -291,7 +292,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
      * @param bytesPerChecksum number of bytes per checksum
      * @throws IOException if error occurs
      */
-    private DataStreamer(LocatedBlock lastBlock, FileStatus stat,
+    private DataStreamer(LocatedBlock lastBlock, HdfsFileStatus stat,
         int bytesPerChecksum) throws IOException {
       stage = BlockConstructionStage.PIPELINE_SETUP_APPEND;
       block = lastBlock.getBlock();
@@ -1072,7 +1073,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
    */
   DFSOutputStream(DFSClient dfsClient, String src, int buffersize, Progressable progress,
-      LocatedBlock lastBlock, FileStatus stat,
+      LocatedBlock lastBlock, HdfsFileStatus stat,
       int bytesPerChecksum) throws IOException {
     this(dfsClient, src, stat.getBlockSize(), progress, bytesPerChecksum);
     initialFileSize = stat.getLen(); // length of file when opened

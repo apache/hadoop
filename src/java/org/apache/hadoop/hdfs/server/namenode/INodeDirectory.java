@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 /**
@@ -95,7 +96,7 @@ class INodeDirectory extends INode {
   }
   
   INode getChild(String name) {
-    return getChildINode(string2Bytes(name));
+    return getChildINode(DFSUtil.string2Bytes(name));
   }
 
   private INode getChildINode(byte[] name) {
@@ -161,7 +162,7 @@ class INodeDirectory extends INode {
   int getExistingPathINodes(byte[][] components, INode[] existing) {
     assert compareBytes(this.name, components[0]) == 0 :
       "Incorrect name " + getLocalName() + " expected " + 
-      bytes2String(components[0]);
+      DFSUtil.bytes2String(components[0]);
 
     INode curNode = this;
     int count = 0;

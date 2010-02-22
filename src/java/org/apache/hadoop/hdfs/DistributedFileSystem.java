@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -303,23 +304,24 @@ public class DistributedFileSystem extends FileSystem {
     dfs.setQuota(getPathName(src), namespaceQuota, diskspaceQuota);
   }
   
-  private FileStatus makeQualified(FileStatus f) {
+  private FileStatus makeQualified(HdfsFileStatus f, Path parent) {
     return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
         f.getBlockSize(), f.getModificationTime(),
         f.getAccessTime(),
         f.getPermission(), f.getOwner(), f.getGroup(),
-        f.getPath().makeQualified(this)); // fully-qualify path
+        (f.getFullPath(parent)).makeQualified(
+            getUri(), getWorkingDirectory())); // fully-qualify path
   }
 
   @Override
   public FileStatus[] listStatus(Path p) throws IOException {
-    FileStatus[] infos = dfs.listPaths(getPathName(p));
+    HdfsFileStatus[] infos = dfs.listPaths(getPathName(p));
     if (infos == null) 
       throw new FileNotFoundException("File " + p + " does not exist.");
     
     FileStatus[] stats = new FileStatus[infos.length];
     for (int i = 0; i < infos.length; i++) {
-      stats[i] = makeQualified(infos[i]);
+      stats[i] = makeQualified(infos[i], p);
     }
     return stats;
   }
@@ -564,9 +566,9 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    FileStatus fi = dfs.getFileInfo(getPathName(f));
+    HdfsFileStatus fi = dfs.getFileInfo(getPathName(f));
     if (fi != null) {
-      return makeQualified(fi);
+      return makeQualified(fi, f);
     } else {
       throw new FileNotFoundException("File does not exist: " + f);
     }

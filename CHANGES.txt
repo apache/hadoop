@@ -72,6 +72,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HDFS-946. NameNode should not return full path name when lisitng a
+    diretory or getting the status of a file. (hairong)
+
   BUG FIXES
     HDFS-913. Rename fault injection test TestRename.java to TestFiRename.java
     to include it in tests run by ant target run-test-hdfs-fault-inject.
