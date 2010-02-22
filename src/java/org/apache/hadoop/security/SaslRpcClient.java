@@ -107,9 +107,11 @@ public class SaslRpcClient {
    *          InputStream to use
    * @param outS
    *          OutputStream to use
+   * @return true if connection is set up, or false if needs to switch 
+   *             to simple Auth.
    * @throws IOException
    */
-  public void saslConnect(InputStream inS, OutputStream outS)
+  public boolean saslConnect(InputStream inS, OutputStream outS)
       throws IOException {
     DataInputStream inStream = new DataInputStream(new BufferedInputStream(inS));
     DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(
@@ -128,7 +130,14 @@ public class SaslRpcClient {
               + " from initSASLContext.");
       }
       if (!saslClient.isComplete()) {
-        saslToken = new byte[inStream.readInt()];
+        int len = inStream.readInt();
+        if (len == SaslRpcServer.SWITCH_TO_SIMPLE_AUTH) {
+          if (LOG.isDebugEnabled())
+            LOG.debug("Server asks us to fall back to simple auth.");
+          saslClient.dispose();
+          return false;
+        }
+        saslToken = new byte[len];
         if (LOG.isDebugEnabled())
           LOG.debug("Will read input token of size " + saslToken.length
               + " for processing by initSASLContext");
@@ -157,8 +166,13 @@ public class SaslRpcClient {
         LOG.debug("SASL client context established. Negotiated QoP: "
             + saslClient.getNegotiatedProperty(Sasl.QOP));
       }
+      return true;
     } catch (IOException e) {
-      saslClient.dispose();
+      try {
+        saslClient.dispose();
+      } catch (SaslException ignored) {
+        // ignore further exceptions during cleanup
+      }
       throw e;
     }
   }

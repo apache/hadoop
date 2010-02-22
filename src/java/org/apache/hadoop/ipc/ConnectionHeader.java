@@ -20,7 +20,6 @@ package org.apache.hadoop.ipc;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,8 +27,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * The IPC connection header sent by the client to the server
@@ -86,16 +83,14 @@ class ConnectionHeader implements Writable {
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, (protocol == null) ? "" : protocol);
     if (ugi != null) {
-      if (UserGroupInformation.isSecurityEnabled()) {
-        if (authMethod == AuthMethod.KERBEROS) {
-          //Send effective user for Kerberos auth
-          out.writeBoolean(true);
-          out.writeUTF(ugi.getUserName());
-          out.writeBoolean(false);
-        } else {
-          //Don't send user for token auth
-          out.writeBoolean(false);
-        }
+      if (authMethod == AuthMethod.KERBEROS) {
+        // Send effective user for Kerberos auth
+        out.writeBoolean(true);
+        out.writeUTF(ugi.getUserName());
+        out.writeBoolean(false);
+      } else if (authMethod == AuthMethod.DIGEST) {
+        // Don't send user for token auth
+        out.writeBoolean(false);
       } else {
         //Send both effective user and real user for simple auth
         out.writeBoolean(true);

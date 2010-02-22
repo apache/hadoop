@@ -158,6 +158,9 @@ Trunk (unreleased changes)
 
     HADOOP-6583. Captures authentication and authorization metrics. (ddas)
 
+    HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
+    (Kan Zhang via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
