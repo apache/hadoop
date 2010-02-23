@@ -119,6 +119,14 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
   <name>dfs.data.dir</name>
   <value>$DFS_DATA_DIR</value>
 </property>
+<property>
+  <name>dfs.datanode.handler.count</name>
+  <value>10</value>
+</property>
+<property>
+  <name>dfs.datanode.max.xcievers</name>
+  <value>4096</value>
+</property>
 </configuration>
 EOF
 cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
