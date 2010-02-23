@@ -28,6 +28,12 @@
       <email>stack@apache.org</email>
       <timezone>-8</timezone>
     </developer>
+    <developer>
+      <id>rawson</id>
+      <name>Ryan Rawson</name>
+      <email>rawson@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
   </developers>
   <issueManagement>
     <system>JIRA</system>

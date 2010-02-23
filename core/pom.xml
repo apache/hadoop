@@ -88,7 +88,7 @@
           <execution>
             <id>JSPC</id>
             <phase>generate-sources</phase>
-            <configuration>n
+            <configuration>
               <tasks><taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/><jspcompiler uriroot="${basedir}/src/main/resources/webapps/master" outputdir="${project.build.directory}/jspc" package="org.apache.hadoop.hbase.generated.master" webxml="${basedir}/src/main/resources/webapps/master/WEB-INF/web.xml"/><jspcompiler uriroot="${basedir}/src/main/resources/webapps/regionserver" outputdir="${project.build.directory}/jspc" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${basedir}/src/main/resources/webapps/regionserver/WEB-INF/web.xml"/></tasks>
             </configuration>
             <goals>
