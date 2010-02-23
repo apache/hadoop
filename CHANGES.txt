@@ -163,6 +163,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
+    (mahadev via szetszwo)
+
   BUG FIXES
 
     HADOOP-6293. Fix FsShell -text to work on filesystems other than the
