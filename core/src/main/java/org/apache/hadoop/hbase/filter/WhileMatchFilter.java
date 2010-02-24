@@ -27,7 +27,11 @@ import java.io.IOException;
 import java.io.DataInput;
 
 /**
- * A wrapper filter that filters everything after the first filtered row.
+ * A wrapper filter that filters everything after the first time false is returned
+ * from any wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
+ * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)},
+ * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or 
+ * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()}.
  */
 public class WhileMatchFilter implements Filter {
   private boolean filterAllRemaining = false;
@@ -49,13 +53,14 @@ public class WhileMatchFilter implements Filter {
     filterAllRemaining = filterAllRemaining || value;
   }
 
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    changeFAR(filter.filterRowKey(buffer, offset, length));
-    return filterAllRemaining();
-  }
-
   public boolean filterAllRemaining() {
     return this.filterAllRemaining || this.filter.filterAllRemaining();
+  }
+
+  public boolean filterRowKey(byte[] buffer, int offset, int length) {
+    boolean value = filter.filterRowKey(buffer, offset, length);
+    changeFAR(value);
+    return value;
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {
@@ -65,7 +70,9 @@ public class WhileMatchFilter implements Filter {
   }
 
   public boolean filterRow() {
-    return false;
+    boolean filterRow = this.filter.filterRow();
+    changeFAR(filterRow);
+    return filterRow;
   }
 
   public void write(DataOutput out) throws IOException {

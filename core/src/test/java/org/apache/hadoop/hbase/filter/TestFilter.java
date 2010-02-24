@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -252,6 +254,93 @@ public class TestFilter extends HBaseTestCase {
     s.setFilter(new PageFilter(expectedRows));
     verifyScanFull(s, Arrays.copyOf(expectedKVs, 6));
     
+  }
+
+  /**
+   * Tests the the {@link WhileMatchFilter} works in combination with a
+   * {@link Filter} that uses the
+   * {@link PageFilter#filterRow()} method.
+   *
+   * See HBASE-2258.
+   *
+   * @throws Exception
+   */
+  public void testWhileMatchFilterWithFilterRow() throws Exception {
+    final int pageSize = 4;
+
+    Scan s = new Scan();
+    WhileMatchFilter filter = new WhileMatchFilter(new PageFilter(pageSize));
+    s.setFilter(filter);
+
+    InternalScanner scanner = this.region.getScanner(s);
+    int scannerCounter = 0;
+    while (true) {
+      boolean isMoreResults = scanner.next(new ArrayList<KeyValue>());
+      scannerCounter++;
+
+      if (scannerCounter >= pageSize) {
+        Assert.assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
+      }
+      if (!isMoreResults) {
+        break;
+      }
+    }
+    Assert.assertEquals("The page filter returned more rows than expected", pageSize, scannerCounter);
+  }
+
+  /**
+   * Tests the the {@link WhileMatchFilter} works in combination with a
+   * {@link Filter} that uses the
+   * {@link PageFilter#filterRowKey(byte[], int, int)} method.
+   *
+   * See HBASE-2258.
+   *
+   * @throws Exception
+   */
+  public void testWhileMatchFilterWithFilterRowKey() throws Exception {
+    Scan s = new Scan();
+    String prefix = "testRowOne";
+    WhileMatchFilter filter = new WhileMatchFilter(new PrefixFilter(Bytes.toBytes(prefix)));
+    s.setFilter(filter);
+
+    InternalScanner scanner = this.region.getScanner(s);
+    while (true) {
+      ArrayList<KeyValue> values = new ArrayList<KeyValue>();
+      boolean isMoreResults = scanner.next(values);
+      if (!isMoreResults || !Bytes.toString(values.get(0).getRow()).startsWith(prefix)) {
+        Assert.assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
+      }
+      if (!isMoreResults) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * Tests the the {@link WhileMatchFilter} works in combination with a
+   * {@link Filter} that uses the
+   * {@link PageFilter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
+   *
+   * See HBASE-2258.
+   *
+   * @throws Exception
+   */
+  public void testWhileMatchFilterWithFilterKeyValue() throws Exception {
+    Scan s = new Scan();
+    WhileMatchFilter filter = new WhileMatchFilter(
+        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0], CompareOp.EQUAL, Bytes.toBytes("foo"))
+    );
+    s.setFilter(filter);
+
+    InternalScanner scanner = this.region.getScanner(s);
+    while (true) {
+      ArrayList<KeyValue> values = new ArrayList<KeyValue>();
+      boolean isMoreResults = scanner.next(values);
+      Assert.assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
+      if (!isMoreResults) {
+        break;
+      }
+    }
   }
   
   public void testInclusiveStopFilter() throws IOException {
