@@ -398,6 +398,10 @@ public class ZooKeeperWrapper implements HConstants {
 
   private boolean ensureExists(final String znode) {
     try {
+      Stat stat = zooKeeper.exists(znode, false);
+      if (stat != null) {
+        return true;
+      }
       zooKeeper.create(znode, new byte[0],
                        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       LOG.debug("Created ZNode " + znode);

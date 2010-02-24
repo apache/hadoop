@@ -382,6 +382,7 @@ Release 0.21.0 - Unreleased
    HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
    HBASE-2250  typo in the maven pom
    HBASE-2254  Improvements to the Maven POMs (Lars Francke via Stack)
+   HBASE-2262  ZKW.ensureExists should check for existence
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
