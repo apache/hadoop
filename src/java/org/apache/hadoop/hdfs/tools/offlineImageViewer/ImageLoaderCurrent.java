@@ -62,6 +62,7 @@ import org.apache.hadoop.io.WritableUtils;
  *      Username (String)
  *      Groupname (String)
  *      OctalPerms (short -> String)  // Modified in -19
+ *    Symlink (String) // added in -23
  * NumINodesUnderConstruction (int)
  * INodesUnderConstruction (count = NumINodesUnderConstruction)
  *  INodeUnderConstruction
@@ -96,7 +97,7 @@ import org.apache.hadoop.io.WritableUtils;
 class ImageLoaderCurrent implements ImageLoader {
   protected final DateFormat dateFormat = 
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
-  private static int [] versions = {-16, -17, -18, -19, -20, -21, -22};
+  private static int [] versions = {-16, -17, -18, -19, -20, -21, -22, -23};
   private int imageVersion = 0;
 
   /* (non-Javadoc)
@@ -206,7 +207,8 @@ class ImageLoaderCurrent implements ImageLoader {
     v.visitEnclosingElement(ImageElement.BLOCKS,
                             ImageElement.NUM_BLOCKS, numBlocks);
     
-    if(numBlocks == -1) { // directory, no blocks to process
+    // directory or symlink, no blocks to process    
+    if(numBlocks == -1 || numBlocks == -2) { 
       v.leaveEnclosingElement(); // Blocks
       return;
     }
@@ -271,10 +273,14 @@ class ImageLoaderCurrent implements ImageLoader {
 
       processBlocks(in, v, numBlocks, skipBlocks);
 
-      if(numBlocks != 0) {
-        v.visit(ImageElement.NS_QUOTA, numBlocks <= 0 ? in.readLong() : -1);
+      // File or directory
+      if (numBlocks > 0 || numBlocks == -1) {
+        v.visit(ImageElement.NS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
         if(imageVersion <= -18) // added in version -18
-          v.visit(ImageElement.DS_QUOTA, numBlocks <= 0 ? in.readLong() : -1);
+          v.visit(ImageElement.DS_QUOTA, numBlocks == -1 ? in.readLong() : -1);
+      }
+      if (imageVersion <= -23 && numBlocks == -2) {
+        v.visit(ImageElement.SYMLINK, Text.readString(in));
       }
 
       processPermission(in, v);

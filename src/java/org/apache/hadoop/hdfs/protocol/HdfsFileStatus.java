@@ -32,6 +32,7 @@ import org.apache.hadoop.io.Writable;
 public class HdfsFileStatus implements Writable {
 
   private byte[] path;  // local name of the inode that's encoded in java UTF8
+  private byte[] symlink; // symlink target encoded in java UTF8
   private long length;
   private boolean isdir;
   private short block_replication;
@@ -47,7 +48,9 @@ public class HdfsFileStatus implements Writable {
   /**
    * default constructor
    */
-  public HdfsFileStatus() { this(0, false, 0, 0, 0, 0, null, null, null, null); }
+  public HdfsFileStatus() { 
+    this(0, false, 0, 0, 0, 0, null, null, null, null, null); 
+  }
   
   /**
    * Constructor
@@ -65,7 +68,7 @@ public class HdfsFileStatus implements Writable {
   public HdfsFileStatus(long length, boolean isdir, int block_replication,
                     long blocksize, long modification_time, long access_time,
                     FsPermission permission, String owner, String group, 
-                    byte[] path) {
+                    byte[] symlink, byte[] path) {
     this.length = length;
     this.isdir = isdir;
     this.block_replication = (short)block_replication;
@@ -76,6 +79,7 @@ public class HdfsFileStatus implements Writable {
                       FsPermission.getDefault() : permission;
     this.owner = (owner == null) ? "" : owner;
     this.group = (group == null) ? "" : group;
+    this.symlink = symlink;
     this.path = path;
   }
 
@@ -95,6 +99,14 @@ public class HdfsFileStatus implements Writable {
     return isdir;
   }
 
+  /**
+   * Is this a symbolic link?
+   * @return true if this is a symbolic link
+   */
+  public boolean isSymlink() {
+    return symlink != null;
+  }
+  
   /**
    * Get the block size of the file.
    * @return the number of bytes
@@ -198,6 +210,14 @@ public class HdfsFileStatus implements Writable {
     return new Path(parent, getLocalName());
   }
 
+  /**
+   * Get the string representation of the symlink.
+   * @return the symlink as a string.
+   */
+  final public String getSymlink() {
+    return DFSUtil.bytes2String(symlink);
+  }
+
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
@@ -213,6 +233,11 @@ public class HdfsFileStatus implements Writable {
     permission.write(out);
     Text.writeString(out, owner);
     Text.writeString(out, group);
+    out.writeBoolean(isSymlink());
+    if (isSymlink()) {
+      out.writeInt(symlink.length);
+      out.write(symlink);
+    }
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -232,5 +257,10 @@ public class HdfsFileStatus implements Writable {
     permission.readFields(in);
     owner = Text.readString(in);
     group = Text.readString(in);
+    if (in.readBoolean()) {
+      numOfBytes = in.readInt();
+      this.symlink = new byte[numOfBytes];
+      in.readFully(symlink);
+    }
   }
 }

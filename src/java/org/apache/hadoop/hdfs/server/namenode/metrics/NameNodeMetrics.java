@@ -67,6 +67,10 @@ public class NameNodeMetrics implements Updater {
                           new MetricsTimeVaryingInt("FileInfoOps", registry);
     public MetricsTimeVaryingInt numAddBlockOps = 
                           new MetricsTimeVaryingInt("AddBlockOps", registry);
+    public MetricsTimeVaryingInt numcreateSymlinkOps = 
+                          new MetricsTimeVaryingInt("CreateSymlinkOps", registry);
+    public MetricsTimeVaryingInt numgetLinkTargetOps = 
+                          new MetricsTimeVaryingInt("GetLinkTargetOps", registry);
 
     public MetricsTimeVaryingRate transactions =
                     new MetricsTimeVaryingRate("Transactions", registry, "Journal Transaction");
@@ -92,7 +96,7 @@ public class NameNodeMetrics implements Updater {
       String processName = nameNodeRole.toString();
       JvmMetrics.init(processName, sessionId);
 
-      // Now the Mbean for the name node - this alos registers the MBean
+      // Now the Mbean for the name node - this also registers the MBean
       namenodeActivityMBean = new NameNodeActivityMBean(registry);
       
       // Create a record for NameNode metrics

@@ -44,6 +44,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
   private long filesize;
   private String modTime;
   private String path;
+  private String linkTarget;
 
   private boolean inInode = false;
   final private StringBuilder sb = new StringBuilder();
@@ -62,7 +63,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
    */
   private void newLine() {
     numBlocks = 0;
-    perms = username = group = path = "";
+    perms = username = group = path = linkTarget = "";
     filesize = 0l;
     replication = 0;
 
@@ -85,6 +86,9 @@ class LsImageVisitor extends TextWriterImageVisitor {
     sb.append(numBlocks < 0 ? "d" : "-");
     sb.append(perms);
 
+    if (0 != linkTarget.length()) {
+      path = path + " -> " + linkTarget; 
+    }
     formatter.format(lsStr, replication > 0 ? replication : "-",
                            username, group, filesize, modTime, path);
     sb.append("\n");
@@ -144,6 +148,9 @@ class LsImageVisitor extends TextWriterImageVisitor {
         break;
       case MODIFICATION_TIME:
         modTime = value;
+        break;
+      case SYMLINK:
+        linkTarget = value;
         break;
       default:
         // This is OK.  We're not looking for all the values.

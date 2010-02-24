@@ -67,8 +67,9 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -361,9 +362,9 @@ public class FSImage extends Storage {
    * @return true if the image needs to be saved or false otherwise
    */
   boolean recoverTransitionRead(Collection<URI> dataDirs,
-                                 Collection<URI> editsDirs,
-                                StartupOption startOpt
-                                ) throws IOException {
+                                Collection<URI> editsDirs,
+                                StartupOption startOpt)
+      throws IOException {
     assert startOpt != StartupOption.FORMAT : 
       "NameNode formatting should be performed before reading the image";
     
@@ -1100,18 +1101,25 @@ public class FSImage extends Storage {
         
         // get quota only when the node is a directory
         long nsQuota = -1L;
-        if (imgVersion <= -16 && blocks == null) {
+        if (imgVersion <= -16 && blocks == null  && numBlocks == -1) {
           nsQuota = in.readLong();
         }
         long dsQuota = -1L;
-        if (imgVersion <= -18 && blocks == null) {
+        if (imgVersion <= -18 && blocks == null && numBlocks == -1) {
           dsQuota = in.readLong();
+        }
+
+        // Read the symlink only when the node is a symlink
+        String symlink = "";
+        if (imgVersion <= -23 && numBlocks == -2) {
+          symlink = Text.readString(in);
         }
         
         PermissionStatus permissions = fsNamesys.getUpgradePermission();
         if (imgVersion <= -11) {
           permissions = PermissionStatus.read(in);
         }
+        
         if (path.length() == 0) { // it is the root
           // update the root's attributes
           if (nsQuota != -1 || dsQuota != -1) {
@@ -1128,7 +1136,7 @@ public class FSImage extends Storage {
         }
         // add new inode
         parentINode = fsDir.addToParent(path, parentINode, permissions,
-                                        blocks, replication, modificationTime, 
+                                        blocks, symlink, replication, modificationTime, 
                                         atime, nsQuota, dsQuota, blockSize);
       }
       
@@ -1312,7 +1320,30 @@ public class FSImage extends Storage {
     int nameLen = name.position();
     out.writeShort(nameLen);
     out.write(name.array(), name.arrayOffset(), nameLen);
-    if (!node.isDirectory()) {  // write file inode
+    if (node.isDirectory()) {
+      out.writeShort(0);  // replication
+      out.writeLong(node.getModificationTime());
+      out.writeLong(0);   // access time
+      out.writeLong(0);   // preferred block size
+      out.writeInt(-1);   // # of blocks
+      out.writeLong(node.getNsQuota());
+      out.writeLong(node.getDsQuota());
+      FILE_PERM.fromShort(node.getFsPermissionShort());
+      PermissionStatus.write(out, node.getUserName(),
+                             node.getGroupName(),
+                             FILE_PERM);
+    } else if (node.isLink()) {
+      out.writeShort(0);  // replication
+      out.writeLong(0);   // modification time
+      out.writeLong(0);   // access time
+      out.writeLong(0);   // preferred block size
+      out.writeInt(-2);   // # of blocks
+      Text.writeString(out, ((INodeSymlink)node).getLinkValue());
+      FILE_PERM.fromShort(node.getFsPermissionShort());
+      PermissionStatus.write(out, node.getUserName(),
+                             node.getGroupName(),
+                             FILE_PERM);      
+    } else {
       INodeFile fileINode = (INodeFile)node;
       out.writeShort(fileINode.getReplication());
       out.writeLong(fileINode.getModificationTime());
@@ -1326,20 +1357,9 @@ public class FSImage extends Storage {
       PermissionStatus.write(out, fileINode.getUserName(),
                              fileINode.getGroupName(),
                              FILE_PERM);
-    } else {   // write directory inode
-      out.writeShort(0);  // replication
-      out.writeLong(node.getModificationTime());
-      out.writeLong(0);   // access time
-      out.writeLong(0);   // preferred block size
-      out.writeInt(-1);    // # of blocks
-      out.writeLong(node.getNsQuota());
-      out.writeLong(node.getDsQuota());
-      FILE_PERM.fromShort(node.getFsPermissionShort());
-      PermissionStatus.write(out, node.getUserName(),
-                             node.getGroupName(),
-                             FILE_PERM);
     }
   }
+  
   /**
    * Save file tree image starting from the given root.
    * This is a recursive procedure, which first saves all children of
@@ -1384,8 +1404,7 @@ public class FSImage extends Storage {
   }
 
   private void loadFilesUnderConstruction(int version, DataInputStream in, 
-                                  FSNamesystem fs) throws IOException {
-
+      FSNamesystem fs) throws IOException {
     FSDirectory fsDir = fs.dir;
     if (version > -13) // pre lease image version
       return;

@@ -30,6 +30,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 
 /**
@@ -157,8 +158,8 @@ public class LeaseManager {
   /**
    * Finds the pathname for the specified pendingFile
    */
-  synchronized String findPath(INodeFileUnderConstruction pendingFile
-      ) throws IOException {
+  synchronized String findPath(INodeFileUnderConstruction pendingFile)
+      throws IOException {
     Lease lease = getLease(pendingFile.getClientName());
     if (lease != null) {
       String src = lease.findPath(pendingFile);
@@ -220,10 +221,14 @@ public class LeaseManager {
      * @return the path associated with the pendingFile and null if not found.
      */
     private String findPath(INodeFileUnderConstruction pendingFile) {
-      for(String src : paths) {
-        if (fsnamesystem.dir.getFileINode(src) == pendingFile) {
-          return src;
+      try {
+        for (String src : paths) {
+          if (fsnamesystem.dir.getFileINode(src) == pendingFile) {
+            return src;
+          }
         }
+      } catch (UnresolvedLinkException e) {
+        throw new AssertionError("Lease files should reside on this FS");
       }
       return null;
     }

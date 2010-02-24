@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -53,11 +54,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 57: getFileInfo returns HDFSFileStatus;
-   *     getListing returns HDFSFileStatus[].
-   * 
+   * 58: Add symlink APIs.
    */
-  public static final long versionID = 57L;
+  public static final long versionID = 58L;
   
   ///////////////////////////////////////
   // File contents
@@ -80,10 +79,12 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param length range length
    * @return file length and array of blocks with their locations
    * @throws IOException
+   * @throws UnresolvedLinkException if the path contains a symlink.
    */
-  public LocatedBlocks  getBlockLocations(String src,
-                                          long offset,
-                                          long length) throws IOException;
+  public LocatedBlocks getBlockLocations(String src,
+                                         long offset,
+                                         long length) 
+    throws IOException, UnresolvedLinkException;
 
   /**
    * Get server default values for a number of configuration params.
@@ -122,15 +123,16 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws QuotaExceededException if the file creation violates 
    *                                any quota restriction
    * @throws IOException if other errors occur.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
   public void create(String src, 
                      FsPermission masked,
-                             String clientName, 
-                             EnumSetWritable<CreateFlag> flag, 
-                             boolean createParent,
-                             short replication,
-                             long blockSize
-                             ) throws IOException;
+                     String clientName, 
+                     EnumSetWritable<CreateFlag> flag, 
+                     boolean createParent,
+                     short replication,
+                     long blockSize)
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Append to the end of the file. 
@@ -144,8 +146,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * configured with the parameter dfs.support.append set to true, otherwise
    * throws an IOException.
    * @throws IOException if other errors occur.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public LocatedBlock append(String src, String clientName) throws IOException;
+  public LocatedBlock append(String src, String clientName) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Set replication for an existing file.
@@ -160,16 +164,17 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    * @return true if successful;
    *         false if file does not exist or is a directory
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public boolean setReplication(String src, 
-                                short replication
-                                ) throws IOException;
+  public boolean setReplication(String src, short replication) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Set permissions for an existing file/directory.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public void setPermission(String src, FsPermission permission
-      ) throws IOException;
+  public void setPermission(String src, FsPermission permission)
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Set owner of a path (i.e. a file or a directory).
@@ -177,18 +182,19 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param src
    * @param username If it is null, the original username remains unchanged.
    * @param groupname If it is null, the original groupname remains unchanged.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public void setOwner(String src, String username, String groupname
-      ) throws IOException;
+  public void setOwner(String src, String username, String groupname)
+      throws IOException, UnresolvedLinkException;
 
   /**
-   * The client can give up on a blcok by calling abandonBlock().
-   * The client can then
-   * either obtain a new block, or complete or abandon the file.
-   * Any partial writes to the block will be discarded.
+   * The client can give up on a block by calling abandonBlock().
+   * The client can then either obtain a new block, or complete or 
+   * abandon the file. Any partial writes to the block will be discarded.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public void abandonBlock(Block b, String src, String holder
-      ) throws IOException;
+  public void abandonBlock(Block b, String src, String holder)
+      throws IOException, UnresolvedLinkException;
 
   /**
    * A client that wants to write an additional block to the 
@@ -208,9 +214,11 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param excludedNodes a list of nodes that should not be
    * allocated for the current block
    * @return LocatedBlock allocated block information.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
   public LocatedBlock addBlock(String src, String clientName,
-      Block previous, DatanodeInfo[] excludedNodes) throws IOException;
+      Block previous, DatanodeInfo[] excludedNodes) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * The client is done writing data to the given filename, and would 
@@ -227,9 +235,11 @@ public interface ClientProtocol extends VersionedProtocol {
    * blocks have been replicated the minimum number of times.  Thus,
    * DataNode failures may cause a client to call complete() several
    * times before succeeding.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public boolean complete(String src, String clientName,
-                          Block last) throws IOException;
+  public boolean complete(String src, String clientName, Block last) 
+    throws IOException, UnresolvedLinkException;
+                          
 
   /**
    * The client wants to report corrupted blocks (blocks with specified
@@ -248,23 +258,27 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return true if successful, or false if the old name does not exist
    * or if the new name already belongs to the namespace.
    * @throws IOException if the new name is invalid.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    * @throws QuotaExceededException if the rename would violate 
    *                                any quota restriction
    * @deprecated Use {@link #rename(String, String, Options.Rename...)} instead.
    */
   @Deprecated
-  public boolean rename(String src, String dst) throws IOException;
+  public boolean rename(String src, String dst) 
+      throws IOException, UnresolvedLinkException;
 
   /**
-   * moves blocks from srcs to trg and delete srcs
+   * Moves blocks from srcs to trg and delete srcs
    * 
    * @param trg existing file
    * @param srcs - list of existing files (same block size, same replication)
    * @throws IOException if some arguments are invalid
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    * @throws QuotaExceededException if the rename would violate 
    *                                any quota restriction
    */
-  public void concat(String trg, String [] srcs) throws IOException;
+  public void concat(String trg, String[] srcs) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Rename src to dst.
@@ -284,9 +298,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param dst new name.
    * @param options Rename options
    * @throws IOException if rename failed
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
   public void rename(String src, String dst, Options.Rename... options)
-      throws IOException;
+      throws IOException, UnresolvedLinkException;
   
   /**
    * Delete the given file or directory from the file system.
@@ -296,10 +311,12 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param src existing name.
    * @return true only if the existing file or directory was actually removed 
    * from the file system. 
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    * @deprecated use {@link #delete(String, boolean)} istead.
    */
   @Deprecated
-  public boolean delete(String src) throws IOException;
+  public boolean delete(String src) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Delete the given file or directory from the file system.
@@ -311,8 +328,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * else throws an exception.
    * @return true only if the existing file or directory was actually removed 
    * from the file system. 
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public boolean delete(String src, boolean recursive) throws IOException;
+  public boolean delete(String src, boolean recursive) 
+     throws IOException, UnresolvedLinkException;
   
   /**
    * Create a directory (or hierarchy of directories) with the given
@@ -322,6 +341,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param masked The masked permission of the directory being created
    * @param createParent create missing parent directory if true
    * @return True if the operation success.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    * @throws {@link AccessControlException} if permission to create file is 
    * denied by the system. As usually on the client side the exception will 
    * be wraped into {@link org.apache.hadoop.ipc.RemoteException}.
@@ -329,12 +349,14 @@ public interface ClientProtocol extends VersionedProtocol {
    *                                any quota restriction.
    */
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
-      throws IOException;
+      throws IOException, UnresolvedLinkException;
 
   /**
-   * Get a listing of the indicated directory
+   * Get a listing of the indicated directory.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public HdfsFileStatus[] getListing(String src) throws IOException;
+  public HdfsFileStatus[] getListing(String src) 
+      throws IOException, UnresolvedLinkException; 
 
   ///////////////////////////////////////
   // System issues and management
@@ -355,8 +377,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * renewLease().  If a certain amount of time passes since
    * the last call to renewLease(), the NameNode assumes the
    * client has died.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public void renewLease(String clientName) throws IOException;
+  public void renewLease(String clientName) 
+      throws IOException, UnresolvedLinkException;
 
   public int GET_STATS_CAPACITY_IDX = 0;
   public int GET_STATS_USED_IDX = 1;
@@ -388,15 +412,17 @@ public interface ClientProtocol extends VersionedProtocol {
    * otherwise all datanodes if type is ALL.
    */
   public DatanodeInfo[] getDatanodeReport(FSConstants.DatanodeReportType type)
-  throws IOException;
+      throws IOException;
 
   /**
    * Get the block size for the given file.
    * @param filename The name of the file
    * @return The number of bytes in each block
    * @throws IOException
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public long getPreferredBlockSize(String filename) throws IOException;
+  public long getPreferredBlockSize(String filename) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Enter, leave or get safe mode.
@@ -495,10 +521,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
-  throws IOException;
+      throws IOException;
 
   /**
-   * Dumps namenode data structures into specified file. If file
+   * Dumps namenode data structures into specified file. If the file
    * already exists, then append.
    * @throws IOException
    */
@@ -507,17 +533,33 @@ public interface ClientProtocol extends VersionedProtocol {
   /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
-   * @throws IOException if permission to access file is denied by the system 
+   * @throws UnresolvedLinkException if the path contains symlinks;
+   *         IOException if permission to access file is denied by the system
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  public HdfsFileStatus getFileInfo(String src) throws IOException;
+  public HdfsFileStatus getFileInfo(String src) 
+      throws IOException, UnresolvedLinkException;
 
+  /**
+   * Get the file info for a specific file or directory. If the path 
+   * refers to a symlink then the FileStatus of the symlink is returned.
+   * @param src The string representation of the path to the file
+   * @throws UnresolvedLinkException if the path contains symlinks;
+   *         IOException if permission to access file is denied by the system
+   * @return object containing information regarding the file
+   *         or null if file not found
+   */
+  public HdfsFileStatus getFileLinkInfo(String src) 
+      throws IOException, UnresolvedLinkException;
+  
   /**
    * Get {@link ContentSummary} rooted at the specified directory.
    * @param path The string representation of the path
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public ContentSummary getContentSummary(String path) throws IOException;
+  public ContentSummary getContentSummary(String path) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Set the quota for a directory.
@@ -532,22 +574,24 @@ public interface ClientProtocol extends VersionedProtocol {
    * the quota to that value, (2) {@link FSConstants#QUOTA_DONT_SET}  implies 
    * the quota will not be changed, and (3) {@link FSConstants#QUOTA_RESET} 
    * implies the quota will be reset. Any other value is a runtime error.
-   *                        
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    * @throws FileNotFoundException if the path is a file or 
    *                               does not exist 
    * @throws QuotaExceededException if the directory size 
    *                                is greater than the given quota
    */
   public void setQuota(String path, long namespaceQuota, long diskspaceQuota)
-                      throws IOException;
+      throws IOException, UnresolvedLinkException;
   
   /**
    * Write all metadata for this file into persistent storage.
    * The file must be currently open for writing.
    * @param src The string representation of the path
    * @param client The string representation of the client
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public void fsync(String src, String client) throws IOException;
+  public void fsync(String src, String client) 
+      throws IOException, UnresolvedLinkException;
 
   /**
    * Sets the modification and access time of the file to the specified time.
@@ -558,8 +602,32 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param atime The number of milliseconds since Jan 1, 1970.
    *              Setting atime to -1 means that access time should not be set
    *              by this call.
+   * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public void setTimes(String src, long mtime, long atime) throws IOException;
+  public void setTimes(String src, long mtime, long atime) 
+      throws IOException, UnresolvedLinkException;
+
+  /**
+   * Create a symbolic link to a file or directory.
+   * @param target The pathname of the destination that the
+   *               link points to.
+   * @param link The pathname of the link being created.
+   * @param dirPerm permissions to use when creating parent directories
+   * @param createParent - if true then missing parent dirs are created
+   *                       if false then parent must exist
+   * @throws IOException
+   * @throws UnresolvedLinkException if the path contains a symlink. 
+   */
+  public void createSymlink(String target, String link, FsPermission dirPerm, 
+      boolean createParent) throws IOException, UnresolvedLinkException;
+
+  /**
+   * Resolve the first symbolic link on the specified path.
+   * @param path The pathname that needs to be resolved
+   * @return The pathname after resolving the first symbolic link if any.
+   * @throws IOException
+   */
+  public String getLinkTarget(String path) throws IOException; 
   
   /**
    * Get a new generation stamp together with an access token for 
@@ -574,7 +642,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException if any error occurs
    */
   public LocatedBlock updateBlockForPipeline(Block block, String clientName) 
-  throws IOException;
+      throws IOException;
 
   /**
    * Update a pipeline for a block under construction
@@ -587,7 +655,7 @@ public interface ClientProtocol extends VersionedProtocol {
    */
   public void updatePipeline(String clientName, Block oldBlock, 
       Block newBlock, DatanodeID[] newNodes)
-  throws IOException;
+      throws IOException;
 
   /**
    * Get a valid Delegation Token.
@@ -596,7 +664,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return Token<DelegationTokenIdentifier>
    * @throws IOException
    */
-  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer) throws IOException;
+  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer) 
+      throws IOException;
 
   /**
    * Renew an existing delegation token.

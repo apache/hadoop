@@ -64,6 +64,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.*;
@@ -257,7 +258,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * Initialize FSNamesystem.
    */
-  private void initialize(Configuration conf, FSImage fsImage) throws IOException {
+  private void initialize(Configuration conf, FSImage fsImage)
+      throws IOException {
     this.systemStart = now();
     this.blockManager = new BlockManager(this, conf);
     setConfigurationParameters(conf);
@@ -631,15 +633,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Set permissions for an existing file.
    * @throws IOException
    */
-  public synchronized void setPermission(String src, FsPermission permission
-      ) throws IOException {
+  public synchronized void setPermission(String src, FsPermission permission)
+      throws IOException, UnresolvedLinkException {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set permission for " + src, safeMode);
     checkOwner(src);
     dir.setPermission(src, permission);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src);
+      final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setPermission", src, null, stat);
@@ -650,8 +652,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Set owner for an existing file.
    * @throws IOException
    */
-  public synchronized void setOwner(String src, String username, String group
-      ) throws IOException {
+  public synchronized void setOwner(String src, String username, String group)
+      throws IOException, UnresolvedLinkException {
     if (isInSafeMode())
         throw new SafeModeException("Cannot set owner for " + src, safeMode);
     FSPermissionChecker pc = checkOwner(src);
@@ -667,7 +669,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     dir.setOwner(src, username, group);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src);
+      final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setOwner", src, null, stat);
@@ -679,7 +681,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
-      long offset, long length) throws IOException {
+      long offset, long length) throws IOException, UnresolvedLinkException {
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.READ);
     }
@@ -702,7 +704,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws FileNotFoundException
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length,
-      boolean doAccessTime) throws IOException {
+      boolean doAccessTime) throws IOException, UnresolvedLinkException {
     if (offset < 0) {
       throw new IOException("Negative offset is not supported. File: " + src );
     }
@@ -722,11 +724,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private synchronized LocatedBlocks getBlockLocationsInternal(String src,
                                                        long offset, 
                                                        long length,
-                                                       boolean doAccessTime
-                                                       ) throws IOException {
+                                                       boolean doAccessTime)
+      throws IOException, UnresolvedLinkException {
     INodeFile inode = dir.getFileINode(src);
     if (inode == null)
       throw new FileNotFoundException(src);
+    assert !inode.isLink();
     if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);
     }
@@ -780,7 +783,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param srcs
    * @throws IOException
    */
-  public void concat(String target, String [] srcs) throws IOException{
+  public void concat(String target, String [] srcs) 
+    throws IOException, UnresolvedLinkException {
     FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) + " to " + target);
     // check safe mode
     if (isInSafeMode()) {
@@ -792,10 +796,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throw new IllegalArgumentException("concat: trg file name is empty");
     }
     if(srcs == null || srcs.length == 0) {
-      throw new IllegalArgumentException("concat:  srcs list is empty or null");
+      throw new IllegalArgumentException("concat: srcs list is empty or null");
     }
     
-    // curretnly we require all the files to be in the same dir
+    // currently we require all the files to be in the same dir
     String trgParent = 
       target.substring(0, target.lastIndexOf(Path.SEPARATOR_CHAR));
     for(String s : srcs) {
@@ -904,7 +908,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    
     
     if (auditLog.isInfoEnabled()) {
-      final HdfsFileStatus stat = dir.getFileInfo(target);
+      final HdfsFileStatus stat = dir.getFileInfo(target, false);
       logAuditEvent(UserGroupInformation.getLoginUser(),
                     Server.getRemoteIp(),
                     "concat", Arrays.toString(srcs), target, stat);
@@ -917,7 +921,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * The access time is precise upto an hour. The transaction, if needed, is
    * written to the edits log but is not flushed.
    */
-  public synchronized void setTimes(String src, long mtime, long atime) throws IOException {
+  public synchronized void setTimes(String src, long mtime, long atime) 
+    throws IOException, UnresolvedLinkException {
     if (!isAccessTimeSupported() && atime != -1) {
       throw new IOException("Access time for hdfs is not configured. " +
                             " Please set dfs.support.accessTime configuration parameter.");
@@ -931,7 +936,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (inode != null) {
       dir.setTimes(src, inode, mtime, atime, true);
       if (auditLog.isInfoEnabled()) {
-        final HdfsFileStatus stat = dir.getFileInfo(src);
+        final HdfsFileStatus stat = dir.getFileInfo(src, false);
         logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
                       "setTimes", src, null, stat);
@@ -942,10 +947,60 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   /**
+   * Create a symbolic link.
+   */
+  public synchronized void createSymlink(String target, String link,
+      PermissionStatus dirPerms, boolean createParent) 
+      throws IOException, UnresolvedLinkException {
+    if (!createParent) {
+      verifyParentDir(link);
+    }
+    createSymlinkInternal(target, link, dirPerms, createParent);
+    getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      final HdfsFileStatus stat = dir.getFileInfo(link, false);
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
+                    Server.getRemoteIp(),
+                    "createSymlink", link, target, stat);
+    }
+  }
+
+  /**
+   * Create a symbolic link.
+   */
+  private synchronized void createSymlinkInternal(String target, String link,
+      PermissionStatus dirPerms, boolean createParent)
+      throws IOException, UnresolvedLinkException {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.createSymlink: target=" + 
+        target + " link=" + link);
+    }
+
+    if (isInSafeMode()) {
+      throw new SafeModeException("Cannot create symlink " + link, safeMode);
+    }
+    if (!DFSUtil.isValidName(link)) {
+      throw new IOException("Invalid file name: " + link);
+    }
+    if (!dir.isValidToCreate(link)) {
+      throw new IOException("failed to create link " + link 
+          +" either because the filename is invalid or the file exists");
+    }
+    if (isPermissionEnabled) {
+      checkAncestorAccess(link, FsAction.WRITE);
+    }
+    // validate that we have enough inodes.
+    checkFsObjectLimit();
+
+    // add symbolic link to namespace
+    dir.addSymlink(link, target, dirPerms, createParent);
+  }
+
+  /**
    * Set replication for an existing file.
    * 
    * The NameNode sets new replication and schedules either replication of 
-   * under-replicated data blocks or removal of the eccessive block copies 
+   * under-replicated data blocks or removal of the excessive block copies 
    * if the blocks are over-replicated.
    * 
    * @see ClientProtocol#setReplication(String, short)
@@ -955,7 +1010,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    *         false if file does not exist or is a directory
    */
   public boolean setReplication(String src, short replication) 
-                                throws IOException {
+    throws IOException, UnresolvedLinkException {
     boolean status = setReplicationInternal(src, replication);
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
@@ -966,9 +1021,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return status;
   }
 
-  private synchronized boolean setReplicationInternal(String src, 
-                                             short replication
-                                             ) throws IOException {
+  private synchronized boolean setReplicationInternal(String src, short replication) 
+    throws IOException, UnresolvedLinkException {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set replication for " + src, safeMode);
     blockManager.verifyReplication(src, replication, null);
@@ -1002,7 +1056,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return true;
   }
     
-  long getPreferredBlockSize(String filename) throws IOException {
+  long getPreferredBlockSize(String filename) 
+    throws IOException, UnresolvedLinkException {
     if (isPermissionEnabled) {
       checkTraverse(filename);
     }
@@ -1010,17 +1065,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   /*
-   * Verify that parent dir exists
+   * Verify that parent directory of src exists.
    */
   private void verifyParentDir(String src) throws FileAlreadyExistsException,
-      FileNotFoundException {
+      FileNotFoundException, UnresolvedLinkException {
     Path parent = new Path(src).getParent();
     if (parent != null) {
       INode[] pathINodes = dir.getExistingPathINodes(parent.toString());
-      if (pathINodes[pathINodes.length - 1] == null) {
+      INode parentNode = pathINodes[pathINodes.length - 1];
+      if (parentNode == null) {
         throw new FileNotFoundException("Parent directory doesn't exist: "
             + parent.toString());
-      } else if (!pathINodes[pathINodes.length - 1].isDirectory()) {
+      } else if (!parentNode.isDirectory() && !parentNode.isLink()) {
         throw new FileAlreadyExistsException("Parent path is not a directory: "
             + parent.toString());
       }
@@ -1038,13 +1094,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   void startFile(String src, PermissionStatus permissions,
                  String holder, String clientMachine,
                  EnumSet<CreateFlag> flag, boolean createParent, 
-                 short replication, long blockSize
-                ) throws IOException {
+                 short replication, long blockSize)
+      throws IOException, UnresolvedLinkException {
     startFileInternal(src, permissions, holder, clientMachine, flag,
         createParent, replication, blockSize);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src);
+      final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "create", src, null, stat);
@@ -1058,8 +1114,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                               EnumSet<CreateFlag> flag,
                                               boolean createParent,
                                               short replication,
-                                              long blockSize
-                                              ) throws IOException {
+                                              long blockSize)
+      throws IOException, UnresolvedLinkException {
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
     boolean append = flag.contains(CreateFlag.APPEND);
     boolean create = flag.contains(CreateFlag.CREATE);
@@ -1230,8 +1286,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * Append to an existing file in the namespace.
    */
-  LocatedBlock appendFile(String src, String holder, String clientMachine
-      ) throws IOException {
+  LocatedBlock appendFile(String src, String holder, String clientMachine)
+    throws IOException, UnresolvedLinkException {
     if (supportAppends == false) {
       throw new IOException("Append to hdfs not supported." +
                             " Please refer to dfs.support.append configuration parameter.");
@@ -1314,7 +1370,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                          String clientName,
                                          Block previous,
                                          HashMap<Node, Node> excludedNodes
-                                         ) throws IOException {
+                                         ) 
+      throws IOException, UnresolvedLinkException {
     long fileLength, blockSize;
     int replication;
     DatanodeDescriptor clientNode = null;
@@ -1389,8 +1446,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * The client would like to let go of the given block
    */
-  public synchronized boolean abandonBlock(Block b, String src, String holder
-      ) throws IOException {
+  public synchronized boolean abandonBlock(Block b, String src, String holder)
+    throws IOException, UnresolvedLinkException {
     //
     // Remove the block from the pending creates list
     //
@@ -1406,7 +1463,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   
   // make sure that we still have the lease on this file.
   private INodeFileUnderConstruction checkLease(String src, String holder) 
-                                                      throws IOException {
+    throws IOException, UnresolvedLinkException {
     INodeFile file = dir.getFileINode(src);
     checkLease(src, holder, file);
     return (INodeFileUnderConstruction)file;
@@ -1450,18 +1507,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     COMPLETE_SUCCESS
   }
   
-  public CompleteFileStatus completeFile(String src,
-                                         String holder,
-                                         Block last) throws IOException {
+  public CompleteFileStatus completeFile(String src, String holder, Block last) 
+    throws IOException, UnresolvedLinkException {
     CompleteFileStatus status = completeFileInternal(src, holder, last);
     getEditLog().logSync();
     return status;
   }
 
-  private synchronized CompleteFileStatus completeFileInternal(
-                                            String src, 
-                                            String holder,
-                                            Block last) throws IOException {
+  private synchronized CompleteFileStatus completeFileInternal(String src, 
+    String holder, Block last) throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
@@ -1595,11 +1649,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @deprecated Use {@link #renameTo(String, String, Options.Rename...)} instead.
    */
   @Deprecated
-  boolean renameTo(String src, String dst) throws IOException {
+  boolean renameTo(String src, String dst) 
+    throws IOException, UnresolvedLinkException {
     boolean status = renameToInternal(src, dst);
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
-      final HdfsFileStatus stat = dir.getFileInfo(dst);
+      final HdfsFileStatus stat = dir.getFileInfo(dst, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "rename", src, dst, stat);
@@ -1609,8 +1664,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   /** @deprecated See {@link #renameTo(String, String)} */
   @Deprecated
-  private synchronized boolean renameToInternal(String src, String dst
-      ) throws IOException {
+  private synchronized boolean renameToInternal(String src, String dst)
+    throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst);
     if (isInSafeMode())
       throw new SafeModeException("Cannot rename " + src, safeMode);
@@ -1627,7 +1682,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       checkAncestorAccess(actualdst, FsAction.WRITE);
     }
 
-    HdfsFileStatus dinfo = dir.getFileInfo(dst);
+    HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
     if (dir.renameTo(src, dst)) {
       changeLease(src, dst, dinfo);     // update lease with new filename
       return true;
@@ -1638,7 +1693,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   /** Rename src to dst */
   void renameTo(String src, String dst, Options.Rename... options)
-      throws IOException {
+      throws IOException, UnresolvedLinkException {
     renameToInternal(src, dst, options);
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
@@ -1646,14 +1701,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       for (Rename option : options) {
         cmd.append(option.value()).append(" ");
       }
-      final HdfsFileStatus stat = dir.getFileInfo(dst);
+      final HdfsFileStatus stat = dir.getFileInfo(dst, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(), Server.getRemoteIp(),
                     cmd.toString(), src, dst, stat);
     }
   }
 
   private synchronized void renameToInternal(String src, String dst,
-      Options.Rename... options) throws IOException {
+      Options.Rename... options) throws IOException, UnresolvedLinkException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options - "
           + src + " to " + dst);
@@ -1669,7 +1724,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       checkAncestorAccess(dst, FsAction.WRITE);
     }
 
-    HdfsFileStatus dinfo = dir.getFileInfo(dst);
+    HdfsFileStatus dinfo = dir.getFileInfo(dst, false);
     dir.renameTo(src, dst, options);
     changeLease(src, dst, dinfo); // update lease with new filename
   }
@@ -1678,7 +1733,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Remove the indicated filename from namespace. If the filename 
    * is a directory (non empty) and recursive is set to false then throw exception.
    */
-    public boolean delete(String src, boolean recursive) throws IOException {
+    public boolean delete(String src, boolean recursive) 
+      throws IOException, UnresolvedLinkException {
       if ((!recursive) && (!dir.isDirEmpty(src))) {
         throw new IOException(src + " is non empty");
       }
@@ -1703,8 +1759,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * <p>
    * For small directory or file the deletion is done in one shot.
    */
-  private boolean deleteInternal(String src, 
-      boolean enforcePermission) throws IOException {
+  private boolean deleteInternal(String src, boolean enforcePermission) 
+    throws IOException, UnresolvedLinkException {
     boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
     synchronized(this) {
@@ -1764,29 +1820,33 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
+   * @param resolveLink whether to throw UnresolvedLinkException 
+   *        if src refers to a symlinks
    * @throws IOException if permission to access file is denied by the system 
+   * @throws UnresolvedLinkException if a symlink is encountered.
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  HdfsFileStatus getFileInfo(String src) throws IOException {
+  HdfsFileStatus getFileInfo(String src, boolean resolveLink) 
+    throws IOException, UnresolvedLinkException {
     if (!DFSUtil.isValidName(src)) {
       throw new IOException("Invalid file name: " + src);
     }
     if (isPermissionEnabled) {
       checkTraverse(src);
     }
-    return dir.getFileInfo(src);
+    return dir.getFileInfo(src, resolveLink);
   }
 
   /**
    * Create all the necessary directories
    */
   public boolean mkdirs(String src, PermissionStatus permissions,
-      boolean createParent) throws IOException {
+      boolean createParent) throws IOException, UnresolvedLinkException {
     boolean status = mkdirsInternal(src, permissions, createParent);
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
-      final HdfsFileStatus stat = dir.getFileInfo(src);
+      final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "mkdirs", src, null, stat);
@@ -1798,7 +1858,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Create all the necessary directories
    */
   private synchronized boolean mkdirsInternal(String src,
-      PermissionStatus permissions, boolean createParent) throws IOException {
+      PermissionStatus permissions, boolean createParent) 
+      throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     if (isPermissionEnabled) {
       checkTraverse(src);
@@ -1832,7 +1893,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return true;
   }
 
-  ContentSummary getContentSummary(String src) throws IOException {
+  ContentSummary getContentSummary(String src) 
+      throws IOException, UnresolvedLinkException {
     if (isPermissionEnabled) {
       checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
     }
@@ -1844,7 +1906,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * See {@link ClientProtocol#setQuota(String, long, long)} for the 
    * contract.
    */
-  void setQuota(String path, long nsQuota, long dsQuota) throws IOException {
+  void setQuota(String path, long nsQuota, long dsQuota) 
+      throws IOException, UnresolvedLinkException {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set quota on " + path, safeMode);
     if (isPermissionEnabled) {
@@ -1859,7 +1922,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param clientName The string representation of the client
    * @throws IOException if path does not exist
    */
-  void fsync(String src, String clientName) throws IOException {
+  void fsync(String src, String clientName) 
+      throws IOException, UnresolvedLinkException {
 
     NameNode.stateChangeLog.info("BLOCK* NameSystem.fsync: file "
                                   + src + " for " + clientName);
@@ -1885,10 +1949,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @return true  if file has been successfully finalized and closed or 
    *         false if block recovery has been initiated
    */
-  boolean internalReleaseLease(
-      Lease lease, String src, String recoveryLeaseHolder)
-  throws AlreadyBeingCreatedException,
-         IOException {
+  boolean internalReleaseLease(Lease lease, String src, 
+      String recoveryLeaseHolder) throws AlreadyBeingCreatedException, 
+      IOException, UnresolvedLinkException {
     LOG.info("Recovering lease=" + lease + ", src=" + src);
 
     INodeFile iFile = dir.getFileINode(src);
@@ -2019,9 +2082,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
 
-  private void finalizeINodeFileUnderConstruction(
-      String src,
-      INodeFileUnderConstruction pendingFile) throws IOException {
+  private void finalizeINodeFileUnderConstruction(String src, 
+      INodeFileUnderConstruction pendingFile) 
+      throws IOException, UnresolvedLinkException {
+      
     leaseManager.removeLease(pendingFile.getClientName(), src);
 
     // The file is no longer pending.
@@ -2037,8 +2101,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   synchronized void commitBlockSynchronization(Block lastblock,
       long newgenerationstamp, long newlength,
-      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
-      ) throws IOException {
+      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
+      throws IOException, UnresolvedLinkException {
     LOG.info("commitBlockSynchronization(lastblock=" + lastblock
           + ", newgenerationstamp=" + newgenerationstamp
           + ", newlength=" + newlength
@@ -2137,7 +2201,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Get a listing of all files at 'src'.  The Object[] array
    * exists so we can return file attributes (soon to be implemented)
    */
-  public HdfsFileStatus[] getListing(String src) throws IOException {
+  public HdfsFileStatus[] getListing(String src) 
+    throws IOException, UnresolvedLinkException {
     if (isPermissionEnabled) {
       if (dir.isDir(src)) {
         checkPathAccess(src, FsAction.READ_EXECUTE);
@@ -3725,8 +3790,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
     for (Lease lease : leaseManager.getSortedLeases()) {
-      for(String path : lease.getPaths()) {
-        INode node = dir.getFileINode(path);
+      for (String path : lease.getPaths()) {
+        INode node; 
+        try {
+          node = dir.getFileINode(path);
+        } catch (UnresolvedLinkException e) {
+          throw new AssertionError("Lease files should reside on this FS");
+        }
         assert node != null : "Found a lease for nonexisting file.";
         assert node.isUnderConstruction() :
           "Found a lease for file that is not under construction.";
@@ -3860,27 +3930,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return new PermissionStatus(fsOwner.getShortUserName(), supergroup, permission);
   }
 
-  private FSPermissionChecker checkOwner(String path) throws AccessControlException {
+  private FSPermissionChecker checkOwner(String path
+      ) throws AccessControlException, UnresolvedLinkException {
     return checkPermission(path, true, null, null, null, null);
   }
 
   private FSPermissionChecker checkPathAccess(String path, FsAction access
-      ) throws AccessControlException {
+      ) throws AccessControlException, UnresolvedLinkException {
     return checkPermission(path, false, null, null, access, null);
   }
 
   private FSPermissionChecker checkParentAccess(String path, FsAction access
-      ) throws AccessControlException {
+      ) throws AccessControlException, UnresolvedLinkException {
     return checkPermission(path, false, null, access, null, null);
   }
 
   private FSPermissionChecker checkAncestorAccess(String path, FsAction access
-      ) throws AccessControlException {
+      ) throws AccessControlException, UnresolvedLinkException {
     return checkPermission(path, false, access, null, null, null);
   }
 
   private FSPermissionChecker checkTraverse(String path
-      ) throws AccessControlException {
+      ) throws AccessControlException, UnresolvedLinkException {
     return checkPermission(path, false, null, null, null, null);
   }
 
@@ -3897,7 +3968,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   private FSPermissionChecker checkPermission(String path, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-      FsAction subAccess) throws AccessControlException {
+      FsAction subAccess) throws AccessControlException, UnresolvedLinkException {
     FSPermissionChecker pc = new FSPermissionChecker(
         fsOwner.getShortUserName(), supergroup);
     if (!pc.isSuper) {
@@ -4216,7 +4287,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       for (Lease lease : leaseManager.getSortedLeases()) {
         for(String path : lease.getPaths()) {
           // verify that path exists in namespace
-          INode node = dir.getFileINode(path);
+          INode node;
+          try {
+            node = dir.getFileINode(path);
+          } catch (UnresolvedLinkException e) {
+            throw new AssertionError("Lease files should reside on this FS");
+          }
           if (node == null) {
             throw new IOException("saveLeases found path " + path +
                                   " but no matching entry in namespace.");

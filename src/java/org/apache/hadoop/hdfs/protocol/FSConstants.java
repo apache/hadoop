@@ -91,7 +91,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -22;
+  public static final int LAYOUT_VERSION = -23;
   // Current version: 
-  // -22: added new OP_CONCAT_DELETE 
+  // -23: Symbolic links
 }

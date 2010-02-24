@@ -21,6 +21,9 @@ Trunk (unreleased changes)
     HDFS-935. Adds a real user component in Delegation token.
     (Jitendra Nath Pandey via ddas)
 
+    HDFS-245. Adds a symlink implementation to HDFS. This complements the new symlink feature added in HADOOP-6421
+    (Eli Collins via Sanjay Radia)
+
   IMPROVEMENTS
     
     HDFS-703. Replace current fault injection implementation with one

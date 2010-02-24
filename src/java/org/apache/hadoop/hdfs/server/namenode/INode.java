@@ -179,6 +179,7 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * Check whether it's a directory
    */
   public abstract boolean isDirectory();
+
   /**
    * Collect all the blocks in all children of this INode.
    * Count and return the number of files in the sub tree.
@@ -215,7 +216,7 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   }
   
   /**
-   * Adds total nubmer of names and total disk space taken under 
+   * Adds total number of names and total disk space taken under 
    * this tree to counts.
    * Returns updated counts object.
    */
@@ -319,6 +320,13 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   }
 
   /**
+   * Check whether it's a symlink
+   */
+  public boolean isLink() {
+    return false;
+  }
+
+  /**
    * Breaks file path into components.
    * @param path
    * @return array of byte arrays each of which represents 
@@ -351,11 +359,26 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     return path.split(Path.SEPARATOR);
   }
 
+  /**
+   * Given some components, create a path name.
+   * @param components
+   * @return concatenated path
+   */
+  static String constructPath(byte[][] components, int start) {
+    StringBuilder buf = new StringBuilder();
+    for (int i = start; i < components.length; i++) {
+      buf.append(DFSUtil.bytes2String(components[i]));
+      if (i < components.length - 1) {
+        buf.append(Path.SEPARATOR);
+      }
+    }
+    return buf.toString();
+  }
+
   boolean removeNode() {
     if (parent == null) {
       return false;
     } else {
-      
       parent.removeChild(this);
       parent = null;
       return true;

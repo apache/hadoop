@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
@@ -928,7 +930,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     }
 
     private LocatedBlock locateFollowingBlock(long start,
-        DatanodeInfo[] excludedNodes) throws IOException {
+        DatanodeInfo[] excludedNodes) 
+        throws IOException, UnresolvedLinkException {
       int retries = conf.getInt("dfs.client.block.write.locateFollowingBlock.retries", 5);
       long sleeptime = 400;
       while (true) {
@@ -939,9 +942,10 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           } catch (RemoteException e) {
             IOException ue = 
               e.unwrapRemoteException(FileNotFoundException.class,
-                  AccessControlException.class,
-                  NSQuotaExceededException.class,
-                  DSQuotaExceededException.class);
+                                      AccessControlException.class,
+                                      NSQuotaExceededException.class,
+                                      DSQuotaExceededException.class,
+                                      UnresolvedPathException.class);
             if (ue != e) { 
               throw ue; // no need to retry these exceptions
             }
@@ -1049,7 +1053,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, Progressable progress,
-      int buffersize, int bytesPerChecksum) throws IOException {
+      int buffersize, int bytesPerChecksum) 
+      throws IOException, UnresolvedLinkException {
     this(dfsClient, src, blockSize, progress, bytesPerChecksum);
 
     computePacketChunkSize(dfsClient.writePacketSize, bytesPerChecksum);
@@ -1062,7 +1067,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                                      FileAlreadyExistsException.class,
                                      FileNotFoundException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
     streamer = new DataStreamer();
     streamer.start();

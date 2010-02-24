@@ -250,6 +250,8 @@ public class TestDFSClientRetries extends TestCase {
 
     public HdfsFileStatus getFileInfo(String src) throws IOException { return null; }
 
+    public HdfsFileStatus getFileLinkInfo(String src) throws IOException { return null; }
+
     public ContentSummary getContentSummary(String path) throws IOException { return null; }
 
     public void setQuota(String path, long namespaceQuota, long diskspaceQuota) throws IOException {}
@@ -257,6 +259,12 @@ public class TestDFSClientRetries extends TestCase {
     public void fsync(String src, String client) throws IOException {}
 
     public void setTimes(String src, long mtime, long atime) throws IOException {}
+
+    public void createSymlink(String target, String newpath, 
+        FsPermission dirPerm, boolean createPath) 
+        throws IOException, UnresolvedLinkException {}
+
+    public String getLinkTarget(String src) throws IOException { return null; }
 
     @Override public LocatedBlock updateBlockForPipeline(Block block, 
         String clientName) throws IOException { return null; }

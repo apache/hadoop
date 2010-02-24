@@ -25,6 +25,7 @@ import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
@@ -104,10 +105,12 @@ class FSPermissionChecker {
    * If path is not a directory, there is no effect.
    * @return a PermissionChecker object which caches data for later use.
    * @throws AccessControlException
+   * @throws UnresolvedLinkException
    */
   void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-      FsAction subAccess) throws AccessControlException {
+      FsAction subAccess) 
+      throws AccessControlException, UnresolvedLinkException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ACCESS CHECK: " + this
           + ", doCheckOwner=" + doCheckOwner
@@ -118,7 +121,8 @@ class FSPermissionChecker {
     }
     // check if (parentAccess != null) && file exists, then check sb
     synchronized(root) {
-      INode[] inodes = root.getExistingPathINodes(path);
+      // Resolve symlinks, the check is performed on the link target.
+      INode[] inodes = root.getExistingPathINodes(path, true);
       int ancestorIndex = inodes.length - 2;
       for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
           ancestorIndex--);

@@ -78,6 +78,7 @@ public class FSEditLog {
   private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
   private static final byte OP_RENAME = 15;  // new rename
   private static final byte OP_CONCAT_DELETE = 16; // concat files.
+  private static final byte OP_SYMLINK = 17; // a symbolic link
 
   /* 
    * The following operations are used to control remote edit log streams,
@@ -415,7 +416,7 @@ public class FSEditLog {
 
   @SuppressWarnings("deprecation")
   int loadEditRecords(int logVersion, DataInputStream in,
-                             boolean closeOnExit) throws IOException {
+      boolean closeOnExit) throws IOException {
     FSNamesystem fsNamesys = fsimage.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
@@ -425,7 +426,8 @@ public class FSEditLog {
     int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
         numOpRenameOld = 0, numOpSetRepl = 0, numOpMkDir = 0,
         numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpTimes = 0, numOpRename = 0, numOpConcatDelete = 0, numOpOther = 0;
+        numOpTimes = 0, numOpRename = 0, numOpConcatDelete = 0, 
+        numOpSymlink = 0, numOpOther = 0;
     try {
       while (true) {
         long timestamp = 0;
@@ -577,7 +579,7 @@ public class FSEditLog {
           String s = FSImage.readString(in);
           String d = FSImage.readString(in);
           timestamp = readLong(in);
-          HdfsFileStatus dinfo = fsDir.getFileInfo(d);
+          HdfsFileStatus dinfo = fsDir.getFileInfo(d, false);
           fsDir.unprotectedRenameTo(s, d, timestamp);
           fsNamesys.changeLease(s, d, dinfo);
           break;
@@ -699,6 +701,21 @@ public class FSEditLog {
           fsDir.unprotectedSetTimes(path, mtime, atime, true);
           break;
         }
+        case OP_SYMLINK: {
+          numOpSymlink++;
+          int length = in.readInt();
+          if (length != 4) {
+            throw new IOException("Incorrect data format. " 
+                                  + "symlink operation.");
+          }
+          path = FSImage.readString(in);
+          String value = FSImage.readString(in);
+          mtime = readLong(in);
+          atime = readLong(in);
+          PermissionStatus perm = PermissionStatus.read(in);
+          fsDir.unprotectedSymlink(path, value, mtime, atime, perm);
+          break;
+        }
         case OP_RENAME: {
           if (logVersion > -21) {
             throw new IOException("Unexpected opcode " + opcode
@@ -714,7 +731,7 @@ public class FSEditLog {
           String d = FSImage.readString(in);
           timestamp = readLong(in);
           Rename[] options = readRenameOptions(in);
-          HdfsFileStatus dinfo = fsDir.getFileInfo(d);
+          HdfsFileStatus dinfo = fsDir.getFileInfo(d, false);
           fsDir.unprotectedRenameTo(s, d, timestamp, options);
           fsNamesys.changeLease(s, d, dinfo);
           break;
@@ -1069,6 +1086,21 @@ public class FSEditLog {
       FSEditLog.toLogLong(mtime),
       FSEditLog.toLogLong(atime)};
     logEdit(OP_TIMES, new ArrayWritable(DeprecatedUTF8.class, info));
+  }
+
+  /** 
+   * Add a create symlink record.
+   */
+  void logSymlink(String path, String value, long mtime, 
+                  long atime, INodeSymlink node) {
+    DeprecatedUTF8 info[] = new DeprecatedUTF8[] { 
+      new DeprecatedUTF8(path),
+      new DeprecatedUTF8(value),
+      FSEditLog.toLogLong(mtime),
+      FSEditLog.toLogLong(atime)};
+    logEdit(OP_SYMLINK, 
+            new ArrayWritable(DeprecatedUTF8.class, info),
+            node.getPermissionStatus());
   }
   
   static private DeprecatedUTF8 toLogReplication(short replication) {

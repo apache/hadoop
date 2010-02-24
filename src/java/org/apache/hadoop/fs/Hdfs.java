@@ -83,23 +83,26 @@ public class Hdfs extends AbstractFileSystem {
   }
 
   @Override
-  protected boolean delete(Path f, boolean recursive) throws IOException {
+  protected boolean delete(Path f, boolean recursive) 
+      throws IOException, UnresolvedLinkException {
     return dfs.delete(getUriPath(f), recursive);
   }
 
   @Override
   protected BlockLocation[] getFileBlockLocations(Path p, long start, long len)
-      throws IOException {
+      throws IOException, UnresolvedLinkException {
     return dfs.getBlockLocations(p.toString(), start, len);
   }
 
   @Override
-  protected FileChecksum getFileChecksum(Path f) throws IOException {
+  protected FileChecksum getFileChecksum(Path f) 
+      throws IOException, UnresolvedLinkException {
     return dfs.getFileChecksum(getUriPath(f));
   }
 
   @Override
-  protected FileStatus getFileStatus(Path f) throws IOException {
+  protected FileStatus getFileStatus(Path f) 
+      throws IOException, UnresolvedLinkException {
     HdfsFileStatus fi = dfs.getFileInfo(getUriPath(f));
     if (fi != null) {
       return makeQualified(fi, f);
@@ -107,12 +110,25 @@ public class Hdfs extends AbstractFileSystem {
       throw new FileNotFoundException("File does not exist: " + f.toString());
     }
   }
+  
+  @Override
+  public FileStatus getFileLinkStatus(Path f) 
+      throws IOException, UnresolvedLinkException {
+    HdfsFileStatus fi = dfs.getFileLinkInfo(getUriPath(f));
+    if (fi != null) {
+      return makeQualified(fi, f);
+    } else {
+      throw new FileNotFoundException("File does not exist: " + f);
+    }
+  }  
 
   private FileStatus makeQualified(HdfsFileStatus f, Path parent) {
+    // NB: symlink is made fully-qualified in FileContext. 
     return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
         f.getBlockSize(), f.getModificationTime(),
         f.getAccessTime(),
         f.getPermission(), f.getOwner(), f.getGroup(),
+        f.isSymlink() ? new Path(f.getSymlink()) : null,
         (f.getFullPath(parent)).makeQualified(
             getUri(), null)); // fully-qualify path
   }
@@ -129,7 +145,8 @@ public class Hdfs extends AbstractFileSystem {
   }
 
   @Override
-  protected FileStatus[] listStatus(Path f) throws IOException {
+  protected FileStatus[] listStatus(Path f) 
+      throws IOException, UnresolvedLinkException {
     HdfsFileStatus[] infos = dfs.listPaths(getUriPath(f));
     if (infos == null)
       throw new FileNotFoundException("File " + f + " does not exist.");
@@ -143,57 +160,73 @@ public class Hdfs extends AbstractFileSystem {
 
   @Override
   protected void mkdir(Path dir, FsPermission permission, boolean createParent)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     dfs.mkdirs(getUriPath(dir), permission, createParent);
-
   }
 
   @Override
-  protected FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  protected FSDataInputStream open(Path f, int bufferSize) 
+      throws IOException, UnresolvedLinkException {
     return new DFSClient.DFSDataInputStream(dfs.open(getUriPath(f),
         bufferSize, verifyChecksum));
   }
 
   @Override
-  protected void renameInternal(Path src, Path dst) throws IOException {
+  protected void renameInternal(Path src, Path dst) 
+    throws IOException, UnresolvedLinkException {
     dfs.rename(getUriPath(src), getUriPath(dst));
   }
 
   @Override
   protected void renameInternal(Path src, Path dst, boolean overwrite)
-      throws IOException {
+      throws IOException, UnresolvedLinkException {
     dfs.rename(getUriPath(src), getUriPath(dst),
         overwrite ? Options.Rename.OVERWRITE : Options.Rename.NONE);
   }
 
   @Override
   protected void setOwner(Path f, String username, String groupname)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     dfs.setOwner(getUriPath(f), username, groupname);
-
   }
 
   @Override
   protected void setPermission(Path f, FsPermission permission)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     dfs.setPermission(getUriPath(f), permission);
-
   }
 
   @Override
   protected boolean setReplication(Path f, short replication)
-    throws IOException {
+    throws IOException, UnresolvedLinkException {
     return dfs.setReplication(getUriPath(f), replication);
   }
 
   @Override
-  protected void setTimes(Path f, long mtime, long atime) throws IOException {
+  protected void setTimes(Path f, long mtime, long atime) 
+    throws IOException, UnresolvedLinkException {
     dfs.setTimes(getUriPath(f), mtime, atime);
-
   }
 
   @Override
-  protected void setVerifyChecksum(boolean verifyChecksum) throws IOException {
+  protected void setVerifyChecksum(boolean verifyChecksum) 
+    throws IOException {
     this.verifyChecksum = verifyChecksum;
+  }
+  
+  @Override
+  protected boolean supportsSymlinks() {
+    return true;
+  }  
+  
+  @Override
+  protected void createSymlink(Path target, Path link, boolean createParent)
+    throws IOException, UnresolvedLinkException {
+    dfs.createSymlink(target.toString(), getUriPath(link), createParent);
+  }
+
+  @Override
+  protected Path getLinkTarget(Path p) throws IOException { 
+    return new Path(dfs.getLinkTarget(getUriPath(p)));
   }
 }

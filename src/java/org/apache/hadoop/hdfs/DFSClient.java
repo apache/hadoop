@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -70,6 +71,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -379,12 +381,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
-      String src, long start, long length) throws IOException {
+      String src, long start, long length) 
+      throws IOException, UnresolvedLinkException {
     try {
       return namenode.getBlockLocations(src, start, length);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                    FileNotFoundException.class);
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -401,7 +405,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * as the data-block the task processes. 
    */
   public BlockLocation[] getBlockLocations(String src, long start, 
-    long length) throws IOException {
+    long length) throws IOException, UnresolvedLinkException {
     LocatedBlocks blocks = callGetBlockLocations(namenode, src, start, length);
     if (blocks == null) {
       return new BlockLocation[0];
@@ -430,7 +434,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return blkLocations;
   }
 
-  public DFSInputStream open(String src) throws IOException {
+  public DFSInputStream open(String src) 
+      throws IOException, UnresolvedLinkException {
     return open(src, conf.getInt("io.file.buffer.size", 4096), true, null);
   }
 
@@ -443,8 +448,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    */
   @Deprecated
   public DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
-                      FileSystem.Statistics stats
-      ) throws IOException {
+                             FileSystem.Statistics stats)
+      throws IOException, UnresolvedLinkException {
     return open(src, buffersize, verifyChecksum);
   }
   
@@ -455,8 +460,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * inner subclass of InputStream that does the right out-of-band
    * work.
    */
-  public DFSInputStream open(String src, int buffersize, boolean verifyChecksum
-      ) throws IOException {
+  public DFSInputStream open(String src, int buffersize, boolean verifyChecksum)
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     //    Get block info from namenode
     return new DFSInputStream(this, src, buffersize, verifyChecksum);
@@ -468,11 +473,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param src stream name
    * @param overwrite do not check for file existence if true
    * @return output stream
+   * @throws UnresolvedLinkException if a symlink is encountered in src.
    * @throws IOException
    */
-  public OutputStream create(String src, 
-                             boolean overwrite
-                             ) throws IOException {
+  public OutputStream create(String src, boolean overwrite) 
+      throws IOException, UnresolvedLinkException {
     return create(src, overwrite, defaultReplication, defaultBlockSize, null);
   }
     
@@ -483,12 +488,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param src stream name
    * @param overwrite do not check for file existence if true
    * @return output stream
+   * @throws UnresolvedLinkException if a symlink is encountered in src.
    * @throws IOException
    */
   public OutputStream create(String src, 
                              boolean overwrite,
-                             Progressable progress
-                             ) throws IOException {
+                             Progressable progress)
+      throws IOException, UnresolvedLinkException {
     return create(src, overwrite, defaultReplication, defaultBlockSize, null);
   }
     
@@ -500,13 +506,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param overwrite do not check for file existence if true
    * @param replication block replication
    * @return output stream
+   * @throws UnresolvedLinkException if a symlink is encountered in src.
    * @throws IOException
    */
   public OutputStream create(String src, 
                              boolean overwrite, 
                              short replication,
-                             long blockSize
-                             ) throws IOException {
+                             long blockSize)
+      throws IOException, UnresolvedLinkException {
     return create(src, overwrite, replication, blockSize, null);
   }
 
@@ -528,14 +535,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param overwrite do not check for file existence if true
    * @param replication block replication
    * @return output stream
+   * @throws UnresolvedLinkException if a symlink is encountered in src.
    * @throws IOException
    */
   public OutputStream create(String src, 
                              boolean overwrite, 
                              short replication,
                              long blockSize,
-                             Progressable progress
-                             ) throws IOException {
+                             Progressable progress)
+      throws IOException, UnresolvedLinkException {
     return create(src, overwrite, replication, blockSize, progress,
         conf.getInt("io.file.buffer.size", 4096));
   }
@@ -550,8 +558,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       short replication,
       long blockSize,
       Progressable progress,
-      int buffersize
-      ) throws IOException {
+      int buffersize)
+      throws IOException, UnresolvedLinkException {
     return create(src, FsPermission.getDefault(),
         overwrite ? EnumSet.of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE), 
         replication, blockSize, progress, buffersize);
@@ -568,8 +576,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       short replication,
       long blockSize,
       Progressable progress,
-      int buffersize
-      ) throws IOException {
+      int buffersize)
+      throws IOException, UnresolvedLinkException {
     return create(src, permission, flag, true,
         replication, blockSize, progress, buffersize);
   }
@@ -587,6 +595,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param replication block replication
    * @return output stream
    * @throws IOException
+   * @throws UnresolvedLinkException if src contains a symlink. 
    * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, boolean, short, long)
    */
   public OutputStream create(String src, 
@@ -596,8 +605,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                              short replication,
                              long blockSize,
                              Progressable progress,
-                             int buffersize
-                             ) throws IOException {
+                             int buffersize)
+    throws IOException, UnresolvedLinkException {
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
@@ -616,7 +625,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * Same as {{@link #create(String, FsPermission, EnumSet, short, long,
    *  Progressable, int)}   except that the permission
    *   is absolute (ie has already been masked with umask.
-   * 
    */
   public OutputStream primitiveCreate(String src, 
                              FsPermission absPermission,
@@ -627,14 +635,49 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                              Progressable progress,
                              int buffersize,
                              int bytesPerChecksum)
-    throws IOException {
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     OutputStream result = new DFSOutputStream(this, src, absPermission,
         flag, createParent, replication, blockSize, progress, buffersize,
         bytesPerChecksum);
     leasechecker.put(src, result);
     return result;
-  } 
+  }
+  
+  /**
+   * Creates a symbolic link.
+   * 
+   * @see ClientProtocol#createSymlink(String, String,FsPermission, boolean) 
+   */
+  public void createSymlink(String target, String link, boolean createParent)
+      throws IOException, UnresolvedLinkException {
+    try {
+      FsPermission dirPerm = 
+          FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf)); 
+      namenode.createSymlink(target, link, dirPerm, createParent);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     NSQuotaExceededException.class, 
+                                     DSQuotaExceededException.class,
+                                     FileAlreadyExistsException.class, 
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  /**
+   * Resolve the *first* symlink, if any, in the path.
+   * 
+   * @see ClientProtocol#getLinkTarget(String)
+   */
+  public String getLinkTarget(String path) throws IOException { 
+    checkOpen();
+    try {
+      return namenode.getLinkTarget(path);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
+  }
 
   /**
    * Append to an existing HDFS file.  
@@ -644,10 +687,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param progress for reporting write-progress
    * @return an output stream for writing into the file
    * @throws IOException
+   * @throws UnresolvedLinkException if the path contains a symlink.
    * @see ClientProtocol#append(String, String)
    */
-  OutputStream append(String src, int buffersize, Progressable progress
-      ) throws IOException {
+  OutputStream append(String src, int buffersize, Progressable progress)
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     HdfsFileStatus stat = null;
     LocatedBlock lastBlock = null;
@@ -658,7 +702,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throw re.unwrapRemoteException(FileNotFoundException.class,
                                      AccessControlException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
     OutputStream result = new DFSOutputStream(this, src, buffersize, progress,
         lastBlock, stat, conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 
@@ -676,14 +721,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @return true is successful or false if file does not exist 
    */
   public boolean setReplication(String src, 
-                                short replication
-                                ) throws IOException {
+                                short replication)
+      throws IOException, UnresolvedLinkException {
     try {
       return namenode.setReplication(src, replication);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -693,14 +739,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @deprecated Use {@link #rename(String, String, Options.Rename...)} instead.
    */
   @Deprecated
-  public boolean rename(String src, String dst) throws IOException {
+  public boolean rename(String src, String dst) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       return namenode.rename(src, dst);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -708,28 +756,32 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * Move blocks from src to trg and delete src
    * See {@link ClientProtocol#concat(String, String [])}. 
    */
-  public void concat(String trg, String [] srcs) throws IOException {
+  public void concat(String trg, String [] srcs) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       namenode.concat(trg, srcs);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
   }
   /**
    * Rename file or directory.
    * See {@link ClientProtocol#rename(String, String, Options.Rename...)}
    */
-  public void rename(String src, String dst, Options.Rename... options) throws IOException {
+  public void rename(String src, String dst, Options.Rename... options) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       namenode.rename(src, dst, options);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
   }
   /**
@@ -737,7 +789,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * See {@link ClientProtocol#delete(String)}. 
    */
   @Deprecated
-  public boolean delete(String src) throws IOException {
+  public boolean delete(String src) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     return namenode.delete(src, true);
   }
@@ -747,12 +800,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * delete contents of the directory if non empty and recursive 
    * set to true
    */
-  public boolean delete(String src, boolean recursive) throws IOException {
+  public boolean delete(String src, boolean recursive) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       return namenode.delete(src, recursive);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
   
@@ -763,23 +818,46 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return getFileInfo(src) != null;
   }
 
-  public HdfsFileStatus[] listPaths(String src) throws IOException {
+  public HdfsFileStatus[] listPaths(String src) 
+    throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       return namenode.getListing(src);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
-  public HdfsFileStatus getFileInfo(String src) throws IOException {
+  public HdfsFileStatus getFileInfo(String src) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       return namenode.getFileInfo(src);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
+
+  /**
+   * Get the file info for a specific file or directory. If src
+   * refers to a symlink then the FileStatus of the link is returned.
+   * @param src path to a file or directory.
+   * @throws IOException
+   * @throws UnresolvedLinkException if the path contains symlinks
+   * @return FileStatus describing src.
+   */
+  public HdfsFileStatus getFileLinkInfo(String src) 
+      throws IOException, UnresolvedLinkException {
+    checkOpen();
+    try {
+      return namenode.getFileLinkInfo(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     UnresolvedPathException.class);
+     }
+   }
 
   /**
    * Get the checksum of a file.
@@ -921,15 +999,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param src path name.
    * @param permission
    * @throws <code>FileNotFoundException</code> is file does not exist.
+   * @throws UnresolvedLinkException if the path contains a symlink.
    */
-  public void setPermission(String src, FsPermission permission
-                            ) throws IOException {
+  public void setPermission(String src, FsPermission permission)
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       namenode.setPermission(src, permission);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -939,15 +1019,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param username user id.
    * @param groupname user group.
    * @throws <code>FileNotFoundException</code> is file does not exist.
+   * @throws UnresolvedLinkException if the path contains a symlink.
    */
-  public void setOwner(String src, String username, String groupname
-                      ) throws IOException {
+  public void setOwner(String src, String username, String groupname)
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       namenode.setOwner(src, username, groupname);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -1075,9 +1157,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * If permission == null, use {@link FsPermission#getDefault()}.
    * @param createParent create missing parent directory if true
    * @return True if the operation success.
+   * @throws UnresolvedLinkException if the path contains a symlink.
    * @see ClientProtocol#mkdirs(String, FsPermission, boolean)
    */
-  public boolean mkdirs(String src, FsPermission permission, boolean createParent)throws IOException{
+  public boolean mkdirs(String src, FsPermission permission, boolean createParent)
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
@@ -1091,16 +1175,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                                      NSQuotaExceededException.class,
                                      DSQuotaExceededException.class,
                                      FileNotFoundException.class,
-                                     FileAlreadyExistsException.class);
+                                     FileAlreadyExistsException.class,
+                                     UnresolvedPathException.class);
     }
   }
   
   /**
    * Same {{@link #mkdirs(String, FsPermission, boolean)} except
    * that the permissions has already been masked against umask.
+   * @throws UnresolvedLinkException if the path contains a symlink.
    */
   public boolean primitiveMkdir(String src, FsPermission absPermission)
-    throws IOException{
+    throws IOException, UnresolvedLinkException {
     checkOpen();
     if (absPermission == null) {
       absPermission = 
@@ -1113,7 +1199,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -1122,7 +1209,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return namenode.getContentSummary(src);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -1131,7 +1219,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String, long, long)
    */
   void setQuota(String src, long namespaceQuota, long diskspaceQuota) 
-                                                 throws IOException {
+      throws IOException, UnresolvedLinkException {
     // sanity check
     if ((namespaceQuota <= 0 && namespaceQuota != FSConstants.QUOTA_DONT_SET &&
          namespaceQuota != FSConstants.QUOTA_RESET) ||
@@ -1148,7 +1236,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class);
+                                     DSQuotaExceededException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -1156,13 +1245,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * set the modification and access time of a file
    * @throws FileNotFoundException if the path is not a file
    */
-  public void setTimes(String src, long mtime, long atime) throws IOException {
+  public void setTimes(String src, long mtime, long atime) 
+      throws IOException, UnresolvedLinkException {
     checkOpen();
     try {
       namenode.setTimes(src, mtime, atime);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
     }
   }
 

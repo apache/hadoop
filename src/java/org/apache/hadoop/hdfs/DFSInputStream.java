@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -86,7 +87,7 @@ class DFSInputStream extends FSInputStream {
   }
   
   DFSInputStream(DFSClient dfsClient, String src, int buffersize, boolean verifyChecksum
-                 ) throws IOException {
+                 ) throws IOException, UnresolvedLinkException {
     this.dfsClient = dfsClient;
     this.verifyChecksum = verifyChecksum;
     this.buffersize = buffersize;
@@ -100,7 +101,7 @@ class DFSInputStream extends FSInputStream {
   /**
    * Grab the open-file info from namenode
    */
-  synchronized void openInfo() throws IOException {
+  synchronized void openInfo() throws IOException, UnresolvedLinkException {
     LocatedBlocks newInfo = DFSClient.callGetBlockLocations(dfsClient.namenode, src, 0, prefetchSize);
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("newInfo = " + newInfo);
