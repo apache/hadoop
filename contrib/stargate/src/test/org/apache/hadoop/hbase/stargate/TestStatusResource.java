@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -85,7 +85,7 @@ public class TestStatusResource extends MiniClusterTestCase {
   }
 
   public void testGetClusterStatusXML() throws IOException, JAXBException {
-    Response response = client.get(Constants.PATH_STATUS_CLUSTER, MIMETYPE_XML);
+    Response response = client.get("/status/cluster", MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
     StorageClusterStatusModel model = (StorageClusterStatusModel)
       context.createUnmarshaller().unmarshal(
@@ -94,8 +94,7 @@ public class TestStatusResource extends MiniClusterTestCase {
   }
   
   public void testGetClusterStatusPB() throws IOException {
-    Response response =
-      client.get(Constants.PATH_STATUS_CLUSTER, MIMETYPE_PROTOBUF);
+    Response response = client.get("/status/cluster", MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.getObjectFromMessage(response.getBody());

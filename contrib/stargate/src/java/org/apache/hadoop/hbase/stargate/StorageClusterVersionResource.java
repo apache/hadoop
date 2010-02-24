@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.stargate;
 import java.io.IOException;
 
 import javax.ws.rs.GET;
-import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterVersionModel;
 
-@Path(Constants.PATH_VERSION_CLUSTER)
 public class StorageClusterVersionResource implements Constants {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterVersionResource.class);
@@ -53,7 +51,7 @@ public class StorageClusterVersionResource implements Constants {
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON})
   public Response get(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());

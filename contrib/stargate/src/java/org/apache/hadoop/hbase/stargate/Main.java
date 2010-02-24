@@ -39,12 +39,14 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * <li>-p: service port</li>
  * </ul>
  */
-public class Main {
+public class Main implements Constants {
 
   public static void main(String[] args) throws Exception {
     // process command line
+
     Options options = new Options();
     options.addOption("p", "port", true, "service port");
+    options.addOption("m", "multiuser", false, "enable multiuser mode");
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
     int port = 8080;
@@ -52,7 +54,13 @@ public class Main {
       port = Integer.valueOf(cmd.getOptionValue("p"));
     }
 
+    // configure the Stargate singleton
+
+    RESTServlet servlet = RESTServlet.getInstance();
+    servlet.setMultiUser(cmd.hasOption("m"));
+
     // set up the Jersey servlet container for Jetty
+
     ServletHolder sh = new ServletHolder(ServletContainer.class);
     sh.setInitParameter(
       "com.sun.jersey.config.property.resourceConfigClass",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -63,8 +63,7 @@ public class ScannerInstanceResource implements Constants {
   }
 
   @GET
-  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());

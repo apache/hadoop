@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.stargate;
 import java.io.IOException;
 
 import javax.ws.rs.GET;
-import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.CacheControl;
@@ -41,29 +40,28 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterStatusModel;
 
-@Path(Constants.PATH_STATUS_CLUSTER)
 public class StorageClusterStatusResource implements Constants {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterStatusResource.class);
 
   private CacheControl cacheControl;
+  private RESTServlet servlet;
 
-  public StorageClusterStatusResource() {
+  public StorageClusterStatusResource() throws IOException {
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
+    servlet = RESTServlet.getInstance();
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
     try {
-      RESTServlet server = RESTServlet.getInstance();
-      HBaseAdmin admin = new HBaseAdmin(server.getConfiguration());
+      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       ClusterStatus status = admin.getClusterStatus();
       StorageClusterStatusModel model = new StorageClusterStatusModel();
       model.setRegions(status.getRegionsCount());

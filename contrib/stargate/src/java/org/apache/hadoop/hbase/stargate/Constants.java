@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,14 +24,17 @@ package org.apache.hadoop.hbase.stargate;
  * Common constants for org.apache.hadoop.hbase.stargate
  */
 public interface Constants {
+  public static final String VERSION_STRING = "0.0.2";
+
+  public static final String AUTHENTICATOR_KEY = "stargate.authenticator";
+  public static final String MULTIUSER_KEY = "stargate.multiuser";
+
+  public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;       // 4 hours
+
   public static final String MIMETYPE_TEXT = "text/plain";
+  public static final String MIMETYPE_HTML = "text/html";
   public static final String MIMETYPE_XML = "text/xml";
   public static final String MIMETYPE_BINARY = "application/octet-stream";
   public static final String MIMETYPE_PROTOBUF = "application/x-protobuf";
   public static final String MIMETYPE_JSON = "application/json";
-  public static final String MIMETYPE_JAVASCRIPT = "application/x-javascript";
-  
-  public static final String PATH_STATUS_CLUSTER = "/status/cluster";
-  public static final String PATH_VERSION = "/version";
-  public static final String PATH_VERSION_CLUSTER = "/version/cluster";
 }

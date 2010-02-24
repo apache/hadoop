@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -41,18 +41,29 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.stargate.auth.User;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 
 public class ScannerResource implements Constants {
 
   private static final Log LOG = LogFactory.getLog(ScannerResource.class);
-  protected static final Map<String,ScannerInstanceResource> scanners = 
+
+  static final Map<String,ScannerInstanceResource> scanners = 
     new HashMap<String,ScannerInstanceResource>();
 
-  private String table;
+  User user;
+  String tableName;
+  String actualTableName;
 
-  public ScannerResource(String table) {
-    this.table = table;
+  public ScannerResource(User user, String table) {
+    if (user != null) {
+      this.user = user;
+      this.actualTableName = 
+        !user.isAdmin() ? user.getName() + "." + table : table;
+    } else {
+      this.actualTableName = table;
+    }
+    this.tableName = table;
   }
 
   private Response update(ScannerModel model, boolean replace,
@@ -61,10 +72,10 @@ public class ScannerResource implements Constants {
       byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
       RowSpec spec = new RowSpec(model.getStartRow(), endRow,
         model.getColumns(), model.getStartTime(), model.getEndTime(), 1);
-      ScannerResultGenerator gen = new ScannerResultGenerator(table, spec);
+      ScannerResultGenerator gen = new ScannerResultGenerator(actualTableName, spec);
       String id = gen.getID();
       ScannerInstanceResource instance = 
-        new ScannerInstanceResource(table, id, gen, model.getBatch());
+        new ScannerInstanceResource(actualTableName, id, gen, model.getBatch());
       synchronized (scanners) {
         scanners.put(id, instance);
       }
@@ -83,8 +94,7 @@ public class ScannerResource implements Constants {
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response put(ScannerModel model, @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
@@ -93,8 +103,7 @@ public class ScannerResource implements Constants {
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response post(ScannerModel model, @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath());

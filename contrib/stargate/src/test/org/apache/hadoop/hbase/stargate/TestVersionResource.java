@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -85,7 +85,7 @@ public class TestVersionResource extends MiniClusterTestCase {
   }
 
   public void testGetStargateVersionText() throws IOException {
-    Response response = client.get(Constants.PATH_VERSION, MIMETYPE_PLAIN);
+    Response response = client.get("/version", MIMETYPE_PLAIN);
     assertTrue(response.getCode() == 200);
     String body = Bytes.toString(response.getBody());
     assertTrue(body.length() > 0);
@@ -101,7 +101,7 @@ public class TestVersionResource extends MiniClusterTestCase {
   }
 
   public void testGetStargateVersionXML() throws IOException, JAXBException {
-    Response response = client.get(Constants.PATH_VERSION, MIMETYPE_XML);
+    Response response = client.get("/version", MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
     VersionModel model = (VersionModel)
       context.createUnmarshaller().unmarshal(
@@ -111,12 +111,12 @@ public class TestVersionResource extends MiniClusterTestCase {
   }
 
   public void testGetStargateVersionJSON() throws IOException {
-    Response response = client.get(Constants.PATH_VERSION, MIMETYPE_JSON);
+    Response response = client.get("/version", MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
   }
 
   public void testGetStargateVersionPB() throws IOException {
-    Response response = client.get(Constants.PATH_VERSION, MIMETYPE_PROTOBUF);
+    Response response = client.get("/version", MIMETYPE_PROTOBUF);
     assertTrue(response.getCode() == 200);
     VersionModel model = new VersionModel();
     model.getObjectFromMessage(response.getBody());
@@ -125,15 +125,13 @@ public class TestVersionResource extends MiniClusterTestCase {
   }
 
   public void testGetStorageClusterVersionText() throws IOException {
-    Response response =
-      client.get(Constants.PATH_VERSION_CLUSTER, MIMETYPE_PLAIN);
+    Response response = client.get("/version/cluster", MIMETYPE_PLAIN);
     assertTrue(response.getCode() == 200);
   }
 
   public void testGetStorageClusterVersionXML() throws IOException,
       JAXBException {
-    Response response =
-      client.get(Constants.PATH_VERSION_CLUSTER, MIMETYPE_XML);
+    Response response = client.get("/version/cluster", MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
     StorageClusterVersionModel clusterVersionModel = 
       (StorageClusterVersionModel)
@@ -145,8 +143,7 @@ public class TestVersionResource extends MiniClusterTestCase {
   }
 
   public void testGetStorageClusterVersionJSON() throws IOException {
-    Response response =
-      client.get(Constants.PATH_VERSION_CLUSTER, MIMETYPE_JSON);
+    Response response = client.get("/version/cluster", MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
   }
 

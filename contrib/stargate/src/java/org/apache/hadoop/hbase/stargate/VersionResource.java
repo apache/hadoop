@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.stargate.model.VersionModel;
  * <p>
  * <tt>/version</tt> (alias for <tt>/version/stargate</tt>)
  */
-@Path(Constants.PATH_VERSION)
 public class VersionResource implements Constants {
   private static final Log LOG = LogFactory.getLog(VersionResource.class);
 
@@ -60,9 +59,9 @@ public class VersionResource implements Constants {
    * @return a response for a version request 
    */
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
-  public Response get(@Context ServletContext context, @Context UriInfo uriInfo) {
+  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
+  public Response get(@Context ServletContext context, 
+      @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -72,9 +71,16 @@ public class VersionResource implements Constants {
   }
 
   /**
+   * Dispatch to StorageClusterVersionResource
+   */
+  @Path("cluster")
+  public StorageClusterVersionResource getClusterVersionResource() {
+    return new StorageClusterVersionResource();
+  }
+
+  /**
    * Dispatch <tt>/version/stargate</tt> to self.
    */
-  // "/version/stargate" is an alias for "/version"
   @Path("stargate")
   public VersionResource getVersionResource() {
     return this;
