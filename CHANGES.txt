@@ -13,6 +13,7 @@ Release 0.21.0 - Unreleased
    HBASE-2219  stop using code mapping for method names in the RPC
    HBASE-1728  Column family scoping and cluster identification
    HBASE-2099  Move build to Maven (Paul Smith via Stack)
+   HBASE-2260   Remove all traces of Ant and Ivy (Lars Francke via Stack)
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -380,6 +381,7 @@ Release 0.21.0 - Unreleased
                emit it. (Ferdy via Stack)
    HBASE-2241  Change balancer sloppyness from 0.1 to 0.3
    HBASE-2250  typo in the maven pom
+   HBASE-2254  Improvements to the Maven POMs (Lars Francke via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

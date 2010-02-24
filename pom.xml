@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>0.20.2-SNAPSHOT</version>
+  <version>0.21.0-SNAPSHOT</version>
   <name>HBase</name>
-  <description>HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.</description>
+  <description>HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data.
+    This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
+    of commodity hardware.
+  </description>
   <url>http://hadoop.apache.org/hbase</url>
+
+  <modules>
+    <module>core</module>
+    <module>contrib</module>
+  </modules>
+
   <licenses>
     <license>
       <name>Apache 2</name>
@@ -16,31 +27,131 @@
       <comments>A business-friendly OSS license</comments>
     </license>
   </licenses>
+
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hadoop/hbase/trunk</connection>
     <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hadoop/hbase/trunk</developerConnection>
     <url>http://svn.apache.org/viewvc/hadoop/hbase/trunk</url>
   </scm>
+
+  <issueManagement>
+    <system>JIRA</system>
+    <url>http://issues.apache.org/jira/</url>
+  </issueManagement>
+
+  <ciManagement>
+    <system>hudson</system>
+    <url>http://hudson.zones.apache.org/hudson/view/HBase/</url>
+  </ciManagement>
+
+  <mailingLists>
+    <mailingList>
+      <name>User List</name>
+      <subscribe>hbase-user-subscribe@hadoop.apache.org</subscribe>
+      <unsubscribe>hbase-user-unsubscribe@hadoop.apache.org</unsubscribe>
+      <post>hbase-user@hadoop.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/hadoop-hbase-user/</archive>
+      <otherArchives>
+        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
+      </otherArchives>
+    </mailingList>
+    <mailingList>
+      <name>Developer List</name>
+      <subscribe>hbase-dev-subscribe@hadoop.apache.org</subscribe>
+      <unsubscribe>hbase-dev-unsubscribe@hadoop.apache.org</unsubscribe>
+      <post>hbase-dev@hadoop.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/hadoop-hbase-dev/</archive>
+      <otherArchives>
+        <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
+      </otherArchives>
+    </mailingList>
+    <mailingList>
+      <name>Commits List</name>
+      <subscribe>hbase-commits-subscribe@hadoop.apache.org</subscribe>
+      <unsubscribe>hbase-commits-unsubscribe@hadoop.apache.org</unsubscribe>
+      <archive>http://mail-archives.apache.org/mod_mbox/hadoop-hbase-commits/</archive>
+    </mailingList>
+  </mailingLists>
+
   <developers>
     <developer>
-      <id>stack</id>
-      <name>Michael Stack</name>
-      <email>stack@apache.org</email>
+      <id>apurtell</id>
+      <name>Andrew Purtell</name>
+      <email>apurtell@apache.org</email>
       <timezone>-8</timezone>
+      <organization>Trend Micro</organization>
+      <organizationUrl>http://www.trendmicro.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>bryanduxbury</id>
+      <name>Bryan Duxbury</name>
+      <email>bryan@rapleaf.com</email>
+      <timezone>-8</timezone>
+      <organization>Rapleaf</organization>
+      <organizationUrl>http://www.rapleaf.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>jdcryans</id>
+      <name>Jean-Daniel Cryans</name>
+      <email>jdcryans@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>StumbleUpon</organization>
+      <organizationUrl>http://www.stumbleupon.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>jgray</id>
+      <name>Jonathan Gray</name>
+      <email>jgray@streamy.com</email>
+      <timezone>-8</timezone>
+      <organization>Streamy</organization>
+      <organizationUrl>http://www.streamy.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>jimk</id>
+      <name>Jim Kellerman</name>
+      <email>jimk@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Powerset</organization>
+      <organizationUrl>http://www.powerset.com/</organizationUrl>
+    </developer>
+    <developer>
+      <id>larsgeorge</id>
+      <name>Lars George</name>
+      <email>lars.george@gmail.com</email>
+      <timezone>+1</timezone>
+      <organization>WorldLingo</organization>
+      <organizationUrl>http://www.worldlingo.com/</organizationUrl>
+    </developer>
+    <developer>
+      <id>nitay</id>
+      <name>Nitay Joffe</name>
+      <email>nitay@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Powerset</organization>
+      <organizationUrl>http://www.powerset.com/</organizationUrl>
     </developer>
     <developer>
       <id>rawson</id>
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
       <timezone>-8</timezone>
+      <organization>StumbleUpon</organization>
+      <organizationUrl>http://www.stumbleupon.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>stack</id>
+      <name>Michael Stack</name>
+      <email>stack@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Powerset</organization>
+      <organizationUrl>http://www.powerset.com/</organizationUrl>
     </developer>
   </developers>
-  <issueManagement>
-    <system>JIRA</system>
-    <url>http://issues.apache.org/jira/</url>
-  </issueManagement>
+
   <properties>
     <compileSource>1.6</compileSource>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
     <log4j.version>1.2.15</log4j.version>
     <commons-lang.version>2.4</commons-lang.version>
     <commons-math.version>2.0</commons-math.version>
@@ -50,13 +161,10 @@
     <!-- TODO specify external repositories - Note the following 2 resources are not downloadable from a public repository, you'll need to place these manually by using 'mvn install:file' or use something like Nexus as a repository manager -->
     <zookeeper.version>3.2.2</zookeeper.version>
     <thrift.version>0.2.0</thrift.version>
-    <jruby.version>1.3.1</jruby.version>
+    <jruby.version>1.4.0</jruby.version>
     <slf4j.version>1.5.8</slf4j.version>
   </properties>
-  <modules>
-    <module>core</module>
-    <module>contrib</module>
-  </modules>
+
   <repositories>
     <repository>
       <id>asf-snapshots</id>
@@ -115,26 +223,53 @@
       </releases>
     </repository>
   </repositories>
+
   <build>
     <directory>target</directory>
     <outputDirectory>target/classes</outputDirectory>
     <finalName>${artifactId}-${version}</finalName>
+
+    <!-- Some plugins (javadoc for example) can be used in the normal build- and the site phase.
+         These plugins inherit their options from the <reporting> section below. These settings
+         can be overwritten here. -->
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>2.1</version>
+          <configuration>
+            <source>${compileSource}</source>
+            <target>${compileSource}</target>
+            <showWarnings>true</showWarnings>
+            <showDeprecation>true</showDeprecation>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.2-beta-5</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>2.3</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.1.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.5</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.6.1</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>${compileSource}</source>
-          <target>${compileSource}</target>
-          <encoding>UTF-8</encoding>
-          <showWarnings>true</showWarnings>
-          <showDeprecations>true</showDeprecations>
-        </configuration>
-      </plugin>
-      <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <!-- see http://jira.codehaus.org/browse/MASSEMBLY-109, beta-5 is out, but I'm having an error downloading that plugin, maybe Nexus related, not sure -->
-        <version>2.2-beta-4</version>
         <!-- THIS might not be doable
         <executions>
           <execution>
@@ -146,6 +281,7 @@
         </executions>
         -->
         <configuration>
+          <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
             <descriptor>src/assembly/bin.xml</descriptor>
           </descriptors>
@@ -157,6 +293,42 @@
       </plugin>
     </plugins>
   </build>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>hbase-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>hbase-core</artifactId>
+        <version>${project.version}</version>
+        <classifier>tests</classifier>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-core-test</artifactId>
+        <version>${hadoop-core.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-test</artifactId>
+        <version>${hadoop-hdfs.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapred-test</artifactId>
+        <version>${hadoop-mapred.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <distributionManagement>
     <repository>
       <id>Apache Public Releases</id>
@@ -172,6 +344,8 @@
       <url>scp://people.apache.org/home/psmith/public_html/hbase/sandbox/hbase/</url>
     </site>
   </distributionManagement>
+
+  <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>
       <plugin>
@@ -200,16 +374,15 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.6.1</version>
         <configuration>
-          <encoding>UTF-8</encoding>
-          <docencoding>UTF-8</docencoding>
-          <charset>UTF-8</charset>
-          <!--
-This is probably not needed, given the smallness of the HBase source code, but left here in case
-            <minmemory>128m</minmemory>
-            <maxmemory>1024m</maxmemory>
--->
+          <docfilessubdirs>true</docfilessubdirs>
         </configuration>
+        <!--
+          This is probably not needed, given the smallness of the HBase source code, but left here in case
+          <minmemory>128m</minmemory>
+          <maxmemory>1024m</maxmemory>
+        -->
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

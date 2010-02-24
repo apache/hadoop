@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase-contrib</artifactId>
   <packaging>pom</packaging>
   <name>HBase Contrib</name>
+
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase</artifactId>
-    <version>0.20.2-SNAPSHOT</version>
+    <version>0.21.0-SNAPSHOT</version>
   </parent>
+  
   <modules>
+    <module>mdc_replication</module>
     <module>stargate</module>
     <module>transactional</module>
   </modules>
+  
   <build>
     <!-- TODO really all the modules in HBase probably should have a consistent directory structure -->
     <sourceDirectory>${basedir}/src/java</sourceDirectory>
