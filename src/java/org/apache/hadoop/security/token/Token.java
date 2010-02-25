@@ -21,9 +21,15 @@ package org.apache.hadoop.security.token;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
+import org.apache.commons.codec.binary.Base64;
+
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -47,7 +53,21 @@ public class Token<T extends TokenIdentifier> implements Writable {
     kind = id.getKind();
     service = new Text();
   }
-  
+ 
+  /**
+   * Construct a token from the components.
+   * @param identifier the token identifier
+   * @param password the token's password
+   * @param kind the kind of token
+   * @param service the service for this token
+   */
+  public Token(byte[] identifier, byte[] password, Text kind, Text service) {
+    this.identifier = identifier;
+    this.password = password;
+    this.kind = kind;
+    this.service = service;
+  }
+
   /**
    * Default constructor
    */
@@ -122,5 +142,104 @@ public class Token<T extends TokenIdentifier> implements Writable {
     out.write(password);
     kind.write(out);
     service.write(out);
+  }
+
+  /**
+   * Generate a string with the url-quoted base64 encoded serialized form
+   * of the Writable.
+   * @param obj the object to serialize
+   * @return the encoded string
+   * @throws IOException
+   */
+  private static String encodeWritable(Writable obj) throws IOException {
+    DataOutputBuffer buf = new DataOutputBuffer();
+    obj.write(buf);
+    Base64 encoder = new Base64(0, null, true);
+    byte[] raw = new byte[buf.getLength()];
+    System.arraycopy(buf.getData(), 0, raw, 0, buf.getLength());
+    return encoder.encodeToString(raw);
+  }
+  
+  /**
+   * Modify the writable to the value from the newValue
+   * @param obj the object to read into
+   * @param newValue the string with the url-safe base64 encoded bytes
+   * @throws IOException
+   */
+  private static void decodeWritable(Writable obj, 
+                                     String newValue) throws IOException {
+    Base64 decoder = new Base64(0, null, true);
+    DataInputBuffer buf = new DataInputBuffer();
+    byte[] decoded = decoder.decode(newValue);
+    buf.reset(decoded, decoded.length);
+    obj.readFields(buf);
+  }
+
+  /**
+   * Encode this token as a url safe string
+   * @return the encoded string
+   * @throws IOException
+   */
+  public String encodeToUrlString() throws IOException {
+    return encodeWritable(this);
+  }
+  
+  /**
+   * Decode the given url safe string into this token.
+   * @param newValue the encoded string
+   * @throws IOException
+   */
+  public void decodeFromUrlString(String newValue) throws IOException {
+    decodeWritable(this, newValue);
+  }
+  
+  @SuppressWarnings("unchecked")
+  @Override
+  public boolean equals(Object right) {
+    if (this == right) {
+      return true;
+    } else if (right == null || getClass() != right.getClass()) {
+      return false;
+    } else {
+      Token<T> r = (Token<T>) right;
+      return Arrays.equals(identifier, r.identifier) &&
+             Arrays.equals(password, r.password) &&
+             kind.equals(r.kind) &&
+             service.equals(r.service);
+    }
+  }
+  
+  @Override
+  public int hashCode() {
+    return WritableComparator.hashBytes(identifier, identifier.length);
+  }
+  
+  private static void addBinaryBuffer(StringBuilder buffer, byte[] bytes) {
+    for (int idx = 0; idx < bytes.length; idx++) {
+      // if not the first, put a blank separator in
+      if (idx != 0) {
+        buffer.append(' ');
+      }
+      String num = Integer.toHexString(0xff & bytes[idx]);
+      // if it is only one digit, add a leading 0.
+      if (num.length() < 2) {
+        buffer.append('0');
+      }
+      buffer.append(num);
+    }
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder buffer = new StringBuilder();
+    buffer.append("Ident: ");
+    addBinaryBuffer(buffer, identifier);
+    buffer.append(", Pass: ");
+    addBinaryBuffer(buffer, password);
+    buffer.append(", Kind: ");
+    buffer.append(kind.toString());
+    buffer.append(", Service: ");
+    buffer.append(service.toString());
+    return buffer.toString();
   }
 }

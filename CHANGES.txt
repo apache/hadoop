@@ -161,6 +161,9 @@ Trunk (unreleased changes)
     HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
     (Kan Zhang via ddas)
 
+    HADOOP-6579. Provide a mechanism for encoding/decoding Tokens from
+    a url-safe string and change the commons-code library to 1.4. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

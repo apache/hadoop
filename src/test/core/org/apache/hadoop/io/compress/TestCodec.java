@@ -245,7 +245,7 @@ public class TestCodec {
         codec.getClass().getSimpleName());
     final Path file = new Path(wd, "test" + codec.getDefaultExtension());
     final byte[] b = new byte[REC_SIZE];
-    final Base64 b64 = new Base64();
+    final Base64 b64 = new Base64(0, null);
     DataOutputStream fout = null;
     Compressor cmp = CodecPool.getCompressor(codec);
     try {
