@@ -90,14 +90,19 @@ public class Leases extends Thread {
       if (lease == null) {
         continue;
       }
-      // A lease expired.  Run the expired code before removing from queue
-      // since its presence in queue is used to see if lease exists still.
-      if (lease.getListener() == null) {
-        LOG.error("lease listener is null for lease " + lease.getLeaseName());
-      } else {
-        lease.getListener().leaseExpired();
-      }
       synchronized (leaseQueue) {
+        if (lease.getExpirationTime() <= System.currentTimeMillis()) {
+          leaseQueue.add(lease);
+          continue;
+        }
+        // A lease expired.  Run the expired code before removing from queue
+        // since its presence in queue is used to see if lease exists still.
+        if (lease.getListener() == null) {
+          LOG.error("lease listener is null for lease " + lease.getLeaseName());
+        } else {
+          lease.getListener().leaseExpired();
+        }
+
         leases.remove(lease.getLeaseName());
       }
     }
@@ -268,5 +273,14 @@ public class Leases extends Thread {
     public void setExpirationTime(long expirationTime) {
       this.expirationTime = expirationTime;
     }
+
+    /**
+     * Get the expiration time for that lease
+     * @return expiration time
+     */
+    public long getExpirationTime() {
+      return this.expirationTime;
+    }
+
   }
 }
