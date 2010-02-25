@@ -36,23 +36,22 @@ public class RowResultGenerator extends ResultGenerator {
 
   public RowResultGenerator(String tableName, RowSpec rowspec)
       throws IllegalArgumentException, IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool();
+    HTablePool pool = RESTServlet.getInstance().getTablePool(); 
     HTableInterface table = pool.getTable(tableName);
     try {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {
-        byte [][] columns = rowspec.getColumns();
-        for(byte [] column : columns) {
-          byte [][] famQf = KeyValue.parseColumn(column);
-          if(famQf.length == 1) {
-            get.addFamily(famQf[0]);
+        for (byte[] col: rowspec.getColumns()) {
+          byte[][] split = KeyValue.parseColumn(col);
+          if (split.length == 2 && split[1].length != 0) {
+            get.addColumn(split[0], split[1]);
           } else {
-            get.addColumn(famQf[0], famQf[1]);
+            get.addFamily(split[0]);
           }
         }
       } else {
         // rowspec does not explicitly specify columns, return them all
-        for (HColumnDescriptor family:
+        for (HColumnDescriptor family: 
             table.getTableDescriptor().getFamilies()) {
           get.addFamily(family.getName());
         }

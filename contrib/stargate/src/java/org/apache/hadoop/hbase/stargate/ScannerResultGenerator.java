@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
 public class ScannerResultGenerator extends ResultGenerator {
   private static final Log LOG =
     LogFactory.getLog(ScannerResultGenerator.class);
-
+  
   private String id;
   private Iterator<KeyValue> rowI;
   private ResultScanner scanner;
@@ -46,7 +46,7 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   public ScannerResultGenerator(String tableName, RowSpec rowspec)
       throws IllegalArgumentException, IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool();
+    HTablePool pool = RESTServlet.getInstance().getTablePool(); 
     HTableInterface table = pool.getTable(tableName);
     try {
       Scan scan;
@@ -66,12 +66,12 @@ public class ScannerResultGenerator extends ResultGenerator {
           }
         }
       } else {
-        for (HColumnDescriptor family:
+        for (HColumnDescriptor family: 
             table.getTableDescriptor().getFamilies()) {
           scan.addFamily(family.getName());
         }
       }
-      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
+      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          
       scan.setMaxVersions(rowspec.getMaxVersions());
       scanner = table.getScanner(scan);
       cached = null;

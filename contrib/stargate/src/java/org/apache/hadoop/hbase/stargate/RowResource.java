@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.stargate.auth.User;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
 import org.apache.hadoop.hbase.stargate.model.CellSetModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
@@ -54,32 +55,41 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowResource implements Constants {
   private static final Log LOG = LogFactory.getLog(RowResource.class);
 
-  private String table;
-  private RowSpec rowspec;
-  private CacheControl cacheControl;
+  String tableName;
+  String actualTableName;
+  RowSpec rowspec;
+  CacheControl cacheControl;
+  RESTServlet servlet;
 
-  public RowResource(String table, String rowspec, String versions)
+  public RowResource(User user, String table, String rowspec, String versions)
       throws IOException {
-    this.table = table;
+    if (user != null) {
+      this.actualTableName =
+        !user.isAdmin() ? user.getName() + "." + table : table;
+    } else {
+      this.actualTableName = table;
+    }
+    this.tableName = table;
     this.rowspec = new RowSpec(URLDecoder.decode(rowspec,
       HConstants.UTF8_ENCODING));
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.valueOf(versions));
     }
+    this.servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
-    cacheControl.setMaxAge(RESTServlet.getInstance().getMaxAge(table));
+    cacheControl.setMaxAge(servlet.getMaxAge(table));
     cacheControl.setNoTransform(false);
   }
 
   @GET
-  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(@Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
     try {
-      ResultGenerator generator = ResultGenerator.fromRowSpec(table, rowspec);
+      ResultGenerator generator =
+        ResultGenerator.fromRowSpec(actualTableName, rowspec);
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
@@ -93,7 +103,9 @@ public class RowResource implements Constants {
           rowKey = value.getRow();
           rowModel = new RowModel(rowKey);
         }
-        rowModel.addCell(new CellModel(value));
+        rowModel.addCell(
+          new CellModel(value.getFamily(), value.getQualifier(), 
+              value.getTimestamp(), value.getValue()));
         value = generator.next();
       } while (value != null);
       model.addRow(rowModel);
@@ -118,7 +130,8 @@ public class RowResource implements Constants {
       throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
     try {
-      ResultGenerator generator = ResultGenerator.fromRowSpec(table, rowspec);
+      ResultGenerator generator =
+        ResultGenerator.fromRowSpec(actualTableName, rowspec);
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
@@ -134,26 +147,16 @@ public class RowResource implements Constants {
   }
 
   private Response update(CellSetModel model, boolean replace) {
-    HTablePool pool;
-    try {
-      pool = RESTServlet.getInstance().getTablePool();
-    } catch (IOException e) {
-      throw new WebApplicationException(e,
-                  Response.Status.INTERNAL_SERVER_ERROR);
-    }
+    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
-      table = pool.getTable(this.table);
+      table = pool.getTable(actualTableName);
       for (RowModel row: model.getRows()) {
         byte[] key = row.getKey();
         Put put = new Put(key);
         for (CellModel cell: row.getCells()) {
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
-          if(parts.length == 1) {
-            put.add(parts[0], new byte[0], cell.getTimestamp(), cell.getValue());
-          } else {
-            put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
-          }
+          put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
         }
         table.put(put);
         if (LOG.isDebugEnabled()) {
@@ -173,16 +176,10 @@ public class RowResource implements Constants {
     }
   }
 
-  private Response updateBinary(byte[] message, HttpHeaders headers,
+  private Response updateBinary(byte[] message, HttpHeaders headers, 
       boolean replace) {
-    HTablePool pool;
-    try {
-      pool = RESTServlet.getInstance().getTablePool();
-    } catch (IOException e) {
-      throw new WebApplicationException(e,
-                  Response.Status.INTERNAL_SERVER_ERROR);
-    }
-    HTableInterface table = null;
+    HTablePool pool = servlet.getTablePool();
+    HTableInterface table = null;    
     try {
       byte[] row = rowspec.getRow();
       byte[][] columns = rowspec.getColumns();
@@ -208,12 +205,8 @@ public class RowResource implements Constants {
       }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
-      if(parts.length == 1) {
-        put.add(parts[0], new byte[0], timestamp, message);
-      } else {
-        put.add(parts[0], parts[1], timestamp, message);
-      }
-      table = pool.getTable(this.table);
+      put.add(parts[0], parts[1], timestamp, message);
+      table = pool.getTable(actualTableName);
       table.put(put);
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT " + put.toString());
@@ -231,8 +224,7 @@ public class RowResource implements Constants {
   }
 
   @PUT
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response put(CellSetModel model, @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
@@ -242,7 +234,7 @@ public class RowResource implements Constants {
 
   @PUT
   @Consumes(MIMETYPE_BINARY)
-  public Response putBinary(byte[] message, @Context UriInfo uriInfo,
+  public Response putBinary(byte[] message, @Context UriInfo uriInfo, 
       @Context HttpHeaders headers)
   {
     if (LOG.isDebugEnabled()) {
@@ -252,8 +244,7 @@ public class RowResource implements Constants {
   }
 
   @POST
-  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
+  @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response post(CellSetModel model, @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath());
@@ -263,11 +254,11 @@ public class RowResource implements Constants {
 
   @POST
   @Consumes(MIMETYPE_BINARY)
-  public Response postBinary(byte[] message, @Context UriInfo uriInfo,
+  public Response postBinary(byte[] message, @Context UriInfo uriInfo, 
       @Context HttpHeaders headers)
   {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
+      LOG.debug("POST " + uriInfo.getAbsolutePath() + " as "+MIMETYPE_BINARY);
     }
     return updateBinary(message, headers, false);
   }
@@ -300,23 +291,17 @@ public class RowResource implements Constants {
         }
       }
     }
-    HTablePool pool;
-    try {
-      pool = RESTServlet.getInstance().getTablePool();
-    } catch (IOException e) {
-      throw new WebApplicationException(e,
-                  Response.Status.INTERNAL_SERVER_ERROR);
-    }
+    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
-      table = pool.getTable(this.table);
+      table = pool.getTable(actualTableName);
       table.delete(delete);
       if (LOG.isDebugEnabled()) {
         LOG.debug("DELETE " + delete.toString());
       }
       table.flushCommits();
     } catch (IOException e) {
-      throw new WebApplicationException(e,
+      throw new WebApplicationException(e, 
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
       if (table != null) {

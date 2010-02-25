@@ -78,12 +78,21 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
+   * Constructor
+   * @param column
+   * @param qualifier
+   * @param value
+   */
+  public CellModel(byte[] column, byte[] qualifier, byte[] value) {
+    this(column, qualifier, HConstants.LATEST_TIMESTAMP, value);
+  }
+
+  /**
    * Constructor from KeyValue
    * @param kv
    */
   public CellModel(KeyValue kv) {
-    this(KeyValue.makeColumn(kv.getFamily(), kv.getQualifier()), 
-        kv.getTimestamp(), kv.getValue());
+    this(kv.getFamily(), kv.getQualifier(), kv.getTimestamp(), kv.getValue());
   }
 
   /**
@@ -94,6 +103,20 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
    */
   public CellModel(byte[] column, long timestamp, byte[] value) {
     this.column = column;
+    this.timestamp = timestamp;
+    this.value = value;
+  }
+
+  /**
+   * Constructor
+   * @param column
+   * @param qualifier
+   * @param timestamp
+   * @param value
+   */
+  public CellModel(byte[] column, byte[] qualifier, long timestamp,
+      byte[] value) {
+    this.column = KeyValue.makeColumn(column, qualifier);
     this.timestamp = timestamp;
     this.value = value;
   }

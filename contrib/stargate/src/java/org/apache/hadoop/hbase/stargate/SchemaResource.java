@@ -55,20 +55,31 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class SchemaResource implements Constants {
   private static final Log LOG = LogFactory.getLog(SchemaResource.class);
 
-  private String table;
-  private CacheControl cacheControl;
+  User user;
+  String tableName;
+  String actualTableName;
+  CacheControl cacheControl;
+  RESTServlet servlet;
 
-  public SchemaResource(String table) {
-    this.table = table;
+  public SchemaResource(User user, String table) throws IOException {
+    if (user != null) {
+      this.user = user;
+      this.actualTableName = 
+        !user.isAdmin() ? (user.getName() + "." + table) : table;
+    } else {
+      this.actualTableName = table;
+    }
+    this.tableName = table;
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
+    servlet = RESTServlet.getInstance();
   }
 
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool();
-    HTableInterface table = pool.getTable(this.table);
+    HTablePool pool = servlet.getTablePool();
+    HTableInterface table = pool.getTable(actualTableName);
     try {
       return table.getTableDescriptor();
     } finally {
@@ -88,7 +99,7 @@ public class SchemaResource implements Constants {
       model.setName(tableName);
       for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
           htd.getValues().entrySet()) {
-        model.addAttribute(Bytes.toString(e.getKey().get()),
+        model.addAttribute(Bytes.toString(e.getKey().get()), 
             Bytes.toString(e.getValue().get()));
       }
       for (HColumnDescriptor hcd: htd.getFamilies()) {
@@ -96,7 +107,7 @@ public class SchemaResource implements Constants {
         columnModel.setName(hcd.getNameAsString());
         for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
           hcd.getValues().entrySet()) {
-        columnModel.addAttribute(Bytes.toString(e.getKey().get()),
+        columnModel.addAttribute(Bytes.toString(e.getKey().get()), 
           Bytes.toString(e.getValue().get()));
       }
         model.addColumnFamily(columnModel);
@@ -138,10 +149,10 @@ public class SchemaResource implements Constants {
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
     } catch (IOException e) {
-      throw new WebApplicationException(e,
+      throw new WebApplicationException(e, 
             Response.Status.SERVICE_UNAVAILABLE);
-    }
-  }
+    }      
+  } 
 
   private Response update(byte[] tableName, TableSchemaModel model,
       UriInfo uriInfo, HBaseAdmin admin) {
@@ -157,11 +168,11 @@ public class SchemaResource implements Constants {
           if (htd.hasFamily(hcd.getName())) {
             admin.modifyColumn(tableName, hcd.getName(), hcd);
           } else {
-            admin.addColumn(model.getName(), hcd);
+            admin.addColumn(model.getName(), hcd);            
           }
         }
       } catch (IOException e) {
-        throw new WebApplicationException(e,
+        throw new WebApplicationException(e, 
             Response.Status.INTERNAL_SERVER_ERROR);
       } finally {
         admin.enableTable(tableName);
@@ -185,7 +196,7 @@ public class SchemaResource implements Constants {
         return update(tableName, model, uriInfo, admin);
       }
     } catch (IOException e) {
-      throw new WebApplicationException(e,
+      throw new WebApplicationException(e, 
             Response.Status.SERVICE_UNAVAILABLE);
     }
   }
@@ -221,7 +232,7 @@ public class SchemaResource implements Constants {
   }
 
   @DELETE
-  public Response delete(@Context UriInfo uriInfo) {
+  public Response delete(@Context UriInfo uriInfo) {     
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
@@ -233,7 +244,7 @@ public class SchemaResource implements Constants {
     } catch (TableNotFoundException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (IOException e) {
-      throw new WebApplicationException(e,
+      throw new WebApplicationException(e, 
             Response.Status.SERVICE_UNAVAILABLE);
     }
   }

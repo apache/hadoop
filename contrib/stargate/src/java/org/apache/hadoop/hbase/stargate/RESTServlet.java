@@ -25,29 +25,34 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.stargate.auth.Authenticator;
+import org.apache.hadoop.hbase.stargate.auth.HBCAuthenticator;
+import org.apache.hadoop.util.StringUtils;
 
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
  */
-public class RESTServlet extends ServletAdaptor {
+public class RESTServlet extends ServletAdaptor implements Constants {
 
-  private static final long serialVersionUID = 1L;
-  public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;       // 4 hours
-  public static final String VERSION_STRING = "0.0.1";
-
+  private static final Log LOG = LogFactory.getLog(RESTServlet.class);
+  private static final long serialVersionUID = 1L;  
   private static RESTServlet instance;
 
-  private transient final Configuration conf;
-  private transient final HTablePool pool;
-  protected Map<String,Integer> maxAgeMap =
+  transient final Configuration conf;
+  transient final HTablePool pool;
+  Map<String,Integer> maxAgeMap = 
     Collections.synchronizedMap(new HashMap<String,Integer>());
+  boolean multiuser;
+  Authenticator authenticator;
 
   /**
    * @return the RESTServlet singleton instance
@@ -70,7 +75,7 @@ public class RESTServlet extends ServletAdaptor {
   }
 
   /**
-   * Get a table pool for the given table.
+   * Get a table pool for the given table. 
    * @return the table pool
    */
   protected HTablePool getTablePool() {
@@ -87,7 +92,7 @@ public class RESTServlet extends ServletAdaptor {
   /**
    * @param tableName the table name
    * @return the maximum cache age suitable for use with this table, in
-   *  seconds
+   *  seconds 
    * @throws IOException
    */
   public int getMaxAge(String tableName) throws IOException {
@@ -98,7 +103,7 @@ public class RESTServlet extends ServletAdaptor {
     HTableInterface table = pool.getTable(tableName);
     try {
       int maxAge = DEFAULT_MAX_AGE;
-      for (HColumnDescriptor family :
+      for (HColumnDescriptor family : 
           table.getTableDescriptor().getFamilies()) {
         int ttl = family.getTimeToLive();
         if (ttl < 0) {

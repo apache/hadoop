@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -59,7 +60,7 @@ public class MiniClusterTestCase extends TestCase {
   // use a nonstandard port
   public static final int DEFAULT_TEST_PORT = 38080;
 
-  protected static HBaseConfiguration conf = new HBaseConfiguration();
+  protected static Configuration conf = HBaseConfiguration.create();
   protected static MiniZooKeeperCluster zooKeeperCluster;
   protected static MiniHBaseCluster hbaseCluster;
   protected static MiniDFSCluster dfsCluster;

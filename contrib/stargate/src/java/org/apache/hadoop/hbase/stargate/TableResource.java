@@ -22,95 +22,46 @@ package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
 
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.CacheControl;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.stargate.model.TableListModel;
-import org.apache.hadoop.hbase.stargate.model.TableModel;
+import org.apache.hadoop.hbase.stargate.auth.User;
 
-@Path("/")
 public class TableResource implements Constants {
-  private static final Log LOG = LogFactory.getLog(TableResource.class);
 
-  private CacheControl cacheControl;
+  User user;
+  String table;
 
-  public TableResource() {
-    cacheControl = new CacheControl();
-    cacheControl.setNoCache(true);
-    cacheControl.setNoTransform(false);
+  public TableResource(User user, String table) {
+    this.user = user;
+    this.table = table;
   }
 
-  private HTableDescriptor[] getTableList() throws IOException {
-    HBaseAdmin admin =
-      new HBaseAdmin(RESTServlet.getInstance().getConfiguration());
-    HTableDescriptor[] list = admin.listTables();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("getTableList:");
-      for (HTableDescriptor htd: list) {
-        LOG.debug(htd.toString());
-      }
-    }
-    return list;
+  @Path("regions")
+  public RegionsResource getRegionsResource() throws IOException {
+    return new RegionsResource(user, table);
   }
 
-  @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_JAVASCRIPT,
-    MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("GET " + uriInfo.getAbsolutePath());
-    }
-    try {
-      TableListModel tableList = new TableListModel();
-      for (HTableDescriptor htd: getTableList()) {
-        if (htd.isMetaRegion()) {
-          continue;
-        }
-        tableList.add(new TableModel(htd.getNameAsString()));
-      }
-      ResponseBuilder response = Response.ok(tableList);
-      response.cacheControl(cacheControl);
-      return response.build();
-    } catch (IOException e) {
-      throw new WebApplicationException(e,
-                  Response.Status.SERVICE_UNAVAILABLE);
-    }
+  @Path("scanner")
+  public ScannerResource getScannerResource() {
+    return new ScannerResource(user, table);
   }
 
-  @Path("{table}/scanner")
-  public ScannerResource getScannerResource(
-      @PathParam("table") String table) {
-    return new ScannerResource(table);
+  @Path("schema")
+  public SchemaResource getSchemaResource() throws IOException {
+    return new SchemaResource(user, table);
   }
 
-  @Path("{table}/schema")
-  public SchemaResource getSchemaResource(
-      @PathParam("table") String table) {
-    return new SchemaResource(table);
-  }
-
-  @Path("{table}/{rowspec: .+}")
-  public RowResource getRowResource(
-      @PathParam("table") String table,
-      @PathParam("rowspec") String rowspec,
+  @Path("{rowspec: .+}")
+  public RowResource getRowResource(@PathParam("rowspec") String rowspec,
       @QueryParam("v") String versions) {
     try {
-      return new RowResource(table, rowspec, versions);
+      return new RowResource(user, table, rowspec, versions);
     } catch (IOException e) {
-      throw new WebApplicationException(e,
+      throw new WebApplicationException(e, 
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
   }

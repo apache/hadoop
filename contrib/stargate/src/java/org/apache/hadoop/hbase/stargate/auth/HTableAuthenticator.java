@@ -2,6 +2,7 @@ package org.apache.hadoop.hbase.stargate.auth;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -15,7 +16,7 @@ public class HTableAuthenticator extends Authenticator {
   static final byte[] ADMIN = Bytes.toBytes("admin");
   static final byte[] DISABLED = Bytes.toBytes("disabled");
 
-  HBaseConfiguration conf;
+  Configuration conf;
   String tableName;
   HTable table;
 
@@ -23,14 +24,14 @@ public class HTableAuthenticator extends Authenticator {
    * Default constructor
    */
   public HTableAuthenticator() {
-    this(new HBaseConfiguration());
+    this(HBaseConfiguration.create());
   }
 
   /**
    * Constructor
    * @param conf
    */
-  public HTableAuthenticator(HBaseConfiguration conf) {
+  public HTableAuthenticator(Configuration conf) {
     this.conf = conf;
     this.tableName = conf.get("stargate.auth.htable.name",
       "stargate.users");
@@ -41,7 +42,7 @@ public class HTableAuthenticator extends Authenticator {
    * @param conf
    * @param tableName
    */
-  public HTableAuthenticator(HBaseConfiguration conf, String tableName) {
+  public HTableAuthenticator(Configuration conf, String tableName) {
     this.conf = conf;
     this.tableName = tableName;
   }
@@ -51,7 +52,7 @@ public class HTableAuthenticator extends Authenticator {
    * @param conf
    * @param table
    */
-  public HTableAuthenticator(HBaseConfiguration conf, HTable table) {
+  public HTableAuthenticator(Configuration conf, HTable table) {
     this.conf = conf;
     this.table = table;
     this.tableName = Bytes.toString(table.getTableName());

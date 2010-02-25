@@ -98,7 +98,9 @@ public class ScannerInstanceResource implements Constants {
         rowKey = value.getRow();
         rowModel = new RowModel(rowKey);
       }
-      rowModel.addCell(new CellModel(value));
+      rowModel.addCell(
+        new CellModel(value.getFamily(), value.getQualifier(), 
+          value.getTimestamp(), value.getValue()));
     } while (--count > 0);
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);
@@ -119,12 +121,12 @@ public class ScannerInstanceResource implements Constants {
         LOG.info("generator exhausted");
         return Response.noContent().build();
       }
-      byte [] column = KeyValue.makeColumn(value.getFamily(),
-        value.getQualifier());
       ResponseBuilder response = Response.ok(value.getValue());
       response.cacheControl(cacheControl);
-      response.header("X-Row", Base64.encode(value.getRow()));
-      response.header("X-Column", Base64.encode(column));
+      response.header("X-Row", Base64.encode(value.getRow()));      
+      response.header("X-Column", 
+        Base64.encode(
+          KeyValue.makeColumn(value.getFamily(), value.getQualifier())));
       response.header("X-Timestamp", value.getTimestamp());
       return response.build();
     } catch (IllegalStateException e) {
