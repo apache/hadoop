@@ -156,7 +156,11 @@ public class RowResource implements Constants {
         Put put = new Put(key);
         for (CellModel cell: row.getCells()) {
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
-          put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          if (parts.length == 2 && parts[1].length > 0) {
+            put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+          } else {
+            put.add(parts[0], null, cell.getTimestamp(), cell.getValue());
+          }
         }
         table.put(put);
         if (LOG.isDebugEnabled()) {
@@ -205,7 +209,11 @@ public class RowResource implements Constants {
       }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
-      put.add(parts[0], parts[1], timestamp, message);
+      if (parts.length == 2 && parts[1].length > 0) {
+        put.add(parts[0], parts[1], timestamp, message);
+      } else {
+        put.add(parts[0], null, timestamp, message);
+      }
       table = pool.getTable(actualTableName);
       table.put(put);
       if (LOG.isDebugEnabled()) {
