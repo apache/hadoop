@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -77,27 +77,27 @@ public class MiniClusterTestCase extends TestCase {
       LOG.error("MiniDFSCluster already running");
       return;
     }
-    Path path = new Path(
-      conf.get("test.build.data",
-        System.getProperty("test.build.data", "build/test/data")));
-    FileSystem testFS = FileSystem.get(conf);
-    if (testFS.exists(path)) {
-      testFS.delete(path, true);
-    }
-    testDir = new File(path.toString());
-    dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    // This spews a bunch of warnings about missing scheme. TODO: fix.
+    dfsCluster = new MiniDFSCluster(0, conf, 2, true, true, true,
+      null, null, null, null);
+    // mangle the conf so that the fs parameter points to the minidfs we
+    // just started up
     FileSystem filesystem = dfsCluster.getFileSystem();
-    conf.set("fs.defaultFS", filesystem.getUri().toString());      
+    conf.set("fs.defaultFS", filesystem.getUri().toString());
     Path parentdir = filesystem.getHomeDirectory();
     conf.set(HConstants.HBASE_DIR, parentdir.toString());
     filesystem.mkdirs(parentdir);
     FSUtils.setVersion(filesystem, parentdir);
-    LOG.info("started MiniDFSCluster in " + testDir.toString());
   }
 
   private static void stopDFS() {
     if (dfsCluster != null) try {
-      dfsCluster.shutdown();
+      FileSystem fs = dfsCluster.getFileSystem();
+      if (fs != null) {
+        LOG.info("Shutting down FileSystem");
+        fs.close();
+      }
+      FileSystem.closeAll();
       dfsCluster = null;
     } catch (Exception e) {
       LOG.warn(StringUtils.stringifyException(e));
@@ -136,10 +136,7 @@ public class MiniClusterTestCase extends TestCase {
   
   private static void stopHBase() {
     if (hbaseCluster != null) try {
-      for (LocalHBaseCluster.RegionServerThread regionThread:
-        hbaseCluster.getRegionThreads()) {
-        regionThread.getRegionServer().abort();
-      }
+      HConnectionManager.deleteConnectionInfo(conf, true);
       hbaseCluster.shutdown();
       hbaseCluster = null;
     } catch (Exception e) {
