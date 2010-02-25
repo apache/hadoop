@@ -153,6 +153,9 @@ Trunk (unreleased changes)
     HDFS-965. Split TestDelegationToken in to two parts and fix configuration
     to allow proxy users in the test. (Jitendra Pandey via omalley)
 
+    HDFS-999. Secondary namenode should login using kerberos if security is 
+    configured (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
