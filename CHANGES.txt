@@ -170,6 +170,9 @@ Trunk (unreleased changes)
     HADOOP-6596. Add a version field to the AbstractDelegationTokenIdentifier's
     serialized value. (omalley)
 
+    HADOOP-6573. Support for persistent delegation tokens.
+    (Jitendra Pandey via shv)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
