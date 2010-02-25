@@ -83,45 +83,49 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @return MatchCode telling QueryMatcher what action to take
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length) {
-    // No more columns left, we are done with this query
-    if(this.columns.size() == 0) {
-      return MatchCode.DONE; // done_row
-    }
-    
-    // No more columns to match against, done with storefile
-    if(this.column == null) {
-      return MatchCode.NEXT; // done_row
-    }
-    
-    // Compare specific column to current column
-    int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(), 
-        column.getLength(), bytes, offset, length);
-    
-    // Matches, decrement versions left and include
-    if(ret == 0) {
-      if(this.column.decrement() == 0) {
-        // Done with versions for this column
-        this.columns.remove(this.index);
-        if(this.columns.size() == this.index) {
-          // Will not hit any more columns in this storefile
-          this.column = null;
-        } else {
-          this.column = this.columns.get(this.index);
-        }
+    boolean recursive = false;
+    do {
+      // No more columns left, we are done with this query
+      if(this.columns.size() == 0) {
+        return MatchCode.DONE; // done_row
       }
-      return MatchCode.INCLUDE;
-    }
 
-    // Specified column is bigger than current column
-    // Move down current column and check again
-    if(ret <= -1) {
-      if(++this.index == this.columns.size()) {
-        // No more to match, do not include, done with storefile
+      // No more columns to match against, done with storefile
+      if(this.column == null) {
         return MatchCode.NEXT; // done_row
       }
-      this.column = this.columns.get(this.index);
-      return checkColumn(bytes, offset, length);
-    }
+
+      // Compare specific column to current column
+      int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
+          column.getLength(), bytes, offset, length);
+
+      // Matches, decrement versions left and include
+      if(ret == 0) {
+        if(this.column.decrement() == 0) {
+          // Done with versions for this column
+          this.columns.remove(this.index);
+          if(this.columns.size() == this.index) {
+            // Will not hit any more columns in this storefile
+            this.column = null;
+          } else {
+            this.column = this.columns.get(this.index);
+          }
+        }
+        return MatchCode.INCLUDE;
+      }
+
+      // Specified column is bigger than current column
+      // Move down current column and check again
+      if(ret <= -1) {
+        if(++this.index == this.columns.size()) {
+          // No more to match, do not include, done with storefile
+          return MatchCode.NEXT; // done_row
+        }
+        this.column = this.columns.get(this.index);
+        recursive = true;
+        continue;
+      }
+    } while(recursive);
 
     // Specified column is smaller than current column
     // Skip

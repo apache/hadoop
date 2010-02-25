@@ -12,18 +12,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestExplicitColumnTracker extends HBaseTestCase
 implements HConstants {
-  private boolean PRINT = false; 
+  private boolean PRINT = false;
+
+  private final byte [] col1 = Bytes.toBytes("col1");
+  private final byte [] col2 = Bytes.toBytes("col2");
+  private final byte [] col3 = Bytes.toBytes("col3");
+  private final byte [] col4 = Bytes.toBytes("col4");
+  private final byte [] col5 = Bytes.toBytes("col5");
+
   
   public void testGet_SingleVersion(){
     if(PRINT){
       System.out.println("SingleVersion");
     }
-    byte [] col1 = Bytes.toBytes("col1");
-    byte [] col2 = Bytes.toBytes("col2");
-    byte [] col3 = Bytes.toBytes("col3");
-    byte [] col4 = Bytes.toBytes("col4");
-    byte [] col5 = Bytes.toBytes("col5");
-    
+
     //Create tracker
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     //Looking for every other
@@ -69,11 +71,6 @@ implements HConstants {
     if(PRINT){
       System.out.println("\nMultiVersion");
     }
-    byte [] col1 = Bytes.toBytes("col1");
-    byte [] col2 = Bytes.toBytes("col2");
-    byte [] col3 = Bytes.toBytes("col3");
-    byte [] col4 = Bytes.toBytes("col4");
-    byte [] col5 = Bytes.toBytes("col5");
     
     //Create tracker
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
@@ -140,5 +137,30 @@ implements HConstants {
       }
     }
   }
+
+
+  /**
+   * hbase-2259
+   */
+  public void testStackOverflow(){
+    int maxVersions = 1;
+    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    for (int i = 0; i < 100000; i++) {
+      columns.add(Bytes.toBytes("col"+i));
+    }
+
+    ColumnTracker explicit = new ExplicitColumnTracker(columns, maxVersions);
+    for (int i = 0; i < 100000; i+=2) {
+      byte [] col = Bytes.toBytes("col"+i);
+      explicit.checkColumn(col, 0, col.length);
+    }
+    explicit.update();
+
+    for (int i = 1; i < 100000; i+=2) {
+      byte [] col = Bytes.toBytes("col"+i);
+      explicit.checkColumn(col, 0, col.length);
+    }
+  }
+
   
 }

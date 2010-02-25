@@ -211,6 +211,7 @@ Release 0.21.0 - Unreleased
    HBASE-2226  HQuorumPeerTest doesnt run because it doesnt start with the word Test
    HBASE-2230  SingleColumnValueFilter has an ungaurded debug log message
    HBASE-2258  The WhileMatchFilter doesn't delegate the call to filterRow()
+   HBASE-2259  StackOverflow in ExplicitColumnTracker when row has many columns
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
