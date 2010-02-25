@@ -164,6 +164,9 @@ Trunk (unreleased changes)
     HADOOP-6579. Provide a mechanism for encoding/decoding Tokens from
     a url-safe string and change the commons-code library to 1.4. (omalley)
 
+    HADOOP-6596. Add a version field to the AbstractDelegationTokenIdentifier's
+    serialized value. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
