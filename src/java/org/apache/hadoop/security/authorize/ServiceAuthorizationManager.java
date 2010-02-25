@@ -21,6 +21,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -35,7 +36,12 @@ public class ServiceAuthorizationManager {
   
   /**
    * Configuration key for controlling service-level authorization for Hadoop.
+   * 
+   * @deprecated Use
+   *             {@link CommonConfigurationKeys#HADOOP_SECURITY_AUTHORIZATION}
+   *             Instead.
    */
+  @Deprecated
   public static final String SERVICE_AUTHORIZATION_CONFIG = 
     "hadoop.security.authorization";
   

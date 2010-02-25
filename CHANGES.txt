@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     to change the default 1 MB, the maximum size when large IPC handler 
     response buffer is reset. (suresh)
 
+    HADOOP-6568. Adds authorization for the default servlets. 
+    (Vinod Kumar Vavilapalli via ddas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by

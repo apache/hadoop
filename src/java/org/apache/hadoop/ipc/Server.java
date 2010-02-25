@@ -59,6 +59,8 @@ import javax.security.sasl.SaslServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -1295,7 +1297,7 @@ public abstract class Server {
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
     this.authorize = 
-      conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
+      conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
                       false);
     this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
     

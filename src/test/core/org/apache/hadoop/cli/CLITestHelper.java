@@ -28,6 +28,7 @@ import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.cli.util.ComparatorBase;
 import org.apache.hadoop.cli.util.ComparatorData;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.StringUtils;
 import static org.junit.Assert.assertTrue;
@@ -104,7 +105,7 @@ public class CLITestHelper {
     readTestConfigFile();
     
     conf = new Configuration();
-    conf.setBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
                     true);
 
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
