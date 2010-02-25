@@ -384,6 +384,8 @@ Release 0.21.0 - Unreleased
    HBASE-2250  typo in the maven pom
    HBASE-2254  Improvements to the Maven POMs (Lars Francke via Stack)
    HBASE-2262  ZKW.ensureExists should check for existence
+   HBASE-2264  Adjust the contrib apps to the Maven project layout 
+               (Lars Francke via Lars George)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

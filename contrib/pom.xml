@@ -18,10 +18,4 @@
     <module>stargate</module>
     <module>transactional</module>
   </modules>
-  
-  <build>
-    <!-- TODO really all the modules in HBase probably should have a consistent directory structure -->
-    <sourceDirectory>${basedir}/src/java</sourceDirectory>
-    <testSourceDirectory>${basedir}/src/test/</testSourceDirectory>
-  </build>
 </project>
