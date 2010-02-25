@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.stargate.client.Response;
 import org.apache.hadoop.hbase.stargate.model.StorageClusterStatusModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestStatusResource extends MiniClusterTestCase {
+public class TestStatusResource extends MiniClusterTestBase {
   private static final byte[] ROOT_REGION_NAME = Bytes.toBytes("-ROOT-,,0");
   private static final byte[] META_REGION_NAME = Bytes.toBytes(".META.,,1");
 

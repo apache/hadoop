@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-public class TestVersionResource extends MiniClusterTestCase {
+public class TestVersionResource extends MiniClusterTestBase {
   private static final Log LOG =
     LogFactory.getLog(TestVersionResource.class);
 

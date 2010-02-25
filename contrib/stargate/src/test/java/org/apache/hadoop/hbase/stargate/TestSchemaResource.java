@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.TestTableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestSchemaResource extends MiniClusterTestCase {
+public class TestSchemaResource extends MiniClusterTestBase {
   private Client client;
   private JAXBContext context;
   private HBaseAdmin admin;

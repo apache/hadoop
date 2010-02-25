@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.stargate.model.RowModel;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestScannerResource extends MiniClusterTestCase {
+public class TestScannerResource extends MiniClusterTestBase {
   private static final String TABLE = "TestScannerResource";
   private static final String COLUMN_1 = "a:";
   private static final String COLUMN_2 = "b:";

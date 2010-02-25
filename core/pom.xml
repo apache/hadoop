@@ -76,8 +76,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <forkMode>always</forkMode>
-          <argLine>-Xmx512m</argLine>
-          <redirectTestOutputToFile>true</redirectTestOutputToFile>
           <excludes>
             <exclude>**/SoftValueSortedMapTest.java</exclude>
             <exclude>**/*$*</exclude>

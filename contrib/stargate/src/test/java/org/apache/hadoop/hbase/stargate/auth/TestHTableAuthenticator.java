@@ -25,10 +25,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.stargate.MiniClusterTestCase;
+import org.apache.hadoop.hbase.stargate.MiniClusterTestBase;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestHTableAuthenticator extends MiniClusterTestCase {
+public class TestHTableAuthenticator extends MiniClusterTestBase {
 
   static final String UNKNOWN_TOKEN = "00000000000000000000000000000000";
   static final String ADMIN_TOKEN = "e998efffc67c49c6e14921229a51b7b3";

@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.stargate.model.CellSetModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestRowResource extends MiniClusterTestCase {
+public class TestRowResource extends MiniClusterTestBase {
   private static final String TABLE = "TestRowResource";
   private static final String COLUMN_1 = "a:";
   private static final String COLUMN_2 = "b:";

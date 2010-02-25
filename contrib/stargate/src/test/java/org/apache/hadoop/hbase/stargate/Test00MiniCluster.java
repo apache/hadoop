@@ -25,7 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 
-public class Test00MiniCluster extends MiniClusterTestCase {
+public class Test00MiniCluster extends MiniClusterTestBase {
   public void testDFSMiniCluster() {
     assertNotNull(dfsCluster);
   }
