@@ -126,6 +126,9 @@ Release 0.20.2 - 2010-2-19
     HADOOP-5612. Some c++ scripts are not chmodded before ant execution.
     (Todd Lipcon via tomwhite)
 
+    HADOOP-1849. Add undocumented configuration parameter for per handler 
+    call queue size in IPC Server. (shv)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
