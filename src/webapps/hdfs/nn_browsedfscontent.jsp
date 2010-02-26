@@ -19,6 +19,7 @@
 %>
 <%@ page
   contentType="text/html; charset=UTF-8"
+  import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.util.ServletUtil"
 %>
 <%!
@@ -32,7 +33,9 @@
 <body>
 <% 
   NameNode nn = (NameNode)application.getAttribute("name.node");
-  NamenodeJspHelper.redirectToRandomDataNode(nn, response); 
+  Configuration conf = 
+     (Configuration) application.getAttribute("name.conf");
+  NamenodeJspHelper.redirectToRandomDataNode(nn, request, response, conf); 
 %>
 <hr>
 

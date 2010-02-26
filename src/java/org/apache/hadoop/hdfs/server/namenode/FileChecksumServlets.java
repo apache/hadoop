@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -53,12 +54,15 @@ public class FileChecksumServlets {
     /** {@inheritDoc} */
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
-      final UserGroupInformation ugi = getUGI(request);
       final ServletContext context = getServletContext();
+      final Configuration conf = 
+        (Configuration) context.getAttribute("name.conf");
+      final UserGroupInformation ugi = getUGI(request, conf);
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final DatanodeID datanode = namenode.getNamesystem().getRandomDatanode();
       try {
-        final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, request); 
+        final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, 
+                                          request, namenode); 
         response.sendRedirect(uri.toURL().toString());
       } catch(URISyntaxException e) {
         throw new ServletException(e); 
@@ -87,7 +91,8 @@ public class FileChecksumServlets {
       final SocketFactory socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
       
       try {
-        ClientProtocol nnproxy = getUGI(request).doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+        ClientProtocol nnproxy = getUGI(request, conf).doAs
+        (new PrivilegedExceptionAction<ClientProtocol>() {
           @Override
           public ClientProtocol run() throws IOException {
             return DFSClient.createNamenode(conf);

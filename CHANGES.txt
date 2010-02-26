@@ -77,6 +77,9 @@ Trunk (unreleased changes)
 
     HADOOP-6579. Upgrade the commons-codec library to 1.4. (omalley)
 
+    HDFS-991. Allow authentication to the web ui via a delegation token. 
+    (omalley)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

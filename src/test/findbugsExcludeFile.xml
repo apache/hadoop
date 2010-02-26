@@ -30,13 +30,12 @@
      </Match>
      <!-- 
        Ignore Cross Scripting Vulnerabilities
+       We have an input quoting filter that protects us.
      -->
      <Match>
-       <Package name="~org.apache.hadoop.mapred.*" />
        <Bug code="XSS" />
      </Match>
      <Match>
-       <Class name="org.apache.hadoop.mapred.taskdetails_jsp" />
        <Bug code="HRS" />
      </Match>
      <!--

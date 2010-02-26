@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.InclusiveByteRange;
 
 public class StreamFile extends DfsServlet {
@@ -41,7 +42,6 @@ public class StreamFile extends DfsServlet {
 
   static InetSocketAddress nameNodeAddr;
   static DataNode datanode = null;
-  private static final Configuration masterConf = new HdfsConfiguration();
   static {
     if ((datanode = DataNode.getDataNode()) != null) {
       nameNodeAddr = datanode.getNameNodeAddr();
@@ -51,10 +51,11 @@ public class StreamFile extends DfsServlet {
   /** getting a client for connecting to dfs */
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException, InterruptedException {
-    final Configuration conf = new HdfsConfiguration(masterConf);
+    final Configuration conf =
+      (Configuration) getServletContext().getAttribute("name.conf");
     
-    DFSClient client = 
-      getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
+    UserGroupInformation ugi = getUGI(request, conf);
+    DFSClient client = ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
       @Override
       public DFSClient run() throws IOException {
         return new DFSClient(nameNodeAddr, conf);

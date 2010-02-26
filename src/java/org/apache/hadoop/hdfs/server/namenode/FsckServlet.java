@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -44,15 +45,15 @@ public class FsckServlet extends DfsServlet {
     @SuppressWarnings("unchecked")
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
+    final Configuration conf = 
+      (Configuration) getServletContext().getAttribute("name.conf");
 
-    final UserGroupInformation ugi = getUGI(request);
+    final UserGroupInformation ugi = getUGI(request, conf);
     try {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
           final ServletContext context = getServletContext();
-          final Configuration conf = 
-            new HdfsConfiguration((Configuration)context.getAttribute("name.conf"));
           
           NameNode nn = (NameNode) context.getAttribute("name.node");
           

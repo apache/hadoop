@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -135,9 +137,11 @@ public class ListPathsServlet extends DfsServlet {
       final boolean recur = "yes".equals(root.get("recursive"));
       final Pattern filter = Pattern.compile(root.get("filter"));
       final Pattern exclude = Pattern.compile(root.get("exclude"));
+      final Configuration conf = 
+        (Configuration) getServletContext().getAttribute("name.conf");
       
-      ClientProtocol nnproxy = 
-        getUGI(request).doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+      ClientProtocol nnproxy = getUGI(request, conf).doAs
+        (new PrivilegedExceptionAction<ClientProtocol>() {
         @Override
         public ClientProtocol run() throws IOException {
           return createNameNodeProxy();

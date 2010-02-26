@@ -50,13 +50,13 @@ public class ProxyStreamFile extends StreamFile {
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException, InterruptedException {
     ServletContext context = getServletContext();
-    final Configuration conf = new HdfsConfiguration((Configuration) context
-        .getAttribute("name.conf"));
+    final Configuration conf = 
+      (Configuration) context.getAttribute("name.conf");
     final InetSocketAddress nameNodeAddr = (InetSocketAddress) context
         .getAttribute("name.node.address");
     
-    DFSClient client = 
-              getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
+    DFSClient client = getUGI(request, conf).doAs
+      ( new PrivilegedExceptionAction<DFSClient>() {
       @Override
       public DFSClient run() throws IOException {
         return new DFSClient(nameNodeAddr, conf);
@@ -68,7 +68,8 @@ public class ProxyStreamFile extends StreamFile {
 
   /** {@inheritDoc} */
   @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
 

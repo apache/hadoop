@@ -21,6 +21,7 @@
   contentType="text/html; charset=UTF-8"
   import="org.apache.hadoop.hdfs.server.common.JspHelper"
   import="org.apache.hadoop.util.ServletUtil"
+  import="org.apache.hadoop.conf.Configuration"
 %>
 <%!
   //for java.io.Serializable
@@ -32,9 +33,13 @@
 <%JspHelper.createTitle(out, request, request.getParameter("filename")); %>
 </head>
 <body onload="document.goto.dir.focus()">
-<% DatanodeJspHelper.generateFileChunks(out,request); %>
+<% 
+  Configuration conf = 
+     (Configuration) application.getAttribute("datanode.conf");
+  DatanodeJspHelper.generateFileChunks(out, request, conf); 
+%>
 <hr>
-<% DatanodeJspHelper.generateFileDetails(out,request); %>
+<% DatanodeJspHelper.generateFileDetails(out, request, conf); %>
 
 <h2>Local logs</h2>
 <a href="/logs/">Log</a> directory

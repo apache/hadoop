@@ -23,6 +23,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.net.InetAddress;
 import java.net.URLEncoder;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -35,10 +36,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -241,9 +248,32 @@ class NamenodeJspHelper {
     }
   }
 
-  static void redirectToRandomDataNode(NameNode nn, HttpServletResponse resp)
-      throws IOException {
+  static String getDelegationToken(final NameNode nn, final String user
+                                   ) throws IOException, InterruptedException {
+    if (user == null) {
+      return null;
+    }
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+    Token<DelegationTokenIdentifier> token =
+      ugi.doAs(
+               new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+                 public Token<DelegationTokenIdentifier> run() throws IOException {
+                   return nn.getDelegationToken(new Text(user));
+                 }
+               });
+    return token.encodeToUrlString();
+  }
+
+  static void redirectToRandomDataNode(final NameNode nn, 
+                                       HttpServletRequest request,
+                                       HttpServletResponse resp,
+                                       Configuration conf
+                                       ) throws IOException,
+                                                InterruptedException {
     final DatanodeID datanode = nn.getNamesystem().getRandomDatanode();
+    final String user = request.getRemoteUser();
+    String tokenString = getDelegationToken(nn, user);
+    // if the user is defined, get a delegation token and stringify it
     final String redirectLocation;
     final String nodeToRedirect;
     int redirectPort;
@@ -257,8 +287,9 @@ class NamenodeJspHelper {
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = "http://" + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="
-        + nn.getHttpAddress().getPort() + "&dir="
-        + URLEncoder.encode("/", "UTF-8");
+        + nn.getHttpAddress().getPort() + "&dir=/"
+        + (tokenString == null ? "" :
+           JspHelper.SET_DELEGATION + tokenString);
     resp.sendRedirect(redirectLocation);
   }
 

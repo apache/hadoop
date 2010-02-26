@@ -42,7 +42,8 @@ public class ProxyListPathsServlet extends ListPathsServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
     return UserGroupInformation.createRemoteUser(userID);

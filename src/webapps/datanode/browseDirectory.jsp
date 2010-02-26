@@ -23,6 +23,7 @@
 
   import="org.apache.hadoop.hdfs.server.common.JspHelper"
   import="org.apache.hadoop.util.ServletUtil"
+  import="org.apache.hadoop.conf.Configuration"
 %>
 <%!
   //for java.io.Serializable
@@ -45,7 +46,9 @@ body
 <body onload="document.goto.dir.focus()">
 <% 
   try {
-    DatanodeJspHelper.generateDirectoryStructure(out,request,response);
+    Configuration conf = 
+      (Configuration) application.getAttribute("datanode.conf");
+    DatanodeJspHelper.generateDirectoryStructure(out,request,response, conf);
   }
   catch(IOException ioe) {
     String msg = ioe.getLocalizedMessage();

@@ -25,6 +25,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
@@ -58,7 +59,8 @@ public class ProxyFileDataServlet extends FileDataServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
     return UserGroupInformation.createRemoteUser(userID);

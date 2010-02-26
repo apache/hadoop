@@ -25,8 +25,10 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
@@ -39,7 +41,9 @@ public class ContentSummaryServlet extends DfsServlet {
   /** {@inheritDoc} */
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
-    final UserGroupInformation ugi = getUGI(request);
+    final Configuration conf = 
+      (Configuration) getServletContext().getAttribute("name.conf");
+    final UserGroupInformation ugi = getUGI(request, conf);
     try {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override

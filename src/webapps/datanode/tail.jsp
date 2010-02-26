@@ -21,6 +21,7 @@
   contentType="text/html; charset=UTF-8"
   import="org.apache.hadoop.hdfs.server.common.JspHelper"
   import="org.apache.hadoop.util.ServletUtil"
+  import="org.apache.hadoop.conf.Configuration"
 %>
 <%!
   //for java.io.Serializable
@@ -32,7 +33,11 @@
 </head>
 <body>
 <form action="/tail.jsp" method="GET">
-<% DatanodeJspHelper.generateFileChunksForTail(out,request); %>
+<% 
+   Configuration conf = 
+     (Configuration) application.getAttribute("datanode.conf");
+   DatanodeJspHelper.generateFileChunksForTail(out,request, conf); 
+%>
 </form>
 <hr>
 

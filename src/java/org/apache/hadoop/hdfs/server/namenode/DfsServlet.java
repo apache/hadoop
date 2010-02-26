@@ -47,35 +47,6 @@ abstract class DfsServlet extends HttpServlet {
 
   static final Log LOG = LogFactory.getLog(DfsServlet.class.getCanonicalName());
 
-  /** Get {@link UserGroupInformation} from request 
-   * @throws IOException */
-  protected UserGroupInformation getUGI(HttpServletRequest request) 
-        throws IOException {
-    UserGroupInformation u = null;
-    if(UserGroupInformation.isSecurityEnabled()) {
-      String user = request.getRemoteUser();
-      if(user != null)
-        throw new IOException("Security enabled but user not " +
-        		"authenticated by filter");
-      
-      u = UserGroupInformation.createRemoteUser(user);
-    } else { // Security's not on, pull from url
-      String ugi = request.getParameter("ugi");
-      
-      if(ugi == null) // not specified in request
-        ugi = new Configuration().get(JspHelper.WEB_UGI_PROPERTY_NAME);
-      
-      if(ugi == null) // not specified in conf either
-        throw new IOException("Cannot determine UGI from request or conf");
-      
-      u = UserGroupInformation.createRemoteUser(ugi);
-    }
-    
-    if(LOG.isDebugEnabled())
-      LOG.debug("getUGI is returning: " + u.getShortUserName());
-    return u;
-  }
-
   /**
    * Create a {@link NameNode} proxy from the current {@link ServletContext}. 
    */
@@ -88,8 +59,12 @@ abstract class DfsServlet extends HttpServlet {
   }
 
   /** Create a URI for redirecting request */
-  protected URI createRedirectUri(String servletpath, UserGroupInformation ugi,
-      DatanodeID host, HttpServletRequest request) throws URISyntaxException {
+  protected URI createRedirectUri(String servletpath, 
+                                  UserGroupInformation ugi,
+                                  DatanodeID host, 
+                                  HttpServletRequest request,
+                                  NameNode nn
+                                  ) throws IOException, URISyntaxException {
     final String hostname = host instanceof DatanodeInfo?
         ((DatanodeInfo)host).getHostName(): host.getHost();
     final String scheme = request.getScheme();
@@ -97,8 +72,18 @@ abstract class DfsServlet extends HttpServlet {
         (Integer)getServletContext().getAttribute("datanode.https.port")
         : host.getInfoPort();
     final String filename = request.getPathInfo();
+    StringBuilder params = new StringBuilder();
+    params.append("filename=");
+    params.append(filename);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      params.append(JspHelper.SET_DELEGATION);
+      params.append(ugi.getTokens().iterator().next().encodeToUrlString());
+    } else {
+      params.append("&ugi=");
+      params.append(ugi.getShortUserName());
+    }
     return new URI(scheme, null, hostname, port, servletpath,
-        "filename=" + filename + "&ugi=" + ugi.getShortUserName(), null);
+                   params.toString(), null);
   }
 
   /** Get filename from the request */
@@ -109,5 +94,10 @@ abstract class DfsServlet extends HttpServlet {
       throw new IOException("Invalid filename");
     }
     return filename;
+  }
+  
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) throws IOException {
+    return JspHelper.getUGI(request, conf);
   }
 }

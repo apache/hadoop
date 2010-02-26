@@ -33,24 +33,33 @@ import java.util.TreeSet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
+@InterfaceAudience.Private
 public class JspHelper {
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
+  public static final String DELEGATION_PARAMETER_NAME = "delegation";
+  public static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
+                                              "=";
+  private static final Log LOG = LogFactory.getLog(JspHelper.class);
 
-  public static final Configuration conf = new HdfsConfiguration();
-  
-  private static final int defaultChunkSizeToView = 
-    conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
   static final Random rand = new Random();
 
   /** Private constructor for preventing creating JspHelper object. */
@@ -97,8 +106,11 @@ public class JspHelper {
   }
 
   public static void streamBlockInAscii(InetSocketAddress addr, long blockId, 
-                                 BlockAccessToken accessToken, long genStamp, long blockSize, 
-                                 long offsetIntoBlock, long chunkSizeToView, JspWriter out) 
+                                 BlockAccessToken accessToken, long genStamp, 
+                                 long blockSize, 
+                                 long offsetIntoBlock, long chunkSizeToView, 
+                                 JspWriter out,
+                                 Configuration conf) 
     throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = new Socket();
@@ -261,7 +273,10 @@ public class JspHelper {
     Collections.sort(nodes, new NodeComapare(field, order));
   }
 
-  public static void printPathWithLinks(String dir, JspWriter out, int namenodeInfoPort ) throws IOException {
+  public static void printPathWithLinks(String dir, JspWriter out, 
+                                        int namenodeInfoPort,
+                                        String tokenString
+                                        ) throws IOException {
     try {
       String[] parts = dir.split(Path.SEPARATOR);
       StringBuilder tempPath = new StringBuilder(dir.length());
@@ -273,7 +288,8 @@ public class JspHelper {
         if (!parts[i].equals("")) {
           tempPath.append(parts[i]);
           out.print("<a href=\"browseDirectory.jsp" + "?dir="
-              + tempPath.toString() + "&namenodeInfoPort=" + namenodeInfoPort);
+              + tempPath.toString() + "&namenodeInfoPort=" + namenodeInfoPort
+              + SET_DELEGATION + tokenString);
           out.print("\">" + parts[i] + "</a>" + Path.SEPARATOR);
           tempPath.append(Path.SEPARATOR);
         }
@@ -287,18 +303,24 @@ public class JspHelper {
     }
   }
 
-  public static void printGotoForm(JspWriter out, int namenodeInfoPort, String file) throws IOException {
+  public static void printGotoForm(JspWriter out,
+                                   int namenodeInfoPort,
+                                   String tokenString,
+                                   String file) throws IOException {
     out.print("<form action=\"browseDirectory.jsp\" method=\"get\" name=\"goto\">");
     out.print("Goto : ");
     out.print("<input name=\"dir\" type=\"text\" width=\"50\" id\"dir\" value=\""+ file+"\">");
     out.print("<input name=\"go\" type=\"submit\" value=\"go\">");
     out.print("<input name=\"namenodeInfoPort\" type=\"hidden\" "
         + "value=\"" + namenodeInfoPort  + "\">");
+    out.print("<input name=\"" + DELEGATION_PARAMETER_NAME +
+              "\" type=\"hidden\" value=\"" + tokenString + "\">");
     out.print("</form>");
   }
   
   public static void createTitle(JspWriter out, 
-      HttpServletRequest req, String  file) throws IOException{
+                                 HttpServletRequest req, 
+                                 String  file) throws IOException{
     if(file == null) file = "";
     int start = Math.max(0,file.length() - 100);
     if(start != 0)
@@ -307,9 +329,9 @@ public class JspHelper {
   }
 
   /** Convert a String to chunk-size-to-view. */
-  public static int string2ChunkSizeToView(String s) {
+  public static int string2ChunkSizeToView(String s, int defaultValue) {
     int n = s == null? 0: Integer.parseInt(s);
-    return n > 0? n: defaultChunkSizeToView;
+    return n > 0? n: defaultValue;
   }
 
   /** Return a table containing version information. */
@@ -351,4 +373,62 @@ public class JspHelper {
       return null;
     }
   }
+  
+  /**
+   * If security is turned off, what is the default web user?
+   * @param conf the configuration to look in
+   * @return the remote user that was configuration
+   */
+  public static UserGroupInformation getDefaultWebUser(Configuration conf
+                                                       ) throws IOException {
+    String[] strings = conf.getStrings(JspHelper.WEB_UGI_PROPERTY_NAME);
+    if (strings == null || strings.length == 0) {
+      throw new IOException("Cannot determine UGI from request or conf");
+    }
+    return UserGroupInformation.createRemoteUser(strings[0]);
+  }
+
+  /**
+   * Get {@link UserGroupInformation} and possibly the delegation token out of
+   * the request.
+   * @param request the http request
+   * @return a new user from the request
+   * @throws AccessControlException if the request has no token
+   */
+  public static UserGroupInformation getUGI(HttpServletRequest request,
+                                            Configuration conf
+                                           ) throws IOException {
+    UserGroupInformation ugi = null;
+    if(UserGroupInformation.isSecurityEnabled()) {
+      String user = request.getRemoteUser();
+      String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
+      if (tokenString != null) {
+        Token<DelegationTokenIdentifier> token = 
+          new Token<DelegationTokenIdentifier>();
+        token.decodeFromUrlString(tokenString);
+        ugi = UserGroupInformation.createRemoteUser(user);
+        ugi.addToken(token);        
+      } else {
+        if(user == null) {
+          throw new IOException("Security enabled but user not " +
+                                "authenticated by filter");
+        }
+        ugi = UserGroupInformation.createRemoteUser(user);
+      }
+    } else { // Security's not on, pull from url
+      String user = request.getParameter("ugi");
+      
+      if(user == null) { // not specified in request
+        ugi = getDefaultWebUser(conf);
+      } else {
+        ugi = UserGroupInformation.createRemoteUser(user);
+      }
+    }
+    
+    if(LOG.isDebugEnabled())
+      LOG.debug("getUGI is returning: " + ugi.getShortUserName());
+    return ugi;
+  }
+
+
 }
