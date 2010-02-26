@@ -123,6 +123,15 @@ public class CommonConfigurationKeys {
                                        "ipc.server.max.response.size";
   public static final int     IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT = 
                                         1024*1024;
+  /**
+   * How many calls per handler are allowed in the queue.
+   */
+  public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY = 
+                                       "ipc.server.handler.queue.size";
+  /**
+   * The default number of calls per handler in the queue.
+   */
+  public static final int IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT = 100;
 
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY = 
                                        "hadoop.rpc.socket.factory.class.default";
