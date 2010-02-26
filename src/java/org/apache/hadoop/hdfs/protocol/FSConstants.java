@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /************************************
@@ -91,7 +90,8 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -23;
+  public static final int LAYOUT_VERSION = -24;
   // Current version: 
-  // -23: Symbolic links
+  // -24: added new OP_[GET|RENEW|CANCEL]_DELEGATION_TOKEN and
+  // OP_UPDATE_MASTER_KEY.
 }

@@ -25,10 +25,12 @@ import java.util.Date;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 /**
  * ImageLoaderCurrent processes Hadoop FSImage files and walks over
@@ -92,12 +94,29 @@ import org.apache.hadoop.io.WritableUtils;
  *      string
  *      string
  *      enum
+ *    CurrentDelegationKeyId (int)
+ *    NumDelegationKeys (int)
+ *      DelegationKeys (count = NumDelegationKeys)
+ *        DelegationKeyLength (vint)
+ *        DelegationKey (bytes)
+ *    DelegationTokenSequenceNumber (int)
+ *    NumDelegationTokens (int)
+ *    DelegationTokens (count = NumDelegationTokens)
+ *      DelegationTokenIdentifier
+ *        owner (String)
+ *        renewer (String)
+ *        realUser (String)
+ *        issueDate (vlong)
+ *        maxDate (vlong)
+ *        sequenceNumber (vint)
+ *        masterKeyId (vint)
+ *      expiryTime (long)     
  *
  */
 class ImageLoaderCurrent implements ImageLoader {
   protected final DateFormat dateFormat = 
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
-  private static int [] versions = {-16, -17, -18, -19, -20, -21, -22, -23};
+  private static int [] versions = {-16, -17, -18, -19, -20, -21, -22, -23, -24};
   private int imageVersion = 0;
 
   /* (non-Javadoc)
@@ -136,6 +155,10 @@ class ImageLoaderCurrent implements ImageLoader {
 
       processINodesUC(in, v, skipBlocks);
 
+      if (imageVersion <= -24) {
+        processDelegationTokens(in, v);
+      }
+      
       v.leaveEnclosingElement(); // FSImage
       v.finish();
     } catch(IOException e) {
@@ -143,6 +166,36 @@ class ImageLoaderCurrent implements ImageLoader {
       v.finishAbnormally();
       throw e;
     }
+  }
+
+  /**
+   * Process the Delegation Token related section in fsimage.
+   * 
+   * @param in DataInputStream to process
+   * @param v Visitor to walk over records
+   */
+  private void processDelegationTokens(DataInputStream in, ImageVisitor v)
+      throws IOException {
+    v.visit(ImageElement.CURRENT_DELEGATION_KEY_ID, in.readInt());
+    int numDKeys = in.readInt();
+    v.visitEnclosingElement(ImageElement.DELEGATION_KEYS,
+        ImageElement.NUM_DELEGATION_KEYS, numDKeys);
+    for(int i =0; i < numDKeys; i++) {
+      DelegationKey key = new DelegationKey();
+      key.readFields(in);
+      v.visit(ImageElement.DELEGATION_KEY, key.toString());
+    }
+    v.leaveEnclosingElement();
+    v.visit(ImageElement.DELEGATION_TOKEN_SEQUENCE_NUMBER, in.readInt());
+    int numDTokens = in.readInt();
+    v.visitEnclosingElement(ImageElement.DELEGATION_TOKENS,
+        ImageElement.NUM_DELEGATION_TOKENS, numDTokens);
+    for(int i=0; i<numDTokens; i++){
+      DelegationTokenIdentifier id = new  DelegationTokenIdentifier();
+      id.readFields(in);
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER, id.toString());
+    }
+    v.leaveEnclosingElement();
   }
 
   /**

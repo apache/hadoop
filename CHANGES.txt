@@ -7,6 +7,8 @@ Trunk (unreleased changes)
     HDFS-905. Use the new UserGroupInformation from HDFS-6299. 
     (jghoman via omalley)
 
+    HDFS-984. Persistent delegation tokens. (Jitendra Pandey via shv)
+
   NEW FEATURES
 
     HDFS-654. Add support new atomic rename functionality in HDFS for 

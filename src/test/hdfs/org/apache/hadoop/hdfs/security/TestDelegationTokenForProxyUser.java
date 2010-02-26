@@ -99,6 +99,7 @@ public class TestDelegationTokenForProxyUser {
     cluster = new MiniDFSCluster(0, config, 1, true, true, true, null, null,
         null, null);
     cluster.waitActive();
+    cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
   }
 
   @After

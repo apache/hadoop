@@ -315,6 +315,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * Activate name-node servers and threads.
    */
   void activate(Configuration conf) throws IOException {
+    if ((isRole(NamenodeRole.ACTIVE))
+        && (UserGroupInformation.isSecurityEnabled())) {
+      namesystem.activateSecretManager();
+    }
     namesystem.activate(conf);
     startHttpServer(conf);
     server.start();  //start RPC server
