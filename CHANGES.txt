@@ -65,6 +65,8 @@ Trunk (unreleased changes)
     HADOOP-6568. Adds authorization for the default servlets. 
     (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-6586. Log authentication and authorization failures and successes
+    for RPC (boryas)
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
