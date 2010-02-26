@@ -411,6 +411,7 @@ Release 0.21.0 - Unreleased
    HBASE-2070  Collect HLogs and delete them after a period of time
    HBASE-2221  MR to copy a table
    HBASE-2257  [stargate] multiuser mode
+   HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
