@@ -87,6 +87,7 @@ public class RowResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     try {
       ResultGenerator generator =
         ResultGenerator.fromRowSpec(actualTableName, rowspec);
@@ -124,6 +125,7 @@ public class RowResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
     }
+    servlet.getMetrics().incrementRequests(1);
     // doesn't make sense to use a non specific coordinate as this can only
     // return a single cell
     if (!rowspec.hasColumns() || rowspec.getColumns().length > 1) {
@@ -146,7 +148,8 @@ public class RowResource implements Constants {
     }
   }
 
-  private Response update(CellSetModel model, boolean replace) {
+  Response update(CellSetModel model, boolean replace) {
+    servlet.getMetrics().incrementRequests(1);
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
@@ -180,8 +183,9 @@ public class RowResource implements Constants {
     }
   }
 
-  private Response updateBinary(byte[] message, HttpHeaders headers, 
+  Response updateBinary(byte[] message, HttpHeaders headers, 
       boolean replace) {
+    servlet.getMetrics().incrementRequests(1);
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;    
     try {
@@ -276,7 +280,7 @@ public class RowResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
-
+    servlet.getMetrics().incrementRequests(1);
     Delete delete = null;
     if (rowspec.hasTimestamp())
       delete = new Delete(rowspec.getRow(), rowspec.getTimestamp(), null);

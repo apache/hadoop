@@ -42,8 +42,10 @@ public class StorageClusterVersionResource implements Constants {
     LogFactory.getLog(StorageClusterVersionResource.class);
 
   private CacheControl cacheControl;
+  private RESTServlet servlet;
 
-  public StorageClusterVersionResource() {
+  public StorageClusterVersionResource() throws IOException {
+    servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
@@ -55,10 +57,10 @@ public class StorageClusterVersionResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
+    Configuration conf = servlet.getConfiguration();
     try {
-      RESTServlet server = RESTServlet.getInstance();
-      Configuration hconf = server.getConfiguration();
-      HBaseAdmin admin = new HBaseAdmin(hconf);
+      HBaseAdmin admin = new HBaseAdmin(conf);
       StorageClusterVersionModel model = new StorageClusterVersionModel();
       model.setVersion(admin.getClusterStatus().getHBaseVersion());
       ResponseBuilder response = Response.ok(model);

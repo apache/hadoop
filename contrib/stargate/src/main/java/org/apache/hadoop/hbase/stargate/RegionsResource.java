@@ -83,6 +83,7 @@ public class RegionsResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     try {
       TableInfoModel model = new TableInfoModel(table);
       Map<HRegionInfo,HServerAddress> regions = getTableRegions();

@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.log.Log;
 
@@ -24,12 +25,13 @@ public class JDBCAuthenticator extends Authenticator {
 
   /**
    * Constructor
-   * @param url
-   * @param user
-   * @param password
+   * @param conf
    */
-  public JDBCAuthenticator(String url, String user, String password) {
-    this(url, "users", user, password);
+  public JDBCAuthenticator(HBaseConfiguration conf) {
+    this(conf.get("stargate.auth.jdbc.url"),
+      conf.get("stargate.auth.jdbc.table"),
+      conf.get("stargate.auth.jdbc.user"),
+      conf.get("stargate.auth.jdbc.password"));
   }
 
   /**

@@ -47,16 +47,18 @@ public class ScannerInstanceResource implements Constants {
   private static final Log LOG =
     LogFactory.getLog(ScannerInstanceResource.class);
 
-  protected ResultGenerator generator;
-  private String id;
-  private int batch;
-  private CacheControl cacheControl;
+  ResultGenerator generator;
+  String id;
+  int batch;
+  RESTServlet servlet;
+  CacheControl cacheControl;
 
   public ScannerInstanceResource(String table, String id, 
       ResultGenerator generator, int batch) throws IOException {
     this.id = id;
     this.generator = generator;
     this.batch = batch;
+    servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
@@ -68,6 +70,7 @@ public class ScannerInstanceResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     CellSetModel model = new CellSetModel();
     RowModel rowModel = null;
     byte[] rowKey = null;
@@ -115,6 +118,7 @@ public class ScannerInstanceResource implements Constants {
       LOG.debug("GET " + uriInfo.getAbsolutePath() + " as " +
         MIMETYPE_BINARY);
     }
+    servlet.getMetrics().incrementRequests(1);
     try {
       KeyValue value = generator.next();
       if (value == null) {
@@ -140,6 +144,7 @@ public class ScannerInstanceResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     ScannerResource.delete(id);
     return Response.ok().build();
   }

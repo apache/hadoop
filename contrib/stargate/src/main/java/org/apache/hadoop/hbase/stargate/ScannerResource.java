@@ -54,8 +54,9 @@ public class ScannerResource implements Constants {
   User user;
   String tableName;
   String actualTableName;
+  RESTServlet servlet;
 
-  public ScannerResource(User user, String table) {
+  public ScannerResource(User user, String table) throws IOException {
     if (user != null) {
       this.user = user;
       this.actualTableName = 
@@ -64,14 +65,24 @@ public class ScannerResource implements Constants {
       this.actualTableName = table;
     }
     this.tableName = table;
+    servlet = RESTServlet.getInstance();
   }
 
-  private Response update(ScannerModel model, boolean replace,
-      UriInfo uriInfo) {
+  static void delete(String id) {
+    synchronized (scanners) {
+      ScannerInstanceResource instance = scanners.remove(id);
+      if (instance != null) {
+        instance.generator.close();
+      }
+    }
+  }
+
+  Response update(ScannerModel model, boolean replace, UriInfo uriInfo) {
+    servlet.getMetrics().incrementRequests(1);
+    byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
+    RowSpec spec = new RowSpec(model.getStartRow(), endRow,
+      model.getColumns(), model.getStartTime(), model.getEndTime(), 1);
     try {
-      byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
-      RowSpec spec = new RowSpec(model.getStartRow(), endRow,
-        model.getColumns(), model.getStartTime(), model.getEndTime(), 1);
       ScannerResultGenerator gen = new ScannerResultGenerator(actualTableName, spec);
       String id = gen.getID();
       ScannerInstanceResource instance = 
@@ -123,12 +134,4 @@ public class ScannerResource implements Constants {
     }
   }
 
-  static void delete(String id) {
-    synchronized (scanners) {
-      ScannerInstanceResource instance = scanners.remove(id);
-      if (instance != null) {
-        instance.generator.close();
-      }
-    }
-  }
 }

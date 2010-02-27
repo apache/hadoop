@@ -24,6 +24,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
@@ -54,11 +55,6 @@ public class Main implements Constants {
       port = Integer.valueOf(cmd.getOptionValue("p"));
     }
 
-    // configure the Stargate singleton
-
-    RESTServlet servlet = RESTServlet.getInstance();
-    servlet.setMultiUser(cmd.hasOption("m"));
-
     // set up the Jersey servlet container for Jetty
 
     ServletHolder sh = new ServletHolder(ServletContainer.class);
@@ -77,6 +73,15 @@ public class Main implements Constants {
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
+
+    // configure the Stargate singleton
+
+    RESTServlet servlet = RESTServlet.getInstance();
+    servlet.setMultiUser(cmd.hasOption("m"));
+    for (Connector conn: server.getConnectors()) {
+      servlet.addConnectorAddress(conn.getHost(), conn.getLocalPort());
+    }
+
     server.start();
     server.join();
   }

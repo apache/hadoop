@@ -21,38 +21,103 @@
 package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.stargate.auth.Authenticator;
 import org.apache.hadoop.hbase.stargate.auth.HBCAuthenticator;
+import org.apache.hadoop.hbase.stargate.auth.HTableAuthenticator;
+import org.apache.hadoop.hbase.stargate.auth.JDBCAuthenticator;
+import org.apache.hadoop.hbase.stargate.auth.ZooKeeperAuthenticator;
+import org.apache.hadoop.hbase.stargate.metrics.StargateMetrics;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.Stat;
+
+import org.json.JSONStringer;
 
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
  */
-public class RESTServlet extends ServletAdaptor implements Constants {
+public class RESTServlet extends ServletAdaptor 
+    implements Constants, Watcher {
 
   private static final Log LOG = LogFactory.getLog(RESTServlet.class);
-  private static final long serialVersionUID = 1L;  
+  private static final long serialVersionUID = 1L;
+
   private static RESTServlet instance;
 
+  class StatusReporter extends Chore {
+
+    public StatusReporter(int period, AtomicBoolean stopping) {
+      super(period, stopping);
+    }
+
+    @Override
+    protected void chore() {
+      if (wrapper != null) try {
+        JSONStringer status = new JSONStringer();
+        status.object();
+        status.key("requests").value(metrics.getRequests());
+        status.key("connectors").array();
+        for (Pair<String,Integer> e: connectors) {
+          status.object()
+            .key("host").value(e.getFirst())
+            .key("port").value(e.getSecond())
+            .endObject();
+        }
+        status.endArray();
+        status.endObject();
+        updateNode(wrapper, znode, CreateMode.EPHEMERAL, 
+          Bytes.toBytes(status.toString()));
+      } catch (Exception e) {
+        LOG.error(StringUtils.stringifyException(e));
+      }
+    }
+
+  }
+
+  final String znode = INSTANCE_ZNODE_ROOT + "/" + System.currentTimeMillis();
   transient final Configuration conf;
   transient final HTablePool pool;
+  transient volatile ZooKeeperWrapper wrapper;
+  transient Chore statusReporter;
+  transient Authenticator authenticator;
+  AtomicBoolean stopping = new AtomicBoolean(false);
+  boolean multiuser;
   Map<String,Integer> maxAgeMap = 
     Collections.synchronizedMap(new HashMap<String,Integer>());
-  boolean multiuser;
-  Authenticator authenticator;
+  List<Pair<String,Integer>> connectors = 
+    Collections.synchronizedList(new ArrayList<Pair<String,Integer>>());
+  StargateMetrics metrics = new StargateMetrics();
 
   /**
    * @return the RESTServlet singleton instance
@@ -65,6 +130,55 @@ public class RESTServlet extends ServletAdaptor implements Constants {
     return instance;
   }
 
+  static boolean ensureExists(final ZooKeeperWrapper zkw, final String znode,
+      final CreateMode mode) throws IOException {
+    ZooKeeper zk = zkw.getZooKeeper();
+    try {
+      Stat stat = zk.exists(znode, false);
+      if (stat != null) {
+        return true;
+      }
+      zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE, mode);
+      LOG.debug("Created ZNode " + znode);
+      return true;
+    } catch (KeeperException.NodeExistsException e) {
+      return true;      // ok, move on.
+    } catch (KeeperException.NoNodeException e) {
+      return ensureParentExists(zkw, znode, mode) && 
+        ensureExists(zkw, znode, mode);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+
+  static boolean ensureParentExists(final ZooKeeperWrapper zkw,
+      final String znode, final CreateMode mode) throws IOException {
+    int index = znode.lastIndexOf("/");
+    if (index <= 0) {   // Parent is root, which always exists.
+      return true;
+    }
+    return ensureExists(zkw, znode.substring(0, index), mode);
+  }
+
+  static void updateNode(final ZooKeeperWrapper zkw, final String znode, 
+        final CreateMode mode, final byte[] data) throws IOException  {
+    ensureExists(zkw, znode, mode);
+    ZooKeeper zk = zkw.getZooKeeper();
+    try {
+      zk.setData(znode, data, -1);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+
+  ZooKeeperWrapper initZooKeeperWrapper() throws IOException {
+    return new ZooKeeperWrapper(conf, this);
+  }
+
   /**
    * Constructor
    * @throws IOException
@@ -72,21 +186,52 @@ public class RESTServlet extends ServletAdaptor implements Constants {
   public RESTServlet() throws IOException {
     this.conf = HBaseConfiguration.create();
     this.pool = new HTablePool(conf, 10);
+    this.wrapper = initZooKeeperWrapper();
+    this.statusReporter = new StatusReporter(
+      conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 60), stopping);
   }
 
-  /**
-   * Get a table pool for the given table. 
-   * @return the table pool
-   */
-  protected HTablePool getTablePool() {
+  @Override
+  public void process(WatchedEvent event) {
+    LOG.debug(("ZooKeeper.Watcher event " + event.getType() + " with path " +
+      event.getPath()));
+    // handle disconnection (or manual delete to test disconnection scenario)
+    if (event.getState() == KeeperState.Expired || 
+        (event.getType().equals(EventType.NodeDeleted) && 
+            event.getPath().equals(znode))) {
+      wrapper.close();
+      wrapper = null;
+      while (!stopping.get()) try {
+        wrapper = initZooKeeperWrapper();
+        break;
+      } catch (IOException e) {
+        LOG.error(StringUtils.stringifyException(e));
+        try {
+          Thread.sleep(10 * 1000);
+        } catch (InterruptedException ex) {
+        }
+      }
+    }
+  }
+
+  HTablePool getTablePool() {
     return pool;
   }
 
-  /**
-   * @return the servlet's global HBase configuration
-   */
-  protected Configuration getConfiguration() {
+  ZooKeeperWrapper getZooKeeperWrapper() {
+    return wrapper;
+  }
+
+  Configuration getConfiguration() {
     return conf;
+  }
+
+  StargateMetrics getMetrics() {
+    return metrics;
+  }
+
+  void addConnectorAddress(String host, int port) {
+    connectors.add(new Pair<String,Integer>(host, port));
   }
 
   /**
@@ -148,10 +293,24 @@ public class RESTServlet extends ServletAdaptor implements Constants {
    */
   public Authenticator getAuthenticator() {
     if (authenticator == null) {
-      String className = conf.get("stargate.auth.authenticator");
-      if (className != null) try {
+      String className = conf.get(AUTHENTICATOR_KEY,
+        HBCAuthenticator.class.getCanonicalName());
+      try {
         Class<?> c = getClass().getClassLoader().loadClass(className);
-        authenticator = (Authenticator)c.newInstance();
+        if (className.endsWith(HBCAuthenticator.class.getName()) ||
+            className.endsWith(HTableAuthenticator.class.getName()) ||
+            className.endsWith(JDBCAuthenticator.class.getName())) {
+          Constructor<?> cons = c.getConstructor(Configuration.class);
+          authenticator = (Authenticator)
+            cons.newInstance(new Object[] { conf });
+        } else if (className.endsWith(ZooKeeperAuthenticator.class.getName())) {
+          Constructor<?> cons = c.getConstructor(Configuration.class,
+            ZooKeeperWrapper.class);
+          authenticator = (Authenticator)
+            cons.newInstance(new Object[] { conf, wrapper });
+        } else {
+          authenticator = (Authenticator)c.newInstance();
+        }
       } catch (Exception e) {
         LOG.error(StringUtils.stringifyException(e));
       }

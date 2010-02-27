@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.stargate.auth;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.stargate.Constants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.CreateMode;
@@ -45,10 +46,10 @@ import org.json.JSONObject;
  * 'name' (String, required), 'token' (String, optional), 'admin' (boolean,
  * optional), and 'disabled' (boolean, optional).
  */
-public class ZooKeeperAuthenticator extends Authenticator {
+public class ZooKeeperAuthenticator extends Authenticator 
+    implements Constants {
 
-  static final String USERS_ROOT_ZNODE = "/stargate/users";
-
+  final String usersZNode;
   ZooKeeperWrapper wrapper;
 
   private boolean ensureParentExists(final String znode) {
@@ -85,17 +86,20 @@ public class ZooKeeperAuthenticator extends Authenticator {
    * @throws IOException
    */
   public ZooKeeperAuthenticator(Configuration conf) throws IOException {
-    this(new ZooKeeperWrapper(conf, new Watcher() {
+    this(conf, new ZooKeeperWrapper(conf, new Watcher() {
       public void process(WatchedEvent event) { }
     }));
-    ensureExists(USERS_ROOT_ZNODE);
+    ensureExists(USERS_ZNODE_ROOT);
   }
 
   /**
    * Constructor
+   * @param conf
    * @param wrapper
    */
-  public ZooKeeperAuthenticator(ZooKeeperWrapper wrapper) {
+  public ZooKeeperAuthenticator(Configuration conf, 
+      ZooKeeperWrapper wrapper) {
+    this.usersZNode = conf.get("stargate.auth.zk.users", USERS_ZNODE_ROOT);
     this.wrapper = wrapper;
   }
 
@@ -103,7 +107,7 @@ public class ZooKeeperAuthenticator extends Authenticator {
   public User getUserForToken(String token) throws IOException {
     ZooKeeper zk = wrapper.getZooKeeper();
     try {
-      byte[] data = zk.getData(USERS_ROOT_ZNODE + "/" + token, null, null);
+      byte[] data = zk.getData(usersZNode + "/" + token, null, null);
       if (data == null) {
         return null;
       }

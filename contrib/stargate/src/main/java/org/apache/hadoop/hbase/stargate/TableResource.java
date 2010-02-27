@@ -46,7 +46,7 @@ public class TableResource implements Constants {
   }
 
   @Path("scanner")
-  public ScannerResource getScannerResource() {
+  public ScannerResource getScannerResource() throws IOException {
     return new ScannerResource(user, table);
   }
 

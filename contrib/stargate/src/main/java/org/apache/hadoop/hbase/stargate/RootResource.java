@@ -91,6 +91,7 @@ public class RootResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     if (servlet.isMultiUser()) {
       throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
@@ -114,7 +115,7 @@ public class RootResource implements Constants {
   }
 
   @Path("version")
-  public VersionResource getVersionResource() {
+  public VersionResource getVersionResource() throws IOException {
     return new VersionResource();
   }
 

@@ -361,12 +361,15 @@ Release 0.21.0 - Unreleased
                (bulk loading)
    HBASE-2153  Publish generated HTML documentation for Thrift on the website
                (Lars Francke via Stack)
-   HBASE-1373  Update Thrift to use compact/framed protocol (Lars Francke via Stack)
+   HBASE-1373  Update Thrift to use compact/framed protocol (Lars Francke via
+               Stack)
    HBASE-2172  Add constructor to Put for row key and timestamp
                (Lars Francke via Stack)
    HBASE-2178  Hooks for replication
-   HBASE-2180  Bad random read performance from synchronizing hfile.fddatainputstream
-   HBASE-2194  HTable - put(Put) , put(List<Put) code duplication (Kay Kay via Stack)
+   HBASE-2180  Bad random read performance from synchronizing
+               hfile.fddatainputstream
+   HBASE-2194  HTable - put(Put) , put(List<Put) code duplication (Kay Kay via
+               Stack)
    HBASE-2185  Add html version of default hbase-site.xml (Kay Kay via Stack)
    HBASE-2198  SingleColumnValueFilter should be able to find the column value
                even when it's not specifically added as input on the sc
@@ -412,6 +415,7 @@ Release 0.21.0 - Unreleased
    HBASE-2221  MR to copy a table
    HBASE-2257  [stargate] multiuser mode
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
+   HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

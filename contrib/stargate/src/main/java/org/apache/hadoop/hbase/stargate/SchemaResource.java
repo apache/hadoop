@@ -70,10 +70,10 @@ public class SchemaResource implements Constants {
       this.actualTableName = table;
     }
     this.tableName = table;
+    servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
-    servlet = RESTServlet.getInstance();
   }
 
   private HTableDescriptor getTableSchema() throws IOException,
@@ -93,6 +93,7 @@ public class SchemaResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     try {
       HTableDescriptor htd = getTableSchema();
       TableSchemaModel model = new TableSchemaModel();
@@ -207,6 +208,7 @@ public class SchemaResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     // use the name given in the path, but warn if the name on the path and
     // the name in the schema are different
     if (model.getName() != tableName) {
@@ -222,6 +224,7 @@ public class SchemaResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     // use the name given in the path, but warn if the name on the path and
     // the name in the schema are different
     if (model.getName() != tableName) {
@@ -236,6 +239,7 @@ public class SchemaResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     try {
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       admin.disableTable(actualTableName);

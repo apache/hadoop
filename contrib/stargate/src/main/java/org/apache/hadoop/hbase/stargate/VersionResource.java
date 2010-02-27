@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.stargate;
 
+import java.io.IOException;
+
 import javax.servlet.ServletContext;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -45,8 +47,10 @@ public class VersionResource implements Constants {
   private static final Log LOG = LogFactory.getLog(VersionResource.class);
 
   private CacheControl cacheControl;
+  private RESTServlet servlet;
 
-  public VersionResource() {
+  public VersionResource() throws IOException {
+    servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
@@ -65,6 +69,7 @@ public class VersionResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     ResponseBuilder response = Response.ok(new VersionModel(context));
     response.cacheControl(cacheControl);
     return response.build();
@@ -74,7 +79,8 @@ public class VersionResource implements Constants {
    * Dispatch to StorageClusterVersionResource
    */
   @Path("cluster")
-  public StorageClusterVersionResource getClusterVersionResource() {
+  public StorageClusterVersionResource getClusterVersionResource() 
+      throws IOException {
     return new StorageClusterVersionResource();
   }
 

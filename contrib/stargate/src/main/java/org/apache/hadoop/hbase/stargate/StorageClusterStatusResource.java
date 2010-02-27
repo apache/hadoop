@@ -48,10 +48,10 @@ public class StorageClusterStatusResource implements Constants {
   private RESTServlet servlet;
 
   public StorageClusterStatusResource() throws IOException {
+    servlet = RESTServlet.getInstance();
     cacheControl = new CacheControl();
     cacheControl.setNoCache(true);
     cacheControl.setNoTransform(false);
-    servlet = RESTServlet.getInstance();
   }
 
   @GET
@@ -60,6 +60,7 @@ public class StorageClusterStatusResource implements Constants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    servlet.getMetrics().incrementRequests(1);
     try {
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       ClusterStatus status = admin.getClusterStatus();

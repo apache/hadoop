@@ -45,9 +45,9 @@ public class TestZooKeeperAuthenticator extends MiniClusterTestBase {
   public void setUp() throws Exception {
     authenticator = new ZooKeeperAuthenticator(conf);
     ZooKeeper zk = authenticator.wrapper.getZooKeeper();
-    if (zk.exists(ZooKeeperAuthenticator.USERS_ROOT_ZNODE + "/" + 
+    if (zk.exists(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + 
           ADMIN_TOKEN, null) == null) {
-      zk.create(ZooKeeperAuthenticator.USERS_ROOT_ZNODE + "/" + ADMIN_TOKEN, 
+      zk.create(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + ADMIN_TOKEN, 
         Bytes.toBytes(new JSONStringer()
           .object()
             .key("name").value(ADMIN_USERNAME)
@@ -55,9 +55,9 @@ public class TestZooKeeperAuthenticator extends MiniClusterTestBase {
           .endObject().toString()),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
-    if (zk.exists(ZooKeeperAuthenticator.USERS_ROOT_ZNODE + "/" + 
+    if (zk.exists(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + 
           USER_TOKEN, null) == null) {
-      zk.create(ZooKeeperAuthenticator.USERS_ROOT_ZNODE + "/" + USER_TOKEN, 
+      zk.create(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + USER_TOKEN, 
         Bytes.toBytes(new JSONStringer()
           .object()
             .key("name").value(USER_USERNAME)
@@ -65,9 +65,9 @@ public class TestZooKeeperAuthenticator extends MiniClusterTestBase {
           .endObject().toString()),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
-    if (zk.exists(ZooKeeperAuthenticator.USERS_ROOT_ZNODE + "/" + 
+    if (zk.exists(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + 
           DISABLED_TOKEN, null) == null) {
-      zk.create(ZooKeeperAuthenticator.USERS_ROOT_ZNODE + "/" +DISABLED_TOKEN,
+      zk.create(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" +DISABLED_TOKEN,
         Bytes.toBytes(new JSONStringer()
           .object()
             .key("name").value(DISABLED_USERNAME)
