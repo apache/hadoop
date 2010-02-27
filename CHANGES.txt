@@ -80,6 +80,9 @@ Trunk (unreleased changes)
     HDFS-991. Allow authentication to the web ui via a delegation token. 
     (omalley)
 
+    HDFS-994. Allow fetching of delegation token from NameNode for hftp.
+    (Jakob Homan via acmurthy) 
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
