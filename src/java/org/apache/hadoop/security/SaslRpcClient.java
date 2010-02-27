@@ -39,7 +39,10 @@ import javax.security.sasl.SaslClient;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -99,6 +102,14 @@ public class SaslRpcClient {
       throw new IOException("Unable to find SASL client implementation");
   }
 
+  private static void readStatus(DataInputStream inStream) throws IOException {
+    int status = inStream.readInt(); // read status
+    if (status != SaslStatus.SUCCESS.state) {
+      throw new RemoteException(WritableUtils.readString(inStream),
+          WritableUtils.readString(inStream));
+    }
+  }
+  
   /**
    * Do client side SASL authentication with server via the given InputStream
    * and OutputStream
@@ -130,6 +141,7 @@ public class SaslRpcClient {
               + " from initSASLContext.");
       }
       if (!saslClient.isComplete()) {
+        readStatus(inStream);
         int len = inStream.readInt();
         if (len == SaslRpcServer.SWITCH_TO_SIMPLE_AUTH) {
           if (LOG.isDebugEnabled())
@@ -155,6 +167,7 @@ public class SaslRpcClient {
           outStream.flush();
         }
         if (!saslClient.isComplete()) {
+          readStatus(inStream);
           saslToken = new byte[inStream.readInt()];
           if (LOG.isDebugEnabled())
             LOG.debug("Will read input token of size " + saslToken.length
