@@ -74,5 +74,11 @@
       <artifactId>json</artifactId>
       <version>20090211</version>
     </dependency>
+    <!-- we only use this for TestJDBCAuthenticator -->
+    <dependency>
+      <groupId>hsqldb</groupId>
+      <artifactId>hsqldb</artifactId>
+      <version>1.8.0.10</version>
+    </dependency>
   </dependencies>
 </project>
