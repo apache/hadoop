@@ -175,6 +175,8 @@ Trunk (unreleased changes)
     HADOOP-6573. Support for persistent delegation tokens.
     (Jitendra Pandey via shv)
 
+    HADOOP-6594. Provide a fetchdt tool via bin/hdfs. (jhoman via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
