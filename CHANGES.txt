@@ -216,7 +216,7 @@ Release 0.21.0 - Unreleased
    HBASE-2259  StackOverflow in ExplicitColumnTracker when row has many columns
    HBASE-2268  [stargate] Failed tests and DEBUG output is dumped to console
                since move to Mavenized build 
-   HBASE-2274  Hbase Shell hcd() method is broken by the replication scope 
+   HBASE-2276  Hbase Shell hcd() method is broken by the replication scope 
                parameter (Alexey Kovyrin via Lars George)
 
   IMPROVEMENTS
