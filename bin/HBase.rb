@@ -44,6 +44,7 @@ module HBase
   METHOD = "METHOD"
   MAXLENGTH = "MAXLENGTH"
   CACHE_BLOCKS = "CACHE_BLOCKS"
+  REPLICATION_SCOPE = "REPLICATION_SCOPE"
 
   # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
   class Admin
@@ -315,8 +316,7 @@ module HBase
       # public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       # final String compression, final boolean inMemory,
       # final boolean blockCacheEnabled, final int blocksize,
-      # final int maxValueLength,
-      # final int timeToLive, final boolean bloomFilter) {
+      # final int timeToLive, final boolean bloomFilter, final int scope) {
       name = arg[NAME]
       raise ArgumentError.new("Column family " + arg + " must have a name") \
         unless name
@@ -329,7 +329,8 @@ module HBase
         arg[HColumnDescriptor::BLOCKCACHE]? JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE]): HColumnDescriptor::DEFAULT_BLOCKCACHE,
         arg[HColumnDescriptor::BLOCKSIZE]? JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE]): HColumnDescriptor::DEFAULT_BLOCKSIZE,
         arg[HColumnDescriptor::TTL]? JInteger.new(arg[HColumnDescriptor::TTL]): HColumnDescriptor::DEFAULT_TTL,
-        arg[HColumnDescriptor::BLOOMFILTER]? JBoolean.valueOf(arg[HColumnDescriptor::BLOOMFILTER]): HColumnDescriptor::DEFAULT_BLOOMFILTER)
+        arg[HColumnDescriptor::BLOOMFILTER]? JBoolean.valueOf(arg[HColumnDescriptor::BLOOMFILTER]): HColumnDescriptor::DEFAULT_BLOOMFILTER,
+        arg[HColumnDescriptor::REPLICATION_SCOPE]? JInteger.new(arg[REPLICATION_SCOPE]): HColumnDescriptor::DEFAULT_REPLICATION_SCOPE)
     end
 
     def zk(args)
