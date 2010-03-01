@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
@@ -36,6 +37,13 @@ public interface HTableInterface {
    * @return the table name.
    */
   byte[] getTableName();
+
+  /**
+   * Gets the configuration of this instance.
+   *
+   * @return The configuration.
+   */
+  Configuration getConfiguration();
 
   /**
    * Gets the table descriptor for this table.

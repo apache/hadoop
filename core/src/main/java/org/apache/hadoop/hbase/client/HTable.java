@@ -155,6 +155,10 @@ public class HTable implements HTableInterface {
         new DaemonThreadFactory());
   }
 
+  public Configuration getConfiguration() {
+    return configuration;
+  }
+
   /**
    * TODO Might want to change this to public, would be nice if the number
    * of threads would automatically change when servers were added and removed

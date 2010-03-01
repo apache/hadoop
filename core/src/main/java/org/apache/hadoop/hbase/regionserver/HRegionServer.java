@@ -1684,9 +1684,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      region.put(put, getLockFromId(put.getLockId()));
+      boolean writeToWAL = put.getWriteToWAL();
+      region.put(put, getLockFromId(put.getLockId()), writeToWAL);
 
-      this.syncWal(region);
+      if (writeToWAL) {
+        this.syncWal(region);
+      }
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1698,6 +1701,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     int i = 0;
     checkOpen();
     HRegion region = null;
+    boolean writeToWAL = true;
     try {
       region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
@@ -1706,6 +1710,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       for (i = 0; i < puts.length; i++) {
         this.requestCount.incrementAndGet();
         Integer lock = getLockFromId(puts[i].getLockId());
+        writeToWAL &= puts[i].getWriteToWAL();
         region.put(puts[i], lock);
       }
 
@@ -1720,7 +1725,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     // All have been processed successfully.
 
-    this.syncWal(region);
+    if (writeToWAL) {
+      this.syncWal(region);
+    }
     return -1;
   }
 
@@ -2378,7 +2385,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
       long retval = region.incrementColumnValue(row, family, qualifier, amount,
           writeToWAL);
 
-      syncWal(region);
+      if (writeToWAL) {
+        syncWal(region);
+      }
 
       return retval;
     } catch (IOException e) {

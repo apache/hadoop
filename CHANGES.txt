@@ -395,6 +395,10 @@ Release 0.21.0 - Unreleased
    HBASE-2262  ZKW.ensureExists should check for existence
    HBASE-2264  Adjust the contrib apps to the Maven project layout 
                (Lars Francke via Lars George)
+   HBASE-2245  Unnecessary call to syncWal(region); in HRegionServer 
+               (Benoit Sigoure via JD)
+   HBASE-2246  Add a getConfiguration method to HTableInterface
+               (Benoit Sigoure via JD)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
