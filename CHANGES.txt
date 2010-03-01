@@ -1,4 +1,5 @@
 Hadoop Change Log
+# Add directory level at the storage directory
 
 Trunk (unreleased changes)
 
@@ -180,6 +181,9 @@ Trunk (unreleased changes)
 
     HADOOP-6589. Provide better error messages when RPC authentication fails.
     (Kan Zhang via omalley)
+
+   HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
+   (Suresh Srinivas via Sanjay Radia)
 
   OPTIMIZATIONS
 
