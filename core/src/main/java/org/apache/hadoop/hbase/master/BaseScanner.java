@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.ipc.RemoteException;
 
 
@@ -100,7 +102,22 @@ import org.apache.hadoop.ipc.RemoteException;
  */
 abstract class BaseScanner extends Chore implements HConstants {
   static final Log LOG = LogFactory.getLog(BaseScanner.class.getName());
-    
+  // These are names of new columns in a meta region offlined parent row.  They
+  // are added by the metascanner after we verify that split daughter made it
+  // in.  Their value is 'true' if present.
+  private static final byte [] SPLITA_CHECKED =
+    Bytes.toBytes(Bytes.toString(SPLITA_QUALIFIER) + "_checked");
+  private static final byte [] SPLITB_CHECKED =
+    Bytes.toBytes(Bytes.toString(SPLITB_QUALIFIER) + "_checked");
+  // Make the 'true' Writable once only.
+  private static byte [] TRUE_WRITABLE_AS_BYTES;
+  static {
+    try {
+      TRUE_WRITABLE_AS_BYTES = Writables.getBytes(new BooleanWritable(true));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
   private final boolean rootRegion;
   protected final HMaster master;
   
@@ -148,9 +165,9 @@ abstract class BaseScanner extends Chore implements HConstants {
       region.toString());
 
     // Array to hold list of split parents found.  Scan adds to list.  After
-    // scan we go check if parents can be removed.
-    Map<HRegionInfo, Result> splitParents =
-      new HashMap<HRegionInfo, Result>();
+    // scan we go check if parents can be removed and that their daughters
+    // are in place.
+    Map<HRegionInfo, Result> splitParents = new HashMap<HRegionInfo, Result>();
     List<byte []> emptyRows = new ArrayList<byte []>();
     int rows = 0;
     try {
@@ -215,12 +232,13 @@ abstract class BaseScanner extends Chore implements HConstants {
           emptyRows);
     }
 
-    // Take a look at split parents to see if any we can clean up.
-    
+    // Take a look at split parents to see if any we can clean up any and to
+    // make sure that daughter regions are in place.
     if (splitParents.size() > 0) {
       for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
         HRegionInfo hri = e.getKey();
-        cleanupSplits(region.getRegionName(), regionServer, hri, e.getValue());
+        cleanupAndVerifySplits(region.getRegionName(), regionServer,
+          hri, e.getValue());
       }
     }
     LOG.info(Thread.currentThread().getName() + " scan of " + rows +
@@ -262,24 +280,28 @@ abstract class BaseScanner extends Chore implements HConstants {
 
   /*
    * If daughters no longer hold reference to the parents, delete the parent.
-   * @param metaRegionName Meta region name.
+   * If the parent is lone without daughter splits AND there are references in
+   * the filesystem, then a daughters was not added to .META. -- must have been
+   * a crash before their addition.  Add them here.
+   * @param metaRegionName Meta region name: e.g. .META.,,1
    * @param server HRegionInterface of meta server to talk to 
-   * @param parent HRegionInfo of split parent
+   * @param parent HRegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
    * <code>metaRegionName</code>
    * @return True if we removed <code>parent</code> from meta table and from
    * the filesystem.
    * @throws IOException
    */
-  private boolean cleanupSplits(final byte [] metaRegionName, 
+  private boolean cleanupAndVerifySplits(final byte [] metaRegionName, 
     final HRegionInterface srvr, final HRegionInfo parent,
     Result rowContent)
   throws IOException {
     boolean result = false;
-    boolean hasReferencesA = hasReferences(metaRegionName, srvr,
-        parent.getRegionName(), rowContent, CATALOG_FAMILY, SPLITA_QUALIFIER);
-    boolean hasReferencesB = hasReferences(metaRegionName, srvr,
-        parent.getRegionName(), rowContent, CATALOG_FAMILY, SPLITB_QUALIFIER);
+    // Run checks on each daughter split.
+    boolean hasReferencesA = checkDaughter(metaRegionName, srvr,
+      parent, rowContent, SPLITA_QUALIFIER);
+    boolean hasReferencesB = checkDaughter(metaRegionName, srvr,
+        parent, rowContent, SPLITB_QUALIFIER);
     if (!hasReferencesA && !hasReferencesB) {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " (encoded=" + parent.getEncodedName() +
@@ -292,26 +314,184 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
     return result;
   }
+
   
+  /*
+   * See if the passed daughter has references in the filesystem to the parent
+   * and if not, remove the note of daughter region in the parent row: its
+   * column info:splitA or info:splitB.  Also make sure that daughter row is
+   * present in the .META. and mark the parent row when confirmed so we don't
+   * keep checking.  The mark will be info:splitA_checked and its value will be
+   * a true BooleanWritable.
+   * @param metaRegionName
+   * @param srvr
+   * @param parent
+   * @param rowContent
+   * @param qualifier
+   * @return True if this daughter still has references to the parent.
+   * @throws IOException
+   */
+  private boolean checkDaughter(final byte [] metaRegionName, 
+    final HRegionInterface srvr, final HRegionInfo parent,
+    final Result rowContent, final byte [] qualifier)
+  throws IOException {
+    HRegionInfo hri = getDaughterRegionInfo(rowContent, qualifier);
+    boolean references = hasReferences(metaRegionName, srvr, parent, rowContent,
+        hri, qualifier);
+    // Return if no references.
+    if (!references) return references;
+    if (!verifyDaughterRowPresent(rowContent, qualifier, srvr, metaRegionName,
+        hri, parent)) {
+      // If we got here, we added a daughter region to metatable. Update
+      // parent row that daughter has been verified present so we don't check
+      // for it by doing a get each time through here.
+      addDaughterRowChecked(metaRegionName, srvr, parent.getRegionName(), hri,
+        qualifier);
+    }
+    return references;
+  }
+
+  /*
+   * Check the daughter of parent is present in meta table.  If not there,
+   * add it.
+   * @param rowContent
+   * @param daughter
+   * @param srvr
+   * @param metaRegionName
+   * @param daughterHRI
+   * @throws IOException
+   * @return True, if the daughter row is present in meta.  If false, this
+   * method just added it to meta.
+   */
+  private boolean verifyDaughterRowPresent(final Result rowContent,
+      final byte [] daughter, final HRegionInterface srvr,
+      final byte [] metaRegionName,
+      final HRegionInfo daughterHRI, final HRegionInfo parent)
+  throws IOException {
+    // See if the 'checked' column is in parent. If so, we're done.
+    boolean present = getDaughterRowChecked(rowContent, daughter);
+    if (present) return present;
+    // Parent is not carrying the splitA_checked/splitB_checked so this must
+    // be the first time through here checking splitA/splitB are in metatable.
+    byte [] daughterRowKey = daughterHRI.getRegionName();
+    Get g = new Get(daughterRowKey);
+    g.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    Result r = srvr.get(metaRegionName, g);
+    if (r == null || r.isEmpty()) {
+      // Daughter row not present.  Fixup kicks in.  Insert it.
+      LOG.warn("Fixup broke split: Add missing split daughter to meta," +
+       " daughter=" + daughterHRI.toString() + ", parent=" + parent.toString());
+      Put p = new Put(daughterRowKey);
+      p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(daughterHRI));
+      srvr.put(metaRegionName, p);
+    }
+    return present;
+  }
+
+  /*
+   * Add to parent a marker that we verified the daughter exists.
+   * @param metaRegionName
+   * @param srvr
+   * @param parent
+   * @param split
+   * @param daughter
+   * @throws IOException
+   */
+  private void addDaughterRowChecked(final byte [] metaRegionName, 
+    final HRegionInterface srvr, final byte [] parent,
+    final HRegionInfo split, final byte [] daughter)
+  throws IOException {
+    Put p = new Put(parent);
+    p.add(CATALOG_FAMILY, getNameOfVerifiedDaughterColumn(daughter),
+      TRUE_WRITABLE_AS_BYTES);
+    srvr.put(metaRegionName, p);
+  }
+
+  /*
+   * @param rowContent
+   * @param which
+   * @return True if the daughter row has already been verified present in
+   * metatable.
+   * @throws IOException
+   */
+  private boolean getDaughterRowChecked(final Result rowContent,
+    final byte [] which)
+  throws IOException {
+    byte [] b = rowContent.getValue(CATALOG_FAMILY,
+      getNameOfVerifiedDaughterColumn(which));
+    BooleanWritable bw = null;
+    if (b != null && b.length > 0) {
+      bw = (BooleanWritable)Writables.getWritable(b, new BooleanWritable());
+    }
+    return bw == null? false: bw.get();
+  }
+
+  /*
+   * @param daughter
+   * @return Returns splitA_checked or splitB_checked dependent on what
+   * <code>daughter</code> is.
+   */
+  private static byte [] getNameOfVerifiedDaughterColumn(final byte [] daughter) {
+    return Bytes.equals(SPLITA_QUALIFIER, daughter)?
+      SPLITA_CHECKED: SPLITB_CHECKED;
+  }
+
+  /*
+   * Get daughter HRegionInfo out of parent info:splitA/info:splitB columns.
+   * @param rowContent
+   * @param which Whether "info:splitA" or "info:splitB" column
+   * @return Deserialized content of the info:splitA or info:splitB as a
+   * HRegionInfo
+   * @throws IOException
+   */
+  private HRegionInfo getDaughterRegionInfo(final Result rowContent,
+    final byte [] which)
+  throws IOException {
+    return Writables.getHRegionInfoOrNull(rowContent.getValue(CATALOG_FAMILY, which));
+  }
+
+  /*
+   * Remove mention of daughter from parent row.
+   * parent row.
+   * @param metaRegionName
+   * @param srvr
+   * @param parent
+   * @param split
+   * @param qualifier
+   * @throws IOException
+   */
+  private void removeDaughterFromParent(final byte [] metaRegionName, 
+    final HRegionInterface srvr, final HRegionInfo parent,
+    final HRegionInfo split, final byte [] qualifier)
+  throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(split.getRegionNameAsString() + "/" + split.getEncodedName() +
+        " no longer has references to " + parent.getRegionNameAsString());
+    }
+    Delete delete = new Delete(parent.getRegionName());
+    delete.deleteColumns(HConstants.CATALOG_FAMILY, qualifier);
+    srvr.delete(metaRegionName, delete);
+  }
+
   /* 
    * Checks if a daughter region -- either splitA or splitB -- still holds
    * references to parent.  If not, removes reference to the split from
-   * the parent meta region row.
+   * the parent meta region row so we don't check it any more.
    * @param metaRegionName Name of meta region to look in.
    * @param srvr Where region resides.
    * @param parent Parent region name. 
    * @param rowContent Keyed content of the parent row in meta region.
-   * @param splitColumn Column name of daughter split to examine
+   * @param split Which column family.
+   * @param qualifier Which of the daughters to look at, splitA or splitB.
    * @return True if still has references to parent.
    * @throws IOException
    */
   private boolean hasReferences(final byte [] metaRegionName, 
-    final HRegionInterface srvr, final byte [] parent,
-    Result rowContent, final byte [] splitFamily, byte [] splitQualifier)
+    final HRegionInterface srvr, final HRegionInfo parent,
+    Result rowContent, final HRegionInfo split, byte [] qualifier)
   throws IOException {
     boolean result = false;
-    HRegionInfo split =
-      Writables.getHRegionInfoOrNull(rowContent.getValue(splitFamily, splitQualifier));
     if (split == null) {
       return result;
     }
@@ -336,20 +516,9 @@ abstract class BaseScanner extends Chore implements HConstants {
         break;
       }
     }
-    
-    if (result) {
-      return result;
+    if (!result) {
+      removeDaughterFromParent(metaRegionName, srvr, parent, split, qualifier);
     }
-    
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(split.getRegionNameAsString() + "/" + split.getEncodedName()
-          + " no longer has references to " + Bytes.toStringBinary(parent));
-    }
-    
-    Delete delete = new Delete(parent);
-    delete.deleteColumns(splitFamily, splitQualifier);
-    srvr.delete(metaRegionName, delete);
-    
     return result;
   }
 

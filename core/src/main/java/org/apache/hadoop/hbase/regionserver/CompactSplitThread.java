@@ -189,6 +189,10 @@ class CompactSplitThread extends Thread implements HConstants {
       Writables.getBytes(newRegions[1].getRegionInfo()));
     t.put(put);
     
+    // If we crash here, then the daughters will not be added and we'll have
+    // and offlined parent but no daughters to take up the slack.  hbase-2244
+    // adds fixup to the metascanners.
+
     // Add new regions to META
     for (int i = 0; i < newRegions.length; i++) {
       put = new Put(newRegions[i].getRegionName());
@@ -196,17 +200,20 @@ class CompactSplitThread extends Thread implements HConstants {
         newRegions[i].getRegionInfo()));
       t.put(put);
     }
-        
+    
+    // If we crash here, the master will not know of the new daughters and they
+    // will not be assigned.  The metascanner when it runs will notice and take
+    // care of assigning the new daughters.
+
     // Now tell the master about the new regions
     server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
       newRegions[1].getRegionInfo());
+
     LOG.info("region split, META updated, and report to master all" +
       " successful. Old region=" + oldRegionInfo.toString() +
       ", new regions: " + newRegions[0].toString() + ", " +
       newRegions[1].toString() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
-    
-    // Do not serve the new regions. Let the Master assign them.
   }
 
   /**

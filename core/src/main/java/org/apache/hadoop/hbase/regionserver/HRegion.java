@@ -263,7 +263,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.regiondir = new Path(basedir, encodedNameStr);
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
-      LOG.debug("Opening region " + this + ", encoded=" +
+      LOG.debug("Creating region " + this + ", encoded=" +
         this.regionInfo.getEncodedName());
     }
     this.regionCompactionDir =
@@ -290,11 +290,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   throws IOException {
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
-    // Move prefab HStore files into place (if any).  This picks up split files
-    // and any merges from splits and merges dirs.
-    if (initialFiles != null && fs.exists(initialFiles)) {
-      fs.rename(initialFiles, this.regiondir);
-    }
+    moveInitialFilesIntoPlace(this.fs, initialFiles, this.regiondir);
 
     // Write HRI to a file in case we need to recover .META.
     checkRegioninfoOnFilesystem();
@@ -329,7 +325,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     // Add one to the current maximum sequence id so new edits are beyond.
     this.minSequenceId = maxSeqId + 1;
 
-    // Get rid of any splits or merges that were lost in-progress
+    // Get rid of any splits or merges that were lost in-progress.  Clean out
+    // these directories here on open.  We may be opening a region that was
+    // being split but we crashed in the middle of it all.
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
 
@@ -343,6 +341,20 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.lastFlushTime = System.currentTimeMillis();
     LOG.info("region " + this + "/" + this.regionInfo.getEncodedName() +
       " available; sequence id is " + this.minSequenceId);
+  }
+
+  /*
+   * Move any passed HStore files into place (if any).  Used to pick up split
+   * files and any merges from splits and merges dirs.
+   * @param initialFiles
+   * @throws IOException
+   */
+  private static void moveInitialFilesIntoPlace(final FileSystem fs,
+    final Path initialFiles, final Path regiondir)
+  throws IOException {
+    if (initialFiles != null && fs.exists(initialFiles)) {
+      fs.rename(initialFiles, regiondir);
+    }
   }
 
   /**
@@ -583,7 +595,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * but instead create new 'reference' store files that read off the top and
    * bottom ranges of parent store files.
    * @param splitRow row on which to split region
-   * @return two brand-new (and open) HRegions or null if a split is not needed
+   * @return two brand-new HRegions or null if a split is not needed
    * @throws IOException
    */
   HRegion [] splitRegion(final byte [] splitRow) throws IOException {
@@ -620,18 +632,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
         startKey, splitRow, false, rid);
-      Path dirA =
-        new Path(splits, Integer.toString(regionAInfo.getEncodedName()));
-      if(fs.exists(dirA)) {
-        throw new IOException("Cannot split; target file collision at " + dirA);
-      }
+      Path dirA = getSplitDirForDaughter(splits, regionAInfo);
       HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
         splitRow, endKey, false, rid);
-      Path dirB =
-        new Path(splits, Integer.toString(regionBInfo.getEncodedName()));
-      if(this.fs.exists(dirB)) {
-        throw new IOException("Cannot split; target file collision at " + dirB);
-      }
+      Path dirB = getSplitDirForDaughter(splits, regionBInfo);
 
       // Now close the HRegion.  Close returns all store files or null if not
       // supposed to close (? What to do in this case? Implement abort of close?)
@@ -654,24 +658,39 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           h, splitRow, Range.top);
       }
 
-      // Done!
-      // Opening the region copies the splits files from the splits directory
-      // under each region.
-      HRegion regionA = new HRegion(basedir, log, fs, conf, regionAInfo, null);
-      regionA.initialize(dirA, null);
-      regionA.close();
-      HRegion regionB = new HRegion(basedir, log, fs, conf, regionBInfo, null);
-      regionB.initialize(dirB, null);
-      regionB.close();
+      // Create a region instance and then move the splits into place under
+      // regionA and regionB.
+      HRegion regionA =
+        HRegion.newHRegion(basedir, log, fs, conf, regionAInfo, null);
+      moveInitialFilesIntoPlace(this.fs, dirA, regionA.getRegionDir());
+      HRegion regionB =
+        HRegion.newHRegion(basedir, log, fs, conf, regionBInfo, null);
+      moveInitialFilesIntoPlace(this.fs, dirB, regionB.getRegionDir());
 
-      // Cleanup
-      boolean deleted = fs.delete(splits, true); // Get rid of splits directory
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
-      }
       HRegion regions[] = new HRegion [] {regionA, regionB};
       return regions;
     }
+  }
+
+  /*
+   * Get the daughter directories in the splits dir.  The splits dir is under
+   * the parent regions' directory.
+   * @param splits
+   * @param hri
+   * @return Path to split dir.
+   * @throws IOException
+   */
+  private Path getSplitDirForDaughter(final Path splits, final HRegionInfo hri)
+  throws IOException {
+    Path d =
+      new Path(splits, Integer.toString(hri.getEncodedName()));
+    if (fs.exists(d)) {
+      // This should never happen; the splits dir will be newly made when we
+      // come in here.  Even if we crashed midway through a split, the reopen
+      // of the parent region clears out the dir in its initialize method.
+      throw new IOException("Cannot split; target file collision at " + d);
+    }
+    return d;
   }
   
   protected void prepareToSplit() {
