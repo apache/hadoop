@@ -218,6 +218,7 @@ Release 0.21.0 - Unreleased
                since move to Mavenized build 
    HBASE-2276  Hbase Shell hcd() method is broken by the replication scope 
                parameter (Alexey Kovyrin via Lars George)
+   HBASE-2244  META gets inconsistent in a number of crash scenarios
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
