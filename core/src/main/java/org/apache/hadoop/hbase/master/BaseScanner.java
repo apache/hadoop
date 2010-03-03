@@ -342,9 +342,8 @@ abstract class BaseScanner extends Chore implements HConstants {
     if (!references) return references;
     if (!verifyDaughterRowPresent(rowContent, qualifier, srvr, metaRegionName,
         hri, parent)) {
-      // If we got here, we added a daughter region to metatable. Update
-      // parent row that daughter has been verified present so we don't check
-      // for it by doing a get each time through here.
+      // If we got here, then the parent row does not yet have the
+      // "daughter row verified present" marker present. Add it.
       addDaughterRowChecked(metaRegionName, srvr, parent.getRegionName(), hri,
         qualifier);
     }
@@ -360,8 +359,8 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param metaRegionName
    * @param daughterHRI
    * @throws IOException
-   * @return True, if the daughter row is present in meta.  If false, this
-   * method just added it to meta.
+   * @return True, if parent row has marker for "daughter row verified present"
+   * else, false (and will do fixup adding daughter if daughter not present).
    */
   private boolean verifyDaughterRowPresent(final Result rowContent,
       final byte [] daughter, final HRegionInterface srvr,
