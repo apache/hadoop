@@ -35,17 +35,24 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RpcClientException;
+import org.apache.hadoop.ipc.RpcServerException;
+import org.apache.hadoop.ipc.UnexpectedServerException;
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * The FileContext class provides an interface to the application writer for
- * using the Hadoop filesystem.
+ * using the Hadoop file system.
  * It provides a set of methods for the usual operation: create, open, 
  * list, etc 
  * 
@@ -53,24 +60,26 @@ import org.apache.hadoop.io.IOUtils;
  * <b> *** Path Names *** </b>
  * <p>
  * 
- * The Hadoop filesystem supports a URI name space and URI names.
- * It offers a a forest of filesystems that can be referenced using fully
+ * The Hadoop file system supports a URI name space and URI names.
+ * It offers a forest of file systems that can be referenced using fully
  * qualified URIs.
- * Two common Hadoop filesystems implementations are
+ * Two common Hadoop file systems implementations are
  * <ul>
- * <li> the local filesystem: file:///path
- * <li> the hdfs filesystem hdfs://nnAddress:nnPort/path
- * </ul>  
+ * <li> the local file system: file:///path
+ * <li> the hdfs file system hdfs://nnAddress:nnPort/path
+ * </ul>
+ * 
  * While URI names are very flexible, it requires knowing the name or address
  * of the server. For convenience one often wants to access the default system
  * in one's environment without knowing its name/address. This has an
  * additional benefit that it allows one to change one's default fs
  *  (e.g. admin moves application from cluster1 to cluster2).
- *  <p>
- * To facilitate this, Hadoop supports a notion of a default filesystem.
- * The user can set his default filesystem, although this is
+ * <p>
+ * 
+ * To facilitate this, Hadoop supports a notion of a default file system.
+ * The user can set his default file system, although this is
  * typically set up for you in your environment via your default config.
- * A default filesystem implies a default scheme and authority; slash-relative
+ * A default file system implies a default scheme and authority; slash-relative
  * names (such as /for/bar) are resolved relative to that default FS.
  * Similarly a user can also have working-directory-relative names (i.e. names
  * not starting with a slash). While the working directory is generally in the
@@ -78,11 +87,12 @@ import org.apache.hadoop.io.IOUtils;
  * <p>
  *  Hence Hadoop path names can be one of:
  *  <ul>
- *  <li> fully qualified URI:  scheme://authority/path
- *  <li> slash relative names: /path    - relative to the default filesystem
- *  <li> wd-relative names:    path        - relative to the working dir
+ *  <li> fully qualified URI: scheme://authority/path
+ *  <li> slash relative names: /path relative to the default file system
+ *  <li> wd-relative names: path  relative to the working dir
  *  </ul>   
  *  Relative paths with scheme (scheme:foo/bar) are illegal.
+ *  
  *  <p>
  *  <b>****The Role of the FileContext and configuration defaults****</b>
  *  <p>
@@ -94,16 +104,17 @@ import org.apache.hadoop.io.IOUtils;
  *  <li> default file system i.e your slash)
  *  <li> umask
  *  </ul>
- *   in general, are obtained from the default configuration file
+ *  in general, are obtained from the default configuration file
  *  in your environment,  (@see {@link Configuration}).
+ *  
  *  No other configuration parameters are obtained from the default config as 
- *  far as the file context layer is concerned. All filesystem instances
- *  (i.e. deployments of filesystems) have default properties; we call these
+ *  far as the file context layer is concerned. All file system instances
+ *  (i.e. deployments of file systems) have default properties; we call these
  *  server side (SS) defaults. Operation like create allow one to select many 
  *  properties: either pass them in as explicit parameters or use
  *  the SS properties.
  *  <p>
- *  The filesystem related SS defaults are
+ *  The file system related SS defaults are
  *  <ul>
  *  <li> the home directory (default is "/user/userName")
  *  <li> the initial wd (only for local fs)
@@ -151,7 +162,6 @@ import org.apache.hadoop.io.IOUtils;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
-
 public final class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
@@ -216,7 +226,6 @@ public final class FileContext {
    * Hence this method is not called makeAbsolute() and 
    * has been deliberately declared private.
    */
-
   private Path fixRelativePart(Path p) {
     if (p.isUriPathAbsolute()) {
       return p;
@@ -249,26 +258,28 @@ public final class FileContext {
   /**
    * Pathnames with scheme and relative path are illegal.
    * @param path to be checked
-   * @throws IllegalArgumentException if of type scheme:foo/bar
    */
   private static void checkNotSchemeWithRelative(final Path path) {
     if (path.toUri().isAbsolute() && !path.isUriPathAbsolute()) {
-      throw new IllegalArgumentException(
+      throw new HadoopIllegalArgumentException(
           "Unsupported name: has scheme but relative path-part");
     }
   }
-  
+
   /**
-   * Get the filesystem of supplied path.
+   * Get the file system of supplied path.
+   * 
    * @param absOrFqPath - absolute or fully qualified path
-   * @return the filesystem of the path
-   * @throws IOException
+   * @return the file system of the path
+   * 
+   * @throws UnsupportedFileSystemException If the file system for
+   *           <code>absOrFqPath</code> is not supported.
    */
   private AbstractFileSystem getFSofPath(final Path absOrFqPath)
-    throws IOException {
+      throws UnsupportedFileSystemException {
     checkNotSchemeWithRelative(absOrFqPath);
     if (!absOrFqPath.isAbsolute() && absOrFqPath.toUri().getScheme() == null) {
-      throw new IllegalArgumentException(
+      throw new HadoopIllegalArgumentException(
           "FileContext Bug: path is relative");
     }
 
@@ -286,31 +297,29 @@ public final class FileContext {
    * Protected Static Factory methods for getting a FileContexts
    * that take a AbstractFileSystem as input. To be used for testing.
    */
-  
+
   /**
-   * Create a FileContext with specified FS as default 
-   * using the specified config.
+   * Create a FileContext with specified FS as default using the specified
+   * config.
    * 
    * @param defFS
    * @param aConf
    * @return new FileContext with specifed FS as default.
-   * @throws IOException if the filesystem with specified cannot be created
    */
   protected static FileContext getFileContext(final AbstractFileSystem defFS,
-                    final Configuration aConf) throws IOException {
+                    final Configuration aConf) {
     return new FileContext(defFS, FsPermission.getUMask(aConf), aConf);
   }
   
   /**
-   * Create a FileContext for specified filesystem using the default config.
+   * Create a FileContext for specified file system using the default config.
    * 
    * @param defaultFS
    * @return a FileContext with the specified AbstractFileSystem
    *                 as the default FS.
-   * @throws IOException if the filesystem with specified cannot be created
    */
   protected static FileContext getFileContext(
-    final AbstractFileSystem defaultFS) throws IOException {
+    final AbstractFileSystem defaultFS) {
     return getFileContext(defaultFS, new Configuration());
   }
  
@@ -330,80 +339,86 @@ public final class FileContext {
    * The conf is passed to lower layers like AbstractFileSystem and HDFS which
    * pick up their own config variables.
    */
-   
+
   /**
    * Create a FileContext using the default config read from the
-   * $HADOOP_CONFIG/core.xml,
-   * Unspecified key-values for config are defaulted from core-defaults.xml
-   * in the release jar.
+   * $HADOOP_CONFIG/core.xml, Unspecified key-values for config are defaulted
+   * from core-defaults.xml in the release jar.
    * 
-   * @throws IOException if default filesystem in the config  cannot be created
+   * @throws UnsupportedFileSystemException If the file system from the default
+   *           configuration is not supported
    */
-  public static FileContext getFileContext() throws IOException {
+  public static FileContext getFileContext()
+      throws UnsupportedFileSystemException {
     return getFileContext(new Configuration());
-  } 
-  
+  }
+
   /**
-   * 
-   * @return a FileContext for the local filesystem using the default config.
-   * @throws IOException 
+   * @return a FileContext for the local file system using the default config.
+   * @throws UnsupportedFileSystemException If the file system for
+   *           {@link FsConstants#LOCAL_FS_URI} is not supported.
    */
-  public static FileContext getLocalFSFileContext() throws IOException {
+  public static FileContext getLocalFSFileContext()
+      throws UnsupportedFileSystemException {
     if (localFsSingleton == null) {
       localFsSingleton = getFileContext(FsConstants.LOCAL_FS_URI); 
     }
     return localFsSingleton;
   }
 
-  
   /**
    * Create a FileContext for specified URI using the default config.
    * 
    * @param defaultFsUri
    * @return a FileContext with the specified URI as the default FS.
-   * @throws IOException if the filesysem with specified cannot be created
+   * 
+   * @throws UnsupportedFileSystemException If the file system for
+   *           <code>defaultFsUri</code> is not supported
    */
   public static FileContext getFileContext(final URI defaultFsUri)
-    throws IOException {
+      throws UnsupportedFileSystemException {
     return getFileContext(defaultFsUri, new Configuration());
   }
-  
+
   /**
    * Create a FileContext for specified default URI using the specified config.
    * 
    * @param defaultFsUri
    * @param aConf
    * @return new FileContext for specified uri
-   * @throws IOException if the filesysem with specified cannot be created
+   * @throws UnsupportedFileSystemException If the file system with specified is
+   *           not supported
    */
   public static FileContext getFileContext(final URI defaultFsUri,
-                    final Configuration aConf) throws IOException {
+      final Configuration aConf) throws UnsupportedFileSystemException {
     return getFileContext(AbstractFileSystem.get(defaultFsUri,  aConf), aConf);
   }
 
   /**
-   * Create a FileContext using the passed config.
-   * Generally it is better to use {@link #getFileContext(URI, Configuration)}
-   * instead of this one.
+   * Create a FileContext using the passed config. Generally it is better to use
+   * {@link #getFileContext(URI, Configuration)} instead of this one.
    * 
    * 
    * @param aConf
    * @return new FileContext
-   * @throws IOException  if default filesystem in the config  cannot be created
+   * @throws UnsupportedFileSystemException If file system in the config
+   *           is not supported
    */
   public static FileContext getFileContext(final Configuration aConf)
-    throws IOException {
+      throws UnsupportedFileSystemException {
     return getFileContext(URI.create(FsConfig.getDefaultFsURI(aConf)), aConf);
   }
-  
-  
+
   /**
    * @param aConf - from which the FileContext is configured
-   * @return a FileContext for the local filesystem using the specified config.
-   * @throws IOException 
+   * @return a FileContext for the local file system using the specified config.
+   * 
+   * @throws UnsupportedFileSystemException If default file system in the config
+   *           is not supported
+   * 
    */
   public static FileContext getLocalFSFileContext(final Configuration aConf)
-    throws IOException {
+      throws UnsupportedFileSystemException {
     return getFileContext(FsConstants.LOCAL_FS_URI, aConf);
   }
 
@@ -469,48 +484,68 @@ public final class FileContext {
    * Make the path fully qualified if it is isn't. 
    * A Fully-qualified path has scheme and authority specified and an absolute
    * path.
-   * Use the default filesystem and working dir in this FileContext to qualify.
+   * Use the default file system and working dir in this FileContext to qualify.
    * @param path
    * @return qualified path
    */
   public Path makeQualified(final Path path) {
     return path.makeQualified(defaultFS.getUri(), getWorkingDirectory());
-  } 
+  }
 
-  
   /**
-   * Create or overwrite file on indicated path and returns an output stream
-   * for writing into the file.
-   * @param f the file name to open
-   * @param createFlag gives the semantics  of create: overwrite, append etc.
-   * @param opts  - varargs of CreateOpt:
-   * <ul>
-   * <li>   Progress - to report progress on the operation - default null
-   * <li>   Permission - umask is applied against permisssion:
-   *                  default is FsPermissions:getDefault()
-
-   * <li>   CreateParent - create missing parent path; default is to not
-   *                   create parents
-   * <li> The defaults for the following are  SS defaults of the
-   *      file server implementing the target path. 
-   *      Not all parameters make sense for all kinds of filesystem
-   *                - eg. localFS ignores Blocksize, replication, checksum
-   * <ul>
-   * <li>  BufferSize - buffersize used in FSDataOutputStream
-   * <li>  Blocksize - block size for file blocks
-   * <li>  ReplicationFactor - replication for blocks
-   * <li>  BytesPerChecksum - bytes per checksum
-   * </ul>
-   * </ul>
-   *                       
-   * @throws IOException
+   * Create or overwrite file on indicated path and returns an output stream for
+   * writing into the file.
    * 
-   * @see #setPermission(Path, FsPermission)
+   * @param f the file name to open
+   * @param createFlag gives the semantics of create: overwrite, append etc.
+   * @param opts file creation options; see {@link Options.CreateOpts}.
+   *          <ul>
+   *          <li>Progress - to report progress on the operation - default null
+   *          <li>Permission - umask is applied against permisssion: default is
+   *          FsPermissions:getDefault()
+   * 
+   *          <li>CreateParent - create missing parent path; default is to not
+   *          to create parents
+   *          <li>The defaults for the following are SS defaults of the file
+   *          server implementing the target path. Not all parameters make sense
+   *          for all kinds of file system - eg. localFS ignores Blocksize,
+   *          replication, checksum
+   *          <ul>
+   *          <li>BufferSize - buffersize used in FSDataOutputStream
+   *          <li>Blocksize - block size for file blocks
+   *          <li>ReplicationFactor - replication for blocks
+   *          <li>BytesPerChecksum - bytes per checksum
+   *          </ul>
+   *          </ul>
+   * 
+   * @return {@link FSDataOutputStream} for created file
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileAlreadyExistsException If file <code>f</code> already exists
+   * @throws FileNotFoundException If parent of <code>f</code> does not exist
+   *           and <code>createParent</code> is false
+   * @throws ParentNotDirectoryException If parent of <code>f</code> is not a
+   *           directory.
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   * 
+   * RuntimeExceptions:
+   * @throws InvalidPathException If path <code>f</code> is not valid
    */
   public FSDataOutputStream create(final Path f,
-                                   final EnumSet<CreateFlag> createFlag,
-                                   Options.CreateOpts... opts)
-    throws IOException {
+      final EnumSet<CreateFlag> createFlag, Options.CreateOpts... opts)
+      throws AccessControlException, FileAlreadyExistsException,
+      FileNotFoundException, ParentNotDirectoryException,
+      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
     Path absF = fixRelativePart(f);
 
     // If one of the options is a permission, extract it & apply umask
@@ -532,21 +567,41 @@ public final class FileContext {
       }
     }.resolve(this, absF);
   }
-  
+
   /**
-   * Make the given file and all non-existent parents into
-   * directories.
+   * Make(create) a directory and all the non-existent parents.
    * 
    * @param dir - the dir to make
    * @param permission - permissions is set permission&~umask
-   * @param createParent - if true then missing parent dirs are created
-   *                       if false then parent must exist
-   * @throws IOException when operation fails not authorized or 
-   *   if parent does not exist and createParent is false.
+   * @param createParent - if true then missing parent dirs are created if false
+   *          then parent must exist
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileAlreadyExistsException If directory <code>dir</code> already
+   *           exists
+   * @throws FileNotFoundException If parent of <code>dir</code> does not exist
+   *           and <code>createParent</code> is false
+   * @throws ParentNotDirectoryException If parent of <code>dir</code> is not a
+   *           directory
+   * @throws UnresolvedLinkException If symbolic link <code>dir</code> could not
+   *           be resolved
+   * @throws UnsupportedFileSystemException If file system for <code>dir</code>
+   *         is not supported
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   * 
+   * RuntimeExceptions:
+   * @throws InvalidPathException If path <code>dir</code> is not valid
    */
   public void mkdir(final Path dir, final FsPermission permission,
-      final boolean createParent)
-    throws IOException {
+      final boolean createParent) throws AccessControlException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, UnresolvedLinkException,
+      UnsupportedFileSystemException, IOException {
     final Path absDir = fixRelativePart(dir);
     final FsPermission absFerms = (permission == null ? 
           FsPermission.getDefault() : permission).applyUMask(umask);
@@ -564,12 +619,28 @@ public final class FileContext {
    * @param f the path to delete.
    * @param recursive if path is a directory and set to 
    * true, the directory is deleted else throws an exception. In
-   * case of a file the recursive can be set to either true or false. 
-   * @return  true if delete is successful else false. 
-   * @throws IOException
+   * case of a file the recursive can be set to either true or false.
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   * 
+   * RuntimeExceptions:
+   * @throws InvalidPathException If path <code>f</code> is invalid
    */
-  public boolean delete(final Path f, final boolean recursive) 
-    throws IOException {
+  public boolean delete(final Path f, final boolean recursive)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
     Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
       public Boolean next(final AbstractFileSystem fs, final Path p) 
@@ -583,8 +654,24 @@ public final class FileContext {
    * Opens an FSDataInputStream at the indicated Path using
    * default buffersize.
    * @param f the file name to open
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If file <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code>
+   *         is not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public FSDataInputStream open(final Path f) throws IOException {
+  public FSDataInputStream open(final Path f) throws AccessControlException,
+      FileNotFoundException, UnsupportedFileSystemException,
+      UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FSDataInputStream>() {
       public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
@@ -596,11 +683,27 @@ public final class FileContext {
 
   /**
    * Opens an FSDataInputStream at the indicated Path.
+   * 
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If file <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
   public FSDataInputStream open(final Path f, final int bufferSize)
-    throws IOException {
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FSDataInputStream>() {
       public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
@@ -610,17 +713,29 @@ public final class FileContext {
     }.resolve(this, absF);
   }
 
- /**
-  * Set replication for an existing file.
-  * 
-  * @param f file name
-  * @param replication new replication
-  * @throws IOException
-  * @return true if successful;
-  *         false if file does not exist or is a directory
-  */
+  /**
+   * Set replication for an existing file.
+   * 
+   * @param f file name
+   * @param replication new replication
+   *
+   * @return true if successful
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If file <code>f</code> does not exist
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   */
   public boolean setReplication(final Path f, final short replication)
-    throws IOException {
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
       public Boolean next(final AbstractFileSystem fs, final Path p) 
@@ -639,25 +754,44 @@ public final class FileContext {
    * <li>Fails if the parent of dst does not exist or is a file.
    * </ul>
    * <p>
-   * If OVERWRITE option is not passed as an argument, rename fails
-   * if the dst already exists.
+   * If OVERWRITE option is not passed as an argument, rename fails if the dst
+   * already exists.
    * <p>
-   * If OVERWRITE option is passed as an argument, rename overwrites
-   * the dst if it is a file or an empty directory. Rename fails if dst is
-   * a non-empty directory.
+   * If OVERWRITE option is passed as an argument, rename overwrites the dst if
+   * it is a file or an empty directory. Rename fails if dst is a non-empty
+   * directory.
    * <p>
    * Note that atomicity of rename is dependent on the file system
-   * implementation. Please refer to the file system documentation for
-   * details
+   * implementation. Please refer to the file system documentation for details
    * <p>
    * 
    * @param src path to be renamed
    * @param dst new path after rename
-   * @throws IOException on failure
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileAlreadyExistsException If <code>dst</code> already exists and
+   *           <code>options</options> has {@link Rename#OVERWRITE} option
+   *           false.
+   * @throws FileNotFoundException If <code>src</code> does not exist
+   * @throws ParentNotDirectoryException If parent of <code>dst</code> is not a
+   *           directory
+   * @throws UnsupportedFileSystemException If file system for <code>src</code>
+   *           and <code>dst</code> is not supported
+   * @throws UnresolvedLinkException If symbolic link <code>src</code> or
+   *           <code>dst</code> could not be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
    */
-
   public void rename(final Path src, final Path dst,
-      final Options.Rename... options) throws IOException {
+      final Options.Rename... options) throws AccessControlException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, UnsupportedFileSystemException,
+      UnresolvedLinkException, IOException {
     final Path absSrc  = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
     AbstractFileSystem srcFS = getFSofPath(absSrc);
@@ -687,9 +821,24 @@ public final class FileContext {
    * Set permission of a path.
    * @param f
    * @param permission - the new absolute permission (umask is not applied)
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code>
+   *         is not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
   public void setPermission(final Path f, final FsPermission permission)
-    throws IOException {
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -701,16 +850,37 @@ public final class FileContext {
   }
 
   /**
-   * Set owner of a path (i.e. a file or a directory).
-   * The parameters username and groupname cannot both be null.
+   * Set owner of a path (i.e. a file or a directory). The parameters username
+   * and groupname cannot both be null.
+   * 
    * @param f The path
    * @param username If it is null, the original username remains unchanged.
    * @param groupname If it is null, the original groupname remains unchanged.
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   * 
+   * RuntimeExceptions:
+   * @throws HadoopIllegalArgumentException If <code>username</code> or
+   *           <code>groupname</code> is invalid.
    */
   public void setOwner(final Path f, final String username,
-                       final String groupname) throws IOException {
+      final String groupname) throws AccessControlException,
+      UnsupportedFileSystemException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
     if ((username == null) && (groupname == null)) {
-      throw new IllegalArgumentException(
+      throw new HadoopIllegalArgumentException(
           "username and groupname cannot both be null");
     }
     final Path absF = fixRelativePart(f);
@@ -732,9 +902,24 @@ public final class FileContext {
    * @param atime Set the access time of this file.
    *        The number of milliseconds since Jan 1, 1970. 
    *        A value of -1 means that this call should not set access time.
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
   public void setTimes(final Path f, final long mtime, final long atime)
-    throws IOException {
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -748,12 +933,27 @@ public final class FileContext {
   /**
    * Get the checksum of a file.
    *
-   * @param f The file path
+   * @param f file path
+   *
    * @return The file checksum.  The default return value is null,
    *  which indicates that no checksum algorithm is implemented
    *  in the corresponding FileSystem.
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public FileChecksum getFileChecksum(final Path f) throws IOException {
+  public FileChecksum getFileChecksum(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileChecksum>() {
       public FileChecksum next(final AbstractFileSystem fs, final Path p) 
@@ -764,16 +964,27 @@ public final class FileContext {
   }
 
   /**
-   * Set the verify checksum flag for the  filesystem denoted by the path.
+   * Set the verify checksum flag for the  file system denoted by the path.
    * This is only applicable if the 
    * corresponding FileSystem supports checksum. By default doesn't do anything.
    * @param verifyChecksum
-   * @param f - set the verifyChecksum for the Filesystem containing this path
-   * @throws IOException 
+   * @param f set the verifyChecksum for the Filesystem containing this path
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-
   public void setVerifyChecksum(final boolean verifyChecksum, final Path f)
-    throws IOException {
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
     final Path absF = resolve(fixRelativePart(f));
     getFSofPath(absF).setVerifyChecksum(verifyChecksum);
   }
@@ -781,11 +992,26 @@ public final class FileContext {
   /**
    * Return a file status object that represents the path.
    * @param f The path we want information from
+   *
    * @return a FileStatus object
-   * @throws FileNotFoundException when the path does not exist;
-   *         IOException see specific implementation
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public FileStatus getFileStatus(final Path f) throws IOException {
+  public FileStatus getFileStatus(final Path f) throws AccessControlException,
+      FileNotFoundException, UnsupportedFileSystemException,
+      UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileStatus>() {
       public FileStatus next(final AbstractFileSystem fs, final Path p) 
@@ -831,10 +1057,16 @@ public final class FileContext {
    * file system does not support symbolic links.
    * @param  f The path we want information from.
    * @return A FileStatus object
-   * @throws FileNotFoundException when the path does not exist;
-   *         IOException see specific implementation.
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
    */
-  public FileStatus getFileLinkStatus(final Path f) throws IOException {
+  public FileStatus getFileLinkStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileStatus>() {
       public FileStatus next(final AbstractFileSystem fs, final Path p) 
@@ -853,10 +1085,15 @@ public final class FileContext {
    * Transparently resolves all links up to the final path component.
    * @param f
    * @return The un-interpreted target of the symbolic link.
-   * @throws FileNotFoundException when the path does not exist;
-   *         IOException if the last path component of f is not a symlink.
+   * 
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If path <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
    */
-  public Path getLinkTarget(final Path f) throws IOException {
+  public Path getLinkTarget(final Path f) throws AccessControlException,
+      FileNotFoundException, UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<Path>() {
       public Path next(final AbstractFileSystem fs, final Path p) 
@@ -874,18 +1111,35 @@ public final class FileContext {
    * This call is most helpful with DFS, where it returns 
    * hostnames of machines that contain the given file.
    * 
-   * @param p - get blocklocations of this file
+   * @param f - get blocklocations of this file
    * @param start position (byte offset)
    * @param len (in bytes)
+   *
    * @return block locations for given file at specified offset of len
-   * @throws IOException
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
+   * 
+   * RuntimeExceptions:
+   * @throws InvalidPathException If path <code>f</code> is invalid
    */
-  
   @InterfaceAudience.LimitedPrivate({Project.HDFS, Project.MAPREDUCE})
   @InterfaceStability.Evolving
-  public BlockLocation[] getFileBlockLocations(final Path p, 
-    final long start, final long len) throws IOException {
-    final Path absF = fixRelativePart(p);
+  public BlockLocation[] getFileBlockLocations(final Path f, final long start,
+      final long len) throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+    final Path absF = fixRelativePart(f);
     return new FSLinkResolver<BlockLocation[]>() {
       public BlockLocation[] next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
@@ -896,18 +1150,33 @@ public final class FileContext {
   
   /**
    * Returns a status object describing the use and capacity of the
-   * filesystem denoted by the Path argument p.
-   * If the filesystem has multiple partitions, the
+   * file system denoted by the Parh argument p.
+   * If the file system has multiple partitions, the
    * use and capacity of the partition pointed to by the specified
    * path is reflected.
    * 
    * @param f Path for which status should be obtained. null means the
-   * root partition of the default filesystem. 
+   * root partition of the default file system. 
+   *
    * @return a FsStatus object
-   * @throws IOException
-   *           see specific implementation
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public FsStatus getFsStatus(final Path f) throws IOException {
+  public FsStatus getFsStatus(final Path f) throws AccessControlException,
+      FileNotFoundException, UnsupportedFileSystemException,
+      UnresolvedLinkException, IOException {
     if (f == null) {
       return defaultFS.getFsStatus();
     }
@@ -988,10 +1257,24 @@ public final class FileContext {
    * @param link the path to be created that points to target
    * @param createParent if true then missing parent dirs are created if 
    *                     false then parent must exist
-   * @throws IOException
+   *
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileAlreadyExistsException If file <code>linkcode> already exists
+   * @throws FileNotFoundException If <code>target</code> does not exist
+   * @throws ParentNotDirectoryException If parent of <code>link</code> is not a
+   *           directory.
+   * @throws UnresolvedLinkException If symbolic link <code>target</code> could not
+   *           be resolved
+   * @throws UnsupportedFileSystemException If file system for 
+   *           <code>target</code> or <code>link</code> is not supported
+   * @throws IOException If an I/O error occurred
    */
-  public void createSymlink(final Path target, final Path link, 
-    final boolean createParent) throws IOException { 
+  public void createSymlink(final Path target, final Path link,
+      final boolean createParent) throws AccessControlException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, UnresolvedLinkException,
+      UnsupportedFileSystemException, IOException { 
     final Path nonRelLink = fixRelativePart(link);
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -1007,11 +1290,25 @@ public final class FileContext {
    * Note: Avoid using this method if you already have FileStatus in hand.
    * Instead reuse the FileStatus 
    * @param f the  file or dir to be checked
+   *
+   * @throws AccessControlException If access is denied
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public boolean exists(final Path f) throws IOException {
+  public boolean exists(final Path f) throws AccessControlException,
+      IOException {
     try {
       return getFileStatus(f) != null;
     } catch (FileNotFoundException e) {
+      return false;
+    } catch (UnsupportedFileSystemException e) {
+      return false;
+    } catch (UnresolvedLinkException e) {
       return false;
     }
   }
@@ -1023,24 +1320,50 @@ public final class FileContext {
    * returned by getFileStatus() or listStatus() methods.
    * 
    * @param f Path to evaluate
+   *
    * @return True iff the named path is a directory.
-   * @throws IOException
+   *
+   * @throws AccessControlException If access is denied
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public boolean isDirectory(final Path f) throws IOException {
+  public boolean isDirectory(final Path f) throws AccessControlException,
+      UnsupportedFileSystemException, IOException {
     try {
       final Path absF = fixRelativePart(f);
       return getFileStatus(absF).isDir();
     } catch (FileNotFoundException e) {
-      return false;               // f does not exist
+      return false;
     }
   }
 
   /** True iff the named path is a regular file.
    * Note: Avoid using this method  if you already have FileStatus in hand
-   * Instead reuse the FileStatus 
-   * returned by getFileStatus() or listStatus() methods.
+   * Instead reuse the FileStatus returned by getFileStatus() or listStatus()
+   * methods.
+   *
+   * @param f Path to evaluate
+   *
+   * @throws AccessControlException If access is denied
+   * @throws UnsupportedFileSystemException If file system for <code>f</code>
+   *         is not supported
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public boolean isFile(final Path f) throws IOException {
+  public boolean isFile(final Path f) throws AccessControlException,
+      UnsupportedFileSystemException, IOException {
     try {
       final Path absF = fixRelativePart(f);
       return !getFileStatus(absF).isDir();
@@ -1054,10 +1377,26 @@ public final class FileContext {
    * a directory.
    * 
    * @param f is the path
+   *
    * @return the statuses of the files/directories in the given path
-   * @throws IOException
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+   *           be resolved
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public FileStatus[] listStatus(final Path f) throws IOException {
+  public FileStatus[] listStatus(final Path f) throws AccessControlException,
+      FileNotFoundException, UnsupportedFileSystemException,
+      UnresolvedLinkException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileStatus[]>() {
       public FileStatus[] next(final AbstractFileSystem fs, final Path p) 
@@ -1071,10 +1410,22 @@ public final class FileContext {
    * Mark a path to be deleted on JVM shutdown.
    * 
    * @param f the existing path to delete.
+   *
    * @return  true if deleteOnExit is successful, otherwise false.
-   * @throws IOException
+   *
+   * @throws AccessControlException If access is denied
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
+   * 
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws 
+   *           undeclared exception to RPC server
    */
-  public boolean deleteOnExit(Path f) throws IOException {
+  public boolean deleteOnExit(Path f) throws AccessControlException,
+      IOException {
     if (!exists(f)) {
       return false;
     }
@@ -1110,11 +1461,21 @@ public final class FileContext {
      * Return a list of file status objects that corresponds to supplied paths
      * excluding those non-existent paths.
      * 
-     * @param paths are the list of paths we want information from
+     * @param paths list of paths we want information from
+     *
      * @return a list of FileStatus objects
-     * @throws IOException
+     *
+     * @throws AccessControlException If access is denied
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
      */
-    private FileStatus[] getFileStatus(Path[] paths) throws IOException {
+    private FileStatus[] getFileStatus(Path[] paths)
+        throws AccessControlException, IOException {
       if (paths == null) {
         return null;
       }
@@ -1132,11 +1493,27 @@ public final class FileContext {
     
     /**
      * Return the {@link ContentSummary} of path f.
-     * @param f
+     * @param f path
+     *
      * @return the {@link ContentSummary} of path f.
-     * @throws IOException
+     *
+     * @throws AccessControlException If access is denied
+     * @throws FileNotFoundException If <code>f</code> does not exist
+     * @throws UnsupportedFileSystemException If file system for 
+     *         <code>f</code> is not supported
+     * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
+     *           be resolved
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
      */
-    public ContentSummary getContentSummary(Path f) throws IOException {
+    public ContentSummary getContentSummary(Path f)
+        throws AccessControlException, FileNotFoundException,
+        UnsupportedFileSystemException, UnresolvedLinkException, IOException {
       FileStatus status = FileContext.this.getFileStatus(f);
       if (!status.isDir()) {
         // f is a file
@@ -1155,15 +1532,10 @@ public final class FileContext {
     }
     
     /**
-     * Filter files/directories in the given list of paths using default
-     * path filter.
-     * 
-     * @param files is the list of paths
-     * @return a list of statuses for the files under the given paths after
-     *         applying the filter default Path filter
-     * @exception IOException
+     * See {@link #listStatus(Path[], PathFilter)}
      */
-    public FileStatus[] listStatus(Path[] files) throws IOException {
+    public FileStatus[] listStatus(Path[] files) throws AccessControlException,
+        FileNotFoundException, IOException {
       return listStatus(files, DEFAULT_FILTER);
     }
      
@@ -1173,13 +1545,25 @@ public final class FileContext {
      * 
      * @param f is the path name
      * @param filter is the user-supplied path filter
+     *
      * @return an array of FileStatus objects for the files under the given path
      *         after applying the filter
-     * @throws IOException
-     *           if encounter any problem while fetching the status
+     *
+     * @throws AccessControlException If access is denied
+     * @throws FileNotFoundException If <code>f</code> does not exist
+     * @throws UnsupportedFileSystemException If file system for 
+     *         <code>pathPattern</code> is not supported
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
      */
     public FileStatus[] listStatus(Path f, PathFilter filter)
-      throws IOException {
+        throws AccessControlException, FileNotFoundException,
+        UnsupportedFileSystemException, IOException {
       ArrayList<FileStatus> results = new ArrayList<FileStatus>();
       listStatus(results, f, filter);
       return results.toArray(new FileStatus[results.size()]);
@@ -1191,12 +1575,23 @@ public final class FileContext {
      * 
      * @param files is a list of paths
      * @param filter is the filter
+     *
      * @return a list of statuses for the files under the given paths after
      *         applying the filter
-     * @exception IOException
+     *
+     * @throws AccessControlException If access is denied
+     * @throws FileNotFoundException If a file in <code>files</code> does not 
+     *           exist
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
      */
     public FileStatus[] listStatus(Path[] files, PathFilter filter)
-      throws IOException {
+        throws AccessControlException, FileNotFoundException, IOException {
       ArrayList<FileStatus> results = new ArrayList<FileStatus>();
       for (int i = 0; i < files.length; i++) {
         listStatus(results, files[i], filter);
@@ -1209,7 +1604,8 @@ public final class FileContext {
      * filter. Results are added to the given array <code>results</code>.
      */
     private void listStatus(ArrayList<FileStatus> results, Path f,
-        PathFilter filter) throws IOException {
+        PathFilter filter) throws AccessControlException,
+        FileNotFoundException, IOException {
       FileStatus[] listing = FileContext.this.listStatus(f);
       if (listing != null) {
         for (int i = 0; i < listing.length; i++) {
@@ -1219,7 +1615,7 @@ public final class FileContext {
         }
       }
     }
-  
+
     /**
      * <p>Return all the files that match filePattern and are not checksum
      * files. Results are sorted by their names.
@@ -1273,11 +1669,23 @@ public final class FileContext {
      * </dl>
      *
      * @param pathPattern a regular expression specifying a pth pattern
-
+     *
      * @return an array of paths that match the path pattern
-     * @throws IOException
+     *
+     * @throws AccessControlException If access is denied
+     * @throws UnsupportedFileSystemException If file system for 
+     *         <code>pathPattern</code> is not supported
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
      */
-    public FileStatus[] globStatus(Path pathPattern) throws IOException {
+    public FileStatus[] globStatus(Path pathPattern)
+        throws AccessControlException, UnsupportedFileSystemException,
+        IOException {
       return globStatus(pathPattern, DEFAULT_FILTER);
     }
     
@@ -1288,15 +1696,25 @@ public final class FileContext {
      * Return null if pathPattern has no glob and the path does not exist.
      * Return an empty array if pathPattern has a glob and no path matches it. 
      * 
-     * @param pathPattern
-     *          a regular expression specifying the path pattern
-     * @param filter
-     *          a user-supplied path filter
+     * @param pathPattern regular expression specifying the path pattern
+     * @param filter user-supplied path filter
+     *
      * @return an array of FileStatus objects
-     * @throws IOException if any I/O error occurs when fetching file status
+     *
+     * @throws AccessControlException If access is denied
+     * @throws UnsupportedFileSystemException If file system for 
+     *         <code>pathPattern</code> is not supported
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
      */
     public FileStatus[] globStatus(final Path pathPattern,
-        final PathFilter filter) throws IOException {
+        final PathFilter filter) throws AccessControlException,
+        UnsupportedFileSystemException, IOException {
       URI uri = getFSofPath(fixRelativePart(pathPattern)).getUri();
 
       String filename = pathPattern.toUri().getPath();
@@ -1324,12 +1742,16 @@ public final class FileContext {
      * @param uri for all the inPathPattern
      * @param inPathPattern - without the scheme & authority (take from uri)
      * @param filter
-     * @return
-     * @throws IOException
+     *
+     * @return an array of FileStatus objects
+     *
+     * @throws AccessControlException If access is denied
+     * @throws IOException If an I/O error occurred
      */
-    private FileStatus[] globStatusInternal(
-        final URI uri, final Path inPathPattern, final PathFilter filter)
-      throws IOException {
+    private FileStatus[] globStatusInternal(final URI uri,
+        final Path inPathPattern, final PathFilter filter)
+        throws AccessControlException, IOException
+      {
       Path[] parents = new Path[1];
       int level = 0;
       
@@ -1415,7 +1837,8 @@ public final class FileContext {
      * components [<code>level</code>, <code>N-1</code>].
      */
     private Path[] globPathsLevel(Path[] parents, String[] filePattern,
-        int level, boolean[] hasGlob) throws IOException {
+        int level, boolean[] hasGlob) throws AccessControlException,
+        FileNotFoundException, IOException {
       if (level == filePattern.length - 1) {
         return parents;
       }
@@ -1435,13 +1858,13 @@ public final class FileContext {
     }
 
     /**
-     * Copy file from src to dest.
-     * @param src
-     * @param dst
-     * @return true if copy is successful
-     * @throws IOException
+     * Copy file from src to dest. See
+     * {@link #copy(Path, Path, boolean, boolean)}
      */
-    public boolean copy(final Path src, final Path dst)  throws IOException {
+    public boolean copy(final Path src, final Path dst)
+        throws AccessControlException, FileAlreadyExistsException,
+        FileNotFoundException, ParentNotDirectoryException,
+        UnresolvedLinkException, UnsupportedFileSystemException, IOException {
       return copy(src, dst, false, false);
     }
     
@@ -1452,12 +1875,34 @@ public final class FileContext {
      * @param deleteSource - delete src if true
      * @param overwrite  overwrite dst if true; throw IOException if dst exists
      *         and overwrite is false.
+     *
      * @return true if copy is successful
-     * @throws IOException
+     *
+     * @throws AccessControlException If access is denied
+     * @throws FileAlreadyExistsException If <code>dst</code> already exists
+     * @throws FileNotFoundException If <code>src</code> does not exist
+     * @throws ParentNotDirectoryException If parent of <code>dst</code> is not
+     *           a directory
+     * @throws UnresolvedLinkException If symbolic link <code>src</code> could 
+     *           not be resolved
+     * @throws UnsupportedFileSystemException If file system for 
+     *         <code>src</code> or <code>dst</code> is not supported
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
+     * 
+     * RuntimeExceptions:
+     * @throws InvalidPathException If path <code>dst</code> is invalid
      */
-    public boolean copy(final Path src,  final Path dst,
-        boolean deleteSource, boolean overwrite)
-      throws IOException {
+    public boolean copy(final Path src, final Path dst, boolean deleteSource,
+        boolean overwrite) throws AccessControlException,
+        FileAlreadyExistsException, FileNotFoundException,
+        ParentNotDirectoryException, UnresolvedLinkException,
+        UnsupportedFileSystemException, IOException {
       checkNotSchemeWithRelative(src);
       checkNotSchemeWithRelative(dst);
       Path qSrc = makeQualified(src);
@@ -1466,7 +1911,6 @@ public final class FileContext {
       if (isDirectory(qSrc)) {
         checkDependencies(qSrc, qDst);
         mkdir(qDst, FsPermission.getDefault(), true);
-
         FileStatus[] contents = FileContext.this.listStatus(qSrc);
         for (FileStatus content : contents) {
           copy(content.getPath(), new Path(qDst, content.getPath()),
@@ -1506,12 +1950,11 @@ public final class FileContext {
     /** Default pattern character: Character set close. */
     private static final char  PAT_SET_CLOSE = ']';
       
-    GlobFilter(final String filePattern) throws IOException {
+    GlobFilter(final String filePattern) {
       setRegex(filePattern);
     }
       
-    GlobFilter(final String filePattern, final PathFilter filter)
-      throws IOException {
+    GlobFilter(final String filePattern, final PathFilter filter) {
       userFilter = filter;
       setRegex(filePattern);
     }
@@ -1521,7 +1964,7 @@ public final class FileContext {
              pChar == '|' || pChar == '+';
     }
     
-    void setRegex(String filePattern) throws IOException {
+    void setRegex(String filePattern) {
       int len;
       int setOpen;
       int curlyOpen;
@@ -1613,10 +2056,9 @@ public final class FileContext {
       return regex.matcher(path.getName()).matches() && userFilter.accept(path);
     }
       
-    private void error(final String s, final String pattern, final int pos)
-      throws IOException {
-      throw new IOException("Illegal file pattern: "
-                            +s+ " for glob "+ pattern + " at " + pos);
+    private void error(final String s, final String pattern, final int pos) {
+      throw new HadoopIllegalArgumentException("Illegal file pattern: " + s
+          + " for glob " + pattern + " at " + pos);
     }
   }
   
@@ -1625,7 +2067,7 @@ public final class FileContext {
   // and overwrite is not true
   //
   private void checkDest(String srcName, Path dst, boolean overwrite)
-    throws IOException {
+      throws AccessControlException, IOException {
     if (exists(dst)) {
       if (isDirectory(dst)) {
       // TBD not very clear
@@ -1709,8 +2151,9 @@ public final class FileContext {
      * @param fs AbstractFileSystem to perform the operation on.
      * @param p Path given the file system.
      * @return Generic type determined by the specific implementation.
-     * @throws IOException on error.
-     * @throws UnresolvedLinkException when a symlink is encountered.
+     * @throws UnresolvedLinkException If symbolic link <code>path</code> could 
+     *           not be resolved
+     * @throws IOException an I/O error occured
      */
     public abstract T next(final AbstractFileSystem fs, final Path p) 
       throws IOException, UnresolvedLinkException;  

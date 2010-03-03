@@ -185,6 +185,9 @@ Trunk (unreleased changes)
    HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
    (Suresh Srinivas via Sanjay Radia)
 
+   HADOOP-6537 Declare more detailed exceptions in FileContext and AbstractFileSystem
+   (Suresh Srinivas via Sanjay Radia)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
