@@ -193,6 +193,9 @@ Trunk (unreleased changes)
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
     (mahadev via szetszwo)
 
+    HADOOP-6569. FsShell#cat should avoid calling unecessary getFileStatus
+    before opening a file to read. (hairong)
+
   BUG FIXES
 
     HADOOP-6293. Fix FsShell -text to work on filesystems other than the
