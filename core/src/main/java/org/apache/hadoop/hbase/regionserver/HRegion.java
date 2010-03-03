@@ -661,10 +661,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // Create a region instance and then move the splits into place under
       // regionA and regionB.
       HRegion regionA =
-        HRegion.newHRegion(basedir, log, fs, conf, regionAInfo, null);
+        new HRegion(basedir, log, fs, conf, regionAInfo, null);
       moveInitialFilesIntoPlace(this.fs, dirA, regionA.getRegionDir());
       HRegion regionB =
-        HRegion.newHRegion(basedir, log, fs, conf, regionBInfo, null);
+        new HRegion(basedir, log, fs, conf, regionBInfo, null);
       moveInitialFilesIntoPlace(this.fs, dirB, regionB.getRegionDir());
 
       HRegion regions[] = new HRegion [] {regionA, regionB};
