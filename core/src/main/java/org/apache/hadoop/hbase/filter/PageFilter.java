@@ -57,6 +57,10 @@ public class PageFilter implements Filter {
     this.pageSize = pageSize;
   }
 
+  public long getPageSize() {
+    return pageSize;
+  }
+
   public void reset() {
     // noop
   }

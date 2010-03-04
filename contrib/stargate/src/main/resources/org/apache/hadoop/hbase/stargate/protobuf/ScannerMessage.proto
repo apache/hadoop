@@ -25,4 +25,6 @@ message Scanner {
   optional int32 batch = 4;
   optional int64 startTime = 5;
   optional int64 endTime = 6;
+  optional int32 maxVersions = 7;
+  optional string filter = 8;
 }

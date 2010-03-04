@@ -28,6 +28,10 @@ public class ColumnCountGetFilter implements Filter {
     this.limit = n;
   }
 
+  public int getLimit() {
+    return limit;
+  }
+
   public boolean filterAllRemaining() {
     return this.count > this.limit;
   }

@@ -30,12 +30,13 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.filter.Filter;
 
 public class RowResultGenerator extends ResultGenerator {
   private Iterator<KeyValue> valuesI;
 
-  public RowResultGenerator(String tableName, RowSpec rowspec)
-      throws IllegalArgumentException, IOException {
+  public RowResultGenerator(final String tableName, final RowSpec rowspec,
+      final Filter filter) throws IllegalArgumentException, IOException {
     HTablePool pool = RESTServlet.getInstance().getTablePool(); 
     HTableInterface table = pool.getTable(tableName);
     try {
@@ -58,6 +59,9 @@ public class RowResultGenerator extends ResultGenerator {
       }
       get.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
       get.setMaxVersions(rowspec.getMaxVersions());
+      if (filter != null) {
+        get.setFilter(filter);
+      }
       Result result = table.get(get);
       if (result != null && !result.isEmpty()) {
         valuesI = result.list().iterator();

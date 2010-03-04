@@ -116,6 +116,34 @@ public class SingleColumnValueFilter implements Filter {
     this.comparator = comparator;
   }
 
+  /**
+   * @return operator
+   */
+  public CompareOp getOperator() {
+    return compareOp;
+  }
+
+  /**
+   * @return the comparator
+   */
+  public WritableByteArrayComparable getComparator() {
+    return comparator;
+  }
+
+  /**
+   * @return the family
+   */
+  public byte[] getFamily() {
+    return columnFamily;
+  }
+
+  /**
+   * @return the qualifier
+   */
+  public byte[] getQualifier() {
+    return columnQualifier;
+  }
+
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     // We don't filter on the row key... we filter later on column value so
     // always return false.

@@ -20,46 +20,21 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.util.Bytes;
-
 /**
  * A binary comparator which lexicographically compares against the specified 
  * byte array using {@link Bytes#compareTo(byte[], byte[])}.
  */
-public class BinaryComparator implements WritableByteArrayComparable {
-  
-  private byte [] value;
+public class BinaryComparator extends WritableByteArrayComparable {
+
+  /** Nullary constructor for Writable, do not use */
+  public BinaryComparator() { }
 
   /**
-   *  Writable constructor, do not use.
+   * Constructor
+   * @param value
    */
-  public BinaryComparator() {
+  public BinaryComparator(byte[] value) {
+    super(value);
   }
 
-  /**
-   * Constructor.
-   * @param value the value to compare against
-   */
-  public BinaryComparator(byte [] value) {
-    this.value = value;
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    value = Bytes.readByteArray(in);
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, value);
-  }
-
-  @Override
-  public int compareTo(byte [] value) {
-    return Bytes.compareTo(this.value, value);
-  }
 }

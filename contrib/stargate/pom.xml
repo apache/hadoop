@@ -15,7 +15,7 @@
 
   <properties>
     <jsr311.version>1.1.1</jsr311.version>
-    <protobuf.version>2.1.0</protobuf.version>
+    <protobuf.version>2.3.0</protobuf.version>
     <jersey.version>1.1.4.1</jersey.version>
   </properties>
 

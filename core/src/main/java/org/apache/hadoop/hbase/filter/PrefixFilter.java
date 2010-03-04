@@ -42,6 +42,10 @@ public class PrefixFilter implements Filter {
     super();
   }
 
+  public byte[] getPrefix() {
+    return prefix;
+  }
+
   public void reset() {
     // Noop
   }

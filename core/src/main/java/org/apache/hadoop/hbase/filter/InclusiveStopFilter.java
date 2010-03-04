@@ -45,6 +45,10 @@ public class InclusiveStopFilter implements Filter {
     this.stopRowKey = stopRowKey;
   }
 
+  public byte[] getStopRowKey() {
+    return this.stopRowKey;
+  }
+
   public void reset() {
     // noop, no state
   }

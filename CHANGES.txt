@@ -427,6 +427,7 @@ Release 0.21.0 - Unreleased
    HBASE-2257  [stargate] multiuser mode
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
    HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
+   HBASE-2274  [stargate] filter support: JSON descriptors
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

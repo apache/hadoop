@@ -48,33 +48,39 @@ import org.apache.hadoop.hbase.util.Bytes;
  *         "{3}[\\d]{1,3})?)(\\/[0-9]+)?"));
  * </pre>
  */
-public class RegexStringComparator implements WritableByteArrayComparable {
+public class RegexStringComparator extends WritableByteArrayComparable {
+
   private Pattern pattern;
 
-  /** Nullary constructor for Writable */
-  public RegexStringComparator() {
-    super();
-  }
+  /** Nullary constructor for Writable, do not use */
+  public RegexStringComparator() { }
 
   /**
    * Constructor
    * @param expr a valid regular expression
    */
   public RegexStringComparator(String expr) {
+    super(Bytes.toBytes(expr));
     this.pattern = Pattern.compile(expr);
   }
 
+  @Override
   public int compareTo(byte[] value) {
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
     return pattern.matcher(Bytes.toString(value)).find() ? 0 : 1;
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
-    this.pattern = Pattern.compile(in.readUTF());
+    String expr = in.readUTF();
+    this.value = Bytes.toBytes(expr);
+    this.pattern = Pattern.compile(expr);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(pattern.toString());
   }
+
 }

@@ -81,6 +81,20 @@ public abstract class CompareFilter implements Filter {
     this.comparator = comparator;
   }
 
+  /**
+   * @return operator
+   */
+  public CompareOp getOperator() {
+    return compareOp;
+  }
+
+  /**
+   * @return the comparator
+   */
+  public WritableByteArrayComparable getComparator() {
+    return comparator;
+  }
+
   public void reset() {
   }
 

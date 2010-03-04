@@ -20,8 +20,6 @@
 
 package org.apache.hadoop.hbase.stargate;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
@@ -40,6 +38,8 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.apache.hadoop.hbase.filter.Filter;
 
 import org.apache.hadoop.hbase.stargate.auth.User;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
@@ -83,7 +83,9 @@ public class ScannerResource implements Constants {
     RowSpec spec = new RowSpec(model.getStartRow(), endRow,
       model.getColumns(), model.getStartTime(), model.getEndTime(), 1);
     try {
-      ScannerResultGenerator gen = new ScannerResultGenerator(actualTableName, spec);
+      Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
+      ScannerResultGenerator gen = 
+        new ScannerResultGenerator(actualTableName, spec, filter);
       String id = gen.getID();
       ScannerInstanceResource instance = 
         new ScannerInstanceResource(actualTableName, id, gen, model.getBatch());
@@ -96,11 +98,11 @@ public class ScannerResource implements Constants {
       UriBuilder builder = uriInfo.getAbsolutePathBuilder();
       URI uri = builder.path(id).build();
       return Response.created(uri).build();
-    } catch (InvalidProtocolBufferException e) {
-      throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
     } catch (IOException e) {
       throw new WebApplicationException(e,
               Response.Status.SERVICE_UNAVAILABLE);
+    } catch (Exception e) {
+      throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
     }
   }
 

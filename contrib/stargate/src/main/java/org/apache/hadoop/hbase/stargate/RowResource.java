@@ -90,7 +90,7 @@ public class RowResource implements Constants {
     servlet.getMetrics().incrementRequests(1);
     try {
       ResultGenerator generator =
-        ResultGenerator.fromRowSpec(actualTableName, rowspec);
+        ResultGenerator.fromRowSpec(actualTableName, rowspec, null);
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
@@ -133,7 +133,7 @@ public class RowResource implements Constants {
     }
     try {
       ResultGenerator generator =
-        ResultGenerator.fromRowSpec(actualTableName, rowspec);
+        ResultGenerator.fromRowSpec(actualTableName, rowspec, null);
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }

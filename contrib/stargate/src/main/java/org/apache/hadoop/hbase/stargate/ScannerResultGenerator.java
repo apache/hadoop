@@ -33,19 +33,31 @@ import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 import org.apache.hadoop.util.StringUtils;
 
 public class ScannerResultGenerator extends ResultGenerator {
+
   private static final Log LOG =
     LogFactory.getLog(ScannerResultGenerator.class);
-  
+
+  public static Filter buildFilterFromModel(ScannerModel model) 
+      throws Exception {
+    String filter = model.getFilter();
+    if (filter == null || filter.length() == 0) {
+      return null;
+    }
+    return buildFilter(filter);
+  }
+
   private String id;
   private Iterator<KeyValue> rowI;
   private ResultScanner scanner;
   private Result cached;
 
-  public ScannerResultGenerator(String tableName, RowSpec rowspec)
-      throws IllegalArgumentException, IOException {
+  public ScannerResultGenerator(final String tableName, final RowSpec rowspec,
+      final Filter filter) throws IllegalArgumentException, IOException {
     HTablePool pool = RESTServlet.getInstance().getTablePool(); 
     HTableInterface table = pool.getTable(tableName);
     try {
@@ -59,7 +71,7 @@ public class ScannerResultGenerator extends ResultGenerator {
         byte[][] columns = rowspec.getColumns();
         for (byte[] column: columns) {
           byte[][] split = KeyValue.parseColumn(column);
-          if (split.length == 2 && split[1].length != 0) {
+          if (split.length > 1 && (split[1] != null && split[1].length != 0)) {
             scan.addColumn(split[0], split[1]);
           } else {
             scan.addFamily(split[0]);
@@ -73,6 +85,11 @@ public class ScannerResultGenerator extends ResultGenerator {
       }
       scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          
       scan.setMaxVersions(rowspec.getMaxVersions());
+      if (filter != null) {
+        scan.setFilter(filter);
+      }
+      // always disable block caching on the cluster
+      scan.setCacheBlocks(false);
       scanner = table.getScanner(scan);
       cached = null;
       id = Long.toString(System.currentTimeMillis()) +
@@ -145,4 +162,5 @@ public class ScannerResultGenerator extends ResultGenerator {
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }
+
 }

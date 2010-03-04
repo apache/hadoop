@@ -40,12 +40,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  *     new SubstringComparator("substr"));
  * </pre>
  */
-public class SubstringComparator implements WritableByteArrayComparable {
+public class SubstringComparator extends WritableByteArrayComparable {
 
   private String substr;
 
-  /** Nullary constructor for Writable */
+  /** Nullary constructor for Writable, do not use */
   public SubstringComparator() {
+    super();
   }
 
   /**
@@ -53,17 +54,28 @@ public class SubstringComparator implements WritableByteArrayComparable {
    * @param substr the substring
    */
   public SubstringComparator(String substr) {
+    super(Bytes.toBytes(substr.toLowerCase()));
     this.substr = substr.toLowerCase();
   }
 
+  @Override
+  public byte[] getValue() {
+    return Bytes.toBytes(substr);
+  }
+
+  @Override
   public int compareTo(byte[] value) {
     return Bytes.toString(value).toLowerCase().contains(substr) ? 0 : 1;
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
-    substr = in.readUTF();
+    String substr = in.readUTF();
+    this.value = Bytes.toBytes(substr);
+    this.substr = substr;
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(substr);
   }

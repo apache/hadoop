@@ -22,45 +22,28 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 /**
  * A comparator which compares against a specified byte array, but only compares
  * up to the length of this byte array. For the rest it is similar to
  * {@link BinaryComparator}.
  */ 
-public class BinaryPrefixComparator implements WritableByteArrayComparable {
-  private byte [] value;
+public class BinaryPrefixComparator extends WritableByteArrayComparable {
+
+  /** Nullary constructor for Writable, do not use */
+  public BinaryPrefixComparator() { }
 
   /**
-   *  Writable constructor, do not use.
+   * Constructor
+   * @param value
    */
-  public BinaryPrefixComparator() {
-  }
-
-  /**
-   * Constructor.
-   * @param value the value to compare against
-   */
-  public BinaryPrefixComparator(byte [] value) {
-    this.value = value;
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    value = Bytes.readByteArray(in);
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, value);
+  public BinaryPrefixComparator(byte[] value) {
+    super(value);
   }
 
   @Override
   public int compareTo(byte [] value) {
-    return Bytes.compareTo(this.value, 0, this.value.length, value, 0, this.value.length);
+    return Bytes.compareTo(this.value, 0, this.value.length, value, 0, 
+      this.value.length);
   }
 
 }

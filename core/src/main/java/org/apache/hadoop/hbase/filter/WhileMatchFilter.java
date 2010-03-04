@@ -45,6 +45,10 @@ public class WhileMatchFilter implements Filter {
     this.filter = filter;
   }
 
+  public Filter getFilter() {
+    return filter;
+  }
+
   public void reset() {
     this.filter.reset();
   }

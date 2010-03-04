@@ -56,6 +56,10 @@ public class SkipFilter implements Filter {
     this.filter = filter;
   }
 
+  public Filter getFilter() {
+    return filter;
+  }
+
   public void reset() {
     filter.reset();
     filterRow = false;

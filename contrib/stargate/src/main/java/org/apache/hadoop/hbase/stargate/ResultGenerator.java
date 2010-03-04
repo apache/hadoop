@@ -22,18 +22,28 @@ package org.apache.hadoop.hbase.stargate;
 
 import java.io.IOException;
 import java.util.Iterator;
-
+ 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.stargate.model.ScannerModel;
+
+import org.json.JSONObject;
 
 public abstract class ResultGenerator implements Iterator<KeyValue> {
-  public static ResultGenerator fromRowSpec(String table, RowSpec rowspec) 
-      throws IOException {
+
+  public static ResultGenerator fromRowSpec(final String table, 
+      final RowSpec rowspec, final Filter filter) throws IOException {
     if (rowspec.isSingleRow()) {
-      return new RowResultGenerator(table, rowspec);
+      return new RowResultGenerator(table, rowspec, filter);
     } else {
-      return new ScannerResultGenerator(table, rowspec);
+      return new ScannerResultGenerator(table, rowspec, filter);
     }
   }
 
+  public static Filter buildFilter(String filter) throws Exception {
+    return ScannerModel.buildFilter(new JSONObject(filter));
+  }
+
   public abstract void close();
+
 }
