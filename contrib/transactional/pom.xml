@@ -13,6 +13,18 @@
     <version>0.21.0-SNAPSHOT</version>
   </parent>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkMode>always</forkMode>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -22,6 +34,10 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>hbase-core</artifactId>
       <classifier>tests</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-core-test</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

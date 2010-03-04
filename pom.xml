@@ -117,7 +117,7 @@
     <developer>
       <id>larsgeorge</id>
       <name>Lars George</name>
-      <email>lars.george@gmail.com</email>
+      <email>larsgeorge@apache.org</email>
       <timezone>+1</timezone>
       <organization>WorldLingo</organization>
       <organizationUrl>http://www.worldlingo.com/</organizationUrl>
@@ -163,6 +163,7 @@
     <thrift.version>0.2.0</thrift.version>
     <jruby.version>1.4.0</jruby.version>
     <slf4j.version>1.5.8</slf4j.version>
+    <jopt.version>3.2</jopt.version>
   </properties>
 
   <repositories>
@@ -225,10 +226,6 @@
   </repositories>
 
   <build>
-    <directory>target</directory>
-    <outputDirectory>target/classes</outputDirectory>
-    <finalName>${artifactId}-${version}</finalName>
-
     <!-- Some plugins (javadoc for example) can be used in the normal build- and the site phase.
          These plugins inherit their options from the <reporting> section below. These settings
          can be overwritten here. -->
@@ -260,6 +257,7 @@
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.5</version>
           <configuration>
+            <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
             <argLine>-Xmx512m</argLine>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
@@ -267,6 +265,10 @@
         <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.6.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>2.4</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -330,6 +332,11 @@
         <version>${hadoop-mapred.version}</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>net.sf.jopt-simple</groupId>
+        <artifactId>jopt-simple</artifactId>
+        <version>${jopt.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -353,9 +360,13 @@
   <reporting>
     <plugins>
       <plugin>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.1.2</version>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
-        <version>2.3</version>
+        <version>2.4</version>
         <configuration>
           <targetJdk>${compileSource}</targetJdk>
         </configuration>
@@ -363,14 +374,16 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.5</version>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>2.3</version>
+        <version>2.3.1</version>
       </plugin>
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
+        <version>2.1</version>
         <configuration>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
@@ -391,17 +404,21 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>cobertura-maven-plugin</artifactId>
+        <version>2.3</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.1</version>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>jdepend-maven-plugin</artifactId>
+        <version>2.0-beta-2</version>
       </plugin>
       <plugin>
         <artifactId>maven-changes-plugin</artifactId>
+        <version>2.3</version>
         <configuration>
           <issueLinkTemplate>%URL%/browse/%ISSUE%</issueLinkTemplate>
         </configuration>
@@ -412,6 +429,24 @@
             </reports>
           </reportSet>
         </reportSets>
+      </plugin>
+      <plugin>
+        <groupId>com.atlassian.maven.plugins</groupId>
+        <artifactId>maven-clover2-plugin</artifactId>
+        <version>2.6.3</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>2.5</version>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>taglist-maven-plugin</artifactId>
+        <version>2.4</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.1</version>
       </plugin>
     </plugins>
   </reporting>

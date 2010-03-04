@@ -17,6 +17,8 @@
     <jsr311.version>1.1.1</jsr311.version>
     <protobuf.version>2.3.0</protobuf.version>
     <jersey.version>1.1.4.1</jersey.version>
+    <json.version>20090211</json.version>
+    <hsqldb.version>1.8.0.10</hsqldb.version>
   </properties>
 
   <build>
@@ -72,13 +74,13 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <version>20090211</version>
+      <version>${json.version}</version>
     </dependency>
-    <!-- we only use this for TestJDBCAuthenticator -->
     <dependency>
       <groupId>hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
-      <version>1.8.0.10</version>
+      <version>${hsqldb.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

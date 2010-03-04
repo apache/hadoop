@@ -46,6 +46,15 @@
     </moduleSet>
     <moduleSet>
       <includes>
+        <include>org.apache.hbase:hbase-contrib-mdc_replication</include>
+      </includes>
+      <binaries>
+        <outputDirectory>contrib/mdc_replication/</outputDirectory>
+        <unpack>false</unpack>
+      </binaries>
+    </moduleSet>
+    <moduleSet>
+      <includes>
         <include>org.apache.hbase:hbase-contrib-stargate</include>
       </includes>
       <binaries>
