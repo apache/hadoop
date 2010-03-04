@@ -223,6 +223,8 @@ Release 0.21.0 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2063  For hfileoutputformat, on timeout/failure/kill clean up
                half-written hfile (Ruslan Salyakhov via Stack)
+   HBASE-2281  Hbase shell does not work when started from the build dir
+               (Alexey Kovyrin via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
