@@ -670,7 +670,7 @@ public class HLog implements HConstants, Syncable {
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
-      doWrite(regionInfo, logKey, logEdit, logKey.getWriteTime());
+      doWrite(regionInfo, logKey, logEdit);
       this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
     }
@@ -722,7 +722,7 @@ public class HLog implements HConstants, Syncable {
       int counter = 0;
       for (KeyValue kv: edits) {
         HLogKey logKey = makeKey(regionName, tableName, seqNum[counter++], now);
-        doWrite(info, logKey, kv, now);
+        doWrite(info, logKey, kv);
         this.numEntries.incrementAndGet();
       }
 
@@ -869,13 +869,14 @@ public class HLog implements HConstants, Syncable {
     }
   }
   
-  protected void doWrite(HRegionInfo info, HLogKey logKey, KeyValue logEdit, final long now)
+  protected void doWrite(HRegionInfo info, HLogKey logKey, KeyValue logEdit)
   throws IOException {
     if (!this.enabled) {
       return;
     }
     try {
       this.editsSize.addAndGet(logKey.heapSize() + logEdit.heapSize());
+      long now = System.currentTimeMillis();
       this.writer.append(new HLog.Entry(logKey, logEdit));
       long took = System.currentTimeMillis() - now;
       writeTime += took;
