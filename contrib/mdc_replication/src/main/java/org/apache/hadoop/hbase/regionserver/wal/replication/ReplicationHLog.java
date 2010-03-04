@@ -67,10 +67,10 @@ public class ReplicationHLog extends HLog {
 
   @Override
   protected void doWrite(HRegionInfo info, HLogKey logKey,
-                         KeyValue logEdit, long now)
+                         KeyValue logEdit)
       throws IOException {
     logKey.setScope(info.getTableDesc().getFamily(logEdit.getFamily()).getScope());
-    super.doWrite(info, logKey, logEdit, now);
+    super.doWrite(info, logKey, logEdit);
     if(this.isReplicator && ! (info.isMetaRegion() || info.isRootRegion()) &&
         logKey.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL) {
       this.replicationSource.enqueueLog(new Entry(logKey, logEdit));
