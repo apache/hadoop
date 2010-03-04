@@ -221,6 +221,8 @@ Release 0.21.0 - Unreleased
    HBASE-2244  META gets inconsistent in a number of crash scenarios
    HBASE-2284  fsWriteLatency metric may be incorrectly reported 
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2063  For hfileoutputformat, on timeout/failure/kill clean up
+               half-written hfile (Ruslan Salyakhov via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

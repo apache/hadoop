@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.mortbay.log.Log;
 
@@ -50,7 +51,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(TaskAttemptContext context)
   throws IOException, InterruptedException {
     // Get the path of the temporary output file 
-    final Path outputdir = FileOutputFormat.getOutputPath(context);
+    final Path outputPath = FileOutputFormat.getOutputPath(context);
+    final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
     Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
     // These configs. are from hbase-*.xml
