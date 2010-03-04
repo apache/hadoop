@@ -4,3 +4,8 @@
 /.settings
 /build
 /logs
+/target
+/contrib/mdc_replication/target/
+/contrib/stargate/target/
+/contrib/transactional/target/
+/core/target/
