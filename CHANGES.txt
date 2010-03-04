@@ -185,8 +185,8 @@ Trunk (unreleased changes)
    HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
    (Suresh Srinivas via Sanjay Radia)
 
-   HADOOP-6537 Declare more detailed exceptions in FileContext and AbstractFileSystem
-   (Suresh Srinivas via Sanjay Radia)
+   HADOOP-6537 Declare more detailed exceptions in FileContext and 
+   AbstractFileSystem (Suresh Srinivas via Sanjay Radia)
 
   OPTIMIZATIONS
 
@@ -263,6 +263,9 @@ Trunk (unreleased changes)
     queue for the RPC response happens atomically. (Kan Zhang via ddas)
 
     HADOOP-6545. Changes the Key for the FileSystem cache to be UGI (ddas)
+
+   HADOOP-6609. Fixed deadlock in RPC by replacing shared static 
+   DataOutputBuffer in the UTF8 class with a thread local variable. (omalley)
 
 Release 0.21.0 - Unreleased
 
