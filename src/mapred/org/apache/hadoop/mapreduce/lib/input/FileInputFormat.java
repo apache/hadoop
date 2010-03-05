@@ -333,12 +333,11 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   public static void setInputPaths(Job job, 
                                    Path... inputPaths) throws IOException {
     Configuration conf = job.getConfiguration();
-    FileSystem fs = FileSystem.get(conf);
-    Path path = inputPaths[0].makeQualified(fs);
+    Path path = inputPaths[0].getFileSystem(conf).makeQualified(inputPaths[0]);
     StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
     for(int i = 1; i < inputPaths.length;i++) {
       str.append(StringUtils.COMMA_STR);
-      path = inputPaths[i].makeQualified(fs);
+      path = inputPaths[i].getFileSystem(conf).makeQualified(inputPaths[i]);
       str.append(StringUtils.escapeString(path.toString()));
     }
     conf.set("mapred.input.dir", str.toString());
@@ -354,8 +353,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   public static void addInputPath(Job job, 
                                   Path path) throws IOException {
     Configuration conf = job.getConfiguration();
-    FileSystem fs = FileSystem.get(conf);
-    path = path.makeQualified(fs);
+    path = path.getFileSystem(conf).makeQualified(path);
     String dirStr = StringUtils.escapeString(path.toString());
     String dirs = conf.get("mapred.input.dir");
     conf.set("mapred.input.dir", dirs == null ? dirStr : dirs + "," + dirStr);
