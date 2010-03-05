@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -146,7 +147,7 @@ public class JspHelper {
     }
     blockReader = null;
     s.close();
-    out.print(new String(buf));
+    out.print(HtmlQuoting.quoteHtmlChars(new String(buf)));
   }
 
   public static void addTableHeader(JspWriter out) throws IOException {

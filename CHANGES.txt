@@ -83,6 +83,8 @@ Trunk (unreleased changes)
     HDFS-994. Allow fetching of delegation token from NameNode for hftp.
     (Jakob Homan via acmurthy) 
 
+    HDFS-998. Quote blocks streamed through jsps. (cdouglas)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
