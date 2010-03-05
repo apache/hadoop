@@ -71,6 +71,12 @@
       <unsubscribe>hbase-commits-unsubscribe@hadoop.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hadoop-hbase-commits/</archive>
     </mailingList>
+    <mailingList>
+      <name>Issues List</name>
+      <subscribe>hbase-issues-subscribe@hadoop.apache.org</subscribe>
+      <unsubscribe>hbase-issues-unsubscribe@hadoop.apache.org</unsubscribe>
+      <archive>http://mail-archives.apache.org/mod_mbox/hadoop-hbase-issues/</archive>
+    </mailingList>
   </mailingLists>
 
   <developers>
@@ -265,6 +271,11 @@
         <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.6.1</version>
+          <configuration>
+            <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
+            <argLine>-Xmx512m</argLine>
+            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
