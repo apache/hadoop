@@ -737,7 +737,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throws IOException, UnresolvedLinkException {
     INodeFile inode = dir.getFileINode(src);
     if (inode == null)
-      throw new FileNotFoundException(src);
+      throw new FileNotFoundException("File does not exist: " + src);
     assert !inode.isLink();
     if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);

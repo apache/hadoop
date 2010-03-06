@@ -9,6 +9,10 @@ Trunk (unreleased changes)
 
     HDFS-984. Persistent delegation tokens. (Jitendra Pandey via shv)
 
+    HDFS-1016. HDFS side change for HADOOP-6569. This jira changes the
+    error message on the screen when cat a directory or a 
+    non-existent file. (hairong)
+
   NEW FEATURES
 
     HDFS-654. Add support new atomic rename functionality in HDFS for 
