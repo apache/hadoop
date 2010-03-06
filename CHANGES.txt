@@ -226,6 +226,8 @@ Release 0.21.0 - Unreleased
    HBASE-2281  Hbase shell does not work when started from the build dir
                (Alexey Kovyrin via Stack)
    HBASE-2293  CME in RegionManager#isMetaServer
+   HBASE-2261  The javadoc in WhileMatchFilter and it's tests in TestFilter
+               are not accurate/wrong
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

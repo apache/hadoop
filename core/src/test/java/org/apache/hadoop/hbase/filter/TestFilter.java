@@ -259,7 +259,7 @@ public class TestFilter extends HBaseTestCase {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link PageFilter#filterRow()} method.
+   * {@link Filter#filterRow()} method.
    *
    * See HBASE-2258.
    *
@@ -291,7 +291,7 @@ public class TestFilter extends HBaseTestCase {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link PageFilter#filterRowKey(byte[], int, int)} method.
+   * {@link Filter#filterRowKey(byte[], int, int)} method.
    *
    * See HBASE-2258.
    *
@@ -319,7 +319,7 @@ public class TestFilter extends HBaseTestCase {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link PageFilter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
+   * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
    *
    * See HBASE-2258.
    *

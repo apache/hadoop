@@ -27,11 +27,12 @@ import java.io.IOException;
 import java.io.DataInput;
 
 /**
- * A wrapper filter that filters everything after the first time false is returned
- * from any wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
+ * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
+ * as the wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
  * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)},
  * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or 
- * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()}.
+ * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
+ * returns true.
  */
 public class WhileMatchFilter implements Filter {
   private boolean filterAllRemaining = false;
