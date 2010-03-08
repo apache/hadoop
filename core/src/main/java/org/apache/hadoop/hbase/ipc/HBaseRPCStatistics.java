@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +17,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.ipc;
 
-import javax.management.ObjectName;
+package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+
+import javax.management.ObjectName;
 
 /**
  * Exports HBase RPC statistics recorded in {@link HBaseRpcMetrics} as an MBean
@@ -30,7 +33,8 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 public class HBaseRPCStatistics extends MetricsDynamicMBeanBase {
   private final ObjectName mbeanName;
 
-  public HBaseRPCStatistics(MetricsRegistry registry, 
+  @SuppressWarnings({"UnusedDeclaration"})
+  public HBaseRPCStatistics(MetricsRegistry registry,
       String hostName, String port) {
 	  super(registry, "HBaseRPCStatistics");
 

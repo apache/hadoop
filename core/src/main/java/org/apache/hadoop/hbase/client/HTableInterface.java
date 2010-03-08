@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,11 +19,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Used to communicate with a single HBase table.
@@ -49,7 +49,7 @@ public interface HTableInterface {
    * Gets the table descriptor for this table.
    *
    * @return table metadata
-   * @throws IOException
+   * @throws IOException e
    */
   HTableDescriptor getTableDescriptor() throws IOException;
 
@@ -65,7 +65,7 @@ public interface HTableInterface {
    *
    * @param get the Get
    * @return true if the specified Get matches one or more keys, false if not
-   * @throws IOException
+   * @throws IOException e
    */
   boolean exists(Get get) throws IOException;
 
@@ -76,7 +76,7 @@ public interface HTableInterface {
    *
    * @param get the Get to fetch
    * @return the result
-   * @throws IOException
+   * @throws IOException e
    */
   Result get(Get get) throws IOException;
 
@@ -87,7 +87,7 @@ public interface HTableInterface {
    * @param row row key
    * @param family Column family to look for row in
    * @return map of values
-   * @throws IOException
+   * @throws IOException e
    */
   Result getRowOrBefore(byte[] row, byte[] family) throws IOException;
 
@@ -95,8 +95,8 @@ public interface HTableInterface {
    * Get a scanner on the current table as specified by the {@link Scan} object.
    *
    * @param scan a configured {@link Scan} object
-   * @return scanner
-   * @throws IOException
+   * @return the scanner
+   * @throws IOException e
    */
   ResultScanner getScanner(Scan scan) throws IOException;
 
@@ -105,7 +105,7 @@ public interface HTableInterface {
    *
    * @param family the column family to scan
    * @return the scanner
-   * @throws IOException
+   * @throws IOException e
    */
   ResultScanner getScanner(byte[] family) throws IOException;
 
@@ -115,7 +115,7 @@ public interface HTableInterface {
    * @param family the column family to scan
    * @param qualifier the column qualifier to scan
    * @return The scanner
-   * @throws IOException
+   * @throws IOException e
    */
   ResultScanner getScanner(byte[] family, byte[] qualifier) throws IOException;
 
@@ -124,8 +124,8 @@ public interface HTableInterface {
    * <p>
    * If autoFlush is false, the update is buffered.
    *
-   * @param put
-   * @throws IOException
+   * @param put data
+   * @throws IOException e
    */
   void put(Put put) throws IOException;
 
@@ -134,21 +134,22 @@ public interface HTableInterface {
    * <p>
    * If autoFlush is false, the update is buffered.
    *
-   * @param puts
-   * @throws IOException
+   * @param puts list of puts
+   * @throws IOException e
    */
   void put(List<Put> puts) throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected
-   * value. If it does, it adds the put.
+   * value. If it does, it adds the put.  If the passed value is null, the check
+   * is for the lack of column (ie: non-existance)
    *
-   * @param row
-   * @param family
-   * @param qualifier
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
    * @param value the expected value
-   * @param put
-   * @throws IOException
+   * @param put data to put if check succeeds
+   * @throws IOException e
    * @return true if the new put was executed, false otherwise
    */
   boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
@@ -157,8 +158,8 @@ public interface HTableInterface {
   /**
    * Deletes as specified by the delete.
    *
-   * @param delete
-   * @throws IOException
+   * @param delete a delete
+   * @throws IOException e
    */
   void delete(Delete delete) throws IOException;
 
@@ -166,7 +167,7 @@ public interface HTableInterface {
    * Bulk commit a List of Deletes to the table.
    * @param deletes List of deletes. List is modified by this method.
    * On exception holds deletes that were NOT applied.
-   * @throws IOException
+   * @throws IOException e
    */
   void delete(List<Delete> deletes) throws IOException;
 
@@ -176,12 +177,12 @@ public interface HTableInterface {
    * value does not yet exist it is initialized to <code>amount</code> and
    * written to the specified column.
    *
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param amount
+   * @param row row to increment
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param amount long amount to increment
    * @return the new value
-   * @throws IOException
+   * @throws IOException e
    */
   long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException;
@@ -194,13 +195,13 @@ public interface HTableInterface {
    *
    * <p>Setting writeToWAL to false means that in a fail scenario, you will lose
    * any increments that have not been flushed.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param amount
+   * @param row row to increment
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param amount long amount to increment
    * @param writeToWAL true if increment should be applied to WAL, false if not
    * @return The new value.
-   * @throws IOException
+   * @throws IOException e
    */
   long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, boolean writeToWAL) throws IOException; 
@@ -215,14 +216,14 @@ public interface HTableInterface {
   /**
    * Flushes buffer data. Called automatically when autoFlush is true.
    *
-   * @throws IOException
+   * @throws IOException e
    */
   void flushCommits() throws IOException;
 
   /**
    * Releases held resources.
    *
-   * @throws IOException
+   * @throws IOException e
    */
   void close() throws IOException;
 
@@ -231,7 +232,7 @@ public interface HTableInterface {
    *
    * @param row the row to lock
    * @return rowLock RowLock containing row and lock id
-   * @throws IOException
+   * @throws IOException e
    */
   RowLock lockRow(byte[] row) throws IOException;
 
@@ -239,7 +240,7 @@ public interface HTableInterface {
    * Releases the row lock.
    *
    * @param rl the row lock to release
-   * @throws IOException
+   * @throws IOException e
    */
   void unlockRow(RowLock rl) throws IOException;
 }

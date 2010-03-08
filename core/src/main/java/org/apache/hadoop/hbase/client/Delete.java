@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +20,11 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -28,11 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.util.Bytes;
-
 /**
  * Used to perform Delete operations on a single row.
  * <p>
@@ -40,15 +40,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * to delete.  To further define the scope of what to delete, perform
  * additional methods as outlined below.
  * <p>
- * To delete specific families, execute {@link #deleteFamily(byte []) deleteFamily}
+ * To delete specific families, execute {@link #deleteFamily(byte[]) deleteFamily}
  * for each family to delete.
  * <p>
  * To delete multiple versions of specific columns, execute
- * {@link #deleteColumns(byte [],byte []) deleteColumns}
+ * {@link #deleteColumns(byte[], byte[]) deleteColumns}
  * for each column to delete.  
  * <p>
  * To delete specific versions of specific columns, execute
- * {@link #deleteColumn(byte [],byte [],long) deleteColumn}
+ * {@link #deleteColumn(byte[], byte[], long) deleteColumn}
  * for each column version to delete.
  * <p>
  * Specifying timestamps, deleteFamily and deleteColumns will delete all
@@ -142,6 +142,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * Overrides previous calls to deleteColumn and deleteColumns for the
    * specified family.
    * @param family family name
+   * @return this for invocation chaining
    */
   public Delete deleteFamily(byte [] family) {
     this.deleteFamily(family, HConstants.LATEST_TIMESTAMP);
@@ -156,6 +157,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * specified family.
    * @param family family name
    * @param timestamp maximum version timestamp
+   * @return this for invocation chaining
    */
   public Delete deleteFamily(byte [] family, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
@@ -173,6 +175,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * Delete all versions of the specified column.
    * @param family family name
    * @param qualifier column qualifier
+   * @return this for invocation chaining
    */
   public Delete deleteColumns(byte [] family, byte [] qualifier) {
     this.deleteColumns(family, qualifier, HConstants.LATEST_TIMESTAMP);
@@ -185,6 +188,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * @param family family name
    * @param qualifier column qualifier
    * @param timestamp maximum version timestamp
+   * @return this for invocation chaining
    */
   public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
@@ -204,6 +208,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * the fetched cells timestamp.
    * @param family family name
    * @param qualifier column qualifier
+   * @return this for invocation chaining
    */
   public Delete deleteColumn(byte [] family, byte [] qualifier) {
     this.deleteColumn(family, qualifier, HConstants.LATEST_TIMESTAMP);
@@ -215,6 +220,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * @param family family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
+   * @return this for invocation chaining
    */
   public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
     List<KeyValue> list = familyMap.get(family);
@@ -351,6 +357,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * @param column colon-delimited family and qualifier
    * @param timestamp maximum version timestamp
    * @deprecated use {@link #deleteColumn(byte[], byte[], long)} instead
+   * @return this for invocation chaining
    */
   public Delete deleteColumns(byte [] column, long timestamp) {
     byte [][] parts = KeyValue.parseColumn(column);
@@ -363,6 +370,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
    * <code>family:qualifier</code> notation.
    * @param column colon-delimited family and qualifier
    * @deprecated use {@link #deleteColumn(byte[], byte[])} instead
+   * @return this for invocation chaining
    */
   public Delete deleteColumn(byte [] column) {
     byte [][] parts = KeyValue.parseColumn(column);

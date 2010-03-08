@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,21 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +36,21 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -79,7 +79,7 @@ public class HTable implements HTableInterface {
    * Creates an object to access a HBase table
    *
    * @param tableName name of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(final String tableName)
   throws IOException {
@@ -90,7 +90,7 @@ public class HTable implements HTableInterface {
    * Creates an object to access a HBase table
    *
    * @param tableName name of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(final byte [] tableName)
   throws IOException {
@@ -102,7 +102,7 @@ public class HTable implements HTableInterface {
    *
    * @param conf configuration object
    * @param tableName name of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(Configuration conf, final String tableName)
   throws IOException {
@@ -115,7 +115,7 @@ public class HTable implements HTableInterface {
    *
    * @param conf configuration object
    * @param tableName name of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HTable(Configuration conf, final byte [] tableName)
   throws IOException {
@@ -163,7 +163,7 @@ public class HTable implements HTableInterface {
    * TODO Might want to change this to public, would be nice if the number
    * of threads would automatically change when servers were added and removed
    * @return the number of region servers that are currently running
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   private int getCurrentNrHRS() throws IOException {
     HBaseAdmin admin = new HBaseAdmin(this.configuration);
@@ -176,7 +176,7 @@ public class HTable implements HTableInterface {
   /**
    * @param tableName name of table to check
    * @return true if table is on-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
@@ -184,7 +184,7 @@ public class HTable implements HTableInterface {
   /**
    * @param tableName name of table to check
    * @return true if table is on-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
     return isTableEnabled(HBaseConfiguration.create(), tableName);
@@ -194,7 +194,7 @@ public class HTable implements HTableInterface {
    * @param conf HBaseConfiguration object
    * @param tableName name of table to check
    * @return true if table is on-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(Configuration conf, String tableName)
   throws IOException {
@@ -205,7 +205,7 @@ public class HTable implements HTableInterface {
    * @param conf HBaseConfiguration object
    * @param tableName name of table to check
    * @return true if table is on-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public static boolean isTableEnabled(Configuration conf, byte[] tableName)
   throws IOException {
@@ -216,7 +216,7 @@ public class HTable implements HTableInterface {
    * Find region location hosting passed row using cached info
    * @param row Row to find.
    * @return Location of row.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation getRegionLocation(final String row)
   throws IOException {
@@ -227,7 +227,7 @@ public class HTable implements HTableInterface {
    * Find region location hosting passed row using cached info
    * @param row Row to find.
    * @return Location of row.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
@@ -277,7 +277,7 @@ public class HTable implements HTableInterface {
    * Gets the starting row key for every region in the currently open table
    *
    * @return Array of region starting row keys
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public byte [][] getStartKeys() throws IOException {
     return getStartEndKeys().getFirst();
@@ -287,7 +287,7 @@ public class HTable implements HTableInterface {
    * Gets the ending row key for every region in the currently open table
    *
    * @return Array of region ending row keys
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public byte[][] getEndKeys() throws IOException {
     return getStartEndKeys().getSecond();
@@ -298,7 +298,7 @@ public class HTable implements HTableInterface {
    * open table
    *
    * @return Pair of arrays of region starting and ending row keys
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   @SuppressWarnings("unchecked")
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
@@ -327,7 +327,7 @@ public class HTable implements HTableInterface {
    * Get all the regions and their address for this table
    *
    * @return A map of HRegionInfo with it's server address
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
     final Map<HRegionInfo, HServerAddress> regionMap =
@@ -444,8 +444,9 @@ public class HTable implements HTableInterface {
   }
 
   /**
+   * Execute a delete
    *
-   * @param delete
+   * @param delete the delete
    * @throws IOException
    * @since 0.20.0
    */
@@ -482,7 +483,7 @@ public class HTable implements HTableInterface {
    * Commit a Put to the table.
    * <p>
    * If autoFlush is false, the update is buffered.
-   * @param put
+   * @param put data to put
    * @throws IOException
    * @since 0.20.0
    */
@@ -494,24 +495,15 @@ public class HTable implements HTableInterface {
    * Commit a List of Puts to the table.
    * <p>
    * If autoFlush is false, the update is buffered.
-   * @param puts
-   * @throws IOException
+   * @param puts list of puts
+   * @throws IOException if a remote or network exception occurs
    * @since 0.20.0
    */
   public synchronized void put(final List<Put> puts) throws IOException {
     doPut(puts);
   }
 
-  /**
-   * Internal helper method. 
-   * Need to synchronize this instance to prevent race conditions on the internal 
-   * data structures.
-   * <p>
-   * If autoFlush is false, the update is buffered.
-   * @param puts
-   * @throws IOException
-   */
-  private  void doPut(final List<Put> puts) throws IOException {
+  private void doPut(final List<Put> puts) throws IOException {
     for (Put put : puts) {
       validatePut(put);
       writeBuffer.add(put);
@@ -526,12 +518,12 @@ public class HTable implements HTableInterface {
    * Atomically increments a column value. If the column value already exists
    * and is not a big-endian long, this could throw an exception.<p>
    *
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param amount
-   * @return The new value.
-   * @throws IOException
+   * @param row row
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param amount long amount to increment by
+   * @return The new value after incrementing
+   * @throws IOException if a remote or network exception occurs
    */
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
@@ -545,14 +537,15 @@ public class HTable implements HTableInterface {
    *
    * Setting writeToWAL to false means that in a fail scenario, you will lose
    * any increments that have not been flushed.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param amount
+   * @param row row
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param amount long amount to increment by
    * @param writeToWAL true if increment should be applied to WAL, false if not
    * @return The new value.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
+  @SuppressWarnings({"ThrowableInstanceNeverThrown"})
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount, final boolean writeToWAL)
   throws IOException {
@@ -563,9 +556,8 @@ public class HTable implements HTableInterface {
       npe = new NullPointerException("column is null");
     }
     if (npe != null) {
-      IOException io = new IOException(
+      throw new IOException(
           "Invalid arguments to incrementColumnValue", npe);
-      throw io;
     }
     return connection.getRegionServerWithRetries(
         new ServerCallable<Long>(connection, tableName, row) {
@@ -580,13 +572,14 @@ public class HTable implements HTableInterface {
 
   /**
    * Atomically checks if a row/family/qualifier value match the expectedValue.
-   * If it does, it adds the put.
+   * If it does, it adds the put.  If value == null, checks for non-existance
+   * of the value.
    *
-   * @param row
-   * @param family
-   * @param qualifier
+   * @param row to check
+   * @param family column family
+   * @param qualifier column qualifier
    * @param value the expected value
-   * @param put
+   * @param put put to execute if value matches.
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
@@ -598,10 +591,10 @@ public class HTable implements HTableInterface {
         new ServerCallable<Boolean>(connection, tableName, row) {
           public Boolean call() throws IOException {
             return server.checkAndPut(location.getRegionInfo().getRegionName(),
-              row, family, qualifier, value, put)? Boolean.TRUE: Boolean.FALSE;
+                row, family, qualifier, value, put) ? Boolean.TRUE : Boolean.FALSE;
           }
         }
-      ).booleanValue();
+    );
   }
 
   /**
@@ -611,35 +604,35 @@ public class HTable implements HTableInterface {
    *
    * This is a server-side call so it prevents any data from being transfered
    * to the client.
-   * @param get
+   * @param get param to check for
    * @return true if the specified Get matches one or more keys, false if not
    * @throws IOException
    */
   public boolean exists(final Get get) throws IOException {
     return connection.getRegionServerWithRetries(
-      new ServerCallable<Boolean>(connection, tableName, get.getRow()) {
-        public Boolean call() throws IOException {
-          return Boolean.valueOf(server.
-            exists(location.getRegionInfo().getRegionName(), get));
+        new ServerCallable<Boolean>(connection, tableName, get.getRow()) {
+          public Boolean call() throws IOException {
+            return server.
+                exists(location.getRegionInfo().getRegionName(), get);
+          }
         }
-      }
-    ).booleanValue();
+    );
   }
 
   /**
-   * Commit to the table the buffer of BatchUpdate.
+   * Commit to the table the buffer of Puts.
    * Called automatically in the commit methods when autoFlush is true.
-   * @throws IOException
+   * @throws IOException e
    */
   public void flushCommits() throws IOException {
     try {
       connection.processBatchOfPuts(writeBuffer,
           tableName, pool);
     } finally {
-      // the write buffer was adjsuted by processBatchOfPuts
+      // the write buffer was adjusted by processBatchOfPuts
       currentWriteBufferSize = 0;
-      for (int i = 0; i < writeBuffer.size(); i++) {
-        currentWriteBufferSize += writeBuffer.get(i).heapSize();
+      for (Put aWriteBuffer : writeBuffer) {
+        currentWriteBufferSize += aWriteBuffer.heapSize();
       }
     }
   }
@@ -653,12 +646,7 @@ public class HTable implements HTableInterface {
     flushCommits();
   }
 
-  /**
-   * Utility method that verifies Put is well formed.
-   *
-   * @param put
-   * @throws IllegalArgumentException
-   */
+  // validate for well-formedness
   private void validatePut(final Put put) throws IllegalArgumentException{
     if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
@@ -687,8 +675,7 @@ public class HTable implements HTableInterface {
         public RowLock call() throws IOException {
           long lockId =
               server.lockRow(location.getRegionInfo().getRegionName(), row);
-          RowLock rowLock = new RowLock(row,lockId);
-          return rowLock;
+          return new RowLock(row,lockId);
         }
       }
     );
@@ -721,8 +708,11 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * Set if this instanciation of HTable will autoFlush
-   * @param autoFlush
+   * Turning off autoflush will cause operations to be batched for greater
+   * efficiency in the RPC.  Also see @{link #flushCommits}
+   *
+   * @param autoFlush flag
+   * @see #flushCommits
    */
   public void setAutoFlush(boolean autoFlush) {
     this.autoFlush = autoFlush;
@@ -740,8 +730,8 @@ public class HTable implements HTableInterface {
    * Set the size of the buffer in bytes.
    * If the new size is lower than the current size of data in the
    * write buffer, the buffer is flushed.
-   * @param writeBufferSize
-   * @throws IOException
+   * @param writeBufferSize new write buffer size
+   * @throws IOException e
    */
   public void setWriteBufferSize(long writeBufferSize) throws IOException {
     this.writeBufferSize = writeBufferSize;
@@ -814,10 +804,7 @@ public class HTable implements HTableInterface {
       return lastNext;
     }
 
-   /**
-     * @param endKey
-     * @return Returns true if the passed region endkey.
-     */
+    // returns true if the passed region endKey
     private boolean checkScanStopRow(final byte [] endKey) {
       if (this.scan.getStopRow().length > 0) {
         // there is a stop row, check to see if we are past it.
@@ -852,7 +839,7 @@ public class HTable implements HTableInterface {
       }
 
       // Where to start the next scanner
-      byte [] localStartKey = null;
+      byte [] localStartKey;
 
       // if we're at end of table, close and return false to stop iterating
       if (this.currentRegion != null) {

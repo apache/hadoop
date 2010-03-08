@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,9 +23,9 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.DataInput;
 
 /**
  * A Filter that stops after the given row.  There is no "RowStopFilter" because
@@ -55,6 +55,7 @@ public class InclusiveStopFilter implements Filter {
 
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     if (buffer == null) {
+      //noinspection RedundantIfStatement
       if (this.stopRowKey == null) {
         return true; //filter...
       }

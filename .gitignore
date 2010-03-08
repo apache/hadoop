@@ -9,3 +9,4 @@
 /contrib/stargate/target/
 /contrib/transactional/target/
 /core/target/
+*.iml

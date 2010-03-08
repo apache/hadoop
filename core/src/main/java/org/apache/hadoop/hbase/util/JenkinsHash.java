@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -86,6 +86,7 @@ public class JenkinsHash extends Hash {
     a = b = c = (0x00000000deadbeefL + length + initval) & INT_MASK;
     int offset = 0;
     for (; length > 12; offset += 12, length -= 12) {
+      //noinspection PointlessArithmeticExpression
       a = (a + (key[offset + 0]    & BYTE_MASK)) & INT_MASK;
       a = (a + (((key[offset + 1]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
       a = (a + (((key[offset + 2]  & BYTE_MASK) << 16) & INT_MASK)) & INT_MASK;
@@ -186,6 +187,7 @@ public class JenkinsHash extends Hash {
     case  2:
       a = (a + (((key[offset + 1]  & BYTE_MASK) <<  8) & INT_MASK)) & INT_MASK;
     case  1:
+      //noinspection PointlessArithmeticExpression
       a = (a + (key[offset + 0]    & BYTE_MASK)) & INT_MASK;
       break;
     case  0:
@@ -242,7 +244,7 @@ public class JenkinsHash extends Hash {
   /**
    * Compute the hash of the specified file
    * @param args name of file to compute hash of.
-   * @throws IOException
+   * @throws IOException e
    */
   public static void main(String[] args) throws IOException {
     if (args.length != 1) {

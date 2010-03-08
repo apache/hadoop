@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 public interface ServerConnection extends HConnection {
   /**
    * Set root region location in connection
-   * @param rootRegion
+   * @param rootRegion region location for root region
    */
   public void setRootRegionLocation(HRegionLocation rootRegion);
   

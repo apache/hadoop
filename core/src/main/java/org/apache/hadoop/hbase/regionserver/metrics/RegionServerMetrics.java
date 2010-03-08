@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -32,9 +31,12 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 
 /** 
  * This class is for maintaining the various regionserver statistics
@@ -44,6 +46,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * these variables (objects) have methods to update their values.
  */
 public class RegionServerMetrics implements Updater {
+  @SuppressWarnings({"FieldCanBeLocal"})
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
   private long lastUpdate = System.currentTimeMillis();
@@ -154,7 +157,7 @@ public class RegionServerMetrics implements Updater {
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
-   * @param unused 
+   * @param unused unused argument
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {

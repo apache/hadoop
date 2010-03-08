@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +20,16 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -33,11 +45,11 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,16 +59,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.ObjectWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -143,6 +145,7 @@ public abstract class HBaseServer {
   
   protected Configuration conf;
 
+  @SuppressWarnings({"FieldCanBeLocal"})
   private int maxQueueSize;
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
@@ -151,7 +154,7 @@ public abstract class HBaseServer {
   volatile protected boolean running = true;         // true while server runs
   protected BlockingQueue<Call> callQueue; // queued calls
 
-  protected List<Connection> connectionList = 
+  protected final List<Connection> connectionList =
     Collections.synchronizedList(new LinkedList<Connection>());
   //maintain a list
   //of client connections
@@ -254,6 +257,7 @@ public abstract class HBaseServer {
      * that will be cleanedup per run. The criteria for cleanup is the time
      * for which the connection was idle. If 'force' is true then all 
      * connections will be looked at for the cleanup.
+     * @param force all connections will be looked at for cleanup
      */
     private void cleanupConnections(boolean force) {
       if (force || numConnections > thresholdIdleConnections) {
@@ -288,6 +292,7 @@ public abstract class HBaseServer {
             closeConnection(c);
             numNuked++;
             end--;
+            //noinspection UnusedAssignment
             c = null;
             if (!force && numNuked == maxConnectionsToNuke) break;
           }
@@ -317,7 +322,7 @@ public abstract class HBaseServer {
                 else if (key.isReadable())
                   doRead(key);
               }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
             key = null;
           }
@@ -336,7 +341,7 @@ public abstract class HBaseServer {
             LOG.warn("Out of Memory in server select", e);
             closeCurrentConnection(key);
             cleanupConnections(true);
-            try { Thread.sleep(60000); } catch (Exception ie) {}
+            try { Thread.sleep(60000); } catch (Exception ignored) {}
       }
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
@@ -354,7 +359,7 @@ public abstract class HBaseServer {
         try {
           acceptChannel.close();
           selector.close();
-        } catch (IOException e) { }
+        } catch (IOException ignored) { }
 
         selector= null;
         acceptChannel= null;
@@ -373,7 +378,6 @@ public abstract class HBaseServer {
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": disconnecting client " + c.getHostAddress());
           closeConnection(c);
-          c = null;
         }
       }
     }
@@ -383,7 +387,7 @@ public abstract class HBaseServer {
     }
     
     void doAccept(SelectionKey key) throws IOException, OutOfMemoryError {
-      Connection c = null;
+      Connection c;
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
       // accept up to 10 connections
       for (int i=0; i<10; i++) {
@@ -429,7 +433,7 @@ public abstract class HBaseServer {
                     c.getHostAddress() + ". Number of active connections: "+
                     numConnections);
         closeConnection(c);
-        c = null;
+        // c = null;
       }
       else {
         c.setLastContact(System.currentTimeMillis());
@@ -528,7 +532,7 @@ public abstract class HBaseServer {
             // some thread(s) a chance to finish
             //
             LOG.warn("Out of Memory in server select", e);
-            try { Thread.sleep(60000); } catch (Exception ie) {}
+            try { Thread.sleep(60000); } catch (Exception ignored) {}
       }
         } catch (Exception e) {
           LOG.warn("Exception in Responder " + 
@@ -568,9 +572,8 @@ public abstract class HBaseServer {
     // for a long time.
     //
     private void doPurge(Call call, long now) {
-      LinkedList<Call> responseQueue = call.connection.responseQueue;
-      synchronized (responseQueue) {
-        Iterator<Call> iter = responseQueue.listIterator(0);
+      synchronized (call.connection.responseQueue) {
+        Iterator<Call> iter = call.connection.responseQueue.listIterator(0);
         while (iter.hasNext()) {
           Call nextCall = iter.next();
           if (now > nextCall.timestamp + PURGE_INTERVAL) {
@@ -584,13 +587,15 @@ public abstract class HBaseServer {
     // Processes one response. Returns true if there are no more pending
     // data for this channel.
     //
-    private boolean processResponse(LinkedList<Call> responseQueue,
+    @SuppressWarnings({"ConstantConditions"})
+    private boolean processResponse(final LinkedList<Call> responseQueue,
                                     boolean inHandler) throws IOException {
       boolean error = true;
       boolean done = false;       // there is more data for this channel.
-      int numElements = 0;
+      int numElements;
       Call call = null;
       try {
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (responseQueue) {
           //
           // If there are no items for this channel, then we are done
@@ -618,6 +623,7 @@ public abstract class HBaseServer {
           }
           if (!call.response.hasRemaining()) {
             call.connection.decRpcCount();
+            //noinspection RedundantIfStatement
             if (numElements == 1) {    // last call fully processes.
               done = true;             // no more data for this channel.
             } else {
@@ -706,7 +712,7 @@ public abstract class HBaseServer {
     protected SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
-    protected LinkedList<Call> responseQueue;
+    protected final LinkedList<Call> responseQueue;
     private volatile int rpcCount = 0; // number of outstanding rpcs
     private long lastContact;
     private int dataLength;
@@ -774,9 +780,7 @@ public abstract class HBaseServer {
     }
     
     protected boolean timedOut(long currentTime) {
-      if (isIdle() && currentTime -  lastContact > maxIdleTime)
-        return true;
-      return false;
+      return isIdle() && currentTime - lastContact > maxIdleTime;
     }
 
     public int readAndProcess() throws IOException, InterruptedException {
@@ -784,7 +788,7 @@ public abstract class HBaseServer {
         /* Read at most one RPC. If the header is not read completely yet
          * then iterate until we read first RPC or until there is no data left.
          */    
-        int count = -1;
+        int count;
         if (dataLengthBuffer.remaining() > 0) {
           count = channelRead(channel, dataLengthBuffer);       
           if (count < 0 || dataLengthBuffer.remaining() > 0) 
@@ -875,11 +879,11 @@ public abstract class HBaseServer {
       dataLengthBuffer = null;
       if (!channel.isOpen())
         return;
-      try {socket.shutdownOutput();} catch(Exception e) {} // FindBugs DE_MIGHT_IGNORE
+      try {socket.shutdownOutput();} catch(Exception ignored) {} // FindBugs DE_MIGHT_IGNORE
       if (channel.isOpen()) {
-        try {channel.close();} catch(Exception e) {}
+        try {channel.close();} catch(Exception ignored) {}
       }
-      try {socket.close();} catch(Exception e) {}
+      try {socket.close();} catch(Exception ignored) {}
     }
   }
 
@@ -973,7 +977,7 @@ public abstract class HBaseServer {
   {
     this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port));
   }
-  /** Constructs a server listening on the named port and address.  Parameters passed must
+  /* Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.
    * 
@@ -1015,7 +1019,7 @@ public abstract class HBaseServer {
   }
   
   /** Sets the socket buffer size used for responding to RPCs.
-   * @param size
+   * @param size send size
    */
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
@@ -1054,7 +1058,7 @@ public abstract class HBaseServer {
   /** Wait for the server to be stopped.
    * Does not wait for all subthreads to finish.
    *  See {@link #stop()}.
-   * @throws InterruptedException
+   * @throws InterruptedException e
    */
   public synchronized void join() throws InterruptedException {
     while (running) {
@@ -1071,10 +1075,10 @@ public abstract class HBaseServer {
   }
   
   /** Called for each call. 
-   * @param param 
-   * @param receiveTime 
+   * @param param writable parameter
+   * @param receiveTime time
    * @return Writable 
-   * @throws IOException
+   * @throws IOException e
    */
   public abstract Writable call(Writable param, long receiveTime)
                                                 throws IOException;
@@ -1118,6 +1122,10 @@ public abstract class HBaseServer {
    * as a result of multiple write operations required to write a large 
    * buffer.  
    *
+   * @param channel writable byte channel to write to
+   * @param buffer buffer to write
+   * @return number of bytes written
+   * @throws java.io.IOException e
    * @see WritableByteChannel#write(ByteBuffer)
    */
   protected static int channelWrite(WritableByteChannel channel, 
@@ -1132,6 +1140,10 @@ public abstract class HBaseServer {
    * This is to avoid jdk from creating many direct buffers as the size of 
    * ByteBuffer increases. There should not be any performance degredation.
    * 
+   * @param channel writable byte channel to write on
+   * @param buffer buffer to write
+   * @return number of bytes written
+   * @throws java.io.IOException e
    * @see ReadableByteChannel#read(ByteBuffer)
    */
   protected static int channelRead(ReadableByteChannel channel, 
@@ -1145,6 +1157,11 @@ public abstract class HBaseServer {
    * and {@link #channelWrite(WritableByteChannel, ByteBuffer)}. Only
    * one of readCh or writeCh should be non-null.
    * 
+   * @param readCh read channel
+   * @param writeCh write channel
+   * @param buf buffer to read or write into/out of
+   * @return bytes written
+   * @throws java.io.IOException e
    * @see #channelRead(ReadableByteChannel, ByteBuffer)
    * @see #channelWrite(WritableByteChannel, ByteBuffer)
    */

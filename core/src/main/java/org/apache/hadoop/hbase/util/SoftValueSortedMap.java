@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -48,13 +48,15 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   
   /**
    * Constructor
-   * @param c
+   * @param c comparator
    */
   public SoftValueSortedMap(final Comparator<K> c) {
     this(new TreeMap<K, SoftValue<K,V>>(c));
   }
   
-  /** For headMap and tailMap support */
+  /** For headMap and tailMap support
+   * @param original object to wrap
+   */
   private SoftValueSortedMap(SortedMap<K,SoftValue<K,V>> original) {
     this.internalMap = original;
   }
@@ -67,8 +69,9 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
    */
   public int checkReferences() {
     int i = 0;
-    for (Object obj = null; (obj = this.rq.poll()) != null;) {
+    for (Object obj; (obj = this.rq.poll()) != null;) {
       i++;
+      //noinspection unchecked
       this.internalMap.remove(((SoftValue<K,V>)obj).getKey());
     }
     return i;
@@ -86,6 +89,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
     throw new RuntimeException("Not implemented");
   }
   
+  @SuppressWarnings({"SuspiciousMethodCalls"})
   public V get(Object key) {
     checkReferences();
     SoftValue<K,V> value = this.internalMap.get(key);

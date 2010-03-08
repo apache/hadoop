@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +19,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.lang.Thread.UncaughtExceptionHandler;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import java.lang.Thread.UncaughtExceptionHandler;
 
 /**
  * Thread Utility
@@ -30,8 +32,8 @@ public class Threads {
   
   /**
    * Utility method that sets name, daemon status and starts passed thread.
-   * @param t
-   * @param name
+   * @param t thread to frob
+   * @param name new name
    * @return Returns the passed Thread <code>t</code>.
    */
   public static Thread setDaemonThreadRunning(final Thread t,
@@ -41,8 +43,8 @@ public class Threads {
     
   /**
    * Utility method that sets name, daemon status and starts passed thread.
-   * @param t
-   * @param name
+   * @param t thread to frob
+   * @param name new name
    * @param handler A handler to set on the thread.  Pass null if want to
    * use default handler.
    * @return Returns the passed Thread <code>t</code>.

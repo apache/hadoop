@@ -1,6 +1,5 @@
-
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,14 +20,14 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.ipc.RemoteException;
 import org.mortbay.log.Log;
+
+import java.io.IOException;
 
 
 /**
@@ -43,9 +42,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   private int caching = 1;
 
   /**
-   * @param connection
-   * @param tableName
-   * @param scan
+   * @param connection which connection
+   * @param tableName table callable is on
+   * @param scan the scan to execute
    */
   public ScannerCallable (HConnection connection, byte [] tableName, Scan scan) {
     super(connection, tableName, scan.getStartRow());
@@ -53,7 +52,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   }
   
   /**
-   * @param reload
+   * @param reload force reload of server location
    * @throws IOException
    */
   @Override

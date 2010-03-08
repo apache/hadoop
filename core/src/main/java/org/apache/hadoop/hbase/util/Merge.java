@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,9 +19,6 @@
  */
 
 package org.apache.hadoop.hbase.util;
-
-import java.io.IOException;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +41,9 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.io.IOException;
+import java.util.List;
+
 /**
  * Utility that can merge any two regions in the same table: adjacent,
  * overlapping or disjoint.
@@ -64,7 +64,7 @@ public class Merge extends Configured implements Tool {
   }
 
   /**
-   * @param conf
+   * @param conf configuration
    */
   public Merge(Configuration conf) {
     this.mergeInfo = null;
@@ -219,7 +219,7 @@ public class Merge extends Configured implements Tool {
           Bytes.toString(region1) + " in " + meta1);
     }
 
-    HRegion metaRegion2 = null;
+    HRegion metaRegion2;
     if (Bytes.equals(meta1.getRegionName(), meta2.getRegionName())) {
       metaRegion2 = metaRegion1;
     } else {
@@ -243,7 +243,7 @@ public class Merge extends Configured implements Tool {
       throw new IOException("Could not find meta region for " +
           Bytes.toString(merged.getRegionName()));
     }
-    HRegion mergeMeta = null;
+    HRegion mergeMeta;
     if (Bytes.equals(mergedInfo.getRegionName(), meta1.getRegionName())) {
       mergeMeta = metaRegion1;
     } else if (Bytes.equals(mergedInfo.getRegionName(), meta2.getRegionName())) {
@@ -370,13 +370,8 @@ public class Merge extends Configured implements Tool {
         "Usage: bin/hbase merge <table-name> <region-1> <region-2>\n");
   }
   
-  /**
-   * Main program
-   * 
-   * @param args
-   */
   public static void main(String[] args) {
-    int status = 0;
+    int status;
     try {
       status = ToolRunner.run(HBaseConfiguration.create(), new Merge(), args);
     } catch (Exception e) {

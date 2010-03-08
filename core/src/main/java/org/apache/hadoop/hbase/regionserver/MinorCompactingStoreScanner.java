@@ -1,5 +1,5 @@
-/*
- * Copyright 2009 The Apache Software Foundation
+/**
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,12 +20,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * A scanner that does a minor compaction at the same time.  Doesn't need to

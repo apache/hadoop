@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -29,7 +29,7 @@ import java.io.IOException;
 public interface ChangedReadersObserver {
   /**
    * Notify observers.
-   * @throws IOException
+   * @throws IOException e
    */
   void updateReaders() throws IOException;
 }

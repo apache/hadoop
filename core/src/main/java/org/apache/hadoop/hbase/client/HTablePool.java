@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.util.Bytes;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A simple pool of HTable instances.<p>
@@ -73,7 +73,7 @@ public class HTablePool {
    * Get a reference to the specified table from the pool.<p>
    *
    * Create a new one if one is not available.
-   * @param tableName
+   * @param tableName table name
    * @return a reference to the specified table
    * @throws RuntimeException if there is a problem instantiating the HTable
    */
@@ -98,7 +98,7 @@ public class HTablePool {
    * Get a reference to the specified table from the pool.<p>
    *
    * Create a new one if one is not available.
-   * @param tableName
+   * @param tableName table name
    * @return a reference to the specified table
    * @throws RuntimeException if there is a problem instantiating the HTable
    */
@@ -111,7 +111,7 @@ public class HTablePool {
    *
    * If the pool already contains <i>maxSize</i> references to the table,
    * then nothing happens.
-   * @param table
+   * @param table table
    */
   public void putTable(HTableInterface table) {
     LinkedList<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));

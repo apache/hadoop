@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,17 +23,18 @@ import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Abstract class that performs common operations for 
- * @see #ProcessRegionClose and @see #ProcessRegionOpen
+ * @see ProcessRegionClose and @see ProcessRegionOpen
  */
 abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected final boolean isMetaTable;
   protected final HRegionInfo regionInfo;
+  @SuppressWarnings({"FieldCanBeLocal"})
   private volatile MetaRegion metaRegion = null;
   protected volatile byte[] metaRegionName = null;
 
   /**
-   * @param master
-   * @param regionInfo
+   * @param master the master
+   * @param regionInfo region info
    */
   public ProcessRegionStatusChange(HMaster master, HRegionInfo regionInfo) {
     super(master);

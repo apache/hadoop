@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,8 +28,8 @@ public class RowLock {
 
   /**
    * Creates a RowLock from a row and lock id
-   * @param row
-   * @param lockId
+   * @param row row to lock on
+   * @param lockId the lock id
    */
   public RowLock(final byte [] row, final long lockId) {
     this.row = row;
@@ -38,7 +38,7 @@ public class RowLock {
   
   /**
    * Creates a RowLock with only a lock id
-   * @param lockId
+   * @param lockId lock id
    */
   public RowLock(final long lockId) {
     this.lockId = lockId;

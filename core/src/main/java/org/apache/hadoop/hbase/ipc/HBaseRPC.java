@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +20,18 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import javax.net.SocketFactory;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -29,25 +43,8 @@ import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.net.SocketFactory;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /** A simple RPC mechanism.
  *
@@ -99,8 +96,8 @@ public class HBaseRPC {
     }
 
     /**
-     * @param method
-     * @param parameters
+     * @param method method to call
+     * @param parameters parameters of call
      */
     public Invocation(Method method, Object[] parameters) {
       this.methodName = method.getName();
@@ -174,6 +171,7 @@ public class HBaseRPC {
      * if no cached client exists.
      * 
      * @param conf Configuration
+     * @param factory socket factory
      * @return an IPC client
      */
     protected synchronized HBaseClient getClient(Configuration conf,
@@ -208,6 +206,7 @@ public class HBaseRPC {
     /**
      * Stop a RPC client connection 
      * A RPC client is closed only when its reference count becomes zero.
+     * @param client client to stop
      */
     protected void stopClient(HBaseClient client) {
       synchronized (this) {
@@ -231,10 +230,10 @@ public class HBaseRPC {
     private boolean isClosed = false;
 
     /**
-     * @param address
-     * @param ticket
-     * @param conf
-     * @param factory
+     * @param address address for invoker
+     * @param ticket ticket
+     * @param conf configuration
+     * @param factory socket factory
      */
     public Invoker(InetSocketAddress address, UserGroupInformation ticket, 
                    Configuration conf, SocketFactory factory) {
@@ -317,14 +316,14 @@ public class HBaseRPC {
   }
   
   /**
-   * @param protocol
-   * @param clientVersion
-   * @param addr
-   * @param conf
-   * @param maxAttempts
-   * @param timeout
+   * @param protocol protocol interface
+   * @param clientVersion which client version we expect
+   * @param addr address of remote service
+   * @param conf configuration
+   * @param maxAttempts max attempts
+   * @param timeout timeout in milliseconds
    * @return proxy
-   * @throws IOException
+   * @throws IOException e
    */
   @SuppressWarnings("unchecked")
   public static VersionedProtocol waitForProxy(Class protocol,
@@ -371,13 +370,13 @@ public class HBaseRPC {
    * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address.
    *
-   * @param protocol
-   * @param clientVersion
-   * @param addr
-   * @param conf
-   * @param factory
+   * @param protocol interface
+   * @param clientVersion version we are expecting
+   * @param addr remote address
+   * @param conf configuration
+   * @param factory socket factory
    * @return proxy
-   * @throws IOException
+   * @throws IOException e
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
@@ -389,14 +388,14 @@ public class HBaseRPC {
    * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address.
    *
-   * @param protocol
-   * @param clientVersion
-   * @param addr
-   * @param ticket
-   * @param conf
-   * @param factory
+   * @param protocol interface
+   * @param clientVersion version we are expecting
+   * @param addr remote address
+   * @param ticket ticket
+   * @param conf configuration
+   * @param factory socket factory
    * @return proxy
-   * @throws IOException
+   * @throws IOException e
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
@@ -418,12 +417,12 @@ public class HBaseRPC {
   /**
    * Construct a client-side proxy object with the default SocketFactory
    * 
-   * @param protocol
-   * @param clientVersion
-   * @param addr
-   * @param conf
+   * @param protocol interface
+   * @param clientVersion version we are expecting
+   * @param addr remote address
+   * @param conf configuration
    * @return a proxy instance
-   * @throws IOException
+   * @throws IOException e
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf)
@@ -446,12 +445,12 @@ public class HBaseRPC {
   /**
    * Expert: Make multiple, parallel calls to a set of servers.
    *
-   * @param method
-   * @param params
-   * @param addrs
-   * @param conf
+   * @param method method to invoke
+   * @param params array of parameters
+   * @param addrs array of addresses
+   * @param conf configuration
    * @return values
-   * @throws IOException
+   * @throws IOException e
    */
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, Configuration conf)
@@ -484,12 +483,12 @@ public class HBaseRPC {
    * Construct a server for a protocol implementation instance listening on a
    * port and address.
    *
-   * @param instance
-   * @param bindAddress
-   * @param port
-   * @param conf
+   * @param instance instance
+   * @param bindAddress bind address
+   * @param port port to bind to
+   * @param conf configuration
    * @return Server
-   * @throws IOException
+   * @throws IOException e
    */
   public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
     throws IOException {
@@ -500,14 +499,14 @@ public class HBaseRPC {
    * Construct a server for a protocol implementation instance listening on a
    * port and address.
    *
-   * @param instance
-   * @param bindAddress
-   * @param port
-   * @param numHandlers
-   * @param verbose
-   * @param conf
+   * @param instance instance
+   * @param bindAddress bind address
+   * @param port port to bind to
+   * @param numHandlers number of handlers to start
+   * @param verbose verbose flag
+   * @param conf configuration
    * @return Server
-   * @throws IOException
+   * @throws IOException e
    */
   public static Server getServer(final Object instance, final String bindAddress, final int port,
                                  final int numHandlers,
@@ -528,7 +527,7 @@ public class HBaseRPC {
      * @param conf the configuration to use
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
-     * @throws IOException
+     * @throws IOException e
      */
     public Server(Object instance, Configuration conf, String bindAddress, int port) 
       throws IOException {
@@ -550,7 +549,7 @@ public class HBaseRPC {
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
-     * @throws IOException
+     * @throws IOException e
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
                   int numHandlers, boolean verbose) throws IOException {

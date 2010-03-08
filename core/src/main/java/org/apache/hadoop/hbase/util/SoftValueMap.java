@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -51,9 +51,10 @@ public class SoftValueMap<K,V> implements Map<K,V> {
    * ReferenceQueue.
    * @return How many references cleared.
    */
+  @SuppressWarnings({"unchecked"})
   public int checkReferences() {
     int i = 0;
-    for (Object obj = null; (obj = this.rq.poll()) != null;) {
+    for (Object obj; (obj = this.rq.poll()) != null;) {
       i++;
       this.internalMap.remove(((SoftValue<K,V>)obj).getKey());
     }
@@ -72,6 +73,7 @@ public class SoftValueMap<K,V> implements Map<K,V> {
     throw new RuntimeException("Not implemented");
   }
   
+  @SuppressWarnings({"SuspiciousMethodCalls"})
   public V get(Object key) {
     checkReferences();
     SoftValue<K,V> value = this.internalMap.get(key);

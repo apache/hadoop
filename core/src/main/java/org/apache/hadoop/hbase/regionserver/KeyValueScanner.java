@@ -1,5 +1,5 @@
-/*
- * Copyright 2009 The Apache Software Foundation
+/**
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -39,7 +39,7 @@ public interface KeyValueScanner {
   
   /**
    * Seek the scanner at or after the specified KeyValue.
-   * @param key
+   * @param key seek value
    * @return true if scanner has values left, false if end of scanner
    */
   public boolean seek(KeyValue key);

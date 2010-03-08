@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Interface for row and column filters directly applied within the regionserver.

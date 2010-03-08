@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,12 +20,12 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Properties;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -121,8 +121,9 @@ public class ClassSize {
 
     ARRAYLIST = align(OBJECT + align(REFERENCE) + align(ARRAY) +
         (2 * Bytes.SIZEOF_INT));
-    
-    BYTE_BUFFER = align(OBJECT + align(REFERENCE) + align(ARRAY) + 
+
+    //noinspection PointlessArithmeticExpression
+    BYTE_BUFFER = align(OBJECT + align(REFERENCE) + align(ARRAY) +
         (5 * Bytes.SIZEOF_INT) + 
         (3 * Bytes.SIZEOF_BOOLEAN) + Bytes.SIZEOF_LONG); 
     
@@ -172,7 +173,8 @@ public class ClassSize {
    * in the above example.
    *
    * @param cl A class whose instance size is to be estimated
-   * @return an array of 3 integers. The first integer is the size of the 
+   * @param debug debug flag
+   * @return an array of 3 integers. The first integer is the size of the
    * primitives, the second the number of arrays and the third the number of
    * references.
    */
@@ -183,43 +185,41 @@ public class ClassSize {
     //The number of references that a new object takes
     int references = nrOfRefsPerObj; 
 
-    for( ; null != cl; cl = cl.getSuperclass()) {
+    for ( ; null != cl; cl = cl.getSuperclass()) {
       Field[] field = cl.getDeclaredFields();
-      if( null != field) {
-        for( int i = 0; i < field.length; i++) {
-          if( ! Modifier.isStatic( field[i].getModifiers())) {
-            Class fieldClass = field[i].getType();
-            if( fieldClass.isArray()){
+      if (null != field) {
+        for (Field aField : field) {
+          if (!Modifier.isStatic(aField.getModifiers())) {
+            Class fieldClass = aField.getType();
+            if (fieldClass.isArray()) {
               arrays++;
               references++;
-            }
-            else if(!fieldClass.isPrimitive()){
+            } else if (!fieldClass.isPrimitive()) {
               references++;
-            }
-            else {// Is simple primitive
+            } else {// Is simple primitive
               String name = fieldClass.getName();
 
-              if(name.equals("int") || name.equals( "I"))
+              if (name.equals("int") || name.equals("I"))
                 primitives += Bytes.SIZEOF_INT;
-              else if(name.equals("long") || name.equals( "J"))
+              else if (name.equals("long") || name.equals("J"))
                 primitives += Bytes.SIZEOF_LONG;
-              else if(name.equals("boolean") || name.equals( "Z"))
+              else if (name.equals("boolean") || name.equals("Z"))
                 primitives += Bytes.SIZEOF_BOOLEAN;
-              else if(name.equals("short") || name.equals( "S"))
+              else if (name.equals("short") || name.equals("S"))
                 primitives += Bytes.SIZEOF_SHORT;
-              else if(name.equals("byte") || name.equals( "B"))
+              else if (name.equals("byte") || name.equals("B"))
                 primitives += Bytes.SIZEOF_BYTE;
-              else if(name.equals("char") || name.equals( "C"))
+              else if (name.equals("char") || name.equals("C"))
                 primitives += Bytes.SIZEOF_CHAR;
-              else if(name.equals("float") || name.equals( "F"))
+              else if (name.equals("float") || name.equals("F"))
                 primitives += Bytes.SIZEOF_FLOAT;
-              else if(name.equals("double") || name.equals( "D"))
+              else if (name.equals("double") || name.equals("D"))
                 primitives += Bytes.SIZEOF_DOUBLE;
             }
-            if(debug) {
+            if (debug) {
               if (LOG.isDebugEnabled()) {
                 // Write out region name as string and its encoded name.
-                LOG.debug(field[i].getName()+ "\n\t" +field[i].getType());
+                LOG.debug(aField.getName() + "\n\t" + aField.getType());
               }
             }
           }
@@ -235,6 +235,7 @@ public class ClassSize {
    *
    * @param coeff the coefficients
    *
+   * @param debug debug flag
    * @return the size estimate, in bytes
    */
   private static long estimateBaseFromCoefficients(int [] coeff, boolean debug) {
@@ -261,6 +262,8 @@ public class ClassSize {
    * of the array. Similarly the size of an object (reference) field does not 
    * depend on the object.
    *
+   * @param cl class
+   * @param debug debug flag
    * @return the size estimate in bytes.
    */
   @SuppressWarnings("unchecked")

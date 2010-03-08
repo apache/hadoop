@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,13 +20,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -47,6 +38,15 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -66,13 +66,16 @@ public class MetaUtils {
     new TreeMap<byte [], HRegion>(Bytes.BYTES_COMPARATOR));
   
   /** Default constructor 
-   * @throws IOException */
+   * @throws IOException e
+   */
   public MetaUtils() throws IOException {
     this(HBaseConfiguration.create());
   }
   
-  /** @param conf Configuration 
-   * @throws IOException */
+  /**
+   * @param conf Configuration
+   * @throws IOException e
+   */
   public MetaUtils(Configuration conf) throws IOException {
     this.conf = conf;
     conf.setInt("hbase.client.retries.number", 1);
@@ -82,7 +85,7 @@ public class MetaUtils {
 
   /**
    * Verifies that DFS is available and that HBase is off-line.
-   * @throws IOException
+   * @throws IOException e
    */
   private void initialize() throws IOException {
     this.fs = FileSystem.get(this.conf);
@@ -90,8 +93,10 @@ public class MetaUtils {
     this.rootdir = FSUtils.getRootDir(this.conf);
   }
 
-  /** @return the HLog 
-   * @throws IOException */
+  /**
+   * @return the HLog
+   * @throws IOException e
+   */
   public synchronized HLog getLog() throws IOException {
     if (this.log == null) {
       Path logdir = new Path(this.fs.getHomeDirectory(),
@@ -105,7 +110,7 @@ public class MetaUtils {
   
   /**
    * @return HRegion for root region
-   * @throws IOException
+   * @throws IOException e
    */
   public HRegion getRootRegion() throws IOException {
     if (this.rootRegion == null) {
@@ -119,7 +124,7 @@ public class MetaUtils {
    * 
    * @param metaInfo HRegionInfo for meta region
    * @return meta HRegion
-   * @throws IOException
+   * @throws IOException e
    */
   public HRegion getMetaRegion(HRegionInfo metaInfo) throws IOException {
     HRegion meta = metaRegions.get(metaInfo.getRegionName());
@@ -178,7 +183,7 @@ public class MetaUtils {
      * 
      * @param info HRegionInfo for row
      * @return false to terminate the scan
-     * @throws IOException
+     * @throws IOException e
      */
     public boolean processRow(HRegionInfo info) throws IOException;
   }
@@ -188,7 +193,7 @@ public class MetaUtils {
    * the HRegionInfo of the meta region.
    * 
    * @param listener method to be called for each meta region found
-   * @throws IOException
+   * @throws IOException e
    */
   public void scanRootRegion(ScannerListener listener) throws IOException {
     // Open root region so we can scan it
@@ -201,9 +206,9 @@ public class MetaUtils {
   /**
    * Scan the passed in metaregion <code>m</code> invoking the passed
    * <code>listener</code> per row found.
-   * @param r
-   * @param listener
-   * @throws IOException
+   * @param r region
+   * @param listener scanner listener
+   * @throws IOException e
    */
   public void scanMetaRegion(final HRegion r, final ScannerListener listener)
   throws IOException {
@@ -247,7 +252,7 @@ public class MetaUtils {
    * 
    * @param metaRegionInfo HRegionInfo for meta region
    * @param listener method to be called for each meta region found
-   * @throws IOException
+   * @throws IOException e
    */
   public void scanMetaRegion(HRegionInfo metaRegionInfo,
     ScannerListener listener)
@@ -285,7 +290,7 @@ public class MetaUtils {
    * @param row Row in the catalog .META. table whose HRegionInfo's offline
    * status we want to change.
    * @param onlineOffline Pass <code>true</code> to OFFLINE the region.
-   * @throws IOException
+   * @throws IOException e
    */
   public static void changeOnlineStatus (final Configuration c,
       final byte [] row, final boolean onlineOffline)
@@ -320,9 +325,9 @@ public class MetaUtils {
   /**
    * Offline version of the online TableOperation,
    * org.apache.hadoop.hbase.master.AddColumn.
-   * @param tableName
+   * @param tableName table name
    * @param hcd Add this column to <code>tableName</code>
-   * @throws IOException 
+   * @throws IOException e
    */
   public void addColumn(final byte [] tableName,
       final HColumnDescriptor hcd)
@@ -354,9 +359,9 @@ public class MetaUtils {
   /**
    * Offline version of the online TableOperation,
    * org.apache.hadoop.hbase.master.DeleteColumn.
-   * @param tableName
+   * @param tableName table name
    * @param columnFamily Name of column name to remove.
-   * @throws IOException
+   * @throws IOException e
    */
   public void deleteColumn(final byte [] tableName,
       final byte [] columnFamily) throws IOException {
@@ -392,9 +397,9 @@ public class MetaUtils {
   /**
    * Update COL_REGIONINFO in meta region r with HRegionInfo hri
    * 
-   * @param r
-   * @param hri
-   * @throws IOException
+   * @param r region
+   * @param hri region info
+   * @throws IOException e
    */
   public void updateMETARegionInfo(HRegion r, final HRegionInfo hri) 
   throws IOException {
@@ -445,7 +450,7 @@ public class MetaUtils {
    * @return List of {@link HRegionInfo} rows found in the ROOT or META
    * catalog table.
    * @param tableName Name of table to go looking for.
-   * @throws IOException
+   * @throws IOException e
    * @see #getMetaRegion(HRegionInfo)
    */
   public List<HRegionInfo> getMETARows(final byte [] tableName)

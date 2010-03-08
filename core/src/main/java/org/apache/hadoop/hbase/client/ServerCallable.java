@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,11 +20,11 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.util.concurrent.Callable;
-
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+
+import java.io.IOException;
+import java.util.concurrent.Callable;
 
 /**
  * Abstract class that implements Callable, used by retryable actions.
@@ -38,9 +38,9 @@ public abstract class ServerCallable<T> implements Callable<T> {
   protected HRegionInterface server;
 
   /**
-   * @param connection
-   * @param tableName
-   * @param row
+   * @param connection connection callable is on
+   * @param tableName table name callable is on
+   * @param row row we are querying
    */
   public ServerCallable(HConnection connection, byte [] tableName, byte [] row) {
     this.connection = connection;
@@ -51,7 +51,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   /**
    * 
    * @param reload set this to true if connection should re-find the region
-   * @throws IOException
+   * @throws IOException e
    */
   public void instantiateServer(boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);

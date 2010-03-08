@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.filter;
 
 /**
  * A binary comparator which lexicographically compares against the specified 
- * byte array using {@link Bytes#compareTo(byte[], byte[])}.
+ * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
  */
 public class BinaryComparator extends WritableByteArrayComparable {
 
@@ -31,7 +31,7 @@ public class BinaryComparator extends WritableByteArrayComparable {
 
   /**
    * Constructor
-   * @param value
+   * @param value value
    */
   public BinaryComparator(byte[] value) {
     super(value);

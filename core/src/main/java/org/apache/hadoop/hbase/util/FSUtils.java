@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +36,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Utility methods for interacting with the underlying file system.
  */
@@ -58,22 +58,22 @@ public class FSUtils {
 
   /**
    * Delete if exists.
-   * @param fs
-   * @param dir
+   * @param fs filesystem object
+   * @param dir directory to delete
    * @return True if deleted <code>dir</code>
-   * @throws IOException
+   * @throws IOException e
    */
   public static boolean deleteDirectory(final FileSystem fs, final Path dir)
   throws IOException {
-    return fs.exists(dir)? fs.delete(dir, true): false;
+    return fs.exists(dir) && fs.delete(dir, true);
   }
 
   /**
    * Check if directory exists.  If it does not, create it.
-   * @param fs 
-   * @param dir
+   * @param fs filesystem object
+   * @param dir path to check
    * @return Path
-   * @throws IOException
+   * @throws IOException e
    */
   public Path checkdir(final FileSystem fs, final Path dir) throws IOException {
     if (!fs.exists(dir)) {
@@ -84,10 +84,10 @@ public class FSUtils {
 
   /**
    * Create file.
-   * @param fs
-   * @param p
+   * @param fs filesystem object
+   * @param p path to create
    * @return Path
-   * @throws IOException
+   * @throws IOException e
    */
   public static Path create(final FileSystem fs, final Path p)
   throws IOException {
@@ -103,8 +103,8 @@ public class FSUtils {
   /**
    * Checks to see if the specified file system is available
    * 
-   * @param fs
-   * @throws IOException
+   * @param fs filesystem
+   * @throws IOException e
    */
   public static void checkFileSystemAvailable(final FileSystem fs) 
   throws IOException {
@@ -133,10 +133,10 @@ public class FSUtils {
   /**
    * Verifies current version of file system
    * 
-   * @param fs
-   * @param rootdir
+   * @param fs filesystem object
+   * @param rootdir root hbase directory
    * @return null if no version file exists, version string otherwise.
-   * @throws IOException
+   * @throws IOException e
    */
   public static String getVersion(FileSystem fs, Path rootdir)
   throws IOException {
@@ -161,7 +161,7 @@ public class FSUtils {
    * @param rootdir root directory of HBase installation
    * @param message if true, issues a message on System.out 
    * 
-   * @throws IOException
+   * @throws IOException e
    */
   public static void checkVersion(FileSystem fs, Path rootdir, 
       boolean message) throws IOException {
@@ -190,9 +190,9 @@ public class FSUtils {
   /**
    * Sets version of file system
    * 
-   * @param fs
-   * @param rootdir
-   * @throws IOException
+   * @param fs filesystem object
+   * @param rootdir hbase root
+   * @throws IOException e
    */
   public static void setVersion(FileSystem fs, Path rootdir) 
   throws IOException {
@@ -202,10 +202,10 @@ public class FSUtils {
   /**
    * Sets version of file system
    * 
-   * @param fs
-   * @param rootdir
-   * @param version
-   * @throws IOException
+   * @param fs filesystem object
+   * @param rootdir hbase root directory
+   * @param version version to set
+   * @throws IOException e
    */
   public static void setVersion(FileSystem fs, Path rootdir, String version) 
   throws IOException {
@@ -241,9 +241,9 @@ public class FSUtils {
 
   /**
    * If DFS, check safe mode and if so, wait until we clear it.
-   * @param conf
+   * @param conf configuration
    * @param wait Sleep between retries
-   * @throws IOException
+   * @throws IOException e
    */
   public static void waitOnSafeMode(final Configuration conf,
     final long wait)
@@ -293,10 +293,10 @@ public class FSUtils {
   }
 
   /**
-   * @param c
+   * @param c configuration
    * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> from
    * configuration as a Path.
-   * @throws IOException 
+   * @throws IOException e
    */
   public static Path getRootDir(final Configuration c) throws IOException {
     return new Path(c.get(HConstants.HBASE_DIR));
@@ -308,7 +308,7 @@ public class FSUtils {
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @return true if exists
-   * @throws IOException
+   * @throws IOException e
    */
   public static boolean rootRegionExists(FileSystem fs, Path rootdir)
   throws IOException {
@@ -321,40 +321,40 @@ public class FSUtils {
    * Runs through the hbase rootdir and checks all stores have only
    * one file in them -- that is, they've been major compacted.  Looks
    * at root and meta tables too.
-   * @param fs
-   * @param hbaseRootDir
+   * @param fs filesystem
+   * @param hbaseRootDir hbase root directory
    * @return True if this hbase install is major compacted.
-   * @throws IOException
+   * @throws IOException e
    */
   public static boolean isMajorCompacted(final FileSystem fs,
       final Path hbaseRootDir)
   throws IOException {
     // Presumes any directory under hbase.rootdir is a table.
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
-    for (int i = 0; i < tableDirs.length; i++) {
+    for (FileStatus tableDir : tableDirs) {
       // Skip the .log directory.  All others should be tables.  Inside a table,
       // there are compaction.dir directories to skip.  Otherwise, all else
       // should be regions.  Then in each region, should only be family
       // directories.  Under each of these, should be one file only.
-      Path d = tableDirs[i].getPath();
+      Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
       }
-      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
-      for (int j = 0; j < regionDirs.length; j++) {
-        Path dd = regionDirs[j].getPath();
+      FileStatus[] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      for (FileStatus regionDir : regionDirs) {
+        Path dd = regionDir.getPath();
         if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
           continue;
         }
         // Else its a region name.  Now look in region for families.
-        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
-        for (int k = 0; k < familyDirs.length; k++) {
-          Path family = familyDirs[k].getPath();
+        FileStatus[] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        for (FileStatus familyDir : familyDirs) {
+          Path family = familyDir.getPath();
           // Now in family make sure only one file.
-          FileStatus [] familyStatus = fs.listStatus(family);
+          FileStatus[] familyStatus = fs.listStatus(family);
           if (familyStatus.length > 1) {
             LOG.debug(family.toString() + " has " + familyStatus.length +
-              " files.");
+                " files.");
             return false;
           }
         }
@@ -374,7 +374,7 @@ public class FSUtils {
   public static int getTotalTableFragmentation(final HMaster master) 
   throws IOException {
     Map<String, Integer> map = getTableFragmentation(master);
-    return map != null && map.size() > 0 ? map.get("-TOTAL-").intValue() : -1;
+    return map != null && map.size() > 0 ? map.get("-TOTAL-") : -1;
   }
     
   /**
@@ -414,31 +414,31 @@ public class FSUtils {
     DirFilter df = new DirFilter(fs);
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
-    for (int i = 0; i < tableDirs.length; i++) {
+    for (FileStatus tableDir : tableDirs) {
       // Skip the .log directory.  All others should be tables.  Inside a table,
       // there are compaction.dir directories to skip.  Otherwise, all else
       // should be regions.  Then in each region, should only be family
       // directories.  Under each of these, should be one file only.
-      Path d = tableDirs[i].getPath();
+      Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
       }
       int cfCount = 0;
       int cfFrag = 0;
-      FileStatus [] regionDirs = fs.listStatus(d, df);
-      for (int j = 0; j < regionDirs.length; j++) {
-        Path dd = regionDirs[j].getPath();
+      FileStatus[] regionDirs = fs.listStatus(d, df);
+      for (FileStatus regionDir : regionDirs) {
+        Path dd = regionDir.getPath();
         if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
           continue;
         }
         // else its a region name, now look in region for families
-        FileStatus [] familyDirs = fs.listStatus(dd, df);
-        for (int k = 0; k < familyDirs.length; k++) {
+        FileStatus[] familyDirs = fs.listStatus(dd, df);
+        for (FileStatus familyDir : familyDirs) {
           cfCount++;
           cfCountTotal++;
-          Path family = familyDirs[k].getPath();
+          Path family = familyDir.getPath();
           // now in family make sure only one file
-          FileStatus [] familyStatus = fs.listStatus(family);
+          FileStatus[] familyStatus = fs.listStatus(family);
           if (familyStatus.length > 1) {
             cfFrag++;
             cfFragTotal++;
@@ -446,21 +446,19 @@ public class FSUtils {
         }
       }
       // compute percentage per table and store in result list
-      frags.put(d.getName(), Integer.valueOf(
-        Math.round((float) cfFrag / cfCount * 100)));
+      frags.put(d.getName(), Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
-    frags.put("-TOTAL-", Integer.valueOf(
-      Math.round((float) cfFragTotal / cfCountTotal * 100)));
+    frags.put("-TOTAL-", Math.round((float) cfFragTotal / cfCountTotal * 100));
     return frags;
   }
 
   /**
    * Expects to find -ROOT- directory.
-   * @param fs
-   * @param hbaseRootDir
+   * @param fs filesystem
+   * @param hbaseRootDir hbase root directory
    * @return True if this a pre020 layout.
-   * @throws IOException
+   * @throws IOException e
    */
   public static boolean isPre020FileLayout(final FileSystem fs,
     final Path hbaseRootDir)
@@ -476,40 +474,40 @@ public class FSUtils {
    * at root and meta tables too.  This version differs from
    * {@link #isMajorCompacted(FileSystem, Path)} in that it expects a
    * pre-0.20.0 hbase layout on the filesystem.  Used migrating.
-   * @param fs
-   * @param hbaseRootDir
+   * @param fs filesystem
+   * @param hbaseRootDir hbase root directory
    * @return True if this hbase install is major compacted.
-   * @throws IOException
+   * @throws IOException e
    */
   public static boolean isMajorCompactedPre020(final FileSystem fs,
       final Path hbaseRootDir)
   throws IOException {
     // Presumes any directory under hbase.rootdir is a table.
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
-    for (int i = 0; i < tableDirs.length; i++) {
+    for (FileStatus tableDir : tableDirs) {
       // Inside a table, there are compaction.dir directories to skip.
       // Otherwise, all else should be regions.  Then in each region, should
       // only be family directories.  Under each of these, should be a mapfile
       // and info directory and in these only one file.
-      Path d = tableDirs[i].getPath();
+      Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
       }
-      FileStatus [] regionDirs = fs.listStatus(d, new DirFilter(fs));
-      for (int j = 0; j < regionDirs.length; j++) {
-        Path dd = regionDirs[j].getPath();
+      FileStatus[] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      for (FileStatus regionDir : regionDirs) {
+        Path dd = regionDir.getPath();
         if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
           continue;
         }
         // Else its a region name.  Now look in region for families.
-        FileStatus [] familyDirs = fs.listStatus(dd, new DirFilter(fs));
-        for (int k = 0; k < familyDirs.length; k++) {
-          Path family = familyDirs[k].getPath();
-          FileStatus [] infoAndMapfile = fs.listStatus(family);
+        FileStatus[] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        for (FileStatus familyDir : familyDirs) {
+          Path family = familyDir.getPath();
+          FileStatus[] infoAndMapfile = fs.listStatus(family);
           // Assert that only info and mapfile in family dir.
           if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
             LOG.debug(family.toString() +
-              " has more than just info and mapfile: " + infoAndMapfile.length);
+                " has more than just info and mapfile: " + infoAndMapfile.length);
             return false;
           }
           // Make sure directory named info or mapfile.
@@ -518,16 +516,16 @@ public class FSUtils {
                 infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
               continue;
             LOG.debug("Unexpected directory name: " +
-              infoAndMapfile[ll].getPath());
+                infoAndMapfile[ll].getPath());
             return false;
           }
           // Now in family, there are 'mapfile' and 'info' subdirs.  Just
           // look in the 'mapfile' subdir.
-          FileStatus [] familyStatus =
-            fs.listStatus(new Path(family, "mapfiles"));
+          FileStatus[] familyStatus =
+              fs.listStatus(new Path(family, "mapfiles"));
           if (familyStatus.length > 1) {
             LOG.debug(family.toString() + " has " + familyStatus.length +
-              " files.");
+                " files.");
             return false;
           }
         }

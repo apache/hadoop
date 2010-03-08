@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,10 +18,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +43,10 @@ import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.NavigableMap;
+
 /**
  * Provides administrative functions for HBase
  */
@@ -63,7 +63,7 @@ public class HBaseAdmin {
    * Constructor
    * 
    * @param conf Configuration object
-   * @throws MasterNotRunningException
+   * @throws MasterNotRunningException if the master is not running
    */
   public HBaseAdmin(Configuration conf) throws MasterNotRunningException {
     this.connection = HConnectionManager.getConnection(conf);
@@ -80,7 +80,7 @@ public class HBaseAdmin {
 
   /**
    * @return proxy connection to master server for this instance
-   * @throws MasterNotRunningException
+   * @throws MasterNotRunningException if the master is not running
    */
   public HMasterInterface getMaster() throws MasterNotRunningException{
     return this.connection.getMaster();
@@ -94,7 +94,7 @@ public class HBaseAdmin {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws MasterNotRunningException
+   * @throws MasterNotRunningException if the master is not running
    */
   public boolean tableExists(final String tableName)
   throws MasterNotRunningException {
@@ -104,7 +104,7 @@ public class HBaseAdmin {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws MasterNotRunningException
+   * @throws MasterNotRunningException if the master is not running
    */
   public boolean tableExists(final byte [] tableName)
   throws MasterNotRunningException {
@@ -122,7 +122,7 @@ public class HBaseAdmin {
    * Right now, it only exists as part of the META table's region info.
    *
    * @return - returns an array of HTableDescriptors 
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor[] listTables() throws IOException {
     return this.connection.listTables();
@@ -133,7 +133,7 @@ public class HBaseAdmin {
    * Method for getting the tableDescriptor
    * @param tableName as a byte []
    * @return the tableDescriptor
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
   throws IOException {
@@ -158,7 +158,7 @@ public class HBaseAdmin {
    * @throws TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void createTable(HTableDescriptor desc)
   throws IOException {
@@ -195,7 +195,7 @@ public class HBaseAdmin {
    * @throws TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void createTableAsync(HTableDescriptor desc)
   throws IOException {
@@ -215,7 +215,7 @@ public class HBaseAdmin {
    * Synchronous operation.
    * 
    * @param tableName name of table to delete
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void deleteTable(final String tableName) throws IOException {
     deleteTable(Bytes.toBytes(tableName));
@@ -226,7 +226,7 @@ public class HBaseAdmin {
    * Synchronous operation.
    * 
    * @param tableName name of table to delete
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void deleteTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
@@ -257,10 +257,9 @@ public class HBaseAdmin {
           break;
         }
         boolean found = false;
-        for (int i = 0; i < values.length; i++) {
-          Result r = values[i];
+        for (Result r : values) {
           NavigableMap<byte[], byte[]> infoValues =
-            r.getFamilyMap(HConstants.CATALOG_FAMILY);
+              r.getFamilyMap(HConstants.CATALOG_FAMILY);
           for (Map.Entry<byte[], byte[]> e : infoValues.entrySet()) {
             if (Bytes.equals(e.getKey(), HConstants.REGIONINFO_QUALIFIER)) {
               info = (HRegionInfo) Writables.getWritable(e.getValue(), info);
@@ -310,7 +309,7 @@ public class HBaseAdmin {
    * Synchronous operation.
    * 
    * @param tableName name of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void enableTable(final String tableName) throws IOException {
     enableTable(Bytes.toBytes(tableName));
@@ -321,7 +320,7 @@ public class HBaseAdmin {
    * Synchronous operation.
    * 
    * @param tableName name of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void enableTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
@@ -366,7 +365,7 @@ public class HBaseAdmin {
    * Synchronous operation.
    * 
    * @param tableName name of table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void disableTable(final String tableName) throws IOException {
     disableTable(Bytes.toBytes(tableName));
@@ -378,7 +377,7 @@ public class HBaseAdmin {
    * Synchronous operation.
    * 
    * @param tableName name of table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void disableTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
@@ -419,7 +418,7 @@ public class HBaseAdmin {
   /**
    * @param tableName name of table to check
    * @return true if table is on-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(String tableName) throws IOException {
     return isTableEnabled(Bytes.toBytes(tableName));
@@ -427,7 +426,7 @@ public class HBaseAdmin {
   /**
    * @param tableName name of table to check
    * @return true if table is on-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException {
     return connection.isTableEnabled(tableName);
@@ -436,7 +435,7 @@ public class HBaseAdmin {
   /**
    * @param tableName name of table to check
    * @return true if table is off-line
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableDisabled(byte[] tableName) throws IOException {
     return connection.isTableDisabled(tableName);
@@ -445,7 +444,7 @@ public class HBaseAdmin {
   /**
    * @param tableName name of table to check
    * @return true if all regions of the table are available
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(byte[] tableName) throws IOException {
     return connection.isTableAvailable(tableName);
@@ -454,7 +453,7 @@ public class HBaseAdmin {
   /**
    * @param tableName name of table to check
    * @return true if all regions of the table are available
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(String tableName) throws IOException {
     return connection.isTableAvailable(Bytes.toBytes(tableName));
@@ -466,7 +465,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of the table to add column to
    * @param column column descriptor of column to be added
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void addColumn(final String tableName, HColumnDescriptor column)
   throws IOException {
@@ -479,7 +478,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of the table to add column to
    * @param column column descriptor of column to be added
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void addColumn(final byte [] tableName, HColumnDescriptor column)
   throws IOException {
@@ -500,7 +499,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of table
    * @param columnName name of column to be deleted
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void deleteColumn(final String tableName, final String columnName)
   throws IOException {
@@ -513,7 +512,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of table
    * @param columnName name of column to be deleted
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException {
@@ -535,7 +534,7 @@ public class HBaseAdmin {
    * @param tableName name of table
    * @param columnName name of column to be modified
    * @param descriptor new column descriptor to use
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void modifyColumn(final String tableName, final String columnName, 
       HColumnDescriptor descriptor)
@@ -551,7 +550,7 @@ public class HBaseAdmin {
    * @param tableName name of table
    * @param columnName name of column to be modified
    * @param descriptor new column descriptor to use
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void modifyColumn(final byte [] tableName, final byte [] columnName, 
     HColumnDescriptor descriptor)
@@ -571,10 +570,10 @@ public class HBaseAdmin {
    * Close a region. For expert-admins.
    * Asynchronous operation.
    * 
-   * @param regionname
+   * @param regionname region name to close
    * @param args Optional server name.  Otherwise, we'll send close to the
    * server registered in .META.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void closeRegion(final String regionname, final Object... args)
   throws IOException {
@@ -585,10 +584,10 @@ public class HBaseAdmin {
    * Close a region.  For expert-admins.
    * Asynchronous operation.
    * 
-   * @param regionname
+   * @param regionname region name to close
    * @param args Optional server name.  Otherwise, we'll send close to the
    * server registered in .META.
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void closeRegion(final byte [] regionname, final Object... args)
   throws IOException {
@@ -598,9 +597,7 @@ public class HBaseAdmin {
     Object [] newargs = new Object[len + xtraArgsCount];
     newargs[0] = regionname;
     if(args != null) {
-      for (int i = 0; i < len; i++) {
-        newargs[i + xtraArgsCount] = args[i];
-      }
+      System.arraycopy(args, 0, newargs, xtraArgsCount, len);
     }
     modifyTable(HConstants.META_TABLE_NAME, HConstants.Modify.CLOSE_REGION,
       newargs);
@@ -610,8 +607,8 @@ public class HBaseAdmin {
    * Flush a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to flush
+   * @throws IOException if a remote or network exception occurs
    */
   public void flush(final String tableNameOrRegionName) throws IOException {
     flush(Bytes.toBytes(tableNameOrRegionName));
@@ -621,8 +618,8 @@ public class HBaseAdmin {
    * Flush a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to flush
+   * @throws IOException if a remote or network exception occurs
    */
   public void flush(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_FLUSH);
@@ -632,8 +629,8 @@ public class HBaseAdmin {
    * Compact a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to compact
+   * @throws IOException if a remote or network exception occurs
    */
   public void compact(final String tableNameOrRegionName) throws IOException {
     compact(Bytes.toBytes(tableNameOrRegionName));
@@ -643,8 +640,8 @@ public class HBaseAdmin {
    * Compact a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to compact
+   * @throws IOException if a remote or network exception occurs
    */
   public void compact(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_COMPACT);
@@ -654,8 +651,8 @@ public class HBaseAdmin {
    * Major compact a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to major compact
+   * @throws IOException if a remote or network exception occurs
    */
   public void majorCompact(final String tableNameOrRegionName)
   throws IOException {
@@ -666,8 +663,8 @@ public class HBaseAdmin {
    * Major compact a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to major compact
+   * @throws IOException if a remote or network exception occurs
    */
   public void majorCompact(final byte [] tableNameOrRegionName)
   throws IOException {
@@ -678,8 +675,8 @@ public class HBaseAdmin {
    * Split a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table or region to split
+   * @throws IOException if a remote or network exception occurs
    */
   public void split(final String tableNameOrRegionName) throws IOException {
     split(Bytes.toBytes(tableNameOrRegionName));
@@ -689,8 +686,8 @@ public class HBaseAdmin {
    * Split a table or an individual region.
    * Asynchronous operation.
    * 
-   * @param tableNameOrRegionName
-   * @throws IOException
+   * @param tableNameOrRegionName table to region to split
+   * @throws IOException if a remote or network exception occurs
    */
   public void split(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_SPLIT);
@@ -722,7 +719,7 @@ public class HBaseAdmin {
    * 
    * @param tableName name of table.
    * @param htd modified description of the table
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void modifyTable(final byte [] tableName, HTableDescriptor htd) 
   throws IOException {
@@ -737,7 +734,7 @@ public class HBaseAdmin {
    * region.
    * @param op table modification operation
    * @param args operation specific arguments
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public void modifyTable(final byte [] tableName, HConstants.Modify op, 
       Object... args)
@@ -796,7 +793,7 @@ public class HBaseAdmin {
           } else if (args[i] instanceof String) {
             arr[i] = new ImmutableBytesWritable(Bytes.toBytes((String)args[i]));
           } else if (args[i] instanceof Boolean) {
-            arr[i] = new BooleanWritable(((Boolean)args[i]).booleanValue());
+            arr[i] = new BooleanWritable((Boolean) args[i]);
           } else {
             throw new IllegalArgumentException("Requires byte [] or " +
               "ImmutableBytesWritable, not " + args[i]);
@@ -815,7 +812,7 @@ public class HBaseAdmin {
 
   /** 
    * Shuts down the HBase instance 
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public synchronized void shutdown() throws IOException {
     if (this.master == null) {
@@ -832,7 +829,7 @@ public class HBaseAdmin {
 
   /**
    * @return cluster status
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public ClusterStatus getClusterStatus() throws IOException {
     if (this.master == null) {
@@ -850,8 +847,8 @@ public class HBaseAdmin {
   /**
    * Check to see if HBase is running. Throw an exception if not.
    *
-   * @param conf
-   * @throws MasterNotRunningException
+   * @param conf system configuration
+   * @throws MasterNotRunningException if a remote or network exception occurs
    */
   public static void checkHBaseAvailable(Configuration conf)
   throws MasterNotRunningException {

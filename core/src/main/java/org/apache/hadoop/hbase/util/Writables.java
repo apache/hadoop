@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,25 +19,25 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.Writable;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.Writable;
-
 /**
  * Utility class with methods for manipulating Writable objects
  */
 public class Writables {
   /**
-   * @param w
+   * @param w writable
    * @return The bytes of <code>w</code> gotten by running its 
    * {@link Writable#write(java.io.DataOutput)} method.
-   * @throws IOException
+   * @throws IOException e
    * @see #getWritable(byte[], Writable)
    */
   public static byte [] getBytes(final Writable w) throws IOException {
@@ -59,13 +61,13 @@ public class Writables {
   /**
    * Set bytes into the passed Writable by calling its
    * {@link Writable#readFields(java.io.DataInput)}.
-   * @param bytes
+   * @param bytes serialized bytes
    * @param w An empty Writable (usually made by calling the null-arg
    * constructor).
    * @return The passed Writable after its readFields has been called fed
    * by the passed <code>bytes</code> array or IllegalArgumentException
    * if passed null or an empty <code>bytes</code> array.
-   * @throws IOException
+   * @throws IOException e
    * @throws IllegalArgumentException
    */
   public static Writable getWritable(final byte [] bytes, final Writable w)
@@ -76,15 +78,15 @@ public class Writables {
   /**
    * Set bytes into the passed Writable by calling its
    * {@link Writable#readFields(java.io.DataInput)}.
-   * @param bytes
-   * @param offset
-   * @param length
+   * @param bytes serialized bytes
+   * @param offset offset into array
+   * @param length length of data
    * @param w An empty Writable (usually made by calling the null-arg
    * constructor).
    * @return The passed Writable after its readFields has been called fed
    * by the passed <code>bytes</code> array or IllegalArgumentException
    * if passed null or an empty <code>bytes</code> array.
-   * @throws IOException
+   * @throws IOException e
    * @throws IllegalArgumentException
    */
   public static Writable getWritable(final byte [] bytes, final int offset,
@@ -108,9 +110,9 @@ public class Writables {
   }
 
   /**
-   * @param bytes
+   * @param bytes serialized bytes
    * @return A HRegionInfo instance built out of passed <code>bytes</code>.
-   * @throws IOException
+   * @throws IOException e
    */
   public static HRegionInfo getHRegionInfo(final byte [] bytes)
   throws IOException {
@@ -118,15 +120,15 @@ public class Writables {
   }
  
   /**
-   * @param bytes
+   * @param bytes serialized bytes
    * @return A HRegionInfo instance built out of passed <code>bytes</code>
    * or <code>null</code> if passed bytes are null or an empty array.
-   * @throws IOException
+   * @throws IOException e
    */
   public static HRegionInfo getHRegionInfoOrNull(final byte [] bytes)
   throws IOException {
     return (bytes == null || bytes.length <= 0)?
-      (HRegionInfo)null: getHRegionInfo(bytes);
+        null : getHRegionInfo(bytes);
   }
 
   /**
@@ -134,7 +136,7 @@ public class Writables {
    * @param src Source Writable
    * @param tgt Target Writable
    * @return The target Writable.
-   * @throws IOException
+   * @throws IOException e
    */
   public static Writable copyWritable(final Writable src, final Writable tgt)
   throws IOException {
@@ -146,7 +148,7 @@ public class Writables {
    * @param bytes Source Writable
    * @param tgt Target Writable
    * @return The target Writable.
-   * @throws IOException
+   * @throws IOException e
    */
   public static Writable copyWritable(final byte [] bytes, final Writable tgt)
   throws IOException {

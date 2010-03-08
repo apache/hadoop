@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,12 +19,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.io.MapWritable;
+
+import java.io.IOException;
 
 /**
  * HRegionServers interact with the HMasterRegionInterface to report on local 
@@ -39,8 +39,8 @@ public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Called when a region server first starts
-   * @param info
-   * @throws IOException
+   * @param info server info
+   * @throws IOException e
    * @return Configuration for the regionserver to use: e.g. filesystem,
    * hbase rootdir, etc.
    */
@@ -56,7 +56,7 @@ public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
    * reporting server's most loaded regions. These are candidates for being
    * rebalanced.
    * @return instructions from the master to the region server
-   * @throws IOException
+   * @throws IOException e
    */
   public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[], 
     HRegionInfo mostLoadedRegions[])

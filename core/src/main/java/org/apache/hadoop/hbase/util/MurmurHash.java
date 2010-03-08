@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,6 +51,7 @@ public class MurmurHash extends Hash {
       k = k << 8;
       k = k | (data[i_4 + 1] & 0xff);
       k = k << 8;
+      //noinspection PointlessArithmeticExpression
       k = k | (data[i_4 + 0] & 0xff);
       k *= m;
       k ^= k >>> r;

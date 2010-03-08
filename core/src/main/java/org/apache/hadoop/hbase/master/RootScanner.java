@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,10 +19,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+
+import java.io.IOException;
 
 /** Scanner for the <code>ROOT</code> HRegion. */
 class RootScanner extends BaseScanner {

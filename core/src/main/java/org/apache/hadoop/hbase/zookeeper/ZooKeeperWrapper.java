@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -127,6 +127,7 @@ public class ZooKeeperWrapper implements HConstants {
         String host = value.substring(0, value.indexOf(':'));
         servers.add(host);
         try {
+          //noinspection ResultOfMethodCallIgnored
           InetAddress.getByName(host);
           anyValid = true;
         } catch (UnknownHostException e) {
@@ -166,6 +167,7 @@ public class ZooKeeperWrapper implements HConstants {
   }
 
   /** @return String dump of everything in ZooKeeper. */
+  @SuppressWarnings({"ConstantConditions"})
   public String dump() {
     StringBuilder sb = new StringBuilder();
     sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
@@ -201,7 +203,7 @@ public class ZooKeeperWrapper implements HConstants {
    */
   public String[] getServerStats(String server) 
   throws IOException {
-    return getServerStats(server, 1 * 60 * 1000);
+    return getServerStats(server, 60 * 1000);
   }
   
   /**
@@ -392,8 +394,7 @@ public class ZooKeeperWrapper implements HConstants {
 
     String addressString = Bytes.toString(data);
     LOG.debug("Read ZNode " + znode + " got " + addressString);
-    HServerAddress address = new HServerAddress(addressString);
-    return address;
+    return new HServerAddress(addressString);
   }
 
   private boolean ensureExists(final String znode) {

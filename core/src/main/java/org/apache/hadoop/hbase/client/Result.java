@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +20,12 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -30,12 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
@@ -152,7 +152,7 @@ public class Result implements Writable {
     if (isEmpty()) {
       return null;
     }
-    Arrays.sort(kvs, (Comparator<KeyValue>)KeyValue.COMPARATOR);
+    Arrays.sort(kvs, KeyValue.COMPARATOR);
     return kvs;
   }
 
@@ -238,6 +238,7 @@ public class Result implements Writable {
    * Map of qualifiers to values.
    * <p>
    * Returns a Map of the form: <code>Map&lt;qualifier,value></code>
+   * @param family column family to get
    * @return map of qualifiers to values
    */
   public NavigableMap<byte[], byte[]> getFamilyMap(byte [] family) {
@@ -319,10 +320,7 @@ public class Result implements Writable {
       return false;
     }
     NavigableMap<Long, byte[]> versionMap = getVersionMap(qualifierMap, qualifier);
-    if(versionMap == null) {
-      return false;
-    }
-    return true;
+    return versionMap != null;
   }
     
   /**

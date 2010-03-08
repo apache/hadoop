@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,13 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.concurrent.Delayed;
-import java.util.concurrent.TimeUnit;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+
+import java.io.IOException;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
 
 abstract class RegionServerOperation implements Delayed, HConstants {
   protected static final Log LOG = 

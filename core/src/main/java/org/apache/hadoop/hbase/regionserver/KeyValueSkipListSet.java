@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.KeyValue;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -27,8 +29,6 @@ import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-
-import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A {@link java.util.Set} of {@link KeyValue}s implemented on top of a

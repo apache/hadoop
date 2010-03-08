@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,13 +20,13 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
-
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an 
@@ -58,7 +58,7 @@ public abstract class CompareFilter implements Filter {
     /** greater than or equal to */
     GREATER_OR_EQUAL,
     /** greater than */
-    GREATER;
+    GREATER,
   }
   
   protected CompareOp compareOp;

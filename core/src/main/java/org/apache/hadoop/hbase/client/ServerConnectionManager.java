@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -36,7 +36,7 @@ public class ServerConnectionManager extends HConnectionManager {
   /**
    * Get the connection object for the instance specified by the configuration
    * If no current connection exists, create a new connection for that instance
-   * @param conf
+   * @param conf configuration
    * @return HConnection object for the instance specified by the configuration
    */
   public static ServerConnection getConnection(Configuration conf) {

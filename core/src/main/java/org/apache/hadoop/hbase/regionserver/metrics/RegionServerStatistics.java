@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +19,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
-import javax.management.ObjectName;
-
 import org.apache.hadoop.hbase.metrics.MetricsMBeanBase;
 import org.apache.hadoop.metrics.util.MBeanUtil;
-import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+
+import javax.management.ObjectName;
 
 /**
  * Exports metrics recorded by {@link RegionServerMetrics} as an MBean

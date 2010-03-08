@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,6 +20,13 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.io.Writable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -28,14 +35,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.apache.hadoop.io.Writable;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
 
 
 /** 
@@ -128,6 +127,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * @param family family name
    * @param qualifier column qualifier
    * @param value column value
+   * @return this
    */
   public Put add(byte [] family, byte [] qualifier, byte [] value) {
     return add(family, qualifier, this.timestamp, value);
@@ -140,6 +140,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * @param qualifier column qualifier
    * @param ts version timestamp
    * @param value column value
+   * @return this
    */
   public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
     List<KeyValue> list = getKeyValueList(family);
@@ -153,7 +154,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * Add the specified KeyValue to this Put operation.  Operation assumes that 
    * the passed KeyValue is immutable and its backing array will not be modified
    * for the duration of this Put.
-   * @param kv
+   * @param kv individual KeyValue
+   * @return this
+   * @throws java.io.IOException e
    */
   public Put add(KeyValue kv) throws IOException{
     byte [] family = kv.getFamily();
@@ -172,13 +175,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
     return this;
   }
 
-  /**
+  /*
    * Create a KeyValue with this objects row key and the Put identifier.
    * 
-   * @param family
-   * @param qualifier
-   * @param ts
-   * @param value
    * @return a KeyValue with this objects row key and the Put identifier.
    */
   private KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts,
@@ -192,8 +191,8 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * a value assigned to the given family & qualifier.
    * Both given arguments must match the KeyValue object to return true.
    * 
-   * @param family
-   * @param qualifier
+   * @param family column family
+   * @param qualifier column qualifier
    * @return returns true if the given family and qualifier already has an
    * existing KeyValue object in the family map.
    */
@@ -206,9 +205,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * a value assigned to the given family, qualifier and timestamp.
    * All 3 given arguments must match the KeyValue object to return true.
    * 
-   * @param family
-   * @param qualifier
-   * @param ts
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param ts timestamp
    * @return returns true if the given family, qualifier and timestamp already has an
    * existing KeyValue object in the family map.
    */
@@ -221,9 +220,9 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * a value assigned to the given family, qualifier and timestamp.
    * All 3 given arguments must match the KeyValue object to return true.
    * 
-   * @param family
-   * @param qualifier
-   * @param value
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param value value to check
    * @return returns true if the given family, qualifier and value already has an
    * existing KeyValue object in the family map.
    */
@@ -236,10 +235,10 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * the given value assigned to the given family, qualifier and timestamp.
    * All 4 given arguments must match the KeyValue object to return true.
    * 
-   * @param family
-   * @param qualifier
-   * @param ts
-   * @param value
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param ts timestamp
+   * @param value value to check
    * @return returns true if the given family, qualifier timestamp and value 
    * already has an existing KeyValue object in the family map.
    */
@@ -247,7 +246,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
       return has(family, qualifier, ts, value, false, false);
   }
   
-  /**
+  /*
    * Private method to determine if this object's familyMap contains 
    * the given value assigned to the given family, qualifier and timestamp
    * respecting the 2 boolean arguments
@@ -264,9 +263,14 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   private boolean has(byte [] family, byte [] qualifier, long ts, byte [] value, 
       boolean ignoreTS, boolean ignoreValue) {
     List<KeyValue> list = getKeyValueList(family);
-    if (list.size() == 0 ) {
+    if (list.size() == 0) {
       return false;
     }
+    // Boolean analysis of ignoreTS/ignoreValue.
+    // T T => 2
+    // T F => 3 (first is always true)
+    // F T => 2
+    // F F => 1
     if (!ignoreTS && !ignoreValue) {
       KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
       return (list.contains(kv));
@@ -277,20 +281,14 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
           return true;
         }
       }
-    } else if (ignoreTS) {
+    } else {
+      // ignoreTS is always true
       for (KeyValue kv: list) {
       if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
               && Arrays.equals(kv.getValue(), value)) {
           return true;
         }
       }
-    } else {
-      for (KeyValue kv: list) {
-      if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(
-          kv.getQualifier(), qualifier)) {
-          return true;
-        }
-    }
     }
     return false;
   }
@@ -298,8 +296,8 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
   /**
    * Returns a list of all KeyValue objects with matching column family and qualifier.
    * 
-   * @param family
-   * @param qualifier
+   * @param family column family
+   * @param qualifier column qualifier
    * @return a list of KeyValue objects with the matching family and qualifier, 
    * returns an empty list if one doesnt exist for the given family.
    */
@@ -317,7 +315,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * Creates an empty list if one doesnt exist for the given column family
    * or else it returns the associated list of KeyValue objects.
    * 
-   * @param family
+   * @param family column family
    * @return a list of KeyValue objects, returns an empty list if one doesnt exist.
    */
   private List<KeyValue> getKeyValueList(byte[] family) {
@@ -538,6 +536,7 @@ public class Put implements HeapSize, Writable, Row, Comparable<Row> {
    * @param ts version timestamp
    * @param value column value
    * @deprecated use {@link #add(byte[], byte[], long, byte[])} instead
+   * @return true
    */
   public Put add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);

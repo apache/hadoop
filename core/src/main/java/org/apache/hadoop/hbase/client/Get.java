@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -27,15 +35,6 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
 
 /**
  * Used to perform Get operations on a single row.
@@ -138,6 +137,7 @@ public class Get implements Writable {
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
+   * @return this for invocation chaining
    */
   public Get setTimeRange(long minStamp, long maxStamp)
   throws IOException {
@@ -147,7 +147,8 @@ public class Get implements Writable {
 
   /**
    * Get versions of columns with the specified timestamp.
-   * @param timestamp version timestamp  
+   * @param timestamp version timestamp
+   * @return this for invocation chaining
    */
   public Get setTimeStamp(long timestamp) {
     try {
@@ -160,6 +161,7 @@ public class Get implements Writable {
 
   /**
    * Get all available versions.
+   * @return this for invocation chaining
    */
   public Get setMaxVersions() {
     this.maxVersions = Integer.MAX_VALUE;
@@ -170,6 +172,7 @@ public class Get implements Writable {
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
    * @throws IOException if invalid number of versions
+   * @return this for invocation chaining
    */
   public Get setMaxVersions(int maxVersions) throws IOException {
     if(maxVersions <= 0) {
@@ -184,6 +187,7 @@ public class Get implements Writable {
    * Only {@link Filter#filterKeyValue(KeyValue)} is called AFTER all tests
    * for ttl, column match, deletes and max versions have been run.
    * @param filter filter to run on the server
+   * @return this for invocation chaining
    */
   public Get setFilter(Filter filter) {
     this.filter = filter;
@@ -280,9 +284,10 @@ public class Get implements Writable {
     sb.append("row=");
     sb.append(Bytes.toString(this.row));
     sb.append(", maxVersions=");
-    sb.append("" + this.maxVersions);
+    sb.append("").append(this.maxVersions);
     sb.append(", timeRange=");
-    sb.append("[" + this.tr.getMin() + "," + this.tr.getMax() + ")");
+    sb.append("[").append(this.tr.getMin()).append(",");
+    sb.append(this.tr.getMax()).append(")");
     sb.append(", families=");
     if(this.familyMap.size() == 0) {
       sb.append("ALL");
@@ -398,19 +403,22 @@ public class Get implements Writable {
     }    
   }
 
-    /**
+  /**
    * Adds an array of columns specified the old format, family:qualifier.
    * <p>
    * Overrides previous calls to addFamily for any families in the input.
    * @param columns array of columns, formatted as <pre>family:qualifier</pre>
    * @deprecated issue multiple {@link #addColumn(byte[], byte[])} instead
+   * @return this for invocation chaining
    */
+  @SuppressWarnings({"deprecation"})
   public Get addColumns(byte [][] columns) {
     if (columns == null) return this;
-    for(int i = 0; i < columns.length; i++) {
+    for (byte[] column : columns) {
       try {
-        addColumn(columns[i]);
-      } catch(Exception e) {}
+        addColumn(column);
+      } catch (Exception ignored) {
+      }
     }
     return this;
   }

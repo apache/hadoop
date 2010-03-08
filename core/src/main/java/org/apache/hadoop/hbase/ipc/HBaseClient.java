@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,40 +20,37 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.net.Socket;
-import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.net.ConnectException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 
-import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import javax.net.SocketFactory;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.FilterInputStream;
+import java.io.IOException;
 import java.io.InputStream;
-
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.net.SocketFactory;
-
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.ObjectWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -64,24 +63,24 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class HBaseClient {
   
-  public static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
-  protected Hashtable<ConnectionId, Connection> connections =
+  protected final Hashtable<ConnectionId, Connection> connections =
     new Hashtable<ConnectionId, Connection>();
 
-  protected Class<? extends Writable> valueClass;   // class of call values
+  protected final Class<? extends Writable> valueClass;   // class of call values
   protected int counter;                            // counter for call ids
-  protected AtomicBoolean running = new AtomicBoolean(true); // if client runs
+  protected final AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final protected Configuration conf;
-  final protected int maxIdleTime; //connections will be culled if it was idle for 
-                           //maxIdleTime msecs
+  final protected int maxIdleTime; // connections will be culled if it was idle for
+                           // maxIdleTime microsecs
   final protected int maxRetries; //the max. no. of retries for socket connections
   final protected long failureSleep; // Time to sleep before retry on failure.
-  protected boolean tcpNoDelay; // if T then disable Nagle's Algorithm
-  protected boolean tcpKeepAlive; // if T then use keepalives
-  protected int pingInterval; // how often sends ping to the server in msecs
+  protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+  protected final boolean tcpKeepAlive; // if T then use keepalives
+  protected final int pingInterval; // how often sends ping to the server in msecs
 
-  protected SocketFactory socketFactory;           // how to create sockets
+  protected final SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
   
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
@@ -94,7 +93,8 @@ public class HBaseClient {
    * @param conf Configuration
    * @param pingInterval the ping interval
    */
-  final public static void setPingInterval(Configuration conf, int pingInterval) {
+  @SuppressWarnings({"UnusedDeclaration"})
+  public static void setPingInterval(Configuration conf, int pingInterval) {
     conf.setInt(PING_INTERVAL_NAME, pingInterval);
   }
 
@@ -105,7 +105,7 @@ public class HBaseClient {
    * @param conf Configuration
    * @return the ping interval
    */
-  final static int getPingInterval(Configuration conf) {
+  static int getPingInterval(Configuration conf) {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
   }
   
@@ -136,8 +136,8 @@ public class HBaseClient {
 
   /** A call waiting for a value. */
   private class Call {
-    int id;                                       // call id
-    Writable param;                               // parameter
+    final int id;                                       // call id
+    final Writable param;                               // parameter
     Writable value;                               // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
@@ -187,9 +187,9 @@ public class HBaseClient {
     private DataOutputStream out;
     
     // currently active calls
-    private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
-    private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
-    protected AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
+    private final Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
+    private final AtomicLong lastActivity = new AtomicLong();// last I/O activity time
+    protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
 
     public Connection(InetSocketAddress address) throws IOException {
@@ -287,6 +287,7 @@ public class HBaseClient {
     /** Connect to the server and set up the I/O streams. It then sends
      * a header to the server and starts
      * the connection thread that waits for responses.
+     * @throws java.io.IOException e
      */
     protected synchronized void setupIOstreams() throws IOException {
       if (socket != null || shouldCloseConnection.get()) {
@@ -395,6 +396,7 @@ public class HBaseClient {
      * 
      * Return true if it is time to read a response; false otherwise.
      */
+    @SuppressWarnings({"ThrowableInstanceNeverThrown"})
     private synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
         long timeout = maxIdleTime-
@@ -402,7 +404,7 @@ public class HBaseClient {
         if (timeout>0) {
           try {
             wait(timeout);
-          } catch (InterruptedException e) {}
+          } catch (InterruptedException ignored) {}
         }
       }
       
@@ -431,7 +433,8 @@ public class HBaseClient {
       long curTime = System.currentTimeMillis();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
-        synchronized (out) {
+        //noinspection SynchronizeOnNonFinalField
+        synchronized (this.out) {
           out.writeInt(PING_CALL_ID);
           out.flush();
         }
@@ -455,18 +458,18 @@ public class HBaseClient {
             + connections.size());
     }
 
-    /** Initiates a call by sending the parameter to the remote server.
+    /* Initiates a call by sending the parameter to the remote server.
      * Note: this is not called from the Connection thread, but by other
      * threads.
-     * @param call
      */
-    public void sendParam(Call call) {
+    protected void sendParam(Call call) {
       if (shouldCloseConnection.get()) {
         return;
       }
 
       DataOutputBuffer d=null;
       try {
+        //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " sending #" + call.id);
@@ -510,6 +513,7 @@ public class HBaseClient {
 
         boolean isError = in.readBoolean();     // read if error
         if (isError) {
+          //noinspection ThrowableInstanceNeverThrown
           call.setException(new RemoteException( WritableUtils.readString(in),
               WritableUtils.readString(in)));
         } else {
@@ -585,8 +589,8 @@ public class HBaseClient {
 
   /** Call implementation used for parallel calls. */
   private class ParallelCall extends Call {
-    private ParallelResults results;
-    protected int index;
+    private final ParallelResults results;
+    protected final int index;
     
     public ParallelCall(Writable param, ParallelResults results, int index) {
       super(param);
@@ -603,7 +607,7 @@ public class HBaseClient {
 
   /** Result collector for parallel calls. */
   private static class ParallelResults {
-    protected Writable[] values;
+    protected final Writable[] values;
     protected int size;
     protected int count;
 
@@ -612,11 +616,10 @@ public class HBaseClient {
       this.size = size;
     }
 
-    /**
+    /*
      * Collect a result.
-     * @param call
      */
-    public synchronized void callComplete(ParallelCall call) {
+    synchronized void callComplete(ParallelCall call) {
       // FindBugs IS2_INCONSISTENT_SYNC
       values[call.index] = call.value;            // store the value
       count++;                                    // count it
@@ -628,9 +631,9 @@ public class HBaseClient {
   /**
    * Construct an IPC client whose values are of the given {@link Writable}
    * class.
-   * @param valueClass
-   * @param conf
-   * @param factory
+   * @param valueClass value class
+   * @param conf configuration
+   * @param factory socket factory
    */
   public HBaseClient(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
@@ -651,8 +654,8 @@ public class HBaseClient {
 
   /**
    * Construct an IPC client with the default SocketFactory
-   * @param valueClass
-   * @param conf
+   * @param valueClass value class
+   * @param conf configuration
    */
   public HBaseClient(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
@@ -688,7 +691,7 @@ public class HBaseClient {
     while (!connections.isEmpty()) {
       try {
         Thread.sleep(100);
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ignored) {
       }
     }
   }
@@ -696,10 +699,10 @@ public class HBaseClient {
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception. 
-   * @param param 
-   * @param address 
-   * @return Writable 
-   * @throws IOException
+   * @param param writable parameter
+   * @param address network address
+   * @return Writable
+   * @throws IOException e
    */
   public Writable call(Writable param, InetSocketAddress address)
   throws IOException {
@@ -712,6 +715,7 @@ public class HBaseClient {
     Call call = new Call(param);
     Connection connection = getConnection(addr, ticket, call);
     connection.sendParam(call);                 // send the parameter
+    //noinspection SynchronizationOnLocalVariableOrMethodParameter
     synchronized (call) {
       while (!call.done) {
         try {
@@ -743,6 +747,7 @@ public class HBaseClient {
    * @param exception the relevant exception
    * @return an exception to throw
    */
+  @SuppressWarnings({"ThrowableInstanceNeverThrown"})
   private IOException wrapException(InetSocketAddress addr,
                                          IOException exception) {
     if (exception instanceof ConnectException) {
@@ -766,16 +771,18 @@ public class HBaseClient {
    * corresponding address.  When all values are available, or have timed out
    * or errored, the collected results are returned in an array.  The array
    * contains nulls for calls that timed out or errored.  
-   * @param params 
-   * @param addresses 
+   * @param params writable parameters
+   * @param addresses socket addresses
    * @return  Writable[]
-   * @throws IOException
+   * @throws IOException e
    */
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
     throws IOException {
     if (addresses.length == 0) return new Writable[0];
 
     ParallelResults results = new ParallelResults(params.length);
+    // TODO this synchronization block doesnt make any sense, we should possibly fix it
+    //noinspection SynchronizationOnLocalVariableOrMethodParameter
     synchronized (results) {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
@@ -792,14 +799,14 @@ public class HBaseClient {
       while (results.count != results.size) {
         try {
           results.wait();                    // wait for all results
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException ignored) {}
       }
 
       return results.values;
     }
   }
 
-  /** Get a connection from the pool, or create a new one and add it to the
+  /* Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
   private Connection getConnection(InetSocketAddress addr, 
                                    UserGroupInformation ticket,
@@ -838,8 +845,8 @@ public class HBaseClient {
    * to servers are uniquely identified by <remoteAddress, ticket>
    */
   private static class ConnectionId {
-    InetSocketAddress address;
-    UserGroupInformation ticket;
+    final InetSocketAddress address;
+    final UserGroupInformation ticket;
     
     ConnectionId(InetSocketAddress address, UserGroupInformation ticket) {
       this.address = address;

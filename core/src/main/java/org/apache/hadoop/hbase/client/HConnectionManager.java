@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,22 +18,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
-
-import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,6 +48,22 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * A non-instantiable class that manages connections to multiple tables in
  * multiple HBase instances.
@@ -71,8 +71,8 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
-  private static final Delete [] DELETE_ARRAY_TYPE = new Delete[0];
-  private static final Put [] PUT_ARRAY_TYPE = new Put[0];
+  private static final Delete [] DELETE_ARRAY_TYPE = new Delete[]{};
+  private static final Put [] PUT_ARRAY_TYPE = new Put[]{};
 
   // Register a shutdown hook, one that cleans up RPC and closes zk sessions.
   static {
@@ -112,7 +112,7 @@ public class HConnectionManager implements HConstants {
   /**
    * Get the connection object for the instance specified by the configuration
    * If no current connection exists, create a new connection for that instance
-   * @param conf
+   * @param conf configuration
    * @return HConnection object for the instance specified by the configuration
    */
   public static HConnection getConnection(Configuration conf) {
@@ -130,13 +130,14 @@ public class HConnectionManager implements HConstants {
   
   /**
    * Delete connection information for the instance specified by configuration
-   * @param conf
-   * @param stopProxy
+   * @param conf configuration
+   * @param stopProxy stop the proxy as well
    */
   public static void deleteConnectionInfo(Configuration conf,
       boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
-      TableServers t = HBASE_INSTANCES.remove(conf);
+      Integer key = HBaseConfiguration.hashCode(conf);
+      TableServers t = HBASE_INSTANCES.remove(key);
       if (t != null) {
         t.close(stopProxy);
       }
@@ -145,7 +146,7 @@ public class HConnectionManager implements HConstants {
 
   /**
    * Delete information for all connections.
-   * @param stopProxy
+   * @param stopProxy stop the proxy as well
    */
   public static void deleteAllConnections(boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
@@ -166,9 +167,9 @@ public class HConnectionManager implements HConstants {
    * Get a watcher of a zookeeper connection for a given quorum address.
    * If the connection isn't established, a new one is created.
    * This acts like a multiton.
-   * @param conf
+   * @param conf configuration
    * @return ZKW watcher
-   * @throws IOException
+   * @throws IOException if a remote or network exception occurs
    */
   public static synchronized ClientZKWatcher getClientZooKeeperWatcher(
       Configuration conf) throws IOException {
@@ -193,8 +194,7 @@ public class HConnectionManager implements HConstants {
 
     /**
      * Takes a configuration to pass it to ZKW but won't instanciate it
-     * @param conf
-     * @throws IOException
+     * @param conf configuration
      */
     public ClientZKWatcher(Configuration conf) {
       this.conf = conf;
@@ -224,6 +224,7 @@ public class HConnectionManager implements HConstants {
     /**
      * Get this watcher's ZKW, instanciate it if necessary.
      * @return ZKW
+     * @throws java.io.IOException if a remote or network exception occurs
      */
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
       if(zooKeeperWrapper == null) {
@@ -296,7 +297,7 @@ public class HConnectionManager implements HConstants {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 1 * 1000);
+      this.pause = conf.getLong("hbase.client.pause", 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
@@ -327,7 +328,7 @@ public class HConnectionManager implements HConstants {
     }
     
     public HMasterInterface getMaster() throws MasterNotRunningException {
-      ZooKeeperWrapper zk = null;
+      ZooKeeperWrapper zk;
       try {
         zk = getZooKeeperWrapper();
       } catch (IOException e) {
@@ -409,8 +410,8 @@ public class HConnectionManager implements HConstants {
       boolean exists = false;
       try {
         HTableDescriptor[] tables = listTables();
-        for (int i = 0; i < tables.length; i++) {
-          if (Bytes.equals(tables[i].getName(), tableName)) {
+        for (HTableDescriptor table : tables) {
+          if (Bytes.equals(table.getName(), tableName)) {
             exists = true;
           }
         }
@@ -515,8 +516,8 @@ public class HConnectionManager implements HConstants {
       int rowsOffline = 0;
       byte[] startKey =
         HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES);
-      byte[] endKey = null;
-      HRegionInfo currentRegion = null;
+      byte[] endKey;
+      HRegionInfo currentRegion;
       Scan scan = new Scan(startKey);
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       int rows = this.conf.getInt("hbase.meta.scanner.caching", 100);
@@ -528,13 +529,9 @@ public class HConnectionManager implements HConstants {
         // Open scanner
         getRegionServerWithRetries(s);
         do {
-          HRegionInfo oldRegion = currentRegion;
-          if (oldRegion != null) {
-            startKey = oldRegion.getEndKey();
-          }
           currentRegion = s.getHRegionInfo();
-          Result r = null;
-          Result [] rrs = null;
+          Result r;
+          Result [] rrs;
           while ((rrs = getRegionServerWithRetries(s)) != null && rrs.length > 0) {
             r = rrs[0];
             byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
@@ -651,10 +648,11 @@ public class HConnectionManager implements HConstants {
       * Search one of the meta tables (-ROOT- or .META.) for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
+    @SuppressWarnings({"ConstantConditions"})
     private HRegionLocation locateRegionInMeta(final byte [] parentTable,
       final byte [] tableName, final byte [] row, boolean useCache)
     throws IOException {
-      HRegionLocation location = null;
+      HRegionLocation location;
       // If supposed to be using the cache, then check it for a possible hit.
       // Otherwise, delete any existing cached location so it won't interfere.
       if (useCache) {
@@ -880,7 +878,7 @@ public class HConnectionManager implements HConstants {
         final byte [] tableName) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftValueSortedMap<byte [], HRegionLocation> result = null;
+      SoftValueSortedMap<byte [], HRegionLocation> result;
       synchronized (this.cachedRegionLocations) {
         result = this.cachedRegionLocations.get(key);
         // if tableLocations for this table isn't built yet, make one
@@ -1042,7 +1040,8 @@ public class HConnectionManager implements HConstants {
         HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
     }
 
-    public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
+    @SuppressWarnings({"ConstantConditions"})
+    public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
     throws IOException, RuntimeException {
       List<Throwable> exceptions = new ArrayList<Throwable>();
       for(int tries = 0; tries < numRetries; tries++) {
@@ -1093,6 +1092,7 @@ public class HConnectionManager implements HConstants {
       return null;
     }
 
+    @SuppressWarnings({"ConstantConditions"})
     private HRegionLocation
       getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey,
         boolean reload)
@@ -1140,29 +1140,29 @@ public class HConnectionManager implements HConstants {
 
       /**
        * This is the method subclasses must implement.
-       * @param currentList
-       * @param tableName
-       * @param row
+       * @param currentList current list of rows
+       * @param tableName table we are processing
+       * @param row row
        * @return Count of items processed or -1 if all.
-       * @throws IOException
-       * @throws RuntimeException
+       * @throws IOException if a remote or network exception occurs
+       * @throws RuntimeException other undefined exception
        */
-      abstract int doCall(final List<Row> currentList,
+      abstract int doCall(final List<? extends Row> currentList,
         final byte [] row, final byte [] tableName)
       throws IOException, RuntimeException;
 
       /**
        * Process the passed <code>list</code>.
-       * @param list
-       * @param tableName
+       * @param list list of rows to process
+       * @param tableName table we are processing
        * @return Count of how many added or -1 if all added.
-       * @throws IOException
+       * @throws IOException if a remote or network exception occurs
        */
       int process(final List<? extends Row> list, final byte[] tableName)
       throws IOException {
         byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
         byte [] currentRegion = region;
-        boolean isLastRow = false;
+        boolean isLastRow;
         boolean retryOnlyOne = false;
         List<Row> currentList = new ArrayList<Row>();
         int i, tries;
@@ -1250,7 +1250,7 @@ public class HConnectionManager implements HConstants {
       if (list.size() > 1) Collections.sort(list);
       Batch b = new Batch(this) {
         @Override
-        int doCall(final List<Row> currentList, final byte [] row,
+        int doCall(final List<? extends Row> currentList, final byte [] row,
           final byte [] tableName)
         throws IOException, RuntimeException {
           final Put [] puts = currentList.toArray(PUT_ARRAY_TYPE);
@@ -1272,7 +1272,7 @@ public class HConnectionManager implements HConstants {
       if (list.size() > 1) Collections.sort(list);
       Batch b = new Batch(this) {
         @Override
-        int doCall(final List<Row> currentList, final byte [] row,
+        int doCall(final List<? extends Row> currentList, final byte [] row,
           final byte [] tableName)
         throws IOException, RuntimeException {
           final Delete [] deletes = currentList.toArray(DELETE_ARRAY_TYPE);
@@ -1303,6 +1303,7 @@ public class HConnectionManager implements HConstants {
       }
     }
 
+    @SuppressWarnings({"ConstantConditions"})
     public void processBatchOfPuts(List<Put> list,
                                    final byte[] tableName, ExecutorService pool) throws IOException {
       for ( int tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
@@ -1389,8 +1390,7 @@ public class HConnectionManager implements HConstants {
               " ms!");
           try {
             Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-
+          } catch (InterruptedException ignored) {
           }
         }
       }

@@ -1,5 +1,5 @@
-/*
- * Copyright 2009 The Apache Software Foundation
+/**
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,14 +20,14 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.NavigableSet;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.util.NavigableSet;
 
 /**
  * This is the primary class used to process KeyValues during a Get or Scan

@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,12 +19,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.net.URI;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+
+import java.net.URI;
 
 /**
  * Compression validation test.  Checks compression is working.  Be sure to run

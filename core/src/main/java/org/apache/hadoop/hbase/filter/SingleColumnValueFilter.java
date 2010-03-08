@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,11 +20,6 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Arrays;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
@@ -32,6 +27,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp} 
@@ -228,6 +228,7 @@ public class SingleColumnValueFilter implements Filter {
    * If true, the entire row will be skipped if the column is not found.
    * <p>
    * If false, the row will pass if the column is not found.  This is default.
+   * @param filterIfMissing flag
    */
   public void setFilterIfMissing(boolean filterIfMissing) {
     this.filterIfMissing = filterIfMissing;
@@ -238,6 +239,7 @@ public class SingleColumnValueFilter implements Filter {
    * If true, the row will be returned if only the latest version of the column
    * value matches. If false, the row will be returned if any version of the
    * column value matches. The default is true.
+   * @return return value
    */
   public boolean getLatestVersionOnly() {
     return latestVersionOnly;
@@ -248,6 +250,7 @@ public class SingleColumnValueFilter implements Filter {
    * If true, the row will be returned if only the latest version of the column
    * value matches. If false, the row will be returned if any version of the
    * column value matches. The default is true.
+   * @param latestVersionOnly flag
    */
   public void setLatestVersionOnly(boolean latestVersionOnly) {
     this.latestVersionOnly = latestVersionOnly;

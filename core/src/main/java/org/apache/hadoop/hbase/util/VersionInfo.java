@@ -1,4 +1,6 @@
-/*
+/**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +37,7 @@ public class VersionInfo {
 
   /**
    * Get the meta-data for the hbase package.
-   * @return
+   * @return package
    */
   static Package getPackage() {
     return myPackage;
@@ -81,9 +83,6 @@ public class VersionInfo {
     return version != null ? version.url() : "Unknown";
   }
   
-  /**
-   * @param args
-   */
   public static void main(String[] args) {
     System.out.println("HBase " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());

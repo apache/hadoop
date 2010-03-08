@@ -1,11 +1,11 @@
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.IOException;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic 
@@ -18,9 +18,9 @@ class MetaScanner implements HConstants {
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
    * start row value as table name.
    * 
-   * @param configuration
+   * @param configuration conf
    * @param visitor A custom visitor
-   * @throws IOException
+   * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
@@ -32,10 +32,10 @@ class MetaScanner implements HConstants {
    * Scans the meta table and calls a visitor on each RowResult. Uses a table
    * name to locate meta regions.
    * 
-   * @param configuration
-   * @param visitor
-   * @param tableName
-   * @throws IOException
+   * @param configuration config
+   * @param visitor visitor object
+   * @param tableName table name
+   * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor, byte[] tableName)
@@ -46,7 +46,7 @@ class MetaScanner implements HConstants {
           HRegionInfo.createRegionName(tableName, null, ZEROES);
       
     // Scan over each meta region
-    ScannerCallable callable = null;
+    ScannerCallable callable;
     int rows = configuration.getInt("hbase.meta.scanner.caching", 100); 
     do {
       Scan scan = new Scan(startRow).addFamily(CATALOG_FAMILY);
@@ -59,10 +59,10 @@ class MetaScanner implements HConstants {
           //we have all the rows here 
           Result [] rrs = connection.getRegionServerWithRetries(callable);
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
-            break done; //exit completely
+            break; //exit completely
           }
-          for (int i = 0; i < rrs.length; i++) {
-            if (!visitor.processRow(rrs[i]))
+          for (Result rr : rrs) {
+            if (!visitor.processRow(rr))
               break done; //exit completely
           }
           //here, we didn't break anywhere. Check if we have more rows
@@ -86,9 +86,9 @@ class MetaScanner implements HConstants {
      * Implementations can return false to stop the region's loop if it becomes
      * unnecessary for some reason.
      * 
-     * @param rowResult
+     * @param rowResult result
      * @return A boolean to know if it should continue to loop in the region
-     * @throws IOException
+     * @throws IOException e
      */
     public boolean processRow(Result rowResult) throws IOException;
   }

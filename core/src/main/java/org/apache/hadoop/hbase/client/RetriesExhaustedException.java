@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.util.Bytes;
+
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
  * Exception thrown by HTable methods when an attempt to do something (like

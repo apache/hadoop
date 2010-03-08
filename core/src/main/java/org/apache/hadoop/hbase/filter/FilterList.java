@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,17 +19,17 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.io.Writable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Implementation of {@link Filter} that represents an ordered List of Filters
@@ -64,7 +64,7 @@ public class FilterList implements Filter {
    * Constructor that takes a set of {@link Filter}s. The default operator
    * MUST_PASS_ALL is assumed.
    * 
-   * @param rowFilters
+   * @param rowFilters list of filters
    */
   public FilterList(final List<Filter> rowFilters) {
     this.filters = rowFilters;
@@ -111,7 +111,7 @@ public class FilterList implements Filter {
   /**
    * Add a filter.
    * 
-   * @param filter
+   * @param filter another filter
    */
   public void addFilter(Filter filter) {
     this.filters.add(filter);
@@ -178,7 +178,7 @@ public class FilterList implements Filter {
           return ReturnCode.INCLUDE;
         case NEXT_ROW:
         case SKIP:
-          continue;
+          // continue;
         }
       }
     }

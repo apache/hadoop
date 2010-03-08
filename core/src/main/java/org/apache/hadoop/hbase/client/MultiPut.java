@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,27 +20,37 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.DataInput;
-import java.util.List;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * Data type class for putting multiple regions worth of puts in one RPC.
+ */
 public class MultiPut implements Writable {
   public HServerAddress address; // client code ONLY
 
   // map of regions to lists of puts for that region.
   public Map<byte[], List<Put> > puts = new TreeMap<byte[], List<Put>>(Bytes.BYTES_COMPARATOR);
 
+  /**
+   * Writable constructor only.
+   */
   public MultiPut() {}
 
+  /**
+   * MultiPut for putting multiple regions worth of puts in one RPC.
+   * @param a address
+   */
   public MultiPut(HServerAddress a) {
     address = a;
   }

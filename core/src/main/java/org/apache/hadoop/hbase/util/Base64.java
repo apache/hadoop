@@ -1,6 +1,50 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase.util;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+/**
  * Encodes and decodes to and from Base64 notation.
- * 
+ *
  * <p>
  * Homepage: <a href="http://iharder.net/base64">http://iharder.net/base64</a>.
  * </p>
@@ -28,7 +72,7 @@
  *     Special thanks to Jim Kellerman at <a href="http://www.powerset.com/">
  *     http://www.powerset.com/</a> for contributing the new Base64 dialects.
  *   </li>
- * 
+ *
  *   <li>v2.1 - Cleaned up javadoc comments and unused variables and methods.
  *     Added some convenience methods for reading and writing to and from files.
  *   </li>
@@ -46,7 +90,7 @@
  *     <tt>decode( String s, boolean gzipCompressed )</tt>. Added the ability to
  *     "suspend" encoding in the Output Stream so you can turn on and off the
  *     encoding if you need to embed base64 data in an otherwise "normal" stream
- *     (like an XML file).</li>  
+ *     (like an XML file).</li>
  *   <li>v1.5 - Output stream pases on flush() command but doesn't do anything
  *     itself. This helps when using GZIP streams. Added the ability to
  *     GZip-compress objects before encoding them.</li>
@@ -71,54 +115,6 @@
  * author: Robert Harder, rob@iharder.net
  * <br>
  * version: 2.2.1
- */
-
-/**
- * Copyright 2007 The Apache Software Foundation
- *
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package org.apache.hadoop.hbase.util;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FilterInputStream;
-import java.io.FilterOutputStream;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
-import java.lang.ClassNotFoundException;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-/**
- * Encodes and decodes to and from Base64 notation.
  */
 public class Base64 {
 
@@ -347,8 +343,11 @@ public class Base64 {
    * specified. It's possible, though silly, to specify ORDERED and URLSAFE in
    * which case one of them will be picked, though there is no guarantee as to
    * which one will be picked.
+   *
+   * @param options URL_SAFE or ORDERED
+   * @return alphabet array to use
    */
-  protected final static byte[] getAlphabet(int options) {
+  protected static byte[] getAlphabet(int options) {
     if ((options & URL_SAFE) == URL_SAFE) {
       return _URL_SAFE_ALPHABET;
 
@@ -365,8 +364,10 @@ public class Base64 {
    * options specified. It's possible, though silly, to specify ORDERED and
    * URL_SAFE in which case one of them will be picked, though there is no
    * guarantee as to which one will be picked.
+   * @param options URL_SAFE or ORDERED
+   * @return alphabet array to use
    */
-  protected final static byte[] getDecodabet(int options) {
+  protected static byte[] getDecodabet(int options) {
     if ((options & URL_SAFE) == URL_SAFE) {
       return _URL_SAFE_DECODABET;
       
@@ -388,7 +389,7 @@ public class Base64 {
    * 
    * @param args command arguments
    */
-  public final static void main(String[] args) {
+  public static void main(String[] args) {
     if (args.length < 3) {
       usage("Not enough arguments.");
 
@@ -413,7 +414,7 @@ public class Base64 {
    * 
    * @param msg A message to include with usage info.
    */
-  private final static void usage(String msg) {
+  private static void usage(String msg) {
     System.err.println(msg);
     System.err.println("Usage: java Base64 -e|-d inputfile outputfile");
   } // end usage
@@ -430,6 +431,7 @@ public class Base64 {
    * @param b4 A reusable byte array to reduce array instantiation
    * @param threeBytes the array to convert
    * @param numSigBytes the number of significant bytes in your array
+   * @param options options for get alphabet
    * @return four byte array in Base64 notation.
    * @since 1.5.1
    */
@@ -458,6 +460,7 @@ public class Base64 {
    * @param numSigBytes the number of significant bytes in your array
    * @param destination the array to hold the conversion
    * @param destOffset the index where output will be put
+   * @param options options for get alphabet
    * @return the <var>destination</var> array
    * @since 1.3
    */
@@ -546,6 +549,7 @@ public class Base64 {
    * @return The Base64-encoded object
    * @since 2.0
    */
+  @SuppressWarnings({"ConstantConditions"})
   public static String encodeObject(Serializable serializableObject,
       int options) {
 
@@ -771,12 +775,13 @@ public class Base64 {
    * @param srcOffset the index where conversion begins
    * @param destination the array to hold the conversion
    * @param destOffset the index where output will be put
-   * @param options
+   * @param options options for getDecoabet
    * @see Base64#URL_SAFE
    * @see Base64#ORDERED
    * @return the number of decoded bytes converted
    * @since 1.3
    */
+  @SuppressWarnings({"ConstantConditions"})
   protected static int decode4to3(byte[] source, int srcOffset,
       byte[] destination, int destOffset, int options) {
     byte[] DECODABET = getDecodabet(options);
@@ -845,7 +850,7 @@ public class Base64 {
    * @param source The Base64 encoded data
    * @param off The offset of where to begin decoding
    * @param len The length of characters to decode
-   * @param options 
+   * @param options options for getDecodabet
    * @see Base64#URL_SAFE
    * @see Base64#ORDERED
    * @return decoded data
@@ -860,9 +865,9 @@ public class Base64 {
 
     byte[] b4 = new byte[4];
     int b4Posn = 0;
-    int i = 0;
-    byte sbiCrop = 0;
-    byte sbiDecode = 0;
+    int i;
+    byte sbiCrop;
+    byte sbiDecode;
     for (i = off; i < off + len; i++) {
       sbiCrop = (byte) (source[i] & 0x7f);      // Only the low seven bits
       sbiDecode = DECODABET[sbiCrop];
@@ -908,14 +913,14 @@ public class Base64 {
    * data and decompressing it.
    * 
    * @param s the string to decode
-   * @param options
+   * @param options options for decode
    * @see Base64#URL_SAFE
    * @see Base64#ORDERED
    * @return the decoded data
    * @since 1.4
    */
   public static byte[] decode(String s, int options) {
-    byte[] bytes = null;
+    byte[] bytes;
     try {
       bytes = s.getBytes(PREFERRED_ENCODING);
 
@@ -939,7 +944,7 @@ public class Base64 {
           gzis = new GZIPInputStream(new ByteArrayInputStream(bytes));
 
           byte[] buffer = new byte[2048];
-          for (int length = 0; (length = gzis.read(buffer)) >= 0; ) {
+          for (int length; (length = gzis.read(buffer)) >= 0; ) {
             baos.write(buffer, 0, length);
           } // end while: reading input
 
@@ -1087,7 +1092,7 @@ public class Base64 {
     Base64InputStream bis = null;
     try {
       File file = new File(filename);
-      byte[] buffer = null;
+      byte[] buffer;
 
       // Check the size of file
       if (file.length() > Integer.MAX_VALUE) {
@@ -1106,7 +1111,7 @@ public class Base64 {
       // Read until done
       
       int length = 0;
-      for (int numBytes = 0; (numBytes = bis.read(buffer, length, 4096)) >= 0; ) {
+      for (int numBytes; (numBytes = bis.read(buffer, length, 4096)) >= 0; ) {
         length += numBytes;
       }
       
@@ -1156,7 +1161,7 @@ public class Base64 {
 
       // Read until done
       int length = 0;
-      for (int numBytes = 0; (numBytes = bis.read(buffer, length, 4096)) >= 0; ) {
+      for (int numBytes; (numBytes = bis.read(buffer, length, 4096)) >= 0; ) {
         length += numBytes;
       }
 
@@ -1346,10 +1351,10 @@ public class Base64 {
 
         } else {
           byte[] b4 = new byte[4];
-          int i = 0;
+          int i;
           for (i = 0; i < 4; i++) {
             // Read four "meaningful" bytes:
-            int b = 0;
+            int b;
             do {
               b = in.read();
             } while (b >= 0 && decodabet[b & 0x7f] <= WHITE_SPACE_ENC);
@@ -1578,7 +1583,7 @@ public class Base64 {
      * Method added by PHIL. [Thanks, PHIL. -Rob] This pads the buffer without
      * closing the stream.
      * 
-     * @throws IOException
+     * @throws IOException e
      */
     public void flushBase64() throws IOException {
       if (position > 0) {
@@ -1615,7 +1620,7 @@ public class Base64 {
      * Suspends encoding of the stream. May be helpful if you need to embed a
      * piece of base640-encoded data in a stream.
      *
-     * @throws IOException
+     * @throws IOException e
      * @since 1.5.1
      */
     public void suspendEncoding() throws IOException {

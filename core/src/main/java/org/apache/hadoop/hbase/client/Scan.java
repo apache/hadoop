@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,14 +20,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -36,6 +28,14 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Used to perform Scan operations.
@@ -154,6 +154,7 @@ public class Scan implements Writable {
    * <p>
    * Overrides previous calls to addColumn for this family.
    * @param family family name
+   * @return this
    */
   public Scan addFamily(byte [] family) {
     familyMap.remove(family);
@@ -167,6 +168,7 @@ public class Scan implements Writable {
    * Overrides previous calls to addFamily for this family.
    * @param family family name
    * @param qualifier column qualifier
+   * @return this
    */
   public Scan addColumn(byte [] family, byte [] qualifier) {
     NavigableSet<byte []> set = familyMap.get(family);
@@ -189,6 +191,7 @@ public class Scan implements Writable {
    * @throws IOException if invalid time range
    * @see #setMaxVersions()
    * @see #setMaxVersions(int)
+   * @return this
    */
   public Scan setTimeRange(long minStamp, long maxStamp)
   throws IOException {
@@ -204,6 +207,7 @@ public class Scan implements Writable {
    * @param timestamp version timestamp
    * @see #setMaxVersions()
    * @see #setMaxVersions(int)
+   * @return this
    */
   public Scan setTimeStamp(long timestamp) {
     try {
@@ -215,8 +219,9 @@ public class Scan implements Writable {
   }
 
   /**
-   * Set the start row.
-   * @param startRow
+   * Set the start row of the scan.
+   * @param startRow row to start scan on, inclusive
+   * @return this
    */
   public Scan setStartRow(byte [] startRow) {
     this.startRow = startRow;
@@ -225,7 +230,8 @@ public class Scan implements Writable {
   
   /**
    * Set the stop row.
-   * @param stopRow
+   * @param stopRow row to end at (exclusive)
+   * @return this
    */
   public Scan setStopRow(byte [] stopRow) {
     this.stopRow = stopRow;
@@ -234,6 +240,7 @@ public class Scan implements Writable {
   
   /**
    * Get all available versions.
+   * @return this
    */
   public Scan setMaxVersions() {
     this.maxVersions = Integer.MAX_VALUE;
@@ -243,6 +250,7 @@ public class Scan implements Writable {
   /**
    * Get up to the specified number of versions of each column.
    * @param maxVersions maximum versions for each column
+   * @return this
    */
   public Scan setMaxVersions(int maxVersions) {
     this.maxVersions = maxVersions;
@@ -270,6 +278,7 @@ public class Scan implements Writable {
   /**
    * Apply the specified server-side filter when performing the Scan.
    * @param filter filter to run on the server
+   * @return this
    */
   public Scan setFilter(Filter filter) {
     this.filter = filter;
@@ -278,7 +287,8 @@ public class Scan implements Writable {
 
   /**
    * Setting the familyMap
-   * @param familyMap
+   * @param familyMap map of family to qualifier
+   * @return this
    */
   public Scan setFamilyMap(Map<byte [], NavigableSet<byte []>> familyMap) {
     this.familyMap = familyMap;
@@ -410,15 +420,16 @@ public class Scan implements Writable {
     sb.append(", stopRow=");
     sb.append(Bytes.toString(this.stopRow));
     sb.append(", maxVersions=");
-    sb.append("" + this.maxVersions);
+    sb.append(this.maxVersions);
     sb.append(", batch=");
-    sb.append("" + this.batch);
+    sb.append(this.batch);
     sb.append(", caching=");
-    sb.append("" + this.caching);
+    sb.append(this.caching);
     sb.append(", cacheBlocks=");
-    sb.append("" + this.cacheBlocks);
+    sb.append(this.cacheBlocks);
     sb.append(", timeRange=");
-    sb.append("[" + this.tr.getMin() + "," + this.tr.getMax() + ")");
+    sb.append("[").append(this.tr.getMin()).append(",");
+    sb.append(this.tr.getMax()).append(")");
     sb.append(", families=");
     if(this.familyMap.size() == 0) {
       sb.append("ALL");
@@ -539,7 +550,7 @@ public class Scan implements Writable {
    * <p>
    * Note: It will through an error when the colon is missing.
    *
-   * @param familyAndQualifier
+   * @param familyAndQualifier family and qualifier
    * @return A reference to this instance.
    * @throws IllegalArgumentException When the colon is missing.
    * @deprecated use {@link #addColumn(byte[], byte[])} instead
@@ -561,10 +572,11 @@ public class Scan implements Writable {
    *
    * @param columns array of columns, formatted as <pre>family:qualifier</pre>
    * @deprecated issue multiple {@link #addColumn(byte[], byte[])} instead
+   * @return this
    */
   public Scan addColumns(byte [][] columns) {
-    for (int i = 0; i < columns.length; i++) {
-      addColumn(columns[i]);
+    for (byte[] column : columns) {
+      addColumn(column);
     }
     return this;
   }
@@ -608,12 +620,12 @@ public class Scan implements Writable {
         for (byte[] qual : quals) {
           if (cs.length() > 0) cs.append(" ");
           // encode values to make parsing easier later
-          cs.append(Bytes.toStringBinary(fam) + ":" + Bytes.toStringBinary(qual));
+          cs.append(Bytes.toStringBinary(fam)).append(":").append(Bytes.toStringBinary(qual));
         }
         cols.append(cs);
       } else {
         // only add the family but with old style delimiter
-        cols.append(Bytes.toStringBinary(fam) + ":");
+        cols.append(Bytes.toStringBinary(fam)).append(":");
       }
     }
     return cols.toString();

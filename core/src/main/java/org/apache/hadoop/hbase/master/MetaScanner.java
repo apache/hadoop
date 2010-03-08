@@ -1,5 +1,5 @@
 /**
- * Copyright 2008 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +19,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MetaScanner <code>META</code> table.

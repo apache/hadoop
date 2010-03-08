@@ -1,4 +1,6 @@
 /**
+ * Copyright 2010 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,16 +17,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.Map;
+package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
+
+import java.io.IOException;
+import java.net.URL;
+import java.util.Map;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -39,11 +42,11 @@ public class InfoServer extends HttpServer {
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<code>name<code>.
    * @param name The name of the server
-   * @param bindAddress
+   * @param bindAddress address to bind to
    * @param port The port to use on the server
    * @param findPort whether the server should start at the given port and 
    * increment by 1 until it finds a free port.
-   * @throws IOException
+   * @throws IOException e
    */
   public InfoServer(String name, String bindAddress, int port, boolean findPort)
   throws IOException {
@@ -108,11 +111,11 @@ public class InfoServer extends HttpServer {
    * Get the path for this web app
    * @param webappName web app
    * @return path
-   * @throws IOException
+   * @throws IOException e
    */
   public static String getWebAppDir(final String webappName)
   throws IOException {
-    String webappDir = null;
+    String webappDir;
     webappDir = getWebAppsPath("webapps/" + webappName);
     return webappDir;
   }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,10 +19,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Sleeper for current thread.
@@ -33,11 +33,11 @@ import org.apache.commons.logging.LogFactory;
 public class Sleeper {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final int period;
-  private AtomicBoolean stop;
+  private final AtomicBoolean stop;
   
   /**
-   * @param sleep
-   * @param stop
+   * @param sleep sleep time in milliseconds
+   * @param stop flag for when we stop
    */
   public Sleeper(final int sleep, final AtomicBoolean stop) {
     this.period = sleep;

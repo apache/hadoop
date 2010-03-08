@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,22 +20,23 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
+import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.DataInput;
 import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.TreeMap;
 
+/**
+ * Response class for MultiPut.
+ */
 public class MultiPutResponse implements Writable {
 
-  public MultiPut request; // used in client code ONLY
+  protected MultiPut request; // used in client code ONLY
 
-  public Map<byte[], Integer> answers = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+  protected Map<byte[], Integer> answers = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
 
   public MultiPutResponse() {}
 
