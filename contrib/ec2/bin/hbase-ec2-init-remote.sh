@@ -5,6 +5,7 @@
 
 MASTER_HOST="%MASTER_HOST%"
 ZOOKEEPER_QUORUM="%ZOOKEEPER_QUORUM%"
+NUM_SLAVES="%NUM_SLAVES%"
 EXTRA_PACKAGES="%EXTRA_PACKAGES%"
 SECURITY_GROUPS=`wget -q -O - http://169.254.169.254/latest/meta-data/security-groups`
 IS_MASTER=`echo $SECURITY_GROUPS | awk '{ a = match ($0, "-master$"); if (a) print "true"; else print "false"; }'`
@@ -120,6 +121,10 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
   <value>$DFS_DATA_DIR</value>
 </property>
 <property>
+  <name>dfs.replication</name>
+  <value>3</value>
+</property>
+<property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
 </property>
@@ -138,14 +143,6 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
   <value>$MASTER_HOST:8021</value>
 </property>
 <property>
-  <name>mapred.output.compress</name>
-  <value>true</value>
-</property>
-<property>
-  <name>mapred.output.compression.type</name>
-  <value>BLOCK</value>
-</property>
-<property>
   <name>io.compression.codecs</name>
   <value>org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.BZip2Codec,com.hadoop.compression.lzo.LzoCodec,com.hadoop.compression.lzo.LzopCodec</value>
 </property>
@@ -154,14 +151,22 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
   <value>com.hadoop.compression.lzo.LzoCodec</value>
 </property>
 <property>
-  <name>mapred.map.output.compression.codec</name>
-  <value>com.hadoop.compression.lzo.LzoCodec</value>
+  <name>mapred.map.tasks.speculative.execution</name>
+  <value>false</value>
+</property>
+<property>
+  <name>mapred.child.java.opts</name>
+  <value>-Xmx512m -XX:+UseCompressedOops</value>
 </property>
 </configuration>
 EOF
+# Add JVM options
+cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
+export HADOOP_OPTS="$HADOOP_OPTS -XX:+UseCompressedOops"
+EOF
 # Update classpath to include HBase jars and config
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
-HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.2.1.jar:$HBASE_HOME/conf"
+export HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.2.2.jar:$HBASE_HOME/conf"
 EOF
 # Configure Hadoop for Ganglia
 cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
@@ -189,6 +194,10 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <property>
   <name>hbase.cluster.distributed</name>
   <value>true</value>
+</property>
+<property>
+  <name>hbase.regions.server.count.min</name>
+  <value>$NUM_SLAVES</value>
 </property>
 <property>
   <name>hbase.zookeeper.quorum</name>
@@ -224,10 +233,12 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 </property>
 </configuration>
 EOF
+# Copy over mapred configuration for jobs started with 'hbase ...'
+cp $HADOOP_HOME/conf/mapred-site.xml $HBASE_HOME/conf/mapred-site.xml
 # Override JVM options
 cat >> $HBASE_HOME/conf/hbase-env.sh <<EOF
-export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
-export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=64m -XX:MaxNewSize=64m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
+export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
+export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=64m -XX:MaxNewSize=64m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
 # Configure HBase for Ganglia
 cat > $HBASE_HOME/conf/hadoop-metrics.properties <<EOF

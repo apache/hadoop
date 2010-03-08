@@ -228,6 +228,7 @@ Release 0.21.0 - Unreleased
    HBASE-2293  CME in RegionManager#isMetaServer
    HBASE-2261  The javadoc in WhileMatchFilter and it's tests in TestFilter
                are not accurate/wrong
+   HBASE-2299  [EC2] mapreduce fixups for PE
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

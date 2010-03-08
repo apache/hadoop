@@ -52,7 +52,7 @@ fi
 
 # Launch the HBase master
 
-if ! "$bin"/launch-hbase-master $CLUSTER ; then
+if ! "$bin"/launch-hbase-master $CLUSTER $SLAVES ; then
   exit $?
 fi
 
