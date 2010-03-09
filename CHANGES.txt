@@ -229,6 +229,8 @@ Release 0.21.0 - Unreleased
    HBASE-2261  The javadoc in WhileMatchFilter and it's tests in TestFilter
                are not accurate/wrong
    HBASE-2299  [EC2] mapreduce fixups for PE
+   HBASE-2295  Row locks may deadlock with themselves
+               (dhruba borthakur via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
