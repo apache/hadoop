@@ -58,10 +58,13 @@ package org.apache.hadoop.hbase.regionserver;
  import java.util.Iterator;
  import java.util.List;
  import java.util.Map;
+ import java.util.Set;
  import java.util.NavigableSet;
  import java.util.TreeMap;
  import java.util.TreeSet;
- import java.util.concurrent.ConcurrentHashMap;
+ import java.util.HashMap;
+ import java.util.HashSet;
+ import java.util.Random;
  import java.util.concurrent.ConcurrentSkipListMap;
  import java.util.concurrent.atomic.AtomicBoolean;
  import java.util.concurrent.atomic.AtomicLong;
@@ -119,8 +122,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   // Members
   //////////////////////////////////////////////////////////////////////////////
 
-  private final Map<Integer, byte []> locksToRows =
-    new ConcurrentHashMap<Integer, byte []>();
+  private final Set<byte[]> lockedRows =
+    new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  private final Map<Integer, byte []> lockIds =
+    new HashMap<Integer, byte []>();
+  private int lockIdGenerator = 1;
+  static private Random rand = new Random();
+
   protected final Map<byte [], Store> stores =
     new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR);
   
@@ -1583,18 +1591,34 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       if (this.closed.get()) {
         throw new NotServingRegionException("Region " + this + " closed");
       }
-      Integer key = Bytes.mapKey(row);
-      synchronized (locksToRows) {
-        while (locksToRows.containsKey(key)) {
+      synchronized (lockedRows) {
+        while (lockedRows.contains(row)) {
           try {
-            locksToRows.wait();
+            lockedRows.wait();
           } catch (InterruptedException ie) {
             // Empty
           }
         }
-        locksToRows.put(key, row);
-        locksToRows.notifyAll();
-        return key;
+        // generate a new lockid. Attempt to insert the new [lockid, row].
+        // if this lockid already exists in the map then revert and retry
+        // We could have first done a lockIds.get, and if it does not exist only
+        // then do a lockIds.put, but the hope is that the lockIds.put will 
+        // mostly return null the first time itself because there won't be
+        // too many lockId collisions.
+        byte [] prev = null;
+        Integer lockId = null;
+        do {
+          lockId = new Integer(lockIdGenerator++);
+          prev = lockIds.put(lockId, row);
+          if (prev != null) {
+            lockIds.put(lockId, prev);    // revert old value
+            lockIdGenerator = rand.nextInt(); // generate new start point
+          }
+        } while (prev != null);
+
+        lockedRows.add(row);
+        lockedRows.notifyAll();
+        return lockId;
       }
     } finally {
       splitsAndClosesLock.readLock().unlock();
@@ -1607,7 +1631,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return Row that goes with <code>lockid</code>
    */
   byte [] getRowFromLock(final Integer lockid) {
-    return locksToRows.get(lockid);
+    synchronized (lockedRows) {
+      return lockIds.get(lockid);
+    }
   }
   
   /** 
@@ -1615,9 +1641,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @param lockid  The lock ID to release.
    */
   void releaseRowLock(final Integer lockid) {
-    synchronized (locksToRows) {
-      locksToRows.remove(lockid);
-      locksToRows.notifyAll();
+    synchronized (lockedRows) {
+      byte[] row = lockIds.remove(lockid);
+      lockedRows.remove(row);
+      lockedRows.notifyAll();
     }
   }
   
@@ -1627,8 +1654,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return boolean
    */
   private boolean isRowLocked(final Integer lockid) {
-    synchronized (locksToRows) {
-      if(locksToRows.containsKey(lockid)) {
+    synchronized (lockedRows) {
+      if (lockIds.get(lockid) != null) {
         return true;
       }
       return false;
@@ -1656,11 +1683,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   }
   
   private void waitOnRowLocks() {
-    synchronized (locksToRows) {
-      while (this.locksToRows.size() > 0) {
-        LOG.debug("waiting for " + this.locksToRows.size() + " row locks");
+    synchronized (lockedRows) {
+      while (!this.lockedRows.isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Waiting on " + this.lockedRows.size() + " row locks");
+        }
         try {
-          this.locksToRows.wait();
+          this.lockedRows.wait();
         } catch (InterruptedException e) {
           // Catch. Let while test determine loop-end.
         }
