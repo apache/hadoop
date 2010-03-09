@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
@@ -968,6 +969,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.metaSave(filename);
   }
 
+  /** {@inheritDoc} */
+  public FileStatus[] getCorruptFiles() 
+    throws AccessControlException, IOException {
+    
+    return namesystem.getCorruptFiles();
+    
+  }
+  
   /** {@inheritDoc} */
   public ContentSummary getContentSummary(String path) throws IOException {
     return namesystem.getContentSummary(path);

@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,7 @@ public class BlockManager {
   // Default initial capacity and load factor of map
   public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
+  public static final int DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
 
   private final FSNamesystem namesystem;
 
@@ -105,7 +107,9 @@ public class BlockManager {
   int minReplication;
   // Default number of replicas
   int defaultReplication;
-
+  // How many entries are returned by getCorruptInodes()
+  int maxCorruptFilesReturned;
+  
   // variable to enable check for enough racks 
   boolean shouldCheckForEnoughRacks = true;
 
@@ -140,6 +144,8 @@ public class BlockManager {
                          namesystem,
                          namesystem.clusterMap);
 
+    this.maxCorruptFilesReturned = conf.getInt("dfs.corruptfilesreturned.max",
+        DEFAULT_MAX_CORRUPT_FILES_RETURNED);
     this.defaultReplication = conf.getInt("dfs.replication", 3);
     this.maxReplication = conf.getInt("dfs.replication.max", 512);
     this.minReplication = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,
@@ -1705,5 +1711,26 @@ public class BlockManager {
     return corruptReplicas.getCorruptReplicaBlockIds(numExpectedBlocks,
                                                      startingBlockId);
   }  
+  
+  /**
+   * @return inodes of files with corrupt blocks, with a maximum of 
+   * MAX_CORRUPT_FILES_RETURNED inodes listed in total
+   */
+  INode[] getCorruptInodes() {
+    LinkedHashSet<INode> set = new LinkedHashSet<INode>();
+
+    for (Block blk : 
+            neededReplications.getQueue(
+                UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS)){
+      INode inode = blocksMap.getINode(blk);
+      if (inode != null && countNodes(blk).liveReplicas() == 0) {
+        set.add(inode);
+        if (set.size() >= this.maxCorruptFilesReturned) {
+          break;  
+        }
+      } 
+    }
+    return set.toArray(new INode[set.size()]);
+  }
   
 }

@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
  */
 class UnderReplicatedBlocks implements Iterable<Block> {
   static final int LEVEL = 4;
+  static public final int QUEUE_WITH_CORRUPT_BLOCKS = 2;
   private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
       
   /* constructor */
@@ -81,7 +82,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       if (decommissionedReplicas > 0) {
         return 0;
       }
-      return 2; // keep these blocks in needed replication.
+      return QUEUE_WITH_CORRUPT_BLOCKS; // keep these blocks in needed replication.
     } else if(curReplicas==1) {
       return 0; // highest priority
     } else if(curReplicas*3<expectedReplicas) {
@@ -183,7 +184,15 @@ class UnderReplicatedBlocks implements Iterable<Block> {
                                     + " at priority level " + curPri);
     }
   }
-      
+
+  /* returns an interator of all blocks in a given priority queue */
+  public synchronized Iterable<Block> getQueue(int priority) {
+    if (priority < 0 || priority >= LEVEL) {
+      return null;
+    }
+    return priorityQueues.get(priority);
+  }
+  
   /* return an iterator of all the under replication blocks */
   public synchronized BlockIterator iterator() {
     return new BlockIterator();

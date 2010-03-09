@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -4387,6 +4388,38 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                                   startingBlockId);
   }
 
+  /**
+   * @return Array of FileStatus objects representing files with 
+   * corrupted blocks.
+   * @throws AccessControlException
+   * @throws IOException
+   */
+  synchronized FileStatus[] getCorruptFiles() 
+    throws AccessControlException, IOException {
+    
+    checkSuperuserPrivilege();
+    
+    INode[] inodes = blockManager.getCorruptInodes();
+    FileStatus[] ret = new FileStatus[inodes.length];
+    
+    int i = 0;
+    for (INode inode: inodes) {
+      String src = inode.getFullPathName();
+      ret[i++] = new FileStatus(inode.computeContentSummary().getLength(), 
+          inode.isDirectory(), 
+          ((INodeFile)inode).getReplication(), 
+          ((INodeFile)inode).getPreferredBlockSize(),
+          inode.getModificationTime(),
+          inode.getAccessTime(),
+          inode.getFsPermission(),
+          inode.getUserName(),
+          inode.getGroupName(),
+          new Path(src));
+    }
+
+    return ret;
+  }
+  
   public synchronized ArrayList<DatanodeDescriptor> getDecommissioningNodes() {
     ArrayList<DatanodeDescriptor> decommissioningNodes = 
         new ArrayList<DatanodeDescriptor>();

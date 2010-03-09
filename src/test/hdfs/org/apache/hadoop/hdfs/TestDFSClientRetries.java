@@ -260,6 +260,11 @@ public class TestDFSClientRetries extends TestCase {
 
     public void setTimes(String src, long mtime, long atime) throws IOException {}
 
+    public FileStatus[] getCorruptFiles()
+      throws AccessControlException, IOException {
+      return null;
+    }
+
     public void createSymlink(String target, String newpath, 
         FsPermission dirPerm, boolean createPath) 
         throws IOException, UnresolvedLinkException {}
