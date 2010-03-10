@@ -163,6 +163,7 @@ EOF
 # Add JVM options
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
 export HADOOP_OPTS="$HADOOP_OPTS -XX:+UseCompressedOops"
+export HADOOP_NAMENODE_OPTS="$HADOOP_NAMENODE_OPTS -Xmx3000m -XX:+UseCompressedOops"                 
 EOF
 # Update classpath to include HBase jars and config
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
