@@ -176,6 +176,9 @@ Trunk (unreleased changes)
     HDFS-999. Secondary namenode should login using kerberos if security is 
     configured (boryas)
 
+    HDFS-856. Hardcoded replication level for new files in fuse-dfs.
+    (Brian Bockelman via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

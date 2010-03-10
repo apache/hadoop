@@ -54,7 +54,7 @@ int dfs_truncate(const char *path, off_t size)
   int flags = O_WRONLY | O_CREAT;
 
   hdfsFile file;
-  if ((file = (hdfsFile)hdfsOpenFile(userFS, path, flags,  0, 3, 0)) == NULL) {
+  if ((file = (hdfsFile)hdfsOpenFile(userFS, path, flags,  0, 0, 0)) == NULL) {
     syslog(LOG_ERR, "ERROR: could not connect open file %s:%d\n", __FILE__, __LINE__);
     return -EIO;
   }

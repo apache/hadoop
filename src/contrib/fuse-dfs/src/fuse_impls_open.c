@@ -50,7 +50,7 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     return -EIO;
   }
 
-  if ((fh->hdfsFH = hdfsOpenFile(fh->fs, path, flags,  0, 3, 0)) == NULL) {
+  if ((fh->hdfsFH = hdfsOpenFile(fh->fs, path, flags,  0, 0, 0)) == NULL) {
     syslog(LOG_ERR, "ERROR: could not connect open file %s:%d\n", __FILE__, __LINE__);
     return -EIO;
   }
