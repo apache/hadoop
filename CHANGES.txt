@@ -264,8 +264,11 @@ Trunk (unreleased changes)
 
     HADOOP-6545. Changes the Key for the FileSystem cache to be UGI (ddas)
 
-   HADOOP-6609. Fixed deadlock in RPC by replacing shared static 
-   DataOutputBuffer in the UTF8 class with a thread local variable. (omalley)
+    HADOOP-6609. Fixed deadlock in RPC by replacing shared static 
+    DataOutputBuffer in the UTF8 class with a thread local variable. (omalley)
+
+    HADOOP-6504. Invalid example in the documentation of
+    org.apache.hadoop.util.Tool. (Benoit Sigoure via tomwhite)
 
 Release 0.21.0 - Unreleased
 
