@@ -232,6 +232,7 @@ Release 0.21.0 - Unreleased
    HBASE-2295  Row locks may deadlock with themselves
                (dhruba borthakur via Stack)
    HBASE-2308  Fix the bin/rename_table.rb script, make it work again
+   HBASE-2307  hbase-2295 changed hregion size, testheapsize broke... fix it
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
