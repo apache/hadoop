@@ -43,9 +43,9 @@ int dfs_statfs(const char *path, struct statvfs *st)
     return -EIO;
   }
 
-  const long cap   = hdfsGetCapacity(userFS);
-  const long used  = hdfsGetUsed(userFS);
-  const long bsize = hdfsGetDefaultBlockSize(userFS);
+  const tOffset cap   = hdfsGetCapacity(userFS);
+  const tOffset used  = hdfsGetUsed(userFS);
+  const tOffset bsize = hdfsGetDefaultBlockSize(userFS);
 
   // fill in the statvfs structure
 
