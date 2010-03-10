@@ -231,6 +231,7 @@ Release 0.21.0 - Unreleased
    HBASE-2299  [EC2] mapreduce fixups for PE
    HBASE-2295  Row locks may deadlock with themselves
                (dhruba borthakur via Stack)
+   HBASE-2308  Fix the bin/rename_table.rb script, make it work again
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

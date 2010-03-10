@@ -1,9 +1,14 @@
 # Script that renames table in hbase.  As written, will not work for rare
-# case where there is more than one region in .META. table.  Does the
-# update of the hbase .META. and moves the directories in filesystem.  
-# HBase MUST be shutdown when you run this script.  On successful rename,
-# DOES NOT remove old directory from filesystem because was afraid this
-# script could remove the original table on error.
+# case where there is more than one region in .META. table (You'd have to
+# have a really massive hbase install).  Does the update of the hbase
+# .META. and moves the directories in the filesystem.  Use at your own
+# risk.  Before running you must DISABLE YOUR TABLE:
+# 
+# hbase> disable "YOUR_TABLE_NAME"
+#
+# Enable the new table after the script completes.
+#
+# hbase> enable "NEW_TABLE_NAME"
 #
 # To see usage for this script, run: 
 #
@@ -15,12 +20,14 @@ import org.apache.hadoop.hbase.util.FSUtils
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.util.Writables
 import org.apache.hadoop.hbase.HConstants
+import org.apache.hadoop.hbase.client.Scan
+import org.apache.hadoop.hbase.client.Delete
+import org.apache.hadoop.hbase.client.Put
+import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.HStoreKey
 import org.apache.hadoop.hbase.HRegionInfo
 import org.apache.hadoop.hbase.HTableDescriptor
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
-import org.apache.hadoop.hbase.regionserver.HLogEdit
 import org.apache.hadoop.hbase.regionserver.HRegion
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.FileSystem
@@ -65,8 +72,8 @@ if ARGV.size != 2
 end
 
 # Check good table names were passed.
-oldTableName = HTableDescriptor.isLegalTableName(ARGV[0].to_java_bytes)
-newTableName = HTableDescriptor.isLegalTableName(ARGV[1].to_java_bytes)
+oldTableName = ARGV[0]
+newTableName = ARGV[1]
 
 # Get configuration to use.
 c = HBaseConfiguration.new()
@@ -79,76 +86,57 @@ fs = FileSystem.get(c)
 
 # If new table directory does not exit, create it.  Keep going if already
 # exists because maybe we are rerunning script because it failed first
-# time.
+# time. Otherwise we are overwriting a pre-existing table.
 rootdir = FSUtils.getRootDir(c)
-oldTableDir = Path.new(rootdir, Path.new(Bytes.toString(oldTableName)))
+oldTableDir = fs.makeQualified(Path.new(rootdir, Path.new(oldTableName)))
 isDirExists(fs, oldTableDir)
-newTableDir = Path.new(rootdir, Bytes.toString(newTableName))
+newTableDir = fs.makeQualified(Path.new(rootdir, newTableName))
 if !fs.exists(newTableDir)
   fs.mkdirs(newTableDir)
 end
 
 # Get a logger and a metautils instance.
 LOG = LogFactory.getLog(NAME)
-utils = MetaUtils.new(c)
 
-# Start.  Get all meta rows.
-begin
-  # Get list of all .META. regions that contain old table name
-  metas = utils.getMETARows(oldTableName)
-  index = 0
-  for meta in metas
-    # For each row we find, move its region from old to new table.
-    # Need to update the encoded name in the hri as we move.
-    # After move, delete old entry and create a new.
-    LOG.info("Scanning " + meta.getRegionNameAsString())
-    metaRegion = utils.getMetaRegion(meta)
-    scanner = metaRegion.getScanner(HConstants::COL_REGIONINFO_ARRAY, oldTableName,
-      HConstants::LATEST_TIMESTAMP, nil) 
-    begin
-      key = HStoreKey.new()
-      value = TreeMap.new(Bytes.BYTES_COMPARATOR)
-      while scanner.next(key, value)
-        index = index + 1
-        keyStr = key.toString()
-        oldHRI = Writables.getHRegionInfo(value.get(HConstants::COL_REGIONINFO))
-        if !oldHRI
-          raise IOError.new(index.to_s + " HRegionInfo is null for " + keyStr)
-        end
-        unless isTableRegion(oldTableName, oldHRI)
-          # If here, we passed out the table.  Break.
-          break
-        end
-        oldRDir = Path.new(oldTableDir, Path.new(oldHRI.getEncodedName().to_s))
-        if !fs.exists(oldRDir)
-          LOG.warn(oldRDir.toString() + " does not exist -- region " +
-            oldHRI.getRegionNameAsString())
-        else
-           # Now make a new HRegionInfo to add to .META. for the new region.
-          newHRI = createHRI(newTableName, oldHRI)
-          newRDir = Path.new(newTableDir, Path.new(newHRI.getEncodedName().to_s))
-          # Move the region in filesystem
-          LOG.info("Renaming " + oldRDir.toString() + " as " + newRDir.toString())
-          fs.rename(oldRDir, newRDir)
-          # Removing old region from meta
-          LOG.info("Removing " + Bytes.toString(key.getRow()) + " from .META.")
-          metaRegion.deleteAll(key.getRow(), HConstants::LATEST_TIMESTAMP)
-          # Create 'new' region
-          newR = HRegion.new(rootdir, utils.getLog(), fs, c, newHRI, nil)
-          # Add new row. NOTE: Presumption is that only one .META. region. If not,
-          # need to do the work to figure proper region to add this new region to.
-          LOG.info("Adding to meta: " + newR.toString())
-          HRegion.addRegionToMETA(metaRegion, newR)
-          LOG.info("Done moving: " + Bytes.toString(key.getRow()))
-        end
-        # Need to clear value else we keep appending values.
-        value.clear()
-      end
-    ensure
-      scanner.close()
-    end
+# Run through the meta table moving region mentions from old to new table name.
+metaTable = HTable.new(c, HConstants::META_TABLE_NAME)
+# TODO: Start the scan at the old table offset in .META.
+scan = Scan.new()
+scanner = metaTable.getScanner(scan)
+while (result = scanner.next())
+  rowid = Bytes.toString(result.getRow())
+  oldHRI = Writables.getHRegionInfo(result.getValue(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER))
+  if !oldHRI
+    raise IOError.new("HRegionInfo is null for " + rowid)
   end
-  LOG.info("Renamed table -- manually delete " + oldTableDir.toString());
-ensure
-  utils.shutdown()
+  next unless isTableRegion(oldTableName.to_java_bytes, oldHRI)
+  puts oldHRI.toString()
+  oldRDir = Path.new(oldTableDir, Path.new(oldHRI.getEncodedName().to_s))
+  if !fs.exists(oldRDir)
+    LOG.warn(oldRDir.toString() + " does not exist -- region " +
+      oldHRI.getRegionNameAsString())
+  else
+    # Now make a new HRegionInfo to add to .META. for the new region.
+    newHRI = createHRI(newTableName, oldHRI)
+    puts newHRI.toString()
+    newRDir = Path.new(newTableDir, Path.new(newHRI.getEncodedName().to_s))
+    # Move the region in filesystem
+    LOG.info("Renaming " + oldRDir.toString() + " as " + newRDir.toString())
+    fs.rename(oldRDir, newRDir)
+    # Removing old region from meta
+    LOG.info("Removing " + rowid + " from .META.")
+    d = Delete.new(result.getRow())
+    metaTable.delete(d)
+    # Create 'new' region
+    newR = HRegion.new(rootdir, nil, fs, c, newHRI, nil)
+    # Add new row. NOTE: Presumption is that only one .META. region. If not,
+    # need to do the work to figure proper region to add this new region to.
+    LOG.info("Adding to meta: " + newR.toString())
+    p = Put.new(newR.getRegionName())
+    p.add(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER, Writables.getBytes(newR.getRegionInfo()))
+    metaTable.put(p)
+  end
 end
+scanner.close()
+fs.delete(oldTableDir)
+LOG.info("DONE");
