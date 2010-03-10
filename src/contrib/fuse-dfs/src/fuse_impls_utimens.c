@@ -20,7 +20,7 @@
 #include "fuse_impls.h"
 #include "fuse_connect.h"
 
- int dfs_utimens(const char *path, const struct timespec ts[2])
+int dfs_utimens(const char *path, const struct timespec ts[2])
 {
   TRACE1("utimens", path)
 #if PERMS
@@ -38,14 +38,22 @@
   hdfsFS userFS;
   // if not connected, try to connect and fail out if we can't.
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n",
+           __FILE__, __LINE__);
     return -EIO;
   }
 
   if (hdfsUtime(userFS, path, mTime, aTime)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to utime %s to %ld/%ld",path, (long)mTime, (long)aTime);
-    fprintf(stderr,"ERROR: could not set utime for path %s\n",path);
-    return -EIO;
+    hdfsFileInfo *info = hdfsGetPathInfo(dfs->fs,path);
+    if (info == NULL) {
+      return -EIO;
+    }
+    // Silently ignore utimens failure for directories, otherwise 
+    // some programs like tar will fail.
+    if (info->mKind == kObjectKindDirectory) {
+      return 0;
+    }
+    return -errno;
   }
 #endif  
   return 0;

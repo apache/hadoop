@@ -185,6 +185,9 @@ Trunk (unreleased changes)
     HDFS-858. Incorrect return codes for fuse-dfs. (Brian Bockelman via
     tomwhite)
 
+    HDFS-859. fuse-dfs utime behavior causes issues with tar.
+    (Brian Bockelman via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
