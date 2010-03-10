@@ -112,12 +112,7 @@ void *dfs_init()
   dfs->rdbuffer_size         = options.rdbuffer_size;
   dfs->direct_io             = options.direct_io;
 
-  bzero(dfs->dfs_uri,0);
-  sprintf(dfs->dfs_uri,"dfs://%s:%d/",dfs->nn_hostname,dfs->nn_port);
-  dfs->dfs_uri_len = strlen(dfs->dfs_uri);
-
-  // use ERR level to ensure it makes it into the log.
-  syslog(LOG_ERR, "mounting %s", dfs->dfs_uri);
+  syslog(LOG_INFO, "mounting %s:%d", dfs->nn_hostname, dfs->nn_port);
 
   init_protectedpaths(dfs);
   assert(dfs->protectedpaths != NULL);

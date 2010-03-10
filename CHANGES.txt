@@ -190,6 +190,8 @@ Trunk (unreleased changes)
 
     HDFS-861. fuse-dfs does not support O_RDWR. (Brian Bockelman via tomwhite)
 
+    HDFS-961. dfs_readdir incorrectly parses paths. (Eli Collins via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

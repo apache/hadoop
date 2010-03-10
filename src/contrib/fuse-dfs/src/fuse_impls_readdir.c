@@ -46,9 +46,10 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     return -EIO;
   }
 
-  // call dfs to read the dir
+  // Read dirents. Calling a variant that just returns the final path
+  // component (HDFS-975) would save us from parsing it out below.
   int numEntries = 0;
-  hdfsFileInfo *info = hdfsListDirectory(userFS,path,&numEntries);
+  hdfsFileInfo *info = hdfsListDirectory(userFS, path, &numEntries);
   userFS = NULL;
 
   // NULL means either the directory doesn't exist or maybe IO error.
@@ -59,7 +60,6 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   int i ;
   for (i = 0; i < numEntries; i++) {
 
-    // check the info[i] struct
     if (NULL == info[i].mName) {
       syslog(LOG_ERR,"ERROR: for <%s> info[%d].mName==NULL %s:%d", path, i, __FILE__,__LINE__);
       continue;
@@ -68,11 +68,14 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct stat st;
     fill_stat_structure(&info[i], &st);
 
-    // hack city: todo fix the below to something nicer and more maintainable but
-    // with good performance
-    // strip off the path but be careful if the path is solely '/'
-    // NOTE - this API started returning filenames as full dfs uris
-    const char *const str = info[i].mName + dfs->dfs_uri_len + path_len + ((path_len == 1 && *path == '/') ? 0 : 1);
+    // Find the final path component
+    const char *str = strrchr(info[i].mName, '/');
+    if (NULL == str) {
+      syslog(LOG_ERR, "ERROR: invalid URI %s %s:%d",
+             info[i].mName, __FILE__,__LINE__);
+      continue;
+    }
+    str++;
 
     // pack this entry into the fuse buffer
     int res = 0;

@@ -39,10 +39,6 @@ typedef struct dfs_context_struct {
   int direct_io;
   char **protectedpaths;
   size_t rdbuffer_size;
-  // todo:
-  // total hack city - use this to strip off the dfs url from the filenames. (in fuse_impls_readdir.c)
-  char dfs_uri[1024];
-  int dfs_uri_len;
 } dfs_context;
 
 #endif
