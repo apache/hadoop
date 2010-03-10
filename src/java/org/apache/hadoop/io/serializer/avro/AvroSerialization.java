@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.avro.Schema;
+import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumReader;
@@ -125,7 +126,7 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
     @Override
     public void open(InputStream in) throws IOException {
       inStream = in;
-      decoder = new BinaryDecoder(in);
+      decoder = DecoderFactory.defaultFactory().createBinaryDecoder(in, null);
     }
 
   }

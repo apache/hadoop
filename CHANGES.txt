@@ -1,5 +1,4 @@
 Hadoop Change Log
-# Add directory level at the storage directory
 
 Trunk (unreleased changes)
 
@@ -182,11 +181,14 @@ Trunk (unreleased changes)
     HADOOP-6589. Provide better error messages when RPC authentication fails.
     (Kan Zhang via omalley)
 
-   HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
-   (Suresh Srinivas via Sanjay Radia)
+    HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
+    (Suresh Srinivas via Sanjay Radia)
 
-   HADOOP-6537 Declare more detailed exceptions in FileContext and 
-   AbstractFileSystem (Suresh Srinivas via Sanjay Radia)
+    HADOOP-6537 Declare more detailed exceptions in FileContext and 
+    AbstractFileSystem (Suresh Srinivas via Sanjay Radia)
+
+    HADOOP-6486. fix common classes to work with Avro 1.3 reflection.
+    (cutting via tomwhite)
 
   OPTIMIZATIONS
 

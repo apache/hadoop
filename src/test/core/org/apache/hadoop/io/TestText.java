@@ -253,6 +253,12 @@ public class TestText extends TestCase {
     thread2.join();
   }
 
+  public void testAvroReflect() throws Exception {
+    AvroTestUtil.testReflect
+      (new Text("foo"),
+       "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");
+  }
+
   public static void main(String[] args)  throws Exception
   {
     TestText test = new TestText("main");

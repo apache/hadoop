@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.AvroTestUtil;
 
 import junit.framework.TestCase;
 
@@ -194,5 +195,11 @@ public class TestPath extends TestCase {
     assertEquals(new Path("hdfs://host2/dir2/file"),
                  new Path("file").makeQualified(defaultUri, new Path(wd)));
  }
+
+  public void testAvroReflect() throws Exception {
+    AvroTestUtil.testReflect
+      (new Path("foo"),
+       "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.fs.Path\"}");
+  }
 
 }

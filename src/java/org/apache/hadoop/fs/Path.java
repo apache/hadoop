@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.net.*;
 import java.io.*;
+import org.apache.avro.reflect.Stringable;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
  * Path strings use slash as the directory separator.  A path string is
  * absolute if it begins with a slash.
  */
+@Stringable
 public class Path implements Comparable {
 
   /** The directory separator, a slash. */
