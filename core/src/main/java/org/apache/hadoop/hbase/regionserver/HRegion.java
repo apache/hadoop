@@ -2443,17 +2443,22 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (5 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (19 * ClassSize.REFERENCE) + ClassSize.OBJECT);
+      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
   
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) + 
       ClassSize.ATOMIC_LONG + ClassSize.ATOMIC_INTEGER +
-      ClassSize.CONCURRENT_HASHMAP + 
-      (16 * ClassSize.CONCURRENT_HASHMAP_ENTRY) + 
-      (16 * ClassSize.CONCURRENT_HASHMAP_SEGMENT) +
+
+      // Using TreeMap for TreeSet
+      ClassSize.TREEMAP +
+
+      // Using TreeMap for HashMap
+      ClassSize.TREEMAP +
+
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY +
-      ClassSize.align(ClassSize.OBJECT + (5 * Bytes.SIZEOF_BOOLEAN)) +
-      (3 * ClassSize.REENTRANT_LOCK));
+      ClassSize.align(ClassSize.OBJECT +
+        (5 * Bytes.SIZEOF_BOOLEAN)) +
+        (3 * ClassSize.REENTRANT_LOCK));
   
   @Override
   public long heapSize() {
