@@ -182,6 +182,9 @@ Trunk (unreleased changes)
     HDFS-857. Incorrect type for fuse-dfs capacity can cause "df" to return
     negative values on 32-bit machines. (Brian Bockelman via tomwhite)
 
+    HDFS-858. Incorrect return codes for fuse-dfs. (Brian Bockelman via
+    tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

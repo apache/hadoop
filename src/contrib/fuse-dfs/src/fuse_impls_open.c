@@ -52,7 +52,11 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
 
   if ((fh->hdfsFH = hdfsOpenFile(fh->fs, path, flags,  0, 0, 0)) == NULL) {
     syslog(LOG_ERR, "ERROR: could not connect open file %s:%d\n", __FILE__, __LINE__);
-    return -EIO;
+    syslog(LOG_ERR, "ERROR: errno %d\n", errno);
+    if (errno == 0 || errno == EINTERNAL) {
+      return -EIO;
+    }
+    return -errno;
   }
 
   // 

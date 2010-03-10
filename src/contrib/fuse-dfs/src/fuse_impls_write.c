@@ -53,15 +53,21 @@ int dfs_write(const char *path, const char *buf, size_t size,
   tOffset cur_offset = hdfsTell(fh->fs, file_handle);
   if (cur_offset != offset) {
     syslog(LOG_ERR, "ERROR: user trying to random access write to a file %d!=%d for %s %s:%d\n",(int)cur_offset, (int)offset,path, __FILE__, __LINE__);
-    ret =  -EIO;
+    ret =  -ENOTSUP;
   } else {
     length = hdfsWrite(fh->fs, file_handle, buf, size);
     if (length <= 0) {
-      syslog(LOG_ERR, "ERROR: fuse problem - could not write all the bytes for %s %d!=%d%s:%d\n",path,length,(int)size, __FILE__, __LINE__);
-      ret = -EIO;
+      syslog(LOG_ERR, "ERROR: could not write all the bytes for %s %d!=%d%s:%d\n", path, length, (int)size, __FILE__, __LINE__);
+      syslog(LOG_ERR, "ERROR: errno %d\n", errno);
+      if (errno == 0 || errno == EINTERNAL) {
+        ret = -EIO;
+      } else {
+        ret = -errno;
+      }
     } 
     if (length != size) {
-      syslog(LOG_ERR, "WARN: fuse problem - could not write all the bytes for %s %d!=%d%s:%d\n",path,length,(int)size, __FILE__, __LINE__);
+      syslog(LOG_ERR, "ERROR: could not write all the bytes for %s %d!=%d%s:%d\n", path, length, (int)size, __FILE__, __LINE__);
+      syslog(LOG_ERR, "ERROR: errno - %d\n", errno);
     }
   }
 
