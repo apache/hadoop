@@ -188,6 +188,8 @@ Trunk (unreleased changes)
     HDFS-859. fuse-dfs utime behavior causes issues with tar.
     (Brian Bockelman via tomwhite)
 
+    HDFS-861. fuse-dfs does not support O_RDWR. (Brian Bockelman via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

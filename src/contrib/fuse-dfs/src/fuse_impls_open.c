@@ -50,6 +50,21 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     return -EIO;
   }
 
+  if (flags & O_RDWR) {
+    hdfsFileInfo *info = hdfsGetPathInfo(dfs->fs,path);
+    if (info == NULL) {
+      // File does not exist (maybe?); interpret it as a O_WRONLY
+      // If the actual error was something else, we'll get it again when
+      // we try to open the file.
+      flags ^= O_RDWR;
+      flags |= O_WRONLY;
+    } else {
+      // File exists; open this as read only.
+      flags ^= O_RDWR;
+      flags |= O_RDONLY;
+    }
+  }
+
   if ((fh->hdfsFH = hdfsOpenFile(fh->fs, path, flags,  0, 0, 0)) == NULL) {
     syslog(LOG_ERR, "ERROR: could not connect open file %s:%d\n", __FILE__, __LINE__);
     syslog(LOG_ERR, "ERROR: errno %d\n", errno);
