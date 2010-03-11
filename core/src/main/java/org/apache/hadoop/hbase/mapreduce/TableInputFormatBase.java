@@ -281,6 +281,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     int count = 0;
     List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length); 
     for (int i = 0; i < keys.getFirst().length; i++) {
+      if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
+        continue;
+      }
       String regionLocation = table.getRegionLocation(keys.getFirst()[i]).
         getServerAddress().getHostname();
       byte[] startRow = scan.getStartRow();
@@ -306,6 +309,34 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
     return splits;
   }
+
+  /**
+   *
+   *
+   * Test if the given region is to be included in the InputSplit while splitting
+   * the regions of a table.
+   * <p>
+   * This optimization is effective when there is a specific reasoning to exclude an entire region from the M-R job,
+   * (and hence, not contributing to the InputSplit), given the start and end keys of the same. <br>
+   * Useful when we need to remember the last-processed top record and revisit the [last, current) interval for M-R processing,
+   * continuously. In addition to reducing InputSplits, reduces the load on the region server as well, due to the ordering of the keys.
+   * <br>
+   * <br>
+   * Note: It is possible that <code>endKey.length() == 0 </code> , for the last (recent) region.
+   * <br>
+   * Override this method, if you want to bulk exclude regions altogether from M-R. By default, no region is excluded( i.e. all regions are included).
+   *
+   *
+   * @param startKey Start key of the region
+   * @param endKey End key of the region
+   * @return true, if this region needs to be included as part of the input (default).
+   *
+   */
+  protected boolean includeRegionInSplit(final byte[] startKey, final byte [] endKey) {
+    return true;
+  }
+
+
 
   /**
    * Allows subclasses to get the {@link HTable}.
