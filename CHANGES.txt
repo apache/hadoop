@@ -416,7 +416,9 @@ Release 0.21.0 - Unreleased
                (Benoit Sigoure via JD)
    HBASE-2282  More directories should be ignored when using git for development
                (Alexey Kovyrin via Stack)
-    HBASE-2267 More improvements to the Maven build (Lars Francke via Stack)
+   HBASE-2267  More improvements to the Maven build (Lars Francke via Stack)
+   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS on
+               every heartbeat (Karthik Ranganathan via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

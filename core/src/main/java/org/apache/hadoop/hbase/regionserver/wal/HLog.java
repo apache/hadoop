@@ -1336,7 +1336,7 @@ public class HLog implements HConstants, Syncable {
    * @return the HLog directory name
    */
   public static String getHLogDirectoryName(HServerInfo info) {
-    return getHLogDirectoryName(HServerInfo.getServerName(info));
+    return getHLogDirectoryName(info.getServerName());
   }
 
   /**

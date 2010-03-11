@@ -53,7 +53,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
 
   @Override
   public String toString() {
-    return "PendingOpenOperation from " + HServerInfo.getServerName(serverInfo);
+    return "PendingOpenOperation from " + serverInfo.getServerName();
   }
 
   @Override

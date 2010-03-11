@@ -137,7 +137,14 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    */
   public synchronized String getServerName() {
     if (this.serverName == null) {
+      // if we have the hostname of the RS, use it
+      if(this.name != null) {
+        this.serverName = getServerName(this.name, this.serverAddress.getPort(), this.startCode);
+      }
+      // go to DNS name resolution only if we dont have the name of the RS
+      else {
       this.serverName = getServerName(this.serverAddress, this.startCode);
+    }
     }
     return this.serverName;
   }
@@ -219,7 +226,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * @param info
    * @return the server name in the form hostname_startcode_port
    */
-  public static String getServerName(HServerInfo info) {
+  private static String getServerName(HServerInfo info) {
     return getServerName(info.getServerAddress(), info.getStartCode());
   }
   
