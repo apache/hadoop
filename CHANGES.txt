@@ -234,7 +234,8 @@ Release 0.21.0 - Unreleased
    HBASE-2308  Fix the bin/rename_table.rb script, make it work again
    HBASE-2307  hbase-2295 changed hregion size, testheapsize broke... fix it
    HBASE-2269  PerformanceEvaluation "--nomapred" may assign duplicate random
-               seed over multiple testing threads (Tatsuya Kawano via Stack)
+               seed over multiple testing threads (Tatsuya Kawano via Stack) 
+   HBASE-2287  TypeError in shell (Alexey Kovyrin via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -523,7 +523,7 @@ module HBase
           # May have passed TIMESTAMP and row only; wants all columns from ts.
           ts = args[TIMESTAMP] 
           if not ts
-            raise ArgumentError.new("Failed parse of " + args + ", " + args.class)
+            raise ArgumentError, "Failed parse of #{args}, #{args.class}"
           end
           get = Get.new(row.to_java_bytes, ts)
         else
