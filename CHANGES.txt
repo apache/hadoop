@@ -92,6 +92,9 @@ Trunk (unreleased changes)
     HDFS-729. NameNode API to list files that have missing blocks.
     (Rodrigo Schmidt via dhruba)
 
+    HDFS-850. The WebUI display more details about namenode memory usage.
+    (Dmytro Molkov via dhruba)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

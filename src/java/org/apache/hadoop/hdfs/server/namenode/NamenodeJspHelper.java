@@ -68,8 +68,15 @@ class NamenodeJspHelper {
     MemoryUsage heap = mem.getHeapMemoryUsage();
     long totalMemory = heap.getUsed();
     long maxMemory = heap.getMax();
+    long commitedMemory = heap.getCommitted();
+    
+    MemoryUsage nonHeap = mem.getNonHeapMemoryUsage();
+    long totalNonHeap = nonHeap.getUsed();
+    long maxNonHeap = nonHeap.getMax();
+    long commitedNonHeap = nonHeap.getCommitted();
 
-    long used = (totalMemory * 100) / maxMemory;
+    long used = (totalMemory * 100) / commitedMemory;
+    long usedNonHeap = (totalNonHeap * 100) / commitedNonHeap;
 
     String str = inodes + " files and directories, " + blocks + " blocks = "
         + (inodes + blocks) + " total";
@@ -77,8 +84,16 @@ class NamenodeJspHelper {
       long pct = ((inodes + blocks) * 100) / maxobjects;
       str += " / " + maxobjects + " (" + pct + "%)";
     }
-    str += ".  Heap Size is " + StringUtils.byteDesc(totalMemory) + " / "
-        + StringUtils.byteDesc(maxMemory) + " (" + used + "%) <br>";
+    str += ".<br>";
+    str += "Heap Memory used " + StringUtils.byteDesc(totalMemory) + " is "
+        + " " + used + "% of Commited Heap Memory " 
+        + StringUtils.byteDesc(commitedMemory)
+        + ". Max Heap Memory is " + StringUtils.byteDesc(maxMemory) +
+        ". <br>";
+    str += "Non Heap Memory used " + StringUtils.byteDesc(totalNonHeap) + " is"
+        + " " + usedNonHeap + "% of " + " Commited Non Heap Memory "
+        + StringUtils.byteDesc(commitedNonHeap) + ". Max Non Heap Memory is "
+        + StringUtils.byteDesc(maxNonHeap) + ".<br>";
     return str;
   }
 
