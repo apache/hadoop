@@ -96,7 +96,7 @@ public class PerformanceEvaluation implements HConstants {
   public static final byte [] FAMILY_NAME = Bytes.toBytes("info");
   public static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
   
-  protected HTableDescriptor TABLE_DESCRIPTOR; {
+  protected static HTableDescriptor TABLE_DESCRIPTOR; {
     TABLE_DESCRIPTOR = new HTableDescriptor("TestTable");
     TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
@@ -539,8 +539,15 @@ public class PerformanceEvaluation implements HConstants {
    * A test.
    * Subclass to particularize what happens per row.
    */
-  abstract class Test {
-    protected final Random rand = new Random(System.currentTimeMillis());
+  static abstract class Test {
+    // Below is make it so when Tests are all running in the one
+    // jvm, that they each have a differently seeded Random. 
+    private static final Random randomSeed =
+      new Random(System.currentTimeMillis());
+    private static long nextRandomSeed() {
+      return randomSeed.nextLong();
+    }
+    protected final Random rand = new Random(nextRandomSeed());
     protected final int startRow;
     protected final int perClientRunRows;
     protected final int totalRows;
