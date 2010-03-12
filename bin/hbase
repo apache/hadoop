@@ -51,11 +51,20 @@ case "`uname`" in
 CYGWIN*) cygwin=true;;
 esac
 
+# Detect if we are in hbase sources dir
+in_sources_dir=false
+if [ -f $HBASE_HOME/pom.xml ]; then
+  in_sources_dir=true
+fi
+
 # if no args specified, show usage
 if [ $# = 0 ]; then
   echo "Usage: hbase <command>"
   echo "where <command> is one of:"
   echo "  shell            run the HBase shell"
+  if $in_sources_dir; then
+    echo "  shell-tests      run the HBase shell tests"
+  fi
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
   echo "  thrift           run an HBase Thrift server" 
@@ -100,7 +109,7 @@ if [ -d "$HBASE_HOME/build/webapps" ]; then
 fi
 
 # Add maven target directory
-if [ -f $HBASE_HOME/pom.xml ]; then
+if $in_sources_dir; then
   HBASE_VER=`grep '<version>' $HBASE_HOME/pom.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>/\1/'`
   MAVEN_TARGET_DIR=$HBASE_HOME/target/hbase-$HBASE_VER-bin/hbase-$HBASE_VER
   if [ -d "$MAVEN_TARGET_DIR" ]; then
@@ -184,6 +193,20 @@ unset IFS
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
   CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
+elif $in_sources_dir && [ "$COMMAND" = "shell-tests" ] ; then
+  # Finx maven build classpath
+  mvn -f core/pom.xml dependency:build-classpath -Dmdep.outputFile=/tmp/hbase-core-tests-classpath.txt &> /dev/null
+  # Add tests classes
+  CLASSPATH=${CLASSPATH}:`cat /tmp/hbase-core-tests-classpath.txt`
+  for f in `find ${HBASE_HOME}/core/target -name '*.jar'`; do
+    if [ -f $f ]; then
+      CLASSPATH=${CLASSPATH}:$f;
+    fi
+  done
+  CLASSPATH=${HBASE_HOME}/core/target/test-classes:${CLASSPATH} # For configs
+  # Start the tests
+  CORESRC="${HBASE_HOME}/core/src"
+  CLASS="org.jruby.Main -I${CORESRC}/main/ruby -I${CORESRC}/test/ruby ${CORESRC}/test/ruby/tests_runner.rb"
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
   if [ "$1" != "stop" ] ; then

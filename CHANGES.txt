@@ -454,6 +454,8 @@ Release 0.21.0 - Unreleased
    HBASE-2263  [stargate] multiuser mode: authenticator for zookeeper
    HBASE-2273  [stargate] export metrics via Hadoop metrics, JMX, and zookeeper
    HBASE-2274  [stargate] filter support: JSON descriptors
+   HBASE-2316  Need an ability to run shell tests w/o invoking junit
+               (Alexey Kovyrin via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
