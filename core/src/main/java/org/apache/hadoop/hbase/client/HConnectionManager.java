@@ -631,16 +631,12 @@ public class HConnectionManager implements HConstants {
           return this.rootRegionLocation;
         }        
       } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
-        synchronized (metaRegionLock) {
-          // This block guards against two threads trying to load the meta 
-          // region at the same time. The first will load the meta region and
-          // the second will use the value that the first one found.
-          return locateRegionInMeta(ROOT_TABLE_NAME, tableName, row, useCache);
-        }
+        return locateRegionInMeta(ROOT_TABLE_NAME, tableName, row, useCache,
+                                  metaRegionLock);
       } else {
-        synchronized(userRegionLock){
-          return locateRegionInMeta(META_TABLE_NAME, tableName, row, useCache);
-        }
+        // Region not in the cache - have to go to the meta RS
+        return locateRegionInMeta(META_TABLE_NAME, tableName, row, useCache,
+                                  userRegionLock);
       }
     }
 
@@ -650,18 +646,17 @@ public class HConnectionManager implements HConstants {
       */
     @SuppressWarnings({"ConstantConditions"})
     private HRegionLocation locateRegionInMeta(final byte [] parentTable,
-      final byte [] tableName, final byte [] row, boolean useCache)
+      final byte [] tableName, final byte [] row, boolean useCache,
+      Object regionLockObject)
     throws IOException {
       HRegionLocation location;
-      // If supposed to be using the cache, then check it for a possible hit.
-      // Otherwise, delete any existing cached location so it won't interfere.
+      // If we are supposed to be using the cache, look in the cache to see if
+      // we already have the region.
       if (useCache) {
         location = getCachedLocation(tableName, row);
         if (location != null) {
           return location;
         }
-      } else {
-        deleteCachedLocation(tableName, row);
       }
       
       // build the key of the meta region we should be looking for.
@@ -681,10 +676,29 @@ public class HConnectionManager implements HConstants {
           HRegionInterface server =
             getHRegionConnection(metaLocation.getServerAddress());
 
+          Result regionInfoRow = null;
+          // This block guards against two threads trying to load the meta
+          // region at the same time. The first will load the meta region and
+          // the second will use the value that the first one found.
+          synchronized(regionLockObject) {
+            // Check the cache again for a hit in case some other thread made the
+            // same query while we were waiting on the lock. If not supposed to
+            // be using the cache, delete any existing cached location so it won't
+            // interfere.
+            if (useCache) {
+              location = getCachedLocation(tableName, row);
+              if (location != null) {
+                return location;
+              }
+            } else {
+              deleteCachedLocation(tableName, row);
+            }
+
           // Query the root or meta region for the location of the meta region
-          Result regionInfoRow = server.getClosestRowBefore(
+            regionInfoRow = server.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey,
             HConstants.CATALOG_FAMILY);
+          }
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
