@@ -427,6 +427,7 @@ Release 0.21.0 - Unreleased
                of the table (Kay Kay via Stack) 
    HBASE-2309  Add apache releases to pom (list of ) repositories
                (Kay Kay via Stack)
+   HBASE-2279  Hbase Shell does not have any tests (Alexey Kovyrin via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

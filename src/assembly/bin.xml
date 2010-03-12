@@ -102,6 +102,10 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>core/src/main/ruby</directory>
+      <outputDirectory>lib/ruby</outputDirectory>
+    </fileSet>
+    <fileSet>
       <directory>contrib/transactional</directory>
       <outputDirectory>contrib/transactional</outputDirectory>
       <includes>
