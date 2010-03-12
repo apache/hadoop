@@ -5,6 +5,9 @@ Release 0.20.3 - Unreleased
     MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
     input path. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-6382. Add support for publishing Hadoop jars to Apache Maven
+    repository. (Giridharan Kesavan via cdouglas)
+
 Release 0.20.2 - 2010-2-19
 
   NEW FEATURES

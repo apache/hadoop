@@ -21,7 +21,7 @@
 
   <import file="../build-contrib.xml"/>
 
-  <property name="jarfile" value="${build.dir}/${name}.jar"/>
+  <property name="jarfile" value="${build.dir}/hadoop-${name}-${version}.jar"/>
 
   <target name="jar" depends="compile" unless="skip.contrib">
     <!-- Make sure that the hadoop jar has been created -->
@@ -113,7 +113,7 @@
     <delete file="${name}.jar"/>
 
     <move file="${name}.tar.gz" todir="${build.dir}"/>
-    <echo message= "${hadoop.root}/build/contrib/failmon/${name}.jar"/>
+    <echo message= "${hadoop.root}/build/contrib/failmon/hadoop-${name}-${version}.jar"/>
     
   </target>
   

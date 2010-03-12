@@ -47,7 +47,7 @@
 	<!-- ====================================================== -->
 	<target name="jar" depends="compile" unless="skip.contrib">
 		<echo message="contrib: ${name}" />
-		<jar jarfile="${build.dir}/hadoop-${version}-${name}.jar">
+		<jar jarfile="${build.dir}/hadoop-${name}-${version}.jar">
 			<fileset dir="${build.classes}" />
 			<fileset dir="${basedir}/src/java/org/apache/hadoop/vaidya/postexdiagnosis/tests">
 				<include name="postex_diagnosis_tests.xml" />
