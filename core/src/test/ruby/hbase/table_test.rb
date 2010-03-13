@@ -141,6 +141,17 @@ module Hbase
     define_test "incr should work with integer keys" do
       @test_table.incr(123, 'x:cnt3')
     end
+
+    #-------------------------------------------------------------------------------
+
+    define_test "get_counter should work with integer keys" do
+      @test_table.incr(12345, 'x:cnt')
+      assert_kind_of(Fixnum, @test_table.get_counter(12345, 'x:cnt'))
+    end
+
+    define_test "get_counter should return nil for non-existent counters" do
+      assert_nil(@test_table.get_counter(12345, 'x:qqqq'))
+    end
   end
 
   # Complex data management methods tests

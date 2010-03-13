@@ -14,9 +14,8 @@ module Shell
       end
 
       def command(table, row, column, value = nil)
-        format_simple_command do
-          table(table).incr(row, column, value)
-        end
+        cnt = table(table).incr(row, column, value)
+        puts "COUNTER VALUE = #{cnt}"
       end
     end
   end

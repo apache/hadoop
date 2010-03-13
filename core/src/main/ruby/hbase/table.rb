@@ -171,6 +171,24 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Fetches and decodes a counter value from hbase
+    def get_counter(row, column)
+      family, qualifier = parse_column_name(column.to_s)
+      # Format get request
+      get = Get.new(row.to_s.to_java_bytes)
+      get.addColumn(family, qualifier)
+      get.setMaxVersions(1)
+
+      # Call hbase
+      result = @table.get(get)
+      return nil if result.isEmpty
+
+      # Fetch cell value
+      cell = result.list.first
+      Bytes::toLong(cell.getValue)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Scans whole table or a range of keys and returns rows matching specific criterias
     def scan(args = {})
       unless args.kind_of?(Hash)

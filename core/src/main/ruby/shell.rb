@@ -211,6 +211,7 @@ Shell.load_command_group(
     delete
     deleteall
     get
+    get_counter
     incr
     put
     scan
