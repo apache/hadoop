@@ -103,7 +103,7 @@ public class DFSck extends Configured implements Tool {
       return -1;
     }
 
-    final StringBuffer url = new StringBuffer("http://");
+    final StringBuilder url = new StringBuilder("http://");
     url.append(getConf().get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, 
                              DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
     url.append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");

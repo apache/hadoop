@@ -189,7 +189,7 @@ public class ProxyUtil {
         connection = openConnection(hostname, sslPort, path);
         connection.connect();
         if (LOG.isDebugEnabled()) {
-          StringBuffer sb = new StringBuffer();
+          StringBuilder sb = new StringBuilder();
           X509Certificate[] clientCerts = (X509Certificate[]) connection
               .getLocalCertificates();
           if (clientCerts != null) {
@@ -279,7 +279,7 @@ public class ProxyUtil {
     long curTime = curDate.getTime();
     if (serverCerts != null) {
       for (X509Certificate cert : serverCerts) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("\n Server certificate Subject Name: "
             + cert.getSubjectX500Principal().getName());
         Date expDate = cert.getNotAfter();

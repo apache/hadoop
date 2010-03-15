@@ -893,7 +893,7 @@ public class BlockManager {
           replIndex--;
         }
         if (NameNode.stateChangeLog.isInfoEnabled()) {
-          StringBuffer targetList = new StringBuffer("datanode(s)");
+          StringBuilder targetList = new StringBuilder("datanode(s)");
           for (int k = 0; k < targets.length; k++) {
             targetList.append(' ');
             targetList.append(targets[k].getName());
@@ -1390,7 +1390,7 @@ public class BlockManager {
     int curExpectedReplicas = getReplication(block);
     INode fileINode = blocksMap.getINode(block);
     Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(block);
-    StringBuffer nodeList = new StringBuffer();
+    StringBuilder nodeList = new StringBuilder();
     while (nodeIter.hasNext()) {
       DatanodeDescriptor node = nodeIter.next();
       nodeList.append(node.name);
@@ -1582,7 +1582,7 @@ public class BlockManager {
       dn.addBlocksToBeInvalidated(blocksToInvalidate);
 
       if (NameNode.stateChangeLog.isInfoEnabled()) {
-        StringBuffer blockList = new StringBuffer();
+        StringBuilder blockList = new StringBuilder();
         for (Block blk : blocksToInvalidate) {
           blockList.append(' ');
           blockList.append(blk);

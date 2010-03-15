@@ -166,7 +166,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     long c = getCapacity();
     long r = getRemaining();
     long u = getDfsUsed();
@@ -203,7 +203,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   /** A formatted string for printing the status of the DataNode. */
   public String dumpDatanode() {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     long c = getCapacity();
     long r = getRemaining();
     long u = getDfsUsed();

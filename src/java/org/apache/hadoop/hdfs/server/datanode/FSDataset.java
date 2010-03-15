@@ -642,7 +642,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
       
     public String toString() {
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       for (int idx = 0; idx < volumes.length; idx++) {
         sb.append(volumes[idx].toString());
         if (idx != volumes.length - 1) { sb.append(","); }

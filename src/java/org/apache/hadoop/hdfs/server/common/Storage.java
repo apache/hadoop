@@ -181,7 +181,7 @@ public abstract class Storage extends StorageInfo {
    * generate storage list (debug line)
    */
   public String listStorageDirectories() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     for (StorageDirectory sd : storageDirs) {
       buf.append(sd.getRoot() + "(" + sd.getStorageDirType() + ");");
     }

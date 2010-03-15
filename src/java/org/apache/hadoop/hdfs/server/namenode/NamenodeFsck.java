@@ -220,7 +220,7 @@ public class NamenodeFsck {
     long missize = 0;
     int underReplicatedPerFile = 0;
     int misReplicatedPerFile = 0;
-    StringBuffer report = new StringBuffer();
+    StringBuilder report = new StringBuilder();
     int i = 0;
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
       Block block = lBlk.getBlock();
@@ -278,7 +278,7 @@ public class NamenodeFsck {
       } else {
         report.append(" repl=" + locs.length);
         if (showLocations || showRacks) {
-          StringBuffer sb = new StringBuffer("[");
+          StringBuilder sb = new StringBuilder("[");
           for (int j = 0; j < locs.length; j++) {
             if (j > 0) { sb.append(", "); }
             if (showRacks)
@@ -573,7 +573,7 @@ public class NamenodeFsck {
     
     /** {@inheritDoc} */
     public String toString() {
-      StringBuffer res = new StringBuffer();
+      StringBuilder res = new StringBuilder();
       res.append("Status: " + (isHealthy() ? "HEALTHY" : "CORRUPT"));
       res.append("\n Total size:\t" + totalSize + " B");
       if (totalOpenFilesSize != 0) 

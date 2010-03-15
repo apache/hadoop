@@ -140,7 +140,7 @@ class TransferFsImage implements FSConstants {
   static void getFileClient(String fsName, String id, File[] localPath)
     throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
-    StringBuffer str = new StringBuffer("http://"+fsName+"/getimage?");
+    StringBuilder str = new StringBuilder("http://"+fsName+"/getimage?");
     str.append(id);
 
     //
