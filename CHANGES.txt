@@ -238,6 +238,7 @@ Release 0.21.0 - Unreleased
    HBASE-2287  TypeError in shell (Alexey Kovyrin via Stack)
    HBASE-2023  Client sync block can cause 1 thread of a multi-threaded client
                to block all others (Karthik Ranganathan via Stack)
+   HBASE-2305  Client port for ZK has no default (Suraj Varma via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

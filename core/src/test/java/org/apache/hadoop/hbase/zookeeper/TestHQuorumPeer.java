@@ -24,7 +24,9 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
@@ -135,5 +137,16 @@ public class TestHQuorumPeer extends HBaseTestCase {
     servers = config.getServers();
     server = servers.get(Long.valueOf(0));
     assertEquals("foo.bar", server.addr.getHostName());
+  }
+  
+  /**
+   * Test Case for HBASE-2305
+   */
+  public void testShouldAssignDefaultZookeeperClientPort() {
+    Configuration config = HBaseConfiguration.create();
+    config.clear();
+    Properties p = HQuorumPeer.makeZKProps(config);
+    assertNotNull(p);
+    assertEquals(2181, p.get("hbase.zookeeper.property.clientPort"));
   }
 }

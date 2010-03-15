@@ -61,6 +61,8 @@ public class HQuorumPeer implements HConstants {
 
   private static final String ZK_CFG_PROPERTY = "hbase.zookeeper.property.";
   private static final int ZK_CFG_PROPERTY_SIZE = ZK_CFG_PROPERTY.length();
+  private static final String ZK_CLIENT_PORT_KEY = ZK_CFG_PROPERTY
+      + "clientPort";
 
   /**
    * Parse ZooKeeper configuration from HBase XML config and run a QuorumPeer.
@@ -194,6 +196,11 @@ public class HQuorumPeer implements HConstants {
         }
         zkProperties.put(zkKey, value);
       }
+    }
+
+    // If clientPort is not set, assign the default
+    if (zkProperties.getProperty(ZK_CLIENT_PORT_KEY) == null) {
+      zkProperties.put(ZK_CLIENT_PORT_KEY, DEFAULT_ZOOKEPER_CLIENT_PORT);
     }
 
     // Create the server.X properties.

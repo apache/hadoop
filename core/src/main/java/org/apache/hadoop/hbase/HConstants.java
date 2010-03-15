@@ -93,6 +93,9 @@ public interface HConstants {
   /** Default ZooKeeper pause value. In milliseconds. */
   static final int DEFAULT_ZOOKEEPER_PAUSE = 2 * 1000;
 
+  /** default client port that the zookeeper listens on */
+  static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
+
   /** Parameter name for the root dir in ZK for this cluster */
   static final String ZOOKEEPER_ZNODE_PARENT = "zookeeper.znode.parent";
 
