@@ -434,6 +434,8 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2279  Hbase Shell does not have any tests (Alexey Kovyrin via Stack)
    HBASE-2314  [shell] Support for getting counters (Alexey Kovyrin via Stack)
+   HBASE-2324  Refactoring of TableRecordReader (mapred / mapreduce) for reuse
+               outside the scope of InputSplit / RecordReader (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
