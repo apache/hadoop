@@ -95,6 +95,9 @@ Trunk (unreleased changes)
     HDFS-850. The WebUI display more details about namenode memory usage.
     (Dmytro Molkov via dhruba)
 
+    HDFS-826. The DFSOutputStream has a API that returns the number of
+    active datanode(s) in the current pipeline. (dhruba)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

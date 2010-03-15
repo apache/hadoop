@@ -460,10 +460,18 @@ public class TestFileCreation extends junit.framework.TestCase {
       FSDataOutputStream stm = createFile(fs, file1, 1);
       System.out.println("testFileCreationNamenodeRestart: "
                          + "Created file " + file1);
+      int actualRepl = ((DFSOutputStream)(stm.getWrappedStream())).
+                        getNumCurrentReplicas();
+      assertTrue(file1 + " should be replicated to 1 datanodes.",
+                 actualRepl == 1);
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
       stm.hflush();
+      actualRepl = ((DFSOutputStream)(stm.getWrappedStream())).
+                        getNumCurrentReplicas();
+      assertTrue(file1 + " should still be replicated to 1 datanodes.",
+                 actualRepl == 1);
 
       // rename file wile keeping it open.
       Path fileRenamed = new Path("/filestatusRenamed.dat");
@@ -857,6 +865,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
       out.write("something".getBytes());
       out.hflush();
+      int actualRepl = ((DFSOutputStream)(out.getWrappedStream())).
+                        getNumCurrentReplicas();
+      assertTrue(f + " should be replicated to " + DATANODE_NUM + " datanodes.",
+                 actualRepl == DATANODE_NUM);
 
       // set the soft and hard limit to be 1 second so that the
       // namenode triggers lease recovery
