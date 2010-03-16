@@ -63,11 +63,11 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Count rows in a table
-    def count(interval = 1000)
+    def count(interval = 1000, caching_rows = 10)
       # We can safely set scanner caching with the first key only filter
       scan = Scan.new
       scan.cache_blocks = false
-      scan.caching = 10
+      scan.caching = caching_rows
       scan.setFilter(FirstKeyOnlyFilter.new)
 
       # Run the scanner

@@ -31,6 +31,8 @@ module HBaseConstants
   MAXLENGTH = "MAXLENGTH"
   CACHE_BLOCKS = "CACHE_BLOCKS"
   REPLICATION_SCOPE = "REPLICATION_SCOPE"
+  INTERVAL = 'INTERVAL'
+  CACHE = 'CACHE'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

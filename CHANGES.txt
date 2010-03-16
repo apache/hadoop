@@ -439,6 +439,8 @@ Release 0.21.0 - Unreleased
    HBASE-2313  Nit-pick about hbase-2279 shell fixup, if you do get with
                non-existant column family, throws lots of exceptions
                (Alexey Kovyrin via Stack)
+   HBASE-2331  [shell] count command needs a way to specify scan caching
+               (Alexey Kovyrin via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
