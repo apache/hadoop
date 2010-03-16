@@ -19,8 +19,10 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -45,7 +47,7 @@ import org.apache.hadoop.util.Progressable;
  */
 
 public class HarFileSystem extends FilterFileSystem {
-  public static final int VERSION = 1;
+  public static final int VERSION = 2;
   // uri representation of this Har filesystem
   private URI uri;
   // the version of this har filesystem
@@ -121,7 +123,8 @@ public class HarFileSystem extends FilterFileSystem {
       throw new IOException("Unable to " +
           "read the version of the Har file system: " + this.archivePath);
     }
-    if (this.version != HarFileSystem.VERSION) {
+    // make it always backwards-compatible
+    if (this.version > HarFileSystem.VERSION) {
       throw new IOException("Invalid version " + 
           this.version + " expected " + HarFileSystem.VERSION);
     }
@@ -211,6 +214,15 @@ public class HarFileSystem extends FilterFileSystem {
         // do nothing should not happen
     }
     return tmp;
+  }
+  
+  private String decodeFileName(String fname) 
+    throws UnsupportedEncodingException {
+    
+    if (version == 2){
+      return URLDecoder.decode(fname, "UTF-8");
+    }
+    return fname;
   }
   
   /**
@@ -479,6 +491,7 @@ public class HarFileSystem extends FilterFileSystem {
         read += tmp;
         String lineFeed = line.toString();
         String[] parsed = lineFeed.split(" ");
+        parsed[0] = decodeFileName(parsed[0]);
         if (harPath.compareTo(new Path(parsed[0])) == 0) {
           // bingo!
           retStr = lineFeed;
@@ -502,16 +515,16 @@ public class HarFileSystem extends FilterFileSystem {
   // the format is of the form 
   // filename "dir"/"file" partFileName startIndex length 
   // <space seperated children>
-  private static class HarStatus {
+  private class HarStatus {
     boolean isDir;
     String name;
     List<String> children;
     String partName;
     long startIndex;
     long length;
-    public HarStatus(String harString) {
+    public HarStatus(String harString) throws UnsupportedEncodingException {
       String[] splits = harString.split(" ");
-      this.name = splits[0];
+      this.name = decodeFileName(splits[0]);
       this.isDir = "dir".equals(splits[1]) ? true: false;
       // this is equal to "none" if its a directory
       this.partName = splits[2];
@@ -520,7 +533,7 @@ public class HarFileSystem extends FilterFileSystem {
       if (isDir) {
         children = new ArrayList<String>();
         for (int i = 5; i < splits.length; i++) {
-          children.add(splits[i]);
+          children.add(decodeFileName(splits[i]));
         }
       }
     }

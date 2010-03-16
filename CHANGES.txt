@@ -190,6 +190,9 @@ Trunk (unreleased changes)
     HADOOP-6486. fix common classes to work with Avro 1.3 reflection.
     (cutting via tomwhite)
 
+    HADOOP-6591. HarFileSystem can handle paths with the whitespace characters.
+    (Rodrigo Schmidt via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
