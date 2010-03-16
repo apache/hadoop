@@ -436,6 +436,9 @@ Release 0.21.0 - Unreleased
    HBASE-2314  [shell] Support for getting counters (Alexey Kovyrin via Stack)
    HBASE-2324  Refactoring of TableRecordReader (mapred / mapreduce) for reuse
                outside the scope of InputSplit / RecordReader (Kay Kay via Stack)
+   HBASE-2313  Nit-pick about hbase-2279 shell fixup, if you do get with
+               non-existant column family, throws lots of exceptions
+               (Alexey Kovyrin via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

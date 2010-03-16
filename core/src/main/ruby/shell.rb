@@ -47,6 +47,9 @@ module Shell
     attr_accessor :hbase
     attr_accessor :formatter
 
+    @debug = false
+    attr_accessor :debug
+
     def initialize(hbase, formatter)
       self.hbase = hbase
       self.formatter = formatter
@@ -65,6 +68,7 @@ module Shell
         where.send :instance_eval, <<-EOF
           def #{cmd}(*args)
             @shell.command('#{cmd}', *args)
+            puts
           end
         EOF
       end
@@ -75,13 +79,14 @@ module Shell
     end
 
     def command(command, *args)
-      command_instance(command).command_safe(*args)
+      command_instance(command).command_safe(self.debug, *args)
     end
 
     def print_banner
       puts "HBase Shell; enter 'help<RETURN>' for list of supported commands."
       puts 'Type "exit<RETURN>" to leave the HBase Shell'
       command('version')
+      puts
     end
 
     def help_command(command)

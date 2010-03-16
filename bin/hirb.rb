@@ -112,6 +112,23 @@ def tools
   @shell.help_group('tools')
 end
 
+# Debugging method
+def debug
+  if @shell.debug
+    @shell.debug = false
+    conf.back_trace_limit = 0
+  else
+    @shell.debug = true
+    conf.back_trace_limit = 100
+  end
+  debug?
+end
+
+def debug?
+  puts "Debug mode is #{@shell.debug ? 'ON' : 'OFF'}\n\n"
+  nil
+end
+
 # Include hbase constants
 include HBaseConstants
 
