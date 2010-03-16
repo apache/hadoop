@@ -241,6 +241,9 @@ cat >> $HBASE_HOME/conf/hbase-env.sh <<EOF
 export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
 export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=64m -XX:MaxNewSize=64m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
+# Configure log4j
+sed -i -e 's/hadoop.hbase=DEBUG/hadoop.hbase=INFO/g' \
+    $HBASE_HOME/conf/log4j.properties
 # Configure HBase for Ganglia
 cat > $HBASE_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
