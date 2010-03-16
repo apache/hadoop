@@ -41,46 +41,48 @@ arch=$ZOO_ARCH
 [ -z "$arch" ] && arch=$SLAVE_ARCH
 
 # Finding HBase image
-[ -z "$ZOO_AMI_IMAGE" ] && ZOO_AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION-$arch |grep available | awk '{print $2}'`
+[ -z "$ZOO_AMI_IMAGE" ] && ZOO_AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION-$arch | grep available | awk '{print $2}'`
 
 # Start Zookeeper instances
 
 echo "Starting ZooKeeper quorum ensemble."
 
 peers=""
-public_names=""
-inst=0
-while [ $inst -lt $NO_INSTANCES ] ; do
+peer_addrs=""
+i=0
+while [ $i -lt $NO_INSTANCES ] ; do
   echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
-  INSTANCE=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
-  echo -n "Waiting for instance $INSTANCE to start: "
+  inst=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
+  addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
+  ec2-associate-address $TOOL_OPTS $addr -i $inst
+  echo -n "Waiting for instance $inst to start: "
   while true; do
     printf "."
-    # get private dns
-    priv=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $5}'`
+    priv=`ec2-describe-instances $TOOL_OPTS $inst | grep running | awk '{print $5}'`
     if [ ! -z $priv ]; then
-      echo " Started ZooKeeper instance $INSTANCE as ${priv}"
+      echo " Started ZooKeeper instance $inst as $priv"
       break
     fi
     sleep 1
   done
-  peers="$peers $priv"
-  public=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $4}'`
-  echo "    Public DNS name is $public."
-  public_names="$public_names $public"
-  inst=$(($inst + 1))
+  host=`ec2-describe-instances $TOOL_OPTS $inst | grep INSTANCE | awk '{print $4}'`
+  echo "Associated elastic IP $host ($addr) with instance $INSTANCE"
+  peers="$peers $host"
+  peer_addrs="$peer_addrs $addr"
+  i=$(($i + 1))
 done
 
-ZOOKEEPER_QUORUM=`echo $peers | sed -e 's/ /,/g'`
-echo $ZOOKEEPER_QUORUM  > $ZOOKEEPER_QUORUM_PATH
-echo "ZooKeeper quorum is $ZOOKEEPER_QUORUM."
+quorum=`echo $peers | sed -e 's/ /,/g'`
+echo $quorum  > $ZOOKEEPER_QUORUM_PATH
+echo $peer_addrs  > $ZOOKEEPER_ADDR_PATH
+echo "ZooKeeper quorum is $quorum"
 
 # Start Zookeeper quorum
 
 sleep 10
-echo "Initializing the ZooKeeper quorum ensemble."
+echo "Initializing the ZooKeeper quorum ensemble"
 
-for host in $public_names ; do 
+for host in $peers ; do 
   echo "    $host"
   scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "root@${host}:/var/tmp"
   ssh $SSH_OPTS "root@${host}" "sh -c \"ZOOKEEPER_QUORUM=\"$ZOOKEEPER_QUORUM\" sh /var/tmp/hbase-ec2-init-zookeeper-remote.sh\""

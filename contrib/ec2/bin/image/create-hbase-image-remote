@@ -30,6 +30,9 @@ arch=$ARCH
 echo "Remote: INSTANCE_TYPE is $type"
 echo "Remote: ARCH is $arch"
 
+# Perform any URL substitutions that must be done at this late stage
+JAVA_URL=`echo $JAVA_URL | sed -e "s/@arch@/$arch/g"`
+
 # Remove sensitive information
 rm -f "$bin"/hbase-ec2-env.sh
 rm -f "$bin"/credentials.sh
@@ -37,7 +40,7 @@ rm -f "$bin"/credentials.sh
 # Install Java
 echo "Downloading and installing java binary."
 cd /usr/local
-wget -nv -O java.bin http://hbase.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-${arch}.bin
+wget -nv -O java.bin $JAVA_URL
 sh java.bin
 rm -f java.bin
 
@@ -46,18 +49,20 @@ echo "Installing rpms."
 yum -y update
 yum -y install rsync lynx screen ganglia-gmetad ganglia-gmond ganglia-web httpd php lzo-devel xfsprogs
 yum -y clean all
+chkconfig --levels 0123456 httpd off
+chkconfig --levels 0123456 gmetad off
+chkconfig --levels 0123456 gmond off
 
 # Install Hadoop
 echo "Installing Hadoop $HADOOP_VERSION."
 cd /usr/local
-wget -nv http://archive.apache.org/dist/hadoop/core/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz
-[ ! -f hadoop-$HADOOP_VERSION.tar.gz ] && wget -nv http://www.apache.org/dist/hadoop/core/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz
+wget -nv $HADOOP_URL
 tar xzf hadoop-$HADOOP_VERSION.tar.gz
 rm -f hadoop-$HADOOP_VERSION.tar.gz
 
 # Configure Hadoop
 sed -i \
-  -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|" \
+  -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|"\
   -e 's|# export HADOOP_LOG_DIR=.*|export HADOOP_LOG_DIR=/mnt/hadoop/logs|' \
   -e 's|# export HADOOP_SLAVE_SLEEP=.*|export HADOOP_SLAVE_SLEEP=1|' \
   -e 's|# export HADOOP_OPTS=.*|export HADOOP_OPTS=-server|' \
@@ -66,13 +71,13 @@ sed -i \
 # Install HBase
 echo "Installing HBase $HBASE_VERSION."
 cd /usr/local
-wget -nv http://hbase.s3.amazonaws.com/hbase/hbase-$HBASE_VERSION.tar.gz
+wget -nv $HBASE_URL
 tar xzf hbase-$HBASE_VERSION.tar.gz
 rm -f hbase-$HBASE_VERSION.tar.gz
 
 # Configure HBase
 sed -i \
-  -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|" \
+  -e "s|# export JAVA_HOME=.*|export JAVA_HOME=/usr/local/jdk${JAVA_VERSION}|"\
   -e 's|# export HBASE_OPTS=.*|export HBASE_OPTS="$HBASE_OPTS -server -XX:+HeapDumpOnOutOfMemoryError"|' \
   -e 's|# export HBASE_LOG_DIR=.*|export HBASE_LOG_DIR=/mnt/hbase/logs|' \
   -e 's|# export HBASE_SLAVE_SLEEP=.*|export HBASE_SLAVE_SLEEP=1|' \
@@ -97,7 +102,7 @@ echo '    StrictHostKeyChecking no' >> /etc/ssh/ssh_config
 
 # Install LZO
 echo "Installing LZO codec support"
-wget -nv -O /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz http://hbase.s3.amazonaws.com/hbase/lzo-linux-${HADOOP_VERSION}.tar.gz
+wget -nv -O /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz $LZO_URL
 cd /usr/local/hadoop-${HADOOP_VERSION} && tar xzf /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
 cd /usr/local/hbase-${HBASE_VERSION} && tar xzf /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz
 rm -f /tmp/lzo-linux-${HADOOP_VERSION}.tar.gz

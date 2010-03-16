@@ -76,7 +76,7 @@ scp $SSH_OPTS $EC2_PRIVATE_KEY "root@$HOSTNAME:/mnt"
 scp $SSH_OPTS $EC2_CERT "root@$HOSTNAME:/mnt"
 
 # Connect to it
-ssh $SSH_OPTS "root@$HOSTNAME" "sh -c \"INSTANCE_TYPE=$type ARCH=$arch /mnt/create-hbase-image-remote\""
+ssh $SSH_OPTS "root@$HOSTNAME" "sh -c \"INSTANCE_TYPE=$type ARCH=$arch HBASE_URL=$HBASE_URL HADOOP_URL=$HADOOP_URL LZO_URL=$LZO_URL JAVA_URL=$JAVA_URL /mnt/create-hbase-image-remote\""
 
 # Register image
 ec2-register $TOOL_OPTS $S3_BUCKET/hbase-$HBASE_VERSION-$arch.manifest.xml

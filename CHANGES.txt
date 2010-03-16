@@ -462,6 +462,7 @@ Release 0.21.0 - Unreleased
    HBASE-2274  [stargate] filter support: JSON descriptors
    HBASE-2316  Need an ability to run shell tests w/o invoking junit
                (Alexey Kovyrin via Stack)
+   HBASE-2327  [EC2] Allocate elastic IP addresses for ZK and master nodes
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

@@ -47,14 +47,11 @@ arch=$MASTER_ARCH
 [ -z "$arch" ] && arch=$SLAVE_ARCH
 
 echo "Testing for existing master in group: $CLUSTER"
-MASTER_EC2_HOST=`ec2-describe-instances $TOOL_OPTS | awk '"RESERVATION" == $1 && "'$CLUSTER_MASTER'" == $4, "RESERVATION" == $1 && "'$CLUSTER_MASTER'" != $4'`
-MASTER_EC2_HOST=`echo "$MASTER_EC2_HOST" | awk '"INSTANCE" == $1 && "running" == $6 {print $4}'`
+host=`ec2-describe-instances $TOOL_OPTS | awk '"RESERVATION" == $1 && "'$CLUSTER_MASTER'" == $4, "RESERVATION" == $1 && "'$CLUSTER_MASTER'" != $4'`
+host=`echo "$host" | awk '"INSTANCE" == $1 && "running" == $6 {print $4}'`
 
-if [ ! -z "$MASTER_EC2_HOST" ]; then
-  echo "Master already running on: $MASTER_EC2_HOST"
-  MASTER_HOST=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | grep running | grep $MASTER_EC2_HOST | awk '{print $5}'`
-  echo $MASTER_HOST > $MASTER_PRIVATE_IP_PATH
-  echo $MASTER_EC2_HOST > $MASTER_IP_PATH
+if [ ! -z "$host" ]; then
+  echo "Master already running on: $host"
   exit 0
 fi
 
@@ -64,41 +61,45 @@ fi
 # Start a master
 echo "Starting master with AMI $AMI_IMAGE (arch $arch)"
 # Substituting zookeeper quorum
-ZOOKEEPER_QUORUM=`cat $ZOOKEEPER_QUORUM_PATH`
-sed -e "s|%ZOOKEEPER_QUORUM%|$ZOOKEEPER_QUORUM|" \
+quorum=`cat $ZOOKEEPER_QUORUM_PATH`
+sed -e "s|%ZOOKEEPER_QUORUM%|$quorum|" \
     -e "s|%NUM_SLAVES%|$NUM_SLAVES|" \
     -e "s|%EXTRA_PACKAGES%|$EXTRA_PACKAGES|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.master
-INSTANCE=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k root -f "$bin"/$USER_DATA_FILE.master -t $type | grep INSTANCE | awk '{print $2}'`
-echo -n "Waiting for instance $INSTANCE to start"
+
+inst=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k root -f "$bin"/$USER_DATA_FILE.master -t $type | grep INSTANCE | awk '{print $2}'`
+addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
+ec2-associate-address $TOOL_OPTS $addr -i $inst
+echo -n "Waiting for instance $inst to start"
 while true; do
   printf "."
   # get private dns
-  MASTER_HOST=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep running | awk '{print $5}'`
-  if [ ! -z $MASTER_HOST ]; then
-    echo " Started as $MASTER_HOST"
+  host=`ec2-describe-instances $TOOL_OPTS $inst | grep running | awk '{print $5}'`
+  if [ ! -z $host ]; then
+    echo " Started as $host"
     break;
   fi
   sleep 1
 done
 rm -f "$bin"/$USER_DATA_FILE.master
 
-MASTER_EC2_HOST=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | grep running | grep $MASTER_HOST | awk '{print $4}'`
-echo $MASTER_HOST > $MASTER_PRIVATE_IP_PATH
-echo $MASTER_EC2_HOST > $MASTER_IP_PATH
-MASTER_EC2_ZONE=`ec2-describe-instances $TOOL_OPTS $INSTANCE | grep INSTANCE | grep running | grep $MASTER_HOST | awk '{print $11}'`
-echo $MASTER_EC2_ZONE > $MASTER_ZONE_PATH
+# get public (elastic) hostname
+host=`ec2-describe-instances $TOOL_OPTS $inst | grep INSTANCE | grep running | grep $host | awk '{print $4}'`
+echo $host > $MASTER_ADDR_PATH
+echo $addr > $MASTER_IP_PATH
+# get zone
+zone=`ec2-describe-instances $TOOL_OPTS $inst | grep INSTANCE | grep running | grep $host | awk '{print $11}'`
+echo $zone > $MASTER_ZONE_PATH
 
 while true; do
-  REPLY=`ssh $SSH_OPTS "root@$MASTER_EC2_HOST" 'echo "hello"'`
+  REPLY=`ssh $SSH_OPTS "root@$host" 'echo "hello"'`
   if [ ! -z $REPLY ]; then
    break;
   fi
   sleep 5
 done
 
-scp $SSH_OPTS $EC2_ROOT_SSH_KEY "root@$MASTER_EC2_HOST:/root/.ssh/id_rsa"
-ssh $SSH_OPTS "root@$MASTER_EC2_HOST" "chmod 600 /root/.ssh/id_rsa"
+scp $SSH_OPTS $EC2_ROOT_SSH_KEY "root@$host:/root/.ssh/id_rsa"
+ssh $SSH_OPTS "root@$host" "chmod 600 /root/.ssh/id_rsa"
 
-MASTER_IP=`dig +short $MASTER_EC2_HOST`
-echo "Master is $MASTER_EC2_HOST, ip is $MASTER_IP, zone is $MASTER_EC2_ZONE."
+echo "Master is $host ($addr) in zone $zone"

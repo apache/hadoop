@@ -36,26 +36,26 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/hbase-ec2-env.sh
 
-if [ ! -f $MASTER_IP_PATH ]; then
+if [ ! -f $MASTER_ADDR_PATH ]; then
   echo "Must start Cluster Master first!"
   exit 1
 fi
 
-[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION-$SLAVE_ARCH |grep available | awk '{print $2}'`
+[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION-$SLAVE_ARCH | grep available | awk '{print $2}'`
 
-MASTER_HOST=`cat $MASTER_PRIVATE_IP_PATH`
-MASTER_ZONE=`cat $MASTER_ZONE_PATH`
-ZOOKEEPER_QUORUM=`cat $ZOOKEEPER_QUORUM_PATH`
+master=`cat $MASTER_ADDR_PATH`
+zone=`cat $MASTER_ZONE_PATH`
+quorum=`cat $ZOOKEEPER_QUORUM_PATH`
 
 # Substituting master hostname and zookeeper quorum
-sed -e "s|%MASTER_HOST%|$MASTER_HOST|" \
+sed -e "s|%MASTER_HOST%|$master|" \
     -e "s|%NUM_SLAVES%|$NUM_SLAVES|" \
-    -e "s|%ZOOKEEPER_QUORUM%|$ZOOKEEPER_QUORUM|" \
+    -e "s|%ZOOKEEPER_QUORUM%|$quorum|" \
     -e "s|%EXTRA_PACKAGES%|$EXTRA_PACKAGES|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.slave
 
 # Start slaves
-echo "Starting $NUM_SLAVES AMI(s) with ID $AMI_IMAGE (arch $SLAVE_ARCH) in group $CLUSTER in zone $MASTER_ZONE"
-ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n "$NUM_SLAVES" -g "$CLUSTER" -k root -f "$bin"/$USER_DATA_FILE.slave -t "$SLAVE_INSTANCE_TYPE" -z "$MASTER_ZONE" | grep INSTANCE | awk '{print $2}'
+echo "Starting $NUM_SLAVES AMI(s) with ID $AMI_IMAGE (arch $SLAVE_ARCH) in group $CLUSTER in zone $zone"
+ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n "$NUM_SLAVES" -g "$CLUSTER" -k root -f "$bin"/$USER_DATA_FILE.slave -t "$SLAVE_INSTANCE_TYPE" -z "$zone" | grep INSTANCE | awk '{print $2}'
 
 rm "$bin"/$USER_DATA_FILE.slave

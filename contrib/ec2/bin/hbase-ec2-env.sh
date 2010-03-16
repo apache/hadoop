@@ -36,8 +36,14 @@ EC2_ROOT_SSH_KEY=
 # The version of HBase to use.
 HBASE_VERSION=@HBASE_VERSION@
 
+HBASE_URL=http://hbase.s3.amazonaws.com/hbase/hbase-$HBASE_VERSION.tar.gz
+
 # The version of Hadoop to use.
-HADOOP_VERSION=0.20.1
+HADOOP_VERSION=0.20.2
+
+HADOOP_URL=http://hbase.s3.amazonaws.com/hadoop/hadoop-$HADOOP_VERSION.tar.gz
+
+LZO_URL=http://hbase.s3.amazonaws.com/hadoop/lzo-linux-$HADOOP_VERSION.tar.gz
 
 # The Amazon S3 bucket where the HBase AMI is stored.
 # Change this value only if you are creating your own (private) AMI
@@ -53,14 +59,14 @@ ENABLE_WEB_PORTS=false
 # The repository descriptor will be fetched into /etc/yum/repos.d.
 EXTRA_PACKAGES=
 
-# Use only c1.xlarge unless you know what you are doing
-MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-c1.xlarge}
+# Use only m1.large or c1.xlarge unless you know what you are doing
+MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-m1.large}
 
-# Use only c1.xlarge unless you know what you are doing
-SLAVE_INSTANCE_TYPE=${SLAVE_INSTANCE_TYPE:-c1.xlarge}
+# Use only m1.large or c1.xlarge unless you know what you are doing
+SLAVE_INSTANCE_TYPE=${SLAVE_INSTANCE_TYPE:-m1.large}
 
-# Use only c1.medium unless you know what you are doing
-ZOO_INSTANCE_TYPE=${ZOO_INSTANCE_TYPE:-c1.medium}
+# Use only m1.small or c1.medium unless you know what you are doing
+ZOO_INSTANCE_TYPE=${ZOO_INSTANCE_TYPE:-m1.small}
 
 ############################################################################
 
@@ -89,19 +95,22 @@ TOOL_OPTS=`echo -K "$EC2_PRIVATE_KEY" -C "$EC2_CERT" --request-timeout $REQUEST_
 CLUSTER_MASTER=$CLUSTER-master
 
 # Cached values for a given cluster
-MASTER_PRIVATE_IP_PATH=~/.hbase-private-$CLUSTER_MASTER
-MASTER_IP_PATH=~/.hbase-$CLUSTER_MASTER
-MASTER_ZONE_PATH=~/.hbase-zone-$CLUSTER_MASTER
+MASTER_IP_PATH=$HOME/.hbase-${CLUSTER_MASTER}-ip
+MASTER_ADDR_PATH=$HOME/.hbase-${CLUSTER_MASTER}-addr
+MASTER_ZONE_PATH=$HOME/.hbase-${CLUSTER_MASTER}-zone
 
 # The Zookeeper EC2 group name. CLUSTER is set by calling scripts.
-CLUSTER_ZOOKEEPER=$CLUSTER-zookeeper
-ZOOKEEPER_QUORUM_PATH=~/.hbase-quorum-$CLUSTER_ZOOKEEPER
+CLUSTER_ZOOKEEPER=$CLUSTER-zk
+ZOOKEEPER_QUORUM_PATH=$HOME/.hbase-${CLUSTER_ZOOKEEPER}-quorum
+ZOOKEEPER_ADDR_PATH=$HOME/.hbase-${CLUSTER_ZOOKEEPER}-addrs
 
 # The script to run on instance boot.
 USER_DATA_FILE=hbase-ec2-init-remote.sh
 
 # The version number of the installed JDK.
 JAVA_VERSION=1.6.0_17
+
+JAVA_URL=http://hbase.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-@arch@.bin
 
 # SUPPORTED_ARCHITECTURES = ['i386', 'x86_64']
 if [ "$SLAVE_INSTANCE_TYPE" = "m1.small" -o "$SLAVE_INSTANCE_TYPE" = "c1.medium" ]; then

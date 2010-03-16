@@ -44,3 +44,17 @@ if [ "$answer" != "yes" ]; then
 fi
 
 ec2-terminate-instances $TOOL_OPTS `echo "$HBASE_INSTANCES" | awk '{print $2}'`
+
+# clean up elastic IPs
+
+# master
+ec2-release-address $TOOL_OPTS `cat $MASTER_IP_PATH`
+# zookeeper quorum ensemble
+for addr in `cat $ZOOKEEPER_ADDR_PATH` ; do
+  ec2-release-address $TOOL_OPTS $addr
+done
+
+# clean up state files
+
+rm -f $ZOOKEEPER_ADDR_PATH $ZOOKEEPER_QUORUM_PATH
+rm -f $MASTER_IP_PATH $MASTER_ADDR_PATH $MASTER_ZONE_PATH
