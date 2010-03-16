@@ -84,6 +84,10 @@ echo "Initializing the ZooKeeper quorum ensemble"
 
 for host in $peers ; do 
   echo "    $host"
-  scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "root@${host}:/var/tmp"
-  ssh $SSH_OPTS "root@${host}" "sh -c \"ZOOKEEPER_QUORUM=\"$ZOOKEEPER_QUORUM\" sh /var/tmp/hbase-ec2-init-zookeeper-remote.sh\""
+  i=0
+  while [ $i -lt 3 ] ; do
+    scp $SSH_OPTS "$bin"/hbase-ec2-init-zookeeper-remote.sh "root@${host}:/var/tmp" && ssh $SSH_OPTS "root@${host}" "sh -c \"ZOOKEEPER_QUORUM=\"$ZOOKEEPER_QUORUM\" sh /var/tmp/hbase-ec2-init-zookeeper-remote.sh\"" && break
+    sleep 5
+    i=$(($i + 1))
+  done
 done
