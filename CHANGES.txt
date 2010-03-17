@@ -246,6 +246,7 @@ Release 0.21.0 - Unreleased
                (Alexey Kovyrin via Stack)
    HBASE-2334  Slimming of Maven dependency tree - improves assembly build
                speed (Paul Smith via Stack)
+   HBASE-2336  Fix build broken with HBASE-2334 (Lars Francke via Lars George)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
