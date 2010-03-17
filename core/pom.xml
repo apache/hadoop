@@ -259,7 +259,19 @@
       <version>${commons-lang.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.jruby</groupId>
+     <groupId>org.slf4j</groupId>
+     <artifactId>slf4j-api</artifactId>
+     <version>${slf4j.version}</version>
+      <scope>test</scope>
+   </dependency>
+   <dependency>
+     <groupId>org.slf4j</groupId>
+     <artifactId>slf4j-log4j12</artifactId>
+     <version>${slf4j.version}</version>
+      <scope>test</scope>
+   </dependency>
+   <dependency>
+     <groupId>org.jruby</groupId>
       <artifactId>jruby-complete</artifactId>
       <version>${jruby.version}</version>
     </dependency>
