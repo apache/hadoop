@@ -241,6 +241,11 @@ Release 0.21.0 - Unreleased
    HBASE-2305  Client port for ZK has no default (Suraj Varma via Stack)
    HBASE-2323  filter.RegexStringComparator does not work with certain bytes
                (Benoit Sigoure via Stack)
+   HBASE-2313  Nit-pick about hbase-2279 shell fixup, if you do get with
+               non-existant column family, throws lots of exceptions
+               (Alexey Kovyrin via Stack)
+   HBASE-2334  Slimming of Maven dependency tree - improves assembly build
+               speed (Paul Smith via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
