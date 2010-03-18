@@ -90,6 +90,7 @@ done
 
 # Hadoop configuration
 
+(cd /usr/local && ln -s $HADOOP_HOME hadoop) || true
 cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -184,6 +185,7 @@ EOF
 
 # HBase configuration
 
+(cd /usr/local && ln -s $HBASE_HOME hbase) || true
 cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
