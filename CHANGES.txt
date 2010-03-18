@@ -163,8 +163,8 @@ Trunk (unreleased changes)
     Lipcon via hairong)
 
     HDFS-630. In DFSOutputStream.nextBlockOutputStream(), the client can
-              exclude specific datanodes when locating the next block.
-              (Cosmin Lehene via Stack)
+    exclude specific datanodes when locating the next block.
+    (Cosmin Lehene via Stack)
 
     HDFS-922. Remove unnecessary semicolon added by HDFS-877 that causes
     problems for Eclipse compilation. (jghoman)
@@ -200,6 +200,9 @@ Trunk (unreleased changes)
 
     HDFS-961. dfs_readdir incorrectly parses paths. (Eli Collins via tomwhite)
 
+    HDFS-1015. Fix intermittent failure in TestSecurityTokenEditLog.
+    (Jitendra Nath Pandey via suresh)
+    
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
