@@ -393,6 +393,11 @@ public class FsShell extends Configured implements Tool {
       }
       return ret;
     }
+
+    public void close() throws IOException {
+      r.close();
+      super.close();
+    }
   }
 
   private InputStream forMagic(Path p, FileSystem srcFs) throws IOException {
