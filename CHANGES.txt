@@ -196,6 +196,9 @@ Trunk (unreleased changes)
     HADOOP-6407. Have a way to automatically update Eclipse .classpath file
     when new libs are added to the classpath through Ivy. (tomwhite)
 
+    HADOOP-3659. Patch to allow hadoop native to compile on Mac OS X.
+    (Colin Evans and Allen Wittenauer via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

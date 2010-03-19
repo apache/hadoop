@@ -13,8 +13,10 @@ AC_CACHE_CHECK([Checking for the 'actual' dynamic-library for '-l$1'], ac_cv_lib
       ac_cv_libname_$1="`objdump -p conftest | grep NEEDED | grep $1 | sed 's/\W*NEEDED\W*\(.*\)\W*$/\"\1\"/'`"
     elif test ! -z "`which ldd | grep -v 'no ldd'`"; then
       ac_cv_libname_$1="`ldd conftest | grep $1 | sed 's/^[[[^A-Za-z0-9]]]*\([[[A-Za-z0-9\.]]]*\)[[[^A-Za-z0-9]]]*=>.*$/\"\1\"/'`"
+    elif test ! -z "`which otool | grep -v 'no otool'`"; then
+      ac_cv_libname_$1=\"`otool -L conftest | grep $1 | sed -e 's/^[	 ]*//' -e 's/ .*//' -e 's/.*\/\(.*\)$/\1/'`\";
     else
-      AC_MSG_ERROR(Can't find either 'objdump' or 'ldd' to compute the dynamic library for '-l$1')
+      AC_MSG_ERROR(Can't find either 'objdump' or 'ldd' or 'otool' to compute the dynamic library for '-l$1')
     fi
   else
     ac_cv_libname_$1=libnotfound.so
