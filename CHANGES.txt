@@ -281,6 +281,9 @@ Trunk (unreleased changes)
     HADOOP-6504. Invalid example in the documentation of
     org.apache.hadoop.util.Tool. (Benoit Sigoure via tomwhite)
 
+    HADOOP-6546. BloomMapFile can return false negatives. (Clark Jefcoat
+    via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
