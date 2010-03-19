@@ -167,6 +167,12 @@
 
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
+	
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value="build/eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+  <property name="build.dir.eclipse-test-generated-classes" value="${build.dir.eclipse}/classes-test-generated"/>
 
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
@@ -1332,20 +1338,51 @@
   </exec>
 </target>
 	
-  <target name="eclipse-files" depends="init"
-          description="Generate files for Eclipse">
-    <pathconvert property="eclipse.project">
-      <path path="${basedir}"/>
-      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
-    </pathconvert>
-    <copy todir="." overwrite="true">
-      <fileset dir=".eclipse.templates">
-      	<exclude name="**/README.txt"/>
-      </fileset>
-      <filterset>
-        <filter token="PROJECT" value="${eclipse.project}"/>
-      </filterset>
-    </copy>
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
+
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" />
+  </target>
+
+  <target name="eclipse" 
+          depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test,compile-core-test"
+          description="Create eclipse project files">
+	     <pathconvert property="eclipse.project">
+	       <path path="${basedir}"/>
+	       <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+	     </pathconvert>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse updatealways="true">
+      <project name="${eclipse.project}" />
+      <classpath>
+        <source path="${java.src.dir}"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${test.src.dir}/core"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.src.dir}/aop"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.generated.dir}"
+                output="${build.dir.eclipse-test-generated-classes}" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <library pathref="ivy-common.classpath" exported="true" />
+        <library pathref="ivy-test.classpath" exported="false" />
+        <library path="${conf.dir}" exported="false" />
+      </classpath>
+    </eclipse>
   </target>
 
   <target name="ivy-init-dirs">
