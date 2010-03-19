@@ -25,7 +25,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.stargate.Constants;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;

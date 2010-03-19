@@ -64,8 +64,8 @@ public class VersionResource implements Constants {
    */
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context ServletContext context, 
-      @Context UriInfo uriInfo) {
+  public Response get(final @Context ServletContext context, 
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }

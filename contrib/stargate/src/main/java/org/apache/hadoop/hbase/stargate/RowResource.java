@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
 import org.apache.hadoop.hbase.stargate.model.CellSetModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowResource implements Constants {
   private static final Log LOG = LogFactory.getLog(RowResource.class);
 
+  User user;
   String tableName;
   String actualTableName;
   RowSpec rowspec;
@@ -63,6 +64,7 @@ public class RowResource implements Constants {
 
   public RowResource(User user, String table, String rowspec, String versions)
       throws IOException {
+    this.user = user;
     if (user != null) {
       this.actualTableName =
         !user.isAdmin() ? user.getName() + "." + table : table;
@@ -83,7 +85,7 @@ public class RowResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -121,7 +123,7 @@ public class RowResource implements Constants {
 
   @GET
   @Produces(MIMETYPE_BINARY)
-  public Response getBinary(@Context UriInfo uriInfo) {
+  public Response getBinary(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
     }
@@ -148,13 +150,19 @@ public class RowResource implements Constants {
     }
   }
 
-  Response update(CellSetModel model, boolean replace) {
+  Response update(final CellSetModel model, final boolean replace) {
     servlet.getMetrics().incrementRequests(1);
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
+      List<RowModel> rows = model.getRows();
+      // the user request limit is a transaction limit, so we need to
+      // account for updates by row
+      if (user != null && !servlet.userRequestLimit(user, rows.size())) {
+        throw new WebApplicationException(Response.status(509).build());
+      }
       table = pool.getTable(actualTableName);
-      for (RowModel row: model.getRows()) {
+      for (RowModel row: rows) {
         byte[] key = row.getKey();
         Put put = new Put(key);
         for (CellModel cell: row.getCells()) {
@@ -183,8 +191,9 @@ public class RowResource implements Constants {
     }
   }
 
-  Response updateBinary(byte[] message, HttpHeaders headers, 
-      boolean replace) {
+  // This currently supports only update of one row at a time.
+  Response updateBinary(final byte[] message, final HttpHeaders headers,
+      final boolean replace) {
     servlet.getMetrics().incrementRequests(1);
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;    
@@ -237,7 +246,8 @@ public class RowResource implements Constants {
 
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response put(CellSetModel model, @Context UriInfo uriInfo) {
+  public Response put(final CellSetModel model,
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
@@ -246,8 +256,8 @@ public class RowResource implements Constants {
 
   @PUT
   @Consumes(MIMETYPE_BINARY)
-  public Response putBinary(byte[] message, @Context UriInfo uriInfo, 
-      @Context HttpHeaders headers)
+  public Response putBinary(final byte[] message,
+      final @Context UriInfo uriInfo, final @Context HttpHeaders headers)
   {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath() + " as "+ MIMETYPE_BINARY);
@@ -257,7 +267,8 @@ public class RowResource implements Constants {
 
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response post(CellSetModel model, @Context UriInfo uriInfo) {
+  public Response post(final CellSetModel model,
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath());
     }
@@ -266,9 +277,8 @@ public class RowResource implements Constants {
 
   @POST
   @Consumes(MIMETYPE_BINARY)
-  public Response postBinary(byte[] message, @Context UriInfo uriInfo, 
-      @Context HttpHeaders headers)
-  {
+  public Response postBinary(final byte[] message,
+      final @Context UriInfo uriInfo, final @Context HttpHeaders headers) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath() + " as "+MIMETYPE_BINARY);
     }
@@ -276,7 +286,7 @@ public class RowResource implements Constants {
   }
 
   @DELETE
-  public Response delete(@Context UriInfo uriInfo) {
+  public Response delete(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
@@ -322,4 +332,5 @@ public class RowResource implements Constants {
     }
     return Response.ok().build();
   }
+
 }

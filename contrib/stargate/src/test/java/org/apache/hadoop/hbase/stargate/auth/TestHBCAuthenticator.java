@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.stargate.auth;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.stargate.User;
 
 import junit.framework.TestCase;
 

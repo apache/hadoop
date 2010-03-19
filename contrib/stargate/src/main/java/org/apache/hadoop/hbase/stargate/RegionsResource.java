@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.TableInfoModel;
 import org.apache.hadoop.hbase.stargate.model.TableRegionModel;
 
@@ -79,7 +79,7 @@ public class RegionsResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -106,4 +106,5 @@ public class RegionsResource implements Constants {
                   Response.Status.SERVICE_UNAVAILABLE);
     }
   }
+
 }

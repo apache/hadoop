@@ -55,7 +55,7 @@ public class RowSpec {
     i = parseTimestamp(path, i);
   }
 
-  private int parseRowKeys(String path, int i)
+  private int parseRowKeys(final String path, int i)
       throws IllegalArgumentException {
     StringBuilder startRow = new StringBuilder();
     StringBuilder endRow = null;
@@ -105,7 +105,7 @@ public class RowSpec {
     return i;
   }
 
-  private int parseColumns(String path, int i)
+  private int parseColumns(final String path, int i)
       throws IllegalArgumentException {
     if (i >= path.length()) {
       return i;
@@ -148,7 +148,7 @@ public class RowSpec {
     return i;
   }
 
-  private int parseTimestamp(String path, int i)
+  private int parseTimestamp(final String path, int i)
       throws IllegalArgumentException {
     if (i >= path.length()) {
       return i;
@@ -232,7 +232,7 @@ public class RowSpec {
     return maxVersions;
   }
 
-  public void setMaxVersions(int maxVersions) {
+  public void setMaxVersions(final int maxVersions) {
     this.maxVersions = maxVersions;
   }
 
@@ -256,7 +256,7 @@ public class RowSpec {
     return endRow;
   }
 
-  public void addColumn(byte[] column) {
+  public void addColumn(final byte[] column) {
     columns.add(column);
   }
 
@@ -276,7 +276,7 @@ public class RowSpec {
     return startTime;
   }
 
-  public void setStartTime(long startTime) {
+  public void setStartTime(final long startTime) {
     this.startTime = startTime;
   }
 
@@ -313,4 +313,5 @@ public class RowSpec {
     result.append("}");
     return result.toString();
   }
+
 }

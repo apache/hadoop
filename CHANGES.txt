@@ -428,11 +428,11 @@ Release 0.21.0 - Unreleased
                (Benoit Sigoure via JD)
    HBASE-2246  Add a getConfiguration method to HTableInterface
                (Benoit Sigoure via JD)
-   HBASE-2282  More directories should be ignored when using git for development
-               (Alexey Kovyrin via Stack)
+   HBASE-2282  More directories should be ignored when using git for
+               development (Alexey Kovyrin via Stack)
    HBASE-2267  More improvements to the Maven build (Lars Francke via Stack)
-   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS on
-               every heartbeat (Karthik Ranganathan via Stack) 
+   HBASE-2174  Stop from resolving HRegionServer addresses to names using DNS
+               on every heartbeat (Karthik Ranganathan via Stack) 
    HBASE-2302  Optimize M-R by bulk excluding regions - less InputSplit-s to
                avoid traffic on region servers when performing M-R on a subset
                of the table (Kay Kay via Stack) 
@@ -441,7 +441,8 @@ Release 0.21.0 - Unreleased
    HBASE-2279  Hbase Shell does not have any tests (Alexey Kovyrin via Stack)
    HBASE-2314  [shell] Support for getting counters (Alexey Kovyrin via Stack)
    HBASE-2324  Refactoring of TableRecordReader (mapred / mapreduce) for reuse
-               outside the scope of InputSplit / RecordReader (Kay Kay via Stack)
+               outside the scope of InputSplit / RecordReader (Kay Kay via
+               Stack)
    HBASE-2313  Nit-pick about hbase-2279 shell fixup, if you do get with
                non-existant column family, throws lots of exceptions
                (Alexey Kovyrin via Stack)
@@ -474,6 +475,7 @@ Release 0.21.0 - Unreleased
    HBASE-2316  Need an ability to run shell tests w/o invoking junit
                (Alexey Kovyrin via Stack)
    HBASE-2327  [EC2] Allocate elastic IP addresses for ZK and master nodes
+   HBASE-2319  [stargate] multiuser mode: request shaping
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

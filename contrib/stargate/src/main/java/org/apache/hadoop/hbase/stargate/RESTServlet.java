@@ -44,6 +44,9 @@ import org.apache.hadoop.hbase.stargate.auth.HTableAuthenticator;
 import org.apache.hadoop.hbase.stargate.auth.JDBCAuthenticator;
 import org.apache.hadoop.hbase.stargate.auth.ZooKeeperAuthenticator;
 import org.apache.hadoop.hbase.stargate.metrics.StargateMetrics;
+import org.apache.hadoop.hbase.stargate.util.HTableTokenBucket;
+import org.apache.hadoop.hbase.stargate.util.SoftUserData;
+import org.apache.hadoop.hbase.stargate.util.UserData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -189,6 +192,7 @@ public class RESTServlet extends ServletAdaptor
     this.wrapper = initZooKeeperWrapper();
     this.statusReporter = new StatusReporter(
       conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 60), stopping);
+    this.multiuser = conf.getBoolean("stargate.multiuser", false);
   }
 
   @Override
@@ -326,6 +330,28 @@ public class RESTServlet extends ServletAdaptor
    */
   public void setAuthenticator(Authenticator authenticator) {
     this.authenticator = authenticator;
+  }
+
+  /**
+   * Check if the user has exceeded their request token limit within the
+   * current interval
+   * @param user the user
+   * @param want the number of tokens desired
+   * @throws IOException
+   */
+  public boolean userRequestLimit(final User user, int want) 
+      throws IOException {
+    UserData ud = SoftUserData.get(user);
+    HTableTokenBucket tb = (HTableTokenBucket) ud.get(UserData.TOKENBUCKET);
+    if (tb == null) {
+      tb = new HTableTokenBucket(conf, Bytes.toBytes(user.getToken()));
+      ud.put(UserData.TOKENBUCKET, tb);
+    }
+    if (tb.available() < want) {
+      return false;
+    }
+    tb.remove(want);
+    return true;
   }
 
 }

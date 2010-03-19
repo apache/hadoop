@@ -28,7 +28,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 
 public class TableResource implements Constants {
 
@@ -56,8 +56,9 @@ public class TableResource implements Constants {
   }
 
   @Path("{rowspec: .+}")
-  public RowResource getRowResource(@PathParam("rowspec") String rowspec,
-      @QueryParam("v") String versions) {
+  public RowResource getRowResource(
+      final @PathParam("rowspec") String rowspec,
+      final @QueryParam("v") String versions) {
     try {
       return new RowResource(user, table, rowspec, versions);
     } catch (IOException e) {

@@ -7,12 +7,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.util.StringUtils;
-import org.mortbay.log.Log;
 
 public class JDBCAuthenticator extends Authenticator {
 
+  static final Log LOG = LogFactory.getLog(JDBCAuthenticator.class);
   static final int MAX_RETRIES = 5;
   static final long RETRY_SLEEP_TIME = 1000 * 2;
 
@@ -73,7 +77,7 @@ public class JDBCAuthenticator extends Authenticator {
       if (++retries > MAX_RETRIES) {
         throw new IOException(e);
       } else try {
-        Log.warn(StringUtils.stringifyException(e));
+        LOG.warn(StringUtils.stringifyException(e));
         Thread.sleep(RETRY_SLEEP_TIME);
       } catch (InterruptedException ex) {
         // ignore

@@ -40,9 +40,11 @@ public abstract class ResultGenerator implements Iterator<KeyValue> {
     }
   }
 
-  public static Filter buildFilter(String filter) throws Exception {
+  public static Filter buildFilter(final String filter) throws Exception {
     return ScannerModel.buildFilter(new JSONObject(filter));
   }
+
+  public abstract void putBack(KeyValue kv);
 
   public abstract void close();
 

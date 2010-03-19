@@ -4,12 +4,15 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.stargate.Constants;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class HTableAuthenticator extends Authenticator {
+public class HTableAuthenticator extends Authenticator implements Constants {
 
   static final byte[] USER = Bytes.toBytes("user");
   static final byte[] NAME = Bytes.toBytes("name");
@@ -32,9 +35,7 @@ public class HTableAuthenticator extends Authenticator {
    * @param conf
    */
   public HTableAuthenticator(Configuration conf) {
-    this.conf = conf;
-    this.tableName = conf.get("stargate.auth.htable.name",
-      "stargate.users");
+    this(conf, conf.get("stargate.auth.htable.name", USERS_TABLE));
   }
 
   /**

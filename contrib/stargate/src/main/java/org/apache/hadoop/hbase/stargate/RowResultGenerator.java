@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 
 public class RowResultGenerator extends ResultGenerator {
   private Iterator<KeyValue> valuesI;
+  private KeyValue cache;
 
   public RowResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter) throws IllegalArgumentException, IOException {
@@ -75,6 +76,9 @@ public class RowResultGenerator extends ResultGenerator {
   }
 
   public boolean hasNext() {
+    if (cache != null) {
+      return true;
+    }
     if (valuesI == null) {
       return false;
     }
@@ -82,6 +86,11 @@ public class RowResultGenerator extends ResultGenerator {
   }
 
   public KeyValue next() {
+    if (cache != null) {
+      KeyValue kv = cache;
+      cache = null;
+      return kv;
+    }
     if (valuesI == null) {
       return null;
     }
@@ -92,7 +101,12 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
+  public void putBack(KeyValue kv) {
+    this.cache = kv;
+  }
+
   public void remove() {
     throw new UnsupportedOperationException("remove not supported");
   }
+
 }

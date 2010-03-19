@@ -48,7 +48,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 import junit.framework.TestCase;
 
 public class MiniClusterTestBase extends TestCase {
-  private static final Log LOG =
+  protected static final Log LOG =
     LogFactory.getLog(MiniClusterTestBase.class);
 
   public static final String MIMETYPE_BINARY = "application/octet-stream";

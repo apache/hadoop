@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,7 +89,7 @@ public class SchemaResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -124,8 +124,9 @@ public class SchemaResource implements Constants {
     }
   }
 
-  private Response replace(byte[] tableName, TableSchemaModel model,
-      UriInfo uriInfo, HBaseAdmin admin) {
+  private Response replace(final byte[] tableName, 
+      final TableSchemaModel model, final UriInfo uriInfo,
+      final HBaseAdmin admin) {
     try {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       for (Map.Entry<QName,Object> e: model.getAny().entrySet()) {
@@ -155,8 +156,8 @@ public class SchemaResource implements Constants {
     }      
   } 
 
-  private Response update(byte[] tableName, TableSchemaModel model,
-      UriInfo uriInfo, HBaseAdmin admin) {
+  private Response update(final byte[] tableName,final TableSchemaModel model,
+      final UriInfo uriInfo, final HBaseAdmin admin) {
     try {
       HTableDescriptor htd = admin.getTableDescriptor(tableName);
       admin.disableTable(tableName);
@@ -185,8 +186,8 @@ public class SchemaResource implements Constants {
     }
   }
 
-  private Response update(TableSchemaModel model, boolean replace,
-      UriInfo uriInfo) {
+  private Response update(final TableSchemaModel model, final boolean replace,
+      final UriInfo uriInfo) {
     try {
       servlet.invalidateMaxAge(tableName);
       byte[] tableName = Bytes.toBytes(actualTableName);
@@ -204,7 +205,8 @@ public class SchemaResource implements Constants {
 
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response put(TableSchemaModel model, @Context UriInfo uriInfo) {
+  public Response put(final TableSchemaModel model, 
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
@@ -220,7 +222,8 @@ public class SchemaResource implements Constants {
 
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response post(TableSchemaModel model, @Context UriInfo uriInfo) {
+  public Response post(final TableSchemaModel model, 
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
@@ -235,7 +238,7 @@ public class SchemaResource implements Constants {
   }
 
   @DELETE
-  public Response delete(@Context UriInfo uriInfo) {     
+  public Response delete(final @Context UriInfo uriInfo) {     
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
@@ -252,4 +255,5 @@ public class SchemaResource implements Constants {
             Response.Status.SERVICE_UNAVAILABLE);
     }
   }
+
 }

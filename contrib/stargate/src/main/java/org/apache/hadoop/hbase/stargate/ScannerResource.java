@@ -41,7 +41,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.filter.Filter;
 
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 
 public class ScannerResource implements Constants {
@@ -68,7 +68,7 @@ public class ScannerResource implements Constants {
     servlet = RESTServlet.getInstance();
   }
 
-  static void delete(String id) {
+  static void delete(final String id) {
     synchronized (scanners) {
       ScannerInstanceResource instance = scanners.remove(id);
       if (instance != null) {
@@ -77,7 +77,8 @@ public class ScannerResource implements Constants {
     }
   }
 
-  Response update(ScannerModel model, boolean replace, UriInfo uriInfo) {
+  Response update(final ScannerModel model, final boolean replace, 
+      final UriInfo uriInfo) {
     servlet.getMetrics().incrementRequests(1);
     byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
     RowSpec spec = new RowSpec(model.getStartRow(), endRow,
@@ -88,7 +89,8 @@ public class ScannerResource implements Constants {
         new ScannerResultGenerator(actualTableName, spec, filter);
       String id = gen.getID();
       ScannerInstanceResource instance = 
-        new ScannerInstanceResource(actualTableName, id, gen, model.getBatch());
+        new ScannerInstanceResource(user, actualTableName, id, gen, 
+          model.getBatch());
       synchronized (scanners) {
         scanners.put(id, instance);
       }
@@ -108,7 +110,8 @@ public class ScannerResource implements Constants {
 
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response put(ScannerModel model, @Context UriInfo uriInfo) {
+  public Response put(final ScannerModel model, 
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
@@ -117,7 +120,8 @@ public class ScannerResource implements Constants {
 
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response post(ScannerModel model, @Context UriInfo uriInfo) {
+  public Response post(final ScannerModel model,
+      final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("POST " + uriInfo.getAbsolutePath());
     }
@@ -126,7 +130,7 @@ public class ScannerResource implements Constants {
 
   @Path("{scanner: .+}")
   public ScannerInstanceResource getScannerInstanceResource(
-      @PathParam("scanner") String id) {
+      final @PathParam("scanner") String id) {
     synchronized (scanners) {
       ScannerInstanceResource instance = scanners.get(id);
       if (instance == null) {

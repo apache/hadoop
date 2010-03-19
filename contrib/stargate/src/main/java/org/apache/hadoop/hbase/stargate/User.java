@@ -1,11 +1,11 @@
-package org.apache.hadoop.hbase.stargate.auth;
+package org.apache.hadoop.hbase.stargate;
 
 import java.security.MessageDigest;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** Representation of an authorized user */
-public class User {
+public class User implements Constants {
 
   public static final User DEFAULT_USER = new User("default",
     "00000000000000000000000000000000", false, true);
@@ -69,7 +69,7 @@ public class User {
   /**
    * @param name user name
    */
-  public void setName(String name) {
+  public void setName(final String name) {
     this.name = name;
   }
 
@@ -83,7 +83,7 @@ public class User {
   /**
    * @param token access token, a 16 char hex string
    */
-  public void setToken(String token) {
+  public void setToken(final String token) {
     this.token = token;
   }
 
@@ -97,7 +97,7 @@ public class User {
   /**
    * @param admin true if user has administrator privilege
    */
-  public void setAdmin(boolean admin) {
+  public void setAdmin(final boolean admin) {
     this.admin = admin;
   }
 
@@ -113,6 +113,43 @@ public class User {
    */
   public void setDisabled(boolean disabled) {
     this.disabled = disabled;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + (admin ? 1231 : 1237);
+    result = prime * result + (disabled ? 1231 : 1237);
+    result = prime * result + ((name == null) ? 0 : name.hashCode());
+    result = prime * result + ((token == null) ? 0 : token.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    User other = (User) obj;
+    if (admin != other.admin)
+      return false;
+    if (disabled != other.disabled)
+      return false;
+    if (name == null) {
+      if (other.name != null)
+        return false;
+    } else if (!name.equals(other.name))
+      return false;
+    if (token == null) {
+      if (other.token != null)
+        return false;
+    } else if (!token.equals(other.token))
+      return false;
+    return true;
   }
 
 }

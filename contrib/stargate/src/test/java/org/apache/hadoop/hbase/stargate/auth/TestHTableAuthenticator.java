@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.stargate.MiniClusterTestBase;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestHTableAuthenticator extends MiniClusterTestBase {

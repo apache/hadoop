@@ -35,9 +35,10 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.stargate.auth.User;
+import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.TableListModel;
 import org.apache.hadoop.hbase.stargate.model.TableModel;
 
@@ -55,7 +56,15 @@ public class RootResource implements Constants {
     cacheControl.setNoTransform(false);
   }
 
-  TableListModel getTableList() throws IOException {
+  private final User auth(final String token) throws IOException {
+    User user = servlet.getAuthenticator().getUserForToken(token);
+    if (user == null || user.isDisabled()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
+    return user;
+  }
+
+  private final TableListModel getTableList() throws IOException {
     TableListModel tableList = new TableListModel();
     HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
     HTableDescriptor[] list = admin.listTables();
@@ -65,7 +74,8 @@ public class RootResource implements Constants {
     return tableList;
   }
 
-  TableListModel getTableListForUser(User user) throws IOException {
+  private final TableListModel getTableListForUser(final User user) 
+      throws IOException {
     TableListModel tableList;
     if (user.isAdmin()) {
       tableList = getTableList();
@@ -87,7 +97,7 @@ public class RootResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(@Context UriInfo uriInfo) throws IOException {
+  public Response get(final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
@@ -121,11 +131,11 @@ public class RootResource implements Constants {
 
   @Path("{token: [0-9a-fA-F]{32} }") // 128 bit md5 sums
   public Response getTableRootResource(
-      @PathParam("token") String token) throws IOException {
+      final @PathParam("token") String token) throws IOException {
     if (servlet.isMultiUser()) {
-      User user = servlet.getAuthenticator().getUserForToken(token);
-      if (user == null || user.isDisabled()) {
-        throw new WebApplicationException(Response.Status.FORBIDDEN);
+      User user = auth(token);
+      if (!servlet.userRequestLimit(user, 1)) {
+        throw new WebApplicationException(Response.status(509).build());
       }
       try {
         ResponseBuilder response = Response.ok(getTableListForUser(user));
@@ -141,10 +151,13 @@ public class RootResource implements Constants {
 
   @Path("{token: [0-9a-fA-F]{32} }/status/cluster") // 128 bit md5 sums
   public StorageClusterStatusResource getClusterStatusResourceAuthorized(
-      @PathParam("token") String token) throws IOException {
+      final @PathParam("token") String token) throws IOException {
     if (servlet.isMultiUser()) {
-      User user = servlet.getAuthenticator().getUserForToken(token);
-      if (user != null && user.isAdmin() && !user.isDisabled()) {
+      User user = auth(token);
+      if (user.isAdmin()) {
+        if (!servlet.userRequestLimit(user, 1)) {
+          throw new WebApplicationException(Response.status(509).build());
+        }
         return new StorageClusterStatusResource();
       }
       throw new WebApplicationException(Response.Status.FORBIDDEN);
@@ -153,12 +166,13 @@ public class RootResource implements Constants {
   }
 
   @Path("{token: [0-9a-fA-F]{32} }/{table}")
-  public TableResource getTableResource(@PathParam("token") String token, 
-      @PathParam("table") String table) throws IOException {
+  public TableResource getTableResource(
+      final @PathParam("token") String token, 
+      final @PathParam("table") String table) throws IOException {
     if (servlet.isMultiUser()) {
-      User user = servlet.getAuthenticator().getUserForToken(token);
-      if (user == null || user.isDisabled()) {
-        throw new WebApplicationException(Response.Status.FORBIDDEN);
+      User user = auth(token);
+      if (!servlet.userRequestLimit(user, 1)) {
+        throw new WebApplicationException(Response.status(509).build());
       }
       return new TableResource(user, table);
     }
@@ -166,8 +180,8 @@ public class RootResource implements Constants {
   }
 
   @Path("{table}")
-  public TableResource getTableResource(@PathParam("table") String table)
-    throws IOException {
+  public TableResource getTableResource(
+      final @PathParam("table") String table) throws IOException {
     if (servlet.isMultiUser()) {
       throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }

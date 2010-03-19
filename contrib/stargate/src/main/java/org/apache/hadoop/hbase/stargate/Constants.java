@@ -31,10 +31,12 @@ public interface Constants {
   public static final String STATUS_REPORT_PERIOD_KEY =
     "stargate.status.period";
 
+  public static final String USERS_TABLE = "users";
+
   public static final String INSTANCE_ZNODE_ROOT = "/stargate/instance";
   public static final String USERS_ZNODE_ROOT = "/stargate/users";
 
-  public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;       // 4 hours
+  public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;  // 4 hours
 
   public static final String MIMETYPE_TEXT = "text/plain";
   public static final String MIMETYPE_HTML = "text/html";

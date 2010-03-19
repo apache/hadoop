@@ -42,7 +42,7 @@ public class ScannerResultGenerator extends ResultGenerator {
   private static final Log LOG =
     LogFactory.getLog(ScannerResultGenerator.class);
 
-  public static Filter buildFilterFromModel(ScannerModel model) 
+  public static Filter buildFilterFromModel(final ScannerModel model) 
       throws Exception {
     String filter = model.getFilter();
     if (filter == null || filter.length() == 0) {
@@ -53,6 +53,7 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   private String id;
   private Iterator<KeyValue> rowI;
+  private KeyValue cache;
   private ResultScanner scanner;
   private Result cached;
 
@@ -88,7 +89,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       if (filter != null) {
         scan.setFilter(filter);
       }
-      // always disable block caching on the cluster
+      // always disable block caching on the cluster when scanning
       scan.setCacheBlocks(false);
       scanner = table.getScanner(scan);
       cached = null;
@@ -107,6 +108,9 @@ public class ScannerResultGenerator extends ResultGenerator {
   }
 
   public boolean hasNext() {
+    if (cache != null) {
+      return true;
+    }
     if (rowI != null && rowI.hasNext()) {
       return true;
     }
@@ -127,6 +131,11 @@ public class ScannerResultGenerator extends ResultGenerator {
   }
 
   public KeyValue next() {
+    if (cache != null) {
+      KeyValue kv = cache;
+      cache = null;
+      return kv;
+    }
     boolean loop;
     do {
       loop = false;
@@ -157,6 +166,10 @@ public class ScannerResultGenerator extends ResultGenerator {
       }
     } while (loop);
     return null;
+  }
+
+  public void putBack(KeyValue kv) {
+    this.cache = kv;
   }
 
   public void remove() {
