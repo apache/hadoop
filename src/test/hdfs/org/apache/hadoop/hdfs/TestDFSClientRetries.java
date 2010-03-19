@@ -224,7 +224,7 @@ public class TestDFSClientRetries extends TestCase {
 
     public boolean mkdirs(String src, FsPermission masked, boolean createParent) throws IOException { return false; }
 
-    public HdfsFileStatus[] getListing(String src) throws IOException { return null; }
+    public DirectoryListing getListing(String src, byte[] startName) throws IOException { return null; }
 
     public void renewLease(String clientName) throws IOException {}
 

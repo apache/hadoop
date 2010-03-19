@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -74,9 +75,9 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
     createFile("/tmp1/t2", 3200, (short)3);
     createFile("/tmp2/t1", 3200, (short)3);
     createFile("/tmp2/t2", 3200, (short)3);
-    cluster.getNameNode().getListing("/tmp1") ;
+    cluster.getNameNode().getListing("/tmp1", HdfsFileStatus.EMPTY_NAME);
     assertEquals(2,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
-    cluster.getNameNode().getListing("/tmp2") ;
+    cluster.getNameNode().getListing("/tmp2", HdfsFileStatus.EMPTY_NAME) ;
     assertEquals(4,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
   }
 }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -842,11 +843,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /**
    */
-  public HdfsFileStatus[] getListing(String src) throws IOException {
-    HdfsFileStatus[] files = namesystem.getListing(src);
+  @Override
+  public DirectoryListing getListing(String src, byte[] startAfter)
+  throws IOException {
+    DirectoryListing files = namesystem.getListing(src, startAfter);
     if (files != null) {
       myMetrics.numGetListingOps.inc();
-      myMetrics.numFilesInGetListingOps.inc(files.length);
+      myMetrics.numFilesInGetListingOps.inc(files.getPartialListing().length);
     }
     return files;
   }

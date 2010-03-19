@@ -100,6 +100,9 @@ Trunk (unreleased changes)
     HDFS-826. The DFSOutputStream has a API that returns the number of
     active datanode(s) in the current pipeline. (dhruba)
 
+    HDFS-985. HDFS should issue multiple RPCs for listing a large
+    directory. (hairong)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

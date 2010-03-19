@@ -55,9 +55,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 59: Add API to retrive corrupted block list
+   * 60: Replace full getListing with iterative getListinng.
    */
-  public static final long versionID = 59L;
+  public static final long versionID = 60L;
   
   ///////////////////////////////////////
   // File contents
@@ -353,10 +353,14 @@ public interface ClientProtocol extends VersionedProtocol {
       throws IOException, UnresolvedLinkException;
 
   /**
-   * Get a listing of the indicated directory.
+   * Get a partial listing of the indicated directory
+   *
+   * @param src the directory name
+   * @param startAfter the name to start listing after encoded in java UTF8
+   * @return a partial listing starting after startAfter
    * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  public HdfsFileStatus[] getListing(String src) 
+  public DirectoryListing getListing(String src, byte[] startAfter) 
       throws IOException, UnresolvedLinkException; 
 
   ///////////////////////////////////////

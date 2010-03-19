@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
@@ -72,6 +73,7 @@ public class TestFileStatus extends TestCase {
    */
   public void testFileStatus() throws IOException {
     Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     final HftpFileSystem hftpfs = cluster.getHftpFileSystem();
@@ -83,8 +85,6 @@ public class TestFileStatus extends TestCase {
       //
       Path path = new Path("/");
       System.out.println("Path : \"" + path.toString() + "\"");
-      System.out.println(fs.isDirectory(path));
-      System.out.println(fs.getFileStatus(path).isDir()); 
       assertTrue("/ should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
       
@@ -134,9 +134,24 @@ public class TestFileStatus extends TestCase {
           fs.getWorkingDirectory()).toString(), 
           status.getPath().toString());
 
-      // create an empty directory
-      //
+      // test file status on a directory
       Path dir = new Path("/test/mkdirs");
+
+      // test listStatus on a non-existent file/directory
+      try {
+        stats = fs.listStatus(dir);
+        fail("listStatus of non-existent path should fail");
+      } catch (FileNotFoundException fe) {
+        assertTrue(fe.getMessage().equals("File " + dir + " does not exist."));
+      }
+      try {
+        status = fs.getFileStatus(dir);
+        fail("getFileStatus of non-existent path should fail");
+      } catch (FileNotFoundException fe) {
+        assertTrue(fe.getMessage().startsWith("File does not exist"));
+      }
+
+      // create the directory
       assertTrue(fs.mkdirs(dir));
       assertTrue(fs.exists(dir));
       System.out.println("Dir : \"" + dir + "\"");
@@ -170,9 +185,8 @@ public class TestFileStatus extends TestCase {
       status = fs.getFileStatus(file2);
       assertTrue(status.getBlockSize() == blockSize);
       assertTrue(status.getReplication() == 1);
-      assertEquals(file2.makeQualified(
-          fs.getUri(), fs.getWorkingDirectory()).toString(), 
-          status.getPath().toString());
+      file2 = fs.makeQualified(file2);
+      assertEquals(file2.toString(), status.getPath().toString());
 
       // create another file in the same directory
       Path file3 = new Path(dir, "filestatus3.dat");
@@ -180,6 +194,7 @@ public class TestFileStatus extends TestCase {
       System.out.println("Created file filestatus3.dat with one "
                          + " replicas.");
       checkFile(fs, file3, 1);
+      file3 = fs.makeQualified(file3);
 
       // verify that the size of the directory increased by the size 
       // of the two files
@@ -192,15 +207,34 @@ public class TestFileStatus extends TestCase {
       // test listStatus on a non-empty directory
       stats = fs.listStatus(dir);
       assertEquals(dir + " should have two entries", 2, stats.length);
-      String qualifiedFile2 = file2.makeQualified(fs.getUri(), 
-          fs.getWorkingDirectory()).toString();
-      String qualifiedFile3 = file3.makeQualified(fs.getUri(), 
-          fs.getWorkingDirectory()).toString();
-      for(FileStatus stat:stats) {
-        String statusFullName = stat.getPath().toString();
-        assertTrue(qualifiedFile2.equals(statusFullName)
-          || qualifiedFile3.toString().equals(statusFullName));
-      }
+       assertEquals(file2.toString(), stats[0].getPath().toString());
+       assertEquals(file3.toString(), stats[1].getPath().toString());
+
+      // test iterative listing
+      // now dir has 2 entries, create one more
+      Path dir3 = fs.makeQualified(new Path(dir, "dir3"));
+      fs.mkdirs(dir3);
+      dir3 = fs.makeQualified(dir3);
+      stats = fs.listStatus(dir);
+      assertEquals(dir + " should have three entries", 3, stats.length);
+      assertEquals(dir3.toString(), stats[0].getPath().toString());
+      assertEquals(file2.toString(), stats[1].getPath().toString());
+      assertEquals(file3.toString(), stats[2].getPath().toString());
+
+      // now dir has 3 entries, create two more
+      Path dir4 = fs.makeQualified(new Path(dir, "dir4"));
+      fs.mkdirs(dir4);
+      dir4 = fs.makeQualified(dir4);
+      Path dir5 = fs.makeQualified(new Path(dir, "dir5"));
+      fs.mkdirs(dir5);
+      dir5 = fs.makeQualified(dir5);
+      stats = fs.listStatus(dir);
+      assertEquals(dir + " should have five entries", 5, stats.length);
+      assertEquals(dir3.toString(), stats[0].getPath().toString());
+      assertEquals(dir4.toString(), stats[1].getPath().toString());
+      assertEquals(dir5.toString(), stats[2].getPath().toString());
+      assertEquals(file2.toString(), stats[3].getPath().toString());
+      assertEquals(file3.toString(), stats[4].getPath().toString());
     } finally {
       fs.close();
       cluster.shutdown();

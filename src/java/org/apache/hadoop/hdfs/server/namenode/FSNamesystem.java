@@ -2208,10 +2208,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   /**
-   * Get a listing of all files at 'src'.  The Object[] array
-   * exists so we can return file attributes (soon to be implemented)
+   * Get a partial listing of the indicated directory
+   *
+   * @param src the directory name
+   * @param startAfter the name to start after
+   * @return a partial listing starting after startAfter
    */
-  public HdfsFileStatus[] getListing(String src) 
+  public DirectoryListing getListing(String src, byte[] startAfter) 
     throws IOException, UnresolvedLinkException {
     if (isPermissionEnabled) {
       if (dir.isDir(src)) {
@@ -2226,7 +2229,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                     Server.getRemoteIp(),
                     "listStatus", src, null, null);
     }
-    return dir.getListing(src);
+    return dir.getListing(src, startAfter);
   }
 
   /////////////////////////////////////////////////////////

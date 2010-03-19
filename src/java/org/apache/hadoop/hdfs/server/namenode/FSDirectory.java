@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
@@ -65,6 +66,7 @@ class FSDirectory implements Closeable {
   private volatile boolean ready = false;
   private MetricsRecord directoryMetrics = null;
   private static final long UNKNOWN_DISK_SPACE = -1;
+  private final int lsLimit;  // max list limit
   
   /** Access an existing dfs name directory. */
   FSDirectory(FSNamesystem ns, Configuration conf) {
@@ -84,6 +86,10 @@ class FSDirectory implements Closeable {
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
         Integer.MAX_VALUE, UNKNOWN_DISK_SPACE);
     this.fsImage = fsImage;
+    int configuredLimit = conf.getInt(
+        DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
+    this.lsLimit = configuredLimit>0 ?
+        configuredLimit : DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT;
     initialize(conf);
   }
     
@@ -1048,30 +1054,37 @@ class FSDirectory implements Closeable {
   }
 
   /**
-   * Get a listing of files given path 'src'
+   * Get a partial listing of the indicated directory
    *
-   * This function is admittedly very inefficient right now.  We'll
-   * make it better later.
+   * @param src the directory name
+   * @param startAfter the name to start listing after
+   * @return a partial listing starting after startAfter
    */
-  HdfsFileStatus[] getListing(String src) throws UnresolvedLinkException {
+  DirectoryListing getListing(String src, byte[] startAfter)
+  throws UnresolvedLinkException {
     String srcs = normalizePath(src);
 
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs, true);
       if (targetNode == null)
         return null;
+      
       if (!targetNode.isDirectory()) {
-        return new HdfsFileStatus[]{createFileStatus(
-            HdfsFileStatus.EMPTY_NAME, targetNode)};
+        return new DirectoryListing(new HdfsFileStatus[]{createFileStatus(
+            HdfsFileStatus.EMPTY_NAME, targetNode)}, 0);
       }
-      List<INode> contents = ((INodeDirectory)targetNode).getChildren();
-      HdfsFileStatus listing[] = new HdfsFileStatus[contents.size()];
-      int i = 0;
-      for (INode cur : contents) {
+      INodeDirectory dirInode = (INodeDirectory)targetNode;
+      List<INode> contents = dirInode.getChildren();
+      int startChild = dirInode.nextChild(startAfter);
+      int totalNumChildren = contents.size();
+      int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
+      HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
+      for (int i=0; i<numOfListing; i++) {
+        INode cur = contents.get(startChild+i);
         listing[i] = createFileStatus(cur.name, cur);
-        i++;
       }
-      return listing;
+      return new DirectoryListing(
+          listing, totalNumChildren-startChild-numOfListing);
     }
   }
 
@@ -1479,6 +1492,9 @@ class FSDirectory implements Closeable {
     }
     updateCount(pathComponents, pos, counts.getNsCount(), childDiskspace,
         checkQuota);
+    if (pathComponents[pos-1] == null) {
+      throw new NullPointerException("Panic: parent does not exist");
+    }
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
         child, inheritPermission);
     if (addedNode == null) {

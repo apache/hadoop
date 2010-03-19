@@ -32,11 +32,11 @@ import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
@@ -128,7 +128,6 @@ public class DatanodeJspHelper {
         return;
       }
       // directory
-      HdfsFileStatus[] files = dfs.listPaths(target);
       // generate a table and dump the info
       String[] headings = { "Name", "Type", "Size", "Replication",
           "Block Size", "Modification Time", "Permission", "Owner", "Group" };
@@ -146,42 +145,49 @@ public class DatanodeJspHelper {
             + JspHelper.SET_DELEGATION + tokenString
             + "\">Go to parent directory</a><br>");
 
-      if (files == null || files.length == 0) {
+      DirectoryListing thisListing = 
+        dfs.listPaths(target, HdfsFileStatus.EMPTY_NAME);
+      if (thisListing == null || thisListing.getPartialListing().length == 0) {
         out.print("Empty directory");
       } else {
         JspHelper.addTableHeader(out);
         int row = 0;
         JspHelper.addTableRow(out, headings, row++);
         String cols[] = new String[headings.length];
-        for (int i = 0; i < files.length; i++) {
-          String localFileName = files[i].getLocalName();
-          // Get the location of the first block of the file
-          if (localFileName.endsWith(".crc"))
-            continue;
-          if (!files[i].isDir()) {
-            cols[1] = "file";
-            cols[2] = StringUtils.byteDesc(files[i].getLen());
-            cols[3] = Short.toString(files[i].getReplication());
-            cols[4] = StringUtils.byteDesc(files[i].getBlockSize());
-          } else {
-            cols[1] = "dir";
-            cols[2] = "";
-            cols[3] = "";
-            cols[4] = "";
-          }
-          String datanodeUrl = req.getRequestURL() + "?dir="
+        do {
+          HdfsFileStatus[] files = thisListing.getPartialListing();
+          for (int i = 0; i < files.length; i++) {
+            String localFileName = files[i].getLocalName();
+            // Get the location of the first block of the file
+            if (!files[i].isDir()) {
+              cols[1] = "file";
+              cols[2] = StringUtils.byteDesc(files[i].getLen());
+              cols[3] = Short.toString(files[i].getReplication());
+              cols[4] = StringUtils.byteDesc(files[i].getBlockSize());
+            } else {
+              cols[1] = "dir";
+              cols[2] = "";
+              cols[3] = "";
+              cols[4] = "";
+            }
+            String datanodeUrl = req.getRequestURL() + "?dir="
               + URLEncoder.encode(files[i].getFullName(target), "UTF-8")
               + "&namenodeInfoPort=" + namenodeInfoPort
               + JspHelper.SET_DELEGATION + tokenString;
-          cols[0] = "<a href=\"" + datanodeUrl + "\">"
+            cols[0] = "<a href=\"" + datanodeUrl + "\">"
               + localFileName + "</a>";
-          cols[5] = FsShell.dateForm.format(new Date((files[i]
+            cols[5] = FsShell.dateForm.format(new Date((files[i]
               .getModificationTime())));
-          cols[6] = files[i].getPermission().toString();
-          cols[7] = files[i].getOwner();
-          cols[8] = files[i].getGroup();
-          JspHelper.addTableRow(out, cols, row++);
-        }
+            cols[6] = files[i].getPermission().toString();
+            cols[7] = files[i].getOwner();
+            cols[8] = files[i].getGroup();
+            JspHelper.addTableRow(out, cols, row++);
+          }
+          if (!thisListing.hasMore()) {
+            break;
+          }
+          thisListing = dfs.listPaths(target, thisListing.getLastName());
+        } while (thisListing != null);
         JspHelper.addTableFooter(out);
       }
     }

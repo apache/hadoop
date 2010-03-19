@@ -18,12 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -38,7 +37,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -164,24 +162,32 @@ public class ListPathsServlet extends DfsServlet {
       while (!pathstack.empty()) {
         String p = pathstack.pop();
         try {
-          HdfsFileStatus[] listing = nnproxy.getListing(p);
-          if (listing == null) {
-            LOG.warn("ListPathsServlet - Path " + p + " does not exist");
-            continue;
-          }
-          for (HdfsFileStatus i : listing) {
-            String localName = i.getLocalName();
-            if (exclude.matcher(localName).matches()
-                || !filter.matcher(localName).matches()) {
-              continue;
+          byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;
+          DirectoryListing thisListing;
+          do {
+            assert lastReturnedName != null;
+            thisListing = nnproxy.getListing(p, lastReturnedName);
+            if (thisListing == null) {
+              if (lastReturnedName.length == 0) {
+                LOG.warn("ListPathsServlet - Path " + p + " does not exist");
+              }
+              break;
             }
-            if (recur && i.isDir()) {
-              pathstack.push(new Path(p, localName).toUri().getPath());
+            HdfsFileStatus[] listing = thisListing.getPartialListing();
+            for (HdfsFileStatus i : listing) {
+              String localName = i.getLocalName();
+              if (exclude.matcher(localName).matches()
+                  || !filter.matcher(localName).matches()) {
+                continue;
+              }
+              if (recur && i.isDir()) {
+                pathstack.push(new Path(p, localName).toUri().getPath());
+              }
+              writeInfo(p, i, doc);
             }
-            writeInfo(p, i, doc);
-          }
-        }
-        catch(RemoteException re) {re.writeXml(p, doc);}
+            lastReturnedName = thisListing.getLastName();
+          } while (thisListing.hasMore());
+        } catch(RemoteException re) {re.writeXml(p, doc);}
       }
       if (doc != null) {
         doc.endDocument();
