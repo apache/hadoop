@@ -2,11 +2,19 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
-    MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
-    input path. (Tsz Wo (Nicholas), SZE via cdouglas)
+  NEW FEATURES
+
+    HADOOP-6637. Benchmark for establishing RPC session. (shv)
 
     HADOOP-6382. Add support for publishing Hadoop jars to Apache Maven
     repository. (Giridharan Kesavan via cdouglas)
+
+  BUG FIXES
+
+    MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
+    input path. (Tsz Wo (Nicholas), SZE via cdouglas)
+
+  IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
     actual usage. (Benoit Sigoure via cdouglas)
