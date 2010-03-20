@@ -8,6 +8,9 @@ Release 0.20.3 - Unreleased
     HADOOP-6382. Add support for publishing Hadoop jars to Apache Maven
     repository. (Giridharan Kesavan via cdouglas)
 
+    MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
+    actual usage. (Benoit Sigoure via cdouglas)
+
 Release 0.20.2 - 2010-2-19
 
   NEW FEATURES

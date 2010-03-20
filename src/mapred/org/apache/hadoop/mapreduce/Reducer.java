@@ -84,7 +84,7 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
  *   
  *   <p>In this phase the 
  *   {@link #reduce(Object, Iterable, Context)}
- *   method is called for each <code>&lt;key, (collection of values)></code> in
+ *   method is called for each <code>&lt;key, (collection of values)&gt;</code> in
  *   the sorted inputs.</p>
  *   <p>The output of the reduce task is typically written to a 
  *   {@link RecordWriter} via 
@@ -96,18 +96,18 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
  * 
  * <p>Example:</p>
  * <p><blockquote><pre>
- * public class IntSumReducer<Key> extends Reducer<Key,IntWritable,
- *                                                 Key,IntWritable> {
+ * public class IntSumReducer&lt;Key&gt; extends Reducer&lt;Key,IntWritable,
+ *                                                 Key,IntWritable&gt; {
  *   private IntWritable result = new IntWritable();
  * 
- *   public void reduce(Key key, Iterable<IntWritable> values, 
- *                      Context context) throws IOException {
+ *   public void reduce(Key key, Iterable&lt;IntWritable&gt; values,
+ *                      Context context) throws IOException, InterruptedException {
  *     int sum = 0;
  *     for (IntWritable val : values) {
  *       sum += val.get();
  *     }
  *     result.set(sum);
- *     context.collect(key, result);
+ *     context.write(key, result);
  *   }
  * }
  * </pre></blockquote></p>
