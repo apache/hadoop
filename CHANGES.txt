@@ -103,6 +103,9 @@ Trunk (unreleased changes)
     HDFS-985. HDFS should issue multiple RPCs for listing a large
     directory. (hairong)
 
+    HDFS-1043. NNThroughputBenchmark modifications to support benchmarking of
+    server-side user group resolution. (shv)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
