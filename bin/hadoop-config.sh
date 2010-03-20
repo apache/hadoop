@@ -115,6 +115,9 @@ fi
 if [ -d "$HADOOP_CORE_HOME/build/test/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/test/classes
 fi
+if [ -d "$HADOOP_CORE_HOME/build/test/core/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/test/core/classes
+fi
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
