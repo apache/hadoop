@@ -1148,6 +1148,12 @@ Release 0.21.0 - Unreleased
 
 Release 0.20.3 - Unreleased
 
+  NEW FEATURES
+
+    HADOOP-6637. Benchmark for establishing RPC session. (shv)
+
+  BUG FIXES
+
     HADOOP-5611. Fix C++ libraries to build on Debian Lenny. (Todd Lipcon
     via tomwhite)
 
