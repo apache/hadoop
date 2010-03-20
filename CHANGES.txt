@@ -205,6 +205,8 @@ Trunk (unreleased changes)
 
     HDFS-1015. Fix intermittent failure in TestSecurityTokenEditLog.
     (Jitendra Nath Pandey via suresh)
+
+    HDFS-939. libhdfs test is broken. (Eli Collins via tomwhite)
     
 Release 0.21.0 - Unreleased
 

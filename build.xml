@@ -97,7 +97,6 @@
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
   <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
 
-  <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
 
   <property name="web.src.dir" value="${basedir}/src/web"/>
@@ -1022,6 +1021,7 @@
  <target name="test-c++-libhdfs" depends="compile-c++-libhdfs, compile-core" if="islibhdfs" unless="clover.enabled">
     <delete dir="${test.libhdfs.dir}"/>
     <mkdir dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}/conf"/>
     <mkdir dir="${test.libhdfs.dir}/logs"/>
     <mkdir dir="${test.libhdfs.dir}/hdfs/name"/>
 
@@ -1031,8 +1031,9 @@
         <env key="JVM_ARCH" value="${jvm.arch}"/>
         <env key="LIBHDFS_BUILD_DIR" value="${build.c++.libhdfs}"/>
         <env key="HADOOP_HOME" value="${basedir}"/>
-        <env key="HADOOP_CONF_DIR" value="${test.libhdfs.conf.dir}"/>
+        <env key="HADOOP_CONF_DIR" value="${test.libhdfs.dir}/conf"/>
         <env key="HADOOP_LOG_DIR" value="${test.libhdfs.dir}/logs"/>
+        <env key="LIBHDFS_TEST_DIR" value="${test.libhdfs.dir}"/>
         <env key="LIBHDFS_SRC_DIR" value="${c++.libhdfs.src}"/>
         <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
         <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>

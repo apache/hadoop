@@ -36,6 +36,44 @@ HADOOP_BIN_DIR=$HADOOP_HOME/bin
 COMMON_BUILD_DIR=$HADOOP_HOME/build/ivy/lib/Hadoop-Hdfs/common
 COMMON_JAR=$COMMON_BUILD_DIR/hadoop-core-0.22.0-SNAPSHOT.jar
 
+cat > $HADOOP_CONF_DIR/core-site.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>file:///$LIBHDFS_TEST_DIR</value>
+</property>
+<property>
+  <name>fs.default.name</name>
+  <value>hdfs://localhost:23000/</value>
+</property>
+</configuration>
+EOF
+
+cat > $HADOOP_CONF_DIR/hdfs-site.xml <<EOF
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+<property>
+  <name>dfs.replication</name>
+  <value>1</value>
+</property>
+<property>
+  <name>dfs.support.append</name>
+  <value>true</value>
+</property>
+<property>
+  <name>dfs.namenode.logging.level</name>
+  <value>DEBUG</value>
+</property>
+</configuration>
+EOF
+
+cat > $HADOOP_CONF_DIR/slaves <<EOF
+localhost
+EOF
+
 # If we are running from the hdfs repo we need to create HADOOP_BIN_DIR.  
 # If the bin directory does not and we've got a core jar extract it's
 # bin directory to HADOOP_HOME/bin. The bin scripts hdfs-config.sh and
@@ -142,7 +180,8 @@ cd $HADOOP_HOME
 echo Y | $HADOOP_BIN_DIR/hdfs namenode -format &&
 $HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start namenode && sleep 2
 $HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start datanode && sleep 2
-sleep 20
+echo "Wait 30s for the datanode to start up..."
+sleep 30
 CLASSPATH=$CLASSPATH LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" $LIBHDFS_BUILD_DIR/$HDFS_TEST
 BUILD_STATUS=$?
 sleep 3
