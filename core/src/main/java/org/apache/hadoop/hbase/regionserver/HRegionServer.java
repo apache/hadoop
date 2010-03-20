@@ -1686,10 +1686,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       boolean writeToWAL = put.getWriteToWAL();
       region.put(put, getLockFromId(put.getLockId()), writeToWAL);
-
-      if (writeToWAL) {
-        this.syncWal(region);
-      }
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1723,11 +1719,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
-    // All have been processed successfully.
-
-    if (writeToWAL) {
-      this.syncWal(region);
-    }
     return -1;
   }
 
@@ -1758,7 +1749,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       boolean retval = region.checkAndPut(row, family, qualifier, value, put,
         getLockFromId(put.getLockId()), true);
-      this.syncWal(region);
       return retval;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -1912,7 +1902,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
       Integer lid = getLockFromId(delete.getLockId());
       region.delete(delete, lid, writeToWAL);
-      this.syncWal(region);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1944,8 +1933,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
-
-    this.syncWal(region);
     return -1;
   }
 
@@ -2382,14 +2369,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      long retval = region.incrementColumnValue(row, family, qualifier, amount,
-          writeToWAL);
-
-      if (writeToWAL) {
-        syncWal(region);
-      }
-
-      return retval;
+      return region.incrementColumnValue(row, family, qualifier, amount,
+        writeToWAL);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -2409,13 +2390,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
   /** {@inheritDoc} */
   public HServerInfo getHServerInfo() throws IOException {
     return serverInfo;
-  }
-
-  // Sync the WAL if the table permits it
-  private void syncWal(HRegion region) {
-    if(!region.getTableDesc().isDeferredLogFlush()) {
-      this.hlog.sync(region.getRegionInfo().isMetaRegion());
-    }
   }
 
   /**

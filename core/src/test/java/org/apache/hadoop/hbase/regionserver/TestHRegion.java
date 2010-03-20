@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -374,7 +376,9 @@ public class TestHRegion extends HBaseTestCase {
     //testing existing family
     byte [] family = fam2;
     try {
-      region.delete(family, kvs, true);
+      Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
+      deleteMap.put(family, kvs);
+      region.delete(deleteMap, true);
     } catch (Exception e) {
       assertTrue("Family " +new String(family)+ " does not exist", false);
     }
@@ -383,7 +387,9 @@ public class TestHRegion extends HBaseTestCase {
     boolean ok = false; 
     family = fam4;
     try {
-      region.delete(family, kvs, true);
+      Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
+      deleteMap.put(family, kvs);
+      region.delete(deleteMap, true);
     } catch (Exception e) {
       ok = true;
     }
@@ -605,7 +611,9 @@ public class TestHRegion extends HBaseTestCase {
     kvs.add(new KeyValue(row1, fam1, col2, null));
     kvs.add(new KeyValue(row1, fam1, col3, null));
 
-    region.delete(fam1, kvs, true);
+    Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
+    deleteMap.put(fam1, kvs);
+    region.delete(deleteMap, true);
 
     // extract the key values out the memstore:
     // This is kinda hacky, but better than nothing...

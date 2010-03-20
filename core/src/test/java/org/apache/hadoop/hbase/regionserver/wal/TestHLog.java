@@ -91,7 +91,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         for (int i = 0; i < howmany; i++) {
 
           for (int j = 0; j < howmany; j++) {
-            List<KeyValue> edit = new ArrayList<KeyValue>();
+            WALEdit edit = new WALEdit();
             byte [] family = Bytes.toBytes("column");
             byte [] qualifier = Bytes.toBytes(Integer.toString(j));
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
@@ -142,7 +142,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
                 null,null, false);
 
     for (int i = 0; i < total; i++) {
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
       wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
@@ -160,7 +160,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     // Add test that checks to see that an open of a Reader works on a file
     // that has had a sync done on it.
     for (int i = 0; i < total; i++) {
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
       wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
@@ -179,7 +179,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     // especially that we return good length on file.
     final byte [] value = new byte[1025 * 1024];  // Make a 1M value.
     for (int i = 0; i < total; i++) {
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, value));
       wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
@@ -236,7 +236,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         HLog.Entry entry = new HLog.Entry();
         while((entry = reader.next(entry)) != null) {
           HLogKey key = entry.getKey();
-          KeyValue kv = entry.getEdit();
+          WALEdit kv = entry.getEdit();
           String region = Bytes.toString(key.getRegionName());
           // Assert that all edits are for same region.
           if (previousRegion != null) {
@@ -245,7 +245,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           assertTrue(seqno < key.getLogSeqNum());
           seqno = key.getLogSeqNum();
           previousRegion = region;
-          System.out.println(key + " " + kv);
           count++;
         }
         assertEquals(howmany * howmany, count);
@@ -269,44 +268,49 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
       long timestamp = System.currentTimeMillis();
-      List<KeyValue> cols = new ArrayList<KeyValue>();
+      WALEdit cols = new WALEdit();
       for (int i = 0; i < COL_COUNT; i++) {
         cols.add(new KeyValue(row, Bytes.toBytes("column"), 
             Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
       HRegionInfo info = new HRegionInfo(new HTableDescriptor(tableName),
-                row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
+        row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
       final byte [] regionName = info.getRegionName();
       log.append(info, tableName, cols, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush();
-      log.completeCacheFlush(regionName, tableName, logSeqId);
+      log.completeCacheFlush(regionName, tableName, logSeqId, info.isMetaRegion());
       log.close();
       Path filename = log.computeFilename(log.getFilenum());
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);
-      HLog.Entry entry = new HLog.Entry();
-      for (int i = 0; i < COL_COUNT; i++) {
-        reader.next(entry);
+      // Above we added all columns on a single row so we only read one
+      // entry in the below... thats why we have '1'.
+      for (int i = 0; i < 1; i++) {
+        HLog.Entry entry = reader.next(null);
+        if (entry == null) break;
         HLogKey key = entry.getKey();
-        KeyValue val = entry.getEdit();
+        WALEdit val = entry.getEdit();
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
-        assertTrue(Bytes.equals(row, val.getRow()));
-        assertEquals((byte)(i + '0'), val.getValue()[0]);
+        KeyValue kv = val.getKeyValues().get(0);
+        assertTrue(Bytes.equals(row, kv.getRow()));
+        assertEquals((byte)(i + '0'), kv.getValue()[0]);
         System.out.println(key + " " + val);
       }
+      HLog.Entry entry = null;
       while ((entry = reader.next(null)) != null) {
         HLogKey key = entry.getKey();
-        KeyValue val = entry.getEdit();
+        WALEdit val = entry.getEdit();
         // Assert only one more row... the meta flushed row.
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
-        assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
-        assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
+        KeyValue kv = val.getKeyValues().get(0);
+        assertTrue(Bytes.equals(HLog.METAROW, kv.getRow()));
+        assertTrue(Bytes.equals(HLog.METAFAMILY, kv.getFamily()));
         assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
-          val.getValue()));
+          val.getKeyValues().get(0).getValue()));
         System.out.println(key + " " + val);
       }
     } finally {

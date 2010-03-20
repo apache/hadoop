@@ -6,8 +6,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.SequenceFile;
 
 public class SequenceFileLogReader implements HLog.Reader {
@@ -97,7 +97,7 @@ public class SequenceFileLogReader implements HLog.Reader {
   public HLog.Entry next(HLog.Entry reuse) throws IOException {
     if (reuse == null) {
       HLogKey key = HLog.newKey(conf);
-      KeyValue val = new KeyValue();
+      WALEdit val = new WALEdit();
       if (reader.next(key, val)) {
         return new HLog.Entry(key, val);
       }

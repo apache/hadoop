@@ -45,6 +45,7 @@ package org.apache.hadoop.hbase.regionserver;
  import org.apache.hadoop.hbase.io.hfile.BlockCache;
  import org.apache.hadoop.hbase.ipc.HRegionInterface;
  import org.apache.hadoop.hbase.regionserver.wal.HLog;
+ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  import org.apache.hadoop.hbase.util.Bytes;
  import org.apache.hadoop.hbase.util.ClassSize;
  import org.apache.hadoop.hbase.util.FSUtils;
@@ -58,6 +59,7 @@ package org.apache.hadoop.hbase.regionserver;
  import java.util.Iterator;
  import java.util.List;
  import java.util.Map;
+ import java.util.HashMap;
  import java.util.Set;
  import java.util.NavigableSet;
  import java.util.TreeMap;
@@ -68,7 +70,7 @@ package org.apache.hadoop.hbase.regionserver;
  import java.util.concurrent.ConcurrentSkipListMap;
  import java.util.concurrent.atomic.AtomicBoolean;
  import java.util.concurrent.atomic.AtomicLong;
- import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -986,7 +988,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     //     and that all updates to the log for this regionName that have lower 
     //     log-sequence-ids can be safely ignored.
     this.log.completeCacheFlush(getRegionName(),
-        regionInfo.getTableDesc().getName(), completeSequenceId);
+        regionInfo.getTableDesc().getName(), completeSequenceId,
+        this.getRegionInfo().isMetaRegion());
 
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
@@ -1140,11 +1143,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           checkFamily(family);
         }
       }
-      
-      for(Map.Entry<byte[], List<KeyValue>> e: delete.getFamilyMap().entrySet()) {
-        byte [] family = e.getKey();
-        delete(family, e.getValue(), writeToWAL);
-      }
+
+      // All edits for the given row (across all column families) must happen atomically.
+      delete(delete.getFamilyMap(), writeToWAL);
+
     } finally {
       if(lockid == null) releaseRowLock(lid);
       splitsAndClosesLock.readLock().unlock();
@@ -1153,12 +1155,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   
   
   /**
-   * @param family
-   * @param kvs
+   * @param familyMap map of family to edits for the given family.
    * @param writeToWAL
    * @throws IOException
    */
-  public void delete(byte [] family, List<KeyValue> kvs, boolean writeToWAL)
+  public void delete(Map<byte[], List<KeyValue>> familyMap, boolean writeToWAL)
   throws IOException {
     long now = System.currentTimeMillis();
     byte [] byteNow = Bytes.toBytes(now);
@@ -1166,46 +1167,69 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.updatesLock.readLock().lock();
 
     try {
-      long size = 0;
-      Store store = getStore(family);
-      Iterator<KeyValue> kvIterator = kvs.iterator();
-      while(kvIterator.hasNext()) {
-        KeyValue kv = kvIterator.next();
-        // Check if time is LATEST, change to time of most recent addition if so
-        // This is expensive.
-        if (kv.isLatestTimestamp() && kv.isDeleteType()) {
-          List<KeyValue> result = new ArrayList<KeyValue>(1);
-          Get g = new Get(kv.getRow());
-          NavigableSet<byte []> qualifiers =
-            new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-          byte [] q = kv.getQualifier();
-          if(q == null) q = HConstants.EMPTY_BYTE_ARRAY;
-          qualifiers.add(q);
-          get(store, g, qualifiers, result);
-          if (result.isEmpty()) {
-            // Nothing to delete
-            kvIterator.remove();
-            continue;
-          }
-          if (result.size() > 1) {
-            throw new RuntimeException("Unexpected size: " + result.size());
-          }
-          KeyValue getkv = result.get(0);
-          Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
-            getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
-        } else {
-          kv.updateLatestStamp(byteNow);
-        }
-        
-        // We must do this in this loop because it could affect 
-        // the above get to find the next timestamp to remove. 
-        // This is the case when there are multiple deletes for the same column.
-        size = this.memstoreSize.addAndGet(store.delete(kv));  
-      }
-      
       if (writeToWAL) {
-        this.log.append(regionInfo,
-          regionInfo.getTableDesc().getName(), kvs, now);
+        //
+        // write/sync to WAL should happen before we touch memstore.
+        //
+        // If order is reversed, i.e. we write to memstore first, and
+        // for some reason fail to write/sync to commit log, the memstore
+        // will contain uncommitted transactions.
+        //
+
+        // bunch up all edits across all column families into a
+        // single WALEdit.
+        WALEdit walEdit = new WALEdit();
+        for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+          List<KeyValue> kvs = e.getValue();
+          for (KeyValue kv : kvs) {
+            walEdit.add(kv);
+          }
+        }
+        // append the edit to WAL. The append also does the sync.
+        if (!walEdit.isEmpty()) {
+          this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+            walEdit, now);
+        }
+      }
+
+      long size = 0;
+
+      //
+      // Now make changes to the memstore.
+      //
+      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+
+        byte[] family = e.getKey(); 
+        List<KeyValue> kvs = e.getValue();
+        
+        Store store = getStore(family);
+        for (KeyValue kv: kvs) {
+          //  Check if time is LATEST, change to time of most recent addition if so
+          //  This is expensive.
+          if (kv.isLatestTimestamp() && kv.isDeleteType()) {
+            List<KeyValue> result = new ArrayList<KeyValue>(1);
+            Get g = new Get(kv.getRow());
+            NavigableSet<byte []> qualifiers =
+              new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+              byte [] q = kv.getQualifier();
+              if(q == null) q = HConstants.EMPTY_BYTE_ARRAY;
+              qualifiers.add(q);
+              get(store, g, qualifiers, result);
+              if (result.isEmpty()) {
+                // Nothing to delete
+                continue;
+              }
+              if (result.size() > 1) {
+                throw new RuntimeException("Unexpected size: " + result.size());
+              }
+              KeyValue getkv = result.get(0);
+              Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
+                  getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+          } else {
+            kv.updateLatestStamp(byteNow);
+          }
+          size = this.memstoreSize.addAndGet(store.delete(kv));
+        }
       }
       flush = isFlushSize(size);
     } finally {
@@ -1270,15 +1294,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       Integer lid = getLock(lockid, row);
       byte [] now = Bytes.toBytes(System.currentTimeMillis());
       try {
-        for (Map.Entry<byte[], List<KeyValue>> entry:
-            put.getFamilyMap().entrySet()) {
-          byte [] family = entry.getKey();
-          checkFamily(family);
-          List<KeyValue> puts = entry.getValue();
-          if (updateKeys(puts, now)) {
-            put(family, puts, writeToWAL);
-          }
-        }
+        // All edits for the given row (across all column families) must happen atomically.
+        put(put.getFamilyMap(), writeToWAL);
       } finally {
         if(lockid == null) releaseRowLock(lid);
       }
@@ -1337,16 +1354,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           matches = Bytes.equals(expectedValue, actualValue);
         }
         //If matches put the new put
-        if(matches) {
-          for(Map.Entry<byte[], List<KeyValue>> entry :
-            put.getFamilyMap().entrySet()) {
-            byte [] fam = entry.getKey();
-            checkFamily(fam);
-            List<KeyValue> puts = entry.getValue();
-            if(updateKeys(puts, now)) {
-              put(fam, puts, writeToWAL);
-            }
-          }
+        if (matches) {
+          // All edits for the given row (across all column families) must happen atomically.
+          put(put.getFamilyMap(), writeToWAL);
           return true;  
         }
         return false;
@@ -1456,34 +1466,74 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   private void put(final byte [] family, final List<KeyValue> edits)
   throws IOException {
-    this.put(family, edits, true);
+    Map<byte[], List<KeyValue>> familyMap = new HashMap<byte[], List<KeyValue>>();
+    familyMap.put(family, edits);
+    this.put(familyMap, true);
   }
 
   /** 
    * Add updates first to the hlog (if writeToWal) and then add values to memstore.
    * Warning: Assumption is caller has lock on passed in row.
-   * @param family
-   * @param edits
+   * @param familyMap map of family to edits for the given family.
    * @param writeToWAL if true, then we should write to the log
    * @throws IOException
    */
-  private void put(final byte [] family, final List<KeyValue> edits, 
-      boolean writeToWAL) throws IOException {
-    if (edits == null || edits.isEmpty()) {
-      return;
-    }
+  private void put(final Map<byte [], List<KeyValue>> familyMap,
+      boolean writeToWAL)
+  throws IOException {
+    long now = System.currentTimeMillis();
+    byte[] byteNow = Bytes.toBytes(now);
     boolean flush = false;
     this.updatesLock.readLock().lock();
     try {
-      if (writeToWAL) {
-        long now = System.currentTimeMillis();
-        this.log.append(regionInfo,
-          regionInfo.getTableDesc().getName(), edits, now);
+      WALEdit walEdit = new WALEdit();
+      
+      // check if column families are valid;
+      // check if any timestampupdates are needed;
+      // and if writeToWAL is set, then also collapse edits into a single list.
+      for (Map.Entry<byte[], List<KeyValue>> e: familyMap.entrySet()) {
+        List<KeyValue> edits = e.getValue();
+        byte[] family = e.getKey();
+
+        // is this a valid column family?
+        checkFamily(family);
+
+        // update timestamp on keys if required.
+        if (updateKeys(edits, byteNow)) {
+          if (writeToWAL) {
+            // bunch up all edits across all column families into a 
+            // single WALEdit.
+            for (KeyValue kv : edits) {
+              walEdit.add(kv);
+            }
+          }
+        }
       }
+
+      // append to and sync WAL
+      if (!walEdit.isEmpty()) {
+        //
+        // write/sync to WAL should happen before we touch memstore.
+        //
+        // If order is reversed, i.e. we write to memstore first, and
+        // for some reason fail to write/sync to commit log, the memstore
+        // will contain uncommitted transactions.
+        //
+
+        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+           walEdit, now);
+      }
+
       long size = 0;
-      Store store = getStore(family);
-      for (KeyValue kv: edits) {
-        size = this.memstoreSize.addAndGet(store.add(kv));
+      // now make changes to the memstore
+      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+        byte[] family = e.getKey(); 
+        List<KeyValue> edits = e.getValue();
+
+        Store store = getStore(family);
+        for (KeyValue kv: edits) {
+          size = this.memstoreSize.addAndGet(store.add(kv));
+        }
       }
       flush = isFlushSize(size);
     } finally {
@@ -2402,10 +2452,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // now log it:
       if (writeToWAL) {
         long now = System.currentTimeMillis();
-        List<KeyValue> edits = new ArrayList<KeyValue>(1);
-        edits.add(newKv);
-        this.log.append(regionInfo,
-          regionInfo.getTableDesc().getName(), edits, now);
+        WALEdit walEdit = new WALEdit();
+        walEdit.add(newKv);
+        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+          walEdit, now);
       }
 
       // Now request the ICV to the store, this will set the timestamp
@@ -2460,7 +2510,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         (5 * Bytes.SIZEOF_BOOLEAN)) +
         (3 * ClassSize.REENTRANT_LOCK));
   
-  @Override
   public long heapSize() {
     long heapSize = DEEP_OVERHEAD;
     for(Store store : this.stores.values()) {

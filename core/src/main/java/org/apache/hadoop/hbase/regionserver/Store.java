@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -294,7 +295,7 @@ public class Store implements HConstants, HeapSize {
    *
    * We can ignore any log message that has a sequence ID that's equal to or 
    * lower than maxSeqID.  (Because we know such log messages are already 
-   * reflected in the MapFiles.)
+   * reflected in the HFiles.)
    *
    * @return the new max sequence id as per the log, or -1 if no log recovered
    */
@@ -324,9 +325,17 @@ public class Store implements HConstants, HeapSize {
       int reportInterval =
         this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
       HLog.Entry entry;
+      // TBD: Need to add an exception handler around logReader.next.
+      //
+      // A transaction now appears as a single edit. If logReader.next()
+      // returns an exception, then it must be a incomplete/partial
+      // transaction at the end of the file. Rather than bubble up
+      // the exception, we should catch it and simply ignore the
+      // partial transaction during this recovery phase.
+      //
       while ((entry = logReader.next()) != null) {
         HLogKey key = entry.getKey();
-        KeyValue val = entry.getEdit();
+        WALEdit val = entry.getEdit();
         if (firstSeqIdInLog == -1) {
           firstSeqIdInLog = key.getLogSeqNum();
         }
@@ -335,27 +344,28 @@ public class Store implements HConstants, HeapSize {
           skippedEdits++;
           continue;
         }
-        // Check this edit is for me. Also, guard against writing the special
-        // METACOLUMN info such as HBASE::CACHEFLUSH entries
-        if (val.matchingFamily(HLog.METAFAMILY) ||
-          !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
-          !val.matchingFamily(family.getName())) {
-          continue;
-        }
 
-        if (val.isDelete()) {
-          this.memstore.delete(val);
-        } else {
-          this.memstore.add(val);
-        }
-        editsCount++;
+        for (KeyValue kv : val.getKeyValues()) {
+          // Check this edit is for me. Also, guard against writing the special
+          // METACOLUMN info such as HBASE::CACHEFLUSH entries
+          if (kv.matchingFamily(HLog.METAFAMILY) ||
+              !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
+              !kv.matchingFamily(family.getName())) {
+              continue;
+            }
+          if (kv.isDelete()) {
+            this.memstore.delete(kv);
+          } else {
+            this.memstore.add(kv);
+          }
+          editsCount++;
+       }
+
         // Every 2k edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.
         if (reporter != null && (editsCount % reportInterval) == 0) {
           reporter.progress();
         }
-        // Instantiate a new KeyValue to perform Writable on
-        val = new KeyValue();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
@@ -856,7 +866,6 @@ public class Store implements HConstants, HeapSize {
   /**
    * Do a minor/major compaction.  Uses the scan infrastructure to make it easy.
    * 
-   * @param writer output writer
    * @param filesToCompact which files to compact
    * @param majorCompaction true to major compact (prune all deletes, max versions, etc)
    * @param maxId Readers maximum sequence id.

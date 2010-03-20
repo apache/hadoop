@@ -54,13 +54,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.transactional.HBaseBackedTransactionLogger;
 import org.apache.hadoop.hbase.client.transactional.UnknownTransactionException;
 import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
-import org.apache.hadoop.hbase.regionserver.FlushRequester;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.regionserver.transactional.TransactionState.Status;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.*;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -142,20 +138,23 @@ public class TransactionalRegion extends HRegion {
     }
         
     THLogRecoveryManager recoveryManager = new THLogRecoveryManager(this);
-    Map<Long, List<KeyValue>> commitedTransactionsById = recoveryManager
+    Map<Long, List<WALEdit>> commitedTransactionsById = recoveryManager
         .getCommitsFromLog(oldLogFile, minSeqId, reporter);
 
     if (commitedTransactionsById != null && commitedTransactionsById.size() > 0) {
       LOG.debug("found " + commitedTransactionsById.size()
           + " COMMITED transactions to recover.");
 
-      for (Entry<Long, List<KeyValue>> entry : commitedTransactionsById
+      for (Entry<Long, List<WALEdit>> entry : commitedTransactionsById
           .entrySet()) {
         LOG.debug("Writing " + entry.getValue().size()
             + " updates for transaction " + entry.getKey());
-        for (KeyValue b : entry.getValue()) {
-          Put put = new Put(b.getRow());
-          put.add(b);
+        for (WALEdit b : entry.getValue()) {
+          Put put = null;
+          for (KeyValue kv: b.getKeyValues()) {
+            if (put == null) put = new Put(kv.getRow());
+            put.add(kv);
+          }
           super.put(put, true); // These are walled so they live forever
         }
       }

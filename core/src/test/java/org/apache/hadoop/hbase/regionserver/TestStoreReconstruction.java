@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.*;
@@ -111,24 +112,24 @@ public class TestStoreReconstruction {
     final byte[] regionName = info.getRegionName();
 
     // Add 10 000 edits to HLog on the good family
-    List<KeyValue> edit = new ArrayList<KeyValue>();
     for (int j = 0; j < TOTAL_EDITS; j++) {
       byte[] qualifier = Bytes.toBytes(Integer.toString(j));
       byte[] column = Bytes.toBytes("column:" + Integer.toString(j));
+      WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifier,
           System.currentTimeMillis(), column));
       log.append(info, tableName, edit,
           System.currentTimeMillis());
-      edit.clear();
     }
     // Add a cache flush, shouldn't have any effect
     long logSeqId = log.startCacheFlush();
-    log.completeCacheFlush(regionName, tableName, logSeqId);
+    log.completeCacheFlush(regionName, tableName, logSeqId, info.isMetaRegion());
 
     // Add an edit to another family, should be skipped.
+    WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
           System.currentTimeMillis(), rowName));
-      log.append(info, tableName, edit,
+    log.append(info, tableName, edit,
           System.currentTimeMillis());
     log.sync();
 

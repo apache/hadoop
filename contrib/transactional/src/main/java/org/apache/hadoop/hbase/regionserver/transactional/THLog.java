@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
  * Add support for transactional operations to the regionserver's
@@ -84,16 +85,17 @@ class THLog extends HLog {
    */
   public void append(HRegionInfo regionInfo, long now, THLogKey.TrxOp txOp,
       long transactionId) throws IOException {
-    THLogKey key = new THLogKey(regionInfo.getRegionName(), regionInfo
-        .getTableDesc().getName(), -1, now, txOp, transactionId);
-    super.append(regionInfo, key, new KeyValue(new byte [0], 0, 0)); // Empty KeyValue 
+    THLogKey key = new THLogKey(regionInfo.getRegionName(),
+      regionInfo.getTableDesc().getName(), -1, now, txOp, transactionId);
+    WALEdit e = new WALEdit();
+    e.add(new KeyValue(new byte [0], 0, 0)); // Empty KeyValue
+    super.append(regionInfo, key, e, regionInfo.isMetaRegion());
   }
 
   /**
    * Write a transactional update to the log.
    * 
    * @param regionInfo
-   * @param now
    * @param update
    * @param transactionId
    * @throws IOException
@@ -108,7 +110,9 @@ class THLog extends HLog {
         transactionId);
 
     for (KeyValue value : convertToKeyValues(update)) {
-      super.append(regionInfo, key, value);
+      WALEdit e = new WALEdit();
+      e.add(value);
+      super.append(regionInfo, key, e, regionInfo.isMetaRegion());
     }
   }
 
@@ -116,8 +120,7 @@ class THLog extends HLog {
    * Write a transactional delete to the log.
    * 
    * @param regionInfo
-   * @param now
-   * @param update
+   * @param delete
    * @param transactionId
    * @throws IOException
    */
@@ -131,7 +134,9 @@ class THLog extends HLog {
         transactionId);
 
     for (KeyValue value : convertToKeyValues(delete)) {
-      super.append(regionInfo, key, value);
+      WALEdit e = new WALEdit();
+      e.add(value);
+      super.append(regionInfo, key, e, regionInfo.isMetaRegion());
     }
   }
 

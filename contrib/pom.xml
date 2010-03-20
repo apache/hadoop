@@ -13,7 +13,10 @@
   </parent>
   
   <modules>
-    <module>mdc_replication</module>
+<!-- Commenting out for the moment.  This is being rewritten.  Will then pick up new WALEdit hlog value
+      <module>mdc_replication</module>
+    St.Ack Fri Mar 19 13:20:15 PDT 2010
+ -->
     <module>stargate</module>
     <module>transactional</module>
   </modules>

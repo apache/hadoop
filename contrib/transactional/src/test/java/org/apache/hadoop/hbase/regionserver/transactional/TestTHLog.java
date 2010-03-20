@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
@@ -105,7 +106,7 @@ public class TestTHLog extends HBaseTestCase implements
     log.close();
     Path filename = log.computeFilename(log.getFilenum());
 
-    Map<Long, List<KeyValue>> commits = logRecoveryMangaer.getCommitsFromLog(
+    Map<Long, List<WALEdit>> commits = logRecoveryMangaer.getCommitsFromLog(
         filename, -1, null);
 
     assertNull(commits);
@@ -135,7 +136,7 @@ public class TestTHLog extends HBaseTestCase implements
     log.close();
     Path filename = log.computeFilename(log.getFilenum());
 
-    Map<Long, List<KeyValue>> commits = logRecoveryMangaer.getCommitsFromLog(
+    Map<Long, List<WALEdit>> commits = logRecoveryMangaer.getCommitsFromLog(
         filename, -1, null);
 
     assertNull(commits);
@@ -170,7 +171,7 @@ public class TestTHLog extends HBaseTestCase implements
     log.close();
     Path filename = log.computeFilename(log.getFilenum());
 
-    Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
+    Map<Long, List<WALEdit>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
     assertNull(commits);
@@ -205,7 +206,7 @@ public class TestTHLog extends HBaseTestCase implements
     log.close();
     Path filename = log.computeFilename(log.getFilenum());
 
-    Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
+    Map<Long, List<WALEdit>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
     assertNull(commits);
@@ -240,7 +241,7 @@ public class TestTHLog extends HBaseTestCase implements
     log.close();
     Path filename = log.computeFilename(log.getFilenum());
 
-    Map<Long, List<KeyValue>> commits = logMangaer.getCommitsFromLog(filename,
+    Map<Long, List<WALEdit>> commits = logMangaer.getCommitsFromLog(filename,
         -1, null);
 
     assertNull(commits);
