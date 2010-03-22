@@ -66,9 +66,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
   @Override
   public void sync() throws IOException {
     this.writer.sync();
-    if (this.writer_out != null) {
-      this.writer_out.hflush();
-    }
+
+    this.writer.syncFs();
   }
 
 }

@@ -1029,8 +1029,7 @@ public class HLog implements HConstants, Syncable {
    * @throws IOException
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
-    Path oldLogDir, final FileSystem fs, final Configuration conf)
-    throws IOException {
+    Path oldLogDir, final FileSystem fs, final Configuration conf) throws IOException {
     
     long millis = System.currentTimeMillis();
     List<Path> splits = null;

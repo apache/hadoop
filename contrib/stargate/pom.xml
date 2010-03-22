@@ -19,6 +19,7 @@
     <jersey.version>1.1.4.1</jersey.version>
     <json.version>20090211</json.version>
     <hsqldb.version>1.8.0.10</hsqldb.version>
+    <commons-httpclient.version>3.0.1</commons-httpclient.version>
   </properties>
 
   <build>
@@ -45,11 +46,9 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core-test</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-test</artifactId>
+      <artifactId>hadoop-test</artifactId>
+      <version>${hadoop.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>javax.ws.rs</groupId>
@@ -70,6 +69,11 @@
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-server</artifactId>
       <version>${jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-httpclient</groupId>
+      <artifactId>commons-httpclient</artifactId>
+      <version>${commons-httpclient.version}</version>
     </dependency>
     <dependency>
       <groupId>org.json</groupId>

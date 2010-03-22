@@ -179,63 +179,50 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapred</artifactId>
-      <version>${hadoop-mapred.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>ant</groupId>
-          <artifactId>ant</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty</artifactId>
+      <version>${jetty.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapred-test</artifactId>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+      <version>${jetty.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs</artifactId>
-      <version>${hadoop-hdfs.version}</version>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>servlet-api-2.5</artifactId>
+      <version>${jetty.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-test</artifactId>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jsp-2.1</artifactId>
+      <version>${jetty.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jsp-api-2.1</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>tomcat</groupId>
+      <artifactId>jasper-runtime</artifactId>
+      <version>${jasper.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>tomcat</groupId>
+      <artifactId>jasper-compiler</artifactId>
+      <version>${jasper.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
-      <version>${hadoop-core.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>ant</groupId>
-          <artifactId>ant</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer-ant</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>hsqldb</groupId>
-          <artifactId>hsqldb</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.sf.kosmosfs</groupId>
-          <artifactId>kfs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.java.dev.jets3t</groupId>
-          <artifactId>jets3t</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core-test</artifactId>
+      <artifactId>hadoop-test</artifactId>
+      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.thrift</groupId>
@@ -259,17 +246,35 @@
       <version>${commons-lang.version}</version>
     </dependency>
     <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>slf4j-api</artifactId>
-     <version>${slf4j.version}</version>
-   </dependency>
-   <dependency>
-     <groupId>org.slf4j</groupId>
-     <artifactId>slf4j-log4j12</artifactId>
-     <version>${slf4j.version}</version>
-   </dependency>
-   <dependency>
-     <groupId>org.jruby</groupId>
+      <groupId>commons-cli</groupId>
+      <artifactId>commons-cli</artifactId>
+      <version>${commons-cli.version}</version>
+    </dependency>
+    
+    <!-- 
+    
+      TODO mention to Hbase team to tell the avro team about this problem,
+      hbase-core depends on hadoop, which then:
+      [INFO] |  \- org.apache.hadoop:avro:jar:1.2.0:compile
+      [INFO] |     +- org.slf4j:slf4j-simple:jar:1.5.8:compile
+      [INFO] |     |  \- org.slf4j:slf4j-api:jar:1.5.2:compile
+      
+      see: https://forum.hibernate.org/viewtopic.php?p=2400801 and http://old.nabble.com/org.slf4j.impl.StaticLoggerBinder.SINGLETON-td20987705.html
+      
+      upgrading to 1.5.6 will fix this
+    -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jruby</groupId>
       <artifactId>jruby-complete</artifactId>
       <version>${jruby.version}</version>
     </dependency>

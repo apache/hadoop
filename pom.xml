@@ -158,12 +158,14 @@
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+    <hadoop.version>0.20.2-with-200-826</hadoop.version>
+    
     <log4j.version>1.2.15</log4j.version>
+    <jetty.version>6.1.14</jetty.version>
+    <jasper.version>5.5.12</jasper.version>
     <commons-lang.version>2.4</commons-lang.version>
     <commons-math.version>2.0</commons-math.version>
-    <hadoop-core.version>0.21.0-SNAPSHOT</hadoop-core.version>
-    <hadoop-hdfs.version>0.21.0-SNAPSHOT</hadoop-hdfs.version>
-    <hadoop-mapred.version>0.21.0-SNAPSHOT</hadoop-mapred.version>
+    <commons-cli.version>1.2</commons-cli.version>
     <!-- TODO specify external repositories - Note the following 2 resources are not downloadable from a public repository, you'll need to place these manually by using 'mvn install:file' or use something like Nexus as a repository manager -->
     <zookeeper.version>3.2.2</zookeeper.version>
     <thrift.version>0.2.0</thrift.version>
@@ -173,28 +175,6 @@
   </properties>
 
   <repositories>
-    <repository>
-      <id>asf-releases</id>
-      <name>Apache Public Releases</name>
-      <url>https://repository.apache.org/content/repositories/releases/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>asf-snapshots</id>
-      <name>Apache Public Snapshots</name>
-      <url>https://repository.apache.org/content/repositories/snapshots/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
     <repository>
       <id>java.net</id>
       <name>Java.Net</name>
@@ -209,7 +189,7 @@
     <repository>
       <id>googlecode</id>
       <name>Google Code</name>
-      <url>http://google-maven-repository.googlecode.com/svn/repository</url>
+      <url>http://google-maven-repository.googlecode.com/svn/repository/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -228,11 +208,10 @@
         <enabled>true</enabled>
       </releases>
     </repository>
-    <!-- TODO replace this with a 'proper' repository, even if it's just @stacks version of this. -->
     <repository>
-      <id>misc</id>
-      <name>Miscellaneous (Stuff for Zookeeper and Thrift)</name>
-      <url>http://people.apache.org/~psmith/hbase/repo</url>
+      <id>temp-hadoop</id>
+      <name>Hadoop 0.20.1/2 packaging, thrift, zk</name>
+      <url>http://people.apache.org/~rawson/repo/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -329,20 +308,8 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-core-test</artifactId>
-        <version>${hadoop-core.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-hdfs-test</artifactId>
-        <version>${hadoop-hdfs.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-mapred-test</artifactId>
-        <version>${hadoop-mapred.version}</version>
+        <artifactId>hadoop-test</artifactId>
+        <version>${hadoop.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
@@ -354,8 +353,7 @@ public class TestTableInputFormatScan {
     FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));      
     LOG.info("Started " + job.getJobName());
     job.waitForCompletion(true);
-    LOG.info("Job status: " + job.getStatus());
-    assertTrue(job.getStatus().getState() == JobStatus.State.SUCCEEDED);
+    assertTrue(job.isComplete());
     LOG.info("After map/reduce completion - job " + jobName);
   }
 }

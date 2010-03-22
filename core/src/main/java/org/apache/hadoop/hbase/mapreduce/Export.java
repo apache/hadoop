@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -79,8 +78,7 @@ public class Export {
   throws IOException {
     String tableName = args[0];
     Path outputDir = new Path(args[1]);
-    Cluster mrCluster = new Cluster(conf);
-    Job job = Job.getInstance(mrCluster, conf);
+    Job job = new Job(conf, NAME + "_" + tableName);
     job.setJobName(NAME + "_" + tableName);
     job.setJarByClass(Exporter.class);
     // TODO: Allow passing filter and subset of rows/columns.

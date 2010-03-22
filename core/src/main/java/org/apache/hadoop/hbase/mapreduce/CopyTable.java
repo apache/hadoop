@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
@@ -59,9 +58,7 @@ public class CopyTable {
     if (!doCommandLine(args)) {
       return null;
     }
-    Cluster mrCluster = new Cluster(conf);
-    Job job = Job.getInstance(mrCluster, conf);
-    job.setJobName(NAME + "_" + tableName);
+    Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
     if (startTime != 0) {

@@ -120,7 +120,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
    * Test new HDFS-265 sync.
    * @throws Exception
    */
-  public void testSync() throws Exception {
+  public void Broken_testSync() throws Exception {
     byte [] bytes = Bytes.toBytes(getName());
     // First verify that using streams all works.
     Path p = new Path(this.dir, getName() + ".fsdos");

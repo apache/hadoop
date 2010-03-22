@@ -50,7 +50,8 @@ public class TestStoreReconstruction {
    * @throws java.lang.Exception
    */
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception { }
+  public static void setUpBeforeClass() throws Exception {
+  }
 
   /**
    * @throws java.lang.Exception
@@ -104,8 +105,7 @@ public class TestStoreReconstruction {
     List<KeyValue> result = new ArrayList<KeyValue>();
 
     // Empty set to get all columns
-    NavigableSet<byte[]> qualifiers =
-    new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
 
     final byte[] tableName = Bytes.toBytes(TABLE);
     final byte[] rowName = tableName;
@@ -133,12 +133,15 @@ public class TestStoreReconstruction {
           System.currentTimeMillis());
     log.sync();
 
+    // TODO dont close the file here.
+    log.close();
+
     List<Path> splits =
         HLog.splitLog(new Path(conf.get(HConstants.HBASE_DIR)),
             this.dir, oldLogDir, cluster.getFileSystem(), conf);
 
     // Split should generate only 1 file since there's only 1 region
-    assertTrue(splits.size() == 1);
+    assertEquals(1, splits.size());
 
     // Make sure the file exists
     assertTrue(cluster.getFileSystem().exists(splits.get(0)));
@@ -150,6 +153,6 @@ public class TestStoreReconstruction {
     Get get = new Get(rowName);
     store.get(get, qualifiers, result);
     // Make sure we only see the good edits
-    assertEquals(result.size(), TOTAL_EDITS);
+    assertEquals(TOTAL_EDITS, result.size());
   }
 }
