@@ -124,7 +124,7 @@ implements Configurable
     if (args.size() == 0) {
       return null;
     }
-    StringBuffer allOutput = new StringBuffer();
+    StringBuilder allOutput = new StringBuilder();
     int numProcessed = 0;
     if (maxArgs < MIN_ALLOWABLE_ARGS) {
       LOG.warn("Invalid value " + Integer.toString(maxArgs)

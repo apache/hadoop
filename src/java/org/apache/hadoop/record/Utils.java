@@ -45,7 +45,7 @@ public class Utils {
    * @return
    */
   static String toXMLString(String s) {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     for (int idx = 0; idx < s.length(); idx++) {
       char ch = s.charAt(idx);
       if (ch == '<') {
@@ -86,7 +86,7 @@ public class Utils {
    * @return
    */
   static String fromXMLString(String s) {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     for (int idx = 0; idx < s.length();) {
       char ch = s.charAt(idx++);
       if (ch == '%') {
@@ -109,7 +109,7 @@ public class Utils {
    * @return
    */
   static String toCSVString(String s) {
-    StringBuffer sb = new StringBuffer(s.length()+1);
+    StringBuilder sb = new StringBuilder(s.length()+1);
     sb.append('\'');
     int len = s.length();
     for (int i = 0; i < len; i++) {
@@ -151,7 +151,7 @@ public class Utils {
       throw new IOException("Error deserializing string.");
     }
     int len = s.length();
-    StringBuffer sb = new StringBuffer(len-1);
+    StringBuilder sb = new StringBuilder(len-1);
     for (int i = 1; i < len; i++) {
       char c = s.charAt(i);
       if (c == '%') {
@@ -214,7 +214,7 @@ public class Utils {
    * @return
    */
   static String toCSVBuffer(Buffer buf) {
-    StringBuffer sb = new StringBuffer("#");
+    StringBuilder sb = new StringBuilder("#");
     sb.append(buf.toString());
     return sb.toString();
   }

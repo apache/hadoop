@@ -934,7 +934,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     
     @Override
     public String toString() {
-      StringBuffer result = new StringBuffer();
+      StringBuilder result = new StringBuilder();
       boolean first = true;
       for(Range r: ranges) {
         if (first) {
@@ -1846,7 +1846,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("Configuration: ");
     if(loadDefaults) {
       toString(defaultResources, sb);
@@ -1858,8 +1858,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return sb.toString();
   }
 
-  private void toString(List resources, StringBuffer sb) {
-    ListIterator i = resources.listIterator();
+  private <T> void toString(List<T> resources, StringBuilder sb) {
+    ListIterator<T> i = resources.listIterator();
     while (i.hasNext()) {
       if (i.nextIndex() != 0) {
         sb.append(", ");

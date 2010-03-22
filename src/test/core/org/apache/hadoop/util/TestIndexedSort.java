@@ -294,7 +294,7 @@ public class TestIndexedSort extends TestCase {
       seed = r.nextLong();
       r.setSeed(seed);
       Text t = new Text();
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       indices = new int[j];
       offsets = new int[j];
       check = new String[j];
@@ -315,7 +315,7 @@ public class TestIndexedSort extends TestCase {
       return seed;
     }
 
-    private static void genRandom(Text t, int len, StringBuffer sb) {
+    private static void genRandom(Text t, int len, StringBuilder sb) {
       sb.setLength(0);
       for (int i = 0; i < len; ++i) {
         sb.append(Integer.toString(r.nextInt(26) + 10, 36));

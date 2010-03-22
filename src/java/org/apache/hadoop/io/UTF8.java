@@ -132,7 +132,7 @@ public class UTF8 implements WritableComparable {
 
   /** Convert to a String. */
   public String toString() {
-    StringBuffer buffer = new StringBuffer(length);
+    StringBuilder buffer = new StringBuilder(length);
     try {
       synchronized (IBUF) {
         IBUF.reset(bytes, length);
@@ -204,12 +204,12 @@ public class UTF8 implements WritableComparable {
    */
   public static String readString(DataInput in) throws IOException {
     int bytes = in.readUnsignedShort();
-    StringBuffer buffer = new StringBuffer(bytes);
+    StringBuilder buffer = new StringBuilder(bytes);
     readChars(in, buffer, bytes);
     return buffer.toString();
   }
 
-  private static void readChars(DataInput in, StringBuffer buffer, int nBytes)
+  private static void readChars(DataInput in, StringBuilder buffer, int nBytes)
     throws IOException {
     DataOutputBuffer obuf = OBUF_FACTORY.get();
     obuf.reset();

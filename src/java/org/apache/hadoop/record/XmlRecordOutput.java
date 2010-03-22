@@ -41,7 +41,7 @@ public class XmlRecordOutput implements RecordOutput {
   private Stack<String> compoundStack;
     
   private void putIndent() {
-    StringBuffer sb = new StringBuffer("");
+    StringBuilder sb = new StringBuilder("");
     for (int idx = 0; idx < indent; idx++) {
       sb.append("  ");
     }

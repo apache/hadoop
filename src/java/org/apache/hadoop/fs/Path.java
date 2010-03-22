@@ -238,7 +238,7 @@ public class Path implements Comparable {
   public String toString() {
     // we can't use uri.toString(), which escapes everything, because we want
     // illegal characters unescaped in the string, for glob processing, etc.
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     if (uri.getScheme() != null) {
       buffer.append(uri.getScheme());
       buffer.append(":");

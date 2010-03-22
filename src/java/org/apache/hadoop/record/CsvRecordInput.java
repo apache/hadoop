@@ -51,7 +51,7 @@ public class CsvRecordInput implements RecordInput {
     
   private String readField(String tag) throws IOException {
     try {
-      StringBuffer buf = new StringBuffer();
+      StringBuilder buf = new StringBuilder();
       while (true) {
         char c = (char) stream.read();
         switch (c) {

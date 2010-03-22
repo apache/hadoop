@@ -177,7 +177,7 @@ public class BytesWritable extends BinaryComparable
    * Generate the stream of bytes as hex pairs separated by ' '.
    */
   public String toString() { 
-    StringBuffer sb = new StringBuffer(3*size);
+    StringBuilder sb = new StringBuilder(3*size);
     for (int idx = 0; idx < size; idx++) {
       // if not the first, put a blank separator in
       if (idx != 0) {

@@ -166,7 +166,7 @@ public class FileUtil {
                              throws IOException {
     boolean gotException = false;
     boolean returnVal = true;
-    StringBuffer exceptions = new StringBuffer();
+    StringBuilder exceptions = new StringBuilder();
 
     if (srcs.length == 1)
       return copy(srcFS, srcs[0], dstFS, dst, deleteSource, overwrite, conf);
@@ -529,7 +529,7 @@ public class FileUtil {
       }
     }
 
-    StringBuffer untarCommand = new StringBuffer();
+    StringBuilder untarCommand = new StringBuilder();
     boolean gzipped = inFile.toString().endsWith("gz");
     if (gzipped) {
       untarCommand.append(" gzip -dc '");
@@ -745,7 +745,7 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException, InterruptedException {
-    StringBuffer cmdBuf = new StringBuffer();
+    StringBuilder cmdBuf = new StringBuilder();
     cmdBuf.append("chmod ");
     if (recursive) {
       cmdBuf.append("-R ");

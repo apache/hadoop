@@ -113,7 +113,7 @@ public class HadoopLogParser extends LogParser {
    * 
    */
   private void findHostname() {
-    String startupInfo = Environment.runCommand(
+    String startupInfo = Environment.runCommandGeneric(
         "grep --max-count=1 STARTUP_MSG:\\s*host " + file.getName()).toString();
     Pattern pattern = Pattern.compile("\\s+(\\w+/.+)\\s+");
     Matcher matcher = pattern.matcher(startupInfo);

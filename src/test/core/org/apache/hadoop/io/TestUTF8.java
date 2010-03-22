@@ -29,7 +29,7 @@ public class TestUTF8 extends TestCase {
   private static final Random RANDOM = new Random();
 
   public static String getTestString() throws Exception {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     int length = RANDOM.nextInt(100);
     for (int i = 0; i < length; i++) {
       buffer.append((char)(RANDOM.nextInt(Character.MAX_VALUE)));

@@ -199,6 +199,9 @@ Trunk (unreleased changes)
     HADOOP-3659. Patch to allow hadoop native to compile on Mac OS X.
     (Colin Evans and Allen Wittenauer via tomwhite)
 
+    HADOOP-6471. StringBuffer -> StringBuilder - conversion of references
+    as necessary. (Kay Kay via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

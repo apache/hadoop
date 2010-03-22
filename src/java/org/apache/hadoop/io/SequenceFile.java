@@ -780,7 +780,7 @@ public class SequenceFile {
     }
     
     public String toString() {
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       sb.append("size: ").append(this.theMetadata.size()).append("\n");
       Iterator<Map.Entry<Text, Text>> iter =
         this.theMetadata.entrySet().iterator();
