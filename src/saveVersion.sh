@@ -20,6 +20,7 @@
 # records the version, revision, branch, user, timestamp, and url
 unset LANG
 unset LC_CTYPE
+unset LC_TIME
 version=$1
 build_dir=$2
 user=`whoami`
