@@ -248,6 +248,8 @@ Release 0.21.0 - Unreleased
                speed (Paul Smith via Stack)
    HBASE-2336  Fix build broken with HBASE-2334 (Lars Francke via Lars George)
    HBASE-2283  row level atomicity (Kannan Muthukkaruppan via Stack)
+   HBASE-2355  Unsynchronized logWriters map is mutated from several threads in
+               HLog splitting (Todd Lipcon via Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
