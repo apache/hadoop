@@ -250,6 +250,8 @@ Release 0.21.0 - Unreleased
    HBASE-2283  row level atomicity (Kannan Muthukkaruppan via Stack)
    HBASE-2355  Unsynchronized logWriters map is mutated from several threads in
                HLog splitting (Todd Lipcon via Andrew Purtell)
+   HBASE-2358  Store doReconstructionLog will fail if oldlogfile.log is empty
+               and won't load region (Cosmin Lehene via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -306,13 +306,14 @@ public class Store implements HConstants, HeapSize {
       // Nothing to do.
       return -1;
     }
-    // Check its not empty.
-    FileStatus [] stats = this.fs.listStatus(reconstructionLog);
-    if (stats == null || stats.length == 0) {
+    FileStatus stat = this.fs.getFileStatus(reconstructionLog);
+    if (stat.getLen() <= 0) {
       LOG.warn("Passed reconstruction log " + reconstructionLog +
-        " is zero-length");
+        " is zero-length. Deleting existing file");
+       fs.delete(reconstructionLog, false);
       return -1;
     }
+
     // TODO: This could grow large and blow heap out.  Need to get it into
     // general memory usage accounting.
     long maxSeqIdInLog = -1;
