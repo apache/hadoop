@@ -228,6 +228,19 @@ public class DataNode extends Configured
    */
   DataNode(final Configuration conf, 
            final AbstractList<File> dataDirs) throws IOException {
+    this(conf, dataDirs, (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
+                       DatanodeProtocol.versionID,
+                       NameNode.getAddress(conf), 
+                       conf));
+  }
+  
+  /**
+   * Create the DataNode given a configuration, an array of dataDirs,
+   * and a namenode proxy
+   */
+  DataNode(final Configuration conf, 
+           final AbstractList<File> dataDirs,
+           final DatanodeProtocol namenode) throws IOException {
     super(conf);
 
     UserGroupInformation.setConfiguration(conf);
@@ -238,7 +251,7 @@ public class DataNode extends Configured
     DataNode.setDataNode(this);
     
     try {
-      startDataNode(conf, dataDirs);
+      startDataNode(conf, dataDirs, namenode);
     } catch (IOException ie) {
       shutdown();
      throw ie;
@@ -256,7 +269,8 @@ public class DataNode extends Configured
    * @throws IOException
    */
   void startDataNode(Configuration conf, 
-                     AbstractList<File> dataDirs
+                     AbstractList<File> dataDirs,
+                     DatanodeProtocol namenode
                      ) throws IOException {
     // use configured nameserver & interface to get local hostname
     if (conf.get(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY) != null) {
@@ -287,11 +301,8 @@ public class DataNode extends Configured
     this.dnRegistration = new DatanodeRegistration(machineName + ":" + tmpPort);
 
     // connect to name node
-    this.namenode = (DatanodeProtocol) 
-      RPC.waitForProxy(DatanodeProtocol.class,
-                       DatanodeProtocol.versionID,
-                       nameNodeAddr, 
-                       conf);
+    this.namenode = namenode;
+    
     // get version and id info from the name-node
     NamespaceInfo nsInfo = handshake();
     StartupOption startOpt = getStartupOption(conf);
@@ -1589,7 +1600,7 @@ public class DataNode extends Configured
   }
 
   /** A convenient class used in block recovery */
-  private static class BlockRecord { 
+  static class BlockRecord { 
     final DatanodeID id;
     final InterDatanodeProtocol datanode;
     final ReplicaRecoveryInfo rInfo;
@@ -1650,7 +1661,7 @@ public class DataNode extends Configured
   }
 
   /** Block synchronization */
-  private void syncBlock(RecoveringBlock rBlock,
+  void syncBlock(RecoveringBlock rBlock,
                          List<BlockRecord> syncList) throws IOException {
     Block block = rBlock.getBlock();
     long recoveryId = rBlock.getNewGenerationStamp();

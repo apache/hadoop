@@ -544,6 +544,8 @@ Release 0.21.0 - Unreleased
     HDFS-127. Reset failure count in DFSClient for each block acquiring
     operation.  (Igor Bolotin via szetszwo)
 
+    HDFS-520. Create new tests for block recovery. (hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
