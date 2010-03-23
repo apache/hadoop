@@ -293,6 +293,8 @@ Trunk (unreleased changes)
     HADOOP-6175. Incorrect version compilation with es_ES.ISO8859-15 locale
     on Solaris 10. (Urko Benito via tomwhite)
 
+    HADOOP-6645.  Bugs on listStatus for HarFileSystem (rodrigo via mahadev)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

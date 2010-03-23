@@ -409,7 +409,7 @@ public class HarFileSystem extends FilterFileSystem {
       LineReader aLin;
       long read = 0;
       aLin = new LineReader(aIn, getConf());
-      String parentString = parent.getName();
+      String parentString = parent.getName() + Path.SEPARATOR;
       Path harPath = new Path(parentString);
       int harlen = harPath.depth();
       Text line = new Text();
@@ -417,7 +417,7 @@ public class HarFileSystem extends FilterFileSystem {
         int tmp = aLin.readLine(line);
         read += tmp;
         String lineFeed = line.toString();
-        String child = lineFeed.substring(0, lineFeed.indexOf(" "));
+        String child = decodeFileName(lineFeed.substring(0, lineFeed.indexOf(" ")));
         if ((child.startsWith(parentString))) {
           Path thisPath = new Path(child);
           if (thisPath.depth() == harlen + 1) {
