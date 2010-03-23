@@ -234,7 +234,7 @@
             <source>${compileSource}</source>
             <target>${compileSource}</target>
             <showWarnings>true</showWarnings>
-            <showDeprecation>true</showDeprecation>
+            <showDeprecation>false</showDeprecation>
           </configuration>
         </plugin>
         <plugin>
