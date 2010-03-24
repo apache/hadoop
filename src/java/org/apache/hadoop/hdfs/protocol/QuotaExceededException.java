@@ -38,6 +38,8 @@ public class QuotaExceededException extends IOException {
   protected long quota; // quota
   protected long count; // actual value
   
+  protected QuotaExceededException() {}
+
   protected QuotaExceededException(String msg) {
     super(msg);
   }

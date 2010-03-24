@@ -22,11 +22,19 @@ import java.io.DataOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableFactories;
+import org.apache.avro.reflect.Union;
 
 /**
  * Base class for data-node command.
  * Issued by the name-node to notify data-nodes what should be done.
  */
+
+// Declare subclasses for Avro's denormalized representation
+@Union({Void.class,
+      DatanodeCommand.Register.class, DatanodeCommand.Finalize.class,
+      BlockCommand.class, UpgradeCommand.class,
+      BlockRecoveryCommand.class, KeyUpdateCommand.class})
+
 public abstract class DatanodeCommand extends ServerCommand {
   static class Register extends DatanodeCommand {
     private Register() {super(DatanodeProtocol.DNA_REGISTER);}

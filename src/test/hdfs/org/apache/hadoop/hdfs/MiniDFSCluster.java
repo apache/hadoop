@@ -35,6 +35,13 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -243,6 +250,28 @@ public class MiniDFSCluster {
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
     
+    // use alternate RPC engine if spec'd
+    String rpcEngineName = System.getProperty("hdfs.rpc.engine");
+    if (rpcEngineName != null && !"".equals(rpcEngineName)) {
+      
+      System.out.println("HDFS using RPCEngine: "+rpcEngineName);
+      try {
+        Class rpcEngine = conf.getClassByName(rpcEngineName);
+        setRpcEngine(conf, NamenodeProtocols.class, rpcEngine);
+        setRpcEngine(conf, NamenodeProtocol.class, rpcEngine);
+        setRpcEngine(conf, ClientProtocol.class, rpcEngine);
+        setRpcEngine(conf, DatanodeProtocol.class, rpcEngine);
+        setRpcEngine(conf, RefreshAuthorizationPolicyProtocol.class, rpcEngine);
+        setRpcEngine(conf, RefreshUserToGroupMappingsProtocol.class, rpcEngine);
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+      }
+
+      // disable service authorization, as it does not work with tunnelled RPC
+      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+                      false);
+    }
+
     // Setup the NameNode configuration
     FileSystem.setDefaultUri(conf, "hdfs://localhost:"+ Integer.toString(nameNodePort));
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");  
@@ -289,6 +318,10 @@ public class MiniDFSCluster {
     }
   }
   
+  private void setRpcEngine(Configuration conf, Class protocol, Class engine) {
+    conf.setClass("rpc.engine."+protocol.getName(), engine, Object.class);
+  }
+
   /**
    * 
    * @return URI of this MiniDFSCluster

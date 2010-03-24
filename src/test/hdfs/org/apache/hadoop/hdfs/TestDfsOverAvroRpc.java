@@ -15,23 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 
-/**
- * This exception is thrown when the name node is in safe mode.
- * Client cannot modified namespace until the safe mode is off. 
- * 
- */
-public class SafeModeException extends IOException {
-  private static final long serialVersionUID = 1L;
+/** Test for simple signs of life using Avro RPC.  Not an exhaustive test
+ * yet, just enough to catch fundamental problems using Avro reflection to
+ * infer namenode RPC protocols. */
+public class TestDfsOverAvroRpc extends TestLocalDFS {
 
-  public SafeModeException() {}
-
-  public SafeModeException(String text, FSNamesystem.SafeModeInfo mode ) {
-    super(text + ". Name node is in safe mode.\n" + mode.getTurnOffTip());
+  public void testWorkingDirectory() throws IOException {
+    System.setProperty("hdfs.rpc.engine",
+                       "org.apache.hadoop.ipc.AvroRpcEngine");
+    super.testWorkingDirectory();
   }
 
 }

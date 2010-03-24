@@ -23,6 +23,8 @@ import org.apache.hadoop.util.StringUtils;
 public class DSQuotaExceededException extends QuotaExceededException {
   protected static final long serialVersionUID = 1L;
 
+  public DSQuotaExceededException() {}
+
   public DSQuotaExceededException(String msg) {
     super(msg);
   }

@@ -35,7 +35,7 @@ public class BlockAccessKey implements Writable {
   private long keyID;
   private Text key;
   private long expiryDate;
-  private Mac mac;
+  private transient Mac mac;
 
   public BlockAccessKey() {
     this(0L, new Text(), 0L);

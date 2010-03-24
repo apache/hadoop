@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs.protocol;
 public final class NSQuotaExceededException extends QuotaExceededException {
   protected static final long serialVersionUID = 1L;
   
+  public NSQuotaExceededException() {}
+
   public NSQuotaExceededException(String msg) {
     super(msg);
   }

@@ -106,6 +106,10 @@ Trunk (unreleased changes)
     HDFS-1043. NNThroughputBenchmark modifications to support benchmarking of
     server-side user group resolution. (shv)
 
+    HDFS-982. Optionally use Avro reflection for Namenode RPC.  This
+    is not a complete implementation yet, but rather a starting point.
+    (cutting)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

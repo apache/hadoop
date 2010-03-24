@@ -16,22 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.IOException;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 
-/**
- * This exception is thrown when the name node is in safe mode.
- * Client cannot modified namespace until the safe mode is off. 
- * 
- */
-public class SafeModeException extends IOException {
-  private static final long serialVersionUID = 1L;
-
-  public SafeModeException() {}
-
-  public SafeModeException(String text, FSNamesystem.SafeModeInfo mode ) {
-    super(text + ". Name node is in safe mode.\n" + mode.getTurnOffTip());
-  }
-
+/** The full set of RPC methods implemented by the Namenode.  */
+public interface NamenodeProtocols
+  extends ClientProtocol,
+          DatanodeProtocol,
+          NamenodeProtocol,
+          RefreshAuthorizationPolicyProtocol,
+          RefreshUserToGroupMappingsProtocol {
 }

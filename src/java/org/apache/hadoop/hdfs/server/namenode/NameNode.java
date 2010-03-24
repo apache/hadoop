@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
@@ -128,10 +129,7 @@ import org.apache.hadoop.util.StringUtils;
  * secondary namenodes or rebalancing processes to get partial namenode's
  * state, for example partial blocksMap etc.
  **********************************************************/
-public class NameNode implements ClientProtocol, DatanodeProtocol,
-                                 NamenodeProtocol, FSConstants,
-                                 RefreshAuthorizationPolicyProtocol,
-                                 RefreshUserToGroupMappingsProtocol {
+public class NameNode implements NamenodeProtocols, FSConstants {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
@@ -301,10 +299,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
     // create rpc server 
-    this.server = RPC.getServer(this.getClass(), this, socAddr.getHostName(),
-        socAddr.getPort(), handlerCount, false, conf, namesystem
-            .getDelegationTokenSecretManager());
-
+    this.server = RPC.getServer(NamenodeProtocols.class, this,
+                                socAddr.getHostName(), socAddr.getPort(),
+                                handlerCount, false, conf, 
+				namesystem.getDelegationTokenSecretManager());
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     setRpcServerAddress(conf);
@@ -1051,7 +1049,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   ////////////////////////////////////////////////////////////////
   /** 
    */
-  public DatanodeRegistration register(DatanodeRegistration nodeReg)
+  public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg)
       throws IOException {
     verifyVersion(nodeReg.getVersion());
     namesystem.registerDatanode(nodeReg);

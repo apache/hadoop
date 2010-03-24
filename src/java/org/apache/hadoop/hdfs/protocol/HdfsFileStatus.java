@@ -29,6 +29,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
+import org.apache.avro.reflect.Nullable;
+
 /** Interface that represents the over the wire information for a file.
  */
 public class HdfsFileStatus implements Writable {
@@ -41,7 +43,8 @@ public class HdfsFileStatus implements Writable {
   }
 
   private byte[] path;  // local name of the inode that's encoded in java UTF8
-  private byte[] symlink; // symlink target encoded in java UTF8
+  @Nullable
+  private byte[] symlink; // symlink target encoded in java UTF8 or null
   private long length;
   private boolean isdir;
   private short block_replication;

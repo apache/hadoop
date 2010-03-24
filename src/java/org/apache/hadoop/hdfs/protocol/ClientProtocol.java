@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import org.apache.avro.reflect.Nullable;
+
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,6 +32,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -81,11 +84,13 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return file length and array of blocks with their locations
    * @throws IOException
    * @throws UnresolvedLinkException if the path contains a symlink.
+   * @throws FileNotFoundException if the path does not exist.
    */
+  @Nullable
   public LocatedBlocks getBlockLocations(String src,
                                          long offset,
                                          long length) 
-    throws IOException, UnresolvedLinkException;
+    throws IOException, UnresolvedLinkException, FileNotFoundException;
 
   /**
    * Get server default values for a number of configuration params.
@@ -125,6 +130,8 @@ public interface ClientProtocol extends VersionedProtocol {
    *                                any quota restriction
    * @throws IOException if other errors occur.
    * @throws UnresolvedLinkException if the path contains a symlink. 
+   * @throws AlreadyBeingCreatedException if the path does not exist.
+   * @throws NSQuotaExceededException if the namespace quota is exceeded.
    */
   public void create(String src, 
                      FsPermission masked,
@@ -133,7 +140,8 @@ public interface ClientProtocol extends VersionedProtocol {
                      boolean createParent,
                      short replication,
                      long blockSize)
-      throws IOException, UnresolvedLinkException;
+    throws IOException, UnresolvedLinkException,
+           AlreadyBeingCreatedException, NSQuotaExceededException;
 
   /**
    * Append to the end of the file. 
@@ -175,10 +183,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws UnresolvedLinkException if the path contains a symlink. 
    */
   public void setPermission(String src, FsPermission permission)
-      throws IOException, UnresolvedLinkException;
+    throws IOException, UnresolvedLinkException, SafeModeException;
 
   /**
-   * Set owner of a path (i.e. a file or a directory).
+   * Set Owner of a path (i.e. a file or a directory).
    * The parameters username and groupname cannot both be null.
    * @param src
    * @param username If it is null, the original username remains unchanged.
@@ -216,10 +224,12 @@ public interface ClientProtocol extends VersionedProtocol {
    * allocated for the current block
    * @return LocatedBlock allocated block information.
    * @throws UnresolvedLinkException if the path contains a symlink. 
+   * @throws DSQuotaExceededException if the directory's quota is exceeded.
    */
   public LocatedBlock addBlock(String src, String clientName,
-      Block previous, DatanodeInfo[] excludedNodes) 
-      throws IOException, UnresolvedLinkException;
+                               @Nullable Block previous,
+                               @Nullable DatanodeInfo[] excludedNodes) 
+    throws IOException, UnresolvedLinkException, DSQuotaExceededException;
 
   /**
    * The client is done writing data to the given filename, and would 
@@ -350,7 +360,7 @@ public interface ClientProtocol extends VersionedProtocol {
    *                                any quota restriction.
    */
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
-      throws IOException, UnresolvedLinkException;
+    throws IOException, UnresolvedLinkException, NSQuotaExceededException;
 
   /**
    * Get a partial listing of the indicated directory
@@ -525,6 +535,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return upgrade status information or null if no upgrades are in progress
    * @throws IOException
    */
+  @Nullable
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
       throws IOException;
 
@@ -552,6 +563,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return object containing information regarding the file
    *         or null if file not found
    */
+  @Nullable
   public HdfsFileStatus getFileInfo(String src) 
       throws IOException, UnresolvedLinkException;
 
@@ -595,7 +607,8 @@ public interface ClientProtocol extends VersionedProtocol {
    *                                is greater than the given quota
    */
   public void setQuota(String path, long namespaceQuota, long diskspaceQuota)
-      throws IOException, UnresolvedLinkException;
+    throws IOException, UnresolvedLinkException,
+           FileNotFoundException, SafeModeException;
   
   /**
    * Write all metadata for this file into persistent storage.

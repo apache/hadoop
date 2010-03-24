@@ -757,7 +757,7 @@ public class NNThroughputBenchmark {
       dnRegistration.setStorageInfo(new DataStorage(nsInfo, ""));
       DataNode.setNewStorageID(dnRegistration);
       // register datanode
-      dnRegistration = nameNode.register(dnRegistration);
+      dnRegistration = nameNode.registerDatanode(dnRegistration);
     }
 
     /**
