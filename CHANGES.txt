@@ -295,6 +295,9 @@ Trunk (unreleased changes)
 
     HADOOP-6645.  Bugs on listStatus for HarFileSystem (rodrigo via mahadev)
 
+    HADOOP-6645. Re: Bugs on listStatus for HarFileSystem (rodrigo via
+    mahadev)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

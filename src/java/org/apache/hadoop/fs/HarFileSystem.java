@@ -409,7 +409,10 @@ public class HarFileSystem extends FilterFileSystem {
       LineReader aLin;
       long read = 0;
       aLin = new LineReader(aIn, getConf());
-      String parentString = parent.getName() + Path.SEPARATOR;
+      String parentString = parent.getName();
+      if (!parentString.endsWith(Path.SEPARATOR)){
+          parentString += Path.SEPARATOR;
+      }
       Path harPath = new Path(parentString);
       int harlen = harPath.depth();
       Text line = new Text();
