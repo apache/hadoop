@@ -35,7 +35,7 @@ if [ -d .svn ]; then
   branch=`echo $url | sed -n -e 's,.*\(branches/.*\)$,\1,p' \
                              -e 's,.*\(tags/.*\)$,\1,p' \
                              -e 's,.*trunk$,trunk,p'`
-elif [ -d .git ]; then
+elif [ -d ../.git ]; then
   revision=`git log -1 --pretty=format:"%H"`
   hostname=`hostname`
   branch=`git branch | sed -n -e 's/^* //p'`
