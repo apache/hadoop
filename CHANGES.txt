@@ -202,6 +202,8 @@ Trunk (unreleased changes)
     HADOOP-6471. StringBuffer -> StringBuilder - conversion of references
     as necessary. (Kay Kay via tomwhite)
 
+    HADOOP-6646. Move HarfileSystem out of Hadoop Common. (mahadev)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
