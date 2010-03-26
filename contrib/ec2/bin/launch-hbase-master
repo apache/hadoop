@@ -68,8 +68,10 @@ sed -e "s|%ZOOKEEPER_QUORUM%|$quorum|" \
     "$bin"/$USER_DATA_FILE > "$bin"/$USER_DATA_FILE.master
 
 inst=`ec2-run-instances $AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_MASTER -k root -f "$bin"/$USER_DATA_FILE.master -t $type | grep INSTANCE | awk '{print $2}'`
-addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
-ec2-associate-address $TOOL_OPTS $addr -i $inst
+if [ "$ENABLE_ELASTIC_IPS" = "true" ] ; then
+  addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
+  ec2-associate-address $TOOL_OPTS $addr -i $inst
+fi
 echo -n "Waiting for instance $inst to start"
 while true; do
   printf "."
@@ -102,4 +104,4 @@ done
 scp $SSH_OPTS $EC2_ROOT_SSH_KEY "root@$host:/root/.ssh/id_rsa"
 ssh $SSH_OPTS "root@$host" "chmod 600 /root/.ssh/id_rsa"
 
-echo "Master is $host ($addr) in zone $zone"
+echo "Master is $host in zone $zone"

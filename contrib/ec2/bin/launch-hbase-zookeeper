@@ -53,8 +53,10 @@ i=0
 while [ $i -lt $NO_INSTANCES ] ; do
   echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
   inst=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
-  addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
-  ec2-associate-address $TOOL_OPTS $addr -i $inst
+  if [ "$ENABLE_ELASTIC_IPS" = "true" ] ; then
+    addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
+    ec2-associate-address $TOOL_OPTS $addr -i $inst
+  fi
   echo -n "Waiting for instance $inst to start: "
   while true; do
     printf "."
@@ -66,7 +68,6 @@ while [ $i -lt $NO_INSTANCES ] ; do
     sleep 1
   done
   host=`ec2-describe-instances $TOOL_OPTS $inst | grep INSTANCE | awk '{print $4}'`
-  echo "Associated elastic IP $host ($addr) with instance $INSTANCE"
   peers="$peers $host"
   peer_addrs="$peer_addrs $addr"
   i=$(($i + 1))

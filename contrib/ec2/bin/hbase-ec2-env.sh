@@ -53,6 +53,9 @@ S3_BUCKET=apache-hbase-images
 # Enable public access web interfaces
 ENABLE_WEB_PORTS=false
 
+# Enable mapping of elastic IPs to ZK and master instances
+ENABLE_ELASTIC_IPS=false
+
 # Extra packages
 # Allows you to add a private Yum repo and pull packages from it as your
 # instances boot up. Format is <repo-descriptor-URL> <pkg1> ... <pkgN>
