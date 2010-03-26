@@ -90,6 +90,15 @@ public class FsPermission implements Writable {
     this.otheraction = other.otheraction;
   }
   
+  /**
+   * Construct by given mode, either in octal or symbolic format.
+   * @param mode mode as a string, either in octal or symbolic format
+   * @throws IllegalArgumentException if <code>mode</code> is invalid
+   */
+  public FsPermission(String mode) {
+    this(new UmaskParser(mode).getUMask());
+  }
+
   /** Return user {@link FsAction}. */
   public FsAction getUserAction() {return useraction;}
 
@@ -199,7 +208,7 @@ public class FsPermission implements Writable {
           if(conf.deprecatedKeyWasSet(DEPRECATED_UMASK_LABEL)) 
             umask = Integer.parseInt(confUmask); // Evaluate as decimal value
           else
-            umask = new UmaskParser(confUmask).getUMask();
+            return new FsPermission(confUmask);
         } catch(IllegalArgumentException iae) {
           // Provide more explanation for user-facing message
           String type = iae instanceof NumberFormatException ? "decimal" 

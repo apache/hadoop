@@ -204,6 +204,9 @@ Trunk (unreleased changes)
 
     HADOOP-6646. Move HarfileSystem out of Hadoop Common. (mahadev)
 
+    HADOOP-6566. Add methods supporting, enforcing narrower permissions on
+    local daemon directories. (Arun Murthy and Luke Lu via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
