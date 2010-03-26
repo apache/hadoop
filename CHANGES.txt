@@ -760,6 +760,9 @@ Release 0.21.0 - Unreleased
     HDFS-822. Appends to already-finalized blocks can rename across volumes.
     (hairong)
 
+    HDFS-1046. Fix Tomcat version in hdfsproxy/build.xml.  (Srikanth
+    Sundarrajan via szetszwo)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
