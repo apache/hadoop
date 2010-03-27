@@ -26,6 +26,7 @@ fi
 # get arguments
 COMMAND="$1"
 shift
+
 # get group
 CLUSTER="$1"
 shift
@@ -44,8 +45,8 @@ if [[ "$CLUSTER" = "i-*" ]]; then
   HOST=`ec2-describe-instances $TOOL_OPTS $CLUSTER | grep running | awk '{print $4}'`
   [ -z $HOST ] && echo "Instance still pending or no longer running: $CLUSTER" && exit 1
 else
-  [ ! -f $MASTER_IP_PATH ] && echo "Wrong group name, or cluster not launched! $CLUSTER" && exit 1
-  HOST=`cat $MASTER_IP_PATH`
+  [ ! -f $MASTER_ADDR_PATH ] && echo "Wrong group name, or cluster not launched! $CLUSTER" && exit 1
+  HOST=`cat $MASTER_ADDR_PATH`
 fi
 
 if [ "$COMMAND" = "login" ] ; then
@@ -64,6 +65,5 @@ elif [ "$COMMAND" = "screen" ] ; then
   echo "Logging in and attaching screen on host $HOST."
   ssh $SSH_OPTS -t "root@$HOST" 'screen -D -R'
 else
-  echo "Executing command on host $HOST."
-  ssh $SSH_OPTS -t "root@$HOST" "$COMMAND"
+  ssh $SSH_OPTS -t "root@$HOST" "$COMMAND $@"
 fi

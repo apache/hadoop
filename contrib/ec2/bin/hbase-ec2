@@ -28,6 +28,7 @@ if [ $# = 0 ]; then
   echo "  launch-master  <name>                 launch or find a cluster master"
   echo "  launch-slaves  <name> <slaves>        launch the cluster slaves"
   echo "  terminate-cluster  <name>             terminate all HBase EC2 instances"
+  echo "  reboot-cluster  <name>                reboot all HBase EC2 instances"
   echo "  delete-cluster <name>                 clean up after a terminated cluster"
   echo "  login  <name|instance id>             login to the master node"
   echo "  screen <name|instance id>             start or attach 'screen' on the master"
@@ -56,6 +57,8 @@ elif [ "$COMMAND" = "delete-cluster" ] ; then
   . "$bin"/delete-hbase-cluster $*
 elif [ "$COMMAND" = "terminate-cluster" ] ; then
   . "$bin"/terminate-hbase-cluster $*
+elif [ "$COMMAND" = "reboot-cluster" ] ; then
+  . "$bin"/reboot-hbase-cluster $*
 elif [ "$COMMAND" = "list" ] ; then
   . "$bin"/list-hbase-clusters
 else

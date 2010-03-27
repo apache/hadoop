@@ -46,14 +46,18 @@ HADOOP_URL=http://hbase.s3.amazonaws.com/hadoop/hadoop-$HADOOP_VERSION.tar.gz
 LZO_URL=http://hbase.s3.amazonaws.com/hadoop/lzo-linux-$HADOOP_VERSION.tar.gz
 
 # The Amazon S3 bucket where the HBase AMI is stored.
-# Change this value only if you are creating your own (private) AMI
+# Change this value if you are launching instances in regions other than 
+# us-east-1 (the default).
+# Change this value otherwise only if you are creating your own (private) AMI
 # so you can store it in a bucket you own.
-S3_BUCKET=apache-hbase-images
+S3_BUCKET=apache-hbase-images            # us-east-1
+#S3_BUCKET=apache-hbase-images-eu         # eu-west-1
+#S3_BUCKET=apache-hbase-images-us-west-1  # us-west-1
 
 # Enable public access web interfaces
 ENABLE_WEB_PORTS=false
 
-# Enable mapping of elastic IPs to ZK and master instances
+# Enable use of elastic IPs for ZK and master instances
 ENABLE_ELASTIC_IPS=false
 
 # Extra packages
@@ -62,11 +66,11 @@ ENABLE_ELASTIC_IPS=false
 # The repository descriptor will be fetched into /etc/yum/repos.d.
 EXTRA_PACKAGES=
 
-# Use only m1.large or c1.xlarge unless you know what you are doing
-MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-m1.large}
+# Use only c1.xlarge unless you know what you are doing
+MASTER_INSTANCE_TYPE=${MASTER_INSTANCE_TYPE:-c1.xlarge}
 
 # Use only m1.large or c1.xlarge unless you know what you are doing
-SLAVE_INSTANCE_TYPE=${SLAVE_INSTANCE_TYPE:-m1.large}
+SLAVE_INSTANCE_TYPE=${SLAVE_INSTANCE_TYPE:-c1.xlarge}
 
 # Use only m1.small or c1.medium unless you know what you are doing
 ZOO_INSTANCE_TYPE=${ZOO_INSTANCE_TYPE:-m1.small}
@@ -107,6 +111,9 @@ CLUSTER_ZOOKEEPER=$CLUSTER-zk
 ZOOKEEPER_QUORUM_PATH=$HOME/.hbase-${CLUSTER_ZOOKEEPER}-quorum
 ZOOKEEPER_ADDR_PATH=$HOME/.hbase-${CLUSTER_ZOOKEEPER}-addrs
 
+# Instances path
+INSTANCES_PATH=$HOME/.hbase-${CLUSTER}-instances
+
 # The script to run on instance boot.
 USER_DATA_FILE=hbase-ec2-init-remote.sh
 
@@ -116,12 +123,18 @@ JAVA_VERSION=1.6.0_17
 JAVA_URL=http://hbase.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-@arch@.bin
 
 # SUPPORTED_ARCHITECTURES = ['i386', 'x86_64']
+# Change the BASE_AMI_IMAGE setting if you are creating custom AMI in a region
+# other than us-east-1 (the default).
 if [ "$SLAVE_INSTANCE_TYPE" = "m1.small" -o "$SLAVE_INSTANCE_TYPE" = "c1.medium" ]; then
   SLAVE_ARCH='i386'
-  BASE_AMI_IMAGE="ami-48aa4921"  # ec2-public-images/fedora-8-i386-base-v1.10.manifest.xml
+  BASE_AMI_IMAGE="ami-48aa4921"  # us-east-1 ec2-public-images/fedora-8-i386-base-v1.10.manifest.xml
+  #BASE_AMI_IMAGE="ami-810657c4"  # us-west-1
+  #BASE_AMI_IMAGE="ami-0a48637e"  # eu-west-1
 else
   SLAVE_ARCH='x86_64'
-  BASE_AMI_IMAGE="ami-f61dfd9f"  # ec2-public-images/fedora-8-x86_64-base-v1.10.manifest.xml
+  BASE_AMI_IMAGE="ami-f61dfd9f"  # us-east-1 ec2-public-images/fedora-8-x86_64-base-v1.10.manifest.xml
+  #BASE_AMI_IMAGE="ami-870657c2"  # us-west-1
+  #BASE_AMI_IMAGE="ami-927a51e6"  # eu-west-1
 fi
 
 if [ "$MASTER_INSTANCE_TYPE" = "m1.small" -o "$MASTER_INSTANCE_TYPE" = "c1.medium" ]; then

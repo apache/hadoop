@@ -52,7 +52,7 @@ peer_addrs=""
 i=0
 while [ $i -lt $NO_INSTANCES ] ; do
   echo "Starting an AMI with ID $ZOO_AMI_IMAGE (arch $arch) in group $CLUSTER_ZOOKEEPER"
-  inst=`ec2-run-instances $ZOO_AMI_IMAGE $TOOL_OPTS -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
+  inst=`ec2-run-instances $TOOL_OPTS $ZOO_AMI_IMAGE -n 1 -g $CLUSTER_ZOOKEEPER -k root -t $type | grep INSTANCE | awk '{print $2}'`
   if [ "$ENABLE_ELASTIC_IPS" = "true" ] ; then
     addr=`ec2-allocate-address $TOOL_OPTS | awk '{print $2}'`
     ec2-associate-address $TOOL_OPTS $addr -i $inst
