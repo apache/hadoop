@@ -1754,7 +1754,7 @@ public class HFile {
           KeyValue kv = scanner.getKeyValue();
           // dump key value
           if (printKeyValue) {
-            System.out.println("K: " + Bytes.toStringBinary(kv.getKey()) +
+            System.out.println("K: " + kv +
               " V: " + Bytes.toStringBinary(kv.getValue()));
           }
           // check if rows are in order

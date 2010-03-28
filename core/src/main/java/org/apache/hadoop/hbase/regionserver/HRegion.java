@@ -1167,6 +1167,41 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.updatesLock.readLock().lock();
 
     try {
+
+      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+
+        byte[] family = e.getKey(); 
+        List<KeyValue> kvs = e.getValue();
+        
+        Store store = getStore(family);
+        for (KeyValue kv: kvs) {
+          //  Check if time is LATEST, change to time of most recent addition if so
+          //  This is expensive.
+          if (kv.isLatestTimestamp() && kv.isDeleteType()) {
+            List<KeyValue> result = new ArrayList<KeyValue>(1);
+            Get g = new Get(kv.getRow());
+            NavigableSet<byte []> qualifiers =
+              new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+              byte [] q = kv.getQualifier();
+              if(q == null) q = HConstants.EMPTY_BYTE_ARRAY;
+              qualifiers.add(q);
+              get(store, g, qualifiers, result);
+              if (result.isEmpty()) {
+                // Nothing to delete
+                continue;
+              }
+              if (result.size() > 1) {
+                throw new RuntimeException("Unexpected size: " + result.size());
+              }
+              KeyValue getkv = result.get(0);
+              Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
+                  getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+          } else {
+            kv.updateLatestStamp(byteNow);
+          }
+        }
+      }
+
       if (writeToWAL) {
         //
         // write/sync to WAL should happen before we touch memstore.
@@ -1204,30 +1239,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         
         Store store = getStore(family);
         for (KeyValue kv: kvs) {
-          //  Check if time is LATEST, change to time of most recent addition if so
-          //  This is expensive.
-          if (kv.isLatestTimestamp() && kv.isDeleteType()) {
-            List<KeyValue> result = new ArrayList<KeyValue>(1);
-            Get g = new Get(kv.getRow());
-            NavigableSet<byte []> qualifiers =
-              new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-              byte [] q = kv.getQualifier();
-              if(q == null) q = HConstants.EMPTY_BYTE_ARRAY;
-              qualifiers.add(q);
-              get(store, g, qualifiers, result);
-              if (result.isEmpty()) {
-                // Nothing to delete
-                continue;
-              }
-              if (result.size() > 1) {
-                throw new RuntimeException("Unexpected size: " + result.size());
-              }
-              KeyValue getkv = result.get(0);
-              Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
-                  getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
-          } else {
-            kv.updateLatestStamp(byteNow);
-          }
           size = this.memstoreSize.addAndGet(store.delete(kv));
         }
       }

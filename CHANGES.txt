@@ -456,6 +456,8 @@ Release 0.21.0 - Unreleased
    HBASE-2331  [shell] count command needs a way to specify scan caching
                (Alexey Kovyrin via Stack)
    HBASE-2364  Ignore Deprecations during build (Paul Smith via Stack)
+   HBASE-2338  log recovery: deleted items may be resurrected
+               (Aravind Menon via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
