@@ -90,4 +90,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
     this.writer.syncFs();
   }
 
+  @Override
+  public long getLength() throws IOException {
+    return this.writer.getLength();
+  }
 }

@@ -37,7 +37,7 @@ import java.io.*;
  * <p>Some Transactional edits (START, COMMIT, ABORT) will not have an
  * associated row.
  */
-public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
+public class HLogKey implements WritableComparable<HLogKey> {
   private byte [] regionName;
   private byte [] tablename;
   private long logSeqNum;
@@ -204,7 +204,4 @@ public class HLogKey implements WritableComparable<HLogKey>, HeapSize {
     }
   }
 
-  public long heapSize() {
-    return this.regionName.length + this.tablename.length + HEAP_TAX;
-  }
 }

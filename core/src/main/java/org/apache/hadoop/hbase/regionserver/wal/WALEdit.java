@@ -121,17 +121,6 @@ public class WALEdit implements Writable {
     }
   }
 
-  public long heapSize() {
-    long size = ClassSize.align(ClassSize.OBJECT +
-                                ClassSize.REFERENCE + 
-                                ClassSize.ARRAYLIST);
-    for (KeyValue kv : kvs) {
-      size += kv.heapSize();
-    }
-    
-    return size;
-  }
-
   public String toString() {
     StringBuilder sb = new StringBuilder();
 
