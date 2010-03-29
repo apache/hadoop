@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -173,14 +174,14 @@ public class TestInterDatanodeProtocol {
       }
     }
 
-    { //replica not found
+    { // BlockRecoveryFI_01: replica not found
       final long recoveryid = gs + 1;
       final Block b = new Block(firstblockid - 1, length, gs);
       ReplicaRecoveryInfo r = FSDataset.initReplicaRecovery(map, b, recoveryid);
       Assert.assertNull("Data-node should not have this replica.", r);
     }
     
-    { //case "THIS IS NOT SUPPOSED TO HAPPEN" with recovery id < gs  
+    { // BlockRecoveryFI_02: "THIS IS NOT SUPPOSED TO HAPPEN" with recovery id < gs  
       final long recoveryid = gs - 1;
       final Block b = new Block(firstblockid + 1, length, gs);
       try {
@@ -192,6 +193,19 @@ public class TestInterDatanodeProtocol {
       }
     }
 
+    // BlockRecoveryFI_03: Replica's gs is less than the block's gs
+    {
+      final long recoveryid = gs + 1;
+      final Block b = new Block(firstblockid, length, gs+1);
+      try {
+        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        fail("InitReplicaRecovery should fail because replica's " +
+        		"gs is less than the block's gs");
+      } catch (IOException e) {
+        e.getMessage().startsWith(
+           "replica.getGenerationStamp() < block.getGenerationStamp(), block=");
+      }
+    }
   }
 
   /** Test {@link FSDataset#updateReplicaUnderRecovery(ReplicaUnderRecovery, long, long)} */

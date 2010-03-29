@@ -30,9 +30,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BlockRecord;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -42,16 +44,21 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Daemon;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * This tests if sync all replicas in block recovery works correctly
@@ -313,4 +320,148 @@ public class TestBlockRecovery {
     verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, minLen);
     verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, minLen);    
   }  
+
+  private Collection<RecoveringBlock> initRecoveringBlocks() {
+    Collection<RecoveringBlock> blocks = new ArrayList<RecoveringBlock>(1);
+    DatanodeInfo[] locs = new DatanodeInfo[] {
+        new DatanodeInfo(dn.dnRegistration),
+        mock(DatanodeInfo.class) };
+    RecoveringBlock rBlock = new RecoveringBlock(block, locs, RECOVERY_ID);
+    blocks.add(rBlock);
+    return blocks;
+  }
+  /**
+   * BlockRecoveryFI_05. One DN throws RecoveryInProgressException.
+   *
+   * @throws IOException
+   *           in case of an error
+   */
+  @Test
+  public void testRecoveryInProgressException()
+    throws IOException, InterruptedException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    DataNode spyDN = spy(dn);
+    doThrow(new RecoveryInProgressException("Replica recovery is in progress")).
+       when(spyDN).initReplicaRecovery(any(RecoveringBlock.class));
+    Daemon d = spyDN.recoverBlocks(initRecoveringBlocks());
+    d.join();
+    verify(spyDN, never()).syncBlock(
+        any(RecoveringBlock.class), anyListOf(BlockRecord.class));
+  }
+
+  /**
+   * BlockRecoveryFI_06. all datanodes throws an exception.
+   *
+   * @throws IOException
+   *           in case of an error
+   */
+  @Test
+  public void testErrorReplicas() throws IOException, InterruptedException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    DataNode spyDN = spy(dn);
+    doThrow(new IOException()).
+       when(spyDN).initReplicaRecovery(any(RecoveringBlock.class));
+    Daemon d = spyDN.recoverBlocks(initRecoveringBlocks());
+    d.join();
+    verify(spyDN, never()).syncBlock(
+        any(RecoveringBlock.class), anyListOf(BlockRecord.class));
+  }
+
+  /**
+   * BlockRecoveryFI_07. max replica length from all DNs is zero.
+   *
+   * @throws IOException in case of an error
+   */
+  @Test
+  public void testZeroLenReplicas() throws IOException, InterruptedException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    DataNode spyDN = spy(dn);
+    doReturn(new ReplicaRecoveryInfo(block.getBlockId(), 0,
+        block.getGenerationStamp(), ReplicaState.FINALIZED)).when(spyDN).
+        initReplicaRecovery(any(RecoveringBlock.class));
+    Daemon d = spyDN.recoverBlocks(initRecoveringBlocks());
+    d.join();
+    verify(dn.namenode).commitBlockSynchronization(
+        block, RECOVERY_ID, 0, true, true, DatanodeID.EMPTY_ARRAY);
+  }
+
+  private List<BlockRecord> initBlockRecords(DataNode spyDN) {
+    List<BlockRecord> blocks = new ArrayList<BlockRecord>(1);
+    BlockRecord blockRecord = new BlockRecord(
+        new DatanodeID(dn.dnRegistration), spyDN,
+        new ReplicaRecoveryInfo(block.getBlockId(), block.getNumBytes(),
+            block.getGenerationStamp(), ReplicaState.FINALIZED));
+    blocks.add(blockRecord);
+    return blocks;
+  }
+
+  private final static RecoveringBlock rBlock =
+    new RecoveringBlock(block, null, RECOVERY_ID);
+
+  /**
+   * BlockRecoveryFI_09. some/all DNs failed to update replicas.
+   *
+   * @throws IOException in case of an error
+   */
+  @Test
+  public void testFailedReplicaUpdate() throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    DataNode spyDN = spy(dn);
+    doThrow(new IOException()).when(spyDN).updateReplicaUnderRecovery(
+        block, RECOVERY_ID, block.getNumBytes());
+    try {
+      spyDN.syncBlock(rBlock, initBlockRecords(spyDN));
+      fail("Sync should fail");
+    } catch (IOException e) {
+      e.getMessage().startsWith("Cannot recover ");
+    }
+  }
+
+  /**
+   * BlockRecoveryFI_10. DN has no ReplicaUnderRecovery.
+   *
+   * @throws IOException in case of an error
+   */
+  @Test
+  public void testNoReplicaUnderRecovery() throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    dn.data.createRbw(block);
+    try {
+      dn.syncBlock(rBlock, initBlockRecords(dn));
+      fail("Sync should fail");
+    } catch (IOException e) {
+      e.getMessage().startsWith("Cannot recover ");
+    }
+    verify(dn.namenode, never()).commitBlockSynchronization(
+        any(Block.class), anyLong(), anyLong(), anyBoolean(),
+        anyBoolean(), any(DatanodeID[].class));
+  }
+
+  /**
+   * BlockRecoveryFI_11. a replica's recovery id does not match new GS.
+   *
+   * @throws IOException in case of an error
+   */
+  @Test
+  public void testNotMatchedReplicaID() throws IOException {
+    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    ReplicaInPipelineInterface replicaInfo = dn.data.createRbw(block);
+    BlockWriteStreams streams = null;
+    try {
+      streams = replicaInfo.createStreams(true, 0, 0);
+      streams.checksumOut.write('a');
+      dn.data.initReplicaRecovery(new RecoveringBlock(block, null, RECOVERY_ID+1));
+      try {
+        dn.syncBlock(rBlock, initBlockRecords(dn));
+        fail("Sync should fail");
+      } catch (IOException e) {
+        e.getMessage().startsWith("Cannot recover ");
+      }
+      verify(dn.namenode, never()).commitBlockSynchronization(
+          any(Block.class), anyLong(), anyLong(), anyBoolean(),
+          anyBoolean(), any(DatanodeID[].class));
+    } finally {
+      streams.close();
+    }
+  }
 }

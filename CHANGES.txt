@@ -550,6 +550,8 @@ Release 0.21.0 - Unreleased
 
     HDFS-520. Create new tests for block recovery. (hairong)
 
+    HDFS-1067. Create block recovery tests that handle errors. (hairong)
+
   BUG FIXES
 
     HDFS-76. Better error message to users when commands fail because of 
