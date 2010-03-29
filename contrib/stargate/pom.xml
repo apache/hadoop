@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>hbase-contrib-stargate</artifactId>
-  <packaging>war</packaging>
+  <packaging>pom</packaging>
   <name>HBase Contrib - Stargate</name>
   
   <parent>
@@ -12,79 +12,9 @@
     <artifactId>hbase-contrib</artifactId>
     <version>0.21.0-SNAPSHOT</version>
   </parent>
-
-  <properties>
-    <jsr311.version>1.1.1</jsr311.version>
-    <protobuf.version>2.3.0</protobuf.version>
-    <jersey.version>1.1.4.1</jersey.version>
-    <json.version>20090211</json.version>
-    <hsqldb.version>1.8.0.10</hsqldb.version>
-    <commons-httpclient.version>3.0.1</commons-httpclient.version>
-  </properties>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-war-plugin</artifactId>
-        <configuration>
-          <webXml>conf/web.xml</webXml>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+  <modules>
+    <module>core</module>
+    <module>war</module>
+  </modules>
   
-  <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>hbase-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>hbase-core</artifactId>
-      <classifier>tests</classifier>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-test</artifactId>
-      <version>${hadoop.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
-      <version>${jsr311.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>${protobuf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-json</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-server</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>${commons-httpclient.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>${json.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>hsqldb</groupId>
-      <artifactId>hsqldb</artifactId>
-      <version>${hsqldb.version}</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
 </project>

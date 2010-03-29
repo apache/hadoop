@@ -460,6 +460,8 @@ Release 0.21.0 - Unreleased
                (Aravind Menon via Stack)
    HBASE-2359  WALEdit doesn't implement HeapSize
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2348  [stargate] Stargate needs both JAR and WAR artifacts (Paul Smith
+               via Andrew Purtell)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -55,14 +55,14 @@
     </moduleSet>
     <moduleSet>
       <includes>
-        <include>org.apache.hbase:hbase-contrib-stargate</include>
+        <include>org.apache.hbase:hbase-contrib-stargate*</include>
       </includes>
       <binaries>
         <outputDirectory>contrib/stargate/</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
           <dependencySet>
-            <outputDirectory>contrib/stargate/lib</outputDirectory>
+            <outputDirectory>lib</outputDirectory>
           </dependencySet>
         </dependencySets>
       </binaries>
