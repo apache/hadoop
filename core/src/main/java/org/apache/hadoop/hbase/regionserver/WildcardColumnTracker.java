@@ -89,9 +89,7 @@ public class WildcardColumnTracker implements ColumnTracker {
    * @return MatchCode telling QueryMatcher what action to take
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length) {
-    boolean recursive = false;
     do {
-
       // Nothing to match against, add to new and include
       if(this.column == null && this.newColumn == null) {
         newColumns.add(new ColumnCount(bytes, offset, length, 1));
@@ -121,9 +119,8 @@ public class WildcardColumnTracker implements ColumnTracker {
             this.newColumn = newColumns.get(newIndex);
             return MatchCode.INCLUDE;
           }
+          // recursive case
           this.newColumn = newColumns.get(newIndex);
-          //return checkColumn(bytes, offset, length);
-          recursive = true;
           continue;
         }
 
@@ -158,9 +155,8 @@ public class WildcardColumnTracker implements ColumnTracker {
             this.column = null;
             return MatchCode.INCLUDE;
           }
+          // recursive case
           this.column = columns.get(index);
-          //return checkColumn(bytes, offset, length);
-          recursive = true;
           continue;
         }
 
@@ -199,8 +195,7 @@ public class WildcardColumnTracker implements ColumnTracker {
             } else {
               this.column = columns.get(index);
             }
-            //return checkColumn(bytes, offset, length);
-            recursive = true;
+            // Recursive case
             continue;
           }
 
@@ -234,8 +229,7 @@ public class WildcardColumnTracker implements ColumnTracker {
           } else {
             this.newColumn = newColumns.get(newIndex);
           }
-          //return checkColumn(bytes, offset, length);
-          recursive = true;
+          // Recursive case
           continue;
         }
 
@@ -245,11 +239,7 @@ public class WildcardColumnTracker implements ColumnTracker {
         newColumns.add(new ColumnCount(bytes, offset, length, 1));
         return MatchCode.INCLUDE;
       }
-    } while(recursive);
-
-    // No match happened, add to new and include
-    newColumns.add(new ColumnCount(bytes, offset, length, 1));
-    return MatchCode.INCLUDE;    
+    } while(true);
   }
   
   /**
