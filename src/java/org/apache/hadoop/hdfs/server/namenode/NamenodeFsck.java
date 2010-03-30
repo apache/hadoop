@@ -32,6 +32,8 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -97,6 +100,7 @@ public class NamenodeFsck {
   private boolean showBlocks = false;
   private boolean showLocations = false;
   private boolean showRacks = false;
+  private boolean showCorruptFiles = false;
   private int fixing = FIXING_NONE;
   private String path = "/";
   
@@ -132,6 +136,7 @@ public class NamenodeFsck {
       else if (key.equals("locations")) { this.showLocations = true; }
       else if (key.equals("racks")) { this.showRacks = true; }
       else if (key.equals("openforwrite")) {this.showOpenFiles = true; }
+      else if (key.equals("corruptfiles")) {this.showCorruptFiles = true; }
     }
   }
   
@@ -140,34 +145,93 @@ public class NamenodeFsck {
    */
   public void fsck() {
     try {
-      Result res = new Result(conf);
 
       final HdfsFileStatus file = namenode.getFileInfo(path);
       if (file != null) {
+
+        if (showCorruptFiles) {
+          listCorruptFiles();
+          return;
+        }
+        
+        Result res = new Result(conf);
+
         check(path, file, res);
+
         out.println(res);
         out.println(" Number of data-nodes:\t\t" + totalDatanodes);
         out.println(" Number of racks:\t\t" + networktopology.getNumOfRacks());
 
         // DFSck client scans for the string HEALTHY/CORRUPT to check the status
-        // of file system and return appropriate code. Changing the output string
-        // might break testcases. 
+        // of file system and return appropriate code. Changing the output
+        // string might break testcases.
         if (res.isHealthy()) {
           out.print("\n\nThe filesystem under path '" + path + "' " + HEALTHY_STATUS);
-        }  else {
+        } else {
           out.print("\n\nThe filesystem under path '" + path + "' " + CORRUPT_STATUS);
         }
+
       } else {
         out.print("\n\nPath '" + path + "' " + NONEXISTENT_STATUS);
       }
+
     } catch (Exception e) {
       String errMsg = "Fsck on path '" + path + "' " + FAILURE_STATUS;
       LOG.warn(errMsg, e);
       out.println(e.getMessage());
-      out.print("\n\n"+errMsg);
+      out.print("\n\n" + errMsg);
     } finally {
       out.close();
     }
+  }
+ 
+  static String buildSummaryResultForListCorruptFiles(int corruptFilesCount,
+      String pathName) {
+
+    String summary = "";
+
+    if (corruptFilesCount == 0) {
+      summary = "Unable to locate any corrupt files under '" + pathName
+          + "'.\n\nPlease run a complete fsck to confirm if '" + pathName
+          + "' " + HEALTHY_STATUS;
+    } else if (corruptFilesCount == 1) {
+      summary = "There is at least 1 corrupt file under '" + pathName
+          + "', which " + CORRUPT_STATUS;
+    } else if (corruptFilesCount > 1) {
+      summary = "There are at least " + corruptFilesCount
+          + " corrupt files under '" + pathName + "', which " + CORRUPT_STATUS;
+    } else {
+      throw new IllegalArgumentException("corruptFilesCount must be positive");
+    }
+
+    return summary;
+  }
+
+  private void listCorruptFiles() throws AccessControlException, IOException {
+    int matchedCorruptFilesCount = 0;
+    // directory representation of path
+    String pathdir = path.endsWith(Path.SEPARATOR) ? path : path + Path.SEPARATOR;
+    FileStatus[] corruptFileStatuses = namenode.getCorruptFiles();
+
+    for (FileStatus fileStatus : corruptFileStatuses) {
+      String currentPath = fileStatus.getPath().toString();
+      if (currentPath.startsWith(pathdir) || currentPath.equals(path)) {
+        matchedCorruptFilesCount++;
+        
+        // print the header before listing first item
+        if (matchedCorruptFilesCount == 1 ) {
+          out.println("Here are a few files that may be corrupted:");
+          out.println("===========================================");
+        }
+        
+        out.println(currentPath);
+      }
+    }
+
+    out.println();
+    out.println(buildSummaryResultForListCorruptFiles(matchedCorruptFilesCount,
+        path));
+
   }
   
   private void check(String parent, HdfsFileStatus file, Result res) throws IOException {

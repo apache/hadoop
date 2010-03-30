@@ -79,12 +79,14 @@ public class DFSck extends Configured implements Tool {
    * Print fsck usage information
    */
   static void printUsage() {
-    System.err.println("Usage: DFSck <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]");
+    System.err.println("Usage: DFSck <path> [-list-corruptfiles | [-move | -delete | -openforwrite ] [-files [-blocks [-locations | -racks]]]] ");
     System.err.println("\t<path>\tstart checking from this path");
     System.err.println("\t-move\tmove corrupted files to /lost+found");
     System.err.println("\t-delete\tdelete corrupted files");
     System.err.println("\t-files\tprint out files being checked");
     System.err.println("\t-openforwrite\tprint out files opened for write");
+    System.err.println("\t-list-corruptfiles\tprint out corrupt files up to a "+
+        "maximum defined by property dfs.corruptfilesreturned.max");
     System.err.println("\t-blocks\tprint out block report");
     System.err.println("\t-locations\tprint out locations for every block");
     System.err.println("\t-racks\tprint out network topology for data-node locations");
@@ -119,6 +121,7 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
       else if (args[idx].equals("-files")) { url.append("&files=1"); }
       else if (args[idx].equals("-openforwrite")) { url.append("&openforwrite=1"); }
+      else if (args[idx].equals("-list-corruptfiles")) { url.append("&corruptfiles=1"); }
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }

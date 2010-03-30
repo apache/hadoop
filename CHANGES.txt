@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-854. Datanode should scan devices in parallel to generate
     block report. (Dmytro Molkov via jhoman)
 
+    HDFS-1032. fsck has an option to list corrupt files.
+    (André Orianivia dhruba)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
