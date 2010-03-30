@@ -465,6 +465,8 @@ Release 0.21.0 - Unreleased
    HBASE-2348  [stargate] Stargate needs both JAR and WAR artifacts (Paul Smith
                via Andrew Purtell)
    HBASE-2389  HTable - delete / put unnecessary sync (Kay Kay via Stack)
+   HBASE-2385  Debug Message "Received report from unknown server" should be
+               INFO or WARN
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
