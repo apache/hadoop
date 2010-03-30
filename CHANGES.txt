@@ -469,6 +469,7 @@ Release 0.21.0 - Unreleased
                INFO or WARN
    HBASE-2374  TableInputFormat - Configurable parameter to add column families
                (Kay Kay via Stack)
+   HBASE-2388  Give a very explicit message when we figure a big GC pause
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
