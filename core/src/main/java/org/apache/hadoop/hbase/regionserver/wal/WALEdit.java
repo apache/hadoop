@@ -24,8 +24,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
 
@@ -67,7 +70,8 @@ public class WALEdit implements Writable {
   
   private final int VERSION_2 = -1;
   
-  private List<KeyValue> kvs = new ArrayList<KeyValue>();
+  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
+  private NavigableMap<byte[], Integer> scopes;
   
   public WALEdit() {
   }
@@ -88,13 +92,23 @@ public class WALEdit implements Writable {
     return kvs;
   }
 
+  public NavigableMap<byte[], Integer> getScopes() {
+    return scopes;
+  }
+
+
+  public void setScopes (NavigableMap<byte[], Integer> scopes) {
+    // We currently process the map outside of WALEdit,
+    // TODO revisit when replication is part of core
+    this.scopes = scopes;
+  }
+
   public void readFields(DataInput in) throws IOException {
-    
-    // ignore any old state in case caller is recycling an instance of this object.
-    kvs = new ArrayList<KeyValue>();
-
+    kvs.clear();
+    if (scopes != null) {
+      scopes.clear();
+    }
     int versionOrLength = in.readInt();
-
     if (versionOrLength == VERSION_2) {
       // this is new style HLog entry containing multiple KeyValues.
       int numEdits = in.readInt();
@@ -103,9 +117,20 @@ public class WALEdit implements Writable {
         kv.readFields(in);
         this.add(kv);
       }
+      int numFamilies = in.readInt();
+      if (numFamilies > 0) {
+        if (scopes == null) {
+          scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+        }
+        for (int i = 0; i < numFamilies; i++) {
+          byte[] fam = Bytes.readByteArray(in);
+          int scope = in.readInt();
+          scopes.put(fam, scope);
+        }
+      }
     } else {
       // this is an old style HLog entry. The int that we just
-      // read is actually the length of a single KeyValye.
+      // read is actually the length of a single KeyValue.
       KeyValue kv = new KeyValue();
       kv.readFields(versionOrLength, in);
       this.add(kv);
@@ -116,9 +141,20 @@ public class WALEdit implements Writable {
   public void write(DataOutput out) throws IOException {
     out.writeInt(VERSION_2);
     out.writeInt(kvs.size());
+    // We interleave the two lists for code simplicity
     for (KeyValue kv : kvs) {
       kv.write(out);
     }
+    if (scopes == null) {
+      out.writeInt(0);
+    } else {
+      out.writeInt(scopes.size());
+      for (byte[] key : scopes.keySet()) {
+        Bytes.writeByteArray(out, key);
+        out.writeInt(scopes.get(key));
+      }
+    }
+
   }
 
   public String toString() {
@@ -128,6 +164,9 @@ public class WALEdit implements Writable {
     for (KeyValue kv : kvs) {
       sb.append(kv.toString());
       sb.append("; ");
+    }
+    if (scopes != null) {
+      sb.append(" scopes: " + scopes.toString());
     }
     sb.append(">]");
     return sb.toString();
