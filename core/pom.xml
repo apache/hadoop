@@ -230,7 +230,7 @@
       <version>${thrift.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop.zookeeper</groupId>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>zookeeper</artifactId>
       <version>${zookeeper.version}</version>
     </dependency>

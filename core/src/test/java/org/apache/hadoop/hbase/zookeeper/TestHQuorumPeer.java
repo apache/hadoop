@@ -119,7 +119,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
     int syncLimit = config.getSyncLimit();
     assertEquals(5, syncLimit);
     assertEquals(dataDir.toString(), config.getDataDir());
-    assertEquals(2181, config.getClientPort());
+    assertEquals(2181, config.getClientPortAddress().getPort());
     Map<Long,QuorumServer> servers = config.getServers();
     assertEquals(1, servers.size());
     assertTrue(servers.containsKey(Long.valueOf(0)));

@@ -166,8 +166,8 @@
     <commons-lang.version>2.4</commons-lang.version>
     <commons-math.version>2.0</commons-math.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <!-- TODO specify external repositories - Note the following 2 resources are not downloadable from a public repository, you'll need to place these manually by using 'mvn install:file' or use something like Nexus as a repository manager -->
-    <zookeeper.version>3.2.2</zookeeper.version>
+    <zookeeper.version>3.3.0</zookeeper.version>
+    <!-- TODO specify external repositories - Note the following 1 resource (thrift) is not downloadable from a public repository, you'll need to place this manually by using 'mvn install:file' or use something like Nexus as a repository manager -->
     <thrift.version>0.2.0</thrift.version>
     <jruby.version>1.4.0</jruby.version>
     <slf4j.version>1.5.8</slf4j.version>
@@ -212,6 +212,17 @@
       <id>temp-hadoop</id>
       <name>Hadoop 0.20.1/2 packaging, thrift, zk</name>
       <url>http://people.apache.org/~rawson/repo/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>ibiblio.org</id>
+      <name>ibiblio mirror</name>
+      <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>

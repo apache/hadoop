@@ -17,6 +17,7 @@ Release 0.21.0 - Unreleased
    HBASE-2255  take trunk back to hadoop 0.20
    HBASE-2378  Bulk insert with multiple reducers broken due to improper
                ImmutableBytesWritable comparator (Todd Lipcon via Stack)
+   HBASE-2392  Upgrade to ZooKeeper 3.3.0
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

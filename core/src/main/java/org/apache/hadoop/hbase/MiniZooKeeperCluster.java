@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.net.BindException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.apache.commons.logging.Log;
@@ -100,7 +101,8 @@ public class MiniZooKeeperCluster {
     ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
     while (true) {
       try {
-        standaloneServerFactory = new NIOServerCnxn.Factory(clientPort);
+        standaloneServerFactory =
+          new NIOServerCnxn.Factory(new InetSocketAddress(clientPort));
       } catch (BindException e) {
         LOG.info("Faild binding ZK Server to client port: " + clientPort);
         //this port is already in use. try to use another

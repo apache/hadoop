@@ -419,10 +419,7 @@
       HBase passes this to the zk quorum as suggested maximum time for a
       session.  See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
       "The client sends a requested timeout, the server responds with the
-      timeout that it can give the client. The current implementation
-      requires that the timeout be a minimum of 2 times the tickTime
-      (as set in the server configuration) and a maximum of 20 times
-      the tickTime." Set the zk ticktime with hbase.zookeeper.property.tickTime.
+      timeout that it can give the client. "
       In milliseconds.
     </description>
   </property>
@@ -504,29 +501,6 @@
       <value>10</value>
     </property>
   -->
-  <property>
-    <name>hbase.zookeeper.property.tickTime</name>
-    <value>3000</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The number of milliseconds of each tick.  See
-    zookeeper.session.timeout description.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.initLimit</name>
-    <value>10</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The number of ticks that the initial synchronization phase can take.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.syncLimit</name>
-    <value>5</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The number of ticks that can pass between sending a request and getting an
-    acknowledgment.
-    </description>
-  </property>
   <property>
     <name>hbase.zookeeper.property.dataDir</name>
     <value>${hbase.tmp.dir}/zookeeper</value>
