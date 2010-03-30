@@ -188,7 +188,7 @@ export HADOOP_NAMENODE_OPTS="$HADOOP_NAMENODE_OPTS -Xmx3000m -XX:+UseCompressedO
 EOF
 # Update classpath to include HBase jars and config
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
-export HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.2.2.jar:$HBASE_HOME/conf"
+export HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.3.0.jar:$HBASE_HOME/conf"
 EOF
 # Configure Hadoop for Ganglia
 cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
