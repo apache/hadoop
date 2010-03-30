@@ -467,6 +467,8 @@ Release 0.21.0 - Unreleased
    HBASE-2389  HTable - delete / put unnecessary sync (Kay Kay via Stack)
    HBASE-2385  Debug Message "Received report from unknown server" should be
                INFO or WARN
+   HBASE-2374  TableInputFormat - Configurable parameter to add column families
+               (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
