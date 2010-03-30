@@ -254,6 +254,8 @@ Release 0.21.0 - Unreleased
    HBASE-2358  Store doReconstructionLog will fail if oldlogfile.log is empty
                and won't load region (Cosmin Lehene via Stack)
    HBASE-2370  saveVersion.sh doesnt properly grab the git revision
+   HBASE-2378  Bulk insert with multiple reducers broken due to improper
+               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

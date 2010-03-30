@@ -178,10 +178,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    *         negative if left is smaller than right.
    */
   public int compareTo(final byte [] that) {
-    int diff = this.length - that.length;
-    return (diff != 0)?
-      diff:
-      WritableComparator.compareBytes(this.bytes, 0, this.length, that,
+    return WritableComparator.compareBytes(this.bytes, 0, this.length, that,
         0, that.length);
   }
 
