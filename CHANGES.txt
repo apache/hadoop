@@ -15,6 +15,8 @@ Release 0.21.0 - Unreleased
    HBASE-2099  Move build to Maven (Paul Smith via Stack)
    HBASE-2260  Remove all traces of Ant and Ivy (Lars Francke via Stack)
    HBASE-2255  take trunk back to hadoop 0.20
+   HBASE-2378  Bulk insert with multiple reducers broken due to improper
+               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -254,8 +256,6 @@ Release 0.21.0 - Unreleased
    HBASE-2358  Store doReconstructionLog will fail if oldlogfile.log is empty
                and won't load region (Cosmin Lehene via Stack)
    HBASE-2370  saveVersion.sh doesnt properly grab the git revision
-   HBASE-2378  Bulk insert with multiple reducers broken due to improper
-               ImmutableBytesWritable comparator (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
