@@ -302,6 +302,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.datanode.directoryscan.threads</name>
+  <value>1</value>
+  <description>How many threads should the threadpool used to compile reports
+  for volumes in parallel have.
+  </description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
   <value>3</value>
   <description>Determines datanode heartbeat interval in seconds.</description>

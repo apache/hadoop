@@ -621,6 +621,7 @@ class DataBlockScanner implements Runnable {
   synchronized void shutdown() {
     LogFileHandler log = verificationLog;
     verificationLog = null;
+    dirScanner.shutdown();
     if (log != null) {
       log.close();
     }

@@ -204,11 +204,20 @@ public class TestDirectoryScanner extends TestCase {
     assertEquals(mismatchBlocks, scanner.mismatchBlocks);
   }
 
-  public void test() throws Exception {
+  public void testDirectoryScanner() throws Exception {
+    // Run the test with and without parallel scanning
+    for (int parallelism = 1; parallelism < 2; parallelism++) {
+      runTest(parallelism);
+    }
+  }
+  
+  public void runTest(int parallelism) throws Exception {
     cluster = new MiniDFSCluster(CONF, 1, true, null);
     try {
       cluster.waitActive();
       fds = (FSDataset) cluster.getDataNodes().get(0).getFSDataset();
+      CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
+                  parallelism);
       scanner = new DirectoryScanner(fds, CONF);
 
       // Add files with 100 blocks

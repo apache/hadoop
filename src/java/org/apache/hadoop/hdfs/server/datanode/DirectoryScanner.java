@@ -20,12 +20,20 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
@@ -42,6 +50,7 @@ public class DirectoryScanner {
   private final FSDataset dataset;
   private long scanPeriod;
   private long lastScanTime;
+  private ExecutorService reportCompileThreadPool;
 
   LinkedList<ScanInfo> diff = new LinkedList<ScanInfo>();
 
@@ -128,6 +137,11 @@ public class DirectoryScanner {
     int interval = conf.getInt("dfs.datanode.directoryscan.interval",
         DEFAULT_SCAN_INTERVAL);
     scanPeriod = interval * 1000L;
+    int threads = 
+        conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
+                    DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT);
+
+    reportCompileThreadPool = Executors.newFixedThreadPool(threads);
 
     Random rand = new Random();
     lastScanTime = System.currentTimeMillis() - (rand.nextInt(interval) * 1000L);
@@ -146,6 +160,10 @@ public class DirectoryScanner {
     missingBlockFile = 0;
     missingMemoryBlocks = 0;
     mismatchBlocks = 0;
+  }
+  
+  void shutdown() {
+    reportCompileThreadPool.shutdown();
   }
 
   /**
@@ -241,13 +259,29 @@ public class DirectoryScanner {
     FSDataset.FSVolume[] volumes = dataset.volumes.volumes;
     ArrayList<LinkedList<ScanInfo>> dirReports =
       new ArrayList<LinkedList<ScanInfo>>(volumes.length);
+    
+    Map<Integer, Future<LinkedList<ScanInfo>>> compilersInProgress =
+      new HashMap<Integer, Future<LinkedList<ScanInfo>>>();
     for (int i = 0; i < volumes.length; i++) {
       if (!dataset.volumes.isValid(volumes[i])) { // volume is still valid
         dirReports.add(i, null);
       } else {
-        LinkedList<ScanInfo> dirReport = new LinkedList<ScanInfo>();
-        dirReports.add(i, compileReport(volumes[i], volumes[i].getDir(),
-            dirReport));
+        ReportCompiler reportCompiler =
+          new ReportCompiler(volumes[i], volumes[i].getDir());
+        Future<LinkedList<ScanInfo>> result = 
+          reportCompileThreadPool.submit(reportCompiler);
+        compilersInProgress.put(i, result);
+      }
+    }
+    
+    for (Map.Entry<Integer, Future<LinkedList<ScanInfo>>> report :
+      compilersInProgress.entrySet()) {
+      try {
+        dirReports.add(report.getKey(), report.getValue().get());
+      } catch (Exception ex) {
+        LOG.error("Error compiling report", ex);
+        // Propagate ex to DataBlockScanner to deal with
+        throw new RuntimeException(ex);
       }
     }
 
@@ -270,46 +304,63 @@ public class DirectoryScanner {
         && metaFile.endsWith(Block.METADATA_EXTENSION);
   }
 
-  /** Compile list {@link ScanInfo} for the blocks in the directory <dir>*/
-  private LinkedList<ScanInfo> compileReport(FSVolume vol, File dir,
-      LinkedList<ScanInfo> report) {
-    File[] files = dir.listFiles();
-    Arrays.sort(files);
+  private static class ReportCompiler implements Callable<LinkedList<ScanInfo>> {
+    private FSVolume volume;
+    private File dir;
 
-    /* Assumption: In the sorted list of files block file appears immediately
-     * before block metadata file. This is true for the current naming
-     * convention for block file blk_<blockid> and meta file
-     * blk_<blockid>_<genstamp>.meta
-     */
-    for (int i = 0; i < files.length; i++) {
-      if (files[i].isDirectory()) {
-        compileReport(vol, files[i], report);
-        continue;
-      }
-      if (!Block.isBlockFilename(files[i])) {
-        if (isBlockMetaFile("blk_", files[i].getName())) {
-          long blockId = Block.getBlockId(files[i].getName());
-          report.add(new ScanInfo(blockId, null, files[i], vol));
-        }
-        continue;
-      }
-      File blockFile = files[i];
-      long blockId = Block.filename2id(blockFile.getName());
-      File metaFile = null;
-
-      // Skip all the files that start with block name until
-      // getting to the metafile for the block
-      while (i + 1 < files.length
-          && files[i+1].isFile()
-          && files[i + 1].getName().startsWith(blockFile.getName())) {
-        i++;
-        if (isBlockMetaFile(blockFile.getName(), files[i].getName())) {
-          metaFile = files[i];
-          break;
-        }
-      }
-      report.add(new ScanInfo(blockId, blockFile, metaFile, vol));
+    public ReportCompiler(FSVolume volume, File dir) {
+      this.dir = dir;
+      this.volume = volume;
     }
-    return report;
+
+    @Override
+    public LinkedList<ScanInfo> call() throws Exception {
+      LinkedList<ScanInfo> result = new LinkedList<ScanInfo>();
+      compileReport(volume, dir, result);
+      return result;
+    }
+
+    /** Compile list {@link ScanInfo} for the blocks in the directory <dir> */
+    private LinkedList<ScanInfo> compileReport(FSVolume vol, File dir,
+        LinkedList<ScanInfo> report) {
+      File[] files = dir.listFiles();
+      Arrays.sort(files);
+
+      /*
+       * Assumption: In the sorted list of files block file appears immediately
+       * before block metadata file. This is true for the current naming
+       * convention for block file blk_<blockid> and meta file
+       * blk_<blockid>_<genstamp>.meta
+       */
+      for (int i = 0; i < files.length; i++) {
+        if (files[i].isDirectory()) {
+          compileReport(vol, files[i], report);
+          continue;
+        }
+        if (!Block.isBlockFilename(files[i])) {
+          if (isBlockMetaFile("blk_", files[i].getName())) {
+            long blockId = Block.getBlockId(files[i].getName());
+            report.add(new ScanInfo(blockId, null, files[i], vol));
+          }
+          continue;
+        }
+        File blockFile = files[i];
+        long blockId = Block.filename2id(blockFile.getName());
+        File metaFile = null;
+
+        // Skip all the files that start with block name until
+        // getting to the metafile for the block
+        while (i + 1 < files.length && files[i + 1].isFile()
+            && files[i + 1].getName().startsWith(blockFile.getName())) {
+          i++;
+          if (isBlockMetaFile(blockFile.getName(), files[i].getName())) {
+            metaFile = files[i];
+            break;
+          }
+        }
+        report.add(new ScanInfo(blockId, blockFile, metaFile, vol));
+      }
+      return report;
+    }
   }
 }

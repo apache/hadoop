@@ -109,6 +109,9 @@ Trunk (unreleased changes)
     HDFS-892. Optionally use Avro reflection for Namenode RPC.  This
     is not a complete implementation yet, but rather a starting point.
     (cutting)
+    
+    HDFS-854. Datanode should scan devices in parallel to generate
+    block report. (Dmytro Molkov via jhoman)
 
   OPTIMIZATIONS
 
