@@ -114,7 +114,10 @@ Trunk (unreleased changes)
     block report. (Dmytro Molkov via jhoman)
 
     HDFS-1032. fsck has an option to list corrupt files.
-    (André Orianivia dhruba)
+    (André Oriai via dhruba)
+
+    HDFS-1024. SecondaryNameNode verifies size of fsimage and edits file.
+    (Dmytro Molkov via dhruba)
 
   OPTIMIZATIONS
 
