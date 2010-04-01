@@ -673,12 +673,6 @@ public class HLog implements HConstants, Syncable {
 
     // sync txn to file system
     this.sync(isMetaRegion);
-
-    if (this.writer.getLength() > this.logrollsize) {
-      if (listener != null) {
-        listener.logRollRequested();
-      }
-    }
   }
 
   /**
@@ -729,9 +723,6 @@ public class HLog implements HConstants, Syncable {
     }
     // sync txn to file system
     this.sync(info.isMetaRegion());
-    if (this.writer.getLength() > this.logrollsize) {
-        requestLogRoll();
-    }
   }
 
   /**
@@ -840,6 +831,7 @@ public class HLog implements HConstants, Syncable {
       if (this.closed) {
         return;
       }
+      boolean logRollRequested = false;
       if (this.forceSync ||
           this.unflushedEntries.get() >= this.flushlogentries) {
         try {
@@ -849,11 +841,16 @@ public class HLog implements HConstants, Syncable {
           syncOps++;
           this.forceSync = false;
           this.unflushedEntries.set(0);
+          // TODO: HBASE-2401
         } catch (IOException e) {
           LOG.fatal("Could not append. Requesting close of hlog", e);
           requestLogRoll();
           throw e;
         }
+      }
+
+      if (!logRollRequested && (this.writer.getLength() > this.logrollsize)) {
+        requestLogRoll();
       }
     }
   }

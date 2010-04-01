@@ -261,6 +261,8 @@ Release 0.21.0 - Unreleased
                different address/startcode than SCAN"
    HBASE-2361  WALEdit broke replication scope
    HBASE-2365  Double-assignment around split
+   HBASE-2398  NPE in HLog.append when calling writer.getLength
+               (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
