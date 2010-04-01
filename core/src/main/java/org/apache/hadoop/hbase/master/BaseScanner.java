@@ -551,8 +551,6 @@ abstract class BaseScanner extends Chore implements HConstants {
         if (sa != null && sa.length() > 0) {
           // Reget startcode in case its changed in the meantime too.
           sc = getStartCode(r);
-          LOG.debug("GET got values when meta found none: serverAddress=" + sa
-              + ", startCode=" + sc);
         }
       }
     }
