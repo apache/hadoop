@@ -306,6 +306,9 @@ Trunk (unreleased changes)
     HADOOP-6654. Fix code example in WritableComparable javadoc.  (Tom White
     via szetszwo)
 
+    HADOOP-6640. FileSystem.get() does RPC retries within a static
+    synchronized block. (hairong)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

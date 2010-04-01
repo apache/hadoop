@@ -21,7 +21,9 @@ package org.apache.hadoop.fs;
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertNotSame;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,6 +46,49 @@ public class TestFileSystemCaching {
     FileSystem fs1 = FileSystem.get(new URI("cachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("cachedfile://a"), conf);
     assertSame(fs1, fs2);
+  }
+
+  public static class InitializeForeverFileSystem extends LocalFileSystem {
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      // notify that InitializeForeverFileSystem started initialization
+      synchronized (conf) {
+        conf.notify();
+      }
+      try {
+        while (true) {
+          Thread.sleep(1000);
+        }
+      } catch (InterruptedException e) {
+        return;
+      }
+    }
+  }
+  
+  @Test
+  public void testCacheEnabledWithInitializeForeverFS() throws Exception {
+    final Configuration conf = new Configuration();
+    Thread t = new Thread() {
+      public void run() {
+        conf.set("fs.localfs1.impl", "org.apache.hadoop.fs." +
+         "TestFileSystemCaching$InitializeForeverFileSystem");
+        try {
+          FileSystem.get(new URI("localfs1://a"), conf);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (URISyntaxException e) {
+          e.printStackTrace();
+        }
+      }
+    };
+    t.start();
+    // wait for InitializeForeverFileSystem to start initialization
+    synchronized (conf) {
+      conf.wait();
+    }
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    FileSystem.get(new URI("cachedfile://a"), conf);
+    t.interrupt();
+    t.join();
   }
 
   @Test
