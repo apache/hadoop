@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowSpec {
   public static final long DEFAULT_START_TIMESTAMP = 0;
   public static final long DEFAULT_END_TIMESTAMP = Long.MAX_VALUE;
+  
+  private static final String versionPrefix = "?v=";
 
   private byte[] row = HConstants.EMPTY_START_ROW;
   private byte[] endRow = null;
@@ -53,6 +55,7 @@ public class RowSpec {
     i = parseRowKeys(path, i);
     i = parseColumns(path, i);
     i = parseTimestamp(path, i);
+    i = parseMaxVersions(path, i);
   }
 
   private int parseRowKeys(final String path, int i)
@@ -194,6 +197,15 @@ public class RowSpec {
       endTime = time1;
     } else {
       endTime = time0;
+    }
+    return i;
+  }
+
+  private int parseMaxVersions(final String path, int i) {
+    String s = path.substring(i);
+    if (s.startsWith(versionPrefix)) {
+      this.maxVersions = Integer.valueOf(s.substring(versionPrefix.length()));
+      i += s.length();
     }
     return i;
   }
