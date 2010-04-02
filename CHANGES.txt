@@ -479,6 +479,8 @@ Release 0.21.0 - Unreleased
    HBASE-2388  Give a very explicit message when we figure a big GC pause
    HBASE-2270  Improve how we handle recursive calls in ExplicitColumnTracker 
                and WildcardColumnTracker
+   HBASE-2087  The wait on compaction because "Too many store files" 
+               holds up all flushing
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

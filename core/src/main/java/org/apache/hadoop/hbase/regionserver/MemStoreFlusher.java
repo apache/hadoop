@@ -215,7 +215,25 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * not flushed.
    */
   private boolean flushRegion(HRegion region, boolean removeFromQueue) {
-    checkStoreFileCount(region);
+    // if removeFromQueue, then we come from flushSomeRegions and we need
+    // to block if there's too many store files. Else, we don't want to hang
+    // the main flushing thread so we'll just the region at the end of the
+    // queue if there's too many files.
+    if (removeFromQueue) {
+      checkStoreFileCount(region);
+    } else if (isTooManyStoreFiles(region)) {
+      LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
+          "store files, putting it back at the end of the flush queue.");
+      server.compactSplitThread.compactionRequested(region, getName());
+      // If there's only this item in the queue or they are all in this
+      // situation, we will loop at lot. Sleep a bit.
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) { } // just continue
+      flushQueue.add(region);
+      // Tell a lie, it's not flushed but it's ok
+      return true;
+    }
     synchronized (regionsInQueue) {
       // See comment above for removeFromQueue on why we do not
       // take the region out of the set. If removeFromQueue is true, remove it
@@ -301,6 +319,15 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       LOG.warn("Tried to hold up flushing for compactions of region " + region +
           " but have waited longer than " + blockingWaitTime + "ms, continuing");
     }
+  }
+
+  private boolean isTooManyStoreFiles(HRegion region) {
+    for (Store hstore: region.stores.values()) {
+      if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
