@@ -202,6 +202,9 @@ public class RowSpec {
   }
 
   private int parseMaxVersions(final String path, int i) {
+    if (i >= path.length()) {
+      return i;
+    }
     String s = path.substring(i);
     if (s.startsWith(versionPrefix)) {
       this.maxVersions = Integer.valueOf(s.substring(versionPrefix.length()));
