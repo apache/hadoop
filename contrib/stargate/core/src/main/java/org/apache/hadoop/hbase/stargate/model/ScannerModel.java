@@ -110,11 +110,11 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private byte[] startRow = HConstants.EMPTY_START_ROW;
   private byte[] endRow = HConstants.EMPTY_END_ROW;;
   private List<byte[]> columns = new ArrayList<byte[]>();
-  private int batch = 1;
+  private int batch = Integer.MAX_VALUE;
   private long startTime = 0;
   private long endTime = Long.MAX_VALUE;
-  private String filter;
-  private int maxVersions = 1;
+  private String filter = null;
+  private int maxVersions = Integer.MAX_VALUE;
 
   /**
    * @param o the JSONObject under construction
@@ -343,8 +343,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     model.setStartTime(scan.getTimeRange().getMin());
     model.setEndTime(scan.getTimeRange().getMax());
-    model.setBatch(scan.getCaching());
-    model.setMaxVersions(scan.getMaxVersions());
+    int caching = scan.getCaching();
+    if (caching > 0) {
+      model.setBatch(caching);
+    }
+    int maxVersions = scan.getMaxVersions();
+    if (maxVersions > 0) {
+      model.setMaxVersions(maxVersions);
+    }
     Filter filter = scan.getFilter();
     if (filter != null) {
       model.setFilter(stringifyFilter(new JSONStringer(), filter).toString());

@@ -479,6 +479,7 @@ Release 0.21.0 - Unreleased
    HBASE-2388  Give a very explicit message when we figure a big GC pause
    HBASE-2270  Improve how we handle recursive calls in ExplicitColumnTracker 
                and WildcardColumnTracker
+   HBASE-2402  [stargate] set maxVersions on gets
    HBASE-2087  The wait on compaction because "Too many store files" 
                holds up all flushing
 
@@ -509,7 +510,7 @@ Release 0.21.0 - Unreleased
                (Alexey Kovyrin via Stack)
    HBASE-2327  [EC2] Allocate elastic IP addresses for ZK and master nodes
    HBASE-2319  [stargate] multiuser mode: request shaping
-   HBASE-2402  [stargate] set maxVersions on gets
+   HBASE-2403  [stargate] client HTable interface to REST connector
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

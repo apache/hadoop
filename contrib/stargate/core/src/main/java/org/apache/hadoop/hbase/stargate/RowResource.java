@@ -96,6 +96,7 @@ public class RowResource implements Constants {
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
+      int count = 0;
       CellSetModel model = new CellSetModel();
       KeyValue value = generator.next();
       byte[] rowKey = value.getRow();
@@ -109,6 +110,9 @@ public class RowResource implements Constants {
         rowModel.addCell(
           new CellModel(value.getFamily(), value.getQualifier(), 
               value.getTimestamp(), value.getValue()));
+        if (++count > rowspec.getMaxValues()) {
+          break;
+        }
         value = generator.next();
       } while (value != null);
       model.addRow(rowModel);
