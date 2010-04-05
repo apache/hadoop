@@ -127,14 +127,13 @@ implements Configurable {
         if (conf.get(SCAN_MAXVERSIONS) != null) {
           scan.setMaxVersions(Integer.parseInt(conf.get(SCAN_MAXVERSIONS)));
         }
-        
-        if (conf.get(SCAN_CACHEBLOCKS) != null) {
-          scan.setCacheBlocks(Boolean.parseBoolean(conf.get(SCAN_CACHEBLOCKS)));
-        }
 
         if (conf.get(SCAN_CACHEDROWS) != null) {
           scan.setCaching(Integer.parseInt(conf.get(SCAN_CACHEDROWS)));
         }
+
+        // false by default, full table scans generate too much BC churn
+        scan.setCacheBlocks((conf.getBoolean(SCAN_CACHEBLOCKS, false)));
       } catch (Exception e) {
           LOG.error(StringUtils.stringifyException(e));
       }

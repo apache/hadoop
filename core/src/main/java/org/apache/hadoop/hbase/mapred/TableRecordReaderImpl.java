@@ -62,6 +62,7 @@ public class TableRecordReaderImpl {
         Scan scan = new Scan(firstRow, endRow);
         scan.addColumns(trrInputColumns);
         scan.setFilter(trrRowFilter);
+        scan.setCacheBlocks(false);
         this.scanner = this.htable.getScanner(scan);
       } else {
         LOG.debug("TIFB.restart, firstRow: " +
