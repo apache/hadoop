@@ -263,6 +263,7 @@ Release 0.21.0 - Unreleased
    HBASE-2365  Double-assignment around split
    HBASE-2398  NPE in HLog.append when calling writer.getLength
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2410  spurious warnings from util.Sleeper
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

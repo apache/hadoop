@@ -34,7 +34,7 @@ public class Sleeper {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final int period;
   private final AtomicBoolean stop;
-  private static final long TIME_FOR_WARNING = 30000;
+  private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
   
   /**
    * @param sleep sleep time in milliseconds
@@ -75,8 +75,9 @@ public class Sleeper {
         Thread.sleep(waitTime);
         woke = System.currentTimeMillis();
         long slept = woke - now;
-        if (slept > TIME_FOR_WARNING) {
-          LOG.warn("We slept " + slept + "ms, this is likely due to a long " +
+        if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
+          LOG.warn("We slept " + slept + "ms instead of " + this.period +
+              "ms, this is likely due to a long " +
               "garbage collecting pause and it's usually bad, " +
               "see http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A9");
         }
