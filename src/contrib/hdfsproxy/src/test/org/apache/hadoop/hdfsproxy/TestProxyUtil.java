@@ -40,9 +40,8 @@ public class TestProxyUtil extends TestCase {
     conf.set("hdfsproxy.hosts", hostFname);    
     
     assertTrue(ProxyUtil.sendCommand(conf, "/test/reloadPermFiles"));
-    assertTrue(ProxyUtil.sendCommand(conf, "/test/clearUgiCache"));    
     
-    conf.set("hdfsproxy.https.address", "localhost:0");
+    conf.set("hdfsproxy.https.address", "localhost:7777");
     assertFalse(ProxyUtil.sendCommand(conf, "/test/reloadPermFiles"));
     assertFalse(ProxyUtil.sendCommand(conf, "/test/reloadPermFiles"));
   }

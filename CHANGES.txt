@@ -224,6 +224,9 @@ Trunk (unreleased changes)
 
     HDFS-939. libhdfs test is broken. (Eli Collins via tomwhite)
     
+    HDFS-1074. hdfsproxy: Fix bugs in TestProxyUtil.  (Srikanth Sundarrajan
+    via szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
