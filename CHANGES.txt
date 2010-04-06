@@ -121,6 +121,9 @@ Trunk (unreleased changes)
 
     HDFS-1024. SecondaryNameNode verifies size of fsimage and edits file.
     (Dmytro Molkov via dhruba)
+    
+    HDFS-1011. hdfsproxy: Improve log messages by restoring the previous
+    thread name.  (Srikanth Sundarrajan via szetszwo)
 
     HDFS-997. Allow datanode storage directory permissions to be configurable.
     (Luke Lu via cdouglas)

@@ -144,48 +144,57 @@ public class LdapIpDirFilter implements Filter {
   public void doFilter(ServletRequest request, ServletResponse response,
       FilterChain chain) throws IOException, ServletException {
 
-    HttpServletRequest rqst = (HttpServletRequest) request;
-    HttpServletResponse rsp = (HttpServletResponse) response;
+    String prevThreadName = Thread.currentThread().getName();
 
-    if (LOG.isDebugEnabled()) {
-      StringBuilder b = new StringBuilder("Request from ").append(
-          rqst.getRemoteHost()).append("/").append(rqst.getRemoteAddr())
-          .append(":").append(rqst.getRemotePort());
-      b.append("\n The Scheme is " + rqst.getScheme());
-      b.append("\n The Path Info is " + rqst.getPathInfo());
-      b.append("\n The Translated Path Info is " + rqst.getPathTranslated());
-      b.append("\n The Context Path is " + rqst.getContextPath());
-      b.append("\n The Query String is " + rqst.getQueryString());
-      b.append("\n The Request URI is " + rqst.getRequestURI());
-      b.append("\n The Request URL is " + rqst.getRequestURL());
-      b.append("\n The Servlet Path is " + rqst.getServletPath());
-      LOG.debug(b.toString());
-    }
-    LdapRoleEntry ldapent = new LdapRoleEntry();
-    // check ip address
-    String userIp = rqst.getRemoteAddr();
     try {
-      boolean isAuthorized = getLdapRoleEntryFromUserIp(userIp, ldapent);
-      if (!isAuthorized) {
-        rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "IP " + userIp
-            + " is not authorized to access");
-        return;
-      }
-    } catch (NamingException ne) {
-      throw new IOException("NamingException while searching ldap"
-          + ne.toString());
-    }
+      HttpServletRequest rqst = (HttpServletRequest) request;
+      HttpServletResponse rsp = (HttpServletResponse) response;
 
-    // since we cannot pass ugi object cross context as they are from
-    // different
-    // classloaders in different war file, we have to use String attribute.
-    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
+      String contextPath = rqst.getContextPath();
+      Thread.currentThread().setName(contextPath);
+
+      if (LOG.isDebugEnabled()) {
+        StringBuilder b = new StringBuilder("Request from ").append(
+            rqst.getRemoteHost()).append("/").append(rqst.getRemoteAddr())
+            .append(":").append(rqst.getRemotePort());
+        b.append("\n The Scheme is " + rqst.getScheme());
+        b.append("\n The Path Info is " + rqst.getPathInfo());
+        b.append("\n The Translated Path Info is " + rqst.getPathTranslated());
+        b.append("\n The Context Path is " + rqst.getContextPath());
+        b.append("\n The Query String is " + rqst.getQueryString());
+        b.append("\n The Request URI is " + rqst.getRequestURI());
+        b.append("\n The Request URL is " + rqst.getRequestURL());
+        b.append("\n The Servlet Path is " + rqst.getServletPath());
+        LOG.debug(b.toString());
+      }
+      LdapRoleEntry ldapent = new LdapRoleEntry();
+      // check ip address
+      String userIp = rqst.getRemoteAddr();
+      try {
+        boolean isAuthorized = getLdapRoleEntryFromUserIp(userIp, ldapent);
+        if (!isAuthorized) {
+          rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "IP " + userIp
+              + " is not authorized to access");
+          return;
+        }
+      } catch (NamingException ne) {
+        throw new IOException("NamingException while searching ldap"
+            + ne.toString());
+      }
+
+      // since we cannot pass ugi object cross context as they are from
+      // different
+      // classloaders in different war file, we have to use String attribute.
+      rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
         ldapent.userId);
-    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
+      rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
         ldapent.paths);
-    LOG.info("User: " + ldapent.userId + ", Request: " + rqst.getPathInfo() +
-            " From: " + rqst.getRemoteAddr());
-    chain.doFilter(request, response);
+      LOG.info("User: " + ldapent.userId + ", Request: " + rqst.getPathInfo() +
+              " From: " + rqst.getRemoteAddr());
+      chain.doFilter(request, response);
+    } finally {
+      Thread.currentThread().setName(prevThreadName);
+    }
   }
 
   /**

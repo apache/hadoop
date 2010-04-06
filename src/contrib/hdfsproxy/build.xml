@@ -223,7 +223,7 @@
 	<target name="test" depends="compile,compile-test,test-junit,test-cactus" description="Automated Test Framework" if="test.available"/>
 	
 	<target name="test-junit" depends="compile,compile-test" if="test.available">
-		<junit fork="yes" printsummary="withOutAndErr" errorProperty="tests.failed" failureProperty="tests.failed">
+		<junit fork="yes" printsummary="yes" errorProperty="tests.failed" failureProperty="tests.failed">
         <classpath refid="test.classpath"/>
         <sysproperty key="test.build.data" value="${build.test}/data"/>
 	      <sysproperty key="build.test" value="${build.test}"/>
@@ -291,7 +291,7 @@
 		<copy file="${tomcat.conf.test}/web.xml" tofile="${tomcatconfig.dir}/conf/web.xml"/>
 		<copy file="${tomcat.conf.test}/tomcat-users.xml" tofile="${tomcatconfig.dir}/conf/tomcat-users.xml"/>
 	
-		<cactus warfile="${target.dir}/${cactus.warfile.name}.war" fork="yes" haltonfailure="no" printsummary="withOutAndErr" failureproperty="tests.failed">
+		<cactus warfile="${target.dir}/${cactus.warfile.name}.war" fork="yes" haltonfailure="no" printsummary="yes" failureproperty="tests.failed">
 			<classpath>
 				<path refid="cactus.classpath"/>
 				<pathelement location="${build.classes}"/>
