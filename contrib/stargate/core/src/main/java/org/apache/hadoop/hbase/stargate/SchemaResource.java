@@ -35,10 +35,12 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
+
 import javax.xml.namespace.QName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -46,7 +48,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
@@ -89,31 +90,17 @@ public class SchemaResource implements Constants {
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(final @Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
     }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
+    }
     servlet.getMetrics().incrementRequests(1);
     try {
-      HTableDescriptor htd = getTableSchema();
-      TableSchemaModel model = new TableSchemaModel();
-      model.setName(tableName);
-      for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-          htd.getValues().entrySet()) {
-        model.addAttribute(Bytes.toString(e.getKey().get()), 
-            Bytes.toString(e.getValue().get()));
-      }
-      for (HColumnDescriptor hcd: htd.getFamilies()) {
-        ColumnSchemaModel columnModel = new ColumnSchemaModel();
-        columnModel.setName(hcd.getNameAsString());
-        for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-          hcd.getValues().entrySet()) {
-        columnModel.addAttribute(Bytes.toString(e.getKey().get()), 
-          Bytes.toString(e.getValue().get()));
-      }
-        model.addColumnFamily(columnModel);
-      }
-      ResponseBuilder response = Response.ok(model);
+      ResponseBuilder response =
+        Response.ok(new TableSchemaModel(getTableSchema()));
       response.cacheControl(cacheControl);
       return response.build();
     } catch (TableNotFoundException e) {
@@ -206,46 +193,52 @@ public class SchemaResource implements Constants {
   @PUT
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response put(final TableSchemaModel model, 
-      final @Context UriInfo uriInfo) {
+      final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
-    servlet.getMetrics().incrementRequests(1);
-    // use the name given in the path, but warn if the name on the path and
-    // the name in the schema are different
-    if (model.getName() != tableName) {
-      LOG.warn("table name mismatch: path='" + tableName + "', schema='" +
-        model.getName() + "'");
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
     }
+    servlet.getMetrics().incrementRequests(1);
     return update(model, true, uriInfo);
   }
 
   @POST
   @Consumes({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response post(final TableSchemaModel model, 
-      final @Context UriInfo uriInfo) {
+      final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("PUT " + uriInfo.getAbsolutePath());
     }
-    servlet.getMetrics().incrementRequests(1);
-    // use the name given in the path, but warn if the name on the path and
-    // the name in the schema are different
-    if (model.getName() != tableName) {
-      LOG.warn("table name mismatch: path='" + tableName + "', schema='" +
-        model.getName() + "'");
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
     }
+    servlet.getMetrics().incrementRequests(1);
     return update(model, false, uriInfo);
   }
 
   @DELETE
-  public Response delete(final @Context UriInfo uriInfo) {     
+  public Response delete(final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
+    }
+    if (!servlet.userRequestLimit(user, 1)) {
+      return Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     try {
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      admin.disableTable(actualTableName);
+      boolean success = false;
+      for (int i = 0; i < 10; i++) try {
+        admin.disableTable(actualTableName);
+        success = true;
+        break;
+      } catch (IOException e) {
+      }
+      if (!success) {
+        throw new IOException("could not disable table");
+      }
       admin.deleteTable(actualTableName);
       return Response.ok().build();
     } catch (TableNotFoundException e) {

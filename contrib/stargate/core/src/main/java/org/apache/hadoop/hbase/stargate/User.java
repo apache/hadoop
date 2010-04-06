@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class User implements Constants {
 
   public static final User DEFAULT_USER = new User("default",
-    "00000000000000000000000000000000", false, true);
+    "00000000000000000000000000000000", true, true);
 
   private String name;
   private String token;

@@ -20,46 +20,32 @@
 
 package org.apache.hadoop.hbase.stargate.util;
 
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Generic storage for per user information.
  */
 public class UserData {
 
-  public static final int TOKENBUCKET = 0;
+  public static final int TOKENBUCKET = 1;
 
-  ArrayList<Object> data = new ArrayList<Object>();
+  Map<Integer,Object> data = new HashMap<Integer,Object>(1);
 
   public synchronized boolean has(final int sel) {
-    try {
-      return data.get(sel) != null;
-    } catch (IndexOutOfBoundsException e) {
-      return false;
-    }
+    return data.get(sel) != null;
   }
 
   public synchronized Object get(final int sel) {
-    try {
-      return data.get(sel);
-    } catch (IndexOutOfBoundsException e) {
-      return null;
-    }
+    return data.get(sel);
   }
 
   public synchronized Object put(final int sel, final Object o) {
-    Object old = null;
-    try {
-      old = data.get(sel);
-    } catch (IndexOutOfBoundsException e) {
-      // do nothing
-    }
-    data.set(sel, o);
-    return old;
+    return data.put(sel, o);
   }
 
   public synchronized Object remove(int sel) {
-    return put(sel, null);
+    return remove(sel);
   }
 
 }

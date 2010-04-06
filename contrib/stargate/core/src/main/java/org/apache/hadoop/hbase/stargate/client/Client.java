@@ -64,10 +64,13 @@ public class Client {
    */
   public Client(Cluster cluster) {
     this.cluster = cluster;
-    httpClient = new HttpClient(new MultiThreadedHttpConnectionManager());
-    HttpConnectionManagerParams managerParams =
-      httpClient.getHttpConnectionManager().getParams();
+    MultiThreadedHttpConnectionManager manager = 
+      new MultiThreadedHttpConnectionManager();
+    HttpConnectionManagerParams managerParams = manager.getParams();
     managerParams.setConnectionTimeout(2000); // 2 s
+    managerParams.setDefaultMaxConnectionsPerHost(10);
+    managerParams.setMaxTotalConnections(100);
+    this.httpClient = new HttpClient(manager);
     HttpClientParams clientParams = httpClient.getParams();
     clientParams.setVersion(HttpVersion.HTTP_1_1);
   }
@@ -200,10 +203,13 @@ public class Client {
   public Response head(Cluster cluster, String path, Header[] headers) 
       throws IOException {
     HeadMethod method = new HeadMethod();
-    int code = execute(cluster, method, null, path);
-    headers = method.getResponseHeaders();
-    method.releaseConnection();
-    return new Response(code, headers, null);
+    try {
+      int code = execute(cluster, method, null, path);
+      headers = method.getResponseHeaders();
+      return new Response(code, headers, null);
+    } finally {
+      method.releaseConnection();
+    }
   }
 
   /**
@@ -276,11 +282,14 @@ public class Client {
   public Response get(Cluster c, String path, Header[] headers) 
       throws IOException {
     GetMethod method = new GetMethod();
-    int code = execute(c, method, headers, path);
-    headers = method.getResponseHeaders();
-    byte[] body = method.getResponseBody();
-    method.releaseConnection();
-    return new Response(code, headers, body);
+    try {
+      int code = execute(c, method, headers, path);
+      headers = method.getResponseHeaders();
+      byte[] body = method.getResponseBody();
+      return new Response(code, headers, body);
+    } finally {
+      method.releaseConnection();
+    }
   }
 
   /**
@@ -339,12 +348,15 @@ public class Client {
   public Response put(Cluster cluster, String path, Header[] headers, 
       byte[] content) throws IOException {
     PutMethod method = new PutMethod();
-    method.setRequestEntity(new ByteArrayRequestEntity(content));
-    int code = execute(cluster, method, headers, path);
-    headers = method.getResponseHeaders();
-    content = method.getResponseBody();
-    method.releaseConnection();
-    return new Response(code, headers, content);
+    try {
+      method.setRequestEntity(new ByteArrayRequestEntity(content));
+      int code = execute(cluster, method, headers, path);
+      headers = method.getResponseHeaders();
+      content = method.getResponseBody();
+      return new Response(code, headers, content);
+    } finally {
+      method.releaseConnection();
+    }
   }
 
   /**
@@ -403,12 +415,15 @@ public class Client {
   public Response post(Cluster cluster, String path, Header[] headers, 
       byte[] content) throws IOException {
     PostMethod method = new PostMethod();
-    method.setRequestEntity(new ByteArrayRequestEntity(content));
-    int code = execute(cluster, method, headers, path);
-    headers = method.getResponseHeaders();
-    content = method.getResponseBody();
-    method.releaseConnection();
-    return new Response(code, headers, content);
+    try {
+      method.setRequestEntity(new ByteArrayRequestEntity(content));
+      int code = execute(cluster, method, headers, path);
+      headers = method.getResponseHeaders();
+      content = method.getResponseBody();
+      return new Response(code, headers, content);
+    } finally {
+      method.releaseConnection();
+    }
   }
 
   /**
@@ -430,9 +445,14 @@ public class Client {
    */
   public Response delete(Cluster cluster, String path) throws IOException {
     DeleteMethod method = new DeleteMethod();
-    int code = execute(cluster, method, null, path);
-    Header[] headers = method.getResponseHeaders();
-    method.releaseConnection();
-    return new Response(code, headers);
+    try {
+      int code = execute(cluster, method, null, path);
+      Header[] headers = method.getResponseHeaders();
+      byte[] content = method.getResponseBody();
+      return new Response(code, headers, content);
+    } finally {
+      method.releaseConnection();
+    }
   }
+
 }

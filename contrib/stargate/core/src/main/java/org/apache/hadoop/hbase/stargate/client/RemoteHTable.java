@@ -29,16 +29,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.xml.namespace.QName;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,7 +51,6 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.stargate.Constants;
 import org.apache.hadoop.hbase.stargate.model.CellModel;
 import org.apache.hadoop.hbase.stargate.model.CellSetModel;
-import org.apache.hadoop.hbase.stargate.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.stargate.model.RowModel;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 import org.apache.hadoop.hbase.stargate.model.TableSchemaModel;
@@ -67,11 +63,13 @@ public class RemoteHTable implements HTableInterface {
 
   private static final Log LOG = LogFactory.getLog(RemoteHTable.class);
 
-  Client client;
-  Configuration conf;
-  byte[] name;
-  String accessToken;
-  
+  final Client client;
+  final Configuration conf;
+  final byte[] name;
+  final String accessToken;
+  final int maxRetries;
+  final long sleepTime;
+
   @SuppressWarnings("unchecked")
   protected String buildRowSpec(final byte[] row, final Map familyMap, 
       final long startTime, final long endTime, final int maxVersions) {
@@ -210,19 +208,18 @@ public class RemoteHTable implements HTableInterface {
     this.conf = conf;
     this.name = name;
     this.accessToken = accessToken;
+    this.maxRetries = conf.getInt("stargate.client.max.retries", 10);
+    this.sleepTime = conf.getLong("stargate.client.sleep", 1000);
   }
 
-  @Override
   public byte[] getTableName() {
     return name.clone();
   }
 
-  @Override
   public Configuration getConfiguration() {
     return conf;
   }
 
-  @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
@@ -233,32 +230,30 @@ public class RemoteHTable implements HTableInterface {
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append("schema");
-    Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
-    if (response.getCode() != 200) {
-      throw new IOException("schema request returned " + response.getCode());
-    }
-    TableSchemaModel schema = new TableSchemaModel();
-    schema.getObjectFromMessage(response.getBody());
-    HTableDescriptor htd = new HTableDescriptor(schema.getName());
-    for (Map.Entry<QName, Object> e: schema.getAny().entrySet()) {
-      htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
-    }
-    for (ColumnSchemaModel column: schema.getColumns()) {
-      HColumnDescriptor hcd = new HColumnDescriptor(column.getName());
-      for (Map.Entry<QName, Object> e: column.getAny().entrySet()) {
-        hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.get(sb.toString(), Constants.MIMETYPE_PROTOBUF);
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        TableSchemaModel schema = new TableSchemaModel();
+        schema.getObjectFromMessage(response.getBody());
+        return schema.getTableDescriptor();
+      case 509: 
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("schema request returned " + code);
       }
-      htd.addFamily(hcd);
     }
-    return htd;
+    throw new IOException("schema request timed out");
   }
 
-  @Override
   public void close() throws IOException {
     client.shutdown();
   }
 
-  @Override
   public Result get(Get get) throws IOException {
     TimeRange range = get.getTimeRange();
     String spec = buildRowSpec(get.getRow(), get.getFamilyMap(),
@@ -266,34 +261,41 @@ public class RemoteHTable implements HTableInterface {
     if (get.getFilter() != null) {
       LOG.warn("filters not supported on gets");
     }
-    Response response = client.get(spec, Constants.MIMETYPE_PROTOBUF);
-    int code = response.getCode();
-    if (code == 404) {
-      return new Result();
-    }
-    if (code != 200) {
-      throw new IOException("get request returned " + code);
-    }
-    CellSetModel model = new CellSetModel();
-    model.getObjectFromMessage(response.getBody());
-    Result[] results = buildResultFromModel(model);
-    if (results.length > 0) {
-      if (results.length > 1) {
-        LOG.warn("too many results for get (" + results.length + ")");
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.get(spec, Constants.MIMETYPE_PROTOBUF);
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        CellSetModel model = new CellSetModel();
+        model.getObjectFromMessage(response.getBody());
+        Result[] results = buildResultFromModel(model);
+        if (results.length > 0) {
+          if (results.length > 1) {
+            LOG.warn("too many results for get (" + results.length + ")");
+          }
+          return results[0];
+        }
+        // fall through
+      case 404:
+        return new Result();
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("get request returned " + code);
       }
-      return results[0];
     }
-    return new Result();
+    throw new IOException("get request timed out");
   }
 
-  @Override
   public boolean exists(Get get) throws IOException {
     LOG.warn("exists() is really get(), just use get()");
     Result result = get(get);
     return (result != null && !(result.isEmpty()));
   }
 
-  @Override
   public void put(Put put) throws IOException {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
@@ -305,14 +307,25 @@ public class RemoteHTable implements HTableInterface {
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
     sb.append(Bytes.toStringBinary(put.getRow()));
-    Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
-      model.createProtobufOutput());
-    if (response.getCode() != 200) {
-      throw new IOException("put failed with " + response.getCode());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
+        model.createProtobufOutput());
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        return;
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("put request failed with " + code);
+      }
     }
+    throw new IOException("put request timed out");
   }
 
-  @Override
   public void put(List<Put> puts) throws IOException {
     // this is a trick: Stargate accepts multiple rows in a cell set and
     // ignores the row specification in the URI
@@ -351,31 +364,52 @@ public class RemoteHTable implements HTableInterface {
     }
     sb.append(Bytes.toStringBinary(name));
     sb.append("/$multiput"); // can be any nonexistent row
-    Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
-      model.createProtobufOutput());
-    if (response.getCode() != 200) {
-      throw new IOException("multiput failed with " + response.getCode());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.put(sb.toString(), Constants.MIMETYPE_PROTOBUF,
+        model.createProtobufOutput());
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        return;
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("multiput request failed with " + code);
+      }
     }
+    throw new IOException("multiput request timed out");
   }
 
-  @Override
   public void delete(Delete delete) throws IOException {
     String spec = buildRowSpec(delete.getRow(), delete.getFamilyMap(),
       delete.getTimeStamp(), delete.getTimeStamp(), 1);
-    Response response = client.delete(spec);
-    if (response.getCode() != 200) {
-      throw new IOException("delete() returned " + response.getCode());
+    for (int i = 0; i < maxRetries; i++) {
+      Response response = client.delete(spec);
+      int code = response.getCode();
+      switch (code) {
+      case 200:
+        return;
+      case 509:
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) { }
+        break;
+      default:
+        throw new IOException("delete request failed with " + code);
+      }
     }
+    throw new IOException("delete request timed out");
   }
 
-  @Override
   public void delete(List<Delete> deletes) throws IOException {
     for (Delete delete: deletes) {
       delete(delete);
     }
   }
 
-  @Override
   public void flushCommits() throws IOException {
     // no-op
   }
@@ -385,6 +419,12 @@ public class RemoteHTable implements HTableInterface {
     String uri;
 
     public Scanner(Scan scan) throws IOException {
+      ScannerModel model;
+      try {
+        model = ScannerModel.fromScan(scan);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
       StringBuffer sb = new StringBuffer();
       sb.append('/');
       if (accessToken != null) {
@@ -394,18 +434,24 @@ public class RemoteHTable implements HTableInterface {
       sb.append(Bytes.toStringBinary(name));
       sb.append('/');
       sb.append("scanner");
-      try {
-        ScannerModel model = ScannerModel.fromScan(scan);
+      for (int i = 0; i < maxRetries; i++) {
         Response response = client.post(sb.toString(),
           Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-        if (response.getCode() != 201) {
-          throw new IOException("scan request failed with " +
-            response.getCode());
+        int code = response.getCode();
+        switch (code) {
+        case 201:
+          uri = response.getLocation();
+          return;
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) { }
+          break;
+        default:
+          throw new IOException("scan request failed with " + code);
         }
-        uri = response.getLocation();
-      } catch (Exception e) {
-        throw new IOException(e);
       }
+      throw new IOException("scan request timed out");
     }
 
     @Override
@@ -413,18 +459,28 @@ public class RemoteHTable implements HTableInterface {
       StringBuilder sb = new StringBuilder(uri);
       sb.append("?n=");
       sb.append(nbRows);
-      Response response = client.get(sb.toString(),
-        Constants.MIMETYPE_PROTOBUF);
-      if (response.getCode() == 206) {
-        return null;
+      for (int i = 0; i < maxRetries; i++) {
+        Response response = client.get(sb.toString(),
+          Constants.MIMETYPE_PROTOBUF);
+        int code = response.getCode();
+        switch (code) {
+        case 200:
+          CellSetModel model = new CellSetModel();
+          model.getObjectFromMessage(response.getBody());
+          return buildResultFromModel(model);
+        case 204:
+        case 206:
+          return null;
+        case 509:
+          try {
+            Thread.sleep(sleepTime);
+          } catch (InterruptedException e) { }
+          break;
+        default:
+          throw new IOException("scanner.next request failed with " + code);
+        }
       }
-      if (response.getCode() != 200) {
-        LOG.error("scanner.next failed with " + response.getCode());
-        return null;
-      }
-      CellSetModel model = new CellSetModel();
-      model.getObjectFromMessage(response.getBody());
-      return buildResultFromModel(model);
+      throw new IOException("scanner.next request timed out");
     }
 
     @Override
@@ -487,20 +543,17 @@ public class RemoteHTable implements HTableInterface {
     }
 
   }
-  
-  @Override
+
   public ResultScanner getScanner(Scan scan) throws IOException {
     return new Scanner(scan);
   }
 
-  @Override
   public ResultScanner getScanner(byte[] family) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(family);
     return new Scanner(scan);
   }
 
-  @Override
   public ResultScanner getScanner(byte[] family, byte[] qualifier)
       throws IOException {
     Scan scan = new Scan();
@@ -508,39 +561,32 @@ public class RemoteHTable implements HTableInterface {
     return new Scanner(scan);
   }
 
-  @Override
   public boolean isAutoFlush() {
     return true;
   }
 
-  @Override
   public Result getRowOrBefore(byte[] row, byte[] family) throws IOException {
     throw new IOException("getRowOrBefore not supported");
   }
 
-  @Override
   public RowLock lockRow(byte[] row) throws IOException {
     throw new IOException("lockRow not implemented");
   }
 
-  @Override
   public void unlockRow(RowLock rl) throws IOException {
     throw new IOException("unlockRow not implemented");
   }
 
-  @Override
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {
     throw new IOException("checkAndPut not supported");
   }
 
-  @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException {
     throw new IOException("incrementColumnValue not supported");
   }
 
-  @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, boolean writeToWAL) throws IOException {
     throw new IOException("incrementColumnValue not supported");

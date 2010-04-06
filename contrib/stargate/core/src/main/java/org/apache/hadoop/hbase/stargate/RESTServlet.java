@@ -193,6 +193,10 @@ public class RESTServlet extends ServletAdaptor
     this.statusReporter = new StatusReporter(
       conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 60), stopping);
     this.multiuser = conf.getBoolean("stargate.multiuser", false);
+    if (this.multiuser) {
+      LOG.info("multiuser mode enabled");
+      getAuthenticator();
+    }
   }
 
   @Override
@@ -321,6 +325,7 @@ public class RESTServlet extends ServletAdaptor
       if (authenticator == null) {
         authenticator = new HBCAuthenticator(conf);
       }
+      LOG.info("using authenticator " + authenticator);
     }
     return authenticator;
   }
@@ -339,18 +344,20 @@ public class RESTServlet extends ServletAdaptor
    * @param want the number of tokens desired
    * @throws IOException
    */
-  public boolean userRequestLimit(final User user, int want) 
+  public boolean userRequestLimit(final User user, int want)
       throws IOException {
-    UserData ud = SoftUserData.get(user);
-    HTableTokenBucket tb = (HTableTokenBucket) ud.get(UserData.TOKENBUCKET);
-    if (tb == null) {
-      tb = new HTableTokenBucket(conf, Bytes.toBytes(user.getToken()));
-      ud.put(UserData.TOKENBUCKET, tb);
+    if (multiuser) {
+      UserData ud = SoftUserData.get(user);
+      HTableTokenBucket tb = (HTableTokenBucket) ud.get(UserData.TOKENBUCKET);
+      if (tb == null) {
+        tb = new HTableTokenBucket(conf, Bytes.toBytes(user.getToken()));
+        ud.put(UserData.TOKENBUCKET, tb);
+      }
+      if (tb.available() < want) {
+        return false;
+      }
+      tb.remove(want);
     }
-    if (tb.available() < want) {
-      return false;
-    }
-    tb.remove(want);
     return true;
   }
 

@@ -65,6 +65,18 @@ public class TableRegionModel implements Serializable {
    * @param id the encoded id of the region
    * @param startKey the start key of the region
    * @param endKey the end key of the region
+   */
+  public TableRegionModel(String table, long id, byte[] startKey,
+      byte[] endKey) {
+    this(table, id, startKey, endKey, null);
+  }
+
+  /**
+   * Constructor
+   * @param table the table name
+   * @param id the encoded id of the region
+   * @param startKey the start key of the region
+   * @param endKey the end key of the region
    * @param location the name and port of the region server hosting the region
    */
   public TableRegionModel(String table, long id, byte[] startKey,
@@ -173,8 +185,10 @@ public class TableRegionModel implements Serializable {
     sb.append(Bytes.toString(startKey));
     sb.append("'\n  endKey='");
     sb.append(Bytes.toString(endKey));
-    sb.append("'\n  location='");
-    sb.append(location);
+    if (location != null) {
+      sb.append("'\n  location='");
+      sb.append(location);
+    }
     sb.append("'\n]\n");
     return sb.toString();
   }

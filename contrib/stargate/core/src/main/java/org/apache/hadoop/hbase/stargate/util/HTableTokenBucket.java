@@ -70,7 +70,7 @@ public class HTableTokenBucket implements Constants {
   HTable table;
   byte[] row;
   int tokens;
-  double rate = 10.0; // default, 10 ops added per second
+  double rate = 20.0; // default, 20 ops added per second
   int size = 100;     // burst
   long lastUpdated = System.currentTimeMillis();
   long configUpdateInterval;

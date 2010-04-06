@@ -484,6 +484,7 @@ Release 0.21.0 - Unreleased
    HBASE-2087  The wait on compaction because "Too many store files" 
                holds up all flushing
    HBASE-2252  Mapping a very big table kills region servers
+   HBASE-2412  [stargate] PerformanceEvaluation
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

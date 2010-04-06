@@ -38,9 +38,11 @@ import javax.xml.namespace.QName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.stargate.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.stargate.protobuf.generated.TableSchemaMessage.TableSchema;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A representation of HBase table descriptors.
@@ -76,6 +78,29 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    * Default constructor.
    */
   public TableSchemaModel() {}
+
+  /**
+   * Constructor
+   * @param htd the table descriptor
+   */
+  public TableSchemaModel(HTableDescriptor htd) {
+    setName(htd.getNameAsString());
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        htd.getValues().entrySet()) {
+      addAttribute(Bytes.toString(e.getKey().get()), 
+        Bytes.toString(e.getValue().get()));
+    }
+    for (HColumnDescriptor hcd: htd.getFamilies()) {
+      ColumnSchemaModel columnModel = new ColumnSchemaModel();
+      columnModel.setName(hcd.getNameAsString());
+      for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+          hcd.getValues().entrySet()) {
+        columnModel.addAttribute(Bytes.toString(e.getKey().get()), 
+            Bytes.toString(e.getValue().get()));
+      }
+      addColumnFamily(columnModel);
+    }
+  }
 
   /**
    * Add an attribute to the table descriptor
@@ -308,4 +333,23 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     }
     return this;
   }
+
+  /**
+   * @return a table descriptor
+   */
+  public HTableDescriptor getTableDescriptor() {
+    HTableDescriptor htd = new HTableDescriptor(getName());
+    for (Map.Entry<QName, Object> e: getAny().entrySet()) {
+      htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+    }
+    for (ColumnSchemaModel column: getColumns()) {
+      HColumnDescriptor hcd = new HColumnDescriptor(column.getName());
+      for (Map.Entry<QName, Object> e: column.getAny().entrySet()) {
+        hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
+      }
+      htd.addFamily(hcd);
+    }
+    return htd;
+  }
+
 }

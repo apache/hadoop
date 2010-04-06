@@ -20,11 +20,12 @@
 
 package org.apache.hadoop.hbase.stargate;
 
+import java.net.InetAddress;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
@@ -64,6 +65,18 @@ public class Main implements Constants {
     sh.setInitParameter("com.sun.jersey.config.property.packages",
       "jetty");
 
+    // configure the Stargate singleton
+
+    RESTServlet servlet = RESTServlet.getInstance();
+    port = servlet.getConfiguration().getInt("stargate.port", port);
+    if (!servlet.isMultiUser()) {
+      servlet.setMultiUser(cmd.hasOption("m"));
+    }
+    servlet.addConnectorAddress(
+      servlet.getConfiguration().get("stargate.hostname",
+        InetAddress.getLocalHost().getCanonicalHostName()),
+      port);
+
     // set up Jetty and run the embedded server
 
     Server server = new Server(port);
@@ -73,14 +86,6 @@ public class Main implements Constants {
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
-
-    // configure the Stargate singleton
-
-    RESTServlet servlet = RESTServlet.getInstance();
-    servlet.setMultiUser(cmd.hasOption("m"));
-    for (Connector conn: server.getConnectors()) {
-      servlet.addConnectorAddress(conn.getHost(), conn.getLocalPort());
-    }
 
     server.start();
     server.join();

@@ -121,7 +121,7 @@ public class RootResource implements Constants {
     if (servlet.isMultiUser()) {
       throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
-    return new StorageClusterStatusResource();
+    return new StorageClusterStatusResource(User.DEFAULT_USER);
   }
 
   @Path("version")
@@ -135,7 +135,7 @@ public class RootResource implements Constants {
     if (servlet.isMultiUser()) {
       User user = auth(token);
       if (!servlet.userRequestLimit(user, 1)) {
-        throw new WebApplicationException(Response.status(509).build());
+         return Response.status(509).build();
       }
       try {
         ResponseBuilder response = Response.ok(getTableListForUser(user));
@@ -154,11 +154,8 @@ public class RootResource implements Constants {
       final @PathParam("token") String token) throws IOException {
     if (servlet.isMultiUser()) {
       User user = auth(token);
-      if (user.isAdmin()) {
-        if (!servlet.userRequestLimit(user, 1)) {
-          throw new WebApplicationException(Response.status(509).build());
-        }
-        return new StorageClusterStatusResource();
+      if (user != null && user.isAdmin()) {
+        return new StorageClusterStatusResource(user);
       }
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     }
@@ -185,7 +182,7 @@ public class RootResource implements Constants {
     if (servlet.isMultiUser()) {
       throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
-    return new TableResource(null, table);
+    return new TableResource(User.DEFAULT_USER, table);
   }
 
 }

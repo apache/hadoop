@@ -40,6 +40,11 @@ public class TableResource implements Constants {
     this.table = table;
   }
 
+  @Path("exists")
+  public ExistsResource getExistsResource() throws IOException {
+    return new ExistsResource(user, table);
+  }
+
   @Path("regions")
   public RegionsResource getRegionsResource() throws IOException {
     return new RegionsResource(user, table);
@@ -66,4 +71,5 @@ public class TableResource implements Constants {
                   Response.Status.INTERNAL_SERVER_ERROR);
     }
   }
+
 }

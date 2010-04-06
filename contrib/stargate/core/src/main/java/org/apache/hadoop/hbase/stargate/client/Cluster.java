@@ -47,6 +47,13 @@ public class Cluster {
   }
 
   /**
+   * @return true if no locations have been added, false otherwise
+   */
+  public boolean isEmpty() {
+    return nodes.isEmpty();
+  }
+
+  /**
    * Add a node to the cluster
    * @param node the service location in 'host:port' format
    */

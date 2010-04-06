@@ -44,21 +44,26 @@ public class StorageClusterStatusResource implements Constants {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterStatusResource.class);
 
+  private User user;
   private CacheControl cacheControl;
   private RESTServlet servlet;
 
-  public StorageClusterStatusResource() throws IOException {
-    servlet = RESTServlet.getInstance();
-    cacheControl = new CacheControl();
-    cacheControl.setNoCache(true);
-    cacheControl.setNoTransform(false);
+  public StorageClusterStatusResource(User user) throws IOException {
+    this.user = user;
+    this.servlet = RESTServlet.getInstance();
+    this.cacheControl = new CacheControl();
+    this.cacheControl.setNoCache(true);
+    this.cacheControl.setNoTransform(false);
   }
 
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
-  public Response get(final @Context UriInfo uriInfo) {
+  public Response get(final @Context UriInfo uriInfo) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("GET " + uriInfo.getAbsolutePath());
+    }
+    if (!servlet.userRequestLimit(user, 1)) {
+      Response.status(509).build();
     }
     servlet.getMetrics().incrementRequests(1);
     try {
