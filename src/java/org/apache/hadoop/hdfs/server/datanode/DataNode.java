@@ -46,6 +46,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -1423,26 +1427,41 @@ public class DataNode extends Configured
    */
   static DataNode makeInstance(Collection<URI> dataDirs, Configuration conf)
     throws IOException {
-    ArrayList<File> dirs = new ArrayList<File>();
-    for(URI dirURI : dataDirs) {
-      if(! "file".equalsIgnoreCase(dirURI.getScheme())) {
-        LOG.warn("Unsupported URI schema in " + dirURI  + ". Ignoring ...");
-        continue;
-      }
-      File data = new File(dirURI.getPath());
-      try {
-        DiskChecker.checkDir(data);
-        dirs.add(data);
-      } catch(DiskErrorException e) {
-        LOG.warn("Invalid directory in "
-            + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + ": " + e.getMessage());
-      }
-    }
-    if (dirs.size() > 0) 
+    LocalFileSystem localFS = FileSystem.getLocal(conf);
+    FsPermission permission = new FsPermission(
+        conf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
+                 DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
+    ArrayList<File> dirs = getDataDirsFromURIs(dataDirs, localFS, permission);
+
+    if (dirs.size() > 0) {
       return new DataNode(conf, dirs);
+    }
     LOG.error("All directories in "
         + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + " are invalid.");
     return null;
+  }
+
+  // DataNode ctor expects AbstractList instead of List or Collection...
+  static ArrayList<File> getDataDirsFromURIs(Collection<URI> dataDirs,
+      LocalFileSystem localFS, FsPermission permission) {
+    ArrayList<File> dirs = new ArrayList<File>();
+    for (URI dirURI : dataDirs) {
+      if (!"file".equalsIgnoreCase(dirURI.getScheme())) {
+        LOG.warn("Unsupported URI schema in " + dirURI + ". Ignoring ...");
+        continue;
+      }
+      // drop any (illegal) authority in the URI for backwards compatibility
+      File data = new File(dirURI.getPath());
+      try {
+        DiskChecker.checkDir(localFS, new Path(data.toURI()), permission);
+        dirs.add(data);
+      } catch (IOException e) {
+        LOG.warn("Invalid directory in: "
+                 + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + ": "
+                 + e.getMessage());
+      }
+    }
+    return dirs;
   }
 
   @Override

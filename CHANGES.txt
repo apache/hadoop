@@ -122,6 +122,9 @@ Trunk (unreleased changes)
     HDFS-1024. SecondaryNameNode verifies size of fsimage and edits file.
     (Dmytro Molkov via dhruba)
 
+    HDFS-997. Allow datanode storage directory permissions to be configurable.
+    (Luke Lu via cdouglas)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

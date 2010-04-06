@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.WRITE_BLOCK;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -29,9 +28,9 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.io.Text;
 
 /** Test if a datanode can correctly handle errors during block read/write*/
 public class TestDiskError extends TestCase {
@@ -152,5 +150,34 @@ public class TestDiskError extends TestCase {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  public void testLocalDirs() throws Exception {
+    Configuration conf = new Configuration();
+    final String permStr = "755";
+    FsPermission expected = new FsPermission(permStr);
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY, permStr);
+    MiniDFSCluster cluster = null;
+
+    try {
+      // Start the cluster
+      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster.waitActive();
+
+      // Check permissions on directories in 'dfs.data.dir'
+      FileSystem localFS = FileSystem.getLocal(conf);
+      String[] dataDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+      for (String dir : dataDirs) {
+        Path dataDir = new Path(dir);
+        FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
+        assertEquals("Permission for dir: " + dataDir + ", is " + actual +
+                         ", while expected is " + expected,
+                     expected, actual);
+      }
+    } finally {
+      if (cluster != null)
+        cluster.shutdown();
+    }
+
   }
 }
