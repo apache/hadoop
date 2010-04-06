@@ -90,7 +90,7 @@ public class HsftpFileSystem extends HftpFileSystem {
         fis = null;
       }
       // initialize default trust manager with truststore file and pass
-      if (conf.getBoolean("ssl.client.do.not.authenticate.server", false)) {
+      if (sslConf.getBoolean("ssl.client.do.not.authenticate.server", false)) {
         // by pass trustmanager validation
         tms = new DummyTrustManager[] { new DummyTrustManager() };
       } else {

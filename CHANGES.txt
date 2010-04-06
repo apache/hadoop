@@ -233,6 +233,10 @@ Trunk (unreleased changes)
     HDFS-481. hdfsproxy: Bug Fixes + HdfsProxy to use proxy user to
     impresonate the real user.  (Srikanth Sundarrajan via szetszwo)
 
+    HDFS-482. Move HsftpFileSystem's ssl.client.do.not.authenticate.server
+    configuration setting to ssl-client.xml.  (Srikanth Sundarrajan via
+    szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
