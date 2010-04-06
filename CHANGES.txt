@@ -14,6 +14,9 @@ Release 0.20.3 - Unreleased
     MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
     input path. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HDFS-1024 SecondaryNamenode fails to checkpoint because namenode fails
+    with CancelledKeyException (Dmytro Molkov via Stack)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match

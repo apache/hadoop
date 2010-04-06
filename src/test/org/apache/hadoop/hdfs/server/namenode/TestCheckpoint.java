@@ -383,6 +383,55 @@ public class TestCheckpoint extends TestCase {
   }
 
   /**
+   * Simulate namenode failing to send the whole file
+   * secondary namenode sometimes assumed it received all of it
+   */
+  @SuppressWarnings("deprecation")
+  void testNameNodeImageSendFail(Configuration conf)
+    throws IOException {
+    System.out.println("Starting testNameNodeImageSendFail");
+    Path file1 = new Path("checkpointww.dat");
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
+                                                false, null);
+    cluster.waitActive();
+    FileSystem fileSys = cluster.getFileSystem();
+    try {
+      assertTrue(!fileSys.exists(file1));
+      //
+      // Make the checkpoint fail after rolling the edit log.
+      //
+      SecondaryNameNode secondary = startSecondaryNameNode(conf);
+      ErrorSimulator.setErrorSimulation(3);
+
+      try {
+        secondary.doCheckpoint();  // this should fail
+        fail("Did not get expected exception");
+      } catch (IOException e) {
+        // We only sent part of the image. Have to trigger this exception
+        assertTrue(e.getMessage().contains("is not of the advertised size"));
+      }
+      ErrorSimulator.clearErrorSimulation(3);
+      secondary.shutdown(); // secondary namenode crash!
+
+      // start new instance of secondary and verify that 
+      // a new rollEditLog suceedes inspite of the fact that 
+      // edits.new already exists.
+      //
+      secondary = startSecondaryNameNode(conf);
+      secondary.doCheckpoint();  // this should work correctly
+      secondary.shutdown();
+
+      //
+      // Create a new file
+      //
+      writeFile(fileSys, file1, replication);
+      checkFile(fileSys, file1, replication);
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+    }
+  }
+  /**
    * Test different startup scenarios.
    * <p><ol>
    * <li> Start of primary name-node in secondary directory must succeed. 
@@ -592,7 +641,7 @@ public class TestCheckpoint extends TestCase {
       // Take a checkpoint
       //
       SecondaryNameNode secondary = startSecondaryNameNode(conf);
-      ErrorSimulator.initializeErrorSimulationEvent(3);
+      ErrorSimulator.initializeErrorSimulationEvent(4);
       secondary.doCheckpoint();
       secondary.shutdown();
     } finally {
@@ -646,6 +695,7 @@ public class TestCheckpoint extends TestCase {
 
     // file2 is left behind.
 
+    testNameNodeImageSendFail(conf);
     testSecondaryNamenodeError1(conf);
     testSecondaryNamenodeError2(conf);
     testSecondaryNamenodeError3(conf);

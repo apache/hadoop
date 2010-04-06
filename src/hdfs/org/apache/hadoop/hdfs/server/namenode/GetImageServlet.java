@@ -45,10 +45,14 @@ public class GetImageServlet extends HttpServlet {
       FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       TransferFsImage ff = new TransferFsImage(pmap, request, response);
       if (ff.getImage()) {
+        response.setHeader(TransferFsImage.CONTENT_LENGTH,
+          String.valueOf(nnImage.getFsImageName().length()));
         // send fsImage
         TransferFsImage.getFileServer(response.getOutputStream(),
                                       nnImage.getFsImageName()); 
       } else if (ff.getEdit()) {
+        response.setHeader(TransferFsImage.CONTENT_LENGTH,
+          String.valueOf(nnImage.getFsEditName().length()));
         // send edits
         TransferFsImage.getFileServer(response.getOutputStream(),
                                       nnImage.getFsEditName());
