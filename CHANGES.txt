@@ -309,6 +309,9 @@ Trunk (unreleased changes)
     HADOOP-6640. FileSystem.get() does RPC retries within a static
     synchronized block. (hairong)
 
+    HADOOP-6680. hadoop-cloud push command invokes proxy creation.
+    (Andrew Klochkov via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -374,7 +374,7 @@ def main():
   elif command == 'push':
     (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS,
                                                     ("FILE",))
-    service.proxy(opt.get('ssh_options'), args[1])
+    service.push(opt.get('ssh_options'), args[1])
 
   elif command == 'exec':
     (opt, args, service) = parse_options_and_config(command, SSH_OPTIONS,
