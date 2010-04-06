@@ -61,20 +61,31 @@ public class LdapIpDirFilter implements Filter {
   private static String hdfsPathSchemaStr;
 
   private InitialLdapContext lctx;
-  private String userId;
-  private String groupName;
-  private ArrayList<String> paths;
 
-  /** Pattern for a filter to find out if a request is HFTP/HSFTP request */
-  protected static final Pattern HFTP_PATTERN = Pattern
-      .compile("^(/listPaths|/data|/streamFile|/file)$");
-  /**
-   * Pattern for a filter to find out if an HFTP/HSFTP request stores its file
-   * path in the extra path information associated with the URL; if not, the
-   * file path is stored in request parameter "filename"
-   */
-  protected static final Pattern FILEPATH_PATTERN = Pattern
-      .compile("^(/listPaths|/data|/file)$");
+  private class LdapRoleEntry {
+    String userId;
+    String groupNames;
+    ArrayList<Path> paths;
+
+    void init(String userId, String groupNames, ArrayList<Path> paths) {
+      this.userId = userId;
+      this.groupNames = groupNames;
+      this.paths = paths;
+    }
+
+    boolean contains(Path path) {
+      return paths != null && paths.contains(path);
+    }
+
+    @Override
+    public String toString() {
+      return "LdapRoleEntry{" +
+          "groupName='" + groupNames + '\'' +
+          ", userId='" + userId + '\'' +
+          ", paths=" + paths +
+          '}';
+    }
+  }
 
   public void initialize(String bName, InitialLdapContext ctx) {
     // hook to cooperate unit test
@@ -85,7 +96,6 @@ public class LdapIpDirFilter implements Filter {
     hdfsGroupSchemaStr = "userClass";
     hdfsPathSchemaStr = "documentLocation";
     lctx = ctx;
-    paths = new ArrayList<String>();
   }
 
   /** {@inheritDoc} */
@@ -95,11 +105,7 @@ public class LdapIpDirFilter implements Filter {
     conf.addResource("hdfsproxy-default.xml");
     conf.addResource("hdfsproxy-site.xml");
     // extract namenode from source conf.
-    String nn = conf.get("fs.default.name");
-    if (nn == null) {
-      throw new ServletException(
-          "Proxy source cluster name node address not speficied");
-    }
+    String nn = ProxyUtil.getNamenode(conf);
     InetSocketAddress nAddr = NetUtils.createSocketAddr(nn);
     context.setAttribute("name.node.address", nAddr);
     context.setAttribute("name.conf", conf);
@@ -129,13 +135,11 @@ public class LdapIpDirFilter implements Filter {
       hdfsIpSchemaStrPrefix = conf.get(
           "hdfsproxy.ldap.ip.schema.string.prefix", "cn=");
       hdfsUidSchemaStr = conf.get("hdfsproxy.ldap.uid.schema.string", "uid");
-      hdfsGroupSchemaStr = conf.get("hdfsproxy.ldap.group.schema.string",
-          "userClass");
+      hdfsGroupSchemaStr = conf.get("hdfsproxy.ldap.group.schema.string", "userClass");
       hdfsPathSchemaStr = conf.get("hdfsproxy.ldap.hdfs.path.schema.string",
           "documentLocation");
-      paths = new ArrayList<String>();
     }
-    LOG.info("LdapIpDirFilter initialization success: " + nn);
+    LOG.info("LdapIpDirFilter initialization successful");
   }
 
   /** {@inheritDoc} */
@@ -163,64 +167,57 @@ public class LdapIpDirFilter implements Filter {
       b.append("\n The Servlet Path is " + rqst.getServletPath());
       LOG.debug(b.toString());
     }
+    LdapRoleEntry ldapent = new LdapRoleEntry();
     // check ip address
     String userIp = rqst.getRemoteAddr();
-    boolean isAuthorized = false;
     try {
-      isAuthorized = checkUserIp(userIp);
+      boolean isAuthorized = getLdapRoleEntryFromUserIp(userIp, ldapent);
       if (!isAuthorized) {
-        rsp.sendError(HttpServletResponse.SC_FORBIDDEN,
-            "IP not authorized to access");
+        rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "IP " + userIp
+            + " is not authorized to access");
         return;
       }
     } catch (NamingException ne) {
-      throw new IOException("NameingException in searching ldap"
+      throw new IOException("NamingException while searching ldap"
           + ne.toString());
     }
-    // check request path
-    String servletPath = rqst.getServletPath();
-    if (HFTP_PATTERN.matcher(servletPath).matches()) {
-      // request is an HSFTP request
-      if (FILEPATH_PATTERN.matcher(servletPath).matches()) {
-        // file path as part of the URL
-        isAuthorized = checkHdfsPath(rqst.getPathInfo() != null ? rqst
-            .getPathInfo() : "/");
-      } else {
-        // file path is stored in "filename" parameter
-        isAuthorized = checkHdfsPath(rqst.getParameter("filename"));
-      }
-    }
-    if (!isAuthorized) {
-      rsp.sendError(HttpServletResponse.SC_FORBIDDEN,
-          "User not authorized to access path");
-      return;
-    }
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(userId);
-    rqst.setAttribute("authorized.ugi", ugi);
-    // since we cannot pass ugi object cross context as they are from different
+
+    // since we cannot pass ugi object cross context as they are from
+    // different
     // classloaders in different war file, we have to use String attribute.
-    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", userId);
-    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.role", groupName);
-    LOG.info("User: " + userId + " (" + groupName + ") Request: "
-        + rqst.getPathInfo() + " From: " + rqst.getRemoteAddr());
+    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
+        ldapent.userId);
+    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.role",
+        ldapent.groupNames);
+    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
+        ldapent.paths);
+    LOG.info("User: " + ldapent.userId + ", Request: " + rqst.getPathInfo() +
+            " From: " + rqst.getRemoteAddr());
     chain.doFilter(request, response);
   }
 
-  /** check that client's ip is listed in the Ldap Roles */
+  /**
+   * check if client's ip is listed in the Ldap Roles if yes, return true and
+   * update ldapent. if not, return false
+   * */
   @SuppressWarnings("unchecked")
-  private boolean checkUserIp(String userIp) throws NamingException {
+  private boolean getLdapRoleEntryFromUserIp(String userIp,
+      LdapRoleEntry ldapent) throws NamingException {
     String ipMember = hdfsIpSchemaStrPrefix + userIp;
     Attributes matchAttrs = new BasicAttributes(true);
     matchAttrs.put(new BasicAttribute(hdfsIpSchemaStr, ipMember));
     matchAttrs.put(new BasicAttribute(hdfsUidSchemaStr));
+    matchAttrs.put(new BasicAttribute(hdfsGroupSchemaStr));
     matchAttrs.put(new BasicAttribute(hdfsPathSchemaStr));
 
-    String[] attrIDs = { hdfsUidSchemaStr, hdfsGroupSchemaStr,
-        hdfsPathSchemaStr };
+    String[] attrIDs = { hdfsUidSchemaStr, hdfsGroupSchemaStr, hdfsPathSchemaStr };
 
     NamingEnumeration<SearchResult> results = lctx.search(baseName, matchAttrs,
         attrIDs);
     if (results.hasMore()) {
+      String userId = null;
+      String groupNames = null;
+      ArrayList<Path> paths = new ArrayList<Path>();
       SearchResult sr = results.next();
       Attributes attrs = sr.getAttributes();
       for (NamingEnumeration ne = attrs.getAll(); ne.hasMore();) {
@@ -228,36 +225,20 @@ public class LdapIpDirFilter implements Filter {
         if (hdfsUidSchemaStr.equalsIgnoreCase(attr.getID())) {
           userId = (String) attr.get();
         } else if (hdfsGroupSchemaStr.equalsIgnoreCase(attr.getID())) {
-          groupName = (String) attr.get();
+          groupNames = (String) attr.get();
         } else if (hdfsPathSchemaStr.equalsIgnoreCase(attr.getID())) {
           for (NamingEnumeration e = attr.getAll(); e.hasMore();) {
-            paths.add((String) e.next());
+            String pathStr = (String) e.next();
+            paths.add(new Path(pathStr));
           }
         }
       }
+      ldapent.init(userId, groupNames, paths);
+      if (LOG.isDebugEnabled()) LOG.debug(ldapent);
       return true;
     }
     LOG.info("Ip address " + userIp
         + " is not authorized to access the proxy server");
-    return false;
-  }
-
-  /** check that the requested path is listed in the ldap entry */
-  private boolean checkHdfsPath(String pathInfo) {
-    if (pathInfo == null || pathInfo.length() == 0) {
-      LOG.info("Can't get file path from the request");
-      return false;
-    }
-    Path userPath = new Path(pathInfo);
-    while (userPath != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("\n Checking file path " + userPath);
-      }
-      if (paths.contains(userPath.toString()))
-        return true;
-      userPath = userPath.getParent();
-    }
-    LOG.info("User " + userId + " is not authorized to access " + pathInfo);
     return false;
   }
 }

@@ -205,6 +205,11 @@ public class TestHdfsProxy extends TestCase {
     try {
 
       final Configuration dfsConf = new HdfsConfiguration();
+      dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
+          ".users", "users");
+      dfsConf.set("hadoop.proxyuser.users.ip-addresses", "localhost");
+      dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
+          ".ip-addresses", "localhost");
       cluster = new MiniDFSCluster(dfsConf, 2, true, null);
       cluster.waitActive();
 

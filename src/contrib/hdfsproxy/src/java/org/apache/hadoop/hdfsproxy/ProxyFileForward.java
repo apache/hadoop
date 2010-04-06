@@ -31,8 +31,9 @@ public class ProxyFileForward extends ProxyForwardServlet {
   protected String buildForwardPath(HttpServletRequest request, String pathInfo) {
     String path = "/streamFile";
     path += "?filename=" + request.getPathInfo();
-    UserGroupInformation ugi = 
-                   (UserGroupInformation)request.getAttribute("authorized.ugi");
+    String userID = (String) request.
+        getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    UserGroupInformation ugi = ProxyUtil.getProxyUGIFor(userID);
     if (ugi != null) {
       path += "&ugi=" + ugi.getShortUserName();
     }

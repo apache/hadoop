@@ -227,6 +227,9 @@ Trunk (unreleased changes)
     HDFS-1074. hdfsproxy: Fix bugs in TestProxyUtil.  (Srikanth Sundarrajan
     via szetszwo)
 
+    HDFS-481. hdfsproxy: Bug Fixes + HdfsProxy to use proxy user to
+    impresonate the real user.  (Srikanth Sundarrajan via szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

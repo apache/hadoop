@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,8 +29,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-
 /** {@inheritDoc} */
 public class ProxyFileDataServlet extends FileDataServlet {
   /** For java.io.Serializable */
@@ -40,20 +36,11 @@ public class ProxyFileDataServlet extends FileDataServlet {
 
   /** {@inheritDoc} */
   @Override
-  public void init() throws ServletException {
-    ServletContext context = getServletContext();
-    if (context.getAttribute("name.conf") == null) {
-      context.setAttribute("name.conf", new HdfsConfiguration());
-    }
-  }
-
-  /** {@inheritDoc} */
-  @Override
   protected URI createUri(String parent, HdfsFileStatus i, UserGroupInformation ugi,
       ClientProtocol nnproxy, HttpServletRequest request) throws IOException,
       URISyntaxException {
     return new URI(request.getScheme(), null, request.getServerName(), request
-        .getServerPort(), "/streamFile", "filename=" + i.getFullName(parent) 
+        .getServerPort(), "/streamFile", "filename=" + i.getFullName(parent)
         + "&ugi=" + ugi.getShortUserName(), null);
   }
 
@@ -63,6 +50,6 @@ public class ProxyFileDataServlet extends FileDataServlet {
                                         Configuration conf) {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    return UserGroupInformation.createRemoteUser(userID);
+    return ProxyUtil.getProxyUGIFor(userID);
   }
 }

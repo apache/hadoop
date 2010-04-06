@@ -72,33 +72,7 @@ public class TestLdapIpDirFilter extends FilterTestCase {
     assertEquals(theResponse.getStatusCode(), 403);
     assertTrue("Text missing 'IP not authorized to access' : : ["
         + theResponse.getText() + "]", theResponse.getText().indexOf(
-        "IP not authorized to access") > 0);
-  }
-
-  public void beginPathRestriction(WebRequest theRequest) {
-    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
-        "filename=/nontestdir");
-  }
-
-  public void testPathRestriction() throws ServletException, IOException,
-      NamingException {
-    LdapIpDirFilter filter = new LdapIpDirFilter();
-    String baseName = "ou=proxyroles,dc=mycompany,dc=com";
-    DummyLdapContext dlc = new DummyLdapContext();
-    filter.initialize(baseName, dlc);
-    request.setRemoteIPAddress("127.0.0.1");
-    request.removeAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    FilterChain mockFilterChain = new DummyFilterChain();
-    filter.doFilter(request, response, mockFilterChain);
-    assertNull(request
-        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID"));
-  }
-
-  public void endPathRestriction(WebResponse theResponse) {
-    assertEquals(theResponse.getStatusCode(), 403);
-    assertTrue("Text missing 'User not authorized to access path' : : ["
-        + theResponse.getText() + "]", theResponse.getText().indexOf(
-        "User not authorized to access path") > 0);
+        "not authorized to access") > 0);
   }
 
   public void beginDoFilter(WebRequest theRequest) {

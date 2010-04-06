@@ -66,8 +66,11 @@ public class ProxyForwardServlet extends HttpServlet {
     ServletContext curContext = getServletContext();
     ServletContext dstContext = curContext.getContext(version);
 
-    if (dstContext == null) {
-      LOG.info("Context non-exist or restricted from access: " + version);
+    // avoid infinite forwarding.
+    if (dstContext == null
+        || getServletContext().equals(dstContext)) {
+      LOG.error("Context (" + version
+          + ".war) non-exist or restricted from access");
       response.sendError(HttpServletResponse.SC_NOT_FOUND);
       return;
     }

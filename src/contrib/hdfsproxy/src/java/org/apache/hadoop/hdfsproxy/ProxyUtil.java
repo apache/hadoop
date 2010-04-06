@@ -41,6 +41,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.ServletException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
@@ -331,5 +333,26 @@ public class ProxyUtil {
       in.close();
     }
   }
+
+  public static String getNamenode(Configuration conf)
+      throws ServletException {
+    String namenode = conf.get("fs.default.name");
+    if (namenode == null) {
+      throw new
+          ServletException("Proxy source cluster name node address missing");
+    }
+    return namenode;
+  }
+
+  public static UserGroupInformation getProxyUGIFor(String userID) {
+    try {
+      return UserGroupInformation.
+          createProxyUser(userID, UserGroupInformation.getLoginUser());
+    } catch (IOException e) {
+      throw new
+          RuntimeException("Unable get current logged in user", e);
+    }
+  }
+
 
 }

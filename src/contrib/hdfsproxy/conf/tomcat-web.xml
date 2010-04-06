@@ -16,8 +16,8 @@
   limitations under the License.
 -->
 
-<!DOCTYPE web-app 
-    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" 
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
     "http://java.sun.com/dtd/web-app_2_3.dtd">
 
 <web-app>
@@ -27,7 +27,7 @@
 
     <display-name>HDFS Proxy</display-name>
     <description>
-      get data from grid 
+      get data from grid
     </description>
 
 
@@ -56,17 +56,30 @@
         and comments about this application should be addressed.
       </description>
     </context-param>
-    
+
     <filter>
 	   	<filter-name>ldapIpDirFilter</filter-name>
 	   	<filter-class>org.apache.hadoop.hdfsproxy.LdapIpDirFilter</filter-class>
 		</filter>
 
-		<filter-mapping>
+    <filter>
+        <filter-name>authorizationFilter</filter-name>
+        <filter-class>org.apache.hadoop.hdfsproxy.AuthorizationFilter</filter-class>
+    </filter>
+
+    <filter-mapping>
         <filter-name>ldapIpDirFilter</filter-name>
-				<url-pattern>/*</url-pattern>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
     </filter-mapping>
-    	
+
+    <filter-mapping>
+        <filter-name>authorizationFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
 
     <!-- Servlet definitions for the servlets that make up
          your web application, including initialization
@@ -93,13 +106,13 @@
          You can define any number of servlets, including zero.
     -->
 
-    
+
     <servlet>
     	<servlet-name>listPaths</servlet-name>
       <description>list paths data access</description>
       <servlet-class>org.apache.hadoop.hdfsproxy.ProxyListPathsServlet</servlet-class>
     </servlet>
-    
+
     <servlet-mapping>
         <servlet-name>listPaths</servlet-name>
         <url-pattern>/listPaths/*</url-pattern>
@@ -110,23 +123,23 @@
       <description>data access</description>
       <servlet-class>org.apache.hadoop.hdfsproxy.ProxyFileDataServlet</servlet-class>
     </servlet>
-    
+
 	  <servlet-mapping>
         <servlet-name>data</servlet-name>
         <url-pattern>/data/*</url-pattern>
     </servlet-mapping>
-    
+
     <servlet>
     	<servlet-name>streamFile</servlet-name>
       <description>stream file access</description>
       <servlet-class>org.apache.hadoop.hdfsproxy.ProxyStreamFile</servlet-class>
     </servlet>
-    
+
     <servlet-mapping>
         <servlet-name>streamFile</servlet-name>
         <url-pattern>/streamFile/*</url-pattern>
     </servlet-mapping>
-    
+
 
 		<welcome-file-list>
 		  <welcome-file>index.html</welcome-file>
@@ -139,7 +152,7 @@
 
     <session-config>
       <session-timeout>30</session-timeout>    <!-- 30 minutes -->
-    </session-config>    
+    </session-config>
 
 
 </web-app>
