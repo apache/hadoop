@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 
@@ -59,8 +60,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 public class UpgradeUtilities {
 
   // Root scratch directory on local filesystem 
-  private static File TEST_ROOT_DIR = new File(
-      System.getProperty("test.build.data","/tmp").replace(' ', '+'));
+  private static File TEST_ROOT_DIR = 
+                      new File(MiniDFSCluster.getBaseDirectory());
   // The singleton master storage directory for Namenode
   private static File namenodeStorage = new File(TEST_ROOT_DIR, "namenodeMaster");
   // A checksum of the contents in namenodeStorage directory
@@ -73,7 +74,7 @@ public class UpgradeUtilities {
   private static File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
   // A checksum of the contents in datanodeStorage directory
   private static long datanodeStorageChecksum;
-  
+
   /**
    * Initialize the data structures used by this class.  
    * IMPORTANT NOTE: This method must be called once before calling 
@@ -88,6 +89,7 @@ public class UpgradeUtilities {
     createEmptyDirs(new String[] {TEST_ROOT_DIR.toString()});
     Configuration config = new HdfsConfiguration();
     config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
+    config.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeStorage.toString());
     config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, datanodeStorage.toString());
     MiniDFSCluster cluster = null;
     try {
@@ -115,7 +117,9 @@ public class UpgradeUtilities {
       writeFile(fs, new Path(baseDir, "file2"), buffer, bufferSize);
       
       // save image
-      namenode.getFSImage().saveFSImage();
+      namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      namenode.saveNamespace();
+      namenode.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       
       // write more files
       writeFile(fs, new Path(baseDir, "file3"), buffer, bufferSize);
@@ -160,6 +164,7 @@ public class UpgradeUtilities {
       conf = new HdfsConfiguration();
     }
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameNodeDirs.toString());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameNodeDirs.toString());
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataNodeDirs.toString());
     conf.setInt("dfs.blockreport.intervalMsec", 10000);
     return conf;

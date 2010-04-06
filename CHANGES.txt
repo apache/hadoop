@@ -114,7 +114,7 @@ Trunk (unreleased changes)
     block report. (Dmytro Molkov via jhoman)
 
     HDFS-1032. fsck has an option to list corrupt files.
-    (André Oriai via dhruba)
+    (Andre Oriai via dhruba)
 
     HDFS-1024. SecondaryNameNode verifies size of fsimage and edits file.
     (Dmytro Molkov via dhruba)
@@ -779,6 +779,15 @@ Release 0.21.0 - Unreleased
 
     HDFS-1046. Fix Tomcat version in hdfsproxy/build.xml.  (Srikanth
     Sundarrajan via szetszwo)
+
+Release 0.20.3 - Unreleased
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
+    when name-node fails during saving. (shv)
 
 Release 0.20.2 - Unreleased
 

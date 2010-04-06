@@ -126,16 +126,8 @@ public class BackupStorage extends FSImage {
     recoverCreateRead(getImageDirectories(), getEditsDirectories());
     // rename and recreate
     for(StorageDirectory sd : storageDirs) {
-      File curDir = sd.getCurrentDir();
-      File tmpCkptDir = sd.getLastCheckpointTmp();
-      assert !tmpCkptDir.exists() : 
-        tmpCkptDir.getName() + " directory must not exist.";
-      if(!sd.getVersionFile().exists())
-        continue;
       // rename current to lastcheckpoint.tmp
-      rename(curDir, tmpCkptDir);
-      if(!curDir.mkdir())
-        throw new IOException("Cannot create directory " + curDir);
+      moveCurrent(sd);
     }
   }
 
@@ -174,19 +166,7 @@ public class BackupStorage extends FSImage {
    * and create empty edits.
    */
   void saveCheckpoint() throws IOException {
-    // save image into fsimage.ckpt and purge edits file
-    for (Iterator<StorageDirectory> it = 
-                           dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      NameNodeDirType dirType = (NameNodeDirType)sd.getStorageDirType();
-      if (dirType.isOfType(NameNodeDirType.IMAGE))
-        saveFSImage(getImageFile(sd, NameNodeFile.IMAGE_NEW));
-      if (dirType.isOfType(NameNodeDirType.EDITS))
-        editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
-    }
-
-    ckptState = CheckpointStates.UPLOAD_DONE;
-    renameCheckpoint();
+    saveNamespace(false);
   }
 
   private Object getFSDirectoryRootLock() {
@@ -376,14 +356,7 @@ public class BackupStorage extends FSImage {
 
     // Rename lastcheckpoint.tmp to previous.checkpoint
     for(StorageDirectory sd : storageDirs) {
-      File tmpCkptDir = sd.getLastCheckpointTmp();
-      File prevCkptDir = sd.getPreviousCheckpoint();
-      // delete previous directory
-      if (prevCkptDir.exists())
-        deleteDir(prevCkptDir);
-      // rename tmp to previous
-      if (tmpCkptDir.exists())
-        rename(tmpCkptDir, prevCkptDir);
+      moveLastCheckpoint(sd);
     }
   }
 }
