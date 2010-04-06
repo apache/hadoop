@@ -65,8 +65,6 @@ public class TestAuthorizationFilter extends FilterTestCase {
     request.setRemoteIPAddress("127.0.0.1");
     request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
         System.getProperty("user.name"));
-    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.role",
-        "users");
     List<Path> paths = new ArrayList<Path>();
     paths.add(new Path("/deny"));
     request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",

@@ -80,10 +80,4 @@ public class KerberosAuthorizationFilter
     return userId +
         (userId.indexOf('@') > 0 ? "" : defaultRealm);
   }
-
-  @Override
-  protected String getGroups(ServletRequest request) {
-    return (String) request.
-        getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
-  }
 }

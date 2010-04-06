@@ -26,6 +26,7 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -90,9 +91,10 @@ public class AuthorizationFilter implements Filter {
     return userId;
   }
 
-  protected String getGroups(ServletRequest rqst) {
-    return (String) rqst.
-        getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
+  protected String getGroups(ServletRequest request) {
+    UserGroupInformation ugi = UserGroupInformation.
+        createRemoteUser(getUserId(request));
+    return Arrays.toString(ugi.getGroupNames());
   }
 
   @SuppressWarnings("unchecked")

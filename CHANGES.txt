@@ -237,6 +237,9 @@ Trunk (unreleased changes)
     configuration setting to ssl-client.xml.  (Srikanth Sundarrajan via
     szetszwo)
 
+    HDFS-1010. hdfsproxy: Retrieve groups from UnixUserGroupInformation
+    instead of LdapEntry.  (Srikanth Sundarrajan via szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
