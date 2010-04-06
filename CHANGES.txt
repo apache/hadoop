@@ -17,6 +17,9 @@ Release 0.20.3 - Unreleased
     HDFS-1024 SecondaryNamenode fails to checkpoint because namenode fails
     with CancelledKeyException (Dmytro Molkov via Stack)
 
+    HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
+    when name-node fails during saving. (shv)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match

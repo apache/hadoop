@@ -21,7 +21,6 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.ipc.*;
@@ -544,29 +543,13 @@ public class SecondaryNameNode implements Runnable {
      */
     void startCheckpoint() throws IOException {
       for(StorageDirectory sd : storageDirs) {
-        File curDir = sd.getCurrentDir();
-        File tmpCkptDir = sd.getLastCheckpointTmp();
-        assert !tmpCkptDir.exists() : 
-          tmpCkptDir.getName() + " directory must not exist.";
-        if(curDir.exists()) {
-          // rename current to tmp
-          rename(curDir, tmpCkptDir);
-        }
-        if (!curDir.mkdir())
-          throw new IOException("Cannot create directory " + curDir);
+        moveCurrent(sd);
       }
     }
 
     void endCheckpoint() throws IOException {
       for(StorageDirectory sd : storageDirs) {
-        File tmpCkptDir = sd.getLastCheckpointTmp();
-        File prevCkptDir = sd.getPreviousCheckpoint();
-        // delete previous dir
-        if (prevCkptDir.exists())
-          deleteDir(prevCkptDir);
-        // rename tmp to previous
-        if (tmpCkptDir.exists())
-          rename(tmpCkptDir, prevCkptDir);
+        moveLastCheckpoint(sd);
       }
     }
 
@@ -589,7 +572,7 @@ public class SecondaryNameNode implements Runnable {
       loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
       loadFSEdits(sdEdits);
       sig.validateStorageInfo(this);
-      saveFSImage();
+      saveNamespace(false);
     }
   }
 }
