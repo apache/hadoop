@@ -30,6 +30,9 @@ Trunk (unreleased changes)
     HDFS-245. Adds a symlink implementation to HDFS. This complements the new 
     symlink feature added in HADOOP-6421 (Eli Collins via Sanjay Radia)
 
+    HDFS-1009. Support Kerberos authorization in HDFSProxy.  (Srikanth
+    Sundarrajan via szetszwo)
+
   IMPROVEMENTS
     HDFS-968. Use StringBuilder instead of StringBuffer for better
     performance. (Kay Kay via suresh)

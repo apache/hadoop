@@ -64,7 +64,7 @@
 
     <filter>
         <filter-name>authorizationFilter</filter-name>
-        <filter-class>org.apache.hadoop.hdfsproxy.AuthorizationFilter</filter-class>
+        <filter-class>org.apache.hadoop.hdfsproxy.KerberosAuthorizationFilter</filter-class>
     </filter>
 
     <filter-mapping>
