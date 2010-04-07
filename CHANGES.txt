@@ -486,6 +486,8 @@ Release 0.21.0 - Unreleased
    HBASE-2252  Mapping a very big table kills region servers
    HBASE-2412  [stargate] PerformanceEvaluation
    HBASE-2419  Remove from RS logs the fat NotServingRegionException stack
+   HBASE-2286  [Transactional Contrib] Correctly handle or avoid cases where 
+               writes occur in same millisecond (Clint Morgan via J-D)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

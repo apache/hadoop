@@ -181,6 +181,9 @@ public class IndexedTable extends TransactionalTable {
         Result row = indexResult[i];
         
         byte[] baseRow = row.getValue(INDEX_COL_FAMILY_NAME, INDEX_BASE_ROW);
+        if (baseRow == null) {
+          throw new IllegalStateException("Missing base row for indexed row: ["+Bytes.toString(row.getRow())+"]");
+        }
         LOG.debug("next index row [" + Bytes.toString(row.getRow())
             + "] -> base row [" + Bytes.toString(baseRow) + "]");
         Result baseResult = null;
@@ -209,7 +212,10 @@ public class IndexedTable extends TransactionalTable {
         }
         
         if (baseResult != null) {
-          results.addAll(baseResult.list());
+          List<KeyValue> list = baseResult.list();
+          if (list != null) {
+            results.addAll(list);
+          }
         }
         
         result[i] = new Result(results);

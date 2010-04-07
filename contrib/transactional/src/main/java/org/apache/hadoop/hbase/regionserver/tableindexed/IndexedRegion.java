@@ -147,9 +147,28 @@ class IndexedRegion extends TransactionalRegion {
     SortedMap<byte[], byte[]> oldColumnValues = convertToValueMap(oldResult);
     
     for (IndexSpecification indexSpec : indexesToUpdate) {
-      removeOldIndexEntry(indexSpec, put.getRow(), oldColumnValues);
-      updateIndex(indexSpec, put.getRow(), newColumnValues);
+      updateIndex(indexSpec, put, newColumnValues, oldColumnValues);
     }
+  }
+  
+  // FIXME: This call takes place in an RPC, and requires an RPC. This makes for
+  // a likely deadlock if the number of RPCs we are trying to serve is >= the
+  // number of handler threads.
+  private void updateIndex(IndexSpecification indexSpec, Put put,
+      NavigableMap<byte[], byte[]> newColumnValues,
+      SortedMap<byte[], byte[]> oldColumnValues) throws IOException {
+    Delete indexDelete = makeDeleteToRemoveOldIndexEntry(indexSpec, put.getRow(), oldColumnValues);
+    Put indexPut = makeIndexUpdate(indexSpec, put.getRow(), newColumnValues);
+    
+    HTable indexTable = getIndexTable(indexSpec);
+    if (indexDelete != null && !Bytes.equals(indexDelete.getRow(), indexPut.getRow())) {
+      // Only do the delete if the row changed. This way we save the put after delete issues in HBASE-2256
+      LOG.debug("Deleting old index row ["+Bytes.toString(indexDelete.getRow())+"]. New row is ["+Bytes.toString(indexPut.getRow())+"].");
+      indexTable.delete(indexDelete);
+    } else if (indexDelete != null){
+      LOG.debug("Skipping deleting index row ["+Bytes.toString(indexDelete.getRow())+"] because it has not changed.");
+    }
+    indexTable.put(indexPut);
   }
   
   /** Return the columns needed for the update. */
@@ -163,7 +182,7 @@ class IndexedRegion extends TransactionalRegion {
     return neededColumns;
   }
 
-  private void removeOldIndexEntry(IndexSpecification indexSpec, byte[] row,
+  private Delete makeDeleteToRemoveOldIndexEntry(IndexSpecification indexSpec, byte[] row,
       SortedMap<byte[], byte[]> oldColumnValues) throws IOException {
     for (byte[] indexedCol : indexSpec.getIndexedColumns()) {
       if (!oldColumnValues.containsKey(indexedCol)) {
@@ -171,7 +190,7 @@ class IndexedRegion extends TransactionalRegion {
             + "] not trying to remove old entry for row ["
             + Bytes.toString(row) + "] because col ["
             + Bytes.toString(indexedCol) + "] is missing");
-        return;
+        return null;
       }
     }
 
@@ -179,7 +198,7 @@ class IndexedRegion extends TransactionalRegion {
         oldColumnValues);
     LOG.debug("Index [" + indexSpec.getIndexId() + "] removing old entry ["
         + Bytes.toString(oldIndexRow) + "]");
-    getIndexTable(indexSpec).delete(new Delete(oldIndexRow));
+    return new Delete(oldIndexRow);
   }
   
   private NavigableMap<byte[], byte[]> getColumnsFromPut(Put put) {
@@ -212,23 +231,21 @@ class IndexedRegion extends TransactionalRegion {
     return false;
   }
 
-  // FIXME: This call takes place in an RPC, and requires an RPC. This makes for
-  // a likely deadlock if the number of RPCs we are trying to serve is >= the
-  // number of handler threads.
-  private void updateIndex(IndexSpecification indexSpec, byte[] row,
+  private Put makeIndexUpdate(IndexSpecification indexSpec, byte[] row,
       SortedMap<byte[], byte[]> columnValues) throws IOException {
     Put indexUpdate = IndexMaintenanceUtils.createIndexUpdate(indexSpec, row, columnValues);
-    getIndexTable(indexSpec).put(indexUpdate); 
     LOG.debug("Index [" + indexSpec.getIndexId() + "] adding new entry ["
         + Bytes.toString(indexUpdate.getRow()) + "] for row ["
         + Bytes.toString(row) + "]");
-
+    return indexUpdate; 
   }
 
+  // FIXME we can be smarter about this and avoid the base gets and index maintenance in many cases.
   @Override
   public void delete(Delete delete, final Integer lockid, boolean writeToWAL)
       throws IOException {
-    // First remove the existing indexes.
+    // First look at the current (to be the old) state.
+    SortedMap<byte[], byte[]> oldColumnValues = null;
     if (!getIndexes().isEmpty()) {
       // Need all columns
       NavigableSet<byte[]> neededColumns = getColumnsForIndexes(getIndexes());
@@ -244,12 +261,7 @@ class IndexedRegion extends TransactionalRegion {
       }
       
       Result oldRow = super.get(get, lockid);
-      SortedMap<byte[], byte[]> oldColumnValues = convertToValueMap(oldRow);
-      
-      
-      for (IndexSpecification indexSpec : getIndexes()) {
-        removeOldIndexEntry(indexSpec, delete.getRow(), oldColumnValues);
-      }
+      oldColumnValues = convertToValueMap(oldRow);
     }
     
     super.delete(delete, lockid, writeToWAL);
@@ -259,12 +271,56 @@ class IndexedRegion extends TransactionalRegion {
       
       // Rebuild index if there is still a version visible.
       Result currentRow = super.get(get, lockid);
-      if (!currentRow.isEmpty()) {
-        SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentRow);
-        for (IndexSpecification indexSpec : getIndexes()) {
-          if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, currentColumnValues)) {
-            updateIndex(indexSpec, delete.getRow(), currentColumnValues);
+      SortedMap<byte[], byte[]> currentColumnValues = convertToValueMap(currentRow);
+      for (IndexSpecification indexSpec : getIndexes()) {
+        Delete indexDelete = null;
+        if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec, oldColumnValues)) {
+          indexDelete = makeDeleteToRemoveOldIndexEntry(indexSpec, delete
+              .getRow(), oldColumnValues);
+        }
+        Put indexPut = null;
+        if (IndexMaintenanceUtils.doesApplyToIndex(indexSpec,
+            currentColumnValues)) {
+          indexPut = makeIndexUpdate(indexSpec, delete.getRow(),
+              currentColumnValues);
+        }
+        if (indexPut == null && indexDelete == null) {
+          continue;
+        }
+
+        HTable indexTable = getIndexTable(indexSpec);
+        if (indexDelete != null
+            && (indexPut == null || !Bytes.equals(indexDelete.getRow(),
+                indexPut.getRow()))) {
+          // Only do the delete if the row changed. This way we save the put
+          // after delete issues in HBASE-2256
+          LOG.debug("Deleting old index row ["
+              + Bytes.toString(indexDelete.getRow()) + "].");
+          indexTable.delete(indexDelete);
+        } else if (indexDelete != null) {
+          LOG.debug("Skipping deleting index row ["
+              + Bytes.toString(indexDelete.getRow())
+              + "] because it has not changed.");
+          
+          for (byte [] indexCol : indexSpec.getAdditionalColumns()) {
+              byte[][] parsed = KeyValue.parseColumn(indexCol);
+              List<KeyValue> famDeletes = delete.getFamilyMap().get(parsed[0]);
+              if (famDeletes != null) {
+                for (KeyValue kv : famDeletes) {
+                  if (Bytes.equals(parsed[0], kv.getFamily()) && Bytes.equals(parsed[1], kv.getQualifier())) {
+                    LOG.debug("Need to delete this specific column: "+Bytes.toString(indexCol));
+                    Delete columnDelete = new Delete(indexDelete.getRow());
+                    columnDelete.deleteColumns(parsed[0],parsed[1]);
+                    indexTable.delete(columnDelete);
+                  }
+                }
+                
+              }
           }
+        }
+
+        if (indexPut != null) {
+          getIndexTable(indexSpec).put(indexPut);
         }
       }
     }
