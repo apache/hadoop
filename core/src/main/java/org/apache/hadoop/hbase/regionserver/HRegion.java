@@ -1661,7 +1661,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     splitsAndClosesLock.readLock().lock();
     try {
       if (this.closed.get()) {
-        throw new NotServingRegionException("Region " + this + " closed");
+        throw new NotServingRegionException(this + " is closed");
       }
       synchronized (lockedRows) {
         while (lockedRows.contains(row)) {
