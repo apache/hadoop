@@ -128,6 +128,9 @@ Trunk (unreleased changes)
     HDFS-997. Allow datanode storage directory permissions to be configurable.
     (Luke Lu via cdouglas)
 
+    HDFS-1012. hdfsproxy: Support for fully qualified HDFS path in addition to
+    simple unqualified path.  (Srikanth Sundarrajan via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

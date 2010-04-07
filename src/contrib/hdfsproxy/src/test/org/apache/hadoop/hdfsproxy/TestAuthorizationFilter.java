@@ -55,18 +55,28 @@ public class TestAuthorizationFilter extends FilterTestCase {
     }
   }
 
+  private class ConfiguredAuthorizationFilter extends AuthorizationFilter {
+    
+    private ConfiguredAuthorizationFilter(String nameNode) {
+      this.namenode = nameNode;
+    }  
+  }
+
   public void beginPathRestriction(WebRequest theRequest) {
     theRequest.setURL("proxy-test:0", null, "/streamFile", null,
         "filename=/nontestdir");
   }
 
   public void testPathRestriction() throws ServletException, IOException {
-    AuthorizationFilter filter = new AuthorizationFilter();
+    AuthorizationFilter filter = new 
+        ConfiguredAuthorizationFilter("hdfs://apache.org");
     request.setRemoteIPAddress("127.0.0.1");
     request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
         System.getProperty("user.name"));
     List<Path> paths = new ArrayList<Path>();
     paths.add(new Path("/deny"));
+    paths.add(new Path("hdfs://test:100/deny"));
+    paths.add(new Path("hdfs://test/deny"));
     request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
         paths);
     FilterChain mockFilterChain = new DummyFilterChain();
@@ -78,5 +88,74 @@ public class TestAuthorizationFilter extends FilterTestCase {
     assertTrue("Text missing 'User not authorized to access path' : : ["
         + theResponse.getText() + "]", theResponse.getText().indexOf(
         "is not authorized to access path") > 0);
+  }
+
+  public void beginPathPermit(WebRequest theRequest) {
+    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
+        "filename=/data/file");
+  }
+
+  public void testPathPermit() throws ServletException, IOException {
+    AuthorizationFilter filter = new 
+        ConfiguredAuthorizationFilter("hdfs://apache.org");
+    request.setRemoteIPAddress("127.0.0.1");
+    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
+        System.getProperty("user.name"));
+    List<Path> paths = new ArrayList<Path>();
+    paths.add(new Path("/data"));
+    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
+        paths);
+    FilterChain mockFilterChain = new DummyFilterChain();
+    filter.doFilter(request, response, mockFilterChain);
+  }
+
+  public void endPathPermit(WebResponse theResponse) {
+    assertEquals(theResponse.getStatusCode(), 200);
+  }
+
+  public void beginPathPermitQualified(WebRequest theRequest) {
+    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
+        "filename=/data/file");
+  }
+
+  public void testPathPermitQualified() throws ServletException, IOException {
+    AuthorizationFilter filter = new 
+        ConfiguredAuthorizationFilter("hdfs://apache.org");
+    request.setRemoteIPAddress("127.0.0.1");
+    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
+        System.getProperty("user.name"));
+    List<Path> paths = new ArrayList<Path>();
+    paths.add(new Path("hdfs://apache.org/data"));
+    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
+        paths);
+    FilterChain mockFilterChain = new DummyFilterChain();
+    filter.doFilter(request, response, mockFilterChain);
+  }
+
+  public void endPathPermitQualified(WebResponse theResponse) {
+    assertEquals(theResponse.getStatusCode(), 200);
+  }
+  
+  public void beginPathQualifiediReject(WebRequest theRequest) {
+    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
+        "filename=/data/file");
+  }
+
+  public void testPathQualifiedReject() throws ServletException, IOException {
+    AuthorizationFilter filter = new 
+        ConfiguredAuthorizationFilter("hdfs://apache.org:1111");
+    request.setRemoteIPAddress("127.0.0.1");
+    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
+        System.getProperty("user.name"));
+    List<Path> paths = new ArrayList<Path>();
+    paths.add(new Path("hdfs://apache.org:2222/data"));
+    request.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
+        paths);
+    FilterChain mockFilterChain = new DummyFilterChain();
+    filter.doFilter(request, response, mockFilterChain);
+  }
+
+  public void endPathQualifiedReject(WebResponse theResponse) {
+    assertEquals(theResponse.getStatusCode(), 403);
   }
 }
