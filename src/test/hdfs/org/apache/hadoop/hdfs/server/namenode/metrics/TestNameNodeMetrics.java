@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.mortbay.log.Log;
 
 /**
  * Test for metrics published by the Namenode
@@ -64,7 +64,6 @@ public class TestNameNodeMetrics extends TestCase {
   private Random rand = new Random();
   private FSNamesystem namesystem;
   private NameNodeMetrics nnMetrics;
-  private NameNode nn;
 
   private static Path getTestPath(String fileName) {
     return new Path(TEST_ROOT_DIR_PATH, fileName);
@@ -77,8 +76,7 @@ public class TestNameNodeMetrics extends TestCase {
     namesystem = cluster.getNamesystem();
     fs = (DistributedFileSystem) cluster.getFileSystem();
     metrics = namesystem.getFSNamesystemMetrics();
-    nn = cluster.getNameNode();
-    nnMetrics = nn.getNameNodeMetrics();
+    nnMetrics = NameNode.getNameNodeMetrics();
   }
   
   @Override
@@ -96,19 +94,14 @@ public class TestNameNodeMetrics extends TestCase {
     // for some block related metrics to get updated)
     Thread.sleep(1000);
     metrics.doUpdates(null);
-  }
-
-  private void updateNNMetrics() throws Exception {
-    //Wait for nnmetrics update
-    Thread.sleep(1000);
     nnMetrics.doUpdates(null);
   }
-  
+
   private void readFile(FileSystem fileSys,Path name) throws IOException {
     //Just read file so that getNumBlockLocations are incremented
     DataInputStream stm = fileSys.open(name);
     byte [] buffer = new byte[4];
-    int bytesRead =  stm.read(buffer,0,4);
+    stm.read(buffer,0,4);
     stm.close();
   }
   
@@ -121,6 +114,11 @@ public class TestNameNodeMetrics extends TestCase {
     int blockCapacity = namesystem.getBlockCapacity();
     updateMetrics();
     assertEquals(blockCapacity, metrics.blockCapacity.get());
+    
+    // File create operations is 1
+    // Number of files created is depth of <code>file</code> path
+    assertEquals(1, nnMetrics.numCreateFileOps.getPreviousIntervalValue());
+    assertEquals(file.depth(), nnMetrics.numFilesCreated.getPreviousIntervalValue());
 
     // Blocks are stored in a hashmap. Compute its capacity, which
     // doubles every time the number of entries reach the threshold.
@@ -143,6 +141,10 @@ public class TestNameNodeMetrics extends TestCase {
     assertEquals(filesTotal, metrics.filesTotal.get());
     assertEquals(0, metrics.blocksTotal.get());
     assertEquals(0, metrics.pendingDeletionBlocks.get());
+    
+    // Delete file operations and number of files deleted must be 1
+    assertEquals(1, nnMetrics.numDeleteFileOps.getPreviousIntervalValue());
+    assertEquals(1, nnMetrics.numFilesDeleted.getPreviousIntervalValue());
   }
   
   /** Corrupt a block and ensure metrics reflects it */
@@ -197,6 +199,17 @@ public class TestNameNodeMetrics extends TestCase {
     assertEquals(0, metrics.underReplicatedBlocks.get());
   }
   
+  public void testRenameMetrics() throws Exception {
+    Path src = getTestPath("src");
+    createFile(src, 100, (short)1);
+    Path target = getTestPath("target");
+    createFile(target, 100, (short)1);
+    fs.rename(src, target, Rename.OVERWRITE);
+    updateMetrics();
+    assertEquals(1, nnMetrics.numFilesRenamed.getPreviousIntervalValue());
+    assertEquals(1, nnMetrics.numFilesDeleted.getPreviousIntervalValue());
+  }
+  
   /**
    * Test numGetBlockLocations metric   
    * 
@@ -210,9 +223,6 @@ public class TestNameNodeMetrics extends TestCase {
    * @throws IOException in case of an error
    */
   public void testGetBlockLocationMetric() throws Exception{
-    final String METHOD_NAME = "TestGetBlockLocationMetric";
-    Log.info("Running test "+METHOD_NAME);
-  
     Path file1_Path = new Path(TEST_ROOT_DIR_PATH, "file1.dat");
 
     // When cluster starts first time there are no file  (read,create,open)
@@ -226,8 +236,7 @@ public class TestNameNodeMetrics extends TestCase {
 
     //Perform create file operation
     createFile(file1_Path,100,(short)2);
-    // Update NameNode metrics
-    updateNNMetrics();
+    updateMetrics();
   
     //Create file does not change numGetBlockLocations metric
     //expect numGetBlockLocations = 0 for previous and current interval 
@@ -240,8 +249,7 @@ public class TestNameNodeMetrics extends TestCase {
     // Open and read file operation increments numGetBlockLocations
     // Perform read file operation on earlier created file
     readFile(fs, file1_Path);
-    // Update NameNode metrics
-    updateNNMetrics();
+    updateMetrics();
     // Verify read file operation has incremented numGetBlockLocations by 1
     assertEquals("numGetBlockLocations for previous interval is incorrect",
     1,nnMetrics.numGetBlockLocations.getPreviousIntervalValue());
@@ -252,7 +260,7 @@ public class TestNameNodeMetrics extends TestCase {
     // opening and reading file  twice will increment numGetBlockLocations by 2
     readFile(fs, file1_Path);
     readFile(fs, file1_Path);
-    updateNNMetrics();
+    updateMetrics();
     assertEquals("numGetBlockLocations for previous interval is incorrect",
     2,nnMetrics.numGetBlockLocations.getPreviousIntervalValue());
     // Verify numGetBlockLocations for current interval is 0

@@ -45,9 +45,6 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /*************************************************
@@ -64,7 +61,6 @@ class FSDirectory implements Closeable {
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   private volatile boolean ready = false;
-  private MetricsRecord directoryMetrics = null;
   private static final long UNKNOWN_DISK_SPACE = -1;
   private final int lsLimit;  // max list limit
   
@@ -90,7 +86,6 @@ class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
     this.lsLimit = configuredLimit>0 ?
         configuredLimit : DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT;
-    initialize(conf);
   }
     
   private FSNamesystem getFSNamesystem() {
@@ -99,12 +94,6 @@ class FSDirectory implements Closeable {
 
   private BlockManager getBlockManager() {
     return getFSNamesystem().blockManager;
-  }
-
-  private void initialize(Configuration conf) {
-    MetricsContext metricsContext = MetricsUtil.getContext("dfs");
-    directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
-    directoryMetrics.setTag("sessionId", conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY));
   }
 
   void loadFSImage(Collection<URI> dataDirs,
@@ -135,8 +124,8 @@ class FSDirectory implements Closeable {
   }
 
   private void incrDeletedFileCount(int count) {
-    directoryMetrics.incrMetric("files_deleted", count);
-    directoryMetrics.update();
+    if (getFSNamesystem() != null)
+      NameNode.getNameNodeMetrics().numFilesDeleted.inc(count);
   }
     
   /**
@@ -418,7 +407,9 @@ class FSDirectory implements Closeable {
     }
     waitForReady();
     long now = FSNamesystem.now();
-    unprotectedRenameTo(src, dst, now, options);
+    if (unprotectedRenameTo(src, dst, now, options)) {
+      incrDeletedFileCount(1);
+    }
     fsImage.getEditLog().logRename(src, dst, now, options);
   }
 
@@ -538,9 +529,11 @@ class FSDirectory implements Closeable {
    * @param timestamp modification time
    * @param options Rename options
    * @throws IOException if the operation violates any quota limit
+   * @return true if rename overwrites {@code dst}
    */
-  void unprotectedRenameTo(String src, String dst, long timestamp,
-      Options.Rename... options) throws IOException, UnresolvedLinkException {
+  boolean unprotectedRenameTo(String src, String dst, long timestamp,
+      Options.Rename... options) throws IOException,
+      UnresolvedLinkException {
     boolean overwrite = false;
     if (null != options) {
       for (Rename option : options) {
@@ -569,7 +562,7 @@ class FSDirectory implements Closeable {
 
       // validate of the destination
       if (dst.equals(src)) {
-        return;
+        return false;
       }
       // dst cannot be a directory or a file under src
       if (dst.startsWith(src) && 
@@ -652,6 +645,7 @@ class FSDirectory implements Closeable {
         dstChild = addChildNoQuotaCheck(dstInodes, dstInodes.length - 1,
             removedSrc, UNKNOWN_DISK_SPACE, false);
 
+        int filesDeleted = 0;
         if (dstChild != null) {
           removedSrc = null;
           if (NameNode.stateChangeLog.isDebugEnabled()) {
@@ -667,11 +661,10 @@ class FSDirectory implements Closeable {
             INode rmdst = removedDst;
             removedDst = null;
             List<Block> collectedBlocks = new ArrayList<Block>();
-            int filecount = rmdst.collectSubtreeBlocksAndClear(collectedBlocks);
-            incrDeletedFileCount(filecount);
+            filesDeleted = rmdst.collectSubtreeBlocksAndClear(collectedBlocks);
             getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
           }
-          return;
+          return filesDeleted >0;
         }
       } finally {
         if (removedSrc != null) {
@@ -843,7 +836,7 @@ class FSDirectory implements Closeable {
   /**
    * Concat all the blocks from srcs to trg
    * and delete the srcs files
-   * @param trg target file to move the blocks to
+   * @param target target file to move the blocks to
    * @param srcs list of file to move the blocks from
    * Must be public because also called from EditLogs
    * NOTE: - it does not update quota (not needed for concat)
@@ -900,10 +893,11 @@ class FSDirectory implements Closeable {
     }
     waitForReady();
     long now = FSNamesystem.now();
-    INode removedNode = unprotectedDelete(src, collectedBlocks, now);
-    if (removedNode == null) {
+    int filesRemoved = unprotectedDelete(src, collectedBlocks, now);
+    if (filesRemoved <= 0) {
       return false;
     }
+    incrDeletedFileCount(filesRemoved);
     // Blocks will be deleted later by the caller of this method
     getFSNamesystem().removePathAndBlocks(src, null);
     fsImage.getEditLog().logDelete(src, now);
@@ -944,14 +938,14 @@ class FSDirectory implements Closeable {
    * <br>
    * @param src a string representation of a path to an inode
    * @param mtime the time the inode is removed
-   * @return deleted inode if deletion succeeds; else null
    */ 
-  INode unprotectedDelete(String src, long mtime) 
+  void unprotectedDelete(String src, long mtime) 
     throws UnresolvedLinkException {
     List<Block> collectedBlocks = new ArrayList<Block>();
-    INode removedNode = unprotectedDelete(src, collectedBlocks, mtime);
-    getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
-    return removedNode;
+    int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime);
+    if (filesRemoved > 0) {
+      getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+    }
   }
   
   /**
@@ -960,9 +954,9 @@ class FSDirectory implements Closeable {
    * @param src a string representation of a path to an inode
    * @param collectedBlocks blocks collected from the deleted path
    * @param mtime the time the inode is removed
-   * @return deleted inode if deletion succeeds; else null
+   * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
-  INode unprotectedDelete(String src, List<Block> collectedBlocks, 
+  int unprotectedDelete(String src, List<Block> collectedBlocks, 
       long mtime) throws UnresolvedLinkException {
     src = normalizePath(src);
 
@@ -973,29 +967,28 @@ class FSDirectory implements Closeable {
       if (targetNode == null) { // non-existent src
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
             +"failed to remove "+src+" because it does not exist");
-        return null;
+        return 0;
       }
       if (inodes.length == 1) { // src is the root
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
             "failed to remove " + src +
             " because the root is not allowed to be deleted");
-        return null;
+        return 0;
       }
       int pos = inodes.length - 1;
       // Remove the node from the namespace
       targetNode = removeChild(inodes, pos);
       if (targetNode == null) {
-        return null;
+        return 0;
       }
       // set the parent's modification time
       inodes[pos-1].setModificationTime(mtime);
       int filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks);
-      incrDeletedFileCount(filesRemoved);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           +src+" is removed");
       }
-      return targetNode;
+      return filesRemoved;
     }
   }
 
@@ -1343,7 +1336,7 @@ class FSDirectory implements Closeable {
           return false;
         }
         // Directory creation also count towards FilesCreated
-        // to match count of files_deleted metric. 
+        // to match count of FilesDeleted metric.
         if (getFSNamesystem() != null)
           NameNode.getNameNodeMetrics().numFilesCreated.inc();
         fsImage.getEditLog().logMkDir(cur, inodes[i]);
@@ -1585,7 +1578,6 @@ class FSDirectory implements Closeable {
    * @param dir the root of the tree that represents the directory
    * @param counters counters for name space and disk space
    * @param nodesInPath INodes for the each of components in the path.
-   * @return the size of the tree
    */
   private static void updateCountForINodeWithQuota(INodeDirectory dir, 
                                                INode.DirCounts counts,
