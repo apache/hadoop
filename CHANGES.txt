@@ -265,6 +265,7 @@ Release 0.21.0 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-2410  spurious warnings from util.Sleeper
    HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
+   HBASE-2417  HCM.locateRootRegion fails hard on "Connection refused"
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
