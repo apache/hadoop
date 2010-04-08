@@ -37,26 +37,22 @@ You could add <code>hbase-site.xml</code> to $HADOOP_HOME/conf and add
 changes across your cluster but the cleanest means of adding hbase configuration
 and classes to the cluster <code>CLASSPATH</code> is by uncommenting
 <code>HADOOP_CLASSPATH</code> in <code>$HADOOP_HOME/conf/hadoop-env.sh</code>
-and adding the path to the hbase jar and <code>$HBASE_CONF_DIR</code> directory.
-Then copy the amended configuration around the cluster.
-You'll probably need to restart the MapReduce cluster if you want it to notice
-the new configuration.
-</p>
-
-<p>For example, here is how you would amend <code>hadoop-env.sh</code> adding the
-built hbase jar, hbase conf, and the <code>PerformanceEvaluation</code> class from
-the built hbase test jar to the hadoop <code>CLASSPATH<code>:
+adding hbase dependencies here.  For example, here is how you would amend
+<code>hadoop-env.sh</code> adding the
+built hbase jar, zookeeper (needed by hbase client), hbase conf, and the
+<code>PerformanceEvaluation</code> class from the built hbase test jar to the
+hadoop <code>CLASSPATH</code>:
 
 <blockquote><pre># Extra Java CLASSPATH elements. Optional.
 # export HADOOP_CLASSPATH=
-export HADOOP_CLASSPATH=$HBASE_HOME/build/test:$HBASE_HOME/build/hbase-X.X.X.jar:$HBASE_HOME/build/hbase-X.X.X-test.jar:$HBASE_HOME/conf</pre></blockquote>
+export HADOOP_CLASSPATH=$HBASE_HOME/build/hbase-X.X.X.jar:$HBASE_HOME/build/hbase-X.X.X-test.jar:$HBASE_HOME/conf:${HBASE_HOME}/lib/zookeeper-X.X.X.jar</pre></blockquote>
 
 <p>Expand <code>$HBASE_HOME</code> in the above appropriately to suit your
 local environment.</p>
 
-<p>After copying the above change around your cluster, this is how you would run
-the PerformanceEvaluation MR job to put up 4 clients (Presumes a ready mapreduce
-cluster):
+<p>After copying the above change around your cluster (and restarting), this is
+how you would run the PerformanceEvaluation MR job to put up 4 clients (Presumes
+a ready mapreduce cluster):
 
 <blockquote><pre>$HADOOP_HOME/bin/hadoop org.apache.hadoop.hbase.PerformanceEvaluation sequentialWrite 4</pre></blockquote>
 

@@ -264,6 +264,7 @@ Release 0.21.0 - Unreleased
    HBASE-2398  NPE in HLog.append when calling writer.getLength
                (Kannan Muthukkaruppan via Stack)
    HBASE-2410  spurious warnings from util.Sleeper
+   HBASE-2335  mapred package docs don't say zookeeper jar is a dependent
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
