@@ -914,24 +914,27 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       final int timeout = 3000 * datanodes.length + socketTimeout;
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
-        //connect to a datanode
-        final Socket sock = socketFactory.createSocket();
-        NetUtils.connect(sock, 
-                         NetUtils.createSocketAddr(datanodes[j].getName()),
-                         timeout);
-        sock.setSoTimeout(timeout);
-
-        DataOutputStream out = new DataOutputStream(
-            new BufferedOutputStream(NetUtils.getOutputStream(sock), 
-                                     DataNode.SMALL_BUFFER_SIZE));
-        DataInputStream in = new DataInputStream(NetUtils.getInputStream(sock));
-
-        // get block MD5
+        Socket sock = null;
+        DataOutputStream out = null;
+        DataInputStream in = null;
+        
         try {
+          //connect to a datanode
+          sock = socketFactory.createSocket();
+          NetUtils.connect(sock,
+              NetUtils.createSocketAddr(datanodes[j].getName()), timeout);
+          sock.setSoTimeout(timeout);
+
+          out = new DataOutputStream(
+              new BufferedOutputStream(NetUtils.getOutputStream(sock), 
+                                       DataNode.SMALL_BUFFER_SIZE));
+          in = new DataInputStream(NetUtils.getInputStream(sock));
+
           if (LOG.isDebugEnabled()) {
             LOG.debug("write to " + datanodes[j].getName() + ": "
                 + BLOCK_CHECKSUM + ", block=" + block);
           }
+          // get block MD5
           DataTransferProtocol.Sender.opBlockChecksum(out, block.getBlockId(),
               block.getGenerationStamp(), lb.getAccessToken());
 

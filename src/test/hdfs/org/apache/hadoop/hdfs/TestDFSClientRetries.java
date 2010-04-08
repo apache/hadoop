@@ -660,4 +660,35 @@ public class TestDFSClientRetries extends TestCase {
     public synchronized void inc() { ++counter; }
     public int get() { return counter; }
   }
+
+  public void testGetFileChecksum() throws Exception {
+    final String f = "/testGetFileChecksum";
+    final Path p = new Path(f);
+
+    final Configuration conf = new Configuration();
+    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    try {
+      cluster.waitActive();
+
+      //create a file
+      final FileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.createFile(fs, p, 1L << 20, (short)3, 20100402L);
+
+      //get checksum
+      final FileChecksum cs1 = fs.getFileChecksum(p);
+      assertTrue(cs1 != null);
+
+      //stop the first datanode
+      final List<LocatedBlock> locatedblocks = DFSClient.callGetBlockLocations(
+          cluster.getNameNode(), f, 0, Long.MAX_VALUE).getLocatedBlocks();
+      final DatanodeInfo first = locatedblocks.get(0).getLocations()[0];
+      cluster.stopDataNode(first.getName());
+
+      //get checksum again
+      final FileChecksum cs2 = fs.getFileChecksum(p);
+      assertEquals(cs1, cs2);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }
