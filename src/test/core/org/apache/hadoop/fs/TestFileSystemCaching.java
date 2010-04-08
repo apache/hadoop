@@ -30,9 +30,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Semaphore;
+
 import static org.mockito.Mockito.mock;
 
 
@@ -49,11 +49,10 @@ public class TestFileSystemCaching {
   }
 
   public static class InitializeForeverFileSystem extends LocalFileSystem {
+    final static Semaphore sem = new Semaphore(0);
     public void initialize(URI uri, Configuration conf) throws IOException {
       // notify that InitializeForeverFileSystem started initialization
-      synchronized (conf) {
-        conf.notify();
-      }
+      sem.release();
       try {
         while (true) {
           Thread.sleep(1000);
@@ -82,9 +81,8 @@ public class TestFileSystemCaching {
     };
     t.start();
     // wait for InitializeForeverFileSystem to start initialization
-    synchronized (conf) {
-      conf.wait();
-    }
+    InitializeForeverFileSystem.sem.acquire();
+    
     conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
     FileSystem.get(new URI("cachedfile://a"), conf);
     t.interrupt();

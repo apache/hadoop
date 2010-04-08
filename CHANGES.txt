@@ -312,6 +312,8 @@ Trunk (unreleased changes)
     HADOOP-6680. hadoop-cloud push command invokes proxy creation.
     (Andrew Klochkov via tomwhite)
 
+    HADOOP-6691. TestFileSystemCaching sometimes hangs. (hairong)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
