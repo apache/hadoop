@@ -20,6 +20,9 @@ Release 0.20.3 - Unreleased
     HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
     when name-node fails during saving. (shv)
 
+    HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
+    the first datanode fails.  (szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
