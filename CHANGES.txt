@@ -492,6 +492,8 @@ Release 0.21.0 - Unreleased
                writes occur in same millisecond (Clint Morgan via J-D)
    HBASE-2360  Make sure we have all the hadoop fixes in our our copy of its rpc
                (Todd Lipcon via Stack)
+   HBASE-2423  Update 'Getting Started' for 0.20.4 including making
+               "important configurations more visiable"
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

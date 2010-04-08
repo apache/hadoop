@@ -53,7 +53,7 @@
 
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
-  <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available.</li>
+  <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available except u18 (u19 is fine).</li>
   <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.</li>
   <li>
     <em>ssh</em> must be installed and <em>sshd</em> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
@@ -72,21 +72,9 @@
   </li>
   <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
   <li>
-    HBase currently is a file handle hog. The usual default of 1024 on *nix systems is insufficient
-    if you are loading any significant amount of data into regionservers.
-    See the <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>
-    for how to up the limit. Also, as of 0.18.x Hadoop DataNodes have an upper-bound on the number of threads they will
-    support (<code>dfs.datanode.max.xcievers</code>). The default is 256 threads. Up this limit on your hadoop cluster.
-  </li>
-  <li>
     The clocks on cluster members should be in basic alignments. Some skew is tolerable but
     wild skew could generate odd behaviors. Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
     on your cluster, or an equivalent.
-  </li>
-  <li>
-    HBase servers put up 10 listeners for incoming connections by default.
-    Up this number if you have a dataset of any substance by setting <code>hbase.regionserver.handler.count</code>
-    in your <code>hbase-site.xml</code>.
   </li>
   <li>
     This is the current list of patches we recommend you apply to your running Hadoop cluster:
@@ -102,6 +90,27 @@
         patched version.
       </li>
     </ul>
+  </li>
+  <li>
+    HBase is a database, it uses a lot of files at the same time. The default <b>ulimit -n</b> of 1024 on *nix systems is insufficient.
+    Any significant amount of loading will lead you to
+    <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>.
+    You will also notice errors like:
+    <pre>
+2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
+2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
+    </pre>
+    Do yourself a favor and change this to more than 10k using the FAQ.
+    Also, HDFS has an upper bound of files that it can serve at the same time, called xcievers (yes, this is <em>misspelled</em>). Again, before doing any loading,
+    make sure you configured Hadoop's conf/hdfs-site.xml with this:
+    <pre>
+&lt;property&gt;
+  &lt;name&gt;dfs.datanode.max.xcievers&lt;/name&gt;
+  &lt;value&gt;2047&lt;/value&gt;
+&lt;/property&gt;
+    </pre>
+    See the background of this issue here: <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A5">Problem: "xceiverCount 258 exceeds the limit of concurrent xcievers 256"</a>.
+    Failure to follow these instructions will result in <b>data loss</b>.
   </li>
 </ul>
 
