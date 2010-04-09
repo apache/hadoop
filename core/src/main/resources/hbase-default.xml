@@ -502,6 +502,21 @@
     </property>
   -->
   <property>
+    <name>hbase.zookeeper.property.initLimit</name>
+    <value>10</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that the initial synchronization phase can take.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.syncLimit</name>
+    <value>5</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that can pass between sending a request and getting an
+    acknowledgment.
+    </description>
+  </property>
+  <property>
     <name>hbase.zookeeper.property.dataDir</name>
     <value>${hbase.tmp.dir}/zookeeper</value>
     <description>Property from ZooKeeper's config zoo.cfg.
