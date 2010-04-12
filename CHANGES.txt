@@ -497,6 +497,8 @@ Release 0.21.0 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2423  Update 'Getting Started' for 0.20.4 including making
                "important configurations more visiable"
+   HBASE-2435  HTablePool - method to release resources after use
+               (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

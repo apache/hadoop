@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * A simple pool of HTable instances.<p>
@@ -124,4 +125,41 @@ public class HTablePool {
   protected HTableInterface createHTable(String tableName) {
     return this.tableFactory.createHTableInterface(config, Bytes.toBytes(tableName));
   }
+  
+  /**
+   * Closes all the HTable instances , belonging to the given table, in the table pool.
+   * <p>
+   * Note: this is a 'shutdown' of the given table pool and different from 
+   * {@link #putTable(HTableInterface)}, that is used to return the table 
+   * instance to the pool for future re-use.
+   *  
+   * @param tableName 
+   */
+  public void closeTablePool(final String tableName)  {
+    Queue<HTableInterface> queue = tables.get(tableName);
+    synchronized (queue) {
+      HTableInterface table = queue.poll();
+      while (table != null) {
+        this.tableFactory.releaseHTableInterface(table);
+        table = queue.poll();
+      }
+    }
+
+  }
+
+  /**
+   * See {@link #closeTablePool(String)}.
+   * 
+   * @param tableName
+   */
+  public void closeTablePool(final byte[] tableName)  {
+    closeTablePool(Bytes.toString(tableName));
+  }
+
+  int getCurrentPoolSize(String tableName) {
+    Queue<HTableInterface> queue = tables.get(tableName);
+    synchronized(queue) {
+      return queue.size();
+    }
+  }  
 }

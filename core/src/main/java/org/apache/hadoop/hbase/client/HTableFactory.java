@@ -39,4 +39,17 @@ public class HTableFactory implements HTableInterfaceFactory {
       throw new RuntimeException(ioe);
     }
   }
+
+  @Override
+  public void releaseHTableInterface(HTableInterface table) {
+    try { 
+      table.close();
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+    
+  }
+  
+  
+  
 }
