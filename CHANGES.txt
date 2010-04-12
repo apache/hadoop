@@ -499,6 +499,8 @@ Release 0.21.0 - Unreleased
                "important configurations more visiable"
    HBASE-2435  HTablePool - method to release resources after use
                (Kay Kay via Stack)
+   HBASE-1933  Upload Hbase jars to a public maven repository
+               (Kay Kay via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

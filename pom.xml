@@ -330,17 +330,44 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+  
+  <!--
+  To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
 
+ <settings>
+  <servers>
+    <server>
+      <id>apache.releases.https</id>
+      <username>hbase_committer</username>
+      <password>********</password>
+    </server>
+
+    <server>
+      <id>apache.snapshots.https</id>
+      <username>hbase_committer</username>
+      <password>********</password>
+    </server>
+
+  </servers>
+ </settings>
+
+  $ mvn deploy
+(or)
+  $ mvn -s /my/path/settings.xml deploy 
+
+  -->
   <distributionManagement>
-    <repository>
-      <id>Apache Public Releases</id>
-      <url>scp://people.apache.org/home/psmith/public_html/hbase/repo/</url>
-    </repository>
-    <snapshotRepository>
-      <id>Apache Public Snapshots</id>
-      <name>Aconex Snapshots</name>
-      <url>scp://people.apache.org/home/psmith/public_html/hbase/repo-snapshots/</url>
-    </snapshotRepository>
+    <repository> 
+      <id>apache.releases.https</id> 
+      <name>Apache Release Distribution Repository</name> 
+      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url> 
+    </repository> 
+    <snapshotRepository> 
+      <id>apache.snapshots.https</id> 
+      <name>Apache Development Snapshot Repository</name> 
+      <url>https://repository.apache.org/content/repositories/snapshots</url> 
+    </snapshotRepository> 
+    <!-- Private Site Repository -->
     <site>
       <id>HBase Site</id>
       <url>scp://people.apache.org/home/psmith/public_html/hbase/sandbox/hbase/</url>
