@@ -314,6 +314,9 @@ Trunk (unreleased changes)
 
     HADOOP-6691. TestFileSystemCaching sometimes hangs. (hairong)
 
+    HADOOP-6507. Hadoop Common Docs - delete 3 doc files that do not belong
+    under Common. (Corinne Chandel via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
