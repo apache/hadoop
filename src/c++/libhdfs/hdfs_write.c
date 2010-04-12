@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include <limits.h>
+
 #include "hdfs.h" 
 
 int main(int argc, char **argv) {
@@ -32,9 +34,23 @@ int main(int argc, char **argv) {
     } 
  
     const char* writeFileName = argv[1];
-    tSize fileTotalSize = strtoul(argv[2], NULL, 10);
-    tSize bufferSize = strtoul(argv[3], NULL, 10);
-   
+    off_t fileTotalSize = strtoul(argv[2], NULL, 10);
+    long long tmpBufferSize = strtoul(argv[3], NULL, 10);
+
+    // sanity check
+    if(fileTotalSize == ULONG_MAX && errno == ERANGE) {
+      fprintf(stderr, "invalid file size %s - must be <= %lu\n", argv[2], ULONG_MAX);
+      exit(-3);
+    }
+
+    // currently libhdfs writes are of tSize which is int32
+    if(tmpBufferSize > INT_MAX) {
+      fprintf(stderr, "invalid buffer size libhdfs API write chunks must be <= %d\n",INT_MAX);
+      exit(-3);
+    }
+
+    tSize bufferSize = tmpBufferSize;
+
     hdfsFile writeFile = hdfsOpenFile(fs, writeFileName, O_WRONLY, bufferSize, 0, 0);
     if (!writeFile) {
         fprintf(stderr, "Failed to open %s for writing!\n", writeFileName);
@@ -44,18 +60,23 @@ int main(int argc, char **argv) {
     // data to be written to the file
     char* buffer = malloc(sizeof(char) * bufferSize);
     if(buffer == NULL) {
+        fprintf(stderr, "Could not allocate buffer of size %d\n", bufferSize);
         return -2;
     }
     int i = 0;
     for (i=0; i < bufferSize; ++i) {
         buffer[i] = 'a' + (i%26);
     }
-    
+
     // write to the file
-    tSize nrRemaining;
+    off_t nrRemaining;
     for (nrRemaining = fileTotalSize; nrRemaining > 0; nrRemaining -= bufferSize ) {
-        int curSize = ( bufferSize < nrRemaining ) ? bufferSize : (int)nrRemaining; 
-        hdfsWrite(fs, writeFile, (void*)buffer, curSize); 
+      tSize curSize = ( bufferSize < nrRemaining ) ? bufferSize : (tSize)nrRemaining; 
+      tSize written;
+      if ((written = hdfsWrite(fs, writeFile, (void*)buffer, curSize)) != curSize) {
+        fprintf(stderr, "ERROR: hdfsWrite returned an error on write: %d\n", written);
+        exit(-3);
+      }
     }
 
     free(buffer);

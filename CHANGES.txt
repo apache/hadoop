@@ -252,6 +252,9 @@ Trunk (unreleased changes)
     HDFS-1010. hdfsproxy: Retrieve groups from UnixUserGroupInformation
     instead of LdapEntry.  (Srikanth Sundarrajan via szetszwo)
 
+    HDFS-466. hdfs_write infinite loop when dfs fails and cannot write
+    files > 2 GB. (Pete Wyckoff via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
