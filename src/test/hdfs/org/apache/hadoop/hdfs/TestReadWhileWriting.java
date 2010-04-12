@@ -45,7 +45,10 @@ public class TestReadWhileWriting {
   private static final String DIR = "/"
       + TestReadWhileWriting.class.getSimpleName() + "/";
   private static final int BLOCK_SIZE = 8192;
-  private static final long LEASE_LIMIT = 500;
+  // soft limit is short and hard limit is long, to test that
+  // another thread can lease file after soft limit expired
+  private static final long SOFT_LEASE_LIMIT = 500;
+  private static final long HARD_LEASE_LIMIT = 1000*600; 
   
   /** Test reading while writing. */
   @Test
@@ -59,7 +62,7 @@ public class TestReadWhileWriting {
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     try {
       //change the lease limits.
-      cluster.setLeasePeriod(LEASE_LIMIT, LEASE_LIMIT);
+      cluster.setLeasePeriod(SOFT_LEASE_LIMIT, HARD_LEASE_LIMIT);
 
       //wait for the cluster
       cluster.waitActive();
@@ -89,7 +92,7 @@ public class TestReadWhileWriting {
       //c. On M1, append another half block of data.  Close file on M1.
       {
         //sleep to let the lease is expired.
-        Thread.sleep(2*LEASE_LIMIT);
+        Thread.sleep(2*SOFT_LEASE_LIMIT);
   
         final DistributedFileSystem dfs = (DistributedFileSystem)FileSystem.newInstance(conf);
         final FSDataOutputStream out = append(dfs, p);

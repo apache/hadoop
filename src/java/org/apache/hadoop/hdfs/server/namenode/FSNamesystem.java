@@ -1206,12 +1206,21 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                 "Failed to close file " + src +
                 ". Lease recovery is in progress. Try again later.");
 
-        } else
-          throw new AlreadyBeingCreatedException("failed to create file " +
-              src + " for " + holder + " on client " + clientMachine + 
-              ", because this file is already being created by " +
-              pendingFile.getClientName() + 
-              " on " + pendingFile.getClientMachine());
+        } else {
+          if(pendingFile.getLastBlock().getBlockUCState() ==
+            BlockUCState.UNDER_RECOVERY) {
+            throw new RecoveryInProgressException(
+              "Recovery in progress, file [" + src + "], " +
+              "lease owner [" + lease.getHolder() + "]");
+            } else {
+              throw new AlreadyBeingCreatedException(
+                "Failed to create file [" + src + "] for [" + holder +
+                "] on client [" + clientMachine +
+                "], because this file is already being created by [" +
+                pendingFile.getClientName() + "] on [" +
+                pendingFile.getClientMachine() + "]");
+            }
+         }
       }
 
       try {
