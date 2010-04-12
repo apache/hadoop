@@ -255,6 +255,9 @@ Trunk (unreleased changes)
     HDFS-466. hdfs_write infinite loop when dfs fails and cannot write
     files > 2 GB. (Pete Wyckoff via tomwhite)
 
+    HDFS-651. HDFS Docs - fix listing of docs in the doc menu.
+    (Corinne Chandel via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

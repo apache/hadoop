@@ -33,19 +33,18 @@ See http://forrest.apache.org/docs/linking.html for more info.
 <site label="Hadoop" href="" xmlns="http://apache.org/forrest/linkmap/1.0">
   
    <docs label="Getting Started"> 
-     <hdfsproxy 			label="HDFS Proxy" 					href="hdfsproxy.html"/>
-     <hdfs_user      				label="User Guide"    							href="hdfs_user_guide.html" />
-     <hdfs_arch     				label="Architecture"  								href="hdfs_design.html" />	
+
+     <hdfs_user  label="HDFS Users "  href="hdfs_user_guide.html" />
+     <hdfs_arch  label="HDFS Architecture" href="hdfs_design.html" />	
    </docs>
    <docs label="Guides">
-      <hdfs_perm      				label="Permissions Guide"    					href="hdfs_permissions_guide.html" />
-      <hdfs_quotas     			label="Quotas Guide" 							href="hdfs_quota_admin_guide.html" />
-      <hdfs_SLG        			label="Synthetic Load Generator Guide"  href="SLG_user_guide.html" />
-      <hdfs_imageviewer						label="Offline Image Viewer Guide"	href="hdfs_imageviewer.html" />
-      <hdfs_libhdfs   				label="C API libhdfs"         						href="libhdfs.html" /> 
-    </docs>
-    <docs label="Testing">
-      <faultinject_framework              label="Fault Injection"                                                     href="faultinject_framework.html" />
+      <hdfs_perm      		label="Permissions" href="hdfs_permissions_guide.html" />
+      <hdfs_quotas     	    label="Quotas" href="hdfs_quota_admin_guide.html" />
+      <hdfs_SLG        		label="Synthetic Load Generator"  href="SLG_user_guide.html" />
+      <hdfs_imageviewer	label="Offline Image Viewer"	href="hdfs_imageviewer.html" />
+      <hdfsproxy 			    label="HDFS Proxy" href="hdfsproxy.html"/>
+      <faultinject_framework label="Fault Injection"  href="faultinject_framework.html" /> 
+      <hdfs_libhdfs   		label="C API libhdfs" href="libhdfs.html" /> 
     </docs>
    
    <docs label="Miscellaneous"> 
