@@ -808,6 +808,8 @@ Release 0.21.0 - Unreleased
     HDFS-1046. Fix Tomcat version in hdfsproxy/build.xml.  (Srikanth
     Sundarrajan via szetszwo)
 
+    HDFS-1072. Fix TestReadWhileWriting failure. (Erik Steffl via shv)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS
