@@ -68,6 +68,8 @@ Trunk (unreleased changes)
     HADOOP-6586. Log authentication and authorization failures and successes
     for RPC (boryas)
 
+    HADOOP-6580. UGI should contain authentication method. (jnp via boryas)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by

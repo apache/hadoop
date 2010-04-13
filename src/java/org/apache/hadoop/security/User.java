@@ -19,6 +19,8 @@ package org.apache.hadoop.security;
 
 import java.security.Principal;
 
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+
 /**
  * Save the full and short name of the user as a principal. This allows us to
  * have a single type that we always look for when picking up user names.
@@ -26,8 +28,13 @@ import java.security.Principal;
 class User implements Principal {
   private final String fullName;
   private final String shortName;
+  private AuthenticationMethod authMethod = null;
 
   public User(String name) {
+    this(name, null);
+  }
+  
+  public User(String name, AuthenticationMethod authMethod) {
     fullName = name;
     int atIdx = name.indexOf('@');
     if (atIdx == -1) {
@@ -40,6 +47,7 @@ class User implements Principal {
         shortName = name.substring(0, slashIdx);
       }
     }
+    this.authMethod = authMethod;
   }
 
   /**
@@ -65,7 +73,7 @@ class User implements Principal {
     } else if (o == null || getClass() != o.getClass()) {
       return false;
     } else {
-      return fullName.equals(((User) o).fullName);
+      return ((fullName.equals(((User) o).fullName)) && (authMethod == ((User) o).authMethod));
     }
   }
   
@@ -77,5 +85,13 @@ class User implements Principal {
   @Override
   public String toString() {
     return fullName;
+  }
+
+  public void setAuthenticationMethod(AuthenticationMethod authMethod) {
+    this.authMethod = authMethod;
+  }
+
+  public AuthenticationMethod getAuthenticationMethod() {
+    return authMethod;
   }
 }
