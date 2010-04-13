@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.stargate.model;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,11 +58,12 @@ import org.apache.hadoop.hbase.stargate.protobuf.generated.ScannerMessage.Scanne
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONStringer;
-
 import com.google.protobuf.ByteString;
+
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
+import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
  * A representation of Scanner parameters.
@@ -83,28 +86,6 @@ import com.google.protobuf.ByteString;
 @XmlRootElement(name="Scanner")
 public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
-  static enum FilterType {
-    ColumnCountGetFilter,
-    FilterList,
-    FirstKeyOnlyFilter,
-    InclusiveStopFilter,
-    PageFilter,
-    PrefixFilter,
-    QualifierFilter,
-    RowFilter,
-    SingleColumnValueFilter,
-    SkipFilter,
-    ValueFilter,
-    WhileMatchFilter    
-  }
-
-  static enum ComparatorType {
-    BinaryComparator,
-    BinaryPrefixComparator,
-    RegexStringComparator,
-    SubstringComparator    
-  }
-
   private static final long serialVersionUID = 1L;
 
   private byte[] startRow = HConstants.EMPTY_START_ROW;
@@ -116,215 +97,248 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private String filter = null;
   private int maxVersions = Integer.MAX_VALUE;
 
-  /**
-   * @param o the JSONObject under construction
-   * @return the JSONObject under construction
-   * @throws Exception
-   */
-  public static WritableByteArrayComparable 
-  buildWritableByteArrayComparable(final JSONObject o) throws Exception {
-    String type = o.getString("type");
-    String value = o.getString("value");
-    WritableByteArrayComparable comparator;
-    switch (ComparatorType.valueOf(type)) {
-      case BinaryComparator: {
-        comparator = new BinaryComparator(Base64.decode(value));
-      } break;
-      case BinaryPrefixComparator: {
-        comparator = new BinaryPrefixComparator(Base64.decode(value));
-      } break;
-      case RegexStringComparator: {
-        comparator = new RegexStringComparator(value);
-      } break;
-      case SubstringComparator: {
-        comparator = new SubstringComparator(value);
-      } break;
-      default: {
-        throw new RuntimeException("unhandled comparator type: " + type);
+  @XmlRootElement
+  static class FilterModel {
+    
+    @XmlRootElement
+    static class WritableByteArrayComparableModel {
+      @XmlAttribute public String type;
+      @XmlAttribute public String value;
+
+      static enum ComparatorType {
+        BinaryComparator,
+        BinaryPrefixComparator,
+        RegexStringComparator,
+        SubstringComparator    
+      }
+
+      public WritableByteArrayComparableModel() { }
+
+      public WritableByteArrayComparableModel(
+          WritableByteArrayComparable comparator) {
+        String typeName = comparator.getClass().getSimpleName();
+        ComparatorType type = ComparatorType.valueOf(typeName);
+        this.type = typeName;
+        switch (type) {
+          case BinaryComparator:
+          case BinaryPrefixComparator:
+            this.value = Base64.encodeBytes(comparator.getValue());
+            break;
+          case RegexStringComparator:
+          case SubstringComparator:
+            this.value = Bytes.toString(comparator.getValue());
+            break;
+          default:
+            throw new RuntimeException("unhandled filter type: " + type);
+        }
+      }
+
+      public WritableByteArrayComparable build() {
+        WritableByteArrayComparable comparator;
+        switch (ComparatorType.valueOf(type)) {
+          case BinaryComparator: {
+            comparator = new BinaryComparator(Base64.decode(value));
+          } break;
+          case BinaryPrefixComparator: {
+            comparator = new BinaryPrefixComparator(Base64.decode(value));
+          } break;
+          case RegexStringComparator: {
+            comparator = new RegexStringComparator(value);
+          } break;
+          case SubstringComparator: {
+            comparator = new SubstringComparator(value);
+          } break;
+          default: {
+            throw new RuntimeException("unhandled comparator type: " + type);
+          }
+        }
+        return comparator;
+      }
+
+    }
+
+    // a grab bag of fields, would have been a union if this were C
+    @XmlAttribute public String type = null;
+    @XmlAttribute public String op = null;
+    @XmlElement WritableByteArrayComparableModel comparator = null;
+    @XmlAttribute public String value = null;
+    @XmlElement public List<FilterModel> filters = null;
+    @XmlAttribute public Integer limit = null;
+    @XmlAttribute public String family = null;
+    @XmlAttribute public String qualifier = null;
+    @XmlAttribute public Boolean ifMissing = null;
+    @XmlAttribute public Boolean latestVersion = null;
+
+    static enum FilterType {
+      ColumnCountGetFilter,
+      FilterList,
+      FirstKeyOnlyFilter,
+      InclusiveStopFilter,
+      PageFilter,
+      PrefixFilter,
+      QualifierFilter,
+      RowFilter,
+      SingleColumnValueFilter,
+      SkipFilter,
+      ValueFilter,
+      WhileMatchFilter    
+    }
+
+    public FilterModel() { }
+    
+    public FilterModel(Filter filter) { 
+      String typeName = filter.getClass().getSimpleName();
+      FilterType type = FilterType.valueOf(typeName);
+      this.type = typeName;
+      switch (type) {
+        case ColumnCountGetFilter:
+          this.limit = ((ColumnCountGetFilter)filter).getLimit();
+          break;
+        case FilterList:
+          this.op = ((FilterList)filter).getOperator().toString();
+          this.filters = new ArrayList<FilterModel>();
+          for (Filter child: ((FilterList)filter).getFilters()) {
+            this.filters.add(new FilterModel(child));
+          }
+          break;
+        case FirstKeyOnlyFilter:
+          break;
+        case InclusiveStopFilter:
+          this.value = 
+            Base64.encodeBytes(((InclusiveStopFilter)filter).getStopRowKey());
+          break;
+        case PageFilter:
+          this.value = Long.toString(((PageFilter)filter).getPageSize());
+          break;
+        case PrefixFilter:
+          this.value = Base64.encodeBytes(((PrefixFilter)filter).getPrefix());
+          break;
+        case QualifierFilter:
+        case RowFilter:
+        case ValueFilter:
+          this.op = ((CompareFilter)filter).getOperator().toString();
+          this.comparator = 
+            new WritableByteArrayComparableModel(
+              ((CompareFilter)filter).getComparator());
+          break;
+        case SingleColumnValueFilter: {
+          SingleColumnValueFilter scvf = (SingleColumnValueFilter) filter;
+          this.family = Base64.encodeBytes(scvf.getFamily());
+          byte[] qualifier = scvf.getQualifier();
+          if (qualifier != null) {
+            this.qualifier = Base64.encodeBytes(qualifier);
+          }
+          this.op = scvf.getOperator().toString();
+          this.comparator = 
+            new WritableByteArrayComparableModel(scvf.getComparator());
+          if (scvf.getFilterIfMissing()) {
+            this.ifMissing = true;
+          }
+          if (scvf.getLatestVersionOnly()) {
+            this.latestVersion = true;
+          }
+        } break;
+        case SkipFilter:
+          this.filters = new ArrayList<FilterModel>();
+          this.filters.add(new FilterModel(((SkipFilter)filter).getFilter()));
+          break;
+        case WhileMatchFilter:
+          this.filters = new ArrayList<FilterModel>();
+          this.filters.add(
+            new FilterModel(((WhileMatchFilter)filter).getFilter()));
+          break;
+        default:
+          throw new RuntimeException("unhandled filter type " + type);
       }
     }
-    return comparator;
-  }
 
-  /**
-   * @param o the JSONObject under construction
-   * @return the JSONObject under construction
-   * @throws Exception
-   */
-  public static Filter buildFilter(final JSONObject o) throws Exception {
-    String type = o.getString("type");
-    Filter filter;
-    switch (FilterType.valueOf(type)) {
+    public Filter build() {
+      Filter filter;
+      switch (FilterType.valueOf(type)) {
       case ColumnCountGetFilter: {
-        filter = new ColumnCountGetFilter(o.getInt("limit"));
+        filter = new ColumnCountGetFilter(limit);
       } break;
       case FilterList: {
-        JSONArray arr = o.getJSONArray("filters");
-        List<Filter> filters = new ArrayList<Filter>(arr.length());
-        for (int i = 0; i < arr.length(); i++) {
-          filters.add(buildFilter(arr.getJSONObject(i)));
+        List<Filter> list = new ArrayList<Filter>();
+        for (FilterModel model: filters) {
+          list.add(model.build());
         }
-        filter = new FilterList(
-          FilterList.Operator.valueOf(o.getString("op")),
-          filters);
+        filter = new FilterList(FilterList.Operator.valueOf(op), list);
       } break;
       case FirstKeyOnlyFilter: {
         filter = new FirstKeyOnlyFilter();
       } break;
       case InclusiveStopFilter: {
-        filter = new InclusiveStopFilter(Base64.decode(o.getString("value")));
+        filter = new InclusiveStopFilter(Base64.decode(value));
       } break;
       case PageFilter: {
-        filter = new PageFilter(o.getLong("value"));
+        filter = new PageFilter(Long.valueOf(value));
       } break;
       case PrefixFilter: {
-        filter = new PrefixFilter(Base64.decode(o.getString("value")));
+        filter = new PrefixFilter(Base64.decode(value));
       } break;
       case QualifierFilter: {
-        filter = new QualifierFilter(CompareOp.valueOf(o.getString("op")),
-          buildWritableByteArrayComparable(o.getJSONObject("comparator")));
+        filter = new QualifierFilter(CompareOp.valueOf(op), comparator.build());
       } break;
       case RowFilter: {
-        filter = new RowFilter(CompareOp.valueOf(o.getString("op")),
-          buildWritableByteArrayComparable(o.getJSONObject("comparator")));
+        filter = new RowFilter(CompareOp.valueOf(op), comparator.build());
       } break;
       case SingleColumnValueFilter: {
-        filter = new SingleColumnValueFilter(
-          Base64.decode(o.getString("family")),
-          o.has("qualifier") ? Base64.decode(o.getString("qualifier")) : null,
-          CompareOp.valueOf(o.getString("op")),
-          buildWritableByteArrayComparable(o.getJSONObject("comparator")));
-        if (o.has("ifMissing")) {
-          ((SingleColumnValueFilter)filter)
-            .setFilterIfMissing(o.getBoolean("ifMissing"));
+        filter = new SingleColumnValueFilter(Base64.decode(family),
+          qualifier != null ? Base64.decode(qualifier) : null,
+          CompareOp.valueOf(op), comparator.build());
+        if (ifMissing != null) {
+          ((SingleColumnValueFilter)filter).setFilterIfMissing(ifMissing);
         }
-        if (o.has("latestVersion")) {
-          ((SingleColumnValueFilter)filter)
-            .setLatestVersionOnly(o.getBoolean("latestVersion"));
+        if (latestVersion != null) {
+          ((SingleColumnValueFilter)filter).setLatestVersionOnly(latestVersion);
         }
       } break;
       case SkipFilter: {
-        filter = new SkipFilter(buildFilter(o.getJSONObject("filter")));
+        filter = new SkipFilter(filters.get(0).build());
       } break;
       case ValueFilter: {
-        filter = new ValueFilter(CompareOp.valueOf(o.getString("op")),
-          buildWritableByteArrayComparable(o.getJSONObject("comparator")));
+        filter = new ValueFilter(CompareOp.valueOf(op), comparator.build());
       } break;
       case WhileMatchFilter: {
-        filter = new WhileMatchFilter(buildFilter(o.getJSONObject("filter")));
+        filter = new WhileMatchFilter(filters.get(0).build());
       } break;
-      default: {
-        throw new RuntimeException("unhandled filter type: " + type);
-      }
-    }
-    return filter;
-  }
-
-  /**
-   * @param s the JSONStringer
-   * @param comparator the comparator
-   * @return the JSONStringer
-   * @throws Exception
-   */
-  public static JSONStringer stringifyComparator(final JSONStringer s, 
-      final WritableByteArrayComparable comparator) throws Exception {
-    String typeName = comparator.getClass().getSimpleName();
-    ComparatorType type = ComparatorType.valueOf(typeName);
-    s.object();
-    s.key("type").value(typeName);
-    switch (type) {
-      case BinaryComparator:
-      case BinaryPrefixComparator:
-        s.key("value").value(Base64.encodeBytes(comparator.getValue()));
-        break;
-      case RegexStringComparator:
-      case SubstringComparator:
-        s.key("value").value(Bytes.toString(comparator.getValue()));
-        break;
       default:
         throw new RuntimeException("unhandled filter type: " + type);
+      }
+      return filter;
     }
-    s.endObject();
-    return s;
+
   }
 
   /**
-   * @param s the JSONStringer
-   * @param filter the filter
-   * @return the JSONStringer
+   * @param s the JSON representation of the filter
+   * @return the filter
    * @throws Exception
    */
-  public static JSONStringer stringifyFilter(final JSONStringer s, 
-      final Filter filter) throws Exception {
-    String typeName = filter.getClass().getSimpleName();
-    FilterType type;
-    try { 
-      type = FilterType.valueOf(typeName);
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException("filter type " + typeName + " not supported");
-    }
-    s.object();
-    s.key("type").value(typeName);
-    switch (type) {
-      case ColumnCountGetFilter:
-        s.key("limit").value(((ColumnCountGetFilter)filter).getLimit());
-        break;
-      case FilterList:
-        s.key("op").value(((FilterList)filter).getOperator().toString());
-        s.key("filters").array();
-        for (Filter child: ((FilterList)filter).getFilters()) {
-          stringifyFilter(s, child);
-        }
-        s.endArray();
-        break;
-      case FirstKeyOnlyFilter:
-        break;
-      case InclusiveStopFilter:
-        s.key("value").value(
-          Base64.encodeBytes(((InclusiveStopFilter)filter).getStopRowKey()));
-        break;
-      case PageFilter:
-        s.key("value").value(((PageFilter)filter).getPageSize());
-        break;
-      case PrefixFilter:
-        s.key("value")
-          .value(Base64.encodeBytes(((PrefixFilter)filter).getPrefix()));
-        break;
-      case QualifierFilter:
-      case RowFilter:
-      case ValueFilter:
-        s.key("op").value(((CompareFilter)filter).getOperator().toString());
-        s.key("comparator");
-        stringifyComparator(s, ((CompareFilter)filter).getComparator());
-        break;
-      case SingleColumnValueFilter: {
-        SingleColumnValueFilter scvf = (SingleColumnValueFilter) filter;
-        s.key("family").value(scvf.getFamily());
-        byte[] qualifier = scvf.getQualifier();
-        if (qualifier != null) {
-          s.key("qualifier").value(qualifier);
-        }
-        s.key("op").value(scvf.getOperator().toString());
-        s.key("comparator");
-        stringifyComparator(s, scvf.getComparator());
-        if (scvf.getFilterIfMissing()) {
-          s.key("ifMissing").value(true);
-        }
-        if (scvf.getLatestVersionOnly()) {
-          s.key("latestVersion").value(true);
-        }
-      } break;
-      case SkipFilter:
-        s.key("filter");
-        stringifyFilter(s, ((SkipFilter)filter).getFilter());
-        break;
-      case WhileMatchFilter:
-        s.key("filter");
-        stringifyFilter(s, ((WhileMatchFilter)filter).getFilter());
-        break;
-    }
-    s.endObject();
-    return s;
+  public static Filter buildFilter(String s) throws Exception {
+    JSONJAXBContext context =
+      new JSONJAXBContext(JSONConfiguration.natural().build(),
+        FilterModel.class);
+    JSONUnmarshaller unmarshaller = context.createJSONUnmarshaller();
+    FilterModel model = unmarshaller.unmarshalFromJSON(new StringReader(s),
+      FilterModel.class);
+    return model.build();
+  }
+
+  /**
+   * @param filter the filter
+   * @return the JSON representation of the filter
+   * @throws Exception 
+   */
+  public static String stringifyFilter(final Filter filter) throws Exception {
+    JSONJAXBContext context =
+      new JSONJAXBContext(JSONConfiguration.natural().build(),
+        FilterModel.class);
+    JSONMarshaller marshaller = context.createJSONMarshaller();
+    StringWriter writer = new StringWriter();
+    marshaller.marshallToJSON(new FilterModel(filter), writer);
+    return writer.toString();
   }
 
   /**
@@ -353,7 +367,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     }
     Filter filter = scan.getFilter();
     if (filter != null) {
-      model.setFilter(stringifyFilter(new JSONStringer(), filter).toString());
+      model.setFilter(stringifyFilter(filter));
     }
     return model;
   }

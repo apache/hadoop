@@ -20,15 +20,19 @@
 
 package org.apache.hadoop.hbase.stargate.auth;
 
+import java.io.ByteArrayOutputStream;
+
 import org.apache.hadoop.hbase.stargate.MiniClusterTestBase;
 import org.apache.hadoop.hbase.stargate.User;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.stargate.auth.ZooKeeperAuthenticator.UserModel;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 
-import org.json.JSONStringer;
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
 
 public class TestZooKeeperAuthenticator extends MiniClusterTestBase {
 
@@ -44,38 +48,41 @@ public class TestZooKeeperAuthenticator extends MiniClusterTestBase {
 
   @Override
   public void setUp() throws Exception {
+    super.setUp();
     authenticator = new ZooKeeperAuthenticator(conf);
     ZooKeeper zk = authenticator.wrapper.getZooKeeper();
+    JSONJAXBContext context =
+      new JSONJAXBContext(JSONConfiguration.natural().build(),
+          UserModel.class);
+    JSONMarshaller marshaller = context.createJSONMarshaller();
     if (zk.exists(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + 
           ADMIN_TOKEN, null) == null) {
+      UserModel model = new UserModel();
+      model.name = ADMIN_USERNAME;
+      model.admin = true;
+      ByteArrayOutputStream os = new ByteArrayOutputStream();
+      marshaller.marshallToJSON(model, os);
       zk.create(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + ADMIN_TOKEN, 
-        Bytes.toBytes(new JSONStringer()
-          .object()
-            .key("name").value(ADMIN_USERNAME)
-            .key("admin").value(true)
-          .endObject().toString()),
-        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        os.toByteArray(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
     if (zk.exists(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + 
           USER_TOKEN, null) == null) {
+      UserModel model = new UserModel();
+      model.name = USER_USERNAME;
+      ByteArrayOutputStream os = new ByteArrayOutputStream();
+      marshaller.marshallToJSON(model, os);
       zk.create(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + USER_TOKEN, 
-        Bytes.toBytes(new JSONStringer()
-          .object()
-            .key("name").value(USER_USERNAME)
-            .key("disabled").value(false)
-          .endObject().toString()),
-        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        os.toByteArray(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
     if (zk.exists(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" + 
           DISABLED_TOKEN, null) == null) {
+      UserModel model = new UserModel();
+      model.name = DISABLED_USERNAME;
+      model.disabled = true;
+      ByteArrayOutputStream os = new ByteArrayOutputStream();
+      marshaller.marshallToJSON(model, os);
       zk.create(ZooKeeperAuthenticator.USERS_ZNODE_ROOT + "/" +DISABLED_TOKEN,
-        Bytes.toBytes(new JSONStringer()
-          .object()
-            .key("name").value(DISABLED_USERNAME)
-            .key("admin").value(false)
-            .key("disabled").value(true)
-          .endObject().toString()),
-        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        os.toByteArray(), Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
   }
 

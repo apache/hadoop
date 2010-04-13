@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.stargate;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -28,6 +29,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +55,7 @@ import org.apache.hadoop.hbase.stargate.util.SoftUserData;
 import org.apache.hadoop.hbase.stargate.util.UserData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
 import org.apache.hadoop.util.StringUtils;
@@ -63,8 +70,8 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
-import org.json.JSONStringer;
-
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.server.impl.container.servlet.ServletAdaptor;
 
 /**
@@ -78,34 +85,46 @@ public class RESTServlet extends ServletAdaptor
 
   private static RESTServlet instance;
 
+  @XmlRootElement(name="status")
+  static class StatusModel {  
+    @XmlAttribute long requests;
+    @XmlElement List<String> connectors = new ArrayList<String>();
+    public void addConnector(String host, int port) {
+      connectors.add(host + ":" + Integer.toString(port));
+    }
+  }
+
   class StatusReporter extends Chore {
 
-    public StatusReporter(int period, AtomicBoolean stopping) {
+    final JSONJAXBContext context;
+    final JSONMarshaller marshaller;
+    
+    public StatusReporter(int period, AtomicBoolean stopping) 
+        throws IOException {
       super(period, stopping);
+        try {
+          context = new JSONJAXBContext(StatusModel.class);
+          marshaller = context.createJSONMarshaller();
+        } catch (JAXBException e) {
+          throw new IOException(e);
+        }
     }
 
     @Override
     protected void chore() {
       if (wrapper != null) try {
-        JSONStringer status = new JSONStringer();
-        status.object();
-        status.key("requests").value(metrics.getRequests());
-        status.key("connectors").array();
+        StatusModel model = new StatusModel();
+        model.requests = (long)metrics.getRequests();
         for (Pair<String,Integer> e: connectors) {
-          status.object()
-            .key("host").value(e.getFirst())
-            .key("port").value(e.getSecond())
-            .endObject();
+          model.addConnector(e.getFirst(), e.getSecond());
         }
-        status.endArray();
-        status.endObject();
-        updateNode(wrapper, znode, CreateMode.EPHEMERAL, 
-          Bytes.toBytes(status.toString()));
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        marshaller.marshallToJSON(model, os);
+        ensureExists(znode, CreateMode.EPHEMERAL, os.toByteArray());
       } catch (Exception e) {
         LOG.error(StringUtils.stringifyException(e));
       }
     }
-
   }
 
   final String znode = INSTANCE_ZNODE_ROOT + "/" + System.currentTimeMillis();
@@ -133,49 +152,38 @@ public class RESTServlet extends ServletAdaptor
     return instance;
   }
 
-  static boolean ensureExists(final ZooKeeperWrapper zkw, final String znode,
-      final CreateMode mode) throws IOException {
-    ZooKeeper zk = zkw.getZooKeeper();
+  private boolean ensureExists(final String znode, final CreateMode mode,
+      final byte[] data) {
     try {
+      ZooKeeper zk = wrapper.getZooKeeper();
       Stat stat = zk.exists(znode, false);
       if (stat != null) {
+        zk.setData(znode, data, -1);
         return true;
       }
-      zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE, mode);
-      LOG.debug("Created ZNode " + znode);
+      zk.create(znode, data, Ids.OPEN_ACL_UNSAFE, mode);
+      LOG.info("Created ZNode " + znode);
       return true;
     } catch (KeeperException.NodeExistsException e) {
       return true;      // ok, move on.
     } catch (KeeperException.NoNodeException e) {
-      return ensureParentExists(zkw, znode, mode) && 
-        ensureExists(zkw, znode, mode);
+      return ensureParentExists(znode, CreateMode.PERSISTENT, new byte[]{}) &&
+        ensureExists(znode, mode, data);
     } catch (KeeperException e) {
-      throw new IOException(e);
+      LOG.warn(StringUtils.stringifyException(e));
     } catch (InterruptedException e) {
-      throw new IOException(e);
+      LOG.warn(StringUtils.stringifyException(e));
     }
+    return false;
   }
 
-  static boolean ensureParentExists(final ZooKeeperWrapper zkw,
-      final String znode, final CreateMode mode) throws IOException {
-    int index = znode.lastIndexOf("/");
+  private boolean ensureParentExists(final String znode, final CreateMode mode,
+      final byte[] data) {
+    int index = znode.lastIndexOf('/');
     if (index <= 0) {   // Parent is root, which always exists.
       return true;
     }
-    return ensureExists(zkw, znode.substring(0, index), mode);
-  }
-
-  static void updateNode(final ZooKeeperWrapper zkw, final String znode, 
-        final CreateMode mode, final byte[] data) throws IOException  {
-    ensureExists(zkw, znode, mode);
-    ZooKeeper zk = zkw.getZooKeeper();
-    try {
-      zk.setData(znode, data, -1);
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    }
+    return ensureExists(znode.substring(0, index), mode, data);
   }
 
   ZooKeeperWrapper initZooKeeperWrapper() throws IOException {
@@ -191,7 +199,8 @@ public class RESTServlet extends ServletAdaptor
     this.pool = new HTablePool(conf, 10);
     this.wrapper = initZooKeeperWrapper();
     this.statusReporter = new StatusReporter(
-      conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 60), stopping);
+      conf.getInt(STATUS_REPORT_PERIOD_KEY, 1000 * 30), stopping);
+    Threads.setDaemonThreadRunning(statusReporter, "Stargate.statusReporter");
     this.multiuser = conf.getBoolean("stargate.multiuser", false);
     if (this.multiuser) {
       LOG.info("multiuser mode enabled");
@@ -290,7 +299,7 @@ public class RESTServlet extends ServletAdaptor
   }
 
   /**
-   * @param flag true if the servlet should operate in multiuser mode 
+   * @param multiuser true if the servlet should operate in multiuser mode 
    */
   public void setMultiUser(boolean multiuser) {
     this.multiuser = multiuser;
@@ -308,11 +317,11 @@ public class RESTServlet extends ServletAdaptor
         if (className.endsWith(HBCAuthenticator.class.getName()) ||
             className.endsWith(HTableAuthenticator.class.getName()) ||
             className.endsWith(JDBCAuthenticator.class.getName())) {
-          Constructor<?> cons = c.getConstructor(Configuration.class);
+          Constructor<?> cons = c.getConstructor(HBaseConfiguration.class);
           authenticator = (Authenticator)
             cons.newInstance(new Object[] { conf });
         } else if (className.endsWith(ZooKeeperAuthenticator.class.getName())) {
-          Constructor<?> cons = c.getConstructor(Configuration.class,
+          Constructor<?> cons = c.getConstructor(HBaseConfiguration.class,
             ZooKeeperWrapper.class);
           authenticator = (Authenticator)
             cons.newInstance(new Object[] { conf, wrapper });
@@ -344,7 +353,7 @@ public class RESTServlet extends ServletAdaptor
    * @param want the number of tokens desired
    * @throws IOException
    */
-  public boolean userRequestLimit(final User user, int want)
+  public boolean userRequestLimit(final User user, int want) 
       throws IOException {
     if (multiuser) {
       UserData ud = SoftUserData.get(user);

@@ -27,8 +27,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.stargate.model.ScannerModel;
 
-import org.json.JSONObject;
-
 public abstract class ResultGenerator implements Iterator<KeyValue> {
 
   public static ResultGenerator fromRowSpec(final String table, 
@@ -41,7 +39,7 @@ public abstract class ResultGenerator implements Iterator<KeyValue> {
   }
 
   public static Filter buildFilter(final String filter) throws Exception {
-    return ScannerModel.buildFilter(new JSONObject(filter));
+    return ScannerModel.buildFilter(filter);
   }
 
   public abstract void putBack(KeyValue kv);

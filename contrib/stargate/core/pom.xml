@@ -16,7 +16,7 @@
   <properties>
     <jsr311.version>1.1.1</jsr311.version>
     <protobuf.version>2.3.0</protobuf.version>
-    <jersey.version>1.1.4.1</jersey.version>
+    <jersey.version>1.1.5.1</jersey.version>
     <json.version>20090211</json.version>
     <hsqldb.version>1.8.0.10</hsqldb.version>
     <commons-httpclient.version>3.0.1</commons-httpclient.version>

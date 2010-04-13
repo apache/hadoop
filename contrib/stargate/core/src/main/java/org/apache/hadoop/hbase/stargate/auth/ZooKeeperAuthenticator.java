@@ -20,11 +20,14 @@
 
 package org.apache.hadoop.hbase.stargate.auth;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.stargate.Constants;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.stargate.User;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 
@@ -36,7 +39,9 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
-import org.json.JSONObject;
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
  * A simple authenticator module for ZooKeeper.
@@ -51,8 +56,17 @@ import org.json.JSONObject;
 public class ZooKeeperAuthenticator extends Authenticator 
     implements Constants {
 
+  @XmlRootElement(name="user")
+  static class UserModel {
+    @XmlAttribute public String name;
+    @XmlAttribute public boolean admin = false;
+    @XmlAttribute public boolean disabled = false;
+  }
+
   final String usersZNode;
   ZooKeeperWrapper wrapper;
+  final JSONJAXBContext context;
+  final JSONUnmarshaller unmarshaller;
 
   private boolean ensureParentExists(final String znode) {
     int index = znode.lastIndexOf("/");
@@ -98,11 +112,19 @@ public class ZooKeeperAuthenticator extends Authenticator
    * Constructor
    * @param conf
    * @param wrapper
+   * @throws IOException 
    */
   public ZooKeeperAuthenticator(Configuration conf, 
-      ZooKeeperWrapper wrapper) {
+      ZooKeeperWrapper wrapper) throws IOException {
     this.usersZNode = conf.get("stargate.auth.zk.users", USERS_ZNODE_ROOT);
     this.wrapper = wrapper;
+    try {
+      this.context = new JSONJAXBContext(JSONConfiguration.natural().build(),
+        UserModel.class);
+      this.unmarshaller = context.createJSONUnmarshaller();
+    } catch (Exception e) { 
+      throw new IOException(e);
+    }
   }
 
   @Override
@@ -113,16 +135,10 @@ public class ZooKeeperAuthenticator extends Authenticator
       if (data == null) {
         return null;
       }
-      JSONObject o = new JSONObject(Bytes.toString(data));
-      if (!o.has("name")) {
-        throw new IOException("invalid record, missing 'name'");
-      }
-      String name = o.getString("name");
-      boolean admin = false;
-      if (o.has("admin")) { admin = o.getBoolean("admin"); }
-      boolean disabled = false;
-      if (o.has("disabled")) { disabled = o.getBoolean("disabled"); }
-      return new User(name, token, admin, disabled);
+      UserModel model = 
+        unmarshaller.unmarshalFromJSON(new ByteArrayInputStream(data),
+          UserModel.class);
+      return new User(model.name, token, model.admin, model.disabled);
     } catch (KeeperException.NoNodeException e) {
       return null;
     } catch (Exception e) {
