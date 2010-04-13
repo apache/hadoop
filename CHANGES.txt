@@ -215,6 +215,9 @@ Trunk (unreleased changes)
     HADOOP-6569. FsShell#cat should avoid calling unecessary getFileStatus
     before opening a file to read. (hairong)
 
+    HADOOP-6689. Add directory renaming test to existing FileContext tests.
+    (Eli Collins via suresh)
+
   BUG FIXES
 
     HADOOP-6293. Fix FsShell -text to work on filesystems other than the
