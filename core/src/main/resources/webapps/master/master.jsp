@@ -1,20 +1,14 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
-  import="java.net.URLEncoder" 
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.JvmVersion"
-  import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
-  import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.HColumnDescriptor" 
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -26,7 +20,11 @@
   if (interval == 0) {
       interval = 1;
   }
-  Map<String, Integer> frags = master.getTableFragmentation();
+  boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
+  Map<String, Integer> frags = null;
+  if (showFragmentation) {
+      frags = master.getTableFragmentation();
+  }
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
@@ -61,7 +59,9 @@
 <tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
 <tr><td>Load average</td><td><%= master.getServerManager().getAverageLoad() %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
 <tr><td>Regions On FS</td><td><%= master.getRegionManager().countRegionsOnFS() %></td><td>Number of regions on FileSystem. Rough count.</td></tr>
-<tr><td>Fragmentation</td><td><%= frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
+<%  if (showFragmentation) { %>
+        <tr><td>Fragmentation</td><td><%= frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
+<%  } %>
 <tr><td>Zookeeper Quorum</td><td><%= master.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
 </table>
 
@@ -69,16 +69,28 @@
 <% 
   if (rootLocation != null) { %>
 <table>
-<tr><th>Table</th><th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th><th>Description</th></tr>
-<tr><td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td>
-<td align="center"><%= frags.get("-ROOT-") != null ? frags.get("-ROOT-").intValue() + "%" : "n/a" %></td>
-<td>The -ROOT- table holds references to all .META. regions.</td>
+<tr>
+    <th>Table</th>
+<%  if (showFragmentation) { %>
+        <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
+<%  } %>
+    <th>Description</th>
+</tr>
+<tr>
+    <td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td>
+<%  if (showFragmentation) { %>
+        <td align="center"><%= frags.get("-ROOT-") != null ? frags.get("-ROOT-").intValue() + "%" : "n/a" %></td>
+<%  } %>
+    <td>The -ROOT- table holds references to all .META. regions.</td>
 </tr>
 <%
     if (onlineRegions != null && onlineRegions.size() > 0) { %>
-<tr><td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>"><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
-<td align="center"><%= frags.get(".META.") != null ? frags.get(".META.").intValue() + "%" : "n/a" %></td>
-<td>The .META. table holds references to all User Table regions</td>
+<tr>
+    <td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>"><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
+<%  if (showFragmentation) { %>
+        <td align="center"><%= frags.get(".META.") != null ? frags.get(".META.").intValue() + "%" : "n/a" %></td>
+<%  } %>
+    <td>The .META. table holds references to all User Table regions</td>
 </tr>
   
 <%  } %>
@@ -89,11 +101,20 @@
 <% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
    if(tables != null && tables.length > 0) { %>
 <table>
-<tr><th>Table</th><th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th><th>Description</th></tr>
+<tr>
+    <th>Table</th>
+<%  if (showFragmentation) { %>
+        <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
+<%  } %>
+    <th>Description</th>
+</tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
-<tr><td><a href=/table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td>
-<td align="center"><%= frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
-<td><%= htDesc.toString() %></td>
+<tr>
+    <td><a href=/table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td>
+<%  if (showFragmentation) { %>
+        <td align="center"><%= frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
+<%  } %>
+    <td><%= htDesc.toString() %></td>
 </tr>
 <%   }  %>
 

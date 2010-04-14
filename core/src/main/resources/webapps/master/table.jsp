@@ -1,22 +1,16 @@
 <%@ page contentType="text/html;charset=UTF-8"
-  import="java.io.IOException"
   import="java.util.Map"
-  import="java.net.URLEncoder" 
-  import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.io.Writable"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.util.Bytes"
-  import="java.io.IOException"
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -28,7 +22,11 @@
       master.getServerManager().getServerAddressToServerInfo();
   String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
   HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
-  Map<String, Integer> frags = master.getTableFragmentation(); 
+  boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
+  Map<String, Integer> frags = null;
+  if (showFragmentation) {
+      frags = master.getTableFragmentation();
+  }
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -120,9 +118,22 @@
   try { %>
 <h2>Table Attributes</h2>
 <table>
-  <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-  <tr><td>Enabled</td><td><%= hbadmin.isTableEnabled(table.getTableName()) %></td><td>Is the table enabled</td></tr>
-  <tr><td>Fragmentation</td><td><%= frags.get(tableName) != null ? frags.get(tableName).intValue() + "%" : "n/a" %></td><td>How fragmented is the table. After a major compaction it is 0%.</td></tr>
+  <tr>
+      <th>Attribute Name</th>
+      <th>Value</th>
+      <th>Description</th></tr>
+  <tr>
+      <td>Enabled</td>
+      <td><%= hbadmin.isTableEnabled(table.getTableName()) %></td>
+      <td>Is the table enabled</td>
+  </tr>
+<%  if (showFragmentation) { %>
+  <tr>
+      <td>Fragmentation</td>
+      <td><%= frags.get(tableName) != null ? frags.get(tableName).intValue() + "%" : "n/a" %></td>
+      <td>How fragmented is the table. After a major compaction it is 0%.</td>
+  </tr>
+<%  } %>
 </table>
 <%
   Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();

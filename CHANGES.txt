@@ -505,6 +505,7 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-2440  Master UI should check against known bad JDK versions and
                warn the user (Todd Lipcon via Stack)
+   HBASE-2430  Disable frag display in trunk, let HBASE-2165 replace it
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
