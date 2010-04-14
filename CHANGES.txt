@@ -501,6 +501,8 @@ Release 0.21.0 - Unreleased
                (Kay Kay via Stack)
    HBASE-1933  Upload Hbase jars to a public maven repository
                (Kay Kay via Stack)
+   HBASE-2440  Master UI should check against known bad JDK versions and
+               warn the user (Todd Lipcon via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

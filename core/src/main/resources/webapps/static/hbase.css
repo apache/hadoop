@@ -6,3 +6,10 @@ th { border: thin solid DodgerBlue }
 #logo {float: left;}
 #logo img {border: none;}
 #page_title {padding-top: 27px;}
+
+div.warning {
+  border: 1px solid #666;
+  background-color: #fcc;
+  font-size: 110%;
+  font-weight: bold;
+}
