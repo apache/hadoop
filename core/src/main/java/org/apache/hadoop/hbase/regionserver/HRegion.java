@@ -1444,6 +1444,10 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * the notify.
    */
   private void checkResources() {
+
+    // If catalog region, do not impose resource constraints or block updates.
+    if (this.getRegionInfo().isMetaRegion()) return;
+
     boolean blocked = false;
     while (this.memstoreSize.get() > this.blockingMemStoreSize) {
       requestFlush();

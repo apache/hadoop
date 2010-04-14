@@ -221,7 +221,10 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     // queue if there's too many files.
     if (removeFromQueue) {
       checkStoreFileCount(region);
-    } else if (isTooManyStoreFiles(region)) {
+    } else if ((!region.getRegionInfo().isMetaRegion()) &&
+               isTooManyStoreFiles(region)) {
+      // Note: We don't impose blockingStoreFiles constraint on meta regions
+
       LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
           "store files, putting it back at the end of the flush queue.");
       server.compactSplitThread.compactionRequested(region, getName());

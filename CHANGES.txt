@@ -269,6 +269,8 @@ Release 0.21.0 - Unreleased
    HBASE-2346  Usage of FilterList slows down scans
    HBASE-2341  ZK settings for initLimit/syncLimit should not have been removed
                from hbase-default.xml
+   HBASE-2439  HBase can get stuck if updates to META are blocked
+               (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
