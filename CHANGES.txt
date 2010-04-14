@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     HDFS-1012. hdfsproxy: Support for fully qualified HDFS path in addition to
     simple unqualified path.  (Srikanth Sundarrajan via szetszwo)
 
+    HDFS-933. Namenode should issue a delegation token only for kerberos 
+    authenticated clients.(jnp via boryas)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
