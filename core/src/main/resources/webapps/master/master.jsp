@@ -4,6 +4,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.util.Bytes"
+  import="org.apache.hadoop.hbase.util.JvmVersion"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
