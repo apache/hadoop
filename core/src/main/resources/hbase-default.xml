@@ -313,6 +313,21 @@
     </description>
   </property>
   <property>
+    <name>hbase.hregion.preclose.flush.size</name>
+    <value>5242880</value>
+    <description>
+      If the memstores in a region are this size or larger when we go
+      to close, run a "pre-flush" to clear out memstores before we put up
+      the region closed flag and take the region offline.  On close,
+      a flush is run under the close flag up to empty memory.  During
+      this time the region is offline and we are not taking on any writes.
+      If the memstore content large, this flush could take a long time to
+      complete.  The preflush is meant to clean out the bulk of the memstore
+      before putting up the close flag and taking the region offline so the
+      flush that runs under the close flag has little to do.
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.memstore.block.multiplier</name>
     <value>2</value>
     <description>

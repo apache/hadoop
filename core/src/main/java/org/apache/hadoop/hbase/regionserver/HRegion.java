@@ -468,13 +468,14 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       LOG.warn("region " + this + " already closed");
       return null;
     }
-    this.closing.set(true);
     synchronized (splitLock) {
+      boolean wasFlushing = false;
       synchronized (writestate) {
         // Disable compacting and flushing by background threads for this
         // region.
         writestate.writesEnabled = false;
-        LOG.debug("Closing " + this + ": compactions & flushes disabled ");
+        wasFlushing = writestate.flushing;
+        LOG.debug("Closing " + this + ": disabling compactions & flushes");
         while (writestate.compacting || writestate.flushing) {
           LOG.debug("waiting for" +
               (writestate.compacting ? " compaction" : "") +
@@ -488,7 +489,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           }
         }
       }
+      // If we were not just flushing, is it worth doing a preflush...one
+      // that will clear out of the bulk of the memstore before we put up
+      // the close flag?
+      if (!abort && !wasFlushing && worthPreFlushing()) {
+        LOG.info("Running close preflush of " + this.getRegionNameAsString());
+        internalFlushcache();
+      }
       newScannerLock.writeLock().lock();
+      this.closing.set(true);
       try {
         splitsAndClosesLock.writeLock().lock();
         LOG.debug("Updates disabled for region, no outstanding scanners on " +
@@ -519,6 +528,14 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         newScannerLock.writeLock().unlock();
       }
     }
+  }
+
+   /**
+    * @return True if its worth doing a flush before we put up the close flag.
+    */
+  private boolean worthPreFlushing() {
+    return this.memstoreSize.get() >
+      this.conf.getLong("hbase.hregion.preclose.flush.size", 1024 * 1024 * 5);
   }
 
   //////////////////////////////////////////////////////////////////////////////
