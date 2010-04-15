@@ -209,6 +209,9 @@ Trunk (unreleased changes)
     HADOOP-6566. Add methods supporting, enforcing narrower permissions on
     local daemon directories. (Arun Murthy and Luke Lu via cdouglas)
 
+    HADOOP-6705. Fix to work with 1.5 version of jiracli
+    (Giridharan Kesavan)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

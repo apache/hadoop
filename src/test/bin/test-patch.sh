@@ -632,12 +632,10 @@ $comment"
     echo "======================================================================"
     echo ""
     echo ""
-
     ### Update Jira with a comment
     export USER=hudson
-    $JIRACLI -s issues.apache.org/jira login hadoopqa $JIRA_PASSWD
-    $JIRACLI -s issues.apache.org/jira comment $defect "$comment"
-    $JIRACLI -s issues.apache.org/jira logout
+    $JIRACLI -s https://issues.apache.org/jira -a addcomment -u hadoopqa -p $JIRA_PASSWD --comment "$comment" --issue $defect
+    $JIRACLI -s https://issues.apache.org/jira -a logout -u hadoopqa -p $JIRA_PASSWD
   fi
 }
 
