@@ -720,4 +720,20 @@ public class StringUtils {
     }
     return sb.toString();
   }
+
+  /**
+   * Convert SOME_STUFF to SomeStuff
+   *
+   * @param s input string
+   * @return camelized string
+   */
+  public static String camelize(String s) {
+    StringBuilder sb = new StringBuilder();
+    String[] words = split(s.toLowerCase(Locale.US), ESCAPE_CHAR, '_');
+
+    for (String word : words)
+      sb.append(org.apache.commons.lang.StringUtils.capitalize(word));
+
+    return sb.toString();
+  }
 }

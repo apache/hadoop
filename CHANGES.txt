@@ -69,6 +69,9 @@ Trunk (unreleased changes)
     for RPC (boryas)
 
     HADOOP-6580. UGI should contain authentication method. (jnp via boryas)
+    
+    HADOOP-6657. Add a capitalization method to StringUtils for MAPREDUCE-1545.
+    (Luke Lu via Steve Loughran)
 
   IMPROVEMENTS
 
