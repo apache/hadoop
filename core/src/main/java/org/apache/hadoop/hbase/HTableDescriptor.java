@@ -666,7 +666,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
-          Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
+          Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
           HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
@@ -674,7 +674,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY,
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
-            Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
+            Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
             HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL),
           new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY,
             HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),

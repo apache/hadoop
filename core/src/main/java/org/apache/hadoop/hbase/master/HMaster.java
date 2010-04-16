@@ -249,19 +249,20 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // created here in bootstap and it'll need to be cleaned up.  Better to
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
-      setBlockCaching(HRegionInfo.ROOT_REGIONINFO, false);
-      setBlockCaching(HRegionInfo.FIRST_META_REGIONINFO, false);
-      HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, rd, c);
-      HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-        rd, c);
+      HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
+      setInfoFamilyCaching(rootHRI, false);
+      HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
+      setInfoFamilyCaching(metaHRI, false);
+      HRegion root = HRegion.createHRegion(rootHRI, rd, c);
+      HRegion meta = HRegion.createHRegion(metaHRI, rd, c);
+      setInfoFamilyCaching(rootHRI, true);
+      setInfoFamilyCaching(metaHRI, true);
       // Add first region from the META table to the ROOT region.
       HRegion.addRegionToMETA(root, meta);
       root.close();
       root.getLog().closeAndDelete();
       meta.close();
       meta.getLog().closeAndDelete();
-      setBlockCaching(HRegionInfo.ROOT_REGIONINFO, true);
-      setBlockCaching(HRegionInfo.FIRST_META_REGIONINFO, true);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("bootstrap", e);
@@ -273,9 +274,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @param hri Set all family block caching to <code>b</code>
    * @param b
    */
-  private static void setBlockCaching(final HRegionInfo hri, final boolean b) {
+  private static void setInfoFamilyCaching(final HRegionInfo hri, final boolean b) {
     for (HColumnDescriptor hcd: hri.getTableDesc().families.values()) {
-      hcd.setBlockCacheEnabled(b);
+      if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
+        hcd.setBlockCacheEnabled(b);
+        hcd.setInMemory(b);
+      }
     }
   }
 
