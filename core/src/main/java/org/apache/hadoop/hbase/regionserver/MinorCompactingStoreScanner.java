@@ -35,13 +35,11 @@ import java.util.List;
 public class MinorCompactingStoreScanner implements KeyValueScanner, InternalScanner {
 
   private KeyValueHeap heap;
-  private ScanDeleteTracker deleteTracker;
   private KeyValue.KVComparator comparator;
 
   MinorCompactingStoreScanner(Store store,
                               KeyValueScanner [] scanners) {
     comparator = store.comparator;
-    deleteTracker = new ScanDeleteTracker();
     KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
     for (KeyValueScanner scanner : scanners ) {
       scanner.seek(firstKv);
@@ -53,7 +51,6 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
   MinorCompactingStoreScanner(String cfName, KeyValue.KVComparator comparator,
                               KeyValueScanner [] scanners) {
     this.comparator = comparator;
-    deleteTracker = new ScanDeleteTracker();
 
     KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
     for (KeyValueScanner scanner : scanners ) {
@@ -89,9 +86,6 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
       close();
       return false;
     }
-    // between rows.
-    deleteTracker.reset();
-
     KeyValue kv;
     while ((kv = heap.peek()) != null) {
       // check to see if this is a different row
@@ -99,27 +93,6 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
         // reached next row
         return true;
       }
-
-      // if delete type, output no matter what:
-      if (kv.getType() != KeyValue.Type.Put.getCode()) {
-        deleteTracker.add(kv.getBuffer(),
-            kv.getQualifierOffset(),
-            kv.getQualifierLength(),
-            kv.getTimestamp(),
-            kv.getType());
-
-        writer.append(heap.next());
-        continue;
-      }
-
-      if (deleteTracker.isDeleted(kv.getBuffer(),
-          kv.getQualifierOffset(),
-          kv.getQualifierLength(),
-          kv.getTimestamp())) {
-        heap.next();
-        continue;
-      }
-
       writer.append(heap.next());
     }
     close();
@@ -133,9 +106,6 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
       close();
       return false;
     }
-    // between rows.
-    deleteTracker.reset();
-
     KeyValue kv;
     while ((kv = heap.peek()) != null) {
       // check to see if this is a different row
@@ -143,27 +113,6 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
         // reached next row
         return true;
       }
-
-      // if delete type, output no matter what:
-      if (kv.getType() != KeyValue.Type.Put.getCode()) {
-        deleteTracker.add(kv.getBuffer(),
-            kv.getQualifierOffset(),
-            kv.getQualifierLength(),
-            kv.getTimestamp(),
-            kv.getType());
-
-        results.add(heap.next());
-        continue;
-      }
-
-      if (deleteTracker.isDeleted(kv.getBuffer(),
-          kv.getQualifierOffset(),
-          kv.getQualifierLength(),
-          kv.getTimestamp())) {
-        heap.next();
-        continue;
-      }
-
       results.add(heap.next());
     }
     close();
