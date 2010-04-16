@@ -271,6 +271,7 @@ Release 0.21.0 - Unreleased
                from hbase-default.xml
    HBASE-2439  HBase can get stuck if updates to META are blocked
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2451  .META. by-passes cache; BLOCKCACHE=>'false'
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
