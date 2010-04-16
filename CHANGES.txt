@@ -509,6 +509,7 @@ Release 0.21.0 - Unreleased
                warn the user (Todd Lipcon via Stack)
    HBASE-2430  Disable frag display in trunk, let HBASE-2165 replace it
    HBASE-1892  [performance] make hbase splits run faster
+   HBASE-2456  deleteChangedReaderObserver spitting warnings after HBASE-2248
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

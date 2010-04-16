@@ -132,7 +132,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   }
 
   public synchronized void close() {
-    this.closing.set(true);
+    boolean state = this.closing.getAndSet(true);
+    if (state) return;
     // under test, we dont have a this.store
     if (this.store != null)
       this.store.deleteChangedReaderObserver(this);
