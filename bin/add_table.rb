@@ -69,11 +69,15 @@ end
 # Get cmdline args.
 srcdir = fs.makeQualified(Path.new(java.lang.String.new(ARGV[0])))
 
+if not fs.exists(srcdir)
+  raise IOError.new("src dir " + srcdir.toString() + " doesn't exist!")
+end
+
 # Get table name
 tableName = nil
 if ARGV.size > 1
   tableName = ARGV[1]
-  raise IOError("Not supported yet")
+  raise IOError.new("Not supported yet")
 elsif
   # If none provided use dirname
   tableName = srcdir.getName()
@@ -101,14 +105,15 @@ end
 # Scan the .META. and remove all lines that begin with tablename
 LOG.info("Deleting mention of " + tableName + " from .META.")
 metaTable = HTable.new(c, HConstants::META_TABLE_NAME)
-scan = Scan.new(tableName.to_java_bytes)
+tableNameMetaPrefix = tableName + HConstants::META_ROW_DELIMITER.chr
+scan = Scan.new((tableNameMetaPrefix + HConstants::META_ROW_DELIMITER.chr).to_java_bytes)
 scanner = metaTable.getScanner(scan)
 # Use java.lang.String doing compares.  Ruby String is a bit odd.
 tableNameStr = java.lang.String.new(tableName)
 while (result = scanner.next())
   rowid = Bytes.toString(result.getRow())
   rowidStr = java.lang.String.new(rowid)
-  if not rowidStr.startsWith(tableNameStr)
+  if not rowidStr.startsWith(tableNameMetaPrefix)
     # Gone too far, break
     break
   end

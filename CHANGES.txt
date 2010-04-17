@@ -275,6 +275,8 @@ Release 0.21.0 - Unreleased
    HBASE-2453  Revisit compaction policies after HBASE-2248 commit
                (Jonathan Gray via Stack)
    HBASE-2458  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
+   HBASE-2460  add_table.rb deletes any tables for which the target table name
+               is a prefix (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
