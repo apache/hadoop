@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -39,48 +41,50 @@ import java.util.Comparator;
  * HashSets, etc.
  */
 public class Bytes {
-  
+
+  private static final Log LOG = LogFactory.getLog(Bytes.class);
+
   /**
    * Size of boolean in bytes
    */
-  public static final int SIZEOF_BOOLEAN = Byte.SIZE/Byte.SIZE;
-  
+  public static final int SIZEOF_BOOLEAN = Byte.SIZE / Byte.SIZE;
+
   /**
    * Size of byte in bytes
    */
   public static final int SIZEOF_BYTE = SIZEOF_BOOLEAN;
-  
+
   /**
    * Size of char in bytes
    */
-  public static final int SIZEOF_CHAR = Character.SIZE/Byte.SIZE;
-  
+  public static final int SIZEOF_CHAR = Character.SIZE / Byte.SIZE;
+
   /**
    * Size of double in bytes
    */
-  public static final int SIZEOF_DOUBLE = Double.SIZE/Byte.SIZE;
-  
+  public static final int SIZEOF_DOUBLE = Double.SIZE / Byte.SIZE;
+
   /**
    * Size of float in bytes
    */
-  public static final int SIZEOF_FLOAT = Float.SIZE/Byte.SIZE;
-  
+  public static final int SIZEOF_FLOAT = Float.SIZE / Byte.SIZE;
+
   /**
    * Size of int in bytes
    */
-  public static final int SIZEOF_INT = Integer.SIZE/Byte.SIZE;
-  
+  public static final int SIZEOF_INT = Integer.SIZE / Byte.SIZE;
+
   /**
    * Size of long in bytes
    */
-  public static final int SIZEOF_LONG = Long.SIZE/Byte.SIZE;
+  public static final int SIZEOF_LONG = Long.SIZE / Byte.SIZE;
 
   /**
    * Size of short in bytes
    */
-  public static final int SIZEOF_SHORT = Short.SIZE/Byte.SIZE;
+  public static final int SIZEOF_SHORT = Short.SIZE / Byte.SIZE;
 
-  
+
   /**
    * Estimate of size cost to pay beyond payload in jvm for instance of byte [].
    * Estimate based on study of jhat and jprofiler numbers.
@@ -118,7 +122,7 @@ public class Bytes {
    */
   public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
     new ByteArrayComparator();
-  
+
   /**
    * Read byte-array written with a WritableableUtils.vint prefix.
    * @param in Input to read from.
@@ -135,7 +139,7 @@ public class Bytes {
     in.readFully(result, 0, len);
     return result;
   }
-  
+
   /**
    * Read byte-array written with a WritableableUtils.vint prefix.
    * IOException is converted to a RuntimeException.
@@ -248,6 +252,12 @@ public class Bytes {
     return toString(b, 0, b.length);
   }
 
+  /**
+   * Joins two byte arrays together using a separator.
+   * @param b1 The first byte array.
+   * @param sep The separator to use.
+   * @param b2 The second byte array.
+   */
   public static String toString(final byte [] b1,
                                 String sep,
                                 final byte [] b2) {
@@ -265,19 +275,18 @@ public class Bytes {
    * @return String made from <code>b</code> or null
    */
   public static String toString(final byte [] b, int off, int len) {
-    if(b == null) {
+    if (b == null) {
       return null;
     }
-    if(len == 0) {
+    if (len == 0) {
       return "";
     }
-    String result = null;
     try {
-      result = new String(b, off, len, HConstants.UTF8_ENCODING);
+      return new String(b, off, len, HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
+      LOG.error("UTF-8 not supported?", e);
+      return null;
     }
-    return result;
   }
 
   /**
@@ -325,8 +334,8 @@ public class Bytes {
           result.append(String.format("\\x%02X", ch));
         }
       }
-    } catch ( UnsupportedEncodingException e) {
-      e.printStackTrace();
+    } catch (UnsupportedEncodingException e) {
+      LOG.error("ISO-8859-1 not supported?", e);
     }
     return result.toString();
   }
@@ -369,8 +378,8 @@ public class Bytes {
         char hd2 = in.charAt(i+3);
 
         // they need to be A-F0-9:
-        if ( ! isHexDigit(hd1) ||
-            ! isHexDigit(hd2) ) {
+        if (!isHexDigit(hd1) ||
+            !isHexDigit(hd2)) {
           // bogus escape code, ignore:
           continue;
         }
@@ -395,18 +404,14 @@ public class Bytes {
    * @return the byte array
    */
   public static byte[] toBytes(String s) {
-    if (s == null) {
-      throw new IllegalArgumentException("string cannot be null");
-    }
-    byte [] result = null;
     try {
-      result = s.getBytes(HConstants.UTF8_ENCODING);
+      return s.getBytes(HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
+      LOG.error("UTF-8 not supported?", e);
+      return null;
     }
-    return result;
   }
-  
+
   /**
    * Convert a boolean to a byte array. True becomes -1
    * and false becomes 0.
@@ -415,9 +420,7 @@ public class Bytes {
    * @return <code>b</code> encoded in a byte array.
    */
   public static byte [] toBytes(final boolean b) {
-    byte [] bb = new byte[1];
-    bb[0] = b? (byte)-1: (byte)0;
-    return bb;
+    return new byte[] { b ? (byte) -1 : (byte) 0 };
   }
 
   /**
@@ -426,10 +429,10 @@ public class Bytes {
    * @return True or false.
    */
   public static boolean toBoolean(final byte [] b) {
-    if (b == null || b.length > 1) {
-      throw new IllegalArgumentException("Array is wrong size");
+    if (b.length != 1) {
+      throw new IllegalArgumentException("Array has wrong size: " + b.length);
     }
-    return b[0] != (byte)0;
+    return b[0] != (byte) 0;
   }
 
   /**
@@ -440,11 +443,11 @@ public class Bytes {
    */
   public static byte[] toBytes(long val) {
     byte [] b = new byte[8];
-    for (int i=7; i>0; i--) {
-      b[i] = (byte)(val);
+    for (int i = 7; i > 0; i--) {
+      b[i] = (byte) val;
       val >>>= 8;
     }
-    b[0] = (byte)(val);
+    b[0] = (byte) val;
     return b;
   }
 
@@ -455,7 +458,7 @@ public class Bytes {
    * @return the long value
    */
   public static long toLong(byte[] bytes) {
-    return toLong(bytes, 0);
+    return toLong(bytes, 0, SIZEOF_LONG);
   }
 
   /**
@@ -477,36 +480,55 @@ public class Bytes {
    * @param offset offset into array
    * @param length length of data (must be {@link #SIZEOF_LONG})
    * @return the long value
+   * @throws IllegalArgumentException if length is not {@link #SIZEOF_LONG} or
+   * if there's not enough room in the array at the offset indicated.
    */
   public static long toLong(byte[] bytes, int offset, final int length) {
-    if (bytes == null || length != SIZEOF_LONG ||
-        (offset + length > bytes.length)) {
-      return -1L;
+    if (length != SIZEOF_LONG || offset + length > bytes.length) {
+      throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
     long l = 0;
-    for(int i = offset; i < (offset + length); i++) {
+    for(int i = offset; i < offset + length; i++) {
       l <<= 8;
-      l ^= (long)bytes[i] & 0xFF;
+      l ^= bytes[i] & 0xFF;
     }
     return l;
   }
-  
+
+  private static IllegalArgumentException
+    explainWrongLengthOrOffset(final byte[] bytes,
+                               final int offset,
+                               final int length,
+                               final int expectedLength) {
+    String reason;
+    if (length != expectedLength) {
+      reason = "Wrong length: " + length + ", expected " + expectedLength;
+    } else {
+     reason = "offset (" + offset + ") + length (" + length + ") exceed the"
+        + " capacity of the array: " + bytes.length;
+    }
+    return new IllegalArgumentException(reason);
+  }
+
   /**
    * Put a long value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
    * @param val long to write out
    * @return incremented offset
+   * @throws IllegalArgumentException if the byte array given doesn't have
+   * enough room at the offset specified.
    */
   public static int putLong(byte[] bytes, int offset, long val) {
-    if (bytes == null || (bytes.length - offset < SIZEOF_LONG)) {
-      return offset;
+    if (bytes.length - offset < SIZEOF_LONG) {
+      throw new IllegalArgumentException("Not enough room to put a long at"
+          + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    for(int i=offset+7;i>offset;i--) {
-      bytes[i] = (byte)(val);
+    for(int i = offset + 7; i > offset; i--) {
+      bytes[i] = (byte) val;
       val >>>= 8;
     }
-    bytes[offset] = (byte)(val);
+    bytes[offset] = (byte) val;
     return offset + SIZEOF_LONG;
   }
 
@@ -526,19 +548,17 @@ public class Bytes {
    * @return Float made from passed byte array.
    */
   public static float toFloat(byte [] bytes, int offset) {
-    int i = toInt(bytes, offset);
-    return Float.intBitsToFloat(i);
+    return Float.intBitsToFloat(toInt(bytes, offset, SIZEOF_INT));
   }
 
   /**
    * @param bytes byte array
    * @param offset offset to write to
    * @param f float value
-   * @return New offset in <code>bytes</bytes>
+   * @return New offset in <code>bytes</code>
    */
   public static int putFloat(byte [] bytes, int offset, float f) {
-    int i = Float.floatToRawIntBits(f);
-    return putInt(bytes, offset, i);
+    return putInt(bytes, offset, Float.floatToRawIntBits(f));
   }
 
   /**
@@ -547,8 +567,7 @@ public class Bytes {
    */
   public static byte [] toBytes(final float f) {
     // Encode it as int
-    int i = Float.floatToRawIntBits(f);
-    return Bytes.toBytes(i);
+    return Bytes.toBytes(Float.floatToRawIntBits(f));
   }
 
   /**
@@ -565,8 +584,7 @@ public class Bytes {
    * @return Return double made from passed bytes.
    */
   public static double toDouble(final byte [] bytes, final int offset) {
-    long l = toLong(bytes, offset);
-    return Double.longBitsToDouble(l);
+    return Double.longBitsToDouble(toLong(bytes, offset, SIZEOF_LONG));
   }
 
   /**
@@ -576,8 +594,7 @@ public class Bytes {
    * @return New offset into array <code>bytes</code>
    */
   public static int putDouble(byte [] bytes, int offset, double d) {
-    long l = Double.doubleToLongBits(d);
-    return putLong(bytes, offset, l);
+    return putLong(bytes, offset, Double.doubleToLongBits(d));
   }
 
   /**
@@ -589,8 +606,7 @@ public class Bytes {
    */
   public static byte [] toBytes(final double d) {
     // Encode it as a long
-    long l = Double.doubleToRawLongBits(d);
-    return Bytes.toBytes(l);
+    return Bytes.toBytes(Double.doubleToRawLongBits(d));
   }
 
   /**
@@ -601,20 +617,20 @@ public class Bytes {
   public static byte[] toBytes(int val) {
     byte [] b = new byte[4];
     for(int i = 3; i > 0; i--) {
-      b[i] = (byte)(val);
+      b[i] = (byte) val;
       val >>>= 8;
     }
-    b[0] = (byte)(val);
+    b[0] = (byte) val;
     return b;
   }
-  
+
   /**
    * Converts a byte array to an int value
    * @param bytes byte array
    * @return the int value
    */
   public static int toInt(byte[] bytes) {
-    return toInt(bytes, 0);
+    return toInt(bytes, 0, SIZEOF_INT);
   }
 
   /**
@@ -633,11 +649,12 @@ public class Bytes {
    * @param offset offset into array
    * @param length length of int (has to be {@link #SIZEOF_INT})
    * @return the int value
+   * @throws IllegalArgumentException if length is not {@link #SIZEOF_INT} or
+   * if there's not enough room in the array at the offset indicated.
    */
   public static int toInt(byte[] bytes, int offset, final int length) {
-    if (bytes == null || length != SIZEOF_INT ||
-        (offset + length > bytes.length)) {
-      return -1;
+    if (length != SIZEOF_INT || offset + length > bytes.length) {
+      throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
     int n = 0;
     for(int i = offset; i < (offset + length); i++) {
@@ -646,26 +663,29 @@ public class Bytes {
     }
     return n;
   }
-  
+
   /**
    * Put an int value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
    * @param val int to write out
    * @return incremented offset
+   * @throws IllegalArgumentException if the byte array given doesn't have
+   * enough room at the offset specified.
    */
   public static int putInt(byte[] bytes, int offset, int val) {
-    if (bytes == null || (bytes.length - offset < SIZEOF_INT)) {
-      return offset;
+    if (bytes.length - offset < SIZEOF_INT) {
+      throw new IllegalArgumentException("Not enough room to put an int at"
+          + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    for(int i= offset+3; i > offset; i--) {
-      bytes[i] = (byte)(val);
+    for(int i= offset + 3; i > offset; i--) {
+      bytes[i] = (byte) val;
       val >>>= 8;
     }
-    bytes[offset] = (byte)(val);
+    bytes[offset] = (byte) val;
     return offset + SIZEOF_INT;
   }
-  
+
   /**
    * Convert a short value to a byte array of {@link #SIZEOF_SHORT} bytes long.
    * @param val value
@@ -673,9 +693,9 @@ public class Bytes {
    */
   public static byte[] toBytes(short val) {
     byte[] b = new byte[SIZEOF_SHORT];
-    b[1] = (byte)(val);
+    b[1] = (byte) val;
     val >>= 8;
-    b[0] = (byte)(val);
+    b[0] = (byte) val;
     return b;
   }
 
@@ -685,7 +705,7 @@ public class Bytes {
    * @return the short value
    */
   public static short toShort(byte[] bytes) {
-    return toShort(bytes, 0);
+    return toShort(bytes, 0, SIZEOF_SHORT);
   }
 
   /**
@@ -704,11 +724,12 @@ public class Bytes {
    * @param offset offset into array
    * @param length length, has to be {@link #SIZEOF_SHORT}
    * @return the short value
+   * @throws IllegalArgumentException if length is not {@link #SIZEOF_SHORT}
+   * or if there's not enough room in the array at the offset indicated.
    */
   public static short toShort(byte[] bytes, int offset, final int length) {
-    if (bytes == null || length != SIZEOF_SHORT ||
-        (offset + length > bytes.length)) {
-      return -1;
+    if (length != SIZEOF_SHORT || offset + length > bytes.length) {
+      throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
     short n = 0;
     n ^= bytes[offset] & 0xFF;
@@ -716,24 +737,27 @@ public class Bytes {
     n ^= bytes[offset+1] & 0xFF;
     return n;
   }
-  
+
   /**
    * Put a short value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
    * @param val short to write out
    * @return incremented offset
+   * @throws IllegalArgumentException if the byte array given doesn't have
+   * enough room at the offset specified.
    */
   public static int putShort(byte[] bytes, int offset, short val) {
-    if (bytes == null || (bytes.length - offset < SIZEOF_SHORT)) {
-      return offset;
+    if (bytes.length - offset < SIZEOF_SHORT) {
+      throw new IllegalArgumentException("Not enough room to put a short at"
+          + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    bytes[offset+1] = (byte)(val);
+    bytes[offset+1] = (byte) val;
     val >>= 8;
-    bytes[offset] = (byte)(val);
+    bytes[offset] = (byte) val;
     return offset + SIZEOF_SHORT;
   }
-  
+
   /**
    * @param vint Integer to make a vint of.
    * @return Vint as bytes array.
@@ -744,7 +768,7 @@ public class Bytes {
     byte [] result = new byte[size];
     int offset = 0;
     if (i >= -112 && i <= 127) {
-      result[offset] = ((byte)i);
+      result[offset] = (byte) i;
       return result;
     }
 
@@ -757,10 +781,10 @@ public class Bytes {
     long tmp = i;
     while (tmp != 0) {
       tmp = tmp >> 8;
-    len--;
+      len--;
     }
 
-    result[offset++] = (byte)len;
+    result[offset++] = (byte) len;
 
     len = (len < -120) ? -(len + 120) : -(len + 112);
 
@@ -789,7 +813,7 @@ public class Bytes {
       i = i << 8;
       i = i | (b & 0xFF);
     }
-    return (WritableUtils.isNegativeVInt(firstByte) ? (~i) : i);
+    return (WritableUtils.isNegativeVInt(firstByte) ? ~i : i);
   }
 
   /**
@@ -812,7 +836,7 @@ public class Bytes {
       i = i << 8;
       i = i | (b & 0xFF);
     }
-    return (WritableUtils.isNegativeVInt(firstByte) ? (~i) : i);
+    return (WritableUtils.isNegativeVInt(firstByte) ? ~i : i);
   }
 
   /**
@@ -858,11 +882,13 @@ public class Bytes {
   public static boolean equals(final byte [] left, final byte [] right) {
     // Could use Arrays.equals?
     //noinspection SimplifiableConditionalExpression
-    return left == null && right == null? true:
-      (left == null || right == null || (left.length != right.length))? false:
-        compareTo(left, right) == 0;
+    if (left == null && right == null) {
+      return true;
+    }
+    return (left == null || right == null || (left.length != right.length)
+            ? false : compareTo(left, right) == 0);
   }
-  
+
   /**
    * @param b bytes to hash
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
@@ -925,14 +951,16 @@ public class Bytes {
     System.arraycopy(c, 0, result, a.length + b.length, c.length);
     return result;
   }
-  
+
   /**
    * @param a array
    * @param length amount of bytes to grab
    * @return First <code>length</code> bytes from <code>a</code>
    */
   public static byte [] head(final byte [] a, final int length) {
-    if(a.length < length) return null;
+    if (a.length < length) {
+      return null;
+    }
     byte [] result = new byte[length];
     System.arraycopy(a, 0, result, 0, length);
     return result;
@@ -944,7 +972,9 @@ public class Bytes {
    * @return Last <code>length</code> bytes from <code>a</code>
    */
   public static byte [] tail(final byte [] a, final int length) {
-    if(a.length < length) return null;
+    if (a.length < length) {
+      return null;
+    }
     byte [] result = new byte[length];
     System.arraycopy(a, a.length - length, result, 0, length);
     return result;
@@ -957,10 +987,12 @@ public class Bytes {
    */
   public static byte [] padHead(final byte [] a, final int length) {
     byte [] padding = new byte[length];
-    for(int i=0;i<length;i++) padding[i] = 0;
+    for (int i = 0; i < length; i++) {
+      padding[i] = 0;
+    }
     return add(padding,a);
   }
-  
+
   /**
    * @param a array
    * @param length new array size
@@ -968,10 +1000,12 @@ public class Bytes {
    */
   public static byte [] padTail(final byte [] a, final int length) {
     byte [] padding = new byte[length];
-    for(int i=0;i<length;i++) padding[i] = 0;
+    for (int i = 0; i < length; i++) {
+      padding[i] = 0;
+    }
     return add(a,padding);
   }
-  
+
   /**
    * Split passed range.  Expensive operation relatively.  Uses BigInteger math.
    * Useful splitting ranges for MapReduce jobs.
@@ -985,29 +1019,34 @@ public class Bytes {
     byte [] aPadded;
     byte [] bPadded;
     if (a.length < b.length) {
-      aPadded = padTail(a,b.length-a.length);
+      aPadded = padTail(a, b.length - a.length);
       bPadded = b;
     } else if (b.length < a.length) {
       aPadded = a;
-      bPadded = padTail(b,a.length-b.length);
+      bPadded = padTail(b, a.length - b.length);
     } else {
       aPadded = a;
       bPadded = b;
     }
-    if (compareTo(aPadded,bPadded) > 1) {
+    if (compareTo(aPadded, bPadded) > 1) {
       throw new IllegalArgumentException("b > a");
     }
-    if (num <= 0) throw new IllegalArgumentException("num cannot be < 0");
+    if (num <= 0) {
+      throw new IllegalArgumentException("num cannot be < 0");
+    }
     byte [] prependHeader = {1, 0};
     BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
     BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
     BigInteger diffBI = stopBI.subtract(startBI);
     BigInteger splitsBI = BigInteger.valueOf(num + 1);
-    if(diffBI.compareTo(splitsBI) <= 0) return null;
+    if(diffBI.compareTo(splitsBI) <= 0) {
+      return null;
+    }
     BigInteger intervalBI;
     try {
       intervalBI = diffBI.divide(splitsBI);
     } catch(Exception e) {
+      LOG.error("Exception caught during division", e);
       return null;
     }
 
@@ -1018,15 +1057,15 @@ public class Bytes {
       BigInteger curBI = startBI.add(intervalBI.multiply(BigInteger.valueOf(i)));
       byte [] padded = curBI.toByteArray();
       if (padded[1] == 0)
-        padded = tail(padded,padded.length-2);
+        padded = tail(padded, padded.length - 2);
       else
-        padded = tail(padded,padded.length-1);
+        padded = tail(padded, padded.length - 1);
       result[i] = padded;
     }
     result[num+1] = b;
     return result;
   }
-  
+
   /**
    * @param t operands
    * @return Array of byte arrays made from passed array of Text
@@ -1047,7 +1086,7 @@ public class Bytes {
   public static byte [][] toByteArrays(final String column) {
     return toByteArrays(toBytes(column));
   }
-  
+
   /**
    * @param column operand
    * @return A byte array of a byte array where first and only entry is
@@ -1058,7 +1097,7 @@ public class Bytes {
     result[0] = column;
     return result;
   }
-  
+
   /**
    * Binary search for keys in indexes.
    * @param arr array of byte arrays to search for
@@ -1072,7 +1111,7 @@ public class Bytes {
       int length, RawComparator<byte []> comparator) {
     int low = 0;
     int high = arr.length - 1;
-    
+
     while (low <= high) {
       int mid = (low+high) >>> 1;
       // we have to compare in this order, because the comparator order
@@ -1086,7 +1125,7 @@ public class Bytes {
       else if (cmp < 0)
         high = mid - 1;
       // BAM. how often does this really happen?
-      else 
+      else
         return mid;
     }
     return - (low+1);
@@ -1095,13 +1134,13 @@ public class Bytes {
   /**
    * Bytewise binary increment/deincrement of long contained in byte array
    * on given amount.
-   * 
+   *
    * @param value - array of bytes containing long (length <= SIZEOF_LONG)
    * @param amount value will be incremented on (deincremented if negative)
    * @return array of bytes containing incremented long (length == SIZEOF_LONG)
    * @throws IOException - if value.length > SIZEOF_LONG
    */
-  public static byte [] incrementBytes(byte[] value, long amount) 
+  public static byte [] incrementBytes(byte[] value, long amount)
   throws IOException {
     byte[] val = value;
     if (val.length < SIZEOF_LONG) {
@@ -1133,7 +1172,7 @@ public class Bytes {
     if (amount < 0) {
       amo = -amount;
       sign = -1;
-    } 
+    }
     for(int i=0;i<value.length;i++) {
       int cur = ((int)amo % 256) * sign;
       amo = (amo >> 8);
@@ -1175,5 +1214,5 @@ public class Bytes {
     }
     return value;
   }
-  
+
 }

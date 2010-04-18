@@ -277,6 +277,8 @@ Release 0.21.0 - Unreleased
    HBASE-2458  Client stuck in TreeMap,remove (Todd Lipcon via Stack)
    HBASE-2460  add_table.rb deletes any tables for which the target table name
                is a prefix (Todd Lipcon via Stack)
+   HBASE-2463  Various Bytes.* functions silently ignore invalid arguments
+               (Benoit Sigoure via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

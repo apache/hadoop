@@ -37,7 +37,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Abstract base class for operations that need to examine all HRegionInfo 
+ * Abstract base class for operations that need to examine all HRegionInfo
  * objects in a table. (For a table, operate on each of its rows
  * in .META.).
  */
@@ -64,7 +64,7 @@ abstract class TableOperation implements HConstants {
       // assigned and scanned.
       if (master.getRegionManager().metaScannerThread.waitForMetaRegionsOrClose()) {
         // We're shutting down. Forget it.
-        throw new MasterNotRunningException(); 
+        throw new MasterNotRunningException();
       }
     }
     this.metaRegions = master.getRegionManager().getMetaRegionsForTable(tableName);
@@ -101,12 +101,12 @@ abstract class TableOperation implements HConstants {
                       Bytes.toStringBinary(values.getRow()));
             continue;
           }
-          String serverAddress = 
+          final String serverAddress =
             Bytes.toString(values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
-          long startCode = 
-            Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER)); 
           String serverName = null;
           if (serverAddress != null && serverAddress.length() > 0) {
+            long startCode =
+              Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
             serverName = HServerInfo.getServerName(serverAddress, startCode);
           }
           if (Bytes.compareTo(info.getTableDesc().getName(), tableName) > 0) {
@@ -158,7 +158,7 @@ abstract class TableOperation implements HConstants {
       }
     }
   }
-  
+
   protected boolean isBeingServed(String serverName) {
     boolean result = false;
     if (serverName != null && serverName.length() > 0) {
