@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HDFS-933. Namenode should issue a delegation token only for kerberos 
     authenticated clients.(jnp via boryas)
 
+    HDFS-1087. Modify audit log to use a StringBuilder rather than a Formatter.
+    (cdouglas)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

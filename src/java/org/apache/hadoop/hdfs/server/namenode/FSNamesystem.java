@@ -107,35 +107,48 @@ import javax.management.StandardMBean;
  ***************************************************/
 public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterStats {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
-  public static final String AUDIT_FORMAT =
-    "ugi=%s\t" +  // ugi
-    "ip=%s\t" +   // remote IP
-    "cmd=%s\t" +  // command
-    "src=%s\t" +  // src path
-    "dst=%s\t" +  // dst path (optional)
-    "perm=%s";    // permissions (optional)
 
-  private static final ThreadLocal<Formatter> auditFormatter =
-    new ThreadLocal<Formatter>() {
-      protected Formatter initialValue() {
-        return new Formatter(new StringBuilder(AUDIT_FORMAT.length() * 4));
+  private static final ThreadLocal<StringBuilder> auditBuffer =
+    new ThreadLocal<StringBuilder>() {
+      protected StringBuilder initialValue() {
+        return new StringBuilder();
       }
   };
 
   private static final void logAuditEvent(UserGroupInformation ugi,
       InetAddress addr, String cmd, String src, String dst,
       HdfsFileStatus stat) {
-    final Formatter fmt = auditFormatter.get();
-    ((StringBuilder)fmt.out()).setLength(0);
-    auditLog.info(fmt.format(AUDIT_FORMAT, ugi, addr, cmd, src, dst,
-                  (stat == null)
-                    ? null
-                    : stat.getOwner() + ':' + stat.getGroup() + ':' +
-                      stat.getPermission()
-          ).toString());
-
+    final StringBuilder sb = auditBuffer.get();
+    sb.setLength(0);
+    sb.append("ugi=").append(ugi).append("\t");
+    sb.append("ip=").append(addr).append("\t");
+    sb.append("cmd=").append(cmd).append("\t");
+    sb.append("src=").append(src).append("\t");
+    sb.append("dst=").append(dst).append("\t");
+    if (null == stat) {
+      sb.append("perm=null");
+    } else {
+      sb.append("perm=");
+      sb.append(stat.getOwner()).append(":");
+      sb.append(stat.getGroup()).append(":");
+      sb.append(stat.getPermission());
+    }
+    auditLog.info(sb);
   }
 
+  /**
+   * Logger for audit events, noting successful FSNamesystem operations. Emits
+   * to FSNamesystem.audit at INFO. Each event causes a set of tab-separated
+   * <code>key=value</code> pairs to be written for the following properties:
+   * <code>
+   * ugi=&lt;ugi in RPC&gt;
+   * ip=&lt;remote IP&gt;
+   * cmd=&lt;command&gt;
+   * src=&lt;src path&gt;
+   * dst=&lt;dst path (optional)&gt;
+   * perm=&lt;permissions (optional)&gt;
+   * </code>
+   */
   public static final Log auditLog = LogFactory.getLog(
       FSNamesystem.class.getName() + ".audit");
 
