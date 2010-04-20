@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2008 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title> 
+      HBase ACID Properties
+    </title>
+  </header>
+
+  <body>
+    <section>
+      <title>About this Document</title>
+      <p>HBase is not an ACID compliant database. However, it does guarantee certain specific
+      properties.</p>
+      <p>This specification enumerates the ACID properties of HBase.</p>
+    </section>
+    <section>
+      <title>Definitions</title>
+      <p>For the sake of common vocabulary, we define the following terms:</p>
+      <dl>
+        <dt>Atomicity</dt>
+        <dd>an operation is atomic if it either completes entirely or not at all</dd>
+
+        <dt>Consistency</dt>
+        <dd>
+          all actions cause the table to transition from one valid state directly to another
+          (eg a row will not disappear during an update, etc)
+        </dd>
+
+        <dt>Isolation</dt>
+        <dd>
+          an operation is isolated if it appears to complete independently of any other concurrent transaction
+        </dd>
+
+        <dt>Durability</dt>
+        <dd>any update that reports &quot;successful&quot; to the client will not be lost</dd>
+
+        <dt>Visibility</dt>
+        <dd>an update is considered visible if any subsequent read will see the update as having been committed</dd>
+      </dl>
+      <p>
+        The terms <em>must</em> and <em>may</em> are used as specified by RFC 2119.
+        In short, the word &quot;must&quot; implies that, if some case exists where the statement
+        is not true, it is a bug. The word &quot;may&quot; implies that, even if the guarantee
+        is provided in a current release, users should not rely on it.
+      </p>
+    </section>
+    <section>
+      <title>APIs to consider</title>
+      <ul>
+        <li>Read APIs
+        <ul>
+          <li>get</li>
+          <li>scan</li>
+        </ul>
+        </li>
+        <li>Write APIs</li>
+        <ul>
+          <li>put</li>
+          <li>batch put</li>
+          <li>delete</li>
+        </ul>
+        <li>Combination (read-modify-write) APIs</li>
+        <ul>
+          <li>incrementColumnValue</li>
+          <li>checkAndPut</li>
+        </ul>
+      </ul>
+    </section>
+
+    <section>
+      <title>Guarantees Provided</title>
+
+      <section>
+        <title>Atomicity</title>
+
+        <ol>
+          <li>All mutations are atomic within a row. Any put will either wholely succeed or wholely fail.</li>
+          <ol>
+            <li>An operation that returns a &quot;success&quot; code has completely succeeded.</li>
+            <li>An operation that returns a &quot;failure&quot; code has completely failed.</li>
+            <li>An operation that times out may have succeeded and may have failed. However,
+            it will not have partially succeeded or failed.</li>
+          </ol>
+          <li> This is true even if the mutation crosses multiple column families within a row.</li>
+          <li> APIs that mutate several rows will _not_ be atomic across the multiple rows.
+          For example, a multiput that operates on rows 'a','b', and 'c' may return having
+          mutated some but not all of the rows. In such cases, these APIs will return a list
+          of success codes, each of which may be succeeded, failed, or timed out as described above.</li>
+          <li> The checkAndPut API happens atomically like the typical compareAndSet (CAS) operation
+          found in many hardware architectures.</li>
+          <li> The order of mutations is seen to happen in a well-defined order for each row, with no
+          interleaving. For example, if one writer issues the mutation &quot;a=1,b=1,c=1&quot; and
+          another writer issues the mutation &quot;a=2,b=2,c=2&quot;, the row must either
+          be &quot;a=1,b=1,c=1&quot; or &quot;a=2,b=2,c=2&quot; and must <em>not</em> be something
+          like &quot;a=1,b=2,c=1&quot;.</li>
+          <ol>
+            <li>Please note that this is not true _across rows_ for multirow batch mutations.</li>
+          </ol>
+        </ol>
+      </section>
+      <section>
+        <title>Consistency and Isolation</title>
+        <ol>
+          <li>All rows returned via any access API will consist of a complete row that existed at
+          some point in the table's history.</li>
+          <li>This is true across column families - i.e a get of a full row that occurs concurrent
+          with some mutations 1,2,3,4,5 will return a complete row that existed at some point in time
+          between mutation i and i+1 for some i between 1 and 5.</li>
+          <li>The state of a row will only move forward through the history of edits to it.</li>
+        </ol>
+
+        <section><title>Consistency of Scans</title>
+        <p>
+          A scan is <strong>not</strong> a consistent view of a table. Scans do
+          <strong>not</strong> exhibit <em>snapshot isolation</em>.
+        </p>
+        <p>
+          Rather, scans have the following properties:
+        </p>
+
+        <ol>
+          <li>
+            Any row returned by the scan will be a consistent view (i.e. that version
+            of the complete row existed at some point in time)
+          </li>
+          <li>
+            A scan will always reflect a view of the data <em>at least as new as</em>
+            the beginning of the scan. This satisfies the visibility guarantees
+          enumerated below.</li>
+          <ol>
+            <li>For example, if client A writes data X and then communicates via a side
+            channel to client B, any scans started by client B will contain data at least
+            as new as X.</li>
+            <li>A scan _must_ reflect all mutations committed prior to the construction
+            of the scanner, and _may_ reflect some mutations committed subsequent to the
+            construction of the scanner.</li>
+            <li>Scans must include <em>all</em> data written prior to the scan (except in
+            the case where data is subsequently mutated, in which case it _may_ reflect
+            the mutation)</li>
+          </ol>
+        </ol>
+        <p>
+          Those familiar with relational databases will recognize this isolation level as &quot;read committed&quot;.
+        </p>
+        <p>
+          Please note that the guarantees listed above regarding scanner consistency
+          are referring to &quot;transaction commit time&quot;, not the &quot;timestamp&quot;
+          field of each cell. That is to say, a scanner started at time <em>t</em> may see edits
+          with a timestamp value greater than <em>t</em>, if those edits were committed with a
+          &quot;forward dated&quot; timestamp before the scanner was constructed.
+        </p>
+        </section>
+      </section>
+      <section>
+        <title>Visibility</title>
+        <ol>
+          <li> When a client receives a &quot;success&quot; response for any mutation, that
+          mutation is immediately visible to both that client and any client with whom it
+          later communicates through side channels.</li>
+          <li> A row must never exhibit so-called &quot;time-travel&quot; properties. That
+          is to say, if a series of mutations moves a row sequentially through a series of
+          states, any sequence of concurrent reads will return a subsequence of those states.</li>
+          <ol>
+            <li>For example, if a row's cells are mutated using the &quot;incrementColumnValue&quot;
+            API, a client must never see the value of any cell decrease.</li>
+            <li>This is true regardless of which read API is used to read back the mutation.</li>
+          </ol>
+          <li> Any version of a cell that has been returned to a read operation is guaranteed to
+          be durably stored.</li>
+        </ol>
+
+      </section>
+      <section>
+        <title>Durability</title>
+        <ol>
+          <li> All visible data is also durable data. That is to say, a read will never return
+          data that has not been made durable on disk[1]</li>
+          <li> Any operation that returns a &quot;success&quot; code (eg does not throw an exception)
+          will be made durable.</li>
+          <li> Any operation that returns a &quot;failure&quot; code will not be made durable
+          (subject to the Atomicity guarantees above)</li>
+          <li> All reasonable failure scenarios will not affect any of the guarantees of this document.</li>
+
+        </ol>
+      </section>
+      <section>
+        <title>Tunability</title>
+        <p>All of the above guarantees must be possible within HBase. For users who would like to trade
+        off some guarantees for performance, HBase may offer several tuning options. For example:</p>
+        <ul>
+          <li>Visibility may be tuned on a per-read basis to allow stale reads or time travel.</li>
+          <li>Durability may be tuned to only flush data to disk on a periodic basis</li>
+        </ul>
+      </section>
+    </section>
+    <section>
+      <title>Footnotes</title>
+
+      <p>[1] In the context of HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction
+      log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been
+      written to the OS cache on all replicas of the log. In the case of a full datacenter power loss, it is
+      possible that the edits are not truly durable.</p>
+    </section>
+
+  </body>
+</document>

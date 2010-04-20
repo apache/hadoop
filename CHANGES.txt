@@ -18,6 +18,8 @@ Release 0.21.0 - Unreleased
    HBASE-2378  Bulk insert with multiple reducers broken due to improper
                ImmutableBytesWritable comparator (Todd Lipcon via Stack)
    HBASE-2392  Upgrade to ZooKeeper 3.3.0
+   HBASE-2294  Enumerate ACID properties of HBase in a well defined spec
+               (Todd Lipcon via Stack)
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

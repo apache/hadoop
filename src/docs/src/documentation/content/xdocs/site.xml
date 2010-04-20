@@ -36,6 +36,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <started   label="Getting Started"    href="ext:api/started" />
     <api       label="API Docs"           href="ext:api/index" />
     <api       label="HBase Metrics"      href="metrics.html" />
+    <api       label="HBase Semantics"      href="acid-semantics.html" />
     <api       label="HBase  Default Configuration" href="hbase-conf.html" />
     <api       label="HBase on Windows"   href="cygwin.html" />
     <wiki      label="Wiki"               href="ext:wiki" />
