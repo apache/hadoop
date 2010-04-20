@@ -13,11 +13,7 @@
     <version>0.21.0-SNAPSHOT</version>
   </parent>
 
-  <!-- TODO still need Repositories defined-->
   <build>
-    <!--  TODO this may affect the contrib dependency resolution, commenting out for now
-    <finalName>hbase-${project.version}</finalName>
-    -->
     <resources>
       <resource>
         <directory>src/main/resources</directory>
@@ -154,30 +150,81 @@
     </plugins>
   </build>
 
+  <properties>
+    <commons-lang.version>2.5</commons-lang.version>
+    <commons-math.version>2.1</commons-math.version>
+    <jasper.version>5.5.23</jasper.version>
+    <jruby.version>1.4.0</jruby.version>
+    <slf4j.version>1.5.8</slf4j.version>
+    <thrift.version>0.2.0</thrift.version>
+  </properties>
+
   <dependencies>
+    <dependency>
+      <groupId>commons-cli</groupId>
+      <artifactId>commons-cli</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>${commons-lang.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+    </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
-      <version>${log4j.version}</version>
+    </dependency>
+
+    <!--
+      This is highly dubious!
+
+      We need SLF4J >= 1.5.6 and Thrift depends on that version.
+      hadoop-core on the other hand depends on SLF4J 1.4.3 (even though it is optional)
+      and Mavens dependency resolution mechanism choses the 'nearest' dependency in case
+      of a conflict of dependencies on the same level. The nearest is always the one
+      that was defined first in the pom:
+      http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
+
+      That's why we've added an explicit dependency to SFL4J-API even though we don't need it.
+      Make sure to check the version of SLF4J Hadoop and Thrift depend on when you upgrade
+      one of them.
+    -->
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>thrift</artifactId>
+      <version>${thrift.version}</version>
       <exclusions>
         <exclusion>
-          <groupId>javax.jms</groupId>
-          <artifactId>jms</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.mail</groupId>
-          <artifactId>mail</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jmx</groupId>
-          <artifactId>jmxri</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jdmk</groupId>
-          <artifactId>jmxtools</artifactId>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>zookeeper</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jetty</artifactId>
@@ -191,7 +238,6 @@
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>servlet-api-2.5</artifactId>
-      <version>${jetty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
@@ -208,31 +254,17 @@
       <artifactId>jasper-runtime</artifactId>
       <version>${jasper.version}</version>
     </dependency>
-    <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-compiler</artifactId>
-      <version>${jasper.version}</version>
-    </dependency>
 
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
-      <version>${hadoop.version}</version>
+      <groupId>org.jruby</groupId>
+      <artifactId>jruby-complete</artifactId>
+      <version>${jruby.version}</version>
     </dependency>
+
+    <!-- Test dependencies -->
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-test</artifactId>
-      <version>${hadoop.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>thrift</artifactId>
-      <version>${thrift.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>zookeeper</artifactId>
-      <version>${zookeeper.version}</version>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -240,43 +272,9 @@
       <version>${commons-math.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>${commons-lang.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-cli</groupId>
-      <artifactId>commons-cli</artifactId>
-      <version>${commons-cli.version}</version>
-    </dependency>
-    
-    <!-- 
-    
-      TODO mention to Hbase team to tell the avro team about this problem,
-      hbase-core depends on hadoop, which then:
-      [INFO] |  \- org.apache.hadoop:avro:jar:1.2.0:compile
-      [INFO] |     +- org.slf4j:slf4j-simple:jar:1.5.8:compile
-      [INFO] |     |  \- org.slf4j:slf4j-api:jar:1.5.2:compile
-      
-      see: https://forum.hibernate.org/viewtopic.php?p=2400801 and http://old.nabble.com/org.slf4j.impl.StaticLoggerBinder.SINGLETON-td20987705.html
-      
-      upgrading to 1.5.6 will fix this
-    -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jruby</groupId>
-      <artifactId>jruby-complete</artifactId>
-      <version>${jruby.version}</version>
+        <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-test</artifactId>
     </dependency>
   </dependencies>
 </project>

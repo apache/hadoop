@@ -27,8 +27,27 @@
 
   <dependencies>
     <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+    </dependency>
+
+    <!--
+      It is unfortunately neccessary to keep hbase-core before hadoop-core.
+      For an explanation see the pom.xml from hbase-core.
+    -->
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>hbase-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-core</artifactId>
+    </dependency>
+
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
