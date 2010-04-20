@@ -45,6 +45,7 @@ public class TestCheckPointForSecurityTokens {
   static final int fileSize = 8192;
   static final int numDatanodes = 3;
   short replication = 3;
+  MiniDFSCluster cluster = null;
 
   NameNode startNameNode( Configuration conf,
                           String imageDirs,
@@ -59,13 +60,22 @@ public class TestCheckPointForSecurityTokens {
     Assert.assertTrue(nn.isInSafeMode());
     return nn;
   }
-
+  
+  private void cancelToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+    cluster.getNamesystem().cancelDelegationToken(token);
+  }
+  
+  private void renewToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+      cluster.getNamesystem().renewDelegationToken(token);
+  }
+  
   /**
    * Tests save namepsace.
    */
   @Test
   public void testSaveNamespace() throws IOException {
-    MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
@@ -75,8 +85,10 @@ public class TestCheckPointForSecurityTokens {
       FSNamesystem namesystem = cluster.getNamesystem();
       namesystem.getDelegationTokenSecretManager().startThreads();
       String renewer = UserGroupInformation.getLoginUser().getUserName();
-      Token<DelegationTokenIdentifier> token = namesystem
+      Token<DelegationTokenIdentifier> token1 = namesystem
           .getDelegationToken(new Text(renewer)); 
+      Token<DelegationTokenIdentifier> token2 = namesystem
+          .getDelegationToken(new Text(renewer));
       
       // Saving image without safe mode should fail
       DFSAdmin admin = new DFSAdmin(conf);
@@ -102,7 +114,7 @@ public class TestCheckPointForSecurityTokens {
         Assert.assertTrue(new File(ed, "current/edits").length() == Integer.SIZE/Byte.SIZE);
       }
 
-      // restart cluster and verify file exists
+      // restart cluster
       cluster.shutdown();
       cluster = null;
 
@@ -110,11 +122,66 @@ public class TestCheckPointForSecurityTokens {
       cluster.waitActive();
       //Should be able to renew & cancel the delegation token after cluster restart
       try {
-        cluster.getNamesystem().renewDelegationToken(token);
-        cluster.getNamesystem().cancelDelegationToken(token);
+        renewToken(token1);
+        renewToken(token2);
       } catch (IOException e) {
         Assert.fail("Could not renew or cancel the token");
       }
+
+      namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
+      Token<DelegationTokenIdentifier> token3 = namesystem
+          .getDelegationToken(new Text(renewer));
+      Token<DelegationTokenIdentifier> token4 = namesystem
+          .getDelegationToken(new Text(renewer));
+
+      // restart cluster again
+      cluster.shutdown();
+      cluster = null;
+
+      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster.waitActive();
+
+      namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
+      Token<DelegationTokenIdentifier> token5 = namesystem
+          .getDelegationToken(new Text(renewer));
+
+      try {
+        renewToken(token1);
+        renewToken(token2);
+        renewToken(token3);
+        renewToken(token4);
+        renewToken(token5);
+
+      } catch (IOException e) {
+        Assert.fail("Could not renew or cancel the token");
+      }
+
+      // restart cluster again
+      cluster.shutdown();
+      cluster = null;
+
+      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster.waitActive();
+
+      namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
+      try {
+        renewToken(token1);
+        cancelToken(token1);
+        renewToken(token2);
+        cancelToken(token2);
+        renewToken(token3);
+        cancelToken(token3);
+        renewToken(token4);
+        cancelToken(token4);
+        renewToken(token5);
+        cancelToken(token5);
+      } catch (IOException e) {
+        Assert.fail("Could not renew or cancel the token");
+      }
+
     } finally {
       if(fs != null) fs.close();
       if(cluster!= null) cluster.shutdown();

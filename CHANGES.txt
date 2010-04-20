@@ -261,6 +261,9 @@ Trunk (unreleased changes)
     HDFS-651. HDFS Docs - fix listing of docs in the doc menu.
     (Corinne Chandel via tomwhite)
 
+    HDFS-1014. Error in reading delegation tokens from edit logs.
+    (Jitendra Nath Pandey via jhoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
