@@ -279,6 +279,8 @@ Release 0.21.0 - Unreleased
                is a prefix (Todd Lipcon via Stack)
    HBASE-2463  Various Bytes.* functions silently ignore invalid arguments
                (Benoit Sigoure via Stack)
+   HBASE-2443  IPC client can throw NPE if socket creation fails
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
