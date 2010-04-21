@@ -364,7 +364,9 @@ public class LeaseManager {
     public void run() {
       for(; fsnamesystem.isRunning(); ) {
         synchronized(fsnamesystem) {
-          checkLeases();
+          if (!fsnamesystem.isInSafeMode()) {
+            checkLeases();
+          }
         }
 
         try {

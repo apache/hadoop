@@ -23,9 +23,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 
 public class TestLeaseRecovery extends junit.framework.TestCase {
   static final int BLOCK_SIZE = 1024;
@@ -119,6 +121,20 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
         assertEquals(oldSize, updatedmetainfo[i].getNumBytes());
         assertEquals(currentGS, updatedmetainfo[i].getGenerationStamp());
       }
+
+      // verify that lease recovery does not occur when namenode is in safemode
+      System.out.println("Testing that lease recovery cannot happen during safemode.");
+      filestr = "/foo.safemode";
+      filepath = new Path(filestr);
+      dfs.create(filepath, (short)1);
+      cluster.getNameNode().setSafeMode(FSConstants.SafeModeAction.SAFEMODE_ENTER);
+      assertTrue(dfs.dfs.exists(filestr));
+      DFSTestUtil.waitReplication(dfs, filepath, (short)1);
+      waitLeaseRecovery(cluster);
+      // verify that we still cannot recover the lease
+      LeaseManager lm = cluster.getNamesystem().leaseManager;
+      assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
+      cluster.getNameNode().setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
     }
     finally {
       if (cluster != null) {cluster.shutdown();}

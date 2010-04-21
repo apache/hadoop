@@ -270,6 +270,9 @@ Trunk (unreleased changes)
     HDFS-1088. Prevent renaming a symbolik link to its target.
     (Eli Collins via suresh)
 
+    HDFS-966. NameNode does not recovers lease when it is in safemode.
+    (dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
