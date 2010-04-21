@@ -267,6 +267,9 @@ Trunk (unreleased changes)
     HDFS-1014. Error in reading delegation tokens from edit logs.
     (Jitendra Nath Pandey via jhoman)
 
+    HDFS-1088. Prevent renaming a symbolik link to its target.
+    (Eli Collins via suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

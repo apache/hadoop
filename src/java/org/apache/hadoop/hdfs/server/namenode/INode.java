@@ -348,13 +348,14 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   }
 
   /**
-   * Breaks file path into names.
+   * Splits an absolute path into an array of path components.
    * @param path
-   * @return array of names 
+   * @throws AssertionError if the given path is invalid.
+   * @return array of path components.
    */
   static String[] getPathNames(String path) {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
-      return null;
+      throw new AssertionError("Absolute path required");
     }
     return path.split(Path.SEPARATOR);
   }

@@ -889,6 +889,14 @@ public class FSImage extends Storage {
    * Choose latest image from one of the directories,
    * load it and merge with the edits from that directory.
    * 
+   * Saving and loading fsimage should never trigger symlink resolution. 
+   * The paths that are persisted do not have *intermediate* symlinks 
+   * because intermediate symlinks are resolved at the time files, 
+   * directories, and symlinks are created. All paths accessed while 
+   * loading or saving fsimage should therefore only see symlinks as 
+   * the final path component, and the functions called below do not
+   * resolve symlinks that are the final path component.
+   *
    * @return whether the image should be saved
    * @throws IOException
    */

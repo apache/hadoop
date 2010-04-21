@@ -93,7 +93,7 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   protected BlockLocation[] getFileBlockLocations(Path p, long start, long len)
       throws IOException, UnresolvedLinkException {
-    return dfs.getBlockLocations(p.toString(), start, len);
+    return dfs.getBlockLocations(getUriPath(p), start, len);
   }
 
   @Override

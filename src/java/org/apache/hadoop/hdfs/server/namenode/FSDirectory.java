@@ -383,7 +383,8 @@ class FSDirectory implements Closeable {
    */
   @Deprecated
   boolean renameTo(String src, String dst) 
-      throws QuotaExceededException, UnresolvedLinkException {
+      throws QuotaExceededException, UnresolvedLinkException, 
+      FileAlreadyExistsException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                                   +src+" to "+dst);
@@ -420,16 +421,19 @@ class FSDirectory implements Closeable {
    * @param dst destination path
    * @return true if rename succeeds; false otherwise
    * @throws QuotaExceededException if the operation violates any quota limit
+   * @throws FileAlreadyExistsException if the src is a symlink that points to dst
    * @deprecated See {@link #renameTo(String, String)}
    */
   @Deprecated
   boolean unprotectedRenameTo(String src, String dst, long timestamp)
-    throws QuotaExceededException, UnresolvedLinkException {
+    throws QuotaExceededException, UnresolvedLinkException, 
+    FileAlreadyExistsException {
     synchronized (rootDir) {
       INode[] srcInodes = rootDir.getExistingPathINodes(src, false);
-
+      INode srcInode = srcInodes[srcInodes.length-1];
+      
       // check the validation of the source
-      if (srcInodes[srcInodes.length-1] == null) {
+      if (srcInode == null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             + "failed to rename " + src + " to " + dst
             + " because source does not exist");
@@ -448,6 +452,12 @@ class FSDirectory implements Closeable {
       if (dst.equals(src)) {
         return true;
       }
+      if (srcInode.isLink() && 
+          dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
+        throw new FileAlreadyExistsException(
+            "Cannot rename symlink "+src+" to its target "+dst);
+      }
+      
       // dst cannot be directory or a file under src
       if (dst.startsWith(src) && 
           dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
@@ -529,6 +539,8 @@ class FSDirectory implements Closeable {
    * @param timestamp modification time
    * @param options Rename options
    * @throws IOException if the operation violates any quota limit
+   * @throws FileAlreadyExistsException if src equals dst or the src is a 
+   *         symlink that points to dst.
    * @return true if rename overwrites {@code dst}
    */
   boolean unprotectedRenameTo(String src, String dst, long timestamp,
@@ -560,9 +572,15 @@ class FSDirectory implements Closeable {
         throw new IOException(error);
       }
 
-      // validate of the destination
+      // validate the destination
       if (dst.equals(src)) {
-        return false;
+        throw new FileAlreadyExistsException(
+            "The source "+src+" and destination "+dst+" are the same");
+      }
+      if (srcInode.isLink() && 
+          dst.equals(((INodeSymlink)srcInode).getLinkValue())) {
+        throw new FileAlreadyExistsException(
+            "Cannot rename symlink "+src+" to its target "+dst);
       }
       // dst cannot be a directory or a file under src
       if (dst.startsWith(src) && 
