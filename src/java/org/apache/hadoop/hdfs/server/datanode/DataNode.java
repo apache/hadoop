@@ -700,6 +700,7 @@ public class DataNode extends Configured
       try {
         this.storage.unlockAll();
       } catch (IOException ie) {
+        LOG.warn("Exception when unlocking storage: " + ie, ie);
       }
     }
     if (dataNodeThread != null) {
