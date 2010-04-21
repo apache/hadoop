@@ -23,6 +23,9 @@ Release 0.20.3 - Unreleased
     HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
     the first datanode fails.  (szetszwo)
 
+    HDFS-909. Wait until edits syncing is finishes before purging edits.
+    (Todd Lipcon via shv)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match

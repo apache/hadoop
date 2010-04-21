@@ -83,7 +83,7 @@ public class FSEditLog {
   private long lastPrintTime;
 
   // is a sync currently running?
-  private boolean isSyncRunning;
+  private volatile boolean isSyncRunning;
 
   // these are statistics counters.
   private long numTransactions;        // number of transactions
@@ -308,6 +308,13 @@ public class FSEditLog {
     return editStreams == null ? 0 : editStreams.size();
   }
 
+  /**
+   * Return the current edit streams. This is for use from tests only!
+   */
+  ArrayList<EditLogOutputStream> getEditStreams() {
+    return editStreams;
+  }
+  
   boolean isOpen() {
     return getNumEditStreams() > 0;
   }
@@ -338,6 +345,7 @@ public class FSEditLog {
   }
 
   public synchronized void createEditLogFile(File name) throws IOException {
+    waitForSyncToFinish();
     EditLogOutputStream eStream = new EditLogFileOutputStream(name);
     eStream.create();
     eStream.close();
@@ -347,12 +355,7 @@ public class FSEditLog {
    * Shutdown the file store.
    */
   public synchronized void close() throws IOException {
-    while (isSyncRunning) {
-      try {
-        wait(1000);
-      } catch (InterruptedException ie) { 
-      }
-    }
+    waitForSyncToFinish();
     if (editStreams == null) {
       return;
     }
@@ -851,9 +854,60 @@ public class FSEditLog {
       metrics.transactions.inc((end-start));
   }
 
-  //
-  // Sync all modifications done by this thread.
-  //
+  /**
+   * Blocks until all ongoing edits have been synced to disk.
+   * This differs from logSync in that it waits for edits that have been
+   * written by other threads, not just edits from the calling thread.
+   *
+   * NOTE: this should be done while holding the FSNamesystem lock, or
+   * else more operations can start writing while this is in progress.
+   */
+  void logSyncAll() throws IOException {
+    // Record the most recent transaction ID as our own id
+    synchronized (this) {
+      TransactionId id = myTransactionId.get();
+      id.txid = txid;
+    }
+    // Then make sure we're synced up to this point
+    logSync();
+  }
+
+  synchronized void waitForSyncToFinish() {
+    while (isSyncRunning) {
+      try {
+        wait(1000);
+      } catch (InterruptedException ie) {}
+    }
+  }
+  
+  /**
+   * Sync all modifications done by this thread.
+   *
+   * The internal concurrency design of this class is as follows:
+   *   - Log items are written synchronized into an in-memory buffer,
+   *     and each assigned a transaction ID.
+   *   - When a thread (client) would like to sync all of its edits, logSync()
+   *     uses a ThreadLocal transaction ID to determine what edit number must
+   *     be synced to.
+   *   - The isSyncRunning volatile boolean tracks whether a sync is currently
+   *     under progress.
+   *
+   * The data is double-buffered within each edit log implementation so that
+   * in-memory writing can occur in parallel with the on-disk writing.
+   *
+   * Each sync occurs in three steps:
+   *   1. synchronized, it swaps the double buffer and sets the isSyncRunning
+   *      flag.
+   *   2. unsynchronized, it flushes the data to storage
+   *   3. synchronized, it resets the flag and notifies anyone waiting on the
+   *      sync.
+   *
+   * The lack of synchronization on step 2 allows other threads to continue
+   * to write into the memory buffer while the sync is in progress.
+   * Because this step is unsynchronized, actions that need to avoid
+   * concurrency with sync() should be synchronized and also call
+   * waitForSyncToFinish() before assuming they are running alone.
+   */
   public void logSync() throws IOException {
     ArrayList<EditLogOutputStream> errorStreams = null;
     long syncStart = 0;
@@ -863,10 +917,6 @@ public class FSEditLog {
 
     final int numEditStreams;
     synchronized (this) {
-      numEditStreams = editStreams.size();
-      assert numEditStreams > 0 : "no editlog streams";
-      printStatistics(false);
-
       // if somebody is already syncing, then wait
       while (mytxid > synctxid && isSyncRunning) {
         try {
@@ -874,6 +924,9 @@ public class FSEditLog {
         } catch (InterruptedException ie) { 
         }
       }
+      numEditStreams = editStreams.size();
+      assert numEditStreams > 0 : "no editlog streams";
+      printStatistics(false);
 
       //
       // If this transaction was already flushed, then nothing to do
@@ -1106,6 +1159,7 @@ public class FSEditLog {
    * Returns the lastModified time of the edits log.
    */
   synchronized void rollEditLog() throws IOException {
+    waitForSyncToFinish();
     //
     // If edits.new already exists in some directory, verify it
     // exists in all directories.
