@@ -20,6 +20,7 @@ package org.apache.hadoop.conf;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
@@ -84,227 +85,169 @@ public class TestConfigurationDeprecation {
   }
   
   private void addDeprecationToConfiguration() {
-    Configuration.addDeprecation("old.key1", new String[]{"new.key1"});
-    Configuration.addDeprecation("old.key2", new String[]{"new.key2"});
-    Configuration.addDeprecation("old.key3", new String[]{"new.key3"});
-    Configuration.addDeprecation("old.key4", new String[]{"new.key4"});
-    Configuration.addDeprecation("old.key5", new String[]{"new.key5"});
-    Configuration.addDeprecation("old.key6", new String[]{"new.key6"});
-    Configuration.addDeprecation("old.key7", new String[]{"new.key7"});
-    Configuration.addDeprecation("old.key8", new String[]{"new.key8"});
-    Configuration.addDeprecation("old.key9", new String[]{"new.key9"});
-    Configuration.addDeprecation("old.key10", new String[]{"new.key10"});
-    Configuration.addDeprecation("old.key11", new String[]{"new.key11"});
-    Configuration.addDeprecation("old.key12", new String[]{"new.key12"});
-    Configuration.addDeprecation("old.key13", new String[]{"new.key13"});
-    Configuration.addDeprecation("old.key14", new String[]{"new.key14"});
-    Configuration.addDeprecation("old.key15", new String[]{"new.key15"});
-    Configuration.addDeprecation("old.key16", new String[]{"new.key16"});
     Configuration.addDeprecation("A", new String[]{"B"});
     Configuration.addDeprecation("C", new String[]{"D"});
     Configuration.addDeprecation("E", new String[]{"F"});
-    Configuration.addDeprecation("G", new String[]{"H","I"});
+    Configuration.addDeprecation("G", new String[]{"H"});
+    Configuration.addDeprecation("I", new String[]{"J"});
+    Configuration.addDeprecation("M", new String[]{"N"});
+    Configuration.addDeprecation("X", new String[]{"Y","Z"});
+    Configuration.addDeprecation("P", new String[]{"Q","R"});
   }
   
   /**
-   * This test is to check the precedence order between being final and 
-   * deprecation.Based on the order of occurrence of deprecated key and 
-   * its corresponding mapping key, various cases arise.
-   * The precedence order being followed is:
-   * 1. Final Parameter 
-   * 2. Deprecated key's value.
+   * This test checks the correctness of loading/setting the properties in terms
+   * of occurrence of deprecated keys.
    * @throws IOException 
-   * 
-   * @throws IOException
-   * @throws ClassNotFoundException 
    */
   @Test
   public void testDeprecation() throws IOException {
+    addDeprecationToConfiguration();
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
-    // load keys with default values. Some of them are set to final to
-    // test the precedence order between deprecation and being final
-    appendProperty("new.key1","default.value1",true);
-    appendProperty("new.key2","default.value2");
-    appendProperty("new.key3","default.value3",true);
-    appendProperty("new.key4","default.value4");
-    appendProperty("new.key5","default.value5",true);
-    appendProperty("new.key6","default.value6");
-    appendProperty("new.key7","default.value7",true);
-    appendProperty("new.key8","default.value8");
-    appendProperty("new.key9","default.value9");
-    appendProperty("new.key10","default.value10");
-    appendProperty("new.key11","default.value11");
-    appendProperty("new.key12","default.value12");
-    appendProperty("new.key13","default.value13");
-    appendProperty("new.key14","default.value14");
-    appendProperty("new.key15","default.value15");
-    appendProperty("new.key16","default.value16");
+    // load an old key and a new key.
+    appendProperty("A", "a");
+    appendProperty("D", "d");
+    // load an old key with multiple new-key mappings
+    appendProperty("P", "p");
     endConfig();
     Path fileResource = new Path(CONFIG);
-    addDeprecationToConfiguration();
     conf.addResource(fileResource);
+    
+    // check if loading of old key with multiple new-key mappings actually loads
+    // the corresponding new keys. 
+    assertEquals("p", conf.get("P"));
+    assertEquals("p", conf.get("Q"));
+    assertEquals("p", conf.get("R"));
+    
+    assertEquals("a", conf.get("A"));
+    assertEquals("a", conf.get("B"));
+    assertEquals("d", conf.get("C"));
+    assertEquals("d", conf.get("D"));
     
     out=new BufferedWriter(new FileWriter(CONFIG2));
     startConfig();
-    // add keys that are tested while they are loaded just after their 
-    // corresponding default values
-    appendProperty("old.key1","old.value1",true);
-    appendProperty("old.key2","old.value2",true);
-    appendProperty("old.key3","old.value3");
-    appendProperty("old.key4","old.value4");
-    appendProperty("new.key5","new.value5",true);
-    appendProperty("new.key6","new.value6",true);
-    appendProperty("new.key7","new.value7");
-    appendProperty("new.key8","new.value8");
-    
-    // add keys that are tested while they are loaded first and are followed by
-    // loading of their corresponding deprecated or replacing key
-    appendProperty("new.key9","new.value9",true);
-    appendProperty("new.key10","new.value10");
-    appendProperty("new.key11","new.value11",true);
-    appendProperty("new.key12","new.value12");
-    appendProperty("old.key13","old.value13",true);
-    appendProperty("old.key14","old.value14");
-    appendProperty("old.key15","old.value15",true);
-    appendProperty("old.key16","old.value16");
+    // load the old/new keys corresponding to the keys loaded before.
+    appendProperty("B", "b");
+    appendProperty("C", "c");
     endConfig();
     Path fileResource1 = new Path(CONFIG2);
     conf.addResource(fileResource1);
     
-    out=new BufferedWriter(new FileWriter(CONFIG3));
-    startConfig();
-    // add keys which are already loaded by the corresponding replacing or 
-    // deprecated key.
-    appendProperty("old.key9","old.value9",true);
-    appendProperty("old.key10","old.value10",true);
-    appendProperty("old.key11","old.value11");
-    appendProperty("old.key12","old.value12");
-    appendProperty("new.key13","new.value13",true);
-    appendProperty("new.key14","new.value14",true);
-    appendProperty("new.key15","new.value15");
-    appendProperty("new.key16","new.value16");
-    appendProperty("B", "valueB");
-    endConfig();
-    Path fileResource2 = new Path(CONFIG3);
-    conf.addResource(fileResource2);
-    
-    // get the values. Also check for consistency in get of old and new keys, 
-    // when they are set to final or non-final
-    // Key - the key that is being loaded
-    // isFinal - true if the key is marked as final
-    // prev.occurrence - key that most recently loaded the current key 
-    //                   with its value.
-    // isPrevFinal - true if key corresponding to 
-    //               prev.occurrence is marked as final.
-    
-    // Key-deprecated , isFinal-true, prev.occurrence-default.xml,
-    // isPrevFinal-true
-    assertEquals("old.value1", conf.get("new.key1"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key1"), conf.get("new.key1"));
-    // Key-deprecated , isFinal-true, prev.occurrence-default.xml,
-    // isPrevFinal-false
-    assertEquals("old.value2", conf.get("new.key2"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key2"), conf.get("new.key2"));
-    // Key-deprecated , isFinal-false, prev.occurrence-default.xml,
-    // isPrevFinal-true
-    assertEquals("default.value3", conf.get("new.key3"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key3"), conf.get("new.key3"));
-    // Key-deprecated , isFinal-false, prev.occurrence-default.xml,
-    // isPrevFinal-false
-    assertEquals("old.value4", conf.get("new.key4"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key4"), conf.get("new.key4"));
-    // Key-site.xml , isFinal-true, prev.occurrence-default.xml,
-    // isPrevFinal-true
-    assertEquals("default.value5", conf.get("new.key5"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key5"), conf.get("new.key5"));
-    // Key-site.xml , isFinal-true, prev.occurrence-default.xml,
-    // isPrevFinal-false
-    assertEquals("new.value6",conf.get("new.key6"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key6"), conf.get("new.key6"));
-    // Key-site.xml , isFinal-false, prev.occurrence-default.xml,
-    // isPrevFinal-true
-    assertEquals("default.value7", conf.get("new.key7"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key7"), conf.get("new.key7"));
-    // Key-site.xml , isFinal-false, prev.occurrence-default.xml,
-    // isPrevFinal-false
-    assertEquals("new.value8",conf.get("new.key8"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key8"), conf.get("new.key8"));
-    // Key-deprecated , isFinal-true, prev.occurrence-site.xml,
-    // isPrevFinal-true
-    assertEquals("old.value9", conf.get("new.key9"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key9"), conf.get("new.key9"));
-    // Key-deprecated , isFinal-true, prev.occurrence-site.xml,
-    // isPrevFinal-false
-    assertEquals("old.value10", conf.get("new.key10"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key10"), conf.get("new.key10"));
-    // Key-deprecated , isFinal-false, prev.occurrence-site.xml,
-    // isPrevFinal-true
-    assertEquals("new.value11", conf.get("new.key11"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key11"), conf.get("new.key11"));
-    // Key-deprecated , isFinal-false, prev.occurrence-site.xml,
-    // isPrevFinal-false
-    assertEquals("old.value12", conf.get("new.key12"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key12"), conf.get("new.key12"));
-    // Key-site.xml , isFinal-true, prev.occurrence-deprecated,
-    // isPrevFinal-true
-    assertEquals("old.value13", conf.get("new.key13"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key13"), conf.get("new.key13"));
-    // Key-site.xml , isFinal-true, prev.occurrence-deprecated,
-    // isPrevFinal-false
-    assertEquals("new.value14", conf.get("new.key14"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key14"), conf.get("new.key14"));
-    // Key-site.xml , isFinal-false, prev.occurrence-deprecated,
-    // isPrevFinal-true
-    assertEquals("old.value15", conf.get("new.key15"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key15"), conf.get("new.key15"));
-    // Key-site.xml , isFinal-false, prev.occurrence-deprecated,
-    // isPrevFinal-false
-    assertEquals("old.value16", conf.get("new.key16"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("old.key16"), conf.get("new.key16"));
-    
-    // ensure that reloadConfiguration doesn't deprecation information
-    conf.reloadConfiguration();
-    assertEquals(conf.get("A"), "valueB");
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("A"), conf.get("B"));
-    
-    // check for consistency in get and set of deprecated and corresponding 
-    // new keys from the user code
-    // set old key
-    conf.set("C", "valueC");
-    // get new key
-    assertEquals("valueC",conf.get("D"));
-    // check consistency in get of old and new keys
-    assertEquals(conf.get("C"), conf.get("D"));
+    assertEquals("b", conf.get("A"));
+    assertEquals("b", conf.get("B"));
+    assertEquals("c", conf.get("C"));
+    assertEquals("c", conf.get("D"));
     
     // set new key
-    conf.set("F","valueF");
+    conf.set("N","n");
     // get old key
-    assertEquals("valueF", conf.get("E"));
+    assertEquals("n", conf.get("M"));
     // check consistency in get of old and new keys
-    assertEquals(conf.get("E"), conf.get("F"));
+    assertEquals(conf.get("M"), conf.get("N"));
     
-    conf.set("G", "valueG");
-    assertEquals("valueG", conf.get("G"));
-    assertEquals("valueG", conf.get("H"));
-    assertEquals("valueG", conf.get("I"));
+    // set old key and then get new key(s).
+    conf.set("M", "m");
+    assertEquals("m", conf.get("N"));
+    conf.set("X", "x");
+    assertEquals("x", conf.get("X"));
+    assertEquals("x", conf.get("Y"));
+    assertEquals("x", conf.get("Z"));
+    
+    // set new keys to different values
+    conf.set("Y", "y");
+    conf.set("Z", "z");
+    // get old key
+    assertEquals("y", conf.get("X"));
+  }
+
+  /**
+   * This test is to ensure the correctness of loading of keys with respect to
+   * being marked as final and that are related to deprecation.
+   * @throws IOException
+   */
+  @Test
+  public void testDeprecationForFinalParameters() throws IOException {
+    addDeprecationToConfiguration();
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    // set the following keys:
+    // 1.old key and final
+    // 2.new key whose corresponding old key is final
+    // 3.old key whose corresponding new key is final
+    // 4.new key and final
+    // 5.new key which is final and has null value.
+    appendProperty("A", "a", true);
+    appendProperty("D", "d");
+    appendProperty("E", "e");
+    appendProperty("H", "h", true);
+    appendProperty("J", "", true);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    
+    assertEquals("a", conf.get("A"));
+    assertEquals("a", conf.get("B"));
+    assertEquals("d", conf.get("C"));
+    assertEquals("d", conf.get("D"));
+    assertEquals("e", conf.get("E"));
+    assertEquals("e", conf.get("F"));
+    assertEquals("h", conf.get("G"));
+    assertEquals("h", conf.get("H"));
+    assertNull(conf.get("I"));
+    assertNull(conf.get("J"));
+    
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    // add the corresponding old/new keys of those added to CONFIG1
+    appendProperty("B", "b");
+    appendProperty("C", "c", true);
+    appendProperty("F", "f", true);
+    appendProperty("G", "g");
+    appendProperty("I", "i");
+    endConfig();
+    Path fileResource1 = new Path(CONFIG2);
+    conf.addResource(fileResource1);
+    
+    assertEquals("a", conf.get("A"));
+    assertEquals("a", conf.get("B"));
+    assertEquals("c", conf.get("C"));
+    assertEquals("c", conf.get("D"));
+    assertEquals("f", conf.get("E"));
+    assertEquals("f", conf.get("F"));
+    assertEquals("h", conf.get("G"));
+    assertEquals("h", conf.get("H"));
+    assertNull(conf.get("I"));
+    assertNull(conf.get("J"));
+    
+    out=new BufferedWriter(new FileWriter(CONFIG3));
+    startConfig();
+    // change the values of all the previously loaded 
+    // keys (both deprecated and new)
+    appendProperty("A", "a1");
+    appendProperty("B", "b1");
+    appendProperty("C", "c1");
+    appendProperty("D", "d1");
+    appendProperty("E", "e1");
+    appendProperty("F", "f1");
+    appendProperty("G", "g1");
+    appendProperty("H", "h1");
+    appendProperty("I", "i1");
+    appendProperty("J", "j1");
+    endConfig();
+    fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    
+    assertEquals("a", conf.get("A"));
+    assertEquals("a", conf.get("B"));
+    assertEquals("c", conf.get("C"));
+    assertEquals("c", conf.get("D"));
+    assertEquals("f", conf.get("E"));
+    assertEquals("f", conf.get("F"));
+    assertEquals("h", conf.get("G"));
+    assertEquals("h", conf.get("H"));
+    assertNull(conf.get("I"));
+    assertNull(conf.get("J"));
   }
   
   // Ensure that wasDeprecatedKeySet returns the correct result under

@@ -328,6 +328,9 @@ Trunk (unreleased changes)
     HADOOP-6507. Hadoop Common Docs - delete 3 doc files that do not belong
     under Common. (Corinne Chandel via tomwhite)
 
+    HADOOP-6439. Fixes handling of deprecated keys to follow order in which
+    keys are defined. (V.V.Chaitanya Krishna via yhemanth)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -210,9 +210,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.customMessage = customMessage;
       accessed = false;
     }
-    DeprecatedKeyInfo(String[] newKeys) {
-      this(newKeys, null);
-    }
 
     /**
      * Method to provide the warning message. It gives the custom message if
@@ -267,12 +264,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     if (!isDeprecated(key)) {
       DeprecatedKeyInfo newKeyInfo;
-      if (customMessage == null) {
-        newKeyInfo = new DeprecatedKeyInfo(newKeys);
-      }
-      else {
-        newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
-      }
+      newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
       deprecatedKeyMap.put(key, newKeyInfo);
     }
   }
@@ -1538,56 +1530,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     for (Object resource : resources) {
       loadResource(properties, resource, quiet);
     }
-    // process for deprecation.
-    processDeprecatedKeys();
-  }
-  /**
-   * Updates the keys that are replacing the deprecated keys and removes the 
-   * deprecated keys from memory.
-   */
-  private void processDeprecatedKeys() {
-    for (Map.Entry<String, DeprecatedKeyInfo> item : 
-      deprecatedKeyMap.entrySet()) {
-      if (!properties.containsKey(item.getKey())) {
-        continue;
-      }
-      String oldKey = item.getKey();
-      deprecatedKeyMap.get(oldKey).accessed = false;
-      setDeprecatedValue(oldKey, properties.getProperty(oldKey),
-          finalParameters.contains(oldKey));
-      properties.remove(oldKey);
-      if (finalParameters.contains(oldKey)) {
-        finalParameters.remove(oldKey);
-      }
-      updatingResource.remove(oldKey);
-    }
-  }
-  
-  /**
-   * Sets the deprecated key's value to the associated mapped keys
-   * @param attr the deprecated key
-   * @param value the value corresponding to the deprecated key
-   * @param finalParameter flag to indicate if <code>attr</code> is
-   *        marked as final
-   */
-  private void setDeprecatedValue(String attr,
-      String value, boolean finalParameter) {
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
-    for (String key:keyInfo.newKeys) {
-      // update replacing keys with deprecated key's value in all cases,
-      // except when the replacing key is already set to final
-      // and finalParameter is false
-      if (finalParameters.contains(key) && !finalParameter) {
-        LOG.warn("An attempt to override final parameter: "+key
-            +";  Ignoring.");
-        continue;
-      }
-      properties.setProperty(key, value);
-      updatingResource.put(key, updatingResource.get(attr));
-      if (finalParameter) {
-        finalParameters.add(key);
-      }
-    }
   }
   
   private void loadResource(Properties properties, Object name, boolean quiet) {
@@ -1695,17 +1637,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         
         // Ignore this parameter if it has already been marked as 'final'
         if (attr != null) {
-          if (value != null) {
-            if (!finalParameters.contains(attr)) {
-              properties.setProperty(attr, value);
-              updatingResource.put(attr, name.toString());
-            } else {
-              LOG.warn(name+":a attempt to override final parameter: "+attr
-                     +";  Ignoring.");
+          if (deprecatedKeyMap.containsKey(attr)) {
+            DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
+            keyInfo.accessed = false;
+            for (String key:keyInfo.newKeys) {
+              // update new keys with deprecated key's value 
+              loadProperty(properties, name, key, value, finalParameter);
             }
           }
-          if (finalParameter) {
-            finalParameters.add(attr);
+          else {
+            loadProperty(properties, name, attr, value, finalParameter);
           }
         }
       }
@@ -1722,6 +1663,22 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (ParserConfigurationException e) {
       LOG.fatal("error parsing conf file: " + e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private void loadProperty(Properties properties, Object name, String attr,
+      String value, boolean finalParameter) {
+    if (value != null) {
+      if (!finalParameters.contains(attr)) {
+        properties.setProperty(attr, value);
+        updatingResource.put(attr, name.toString());
+      } else {
+        LOG.warn(name+":an attempt to override final parameter: "+attr
+            +";  Ignoring.");
+      }
+    }
+    if (finalParameter) {
+      finalParameters.add(attr);
     }
   }
 
