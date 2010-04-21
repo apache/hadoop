@@ -256,7 +256,7 @@ public class MiniDFSCluster {
       
       System.out.println("HDFS using RPCEngine: "+rpcEngineName);
       try {
-        Class rpcEngine = conf.getClassByName(rpcEngineName);
+        Class<?> rpcEngine = conf.getClassByName(rpcEngineName);
         setRpcEngine(conf, NamenodeProtocols.class, rpcEngine);
         setRpcEngine(conf, NamenodeProtocol.class, rpcEngine);
         setRpcEngine(conf, ClientProtocol.class, rpcEngine);
@@ -318,7 +318,7 @@ public class MiniDFSCluster {
     }
   }
   
-  private void setRpcEngine(Configuration conf, Class protocol, Class engine) {
+  private void setRpcEngine(Configuration conf, Class<?> protocol, Class<?> engine) {
     conf.setClass("rpc.engine."+protocol.getName(), engine, Object.class);
   }
 
@@ -444,8 +444,9 @@ public class MiniDFSCluster {
           throw new IOException("Mkdirs failed to create directory for DataNode "
                                 + i + ": " + dir1 + " or " + dir2);
         }
-        dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-                    fileAsURI(dir1) + "," + fileAsURI(dir2));
+        String dirs = fileAsURI(dir1) + "," + fileAsURI(dir2);
+        dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
+        conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
       if (simulatedCapacities != null) {
         dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);

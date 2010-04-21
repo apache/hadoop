@@ -113,8 +113,7 @@ public class FSEditLog {
   private long lastPrintTime;
 
   // is a sync currently running?
-  private volatile boolean isSyncRunning;
-
+  private boolean isSyncRunning;
 
   // these are statistics counters.
   private long numTransactions;        // number of transactions
@@ -160,14 +159,6 @@ public class FSEditLog {
     return editStreams == null ? 0 : editStreams.size();
   }
 
-  /**
-   * Return the currently active edit streams.
-   * This should be used only by unit tests.
-   */
-  ArrayList<EditLogOutputStream> getEditStreams() {
-    return editStreams;
-  }
-
   boolean isOpen() {
     return getNumEditStreams() > 0;
   }
@@ -210,8 +201,6 @@ public class FSEditLog {
   }
 
   synchronized void createEditLogFile(File name) throws IOException {
-    waitForSyncToFinish();
-
     EditLogOutputStream eStream = new EditLogFileOutputStream(name,
         sizeOutputFlushBuffer);
     eStream.create();
@@ -222,7 +211,12 @@ public class FSEditLog {
    * Shutdown the file store.
    */
   synchronized void close() {
-    waitForSyncToFinish();
+    while (isSyncRunning) {
+      try {
+        wait(1000);
+      } catch (InterruptedException ie) { 
+      }
+    }
     if (editStreams == null || editStreams.isEmpty()) {
       return;
     }
@@ -889,52 +883,9 @@ public class FSEditLog {
       metrics.transactions.inc((end-start));
   }
 
-  /**
-   * Blocks until all ongoing edits have been synced to disk.
-   * This differs from logSync in that it waits for edits that have been
-   * written by other threads, not just edits from the calling thread.
-   *
-   * NOTE: this should be done while holding the FSNamesystem lock, or
-   * else more operations can start writing while this is in progress.
-   */
-  void logSyncAll() throws IOException {
-    // Record the most recent transaction ID as our own id
-    synchronized (this) {
-      TransactionId id = myTransactionId.get();
-      id.txid = txid;
-    }
-    // Then make sure we're synced up to this point
-    logSync();
-  }
-  
-  /**
-   * Sync all modifications done by this thread.
-   *
-   * The internal concurrency design of this class is as follows:
-   *   - Log items are written synchronized into an in-memory buffer,
-   *     and each assigned a transaction ID.
-   *   - When a thread (client) would like to sync all of its edits, logSync()
-   *     uses a ThreadLocal transaction ID to determine what edit number must
-   *     be synced to.
-   *   - The isSyncRunning volatile boolean tracks whether a sync is currently
-   *     under progress.
-   *
-   * The data is double-buffered within each edit log implementation so that
-   * in-memory writing can occur in parallel with the on-disk writing.
-   *
-   * Each sync occurs in three steps:
-   *   1. synchronized, it swaps the double buffer and sets the isSyncRunning
-   *      flag.
-   *   2. unsynchronized, it flushes the data to storage
-   *   3. synchronized, it resets the flag and notifies anyone waiting on the
-   *      sync.
-   *
-   * The lack of synchronization on step 2 allows other threads to continue
-   * to write into the memory buffer while the sync is in progress.
-   * Because this step is unsynchronized, actions that need to avoid
-   * concurrency with sync() should be synchronized and also call
-   * waitForSyncToFinish() before assuming they are running alone.
-   */
+  //
+  // Sync all modifications done by this thread.
+  //
   public void logSync() throws IOException {
     ArrayList<EditLogOutputStream> errorStreams = null;
     long syncStart = 0;
@@ -1268,7 +1219,6 @@ public class FSEditLog {
    * Closes the current edit log and opens edits.new. 
    */
   synchronized void rollEditLog() throws IOException {
-    waitForSyncToFinish();
     Iterator<StorageDirectory> it = fsimage.dirIterator(NameNodeDirType.EDITS);
     if(!it.hasNext()) 
       return;
@@ -1301,8 +1251,6 @@ public class FSEditLog {
    * @throws IOException
    */
   synchronized void divertFileStreams(String dest) throws IOException {
-    waitForSyncToFinish();
-
     assert getNumEditStreams() >= getNumEditsDirs() :
       "Inconsistent number of streams";
     ArrayList<EditLogOutputStream> errorStreams = null;
@@ -1339,23 +1287,8 @@ public class FSEditLog {
    * Reopens the edits file.
    */
   synchronized void purgeEditLog() throws IOException {
-    waitForSyncToFinish();
     revertFileStreams(
         Storage.STORAGE_DIR_CURRENT + "/" + NameNodeFile.EDITS_NEW.getName());
-  }
-
-
-  /**
-   * The actual sync activity happens while not synchronized on this object.
-   * Thus, synchronized activities that require that they are not concurrent
-   * with file operations should wait for any running sync to finish.
-   */
-  synchronized void waitForSyncToFinish() {
-    while (isSyncRunning) {
-      try {
-        wait(1000);
-      } catch (InterruptedException ie) {}
-    }
   }
 
   /**
@@ -1367,8 +1300,6 @@ public class FSEditLog {
    * @throws IOException
    */
   synchronized void revertFileStreams(String source) throws IOException {
-    waitForSyncToFinish();
-
     assert getNumEditStreams() >= getNumEditsDirs() :
       "Inconsistent number of streams";
     ArrayList<EditLogOutputStream> errorStreams = null;
@@ -1380,8 +1311,7 @@ public class FSEditLog {
       EditLogOutputStream eStream = itE.next();
       StorageDirectory sd = itD.next();
       if(!eStream.getName().startsWith(sd.getRoot().getPath()))
-        throw new IOException("Inconsistent order of edit streams: " + eStream +
-                              " does not start with " + sd.getRoot().getPath());
+        throw new IOException("Inconsistent order of edit streams: " + eStream);
       try {
         // close old stream
         closeStream(eStream);
