@@ -16,13 +16,17 @@ package org.apache.hadoop.fs;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -52,8 +56,18 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  protected Statistics getStatistics() {
+    return myFs.getStatistics();
+  }
+
+  @Override
   protected Path getInitialWorkingDirectory() {
     return myFs.getInitialWorkingDirectory();
+  }
+  
+  @Override
+  protected Path getHomeDirectory() {
+    return myFs.getHomeDirectory();
   }
   
   @Override
@@ -103,6 +117,12 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
   
   @Override
+  protected FsStatus getFsStatus(final Path f) throws AccessControlException,
+    FileNotFoundException, UnresolvedLinkException, IOException {
+    return myFs.getFsStatus(f);
+  }
+
+  @Override
   protected FsStatus getFsStatus() throws IOException {
     return myFs.getFsStatus();
   }
@@ -118,6 +138,21 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  protected URI getUri() {
+    return myFs.getUri();
+  }
+  
+  @Override
+  protected void checkPath(Path path) {
+    myFs.checkPath(path);
+  }
+  
+  @Override
+  protected String getUriPath(final Path p) {
+    return myFs.getUriPath(p);
+  }
+  
+  @Override
   protected FileStatus[] listStatus(Path f) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
@@ -130,6 +165,13 @@ public abstract class FilterFs extends AbstractFileSystem {
     checkPath(dir);
     myFs.mkdir(dir, permission, createParent);
     
+  }
+
+  @Override
+  protected FSDataInputStream open(final Path f) throws AccessControlException,
+    FileNotFoundException, UnresolvedLinkException, IOException {
+    checkPath(f);
+    return myFs.open(f);
   }
 
   @Override
@@ -147,6 +189,14 @@ public abstract class FilterFs extends AbstractFileSystem {
     myFs.rename(src, dst, Options.Rename.NONE);
   }
 
+  @Override
+  protected void renameInternal(final Path src, final Path dst,
+      boolean overwrite) throws AccessControlException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, UnresolvedLinkException, IOException {
+    myFs.renameInternal(src, dst, overwrite);
+  }
+  
   @Override
   protected void setOwner(Path f, String username, String groupname)
     throws IOException, UnresolvedLinkException {
