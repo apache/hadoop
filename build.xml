@@ -114,6 +114,8 @@
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
   <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
+  <property name="jdiff.stability" value="-unstable"/>
+  <property name="jdiff.compatibility" value=""/>
   <property name="jdiff.stable" value="0.20.2"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
@@ -867,7 +869,7 @@
     </uptodate>
   </target>
  
-  <target name="javadoc" description="Generate javadoc" depends="javadoc-uptodate"
+  <target name="javadoc" description="Generate javadoc" depends="jar, javadoc-uptodate"
        unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
@@ -898,15 +900,19 @@
 
        <group title="Core" packages="org.apache.*"/>
        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet"
+               path="${build.dir}/${final.name}.jar"/>
     </javadoc>
   </target>	
 
   <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
     <javadoc maxmemory="${javadoc.maxmemory}">
-       <doclet name="jdiff.JDiff"
-               path="${jdiff.jar}:${xerces.jar}">
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+               path="${build.dir}/${final.name}.jar:${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop-core ${version}"/>
+         <param name="${jdiff.stability}"/>
+         <param name="${jdiff.compatibility}"/>
        </doclet>
        <packageset dir="src/java"/>
        <classpath >
@@ -929,8 +935,8 @@
              destdir="${jdiff.build.dir}"
 	     sourceFiles="${jdiff.home}/Null.java"
 	     maxmemory="${javadoc.maxmemory}">
-       <doclet name="jdiff.JDiff"
-               path="${jdiff.jar}:${xerces.jar}">
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+              path="${build.dir}/${final.name}.jar:${jdiff.jar}:${xerces.jar}">
          <param name="-oldapi" value="hadoop-core ${jdiff.stable}"/>
          <param name="-newapi" value="hadoop-core ${version}"/>
          <param name="-oldapidir" value="${jdiff.xml.dir}"/>
@@ -938,6 +944,8 @@
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
          <param name="-javadocnew" value="../../api/"/>
          <param name="-stats"/>
+         <param name="${jdiff.stability}"/>
+         <param name="${jdiff.compatibility}"/>
        </doclet>
        <classpath >
          <path refid="classpath" />

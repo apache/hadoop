@@ -48,7 +48,7 @@
       encoding="${build.encoding}" 
       srcdir="${java.src.dir};${build.src};${test.src.dir}/aop" 
       includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
-      excludes="org/apache/hadoop/record/**/*"
+      excludes="org/apache/hadoop/classification/tools/**/*, org/apache/hadoop/record/**/*"
       destDir="${build.classes}"
       debug="${javac.debug}"
       target="${javac.version}"

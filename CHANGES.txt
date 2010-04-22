@@ -215,6 +215,8 @@ Trunk (unreleased changes)
     HADOOP-6705. Fix to work with 1.5 version of jiracli
     (Giridharan Kesavan)
 
+    HADOOP-6658. Exclude Private elements from generated Javadoc. (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
