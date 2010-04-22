@@ -333,6 +333,9 @@ Trunk (unreleased changes)
     HADOOP-6439. Fixes handling of deprecated keys to follow order in which
     keys are defined. (V.V.Chaitanya Krishna via yhemanth)
 
+    HADOOP-6690. FilterFileSystem correctly handles setTimes call.
+    (Rodrigo Schmidt via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
