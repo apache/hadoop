@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     HADOOP-6299. Reimplement the UserGroupInformation to use the OS
     specific and Kerberos JAAS login. (omalley)
 
+    HADOOP-6686. Remove redundant exception class name from the exception
+    message for the exceptions thrown at RPC client. (suresh)
+
   NEW FEATURES
 
     HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to

@@ -1276,6 +1276,11 @@ public abstract class Server {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
+            // Remove redundant error class name from the beginning of the stack trace
+            String exceptionHdr = errorClass + ": ";
+            if (error.startsWith(exceptionHdr)) {
+              error = error.substring(exceptionHdr.length());
+            }
           }
           CurCall.set(null);
           synchronized (call.connection.responseQueue) {

@@ -88,12 +88,7 @@ public class RemoteException extends IOException {
       throws Exception {
     Constructor<? extends IOException> cn = cls.getConstructor(String.class);
     cn.setAccessible(true);
-    String firstLine = this.getMessage();
-    int eol = firstLine.indexOf('\n');
-    if (eol>=0) {
-      firstLine = firstLine.substring(0, eol);
-    }
-    IOException ex = cn.newInstance(firstLine);
+    IOException ex = cn.newInstance(this.getMessage());
     ex.initCause(this);
     return ex;
   }
@@ -116,5 +111,9 @@ public class RemoteException extends IOException {
   public static RemoteException valueOf(Attributes attrs) {
     return new RemoteException(attrs.getValue("class"),
         attrs.getValue("message")); 
+  }
+  
+  public String toString() {
+    return className + ": " + getMessage();
   }
 }
