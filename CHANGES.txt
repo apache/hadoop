@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     HDFS-1087. Modify audit log to use a StringBuilder rather than a Formatter.
     (cdouglas)
 
+    HDFS-1083. Update TestHDFSCLI not to expect exception class name
+    in error messages. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

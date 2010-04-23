@@ -5194,7 +5194,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /file</expected-output>
+          <expected-output>^cat: File does not exist: /file</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5209,7 +5209,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /user/[a-z]*/file</expected-output>
+          <expected-output>^cat: File does not exist: /user/[a-z]*/file</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5226,7 +5226,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /dir1</expected-output>
+          <expected-output>^cat: File does not exist: /dir1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5243,7 +5243,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /user/[a-z]*/dir</expected-output>
+          <expected-output>^cat: File does not exist: /user/[a-z]*/dir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5317,7 +5317,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /file</expected-output>
+          <expected-output>^cat: File does not exist: /file</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5334,7 +5334,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /dir1</expected-output>
+          <expected-output>^cat: File does not exist: /dir1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5409,7 +5409,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /file</expected-output>
+          <expected-output>^cat: File does not exist: /file</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5426,7 +5426,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: java.io.FileNotFoundException: File does not exist: /dir1</expected-output>
+          <expected-output>^cat: File does not exist: /dir1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16290,7 +16290,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>put: org.apache.hadoop.hdfs.protocol.DSQuotaExceededException: The DiskSpace quota of /dir1 is exceeded: quota=1024 diskspace consumed=[0-9.]+[kmg]*</expected-output>
+          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota=1024 diskspace consumed=[0-9.]+[kmg]*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16310,7 +16310,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>mkdir: org.apache.hadoop.hdfs.protocol.NSQuotaExceededException: The NameSpace quota (directories and files) of directory /dir1 is exceeded: quota=1 file count=2</expected-output>
+          <expected-output>mkdir: The NameSpace quota (directories and files) of directory /dir1 is exceeded: quota=1 file count=2</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16576,7 +16576,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>saveNamespace: java.io.IOException: Safe mode should be turned ON in order to create namespace image.</expected-output>
+          <expected-output>saveNamespace: Safe mode should be turned ON in order to create namespace image.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16951,7 +16951,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>setQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+          <expected-output>setQuota: Cannot set quota on /test. Name node is in safe mode.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16970,7 +16970,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>clrQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+          <expected-output>clrQuota: Cannot set quota on /test. Name node is in safe mode.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16990,7 +16990,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>setSpaceQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+          <expected-output>setSpaceQuota: Cannot set quota on /test. Name node is in safe mode.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -17009,7 +17009,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-         <expected-output>clrSpaceQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+         <expected-output>clrSpaceQuota: Cannot set quota on /test. Name node is in safe mode.</expected-output>
         </comparator>
       </comparators>
     </test>
