@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -75,6 +77,8 @@ public class MiniDFSCluster {
       this.dnArgs = args;
     }
   }
+  private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
+
   private URI myUri = null;
   private Configuration conf;
   private NameNode nameNode;
@@ -346,7 +350,7 @@ public class MiniDFSCluster {
     if (numDataNodes > 0) {
       while (!isClusterUp()) {
         try {
-          System.err.println("Waiting for the Mini HDFS Cluster to start...");
+          LOG.warn("Waiting for the Mini HDFS Cluster to start...");
           Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
@@ -628,7 +632,7 @@ public class MiniDFSCluster {
    */
   public void shutdownDataNodes() {
     for (int i = dataNodes.size()-1; i >= 0; i--) {
-      System.out.println("Shutting down DataNode " + i);
+      LOG.info("Shutting down DataNode " + i);
       DataNode dn = dataNodes.remove(i).datanode;
       dn.shutdown();
       numDataNodes--;

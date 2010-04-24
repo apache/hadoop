@@ -142,6 +142,9 @@ Trunk (unreleased changes)
 
     HDFS-1099. Add test for umask backward compatibility. (suresh)
 
+    HDFS-1092. Use logging rather than System.err in MiniDFSCluster.
+    (Kay Kay via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
