@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
@@ -31,6 +33,8 @@ import org.apache.hadoop.io.WritableFactory;
  * A class for file/directory permissions.
  */
 public class FsPermission implements Writable {
+  private static final Log LOG = LogFactory.getLog(FsPermission.class);
+
   static final WritableFactory FACTORY = new WritableFactory() {
     public Writable newInstance() { return new FsPermission(); }
   };
@@ -199,25 +203,39 @@ public class FsPermission implements Writable {
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
     
-    // Attempt to pull value from configuration, trying new key first and then
-    // deprecated key, along with a warning, if not present
+    // To ensure backward compatibility first use the deprecated key.
+    // If the deprecated key is not present then check for the new key
     if(conf != null) {
       String confUmask = conf.get(UMASK_LABEL);
-      if(confUmask != null) { // UMASK_LABEL is set
-        try {
-          if(conf.deprecatedKeyWasSet(DEPRECATED_UMASK_LABEL)) 
-            umask = Integer.parseInt(confUmask); // Evaluate as decimal value
-          else
-            return new FsPermission(confUmask);
-        } catch(IllegalArgumentException iae) {
-          // Provide more explanation for user-facing message
-          String type = iae instanceof NumberFormatException ? "decimal" 
-                                                          : "octal or symbolic";
-          
-          throw new IllegalArgumentException("Unable to parse " + confUmask + 
-                                              " as " + type + " umask.");
+      int oldUmask = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
+      try {
+        if(confUmask != null) {
+          umask = new UmaskParser(confUmask).getUMask();
         }
-      } 
+      } catch(IllegalArgumentException iae) {
+        // Provide more explanation for user-facing message
+        String type = iae instanceof NumberFormatException ? "decimal"
+            : "octal or symbolic";
+        String error = "Unable to parse configuration " + UMASK_LABEL
+            + " with value " + confUmask + " as " + type + " umask.";
+        LOG.warn(error);
+        
+        // If oldUmask is not set, then throw the exception
+        if (oldUmask == Integer.MIN_VALUE) {
+          throw new IllegalArgumentException(error);
+        }
+      }
+        
+      if(oldUmask != Integer.MIN_VALUE) { // Property was set with old key
+        if (umask != oldUmask) {
+          LOG.warn(DEPRECATED_UMASK_LABEL
+              + " configuration key is deprecated. " + "Convert to "
+              + UMASK_LABEL + ", using octal or symbolic umask "
+              + "specifications.");
+          // Old and new umask values do not match - Use old umask
+          umask = oldUmask;
+        }
+      }
     }
     
     return new FsPermission((short)umask);
@@ -229,7 +247,8 @@ public class FsPermission implements Writable {
 
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
-    conf.setInt(UMASK_LABEL, umask.toShort());
+    conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));
+    conf.setInt(DEPRECATED_UMASK_LABEL, umask.toShort());
   }
 
   /** Get the default permission. */

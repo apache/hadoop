@@ -20,8 +20,6 @@ package org.apache.hadoop.conf;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
 
 import junit.framework.TestCase;
 
@@ -33,13 +31,5 @@ public class TestDeprecatedKeys extends TestCase {
     conf.set("topology.script.file.name", "xyz");
     String scriptFile = conf.get(CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
     assertTrue(scriptFile.equals("xyz")) ;
-    int m = conf.getInt(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, CommonConfigurationKeys.FS_PERMISSIONS_UMASK_DEFAULT) ;
-    assertTrue(m == 0022) ;
-    conf.setInt("dfs.umask", 0077);
-    m = conf.getInt(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, CommonConfigurationKeys.FS_PERMISSIONS_UMASK_DEFAULT) ;
-    assertTrue(m == 0077) ;
-    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "405");
-    String umask = conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY);
-    assertTrue(umask.equals("405"));
   }
 }

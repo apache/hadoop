@@ -276,6 +276,10 @@ Trunk (unreleased changes)
     HADOOP-6540. Contrib unit tests have invalid XML for core-site, etc.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-6521. User specified umask using deprecated dfs.umask must override
+    server configured using new dfs.umaskmode for backward compatibility.
+    (suresh)
+    
     HADOOP-6522. Fix decoding of codepoint zero in UTF8. (cutting)
 
     HADOOP-6505. Use tr rather than sed to effect literal substitution in the

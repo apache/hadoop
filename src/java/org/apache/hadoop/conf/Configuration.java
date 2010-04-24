@@ -296,20 +296,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
  
   /**
-   * Check whether or not the deprecated key has been specified in the
-   * configuration file rather than the new key
-   * 
-   * Returns false if the specified key is not included in the deprecated
-   * key mapping.
-   * 
-   * @param oldKey Old configuration key 
-   * @return If the old configuration key was specified rather than the new one
-   */
-  public boolean deprecatedKeyWasSet(String oldKey) {
-    return isDeprecated(oldKey) && deprecatedKeyMap.get(oldKey).accessed;
-  }
-  
-  /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
    * in the deprecation map or the <code>name</code> itself.
@@ -1876,11 +1862,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY});
     Configuration.addDeprecation("topology.node.switch.mapping.impl", 
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY});
-    Configuration.addDeprecation("dfs.umask", 
-               new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY},
-               "dfs.umask is deprecated, use " + 
-               CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY + 
-               " with octal or symbolic specifications.");
     Configuration.addDeprecation("dfs.df.interval", 
                new String[]{CommonConfigurationKeys.FS_DF_INTERVAL_KEY});
     Configuration.addDeprecation("dfs.client.buffer.dir", 
