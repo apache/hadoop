@@ -287,6 +287,8 @@ Release 0.21.0 - Unreleased
                running before waiting (Todd Lipcon via Stack)
    HBASE-2481  Client is not getting UnknownScannerExceptions; they are
                being eaten (Jean-Daniel Cryans via Stack)
+   HBASE-2448  Scanner threads are interrupted without acquiring lock properly
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
