@@ -588,9 +588,9 @@ abstract class BaseScanner extends Chore implements HConstants {
   }
 
   /**
-   * Notify the thread to die at the end of its next run
+   * Interrupt thread regardless of what it's doing
    */
-  public void interruptIfAlive() {
+  public void interruptAndStop() {
     synchronized(scannerLock){
       if (isAlive()) {
         super.interrupt();

@@ -72,6 +72,6 @@ class ModifyTableMeta extends TableOperation {
       updateRegionInfo(server, m.getRegionName(), i);
     }
     // kick off a meta scan right away
-    master.getRegionManager().metaScannerThread.interrupt();
+    master.getRegionManager().metaScannerThread.triggerNow();
   }
 }

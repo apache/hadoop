@@ -35,7 +35,10 @@ public class Sleeper {
   private final int period;
   private final AtomicBoolean stop;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
-  
+ 
+  private final Object sleepLock = new Object();
+  private boolean triggerWake = false;
+
   /**
    * @param sleep sleep time in milliseconds
    * @param stop flag for when we stop
@@ -50,6 +53,17 @@ public class Sleeper {
    */
   public void sleep() {
     sleep(System.currentTimeMillis());
+  }
+
+  /**
+   * If currently asleep, stops sleeping; if not asleep, will skip the next
+   * sleep cycle.
+   */
+  public void skipSleepCycle() {
+    synchronized (sleepLock) {
+      triggerWake = true;
+      sleepLock.notify();
+    }
   }
   
   /**
@@ -72,7 +86,10 @@ public class Sleeper {
     while (waitTime > 0) {
       long woke = -1;
       try {
-        Thread.sleep(waitTime);
+        synchronized (sleepLock) {
+          if (triggerWake) break;
+          sleepLock.wait(waitTime);
+        }
         woke = System.currentTimeMillis();
         long slept = woke - now;
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
@@ -92,5 +109,6 @@ public class Sleeper {
       woke = (woke == -1)? System.currentTimeMillis(): woke;
       waitTime = this.period - (woke - startTime);
     }
+    triggerWake = false;
   }
 }

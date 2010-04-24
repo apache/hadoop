@@ -84,6 +84,15 @@ public abstract class Chore extends Thread {
   }
   
   /**
+   * If the thread is currently sleeping, trigger the core to happen immediately.
+   * If it's in the middle of its operation, will begin another operation
+   * immediately after finishing this one.
+   */
+  public void triggerNow() {
+    this.sleeper.skipSleepCycle();
+  }
+  
+  /**
    * Override to run a task before we start looping.
    * @return true if initial chore was successful
    */
