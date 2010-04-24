@@ -284,6 +284,8 @@ Trunk (unreleased changes)
     HDFS-833. Datanode shutdown should log problems with Storage.unlockAll()
     (Steve Loughran via dhruba)
 
+    HDFS-1101. TestDiskError.testLocalDirs() fails. (cdouglas via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

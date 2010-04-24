@@ -166,13 +166,16 @@ public class TestDiskError extends TestCase {
 
       // Check permissions on directories in 'dfs.data.dir'
       FileSystem localFS = FileSystem.getLocal(conf);
-      String[] dataDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
-      for (String dir : dataDirs) {
-        Path dataDir = new Path(dir);
-        FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
-        assertEquals("Permission for dir: " + dataDir + ", is " + actual +
-                         ", while expected is " + expected,
-                     expected, actual);
+      for (DataNode dn : cluster.getDataNodes()) {
+        String[] dataDirs =
+          dn.getConf().getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+        for (String dir : dataDirs) {
+          Path dataDir = new Path(dir);
+          FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
+          assertEquals("Permission for dir: " + dataDir + ", is " + actual +
+                           ", while expected is " + expected,
+                       expected, actual);
+        }
       }
     } finally {
       if (cluster != null)
