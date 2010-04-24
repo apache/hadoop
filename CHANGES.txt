@@ -343,6 +343,9 @@ Trunk (unreleased changes)
     HADOOP-6690. FilterFileSystem correctly handles setTimes call.
     (Rodrigo Schmidt via dhruba)
 
+    HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
+    (suresh)
+    
     HADOOP-6719. Insert all missing methods in FilterFs.
     (Rodrigo Schmidt via dhruba)
 
