@@ -283,6 +283,8 @@ Release 0.21.0 - Unreleased
                (Benoit Sigoure via Stack)
    HBASE-2443  IPC client can throw NPE if socket creation fails
                (Todd Lipcon via Stack)
+   HBASE-2447  LogSyncer.addToSyncQueue doesn't check if syncer is still
+               running before waiting (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
