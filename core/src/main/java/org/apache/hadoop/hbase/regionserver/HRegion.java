@@ -1866,14 +1866,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       results.clear();
       boolean returnResult = nextInternal(limit);
-      if (!returnResult && filter != null) {
-        // final chance to modify row contents
-    	returnResult = filter.filterRow(results);
-    	// final chance to drop the row... This may be superfluous with the addition of the above?
-    	// still needed for backwards compatibility however
-    	if (returnResult || filter.filterRow()) {
-    	  results.clear();
-    	}
+      if (!returnResult && filter != null && filter.filterRow()) {
+        results.clear();
       }
       outResults.addAll(results);
       resetFilters();
