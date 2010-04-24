@@ -916,6 +916,16 @@ public class HTable implements HTableInterface {
               values = getConnection().getRegionServerWithRetries(callable);
             }
           } catch (DoNotRetryIOException e) {
+            long timeout = lastNext + scannerTimeout;
+            if (e instanceof UnknownScannerException &&
+                timeout < System.currentTimeMillis()) {
+              long elapsed = System.currentTimeMillis() - lastNext;
+              ScannerTimeoutException ex = new ScannerTimeoutException(
+                  elapsed + "ms passed since the last invocation, " +
+                      "timeout is currently set to " + scannerTimeout);
+              ex.initCause(e);
+              throw ex;
+            }
             Throwable cause = e.getCause();
             if (cause == null || !(cause instanceof NotServingRegionException)) {
               throw e;
@@ -931,14 +941,6 @@ public class HTable implements HTableInterface {
             // Clear region
             this.currentRegion = null;
             continue;
-          } catch (IOException e) {
-            if (e instanceof UnknownScannerException &&
-                lastNext + scannerTimeout < System.currentTimeMillis()) {
-              ScannerTimeoutException ex = new ScannerTimeoutException();
-              ex.initCause(e);
-              throw ex;
-            }
-            throw e;
           }
           lastNext = System.currentTimeMillis();
           if (values != null && values.length > 0) {
