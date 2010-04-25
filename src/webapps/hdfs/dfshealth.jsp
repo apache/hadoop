@@ -49,7 +49,9 @@
 <h3>Cluster Summary</h3>
 <b> <%= NamenodeJspHelper.getSafeModeText(fsn)%> </b>
 <b> <%= NamenodeJspHelper.getInodeLimitText(fsn)%> </b>
-<a class="warning"><%= NamenodeJspHelper.getWarningText(fsn)%></a>
+<a class="warning" href="/corrupt_files.jsp" title="List corrupt files">
+  <%= NamenodeJspHelper.getWarningText(fsn)%>
+</a>
 
 <% healthjsp.generateHealthReport(out, nn, request); %>
 <hr>
