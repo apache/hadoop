@@ -148,6 +148,8 @@ Trunk (unreleased changes)
     HDFS-1047. Install/deploy source jars to Maven repo. 
     (Patrick Angeles via jghoman)
 
+    HDFS-666. Unit test for FsShell -text. (cdouglas via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
