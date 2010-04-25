@@ -289,6 +289,9 @@ Trunk (unreleased changes)
     HDFS-1031. Enhance the webUi to list a few of the corrupted files in HDFS.
     (André Orian via dhruba)
 
+    HDFS-1078. Create static and dynamic versions of libhdfs.
+    (Sam Rash via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
