@@ -220,6 +220,9 @@ Trunk (unreleased changes)
 
     HADOOP-6658. Exclude Private elements from generated Javadoc. (tomwhite)
 
+    HADOOP-6635. Install/deploy source jars to Maven repo. 
+    (Patrick Angeles via jghoman)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

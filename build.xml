@@ -161,6 +161,8 @@
   <property name="ivy.publish.pattern" value="[artifact]-[revision].[ext]"/>
   <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
   <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
+  <property name="hadoop-core-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
+  <property name="hadoop-core-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -424,6 +426,11 @@
       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
       <fileset file="${jar.extra.properties.list}" />
     </jar>
+
+    <jar jarfile="${hadoop-core-sources.jar}">
+      <fileset dir="${java.src.dir}" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${build.src}" includes="org/apache/hadoop/**/*.java"/>
+    </jar>
   </target>
 
   <!-- ================================================================== -->
@@ -527,6 +534,11 @@
             <attribute name="Implementation-Vendor" value="Apache"/>
           </section>
          </manifest>
+    </jar>
+
+    <jar jarfile="${hadoop-core-test-sources.jar}">
+      <fileset dir="${test.generated.dir}" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${test.src.dir}/core" includes="org/apache/hadoop/**/*.java"/>
     </jar>
   </target>
 
@@ -1169,9 +1181,11 @@
      <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
      <artifact:install file="${hadoop-core.jar}">
         <pom refid="hadoop.core"/>
+	<attach file="${hadoop-core-sources.jar}" classifier="sources" />
      </artifact:install>
      <artifact:install file="${hadoop-core-test.jar}">
         <pom refid="hadoop.core.test"/>
+	<attach file="${hadoop-core-test-sources.jar}" classifier="sources" />
      </artifact:install>
   </target>
 
@@ -1184,10 +1198,12 @@
      <artifact:deploy file="${hadoop-core.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core"/>
+	<attach file="${hadoop-core-sources.jar}" classifier="sources" />
      </artifact:deploy>
      <artifact:deploy file="${hadoop-core-test.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core.test"/>
+	<attach file="${hadoop-core-test-sources.jar}" classifier="sources" />
      </artifact:deploy>
   </target>
   
