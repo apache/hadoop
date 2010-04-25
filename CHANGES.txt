@@ -223,6 +223,9 @@ Trunk (unreleased changes)
     HADOOP-6635. Install/deploy source jars to Maven repo. 
     (Patrick Angeles via jghoman)
 
+    HADOOP-6717. Log levels in o.a.h.security.Groups too high 
+    (Todd Lipcon via jghoman)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

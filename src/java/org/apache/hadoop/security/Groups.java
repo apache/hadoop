@@ -73,14 +73,14 @@ public class Groups {
     long now = System.currentTimeMillis();
     // if cache has a value and it hasn't expired
     if (groups != null && (groups.getTimestamp() + cacheTimeout > now)) {
-      LOG.info("Returning cached groups for '" + user + "'");
+      LOG.debug("Returning cached groups for '" + user + "'");
       return groups.getGroups();
     }
     
     // Create and cache user's groups
     groups = new CachedGroups(impl.getGroups(user));
     userToGroupsMap.put(user, groups);
-    LOG.info("Returning fetched groups for '" + user + "'");
+    LOG.debug("Returning fetched groups for '" + user + "'");
     return groups.getGroups();
   }
   
