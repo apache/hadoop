@@ -164,6 +164,8 @@
   <property name="ivy.publish.pattern" value="hadoop-hdfs-[revision].[ext]"/>
   <property name="hadoop-hdfs.jar" location="${build.dir}/${final.name}.jar" />
   <property name="hadoop-hdfs-test.jar" location="${build.dir}/${test.hdfs.final.name}.jar" />
+  <property name="hadoop-hdfs-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
+  <property name="hadoop-hdfs-test-sources.jar" location="${build.dir}/${test.hdfs.final.name}-sources.jar" />
   <property name="hadoop-hdfs-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
 
   <!-- jdiff.home property set -->
@@ -359,6 +361,11 @@
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
       <fileset file="${jar.extra.properties.list}" />
     </jar>
+
+    <jar jarfile="${hadoop-hdfs-sources.jar}">
+      <fileset dir="${java.src.dir}" includes="org/apache/hadoop/**/*.java" />
+      <fileset dir="${build.src}" includes="org/apache/hadoop/**/*.java" />
+    </jar>
   </target>
 
   <target name="compile-hdfs-test" depends="compile-hdfs-classes, ivy-retrieve-test">
@@ -413,6 +420,11 @@
             <attribute name="Implementation-Vendor" value="Apache"/>
           </section>
          </manifest>
+    </jar>
+
+    <jar jarfile="${hadoop-hdfs-test-sources.jar}">
+      <fileset dir="${test.src.dir}/hdfs" includes="org/apache/hadoop/**/*.java" />
+      <fileset dir="${test.src.dir}/unit" includes="org/apache/hadoop/**/*.java" />
     </jar>
   </target>
 
@@ -1262,11 +1274,11 @@
          uri="urn:maven-artifact-ant" classpathref="mvn-ant-task.classpath"/>
   </target>   
 
-  
   <target name="mvn-install-hdfs" depends="mvn-taskdef,jar,set-version">
      <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
      <artifact:install file="${hadoop-hdfs.jar}">
         <pom refid="hadoop.hdfs"/>
+        <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
      </artifact:install>
   </target>
 
@@ -1275,9 +1287,11 @@
      <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
      <artifact:install file="${hadoop-hdfs.jar}">
         <pom refid="hadoop.hdfs"/>
+        <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
      </artifact:install>
      <artifact:install file="${hadoop-hdfs-test.jar}">
         <pom refid="hadoop.hdfs.test"/>
+        <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
      </artifact:install>
   </target>
 
@@ -1290,10 +1304,12 @@
      <artifact:deploy file="${hadoop-hdfs.jar}">
          <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
          <pom refid="hadoop.hdfs"/>
+        <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
      </artifact:deploy>
      <artifact:deploy file="${hadoop-hdfs-test.jar}">
          <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
          <pom refid="hadoop.hdfs.test"/>
+        <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
      </artifact:deploy>
   </target>
   
