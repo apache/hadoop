@@ -796,7 +796,6 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
      */
     private DatanodeInfo[] nextBlockOutputStream(String client) throws IOException {
       LocatedBlock lb = null;
-      boolean retry = false;
       DatanodeInfo[] nodes = null;
       int count = conf.getInt("dfs.client.block.write.retries", 3);
       boolean success = false;
@@ -804,7 +803,6 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         hasError = false;
         lastException = null;
         errorIndex = -1;
-        retry = false;
         success = false;
 
         long startTime = System.currentTimeMillis();
@@ -825,22 +823,10 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           DFSClient.LOG.info("Abandoning block " + block);
           dfsClient.namenode.abandonBlock(block, src, dfsClient.clientName);
           block = null;
-
-          DFSClient.LOG.debug("Excluding datanode " + nodes[errorIndex]);
+          DFSClient.LOG.info("Excluding datanode " + nodes[errorIndex]);
           excludedNodes.add(nodes[errorIndex]);
-
-          // Connection failed.  Let's wait a little bit and retry
-          retry = true;
-          try {
-            if (System.currentTimeMillis() - startTime > 5000) {
-              DFSClient.LOG.info("Waiting to find target node: " + nodes[0].getName());
-            }
-            //TODO fix this timout. Extract it o a constant, maybe make it available from conf
-            Thread.sleep(6000);
-          } catch (InterruptedException iex) {
-          }
         }
-      } while (retry && --count >= 0);
+      } while (!success && --count >= 0);
 
       if (!success) {
         throw new IOException("Unable to create new block.");

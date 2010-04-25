@@ -150,6 +150,9 @@ Trunk (unreleased changes)
 
     HDFS-666. Unit test for FsShell -text. (cdouglas via jghoman)
 
+    HDFS-1054. Remove unnecessary sleep after failure in nextBlockOutputStream.
+    (Todd Lipcon via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
