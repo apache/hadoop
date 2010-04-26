@@ -77,7 +77,7 @@
     <th>Description</th>
 </tr>
 <tr>
-    <td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td>
+    <td><a href="table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>"><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td>
 <%  if (showFragmentation) { %>
         <td align="center"><%= frags.get("-ROOT-") != null ? frags.get("-ROOT-").intValue() + "%" : "n/a" %></td>
 <%  } %>
@@ -86,7 +86,7 @@
 <%
     if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <tr>
-    <td><a href="/table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>"><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
+    <td><a href="table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>"><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
 <%  if (showFragmentation) { %>
         <td align="center"><%= frags.get(".META.") != null ? frags.get(".META.").intValue() + "%" : "n/a" %></td>
 <%  } %>
@@ -110,7 +110,7 @@
 </tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
 <tr>
-    <td><a href=/table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td>
+    <td><a href=table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td>
 <%  if (showFragmentation) { %>
         <td align="center"><%= frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
 <%  } %>
