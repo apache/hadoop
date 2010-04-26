@@ -254,6 +254,8 @@ public class ServerManager implements HConstants {
   throws IOException {
     HServerInfo info = new HServerInfo(serverInfo);
     if (isDead(info.getServerName())) {
+      LOG.info("Received report from region server " + info.getServerName() +
+        " previously marked dead. Rejecting report.");
       throw new Leases.LeaseStillHeldException(info.getServerName());
     }
     if (msgs.length > 0) {
@@ -573,11 +575,8 @@ public class ServerManager implements HConstants {
       }
     
       if (duplicateAssignment) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("region server " + serverInfo.getServerAddress().toString() +
-            " should not have opened region " +
-            Bytes.toString(region.getRegionName()));
-        }
+        LOG.warn("region server " + serverInfo.getServerAddress().toString() +
+          " should not have opened region " + Bytes.toString(region.getRegionName()));
 
         // This Region should not have been opened.
         // Ask the server to shut it down, but don't report it as closed.  

@@ -531,6 +531,8 @@ Release 0.21.0 - Unreleased
    HBASE-2452  Fix our Maven dependencies (Lars Francke via Stack)
    HBASE-2490  Improve the javadoc of the client API for HTable
                (Benoit Sigoure via Stack)
+   HBASE-2488  Master should warn more loudly about unexpected events
+               (Todd Lipcon via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

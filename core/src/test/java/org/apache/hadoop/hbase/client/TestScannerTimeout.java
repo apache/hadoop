@@ -2,7 +2,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -30,7 +30,7 @@ public class TestScannerTimeout {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    HBaseConfiguration c = TEST_UTIL.getConfiguration();
+    Configuration c = TEST_UTIL.getConfiguration();
     c.setInt("hbase.regionserver.lease.period", 1000);
     TEST_UTIL.startMiniCluster(1);
   }
