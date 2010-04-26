@@ -237,6 +237,9 @@ Trunk (unreleased changes)
     HADOOP-6689. Add directory renaming test to existing FileContext tests.
     (Eli Collins via suresh)
 
+    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
+    (hairong)
+
   BUG FIXES
 
     HADOOP-6293. Fix FsShell -text to work on filesystems other than the
@@ -354,9 +357,6 @@ Trunk (unreleased changes)
     
     HADOOP-6719. Insert all missing methods in FilterFs.
     (Rodrigo Schmidt via dhruba)
-
-    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
-    (hairong)
 
 Release 0.21.0 - Unreleased
 
