@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import junit.framework.Assert;
 
@@ -501,11 +502,12 @@ public abstract class FileContextURIBase {
      fc1.mkdir(path, FsPermission.getDefault(), true);
     }
 
-    FileStatus[] paths = fc1.listStatus(qualifiedPath("test", fc1));
+    // test listStatus that returns an array of FileStatus
+    FileStatus[] paths = fc1.util().listStatus(qualifiedPath("test", fc1));
     Assert.assertEquals(1, paths.length);
     Assert.assertEquals(qualifiedPath(hPrefix, fc1), paths[0].getPath());
 
-    paths = fc1.listStatus(qualifiedPath(hPrefix, fc1));
+    paths = fc1.util().listStatus(qualifiedPath(hPrefix, fc1));
     Assert.assertEquals(6, paths.length);
     for (int i = 0; i < dirs.length; i++) {
       boolean found = false;
@@ -517,7 +519,30 @@ public abstract class FileContextURIBase {
       Assert.assertTrue(dirs[i] + " not found", found);
     }
 
-    paths = fc1.listStatus(qualifiedPath(dirs[0], fc1));
+    paths = fc1.util().listStatus(qualifiedPath(dirs[0], fc1));
     Assert.assertEquals(0, paths.length);
+    
+    // test listStatus that returns an iterator of FileStatus
+    Iterator<FileStatus> pathsItor = fc1.listStatus(qualifiedPath("test", fc1));
+    Assert.assertEquals(qualifiedPath(hPrefix, fc1), pathsItor.next().getPath());
+    Assert.assertFalse(pathsItor.hasNext());
+
+    pathsItor = fc1.listStatus(qualifiedPath(hPrefix, fc1));
+    int dirLen = 0;
+    for (; pathsItor.hasNext(); dirLen++) {
+      boolean found = false;
+      FileStatus stat = pathsItor.next();
+      for (int j = 0; j < dirs.length; j++) {
+        if (qualifiedPath(dirs[j],fc1).equals(stat.getPath())) {
+          found = true;
+          break;
+        }
+      }
+      Assert.assertTrue(stat.getPath() + " not found", found);
+    }
+    Assert.assertEquals(6, dirLen);
+
+    pathsItor = fc1.listStatus(qualifiedPath(dirs[0], fc1));
+    Assert.assertFalse(pathsItor.hasNext());
   }
 }

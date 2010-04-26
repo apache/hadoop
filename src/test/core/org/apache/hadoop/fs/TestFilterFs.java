@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
+import java.util.Iterator;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
@@ -31,6 +32,9 @@ public class TestFilterFs extends TestCase {
 
   public static class DontCheck {
     public void checkScheme(URI uri, String supportedScheme) { }
+    public Iterator<FileStatus> listStatusIterator(Path f) {
+      return null;
+    }
   }
   
   public void testFilterFileSystem() throws Exception {

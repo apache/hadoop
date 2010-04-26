@@ -25,7 +25,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -611,8 +613,8 @@ public abstract class AbstractFileSystem {
       }
       // Delete the destination that is a file or an empty directory
       if (dstStatus.isDir()) {
-        FileStatus[] list = listStatus(dst);
-        if (list != null && list.length != 0) {
+        Iterator<FileStatus> list = listStatusIterator(dst);
+        if (list != null && list.hasNext()) {
           throw new IOException(
               "rename cannot overwrite non empty destination directory " + dst);
         }
@@ -752,6 +754,38 @@ public abstract class AbstractFileSystem {
    * The specification of this method matches that of
    * {@link FileContext#listStatus(Path)} except that Path f must be for this
    * file system.
+   */
+  protected Iterator<FileStatus> listStatusIterator(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    return new Iterator<FileStatus>() {
+      private int i = 0;
+      private FileStatus[] statusList = listStatus(f);
+      
+      @Override
+      public boolean hasNext() {
+        return i < statusList.length;
+      }
+      
+      @Override
+      public FileStatus next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        return statusList[i++];
+      }
+      
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("Remove is not supported");
+      }
+    };
+  }
+
+  /**
+   * The specification of this method matches that of
+   * {@link FileContext.Util#listStatus(Path)} except that Path f must be 
+   * for this file system.
    */
   protected abstract FileStatus[] listStatus(final Path f)
       throws AccessControlException, FileNotFoundException,

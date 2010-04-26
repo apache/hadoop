@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
@@ -262,11 +263,12 @@ public abstract class FileContextMainOperationsBaseTest  {
       fc.mkdir(path, FsPermission.getDefault(), true);
     }
 
-    FileStatus[] paths = fc.listStatus(getTestRootPath(fc, "test"));
+    // test listStatus that returns an array
+    FileStatus[] paths = fc.util().listStatus(getTestRootPath(fc, "test"));
     Assert.assertEquals(1, paths.length);
     Assert.assertEquals(getTestRootPath(fc, "test/hadoop"), paths[0].getPath());
 
-    paths = fc.listStatus(getTestRootPath(fc, "test/hadoop"));
+    paths = fc.util().listStatus(getTestRootPath(fc, "test/hadoop"));
     Assert.assertEquals(3, paths.length);
 
     Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/a"),
@@ -276,8 +278,34 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
         paths));
 
-    paths = fc.listStatus(getTestRootPath(fc, "test/hadoop/a"));
+    paths = fc.util().listStatus(getTestRootPath(fc, "test/hadoop/a"));
     Assert.assertEquals(0, paths.length);
+    
+    // test listStatus that returns an iterator
+    Iterator<FileStatus> pathsIterator = 
+      fc.listStatus(getTestRootPath(fc, "test"));
+    Assert.assertEquals(getTestRootPath(fc, "test/hadoop"), 
+        pathsIterator.next().getPath());
+    Assert.assertFalse(pathsIterator.hasNext());
+
+    pathsIterator = fc.listStatus(getTestRootPath(fc, "test/hadoop"));
+    FileStatus[] subdirs = new FileStatus[3];
+    int i=0;
+    while(i<3 && pathsIterator.hasNext()) {
+      subdirs[i++] = pathsIterator.next();
+    }
+    Assert.assertFalse(pathsIterator.hasNext());
+    Assert.assertTrue(i==3);
+    
+    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/a"),
+        subdirs));
+    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/b"),
+        subdirs));
+    Assert.assertTrue(containsPath(getTestRootPath(fc, "test/hadoop/c"),
+        subdirs));
+
+    pathsIterator = fc.listStatus(getTestRootPath(fc, "test/hadoop/a"));
+    Assert.assertFalse(pathsIterator.hasNext());
   }
   
   @Test

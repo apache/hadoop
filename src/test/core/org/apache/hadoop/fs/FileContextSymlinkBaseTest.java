@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.EnumSet;
 import org.apache.hadoop.fs.FileContext;
@@ -606,8 +607,15 @@ public abstract class FileContextSymlinkBaseTest {
     fc.createSymlink(new Path(testBaseDir1()), link, false);
     // The size of the result is file system dependent, Hdfs is 2 (file 
     // and link) and LocalFs is 3 (file, link, file crc).
-    assertTrue(fc.listStatus(link).length == 2 ||
-               fc.listStatus(link).length == 3);
+    FileStatus[] stats = fc.util().listStatus(link);
+    assertTrue(stats.length == 2 || stats.length == 3);
+    Iterator<FileStatus> statsItor = fc.listStatus(link);
+    int dirLen = 0;
+    while(statsItor.hasNext()) {
+      statsItor.next();
+      dirLen++;
+    }
+    assertTrue(dirLen == 2 || dirLen == 3);
   }
   
   @Test

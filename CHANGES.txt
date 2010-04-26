@@ -355,6 +355,9 @@ Trunk (unreleased changes)
     HADOOP-6719. Insert all missing methods in FilterFs.
     (Rodrigo Schmidt via dhruba)
 
+    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
+    (hairong)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

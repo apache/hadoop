@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1378,12 +1379,11 @@ public final class FileContext {
    * 
    * @param f is the path
    *
-   * @return the statuses of the files/directories in the given path
+   * @return an iterator that traverses statuses of the files/directories 
+   *         in the given path
    *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException If <code>f</code> does not exist
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
    * @throws IOException If an I/O error occurred
@@ -1394,14 +1394,14 @@ public final class FileContext {
    * @throws UnexpectedServerException If server implementation throws 
    *           undeclared exception to RPC server
    */
-  public FileStatus[] listStatus(final Path f) throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException,
-      UnresolvedLinkException, IOException {
+  public Iterator<FileStatus> listStatus(final Path f) throws
+      AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
-    return new FSLinkResolver<FileStatus[]>() {
-      public FileStatus[] next(final AbstractFileSystem fs, final Path p) 
+    return new FSLinkResolver<Iterator<FileStatus>>() {
+      public Iterator<FileStatus> next(final AbstractFileSystem fs, final Path p) 
         throws IOException, UnresolvedLinkException {
-        return fs.listStatus(p);
+        return fs.listStatusIterator(p);
       }
     }.resolve(this, absF);
   }
@@ -1521,7 +1521,9 @@ public final class FileContext {
       }
       // f is a directory
       long[] summary = {0, 0, 1};
-      for(FileStatus s : FileContext.this.listStatus(f)) {
+      Iterator<FileStatus> statusIterator = FileContext.this.listStatus(f);
+      while(statusIterator.hasNext()) {
+        FileStatus s = statusIterator.next();
         ContentSummary c = s.isDir() ? getContentSummary(s.getPath()) :
                                        new ContentSummary(s.getLen(), 1, 0);
         summary[0] += c.getLength();
@@ -1606,7 +1608,7 @@ public final class FileContext {
     private void listStatus(ArrayList<FileStatus> results, Path f,
         PathFilter filter) throws AccessControlException,
         FileNotFoundException, IOException {
-      FileStatus[] listing = FileContext.this.listStatus(f);
+      FileStatus[] listing = listStatus(f);
       if (listing != null) {
         for (int i = 0; i < listing.length; i++) {
           if (filter.accept(listing[i].getPath())) {
@@ -1614,6 +1616,39 @@ public final class FileContext {
           }
         }
       }
+    }
+
+    /**
+     * List the statuses of the files/directories in the given path 
+     * if the path is a directory.
+     * 
+     * @param f is the path
+     *
+     * @return an array that contains statuses of the files/directories 
+     *         in the given path
+     *
+     * @throws AccessControlException If access is denied
+     * @throws FileNotFoundException If <code>f</code> does not exist
+     * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+     *           not supported
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
+     */
+    public FileStatus[] listStatus(final Path f) throws AccessControlException,
+        FileNotFoundException, UnsupportedFileSystemException,
+        IOException {
+      final Path absF = fixRelativePart(f);
+      return new FSLinkResolver<FileStatus[]>() {
+        public FileStatus[] next(final AbstractFileSystem fs, final Path p) 
+          throws IOException, UnresolvedLinkException {
+          return fs.listStatus(p);
+        }
+      }.resolve(FileContext.this, absF);
     }
 
     /**
@@ -1911,7 +1946,7 @@ public final class FileContext {
       if (isDirectory(qSrc)) {
         checkDependencies(qSrc, qDst);
         mkdir(qDst, FsPermission.getDefault(), true);
-        FileStatus[] contents = FileContext.this.listStatus(qSrc);
+        FileStatus[] contents = listStatus(qSrc);
         for (FileStatus content : contents) {
           copy(content.getPath(), new Path(qDst, content.getPath()),
                deleteSource, overwrite);
