@@ -17,39 +17,43 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.security.MessageDigest;
+
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSInputStream;
-import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.server.common.*;
-import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-
-import junit.framework.TestCase;
-
-import static org.mockito.Mockito.*;
-import org.mockito.stubbing.Answer;
+import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * These tests make sure that DFSClient retries fetching data from DFS
@@ -121,181 +125,50 @@ public class TestDFSClientRetries extends TestCase {
   }
   
   // more tests related to different failure cases can be added here.
-  
-  class TestNameNode implements ClientProtocol
-  {
-    int num_calls = 0;
-    
-    // The total number of calls that can be made to addBlock
-    // before an exception is thrown
-    int num_calls_allowed; 
-    public final String ADD_BLOCK_EXCEPTION = "Testing exception thrown from"
-                                             + "TestDFSClientRetries::"
-                                             + "TestNameNode::addBlock";
-    public final String RETRY_CONFIG
-          = "dfs.client.block.write.locateFollowingBlock.retries";
-          
-    public TestNameNode(Configuration conf) throws IOException
-    {
-      // +1 because the configuration value is the number of retries and
-      // the first call is not a retry (e.g., 2 retries == 3 total
-      // calls allowed)
-      this.num_calls_allowed = conf.getInt(RETRY_CONFIG, 5) + 1;
-    }
 
-    public long getProtocolVersion(String protocol, 
-                                     long clientVersion)
-    throws IOException
-    {
-      return versionID;
-    }
-
-    public LocatedBlock addBlock(String src, String clientName,
-                                 Block previous) throws IOException {
-
-      return addBlock(src, clientName, previous, null);
-    }
-
-    public LocatedBlock addBlock(String src,
-                                 String clientName,
-                                 Block previous,
-                                 DatanodeInfo[] excludedNode
-                                 ) throws IOException
-    {
-      num_calls++;
-      if (num_calls > num_calls_allowed) { 
-        throw new IOException("addBlock called more times than "
-                              + RETRY_CONFIG
-                              + " allows.");
-      } else {
-          throw new RemoteException(NotReplicatedYetException.class.getName(),
-                                    ADD_BLOCK_EXCEPTION);
-      }
-    }
-    
-    
-    // The following methods are stub methods that are not needed by this mock class
-    
-    public LocatedBlocks  getBlockLocations(String src, long offset, long length) throws IOException { return null; }
-    
-    public FsServerDefaults getServerDefaults() throws IOException { return null; }
-    
-    public void create(String src, FsPermission masked, String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent, short replication, long blockSize) throws IOException {}
-    
-    public LocatedBlock append(String src, String clientName) throws IOException { return null; }
-
-    public boolean setReplication(String src, short replication) throws IOException { return false; }
-
-    public void setPermission(String src, FsPermission permission) throws IOException {}
-
-    public void setOwner(String src, String username, String groupname) throws IOException {}
-
-    public void abandonBlock(Block b, String src, String holder) throws IOException {}
-
-    public boolean complete(String src, String clientName, Block last) throws IOException { return false; }
-
-    public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {}
-
-    public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
-        throws IOException {
-      return null;
-    }
-    
-    public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
-        throws InvalidToken, IOException {
-      return 0;
-    }
-
-    public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-        throws IOException {
-    }
-    
-    
-    @Deprecated
-    public boolean rename(String src, String dst) throws IOException { return false; }
-    
-    public void concat(String trg, String[] srcs) throws IOException {  }
-
-    public void rename(String src, String dst, Rename... options) throws IOException { }
-
-    public boolean delete(String src) throws IOException { return false; }
-
-    public boolean delete(String src, boolean recursive) throws IOException { return false; }
-
-    public boolean mkdirs(String src, FsPermission masked, boolean createParent) throws IOException { return false; }
-
-    public DirectoryListing getListing(String src, byte[] startName) throws IOException { return null; }
-
-    public void renewLease(String clientName) throws IOException {}
-
-    public long[] getStats() throws IOException { return null; }
-
-    public DatanodeInfo[] getDatanodeReport(FSConstants.DatanodeReportType type) throws IOException { return null; }
-
-    public long getPreferredBlockSize(String filename) throws IOException { return 0; }
-
-    public boolean setSafeMode(FSConstants.SafeModeAction action) throws IOException { return false; }
-
-    public void saveNamespace() throws IOException {}
-
-    public boolean restoreFailedStorage(String arg) throws AccessControlException { return false; }
-
-    public void refreshNodes() throws IOException {}
-
-    public void finalizeUpgrade() throws IOException {}
-
-    public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) throws IOException { return null; }
-
-    public void metaSave(String filename) throws IOException {}
-
-    public HdfsFileStatus getFileInfo(String src) throws IOException { return null; }
-
-    public HdfsFileStatus getFileLinkInfo(String src) throws IOException { return null; }
-
-    public ContentSummary getContentSummary(String path) throws IOException { return null; }
-
-    public void setQuota(String path, long namespaceQuota, long diskspaceQuota) throws IOException {}
-
-    public void fsync(String src, String client) throws IOException {}
-
-    public void setTimes(String src, long mtime, long atime) throws IOException {}
-
-    public FileStatus[] getCorruptFiles()
-      throws AccessControlException, IOException {
-      return null;
-    }
-
-    public void createSymlink(String target, String newpath, 
-        FsPermission dirPerm, boolean createPath) 
-        throws IOException, UnresolvedLinkException {}
-
-    public String getLinkTarget(String src) throws IOException { return null; }
-
-    @Override public LocatedBlock updateBlockForPipeline(Block block, 
-        String clientName) throws IOException { return null; }
-
-    @Override public void updatePipeline(String clientName, Block oldblock,
-        Block newBlock, DatanodeID[] newNodes)
-        throws IOException {}
-  }
-  
+  /**
+   * Verify that client will correctly give up after the specified number
+   * of times trying to add a block
+   */
+  @SuppressWarnings("serial")
   public void testNotYetReplicatedErrors() throws IOException
-  {   
+  { 
+    final String exceptionMsg = "Nope, not replicated yet...";
+    final int maxRetries = 1; // Allow one retry (total of two calls)
     Configuration conf = new HdfsConfiguration();
+   conf.setInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 
+                maxRetries);
     
-    // allow 1 retry (2 total calls)
-    conf.setInt("dfs.client.block.write.locateFollowingBlock.retries", 1);
-        
-    TestNameNode tnn = new TestNameNode(conf);
-    final DFSClient client = new DFSClient(null, tnn, conf, null);
+    NameNode mockNN = mock(NameNode.class);
+    Answer<Object> answer = new ThrowsException(new IOException()) {
+      int retryCount = 0;
+      
+      @Override
+      public Object answer(InvocationOnMock invocation) 
+                       throws Throwable {
+        retryCount++;
+        System.out.println("addBlock has been called "  + retryCount + " times");
+        if(retryCount > maxRetries + 1) // First call was not a retry
+          throw new IOException("Retried too many times: " + retryCount);
+        else
+          throw new RemoteException(NotReplicatedYetException.class.getName(),
+                                    exceptionMsg);
+      }
+    };
+    when(mockNN.addBlock(anyString(), 
+                         anyString(),
+                         any(Block.class),
+                         any(DatanodeInfo[].class))).thenAnswer(answer);
+
+    final DFSClient client = new DFSClient(null, mockNN, conf, null);
     OutputStream os = client.create("testfile", true);
     os.write(20); // write one random byte
     
     try {
       os.close();
     } catch (Exception e) {
-      assertTrue("Retries are not being stopped correctly",
-           e.getMessage().equals(tnn.ADD_BLOCK_EXCEPTION));
+      assertTrue("Retries are not being stopped correctly: " + e.getMessage(),
+           e.getMessage().equals(exceptionMsg));
     }
   }
 
@@ -421,7 +294,6 @@ public class TestDFSClientRetries extends TestCase {
                                badBlocks, null, true);
     }
   }
-  
   
   /**
    * Test that a DFSClient waits for random time before retry on busy blocks.
@@ -692,3 +564,4 @@ public class TestDFSClientRetries extends TestCase {
     }
   }
 }
+

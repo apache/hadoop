@@ -153,6 +153,9 @@ Trunk (unreleased changes)
     HDFS-1054. Remove unnecessary sleep after failure in nextBlockOutputStream.
     (Todd Lipcon via jghoman)
 
+    HDFS-921. Convert TestDFSClientRetries::testNotYetReplicatedErrors
+    to Mockito. (jghoman)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
