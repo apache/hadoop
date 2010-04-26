@@ -529,6 +529,8 @@ Release 0.21.0 - Unreleased
    HBASE-1892  [performance] make hbase splits run faster
    HBASE-2456  deleteChangedReaderObserver spitting warnings after HBASE-2248
    HBASE-2452  Fix our Maven dependencies (Lars Francke via Stack)
+   HBASE-2490  Improve the javadoc of the client API for HTable
+               (Benoit Sigoure via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

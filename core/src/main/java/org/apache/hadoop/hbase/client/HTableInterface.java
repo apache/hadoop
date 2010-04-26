@@ -31,6 +31,7 @@ import java.util.List;
  * @since 0.21.0
  */
 public interface HTableInterface {
+
   /**
    * Gets the name of this table.
    *
@@ -39,17 +40,16 @@ public interface HTableInterface {
   byte[] getTableName();
 
   /**
-   * Gets the configuration of this instance.
-   *
-   * @return The configuration.
+   * Returns the {@link Configuration} object used by this instance.
+   * <p>
+   * The reference returned is not a copy, so any change made to it will
+   * affect this instance.
    */
   Configuration getConfiguration();
 
   /**
-   * Gets the table descriptor for this table.
-   *
-   * @return table metadata
-   * @throws IOException e
+   * Gets the {@link HTableDescriptor table descriptor} for this table.
+   * @throws IOException if a remote or network exception occurs.
    */
   HTableDescriptor getTableDescriptor() throws IOException;
 
@@ -70,72 +70,84 @@ public interface HTableInterface {
   boolean exists(Get get) throws IOException;
 
   /**
-   * Method for getting data from a row.
-   * If the row cannot be found an empty Result is returned.
-   * This can be checked by calling {@link Result#isEmpty()}
-   *
-   * @param get the Get to fetch
-   * @return the result
-   * @throws IOException e
+   * Extracts certain cells from a given row.
+   * @param get The object that specifies what data to fetch and from which row.
+   * @return The data coming from the specified row, if it exists.  If the row
+   * specified doesn't exist, the {@link Result} instance returned won't
+   * contain any {@link KeyValue}, as indicated by {@link Result#isEmpty()}.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   Result get(Get get) throws IOException;
 
   /**
-   * Return the row that matches <i>row</i> and <i>family</i> exactly, or the
-   * one that immediately precedes it.
+   * Return the row that matches <i>row</i> exactly,
+   * or the one that immediately precedes it.
    *
-   * @param row row key
-   * @param family Column family to look for row in
-   * @return map of values
-   * @throws IOException e
+   * @param row A row key.
+   * @param family Column family to include in the {@link Result}.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   Result getRowOrBefore(byte[] row, byte[] family) throws IOException;
 
   /**
-   * Get a scanner on the current table as specified by the {@link Scan} object.
+   * Returns a scanner on the current table as specified by the {@link Scan}
+   * object.
    *
-   * @param scan a configured {@link Scan} object
-   * @return the scanner
-   * @throws IOException e
+   * @param scan A configured {@link Scan} object.
+   * @return A scanner.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   ResultScanner getScanner(Scan scan) throws IOException;
 
   /**
-   * Get a scanner on the current table as specified by the {@link Scan} object.
+   * Gets a scanner on the current table for the given family.
    *
-   * @param family the column family to scan
-   * @return the scanner
-   * @throws IOException e
+   * @param family The column family to scan.
+   * @return A scanner.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   ResultScanner getScanner(byte[] family) throws IOException;
 
   /**
-   * Get a scanner on the current table as specified by the {@link Scan} object.
+   * Gets a scanner on the current table for the given family and qualifier.
    *
-   * @param family the column family to scan
-   * @param qualifier the column qualifier to scan
-   * @return The scanner
-   * @throws IOException e
+   * @param family The column family to scan.
+   * @param qualifier The column qualifier to scan.
+   * @return A scanner.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   ResultScanner getScanner(byte[] family, byte[] qualifier) throws IOException;
 
+
   /**
-   * Commit a Put to the table.
+   * Puts some data in the table.
    * <p>
-   * If autoFlush is false, the update is buffered.
-   *
-   * @param put data
-   * @throws IOException e
+   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
+   * until the internal buffer is full.
+   * @param put The data to put.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   void put(Put put) throws IOException;
 
   /**
-   * Commit a List of Puts to the table.
+   * Puts some data in the table, in batch.
    * <p>
-   * If autoFlush is false, the update is buffered.
-   *
-   * @param puts list of puts
-   * @throws IOException e
+   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
+   * until the internal buffer is full.
+   * @param puts The list of mutations to apply.  The list gets modified by this
+   * method (in particular it gets re-ordered, so the order in which the elements
+   * are inserted in the list gives no guarantee as to the order in which the
+   * {@link Put}s are executed).
+   * @throws IOException if a remote or network exception occurs. In that case
+   * the {@code puts} argument will contain the {@link Put} instances that
+   * have not be successfully applied.
+   * @since 0.20.0
    */
   void put(List<Put> puts) throws IOException;
 
@@ -156,33 +168,40 @@ public interface HTableInterface {
       byte[] value, Put put) throws IOException;
 
   /**
-   * Deletes as specified by the delete.
+   * Deletes the specified cells/row.
    *
-   * @param delete a delete
-   * @throws IOException e
+   * @param delete The object that specifies what to delete.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
    */
   void delete(Delete delete) throws IOException;
 
   /**
-   * Bulk commit a List of Deletes to the table.
-   * @param deletes List of deletes. List is modified by this method.
-   * On exception holds deletes that were NOT applied.
-   * @throws IOException e
+   * Deletes the specified cells/rows in bulk.
+   * @param deletes List of things to delete.  List gets modified by this
+   * method (in particular it gets re-ordered, so the order in which the elements
+   * are inserted in the list gives no guarantee as to the order in which the
+   * {@link Delete}s are executed).
+   * @throws IOException if a remote or network exception occurs. In that case
+   * the {@code deletes} argument will contain the {@link Delete} instances
+   * that have not be successfully applied.
+   * @since 0.20.1
    */
   void delete(List<Delete> deletes) throws IOException;
 
   /**
-   * Atomically increments a column value. If the column value already exists
-   * and is not a big-endian long, this could throw an exception. If the column
-   * value does not yet exist it is initialized to <code>amount</code> and
-   * written to the specified column.
-   *
-   * @param row row to increment
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param amount long amount to increment
-   * @return the new value
-   * @throws IOException e
+   * Atomically increments a column value.
+   * <p>
+   * Equivalent to {@code {@link #incrementColumnValue(byte[], byte[], byte[],
+   * long, boolean) incrementColumnValue}(row, family, qualifier, amount,
+   * <b>true</b>)}
+   * @param row The row that contains the cell to increment.
+   * @param family The column family of the cell to increment.
+   * @param qualifier The column qualifier of the cell to increment.
+   * @param amount The amount to increment the cell with (or decrement, if the
+   * amount is negative).
+   * @return The new value, post increment.
+   * @throws IOException if a remote or network exception occurs.
    */
   long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException;
@@ -195,52 +214,68 @@ public interface HTableInterface {
    *
    * <p>Setting writeToWAL to false means that in a fail scenario, you will lose
    * any increments that have not been flushed.
-   * @param row row to increment
-   * @param family column family
-   * @param qualifier column qualifier
-   * @param amount long amount to increment
-   * @param writeToWAL true if increment should be applied to WAL, false if not
-   * @return The new value.
-   * @throws IOException e
+   * @param row The row that contains the cell to increment.
+   * @param family The column family of the cell to increment.
+   * @param qualifier The column qualifier of the cell to increment.
+   * @param amount The amount to increment the cell with (or decrement, if the
+   * amount is negative).
+   * @param writeToWAL if {@code true}, the operation will be applied to the
+   * Write Ahead Log (WAL).  This makes the operation slower but safer, as if
+   * the call returns successfully, it is guaranteed that the increment will
+   * be safely persisted.  When set to {@code false}, the call may return
+   * successfully before the increment is safely persisted, so it's possible
+   * that the increment be lost in the event of a failure happening before the
+   * operation gets persisted.
+   * @return The new value, post increment.
+   * @throws IOException if a remote or network exception occurs.
    */
   long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, boolean writeToWAL) throws IOException; 
 
   /**
-   * Get the value of autoFlush. If true, updates will not be buffered.
+   * Tells whether or not 'auto-flush' is turned on.
    *
-   * @return true if autoFlush is enabled for this table
+   * @return {@code true} if 'auto-flush' is enabled (default), meaning
+   * {@link Put} operations don't get buffered/delayed and are immediately
+   * executed.
    */
   boolean isAutoFlush();
 
   /**
-   * Flushes buffer data. Called automatically when autoFlush is true.
-   *
-   * @throws IOException e
+   * Executes all the buffered {@link Put} operations.
+   * <p>
+   * This method gets called once automatically for every {@link Put} or batch
+   * of {@link Put}s (when {@link #put(List<Put>)} is used) when
+   * {@link #isAutoFlush} is {@code true}.
+   * @throws IOException if a remote or network exception occurs.
    */
   void flushCommits() throws IOException;
 
   /**
-   * Releases held resources.
+   * Releases any resources help or pending changes in internal buffers.
    *
-   * @throws IOException e
+   * @throws IOException if a remote or network exception occurs.
    */
   void close() throws IOException;
 
   /**
-   * Obtains a row lock.
+   * Obtains a lock on a row.
    *
-   * @param row the row to lock
-   * @return rowLock RowLock containing row and lock id
-   * @throws IOException e
+   * @param row The row to lock.
+   * @return A {@link RowLock} containing the row and lock id.
+   * @throws IOException if a remote or network exception occurs.
+   * @see RowLock
+   * @see #unlockRow
    */
   RowLock lockRow(byte[] row) throws IOException;
 
   /**
-   * Releases the row lock.
+   * Releases a row lock.
    *
-   * @param rl the row lock to release
-   * @throws IOException e
+   * @param rl The row lock to release.
+   * @throws IOException if a remote or network exception occurs.
+   * @see RowLock
+   * @see #unlockRow
    */
   void unlockRow(RowLock rl) throws IOException;
 }
