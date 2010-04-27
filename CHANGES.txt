@@ -535,6 +535,8 @@ Release 0.21.0 - Unreleased
                (Benoit Sigoure via Stack)
    HBASE-2488  Master should warn more loudly about unexpected events
                (Todd Lipcon via Stack)
+   HBASE-2393  ThriftServer instantiates a new HTable per request
+               (Bogdan DRAGU via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
