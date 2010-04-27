@@ -226,6 +226,9 @@ Trunk (unreleased changes)
     HADOOP-6717. Log levels in o.a.h.security.Groups too high 
     (Todd Lipcon via jghoman)
 
+    HADOOP-6667. RPC.waitForProxy should retry through NoRouteToHostException.
+    (Todd Lipcon via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

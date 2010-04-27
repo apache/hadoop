@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.io.*;
 import java.util.Map;
@@ -186,6 +187,9 @@ public class RPC {
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
         ioe = te;
+      } catch(NoRouteToHostException nrthe) { // perhaps a VIP is failing over
+        LOG.info("No route to host for server: " + addr);
+        ioe = nrthe;
       }
       // check if timed out
       if (System.currentTimeMillis()-timeout >= startTime) {
