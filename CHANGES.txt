@@ -76,6 +76,9 @@ Trunk (unreleased changes)
     HADOOP-6657. Add a capitalization method to StringUtils for MAPREDUCE-1545.
     (Luke Lu via Steve Loughran)
 
+    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
+    (hairong)
+
   IMPROVEMENTS
 
     HADOOP-6283. Improve the exception messages thrown by
@@ -243,8 +246,8 @@ Trunk (unreleased changes)
     HADOOP-6689. Add directory renaming test to existing FileContext tests.
     (Eli Collins via suresh)
 
-    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
-    (hairong)
+    HADOOP-6713. The RPC server Listener thread is a scalability bottleneck.
+    (Dmytro Molkov via hairong)
 
   BUG FIXES
 

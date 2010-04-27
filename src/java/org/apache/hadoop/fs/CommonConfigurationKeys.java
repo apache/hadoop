@@ -123,6 +123,9 @@ public class CommonConfigurationKeys {
                                        "ipc.server.max.response.size";
   public static final int     IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT = 
                                         1024*1024;
+  public static final String IPC_SERVER_RPC_READ_THREADS_KEY =
+                                        "ipc.server.read.threadpool.size";
+  public static final int IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
   /**
    * How many calls per handler are allowed in the queue.
    */

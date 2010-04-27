@@ -424,6 +424,15 @@ public class TestRPC extends TestCase {
     // Reset authorization to expect failure
     conf.set(ACL_CONFIG, "invalid invalid");
     doRPCs(conf, true);
+    
+    conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY, 2);
+    // Expect to succeed
+    conf.set(ACL_CONFIG, "*");
+    doRPCs(conf, false);
+    
+    // Reset authorization to expect failure
+    conf.set(ACL_CONFIG, "invalid invalid");
+    doRPCs(conf, true);
   }
 
   /**
@@ -432,7 +441,11 @@ public class TestRPC extends TestCase {
    */
   public void testNoPings() throws Exception {
     Configuration conf = new Configuration();
+    
     conf.setBoolean("ipc.client.ping", false);
+    new TestRPC("testnoPings").testCalls(conf);
+    
+    conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY, 2);
     new TestRPC("testnoPings").testCalls(conf);
   }
 
@@ -461,6 +474,31 @@ public class TestRPC extends TestCase {
       succeeded = true;
     } finally {
       server.stop();
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+    }
+    assertTrue(succeeded);
+
+    conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY, 2);
+
+    final Server multiServer = RPC.getServer(TestProtocol.class,
+        new TestImpl(), ADDRESS, 0, 5, true, conf, null);
+    multiServer.enableSecurity();
+    multiServer.start();
+    succeeded = false;
+    final InetSocketAddress mulitServerAddr =
+                      NetUtils.getConnectAddress(multiServer);
+    proxy = null;
+    try {
+      proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+          TestProtocol.versionID, mulitServerAddr, conf);
+    } catch (RemoteException e) {
+      LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
+      assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
+      succeeded = true;
+    } finally {
+      multiServer.stop();
       if (proxy != null) {
         RPC.stopProxy(proxy);
       }
