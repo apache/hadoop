@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.security;
 
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 
 import java.io.IOException;
@@ -542,7 +540,7 @@ public class UserGroupInformation {
    * @param userGroups the names of the groups that the user belongs to
    * @return a fake user for running unit tests
    */
-  @InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   public static UserGroupInformation createUserForTesting(String user, 
                                                           String[] userGroups) {
     ensureInitialized();
@@ -568,7 +566,7 @@ public class UserGroupInformation {
    *          the names of the groups that the user belongs to
    * @return a fake user for running unit tests
    */
-  @InterfaceAudience.LimitedPrivate( { HDFS, MAPREDUCE })
+  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public static UserGroupInformation createProxyUserForTesting(String user,
       UserGroupInformation realUser, String[] userGroups) {
     ensureInitialized();

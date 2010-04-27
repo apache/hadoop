@@ -229,6 +229,9 @@ Trunk (unreleased changes)
     HADOOP-6667. RPC.waitForProxy should retry through NoRouteToHostException.
     (Todd Lipcon via tomwhite)
 
+    HADOOP-6677. InterfaceAudience.LimitedPrivate should take a string not an
+    enum. (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

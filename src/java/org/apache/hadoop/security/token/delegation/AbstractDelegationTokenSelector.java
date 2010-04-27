@@ -25,14 +25,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 
 /**
  * Look through tokens to find the first delegation token that matches the
  * service and return it.
  */
-@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public 
 class AbstractDelegationTokenSelector<TokenIdent 
 extends AbstractDelegationTokenIdentifier> 

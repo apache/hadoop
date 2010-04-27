@@ -39,7 +39,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
@@ -1135,7 +1134,7 @@ public final class FileContext {
    * RuntimeExceptions:
    * @throws InvalidPathException If path <code>f</code> is invalid
    */
-  @InterfaceAudience.LimitedPrivate({Project.HDFS, Project.MAPREDUCE})
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   @InterfaceStability.Evolving
   public BlockLocation[] getFileBlockLocations(final Path f, final long start,
       final long len) throws AccessControlException, FileNotFoundException,

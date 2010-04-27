@@ -21,9 +21,6 @@ package org.apache.hadoop.security.token.delegation;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -42,7 +39,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 
-@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public abstract 
 class AbstractDelegationTokenSecretManager<TokenIdent 
 extends AbstractDelegationTokenIdentifier> 

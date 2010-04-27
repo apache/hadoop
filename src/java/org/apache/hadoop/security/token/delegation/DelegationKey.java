@@ -27,13 +27,11 @@ import javax.crypto.SecretKey;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 
 /**
  * Key used for generating and verifying delegation tokens
  */
-@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class DelegationKey implements Writable {
   private int keyId;
   private long expiryDate;

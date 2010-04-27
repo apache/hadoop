@@ -21,12 +21,11 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.*;
 
 /** 
  * Thrown when a symbolic link is encountered in a path.
  */
-@InterfaceAudience.LimitedPrivate({Project.HDFS})
+@InterfaceAudience.LimitedPrivate({"HDFS"})
 public class UnresolvedLinkException extends IOException {
   private static final long serialVersionUID = 1L;
 
