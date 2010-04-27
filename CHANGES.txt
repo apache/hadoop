@@ -291,6 +291,8 @@ Release 0.21.0 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2491  master.jsp uses absolute links to table.jsp. This broke when
                master.jsp moved under webapps/master(Cristian Ivascu via Stack)
+   HBASE-2487  Uncaught exceptions in receiving IPC responses orphan clients
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
