@@ -46,11 +46,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class ExplicitColumnTracker implements ColumnTracker {
 
-  private int maxVersions;
-  private List<ColumnCount> columns;
+  private final int maxVersions;
+  private final List<ColumnCount> columns;
+  private final List<ColumnCount> columnsToReuse;
   private int index;
   private ColumnCount column;
-  private NavigableSet<byte[]> origColumns;
   
   /**
    * Default constructor.
@@ -59,7 +59,11 @@ public class ExplicitColumnTracker implements ColumnTracker {
    */
   public ExplicitColumnTracker(NavigableSet<byte[]> columns, int maxVersions) {
     this.maxVersions = maxVersions;
-    this.origColumns = columns;
+    this.columns = new ArrayList<ColumnCount>(columns.size());
+    this.columnsToReuse = new ArrayList<ColumnCount>(columns.size());
+    for(byte [] column : columns) {
+      this.columnsToReuse.add(new ColumnCount(column,maxVersions));
+    }
     reset();
   }
   
@@ -147,15 +151,16 @@ public class ExplicitColumnTracker implements ColumnTracker {
 
   // Called between every row.
   public void reset() {
-    buildColumnList(this.origColumns);
+    buildColumnList();
     this.index = 0;
     this.column = this.columns.get(this.index);
   }
 
-  private void buildColumnList(NavigableSet<byte[]> columns) {
-    this.columns = new ArrayList<ColumnCount>(columns.size());
-    for(byte [] column : columns) {
-      this.columns.add(new ColumnCount(column,maxVersions));
+  private void buildColumnList() {
+    this.columns.clear();
+    this.columns.addAll(this.columnsToReuse);
+    for(ColumnCount col : this.columns) {
+      col.setCount(this.maxVersions);
     }
   }
 }

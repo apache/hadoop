@@ -1815,12 +1815,12 @@ public class HRegionServer implements HConstants, HRegionInterface,
         throw e;
       }
       this.leases.renewLease(scannerName);
-      List<Result> results = new ArrayList<Result>();
+      List<Result> results = new ArrayList<Result>(nbRows);
       long currentScanResultSize = 0;
+      List<KeyValue> values = new ArrayList<KeyValue>();
       for (int i = 0; i < nbRows && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
-        List<KeyValue> values = new ArrayList<KeyValue>();
         boolean moreRows = s.next(values);
         if (!values.isEmpty()) {
           for (KeyValue kv : values) {
@@ -1831,6 +1831,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         if (!moreRows) {
           break;
         }
+        values.clear();
       }
       // Below is an ugly hack where we cast the InternalScanner to be a
       // HRegion.RegionScanner.  The alternative is to change InternalScanner
