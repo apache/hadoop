@@ -376,6 +376,9 @@ Trunk (unreleased changes)
     HADOOP-6724. IPC doesn't properly handle IOEs thrown by socket factory.
     (Todd Lipcon via tomwhite)
 
+    HADOOP-6722. NetUtils.connect should check that it hasn't connected a socket
+    to itself. (Todd Lipcon via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
