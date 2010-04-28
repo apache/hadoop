@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Options.CreateOpts;
@@ -115,5 +116,33 @@ public final class FileContextTestHelper {
   public static void createFileNonRecursive(FileContext fc, Path path)
       throws IOException {
     createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.donotCreateParent());
-  } 
+  }
+
+  public static boolean exists(FileContext fc, Path p) throws IOException {
+    return fc.util().exists(p);
+  }
+  
+  public static boolean isFile(FileContext fc, Path p) throws IOException {
+    try {
+      return !fc.getFileStatus(p).isDir();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
+
+  public static boolean isDir(FileContext fc, Path p) throws IOException {
+    try {
+      return fc.getFileStatus(p).isDir();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
+  
+  public static boolean isSymlink(FileContext fc, Path p) throws IOException {
+    try {
+      return fc.getFileLinkStatus(p).isSymlink();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
 }

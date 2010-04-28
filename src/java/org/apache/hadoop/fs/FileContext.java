@@ -1212,7 +1212,7 @@ public final class FileContext {
    * directory. All other functions fully resolve, ie follow, the symlink. 
    * These are: open, setReplication, setOwner, setTimes, setWorkingDirectory,
    * setPermission, getFileChecksum, setVerifyChecksum, getFileBlockLocations,
-   * getFsStatus, getFileStatus, isDirectory, isFile, exists, and listStatus.
+   * getFsStatus, getFileStatus, exists, and listStatus.
    * 
    * Symlink targets are stored as given to createSymlink, assuming the 
    * underlying file system is capable of storign a fully qualified URI. 
@@ -1284,93 +1284,6 @@ public final class FileContext {
       }
     }.resolve(this, nonRelLink);
   }
-
-  /**
-   * Does the file exist?
-   * Note: Avoid using this method if you already have FileStatus in hand.
-   * Instead reuse the FileStatus 
-   * @param f the  file or dir to be checked
-   *
-   * @throws AccessControlException If access is denied
-   * @throws IOException If an I/O error occurred
-   * 
-   * Exceptions applicable to file systems accessed over RPC:
-   * @throws RpcClientException If an exception occurred in the RPC client
-   * @throws RpcServerException If an exception occurred in the RPC server
-   * @throws UnexpectedServerException If server implementation throws 
-   *           undeclared exception to RPC server
-   */
-  public boolean exists(final Path f) throws AccessControlException,
-      IOException {
-    try {
-      return getFileStatus(f) != null;
-    } catch (FileNotFoundException e) {
-      return false;
-    } catch (UnsupportedFileSystemException e) {
-      return false;
-    } catch (UnresolvedLinkException e) {
-      return false;
-    }
-  }
-
-  /**
-   * Is a directory?
-   * Note: Avoid using this method if you already have FileStatus in hand.
-   * Instead reuse the FileStatus 
-   * returned by getFileStatus() or listStatus() methods.
-   * 
-   * @param f Path to evaluate
-   *
-   * @return True iff the named path is a directory.
-   *
-   * @throws AccessControlException If access is denied
-   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
-   *           not supported
-   * @throws IOException If an I/O error occurred
-   * 
-   * Exceptions applicable to file systems accessed over RPC:
-   * @throws RpcClientException If an exception occurred in the RPC client
-   * @throws RpcServerException If an exception occurred in the RPC server
-   * @throws UnexpectedServerException If server implementation throws 
-   *           undeclared exception to RPC server
-   */
-  public boolean isDirectory(final Path f) throws AccessControlException,
-      UnsupportedFileSystemException, IOException {
-    try {
-      final Path absF = fixRelativePart(f);
-      return getFileStatus(absF).isDir();
-    } catch (FileNotFoundException e) {
-      return false;
-    }
-  }
-
-  /** True iff the named path is a regular file.
-   * Note: Avoid using this method  if you already have FileStatus in hand
-   * Instead reuse the FileStatus returned by getFileStatus() or listStatus()
-   * methods.
-   *
-   * @param f Path to evaluate
-   *
-   * @throws AccessControlException If access is denied
-   * @throws UnsupportedFileSystemException If file system for <code>f</code>
-   *         is not supported
-   * @throws IOException If an I/O error occurred
-   * 
-   * Exceptions applicable to file systems accessed over RPC:
-   * @throws RpcClientException If an exception occurred in the RPC client
-   * @throws RpcServerException If an exception occurred in the RPC server
-   * @throws UnexpectedServerException If server implementation throws 
-   *           undeclared exception to RPC server
-   */
-  public boolean isFile(final Path f) throws AccessControlException,
-      UnsupportedFileSystemException, IOException {
-    try {
-      final Path absF = fixRelativePart(f);
-      return !getFileStatus(absF).isDir();
-    } catch (FileNotFoundException e) {
-      return false;               // f does not exist
-    }
-  }
   
   /**
    * List the statuses of the files/directories in the given path if the path is
@@ -1425,7 +1338,7 @@ public final class FileContext {
    */
   public boolean deleteOnExit(Path f) throws AccessControlException,
       IOException {
-    if (!exists(f)) {
+    if (!this.util().exists(f)) {
       return false;
     }
     synchronized (DELETE_ON_EXIT) {
@@ -1456,6 +1369,34 @@ public final class FileContext {
    * changes to the same part of the name space.
    */
   public class Util {
+    /**
+     * Does the file exist?
+     * Note: Avoid using this method if you already have FileStatus in hand.
+     * Instead reuse the FileStatus 
+     * @param f the  file or dir to be checked
+     *
+     * @throws AccessControlException If access is denied
+     * @throws IOException If an I/O error occurred
+     * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+     *           not supported
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
+     */
+    public boolean exists(final Path f) throws AccessControlException,
+      UnsupportedFileSystemException, IOException {
+      try {
+        FileStatus fs = FileContext.this.getFileStatus(f);
+        assert fs != null;
+        return true;
+      } catch (FileNotFoundException e) {
+        return false;
+      }
+    }
+    
     /**
      * Return a list of file status objects that corresponds to supplied paths
      * excluding those non-existent paths.
@@ -1941,8 +1882,9 @@ public final class FileContext {
       checkNotSchemeWithRelative(dst);
       Path qSrc = makeQualified(src);
       Path qDst = makeQualified(dst);
-      checkDest(qSrc.getName(), qDst, false);
-      if (isDirectory(qSrc)) {
+      checkDest(qSrc.getName(), qDst, overwrite);
+      FileStatus fs = FileContext.this.getFileStatus(qSrc);
+      if (fs.isDir()) {
         checkDependencies(qSrc, qDst);
         mkdir(qDst, FsPermission.getDefault(), true);
         FileStatus[] contents = listStatus(qSrc);
@@ -2095,23 +2037,32 @@ public final class FileContext {
           + " for glob " + pattern + " at " + pos);
     }
   }
-  
-  //
-  // Check destionation. Throw IOException if destination already exists
-  // and overwrite is not true
-  //
+
+  /**
+   * Check if copying srcName to dst would overwrite an existing 
+   * file or directory.
+   * @param srcName File or directory to be copied.
+   * @param dst Destination to copy srcName to.
+   * @param overwrite Whether it's ok to overwrite an existing file. 
+   * @throws AccessControlException If access is denied.
+   * @throws IOException If dst is an existing directory, or dst is an 
+   * existing file and the overwrite option is not passed.
+   */
   private void checkDest(String srcName, Path dst, boolean overwrite)
       throws AccessControlException, IOException {
-    if (exists(dst)) {
-      if (isDirectory(dst)) {
-      // TBD not very clear
+    FileStatus dstFs = getFileStatus(dst);
+    try {
+      if (dstFs.isDir()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");
         }
+        // Recurse to check if dst/srcName exists.
         checkDest(null, new Path(dst, srcName), overwrite);
       } else if (!overwrite) {
         throw new IOException("Target " + dst + " already exists");
       }
+    } catch (FileNotFoundException e) {
+      // dst does not exist - OK to copy.
     }
   }
    

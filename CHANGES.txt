@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-6677. InterfaceAudience.LimitedPrivate should take a string not an
     enum. (tomwhite)
 
+    HADOOP-678. Remove FileContext#isFile, isDirectory, and exists.
+    (Eli Collins via hairong)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

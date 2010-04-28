@@ -196,6 +196,15 @@ public class TestPath extends TestCase {
                  new Path("file").makeQualified(defaultUri, new Path(wd)));
  }
 
+  public void testGetName() {
+    assertEquals("", new Path("/").getName());
+    assertEquals("foo", new Path("foo").getName());
+    assertEquals("foo", new Path("/foo").getName());
+    assertEquals("foo", new Path("/foo/").getName());
+    assertEquals("bar", new Path("/foo/bar").getName());
+    assertEquals("bar", new Path("hdfs://host/foo/bar").getName());
+  }
+  
   public void testAvroReflect() throws Exception {
     AvroTestUtil.testReflect
       (new Path("foo"),

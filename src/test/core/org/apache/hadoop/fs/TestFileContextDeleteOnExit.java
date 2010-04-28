@@ -82,8 +82,8 @@ public class TestFileContextDeleteOnExit {
     FileContext.FINALIZER.start();
     FileContext.FINALIZER.join();
     checkDeleteOnExitData(0, fc, new Path[0]);
-    Assert.assertFalse(fc.exists(file1));
-    Assert.assertFalse(fc.exists(file2));
-    Assert.assertFalse(fc.exists(dir));
+    Assert.assertFalse(exists(fc, file1));
+    Assert.assertFalse(exists(fc, file2));
+    Assert.assertFalse(exists(fc, dir));
   }
 }

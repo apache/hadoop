@@ -84,7 +84,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testMkdirNonRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, false);
-    Assert.assertTrue(fc.isDirectory(f));
+    Assert.assertTrue(isDir(fc, f));
   }
   
   @Test
@@ -103,7 +103,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testMkdirRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(fc.isDirectory(f));
+    Assert.assertTrue(isDir(fc, f));
   }
   
   
@@ -111,7 +111,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testMkdirRecursiveWithNonExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "NonExistant2/aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(fc.isDirectory(f));
+    Assert.assertTrue(isDir(fc, f));
   }
  
   ///////////////////////
@@ -121,7 +121,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testCreateNonRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc, "foo");
     createFile(fc, f);
-    Assert.assertTrue(fc.isFile(f));
+    Assert.assertTrue(isFile(fc, f));
   }
   
   @Test
@@ -139,7 +139,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testCreateRecursiveWithExistingDir() throws IOException {
     Path f = getTestRootPath(fc,"foo");
     createFile(fc, f);
-    Assert.assertTrue(fc.isFile(f));
+    Assert.assertTrue(isFile(fc, f));
   }
   
   
@@ -147,6 +147,6 @@ public abstract class FileContextCreateMkdirBaseTest {
   public void testCreateRecursiveWithNonExistingDir() throws IOException {
     Path f = getTestRootPath(fc,"NonExisting/foo");
     createFile(fc, f);
-    Assert.assertTrue(fc.isFile(f));
+    Assert.assertTrue(isFile(fc, f));
   }
 }
