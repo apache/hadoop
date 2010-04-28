@@ -373,6 +373,9 @@ Trunk (unreleased changes)
     HADOOP-6719. Insert all missing methods in FilterFs.
     (Rodrigo Schmidt via dhruba)
 
+    HADOOP-6724. IPC doesn't properly handle IOEs thrown by socket factory.
+    (Todd Lipcon via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -29,8 +29,10 @@ import java.util.Random;
 import java.io.DataInput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import javax.net.SocketFactory;
 
 import junit.framework.TestCase;
+import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -264,6 +266,25 @@ public class TestIPC extends TestCase {
       Throwable cause = e.getCause();
       assertTrue(cause instanceof IOException);
       assertEquals(LongErrorWritable.ERR_MSG, cause.getMessage());
+    }
+  }
+
+  /**
+   * Test that, if the socket factory throws an IOE, it properly propagates
+   * to the client.
+   */
+  public void testSocketFactoryException() throws Exception {
+    SocketFactory mockFactory = mock(SocketFactory.class);
+    doThrow(new IOException("Injected fault")).when(mockFactory).createSocket();
+    Client client = new Client(LongWritable.class, conf, mockFactory);
+    
+    InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
+    try {
+      client.call(new LongWritable(RANDOM.nextLong()),
+              address, null, null);
+      fail("Expected an exception to have been thrown");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains("Injected fault"));
     }
   }
 
