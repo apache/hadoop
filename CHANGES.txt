@@ -156,6 +156,9 @@ Trunk (unreleased changes)
     HDFS-921. Convert TestDFSClientRetries::testNotYetReplicatedErrors
     to Mockito. (jghoman)
 
+    HDFS-1100. Override unwrapException in TestFcHdfsSymlink to test 
+    symlink API conformance. (Eli Collins via suresh).
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
