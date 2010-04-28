@@ -249,7 +249,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param r
    * @return Empty String or server address found in <code>r</code>
    */
-  private String getServerAddress(final Result r) {
+  static String getServerAddress(final Result r) {
     byte [] val = r.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
     return val == null || val.length <= 0? "": Bytes.toString(val);
   }
@@ -258,7 +258,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param r
    * @return Return 0L or server startcode found in <code>r</code>
    */
-  private long getStartCode(final Result r) {
+  static long getStartCode(final Result r) {
     byte [] val = r.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER);
     return val == null || val.length <= 0? 0L: Bytes.toLong(val);
   }

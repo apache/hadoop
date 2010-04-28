@@ -140,10 +140,9 @@ class ProcessServerShutdown extends RegionServerOperation {
         // shutdown server but that would mean that we'd reassign regions that
         // were already out being assigned, ones that were product of a split
         // that happened while the shutdown was being processed.
-        String serverAddress = 
-          Bytes.toString(values.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
-        long startCode =
-          Bytes.toLong(values.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
+        String serverAddress = BaseScanner.getServerAddress(values);
+        long startCode = BaseScanner.getStartCode(values);
+
         String serverName = null;
         if (serverAddress != null && serverAddress.length() > 0) {
           serverName = HServerInfo.getServerName(serverAddress, startCode);
