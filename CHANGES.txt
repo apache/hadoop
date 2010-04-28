@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     HADOOP-6686. Remove redundant exception class name from the exception
     message for the exceptions thrown at RPC client. (suresh)
 
+    HADOOP-6701. Fix incorrect exit codes returned from chgrp, chown and chgrp
+    commands from FsShell. (Ravi Phulari via suresh)
+
   NEW FEATURES
 
     HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
