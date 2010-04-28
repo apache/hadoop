@@ -49,6 +49,9 @@ echo "root hard nofile 32768" >> /etc/security/limits.conf
 # up epoll limits; ok if this fails, only valid for kernels 2.6.27+
 sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
 
+# up conntrack_max
+sysctl -w net.ipv4.netfilter.ip_conntrack_max=65536 > /dev/null 2>&1
+
 [ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
 
 # Extra packages
@@ -65,10 +68,10 @@ fi
 
 if [ "$IS_MASTER" = "true" ]; then
   sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
-         -e "s|\( *bind *=.*\)|#\1|" \
-         -e "s|\( *mute *=.*\)|  mute = yes|" \
-         -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
-         /etc/gmond.conf
+      -e "s|\( *bind *=.*\)|#\1|" \
+      -e "s|\( *mute *=.*\)|  mute = yes|" \
+      -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
+      /etc/gmond.conf
   mkdir -p /mnt/ganglia/rrds
   chown -R ganglia:ganglia /mnt/ganglia/rrds
   rm -rf /var/lib/ganglia; cd /var/lib; ln -s /mnt/ganglia ganglia; cd
@@ -77,9 +80,9 @@ if [ "$IS_MASTER" = "true" ]; then
   apachectl start
 else
   sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
-         -e "s|\( *bind *=.*\)|#\1|" \
-         -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
-         /etc/gmond.conf
+      -e "s|\( *bind *=.*\)|#\1|" \
+      -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
+      /etc/gmond.conf
   service gmond start
 fi
 
@@ -110,7 +113,7 @@ done
 
 # Hadoop configuration
 
-(cd /usr/local && ln -s $HADOOP_HOME hadoop) || true
+( cd /usr/local && ln -s $HADOOP_HOME hadoop ) || true
 cat > $HADOOP_HOME/conf/core-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -143,7 +146,7 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
 </property>
 <property>
   <name>dfs.replication</name>
-  <value>3</value>
+  <value>2</value>
 </property>
 <property>
   <name>dfs.datanode.handler.count</name>
@@ -172,6 +175,10 @@ cat > $HADOOP_HOME/conf/mapred-site.xml <<EOF
   <value>com.hadoop.compression.lzo.LzoCodec</value>
 </property>
 <property>
+  <name>mapred.map.tasks</name>
+  <value>4</value>
+</property>
+<property>
   <name>mapred.map.tasks.speculative.execution</name>
   <value>false</value>
 </property>
@@ -184,11 +191,10 @@ EOF
 # Add JVM options
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
 export HADOOP_OPTS="$HADOOP_OPTS -XX:+UseCompressedOops"
-export HADOOP_NAMENODE_OPTS="$HADOOP_NAMENODE_OPTS -Xmx3000m -XX:+UseCompressedOops"                 
 EOF
 # Update classpath to include HBase jars and config
 cat >> $HADOOP_HOME/conf/hadoop-env.sh <<EOF
-export HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/AgileJSON-2009-03-30.jar:$HBASE_HOME/lib/json.jar:$HBASE_HOME/lib/zookeeper-3.3.0.jar:$HBASE_HOME/conf"
+export HADOOP_CLASSPATH="$HBASE_HOME/hbase-${HBASE_VERSION}.jar:$HBASE_HOME/lib/zookeeper-3.3.0.jar:$HBASE_HOME/conf"
 EOF
 # Configure Hadoop for Ganglia
 cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
@@ -205,7 +211,7 @@ EOF
 
 # HBase configuration
 
-(cd /usr/local && ln -s $HBASE_HOME hbase) || true
+( cd /usr/local && ln -s $HBASE_HOME hbase ) || true
 cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -240,11 +246,15 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
 </property>
 <property>
   <name>dfs.replication</name>
-  <value>3</value>
+  <value>2</value>
 </property>
 <property>
   <name>dfs.client.block.write.retries</name>
   <value>100</value>
+</property>
+<property>
+  <name>dfs.datanode.socket.write.timeout</name>
+  <value>0</value>
 </property>
 <property>
   <name>zookeeper.session.timeout</name>
@@ -264,8 +274,8 @@ export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseCompressedOops -XX:+UseConcMarkSweep
 export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=128m -XX:MaxNewSize=128m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
 # Configure log4j
-sed -i -e 's/hadoop.hbase=DEBUG/hadoop.hbase=INFO/g' \
-    $HBASE_HOME/conf/log4j.properties
+sed -i -e 's/hadoop.hbase=DEBUG/hadoop.hbase=INFO/g' $HBASE_HOME/conf/log4j.properties
+#sed -i -e 's/#log4j.logger.org.apache.hadoop.dfs=DEBUG/log4j.logger.org.apache.hadoop.dfs=DEBUG/g' $HBASE_HOME/conf/log4j.properties
 # Configure HBase for Ganglia
 cat > $HBASE_HOME/conf/hadoop-metrics.properties <<EOF
 dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
