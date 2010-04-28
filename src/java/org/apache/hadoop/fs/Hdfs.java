@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 
 public class Hdfs extends AbstractFileSystem {
@@ -147,6 +149,61 @@ public class Hdfs extends AbstractFileSystem {
   }
 
   @Override
+  protected Iterator<FileStatus> listStatusIterator(final Path f)
+    throws AccessControlException, FileNotFoundException,
+    UnresolvedLinkException, IOException {
+    return new Iterator<FileStatus>() {
+      private DirectoryListing thisListing;
+      private int i;
+      private String src;
+
+
+      { // initializer
+        src = getUriPath(f);
+        // fetch the first batch of entries in the directory
+        thisListing = dfs.listPaths(src, HdfsFileStatus.EMPTY_NAME);
+        if (thisListing == null) { // the directory does not exist
+          throw new FileNotFoundException("File " + f + " does not exist.");
+        }
+      }
+
+      @Override
+      public boolean hasNext() {
+        if (thisListing == null) {
+          return false;
+        }
+        try {
+          if (i>=thisListing.getPartialListing().length && thisListing.hasMore()) { 
+            // current listing is exhausted & fetch a new listing
+            thisListing = dfs.listPaths(src, thisListing.getLastName());
+            if (thisListing == null) {
+              return false; // the directory is deleted
+            }
+            i = 0;
+          }
+          return (i<thisListing.getPartialListing().length);
+        } catch (IOException ioe) {
+          return false;
+        }
+      }
+
+      @Override
+      public FileStatus next() {
+        if (hasNext()) {
+          return makeQualified(thisListing.getPartialListing()[i++], f);
+        } 
+        throw new java.util.NoSuchElementException("No more entry in " + f);
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("Remove is not supported");
+
+      }
+    };
+  }
+  
+  @Override
   protected FileStatus[] listStatus(Path f) 
       throws IOException, UnresolvedLinkException {
     String src = getUriPath(f);
@@ -184,7 +241,8 @@ public class Hdfs extends AbstractFileSystem {
       thisListing = dfs.listPaths(src, thisListing.getLastName());
  
       if (thisListing == null) {
-        break; // the directory is deleted
+        // the directory is deleted
+        throw new FileNotFoundException("File " + f + " does not exist.");
       }
  
       partialListing = thisListing.getPartialListing();

@@ -33,6 +33,9 @@ Trunk (unreleased changes)
     HDFS-1009. Support Kerberos authorization in HDFSProxy.  (Srikanth
     Sundarrajan via szetszwo)
 
+    HDFS-1091. Implement listStatus that returns an iterator of FileStatus.
+    (hairong)
+
   IMPROVEMENTS
     HDFS-968. Use StringBuilder instead of StringBuffer for better
     performance. (Kay Kay via suresh)

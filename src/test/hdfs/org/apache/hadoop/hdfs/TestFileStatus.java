@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -26,6 +27,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -78,6 +80,7 @@ public class TestFileStatus extends TestCase {
     FileSystem fs = cluster.getFileSystem();
     final HftpFileSystem hftpfs = cluster.getHftpFileSystem();
     final DFSClient dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
+    FileContext fc = FileContext.getFileContext(cluster.getURI(), conf);
     try {
 
       //
@@ -133,6 +136,12 @@ public class TestFileStatus extends TestCase {
       assertEquals(file1.makeQualified(fs.getUri(), 
           fs.getWorkingDirectory()).toString(), 
           status.getPath().toString());
+      
+      Iterator<FileStatus> itor = fc.listStatus(file1);
+      status = itor.next();
+      assertEquals(stats[0], status);
+      assertTrue(file1 + " should be a file", 
+          status.isDir() == false);
 
       // test file status on a directory
       Path dir = new Path("/test/mkdirs");
@@ -140,6 +149,13 @@ public class TestFileStatus extends TestCase {
       // test listStatus on a non-existent file/directory
       try {
         stats = fs.listStatus(dir);
+        fail("listStatus of non-existent path should fail");
+      } catch (FileNotFoundException fe) {
+        assertTrue(fe.getMessage().equals("File " + dir + " does not exist."));
+      }
+      
+      try {
+        itor = fc.listStatus(dir);
         fail("listStatus of non-existent path should fail");
       } catch (FileNotFoundException fe) {
         assertTrue(fe.getMessage().equals("File " + dir + " does not exist."));
@@ -171,6 +187,9 @@ public class TestFileStatus extends TestCase {
           0, fs.getContentSummary(dir).getLength());
       assertEquals(dir + " should be zero size using hftp",
           0, hftpfs.getContentSummary(dir).getLength());
+      
+      itor = fc.listStatus(dir);
+      assertFalse(dir + " should be empty", itor.hasNext());
 
       // create another file that is smaller than a block.
       //
@@ -207,8 +226,13 @@ public class TestFileStatus extends TestCase {
       // test listStatus on a non-empty directory
       stats = fs.listStatus(dir);
       assertEquals(dir + " should have two entries", 2, stats.length);
-       assertEquals(file2.toString(), stats[0].getPath().toString());
-       assertEquals(file3.toString(), stats[1].getPath().toString());
+      assertEquals(file2.toString(), stats[0].getPath().toString());
+      assertEquals(file3.toString(), stats[1].getPath().toString());
+
+      itor = fc.listStatus(dir);
+      assertEquals(file2.toString(), itor.next().getPath().toString());
+      assertEquals(file3.toString(), itor.next().getPath().toString());
+      assertFalse(itor.hasNext());
 
       // test iterative listing
       // now dir has 2 entries, create one more
@@ -220,6 +244,12 @@ public class TestFileStatus extends TestCase {
       assertEquals(dir3.toString(), stats[0].getPath().toString());
       assertEquals(file2.toString(), stats[1].getPath().toString());
       assertEquals(file3.toString(), stats[2].getPath().toString());
+
+      itor = fc.listStatus(dir);
+      assertEquals(dir3.toString(), itor.next().getPath().toString());
+      assertEquals(file2.toString(), itor.next().getPath().toString());
+      assertEquals(file3.toString(), itor.next().getPath().toString());
+      assertFalse(itor.hasNext());
 
       // now dir has 3 entries, create two more
       Path dir4 = fs.makeQualified(new Path(dir, "dir4"));
@@ -235,6 +265,14 @@ public class TestFileStatus extends TestCase {
       assertEquals(dir5.toString(), stats[2].getPath().toString());
       assertEquals(file2.toString(), stats[3].getPath().toString());
       assertEquals(file3.toString(), stats[4].getPath().toString());
+      
+      itor = fc.listStatus(dir);
+      assertEquals(dir3.toString(), itor.next().getPath().toString());
+      assertEquals(dir4.toString(), itor.next().getPath().toString());
+      assertEquals(dir5.toString(), itor.next().getPath().toString());
+      assertEquals(file2.toString(), itor.next().getPath().toString());
+      assertEquals(file3.toString(), itor.next().getPath().toString());
+      assertFalse(itor.hasNext());      
     } finally {
       fs.close();
       cluster.shutdown();
