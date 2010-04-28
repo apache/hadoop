@@ -361,6 +361,9 @@ Trunk (unreleased changes)
     HADOOP-6690. FilterFileSystem correctly handles setTimes call.
     (Rodrigo Schmidt via dhruba)
 
+    HADOOP-6703. Prevent renaming a file, directory or symbolic link to
+    itself. (Eli Collins via suresh)
+
     HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
     (suresh)
     

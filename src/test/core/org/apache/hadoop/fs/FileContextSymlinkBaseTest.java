@@ -51,6 +51,10 @@ public abstract class FileContextSymlinkBaseTest {
   abstract protected String testBaseDir2();
   abstract protected URI testURI();
 
+  protected IOException unwrapException(IOException e) {
+    return e;
+  }
+
   protected static void createAndWriteFile(FileContext fc, Path p) 
       throws IOException {
     FSDataOutputStream out;
@@ -766,7 +770,25 @@ public abstract class FileContextSymlinkBaseTest {
     assertFalse(fc.exists(file));
     assertTrue(fc.exists(fileNewViaLink));
   }
-  
+
+  @Test
+  /** Rename a symlink to itself */
+  public void testRenameSymlinkToItself() throws IOException {
+    Path link = new Path(testBaseDir1(), "linkToFile1");
+    fc.createSymlink(new Path("/doestNotExist"), link, false);
+    try {
+      fc.rename(link, link);
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Fails with overwrite as well
+    try {
+      fc.rename(link, link, Rename.OVERWRITE);
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+  }
+
   @Test
   /** Rename a symlink */
   public void testRenameSymlink() throws IOException {
@@ -786,8 +808,84 @@ public abstract class FileContextSymlinkBaseTest {
     } catch (IOException x) {
       // Expected
     }
-  } 
-    
+  }
+
+  @Test
+  /** Rename a symlink to the file it links to */
+  public void testRenameSymlinkToFileItLinksTo() throws IOException {
+    /* NB: The rename is not atomic, so file is deleted before renaming
+     * linkToFile. In this interval linkToFile is dangling and local file 
+     * system does not handle dangling links because File.exists returns 
+     * false for dangling links. */
+    if ("file".equals(getScheme())) {
+      return;
+    }
+    Path file = new Path(testBaseDir1(), "file");
+    Path link = new Path(testBaseDir1(), "linkToFile");
+    createAndWriteFile(file);
+    fc.createSymlink(file, link, false);
+    try {
+      fc.rename(link, file);
+      fail("Renamed symlink to its target");
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Check the rename didn't happen
+    assertTrue(fc.isFile(file));
+    assertTrue(fc.exists(link));
+    assertTrue(fc.getFileLinkStatus(link).isSymlink());
+    assertEquals(file, fc.getLinkTarget(link));
+    try {
+      fc.rename(link, file, Rename.OVERWRITE);
+      fail("Renamed symlink to its target");
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Check the rename didn't happen
+    assertTrue(fc.isFile(file));
+    assertTrue(fc.exists(link));    
+    assertTrue(fc.getFileLinkStatus(link).isSymlink());
+    assertEquals(file, fc.getLinkTarget(link));    
+  }
+  
+  @Test
+  /** Rename a symlink to the directory it links to */
+  public void testRenameSymlinkToDirItLinksTo() throws IOException {
+    /* NB: The rename is not atomic, so dir is deleted before renaming
+     * linkToFile. In this interval linkToFile is dangling and local file 
+     * system does not handle dangling links because File.exists returns 
+     * false for dangling links. */
+    if ("file".equals(getScheme())) {
+      return;
+    }
+    Path dir  = new Path(testBaseDir1(), "dir");
+    Path link = new Path(testBaseDir1(), "linkToDir");
+    fc.mkdir(dir, FileContext.DEFAULT_PERM, false);
+    fc.createSymlink(dir, link, false);
+    try {
+      fc.rename(link, dir);
+      fail("Renamed symlink to its target");
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Check the rename didn't happen
+    assertTrue(fc.isDirectory(dir));
+    assertTrue(fc.exists(link));
+    assertTrue(fc.getFileLinkStatus(link).isSymlink());
+    assertEquals(dir, fc.getLinkTarget(link));
+    try {
+      fc.rename(link, dir, Rename.OVERWRITE);
+      fail("Renamed symlink to its target");
+    } catch (IOException e) {
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Check the rename didn't happen
+    assertTrue(fc.isDirectory(dir));
+    assertTrue(fc.exists(link));
+    assertTrue(fc.getFileLinkStatus(link).isSymlink());
+    assertEquals(dir, fc.getLinkTarget(link));
+  }
+  
   @Test
   /** Test renaming symlink target */
   public void testMoveLinkTarget() throws IOException {

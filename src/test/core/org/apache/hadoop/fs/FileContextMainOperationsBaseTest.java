@@ -825,6 +825,26 @@ public abstract class FileContextMainOperationsBaseTest  {
   }
 
   @Test
+  public void testRenameFileToItself() throws Exception {
+    if (!renameSupported()) return;
+    Path src = getTestRootPath(fc, "test/hadoop/file");
+    createFile(src);
+    try {
+      rename(src, src, false, true, false, Rename.NONE);
+      Assert.fail("Renamed file to itself");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Also fails with overwrite
+    try {
+      rename(src, src, false, true, false, Rename.OVERWRITE);
+      Assert.fail("Renamed file to itself");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+  }
+  
+  @Test
   public void testRenameFileAsExistingFile() throws Exception {
     if (!renameSupported()) return;
     
@@ -866,6 +886,26 @@ public abstract class FileContextMainOperationsBaseTest  {
       rename(src, dst, false, false, true, Rename.OVERWRITE);
       Assert.fail("Expected exception was not thrown");
     } catch (IOException e) {
+    }
+  }
+
+  @Test
+  public void testRenameDirectoryToItself() throws Exception {
+    if (!renameSupported()) return;
+    Path src = getTestRootPath(fc, "test/hadoop/dir");
+    fc.mkdir(src, FileContext.DEFAULT_PERM, true);
+    try {
+      rename(src, src, false, true, false, Rename.NONE);
+      Assert.fail("Renamed directory to itself");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
+    }
+    // Also fails with overwrite
+    try {
+      rename(src, src, false, true, false, Rename.OVERWRITE);
+      Assert.fail("Renamed directory to itself");
+    } catch (IOException e) {
+      Assert.assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);      
     }
   }
 

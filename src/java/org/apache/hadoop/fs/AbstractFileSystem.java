@@ -603,6 +603,14 @@ public abstract class AbstractFileSystem {
       dstStatus = null;
     }
     if (dstStatus != null) {
+      if (dst.equals(src)) {
+        throw new FileAlreadyExistsException(
+            "The source "+src+" and destination "+dst+" are the same");
+      }
+      if (srcStatus.isSymlink() && dst.equals(srcStatus.getSymlink())) {
+        throw new FileAlreadyExistsException(
+            "Cannot rename symlink "+src+" to its target "+dst);
+      }
       if (srcStatus.isDir() != dstStatus.isDir()) {
         throw new IOException("Source " + src + " Destination " + dst
             + " both should be either file or directory");
