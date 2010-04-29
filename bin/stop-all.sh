@@ -20,7 +20,7 @@
 
 echo "This script is Deprecated. Instead use stop-dfs.sh and stop-mapred.sh"
 
-bin=`dirname "$0"`
+bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/hadoop-config.sh
