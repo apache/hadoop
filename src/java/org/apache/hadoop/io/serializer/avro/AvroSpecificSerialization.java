@@ -18,13 +18,9 @@
 
 package org.apache.hadoop.io.serializer.avro;
 
-import java.util.Map;
-
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
-import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
@@ -38,31 +34,26 @@ public class AvroSpecificSerialization
                           extends AvroSerialization<SpecificRecord>{
 
   @Override
-  public boolean accept(Map<String, String> metadata) {
-    if (!checkSerializationKey(metadata)) {
-      return false;
-    }
-    Class<?> c = getClassFromMetadata(metadata);
-    return c == null ? false : SpecificRecord.class.isAssignableFrom(c);
+  public boolean accept(Class<?> c) {
+    return SpecificRecord.class.isAssignableFrom(c);
   }
 
   @Override
-  public DatumReader getReader(Map<String, String> metadata) {
+  public DatumReader getReader(Class<SpecificRecord> clazz) {
     try {
-      return new SpecificDatumReader(getClassFromMetadata(metadata));
+      return new SpecificDatumReader(clazz.newInstance().getSchema());
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
   @Override
-  public Schema getSchema(Map<String, String> metadata) {
-    Class<?> c = getClassFromMetadata(metadata);
-    return SpecificData.get().getSchema(c);
+  public Schema getSchema(SpecificRecord t) {
+    return t.getSchema();
   }
 
   @Override
-  public DatumWriter getWriter(Map<String, String> metadata) {
+  public DatumWriter getWriter(Class<SpecificRecord> clazz) {
     return new SpecificDatumWriter();
   }
 

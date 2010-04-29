@@ -18,45 +18,14 @@
 
 package org.apache.hadoop.io.serializer.avro;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import junit.framework.TestCase;
 
-import org.apache.avro.util.Utf8;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.serializer.SerializationBase;
-import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.SerializationTestUtil;
 
 public class TestAvroSerialization extends TestCase {
 
   private static final Configuration conf = new Configuration();
-
-  @SuppressWarnings("unchecked")
-  public void testIgnoreMisconfiguredMetadata() {
-    // If SERIALIZATION_KEY is set, still need class name.
-
-    Configuration conf = new Configuration();
-    Map<String, String> metadata = new HashMap<String, String>();
-    SerializationFactory factory = new SerializationFactory(conf);
-    SerializationBase serialization = null;
-
-    metadata.put(SerializationBase.SERIALIZATION_KEY,
-        AvroGenericSerialization.class.getName());
-    serialization = factory.getSerialization(metadata);
-    assertNull("Got serializer without any class info", serialization);
-
-    metadata.put(SerializationBase.SERIALIZATION_KEY,
-        AvroReflectSerialization.class.getName());
-    serialization = factory.getSerialization(metadata);
-    assertNull("Got serializer without any class info", serialization);
-
-    metadata.put(SerializationBase.SERIALIZATION_KEY,
-        AvroSpecificSerialization.class.getName());
-    serialization = factory.getSerialization(metadata);
-    assertNull("Got serializer without any class info", serialization);
-  }
 
   public void testSpecific() throws Exception {
     AvroRecord before = new AvroRecord();
@@ -91,16 +60,6 @@ public class TestAvroSerialization extends TestCase {
     assertEquals(before, after);
   }
   
-  public void testGeneric() throws Exception {
-    Utf8 before = new Utf8("hadoop");
-    Map<String, String> metadata = new HashMap<String, String>();
-    metadata.put(SerializationBase.SERIALIZATION_KEY,
-      AvroGenericSerialization.class.getName());
-    metadata.put(AvroSerialization.AVRO_SCHEMA_KEY, "\"string\"");
-    Utf8 after = SerializationTestUtil.testSerialization(conf, metadata, before);
-    assertEquals(before, after);
-  }
-
   public static class InnerRecord {
     public int x = 7;
 

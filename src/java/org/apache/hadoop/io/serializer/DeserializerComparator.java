@@ -52,13 +52,6 @@ public abstract class DeserializerComparator<T> implements RawComparator<T> {
     this.deserializer.open(buffer);
   }
 
-  protected DeserializerComparator(DeserializerBase<T> deserializer)
-    throws IOException {
-    
-    this.deserializer = deserializer;
-    this.deserializer.open(buffer);
-  }
-
   public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
     try {
       

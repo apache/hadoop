@@ -32,9 +32,6 @@ Trunk (unreleased changes)
     HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
     (tomwhite)
 
-    HADOOP-6323. Add comparators to the serialization API.
-    (Aaron Kimball via cutting)
-
     HADOOP-6433. Introduce asychronous deletion of files via a pool of
     threads. This can be used to delete files in the Distributed
     Cache. (Zheng Shao via dhruba)
@@ -129,17 +126,11 @@ Trunk (unreleased changes)
     HADOOP-6472. add tokenCache option to GenericOptionsParser for passing
      file with secret keys to a map reduce job. (boryas)
 
-    HADOOP-6443. Serialization classes accept invalid metadata.
-    (Aaron Kimball via tomwhite)
-
     HADOOP-3205. Read multiple chunks directly from FSInputChecker subclass
     into user buffers. (Todd Lipcon via tomwhite)
 
     HADOOP-6479. TestUTF8 assertions could fail with better text.
     (Steve Loughran via tomwhite)
-
-    HADOOP-6420. Add functionality permitting subsets of Configuration to be
-    interpreted as Map<String,String>. (Aaron Kimball via cdouglas)
 
     HADOOP-6155. Deprecate RecordIO anticipating Avro. (Tom White via cdouglas)
 
@@ -563,8 +554,6 @@ Release 0.21.0 - Unreleased
     HADOOP-6226. Moves BoundedByteArrayOutputStream from the tfile package to
     the io package and makes it available to other users (MAPREDUCE-318). 
     (Jothi Padmanabhan via ddas)
-
-    HADOOP-6165. Add metadata to Serializations. (tomwhite)
 
     HADOOP-6105. Adds support for automatically handling deprecation of
     configuration keys. (V.V.Chaitanya Krishna via yhemanth)
