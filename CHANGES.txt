@@ -232,6 +232,9 @@ Trunk (unreleased changes)
     HADOOP-678. Remove FileContext#isFile, isDirectory, and exists.
     (Eli Collins via hairong)
 
+    HADOOP-6515. Make maximum number of http threads configurable.
+    (Scott Chen via zshao)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

@@ -18,6 +18,7 @@
 package org.apache.hadoop.http;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -59,6 +63,7 @@ import org.junit.Test;
 public class TestHttpServer {
   private static HttpServer server;
   private static URL baseUrl;
+  private static final int MAX_THREADS = 10;
   
   @SuppressWarnings("serial")
   public static class EchoMapServlet extends HttpServlet {
@@ -125,7 +130,10 @@ public class TestHttpServer {
   @BeforeClass public static void setup() throws Exception {
     new File(System.getProperty("build.webapps", "build/webapps") + "/test"
              ).mkdirs();
-    server = new HttpServer("test", "0.0.0.0", 0, true);
+    Configuration conf = new Configuration();
+    // Set the maximum threads
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, MAX_THREADS);
+    server = new HttpServer("test", "0.0.0.0", 0, true, conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.start();
@@ -136,7 +144,38 @@ public class TestHttpServer {
   @AfterClass public static void cleanup() throws Exception {
     server.stop();
   }
-
+  
+  /** Test the maximum number of threads cannot be exceeded. */
+  @Test public void testMaxThreads() throws Exception {
+    int clientThreads = MAX_THREADS * 10;
+    Executor executor = Executors.newFixedThreadPool(clientThreads);
+    // Run many clients to make server reach its maximum number of threads
+    final CountDownLatch ready = new CountDownLatch(clientThreads);
+    final CountDownLatch start = new CountDownLatch(1);
+    for (int i = 0; i < clientThreads; i++) {
+      executor.execute(new Runnable() {
+        @Override
+        public void run() {
+          ready.countDown();
+          try {
+            start.await();
+            assertEquals("a:b\nc:d\n",
+                         readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
+            int serverThreads = server.webServer.getThreadPool().getThreads();
+            assertTrue(serverThreads <= MAX_THREADS);
+            System.out.println("Number of threads = " + serverThreads +
+                " which is less or equal than the max = " + MAX_THREADS);
+          } catch (Exception e) {
+            // do nothing
+          }
+        }
+      });
+    }
+    // Start the client threads when they are all ready
+    ready.await();
+    start.countDown();
+  }
+  
   @Test public void testEcho() throws Exception {
     assertEquals("a:b\nc:d\n", 
                  readOutput(new URL(baseUrl, "/echo?a=b&c=d")));

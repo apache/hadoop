@@ -80,6 +80,7 @@ public class HttpServer implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
+  static final String HTTP_MAX_THREADS = "hadoop.http.max.threads";
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -121,7 +122,12 @@ public class HttpServer implements FilterContainer {
     listener.setPort(port);
     webServer.addConnector(listener);
 
-    webServer.setThreadPool(new QueuedThreadPool());
+    int maxThreads = conf.getInt(HTTP_MAX_THREADS, -1);
+    // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
+    // default value (currently 254).
+    QueuedThreadPool threadPool = maxThreads == -1 ?
+        new QueuedThreadPool() : new QueuedThreadPool(maxThreads);
+    webServer.setThreadPool(threadPool);
 
     final String appDir = getWebAppsPath();
     ContextHandlerCollection contexts = new ContextHandlerCollection();
