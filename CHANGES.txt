@@ -382,6 +382,9 @@ Trunk (unreleased changes)
     HADOOP-6722. NetUtils.connect should check that it hasn't connected a socket
     to itself. (Todd Lipcon via tomwhite)
 
+    HADOOP-6634. Fix AccessControlList to use short names to verify access 
+    control. (Vinod Kumar Vavilapalli via sharad)
+ 
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
