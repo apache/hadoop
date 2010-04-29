@@ -375,6 +375,9 @@ Trunk (unreleased changes)
 
     HADOOP-6634. Fix AccessControlList to use short names to verify access 
     control. (Vinod Kumar Vavilapalli via sharad)
+
+    HADOOP-6709. Re-instate deprecated FileSystem methods that were removed
+    after 0.20. (tomwhite)
  
 Release 0.21.0 - Unreleased
 

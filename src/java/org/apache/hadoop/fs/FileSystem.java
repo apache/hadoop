@@ -137,6 +137,17 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
   
+  /** @deprecated call #getUri() instead.*/
+  @Deprecated
+  public String getName() { return getUri().toString(); }
+
+  /** @deprecated call #get(URI,Configuration) instead. */
+  @Deprecated
+  public static FileSystem getNamed(String name, Configuration conf)
+    throws IOException {
+    return get(URI.create(fixName(name)), conf);
+  }
+  
   /** Update old-format filesystem names, for back-compatibility.  This should
    * eventually be replaced with a checkName() method that throws an exception
    * for old-format names. */ 
@@ -813,6 +824,19 @@ public abstract class FileSystem extends Configured implements Closeable {
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
 
+ /**
+   * Get replication.
+   * 
+   * @deprecated Use getFileStatus() instead
+   * @param src file name
+   * @return file replication
+   * @throws IOException
+   */ 
+  @Deprecated
+  public short getReplication(Path src) throws IOException {
+    return getFileStatus(src).getReplication();
+  }
+
   /**
    * Set replication for an existing file.
    * 
@@ -922,6 +946,15 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
   }
   
+  /**
+   * Delete a file 
+   * @deprecated Use {@link #delete(Path, boolean)} instead.
+   */
+  @Deprecated
+  public boolean delete(Path f) throws IOException {
+    return delete(f, true);
+  }
+  
   /** Delete a file.
    *
    * @param f the path to delete.
@@ -1008,6 +1041,13 @@ public abstract class FileSystem extends Configured implements Closeable {
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
+  }
+  
+  /** The number of bytes in a file. */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
+  public long getLength(Path f) throws IOException {
+    return getFileStatus(f).getLen();
   }
     
   /** Return the {@link ContentSummary} of a given {@link Path}. */
@@ -1607,6 +1647,17 @@ public abstract class FileSystem extends Configured implements Closeable {
       used += file.getLen();
     }
     return used;
+  }
+  
+  /**
+   * Get the block size for a particular file.
+   * @param f the filename
+   * @return the number of bytes in a block
+   */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
+  public long getBlockSize(Path f) throws IOException {
+    return getFileStatus(f).getBlockSize();
   }
 
   /** Return the number of bytes that large input files should be optimally
