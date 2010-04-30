@@ -58,6 +58,13 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
 
   @Override
   protected boolean process() throws IOException {
+    if (!metaRegionAvailable()) {
+      // We can't proceed unless the meta region we are going to update
+      // is online. metaRegionAvailable() has put this operation on the
+      // delayedToDoQueue, so return true so the operation is not put
+      // back on the toDoQueue
+      return true;
+    }
     Boolean result = null;
     if (offlineRegion || reassignRegion) {
       result =

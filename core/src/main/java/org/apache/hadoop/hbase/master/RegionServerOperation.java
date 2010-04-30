@@ -33,7 +33,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   
   private long expire;
   protected final HMaster master;
-  final int delay;
+  private int delay;
   
   protected RegionServerOperation(HMaster master) {
     this.master = master;
@@ -41,12 +41,27 @@ abstract class RegionServerOperation implements Delayed, HConstants {
       getInt("hbase.server.thread.wakefrequency", 10 * 1000);
     // Set the future time at which we expect to be released from the
     // DelayQueue we're inserted in on lease expiration.
-    this.expire = whenToExpire();
+    resetExpiration();
+  }
+
+  /**
+   * Call before putting this back on the delay queue.
+   * @return When we will expire next.
+   */
+  long resetExpiration() {
+    // Set the future time at which we expect to be released from the
+    // DelayQueue we're inserted in on lease expiration.
+    this.expire = System.currentTimeMillis() + this.delay;
+    return this.expire;
   }
 
   public long getDelay(TimeUnit unit) {
     return unit.convert(this.expire - System.currentTimeMillis(),
       TimeUnit.MILLISECONDS);
+  }
+
+  void setDelay(final int d) {
+    this.delay = d;
   }
   
   public int compareTo(Delayed o) {
@@ -55,8 +70,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   }
   
   protected void requeue() {
-    this.expire = whenToExpire();
-    this.master.requeue(this);
+    this.master.getRegionServerOperationQueue().putOnDelayQueue(this);
   }
 
   private long whenToExpire() {
@@ -103,5 +117,6 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   protected int getPriority() {
     return Integer.MAX_VALUE;
   }
+
   protected abstract boolean process() throws IOException;
 }

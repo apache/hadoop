@@ -109,6 +109,13 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
   }
 
+  /**
+   * @return Name of server we are processing.
+   */
+  public HServerAddress getDeadServerAddress() {
+    return this.deadServerAddress;
+  }
+
   @Override
   public String toString() {
     return "ProcessServerShutdown of " + this.deadServer;

@@ -803,6 +803,10 @@ public class HLog implements HConstants, Syncable {
           LOG.warn(getName() + " was shut down while waiting for sync");
           return;
         }
+        if (syncerShuttingDown) {
+          LOG.warn(getName() + " was shut down while waiting for sync");
+          return;
+        }
         if(force) {
           forceSync = true;
         }

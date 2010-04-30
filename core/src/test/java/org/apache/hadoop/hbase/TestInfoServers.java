@@ -51,7 +51,7 @@ public class TestInfoServers extends HBaseClusterTestCase {
     int port = cluster.getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "master");
-    port = cluster.getRegionThreads().get(0).getRegionServer().
+    port = cluster.getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "regionserver");

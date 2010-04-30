@@ -543,6 +543,7 @@ Release 0.21.0 - Unreleased
    HBASE-2393  ThriftServer instantiates a new HTable per request
                (Bogdan DRAGU via Stack)
    HBASE-2496  Less ArrayList churn on the scan path
+   HBASE-2414  Enhance test suite to be able to specify distributed scenarios
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

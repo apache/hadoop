@@ -196,7 +196,8 @@ public class ServerManager implements HConstants {
       // The startup message was from a known server with the same name.
       // Timeout the old one right away.
       this.master.getRegionManager().getRootRegionLocation();
-      this.master.queue(new ProcessServerShutdown(this.master, storedInfo));
+      RegionServerOperation op = new ProcessServerShutdown(master, storedInfo);
+      this.master.getRegionServerOperationQueue().put(op);
     }
     recordNewServer(info);
   }
@@ -599,8 +600,9 @@ public class ServerManager implements HConstants {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
           this.master.getRegionManager().setOpen(region.getRegionNameAsString());
-          // Queue up an update to note the region location.
-          this.master.queue(new ProcessRegionOpen(master, serverInfo, region));
+          RegionServerOperation op =
+            new ProcessRegionOpen(master, serverInfo, region);
+          this.master.getRegionServerOperationQueue().put(op);
         }
       }
     }
@@ -637,8 +639,9 @@ public class ServerManager implements HConstants {
       //       processed before an open resulting in the master not agreeing on
       //       the region's state.
       this.master.getRegionManager().setClosed(region.getRegionNameAsString());
-      this.master.queue(new ProcessRegionClose(master, region,
-        offlineRegion, reassignRegion));
+      RegionServerOperation op =
+        new ProcessRegionClose(master, region, offlineRegion, reassignRegion);
+      this.master.getRegionServerOperationQueue().put(op);
     }
   }
   
@@ -800,7 +803,7 @@ public class ServerManager implements HConstants {
     }
 
     public void process(WatchedEvent event) {
-      if(event.getType().equals(EventType.NodeDeleted)) {
+      if (event.getType().equals(EventType.NodeDeleted)) {
         LOG.info(server + " znode expired");
         // Remove the server from the known servers list and update load info
         serverAddressToServerInfo.remove(serverAddress);
@@ -821,7 +824,8 @@ public class ServerManager implements HConstants {
             }
           }
           deadServers.add(server);
-          master.queue(new ProcessServerShutdown(master, info));
+          RegionServerOperation op = new ProcessServerShutdown(master, info);
+          master.getRegionServerOperationQueue().put(op);
         }
         synchronized (serversToServerInfo) {
           serversToServerInfo.notifyAll();
@@ -872,5 +876,4 @@ public class ServerManager implements HConstants {
   public void setMinimumServerCount(int minimumServerCount) {
     this.minimumServerCount = minimumServerCount;
   }
-
 }

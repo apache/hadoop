@@ -58,6 +58,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
 
   @Override
   protected boolean process() throws IOException {
+    // TODO: The below check is way too convoluted!!!
     if (!metaRegionAvailable()) {
       // We can't proceed unless the meta region we are going to update
       // is online. metaRegionAvailable() has put this operation on the

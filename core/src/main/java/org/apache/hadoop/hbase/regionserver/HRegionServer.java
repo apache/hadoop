@@ -119,7 +119,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};
-  
+
   // Set when a report to the master comes back with a message asking us to
   // shutdown.  Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation. We use AtomicBoolean rather than
@@ -169,7 +169,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
   HBaseServer server;
-  
+
   // Leases
   private Leases leases;
   
@@ -221,7 +221,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   private final long rpcTimeout;
 
-  // Address passed in to constructor.
+  // Address passed in to constructor.  This is not always the address we run
+  // with.  For example, if passed port is 0, then we are to pick a port.  The
+  // actual address we run with is in the #serverInfo data member.
   private final HServerAddress address;
 
   // The main region server thread.
@@ -244,7 +246,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
         conf.get("hbase.regionserver.dns.nameserver","default"));
     String addressStr = machineName + ":" + 
       conf.get(REGIONSERVER_PORT, Integer.toString(DEFAULT_REGIONSERVER_PORT));
-    this.address = new HServerAddress(addressStr);
+    // This is not necessarily the address we will run with.  The address we
+    // use will be in #serverInfo data member.  For example, we may have been
+    // passed a port of 0 which means we should pick some ephemeral port to bind
+    // to.
+    address = new HServerAddress(addressStr);
     LOG.info("My address is " + address);
 
     this.abortRequested = false;
@@ -652,12 +658,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
       LOG.info("stopping server at: " +
         serverInfo.getServerAddress().toString());
     }
+
+    // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
       HBaseRPC.stopProxy(this.hbaseMaster);
       this.hbaseMaster = null;
     }
-    join();
 
+    join();
     zooKeeperWrapper.close();
 
     LOG.info(Thread.currentThread().getName() + " exiting");
@@ -716,7 +724,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
       // Master may have sent us a new address with the other configs.
       // Update our address in this case. See HBASE-719
       String hra = conf.get("hbase.regionserver.address");
-      if (address != null) {
+      // TODO: The below used to be this.address != null.  Was broken by what
+      // looks like a mistake in:
+      //
+      // HBASE-1215 migration; metautils scan of meta region was broken; wouldn't see first row
+      // ------------------------------------------------------------------------
+      // r796326 | stack | 2009-07-21 07:40:34 -0700 (Tue, 21 Jul 2009) | 38 lines
+      if (hra != null) {
         HServerAddress hsa = new HServerAddress (hra,
           this.serverInfo.getServerAddress().getPort());
         LOG.info("Master passed us address to use. Was=" +
@@ -1180,7 +1194,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       notifyAll(); // FindBugs NN_NAKED_NOTIFY  
     }
   }
-  
+
   /**
    * Cause the server to exit without closing the regions it is serving, the
    * log it is using and without notifying the master.
@@ -1228,9 +1242,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
         // Do initial RPC setup.  The final argument indicates that the RPC
         // should retry indefinitely.
         master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
-            HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-            masterAddress.getInetSocketAddress(),
-            this.conf, -1, this.rpcTimeout);
+          HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
+          masterAddress.getInetSocketAddress(), this.conf, -1, this.rpcTimeout);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();
@@ -2247,7 +2260,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     throw new IOException("Unknown protocol to name node: " + protocol);
   }
-  
+
   /**
    * @return Queue to which you can add outbound messages.
    */
@@ -2290,9 +2303,101 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return fs;
   }
 
+  /**
+   * @return Info on port this server has bound to, etc.
+   */
+  public HServerInfo getServerInfo() { return this.serverInfo; }
+
+  /** {@inheritDoc} */
+  public long incrementColumnValue(byte [] regionName, byte [] row, 
+      byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
+  throws IOException {
+    checkOpen();
+
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to incrementColumnValue " + 
+      "regionName is null");
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      long retval = region.incrementColumnValue(row, family, qualifier, amount, 
+          writeToWAL);
+      
+      return retval;
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
+
+  /** {@inheritDoc} */
+  public HRegionInfo[] getRegionsAssignment() throws IOException {
+    HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
+    Iterator<HRegion> ite = onlineRegions.values().iterator();
+    for(int i = 0; ite.hasNext(); i++) {
+      regions[i] = ite.next().getRegionInfo();
+    }
+    return regions;
+  }
+  
+  /** {@inheritDoc} */
+  public HServerInfo getHServerInfo() throws IOException {
+    return serverInfo;
+  }
+
+  @Override
+  public MultiPutResponse multiPut(MultiPut puts) throws IOException {
+    MultiPutResponse resp = new MultiPutResponse();
+
+    // do each region as it's own.
+    for( Map.Entry<byte[],List<Put>> e: puts.puts.entrySet()) {
+      int result = put(e.getKey(), e.getValue().toArray(new Put[]{}));
+      resp.addResult(e.getKey(), result);
+
+      e.getValue().clear(); // clear some RAM
+    }
+
+    return resp;
+  }
+
+  public String toString() {
+    return this.serverInfo.toString();
+  }
+
+  /**
+   * Interval at which threads should run
+   * @return the interval
+   */
+  public int getThreadWakeFrequency() {
+    return threadWakeFrequency;
+  }
+
   //
   // Main program and support routines
   //
+  
+  /**
+   * @param hrs
+   * @return Thread the RegionServer is running in correctly named.
+   */
+  public static Thread startRegionServer(final HRegionServer hrs) {
+    return startRegionServer(hrs,
+      "regionserver" + hrs.server.getListenerAddress());
+  }
+
+  /**
+   * @param hrs
+   * @param name
+   * @return Thread the RegionServer is running in correctly named.
+   */
+  public static Thread startRegionServer(final HRegionServer hrs,
+      final String name) {
+    Thread t = new Thread(hrs);
+    t.setName(name);
+    t.start();
+    return t;
+  }
 
   private static void printUsageAndExit() {
     printUsageAndExit(null);
@@ -2305,7 +2410,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     System.err.println("Usage: java org.apache.hbase.HRegionServer start|stop");
     System.exit(0);
   }
-  
+
   /**
    * Do class main.
    * @param args
@@ -2335,10 +2440,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
             }
             Constructor<? extends HRegionServer> c =
               regionServerClass.getConstructor(Configuration.class);
-            HRegionServer hrs = c.newInstance(conf);
-            Thread t = new Thread(hrs);
-            t.setName("regionserver" + hrs.server.getListenerAddress());
-            t.start();
+            startRegionServer(c.newInstance(conf));
           }
         } catch (Throwable t) {
           LOG.error( "Can not start region server because "+
@@ -2357,50 +2459,6 @@ public class HRegionServer implements HConstants, HRegionInterface,
       printUsageAndExit();
     }
   }
-  
-  /** {@inheritDoc} */
-  public long incrementColumnValue(byte [] regionName, byte [] row, 
-      byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
-  throws IOException {
-    checkOpen();
-
-    if (regionName == null) {
-      throw new IOException("Invalid arguments to incrementColumnValue " + 
-      "regionName is null");
-    }
-    requestCount.incrementAndGet();
-    try {
-      HRegion region = getRegion(regionName);
-      return region.incrementColumnValue(row, family, qualifier, amount,
-        writeToWAL);
-    } catch (IOException e) {
-      checkFileSystem();
-      throw e;
-    }
-  }
-  
-  /** {@inheritDoc} */
-  public HRegionInfo[] getRegionsAssignment() throws IOException {
-    HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
-    Iterator<HRegion> ite = onlineRegions.values().iterator();
-    for(int i = 0; ite.hasNext(); i++) {
-      regions[i] = ite.next().getRegionInfo();
-    }
-    return regions;
-  }
-  
-  /** {@inheritDoc} */
-  public HServerInfo getHServerInfo() throws IOException {
-    return serverInfo;
-  }
-
-  /**
-   * Interval at which threads should run
-   * @return the interval
-   */
-  public int getThreadWakeFrequency() {
-    return threadWakeFrequency;
-  }
 
   /**
    * @param args
@@ -2412,21 +2470,5 @@ public class HRegionServer implements HConstants, HRegionInterface,
       (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,
         HRegionServer.class);
     doMain(args, regionServerClass);
-  }
-
-
-  @Override
-  public MultiPutResponse multiPut(MultiPut puts) throws IOException {
-    MultiPutResponse resp = new MultiPutResponse();
-
-    // do each region as it's own.
-    for( Map.Entry<byte[],List<Put>> e: puts.puts.entrySet()) {
-      int result = put(e.getKey(), e.getValue().toArray(new Put[]{}));
-      resp.addResult(e.getKey(), result);
-
-      e.getValue().clear(); // clear some RAM
-    }
-
-    return resp;
   }
 }

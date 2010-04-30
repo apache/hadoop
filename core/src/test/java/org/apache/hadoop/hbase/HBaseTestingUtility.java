@@ -40,12 +40,12 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.ZooKeeper;
@@ -60,7 +60,6 @@ import org.apache.zookeeper.ZooKeeper;
  * make changes to configuration parameters.
  */
 public class HBaseTestingUtility {
-  
   private final Log LOG = LogFactory.getLog(getClass());
 
   private final Configuration conf;
@@ -68,6 +67,7 @@ public class HBaseTestingUtility {
   private MiniDFSCluster dfsCluster = null;
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
+  // If non-null, then already a cluster running.
   private File clusterTestBuildDir = null;
   private HBaseAdmin hbaseAdmin = null;
 
@@ -78,7 +78,7 @@ public class HBaseTestingUtility {
   public HBaseTestingUtility(Configuration conf) {
     this.conf = conf;
   }
-  
+
   /** System property key to get test directory value.
    */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
@@ -98,6 +98,36 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Home our cluster in a dir under build/test.  Give it a random name
+   * so can have many concurrent clusters running if we need to.  Need to
+   * amend the test.build.data System property.  Its what minidfscluster bases
+   * it data dir on.  Moding a System property is not the way to do concurrent
+   * instances -- another instance could grab the temporary
+   * value unintentionally -- but not anything can do about it at moment; its
+   * how the minidfscluster works.
+   * @return The calculated cluster test build directory.
+   */
+  File setupClusterTestBuildDir() {
+    String oldTestBuildDir =
+      System.getProperty(TEST_DIRECTORY_KEY, "build/test/data");
+    String randomStr = UUID.randomUUID().toString();
+    String dirStr = oldTestBuildDir + "." + randomStr;
+    File dir = new File(dirStr).getAbsoluteFile();
+    // Have it cleaned up on exit
+    dir.deleteOnExit();
+    return dir;
+  }
+
+  /**
+   * @throws IOException If cluster already running.
+   */
+  void isRunningCluster() throws IOException {
+    if (this.clusterTestBuildDir == null) return;
+    throw new IOException("Cluster already running at " +
+      this.clusterTestBuildDir);
+  }
+
+  /**
    * @param subdirName
    * @return Path to a subdirectory named <code>subdirName</code> under
    * {@link #getTestDir()}.
@@ -114,13 +144,32 @@ public class HBaseTestingUtility {
     startMiniCluster(1);
   }
 
+  /**
+   * Call this if you only want a zk cluster.
+   * @see #startMiniZKCluster() if you want zk + dfs + hbase mini cluster.
+   * @throws Exception
+   * @see #shutdownMiniZKCluster() 
+   */
   public void startMiniZKCluster() throws Exception {
-    // Note that this is done before we create the MiniHBaseCluster because we
-    // need to edit the config to add the ZooKeeper servers.
+    isRunningCluster();
+    this.clusterTestBuildDir = setupClusterTestBuildDir();
+    startMiniZKCluster(this.clusterTestBuildDir);
+
+  }
+
+  private void startMiniZKCluster(final File dir) throws Exception {
     this.zkCluster = new MiniZooKeeperCluster();
-    int clientPort = this.zkCluster.startup(this.clusterTestBuildDir);
+    int clientPort = this.zkCluster.startup(dir);
     this.conf.set("hbase.zookeeper.property.clientPort",
       Integer.toString(clientPort));
+  }
+
+  /**
+   * @throws IOException
+   * @see #startMiniZKCluster()
+   */
+  public void shutdownMiniZKCluster() throws IOException {
+    if (this.zkCluster != null) this.zkCluster.shutdown(); 
   }
 
   /**
@@ -138,27 +187,13 @@ public class HBaseTestingUtility {
   throws Exception {
     LOG.info("Starting up minicluster");
     // If we already put up a cluster, fail.
-    if (this.clusterTestBuildDir != null) {
-      throw new IOException("Cluster already running at " +
-        this.clusterTestBuildDir);
-    }
-    // Now, home our cluster in a dir under build/test.  Give it a random name
-    // so can have many concurrent clusters running if we need to.  Need to
-    // amend the test.build.data System property.  Its what minidfscluster bases
-    // it data dir on.  Moding a System property is not the way to do concurrent
-    // instances -- another instance could grab the temporary
-    // value unintentionally -- but not anything can do about it at moment; its
-    // how the minidfscluster works.
-    String oldTestBuildDir =
+    isRunningCluster();
+    String oldBuildTestDir =
       System.getProperty(TEST_DIRECTORY_KEY, "build/test/data");
-    String randomStr = UUID.randomUUID().toString();
-    String clusterTestBuildDirStr = oldTestBuildDir + "." + randomStr;
-    this.clusterTestBuildDir =
-      new File(clusterTestBuildDirStr).getAbsoluteFile();
-    // Have it cleaned up on exit
-    this.clusterTestBuildDir.deleteOnExit();
+    this.clusterTestBuildDir = setupClusterTestBuildDir();
+
     // Set our random dir while minidfscluster is being constructed.
-    System.setProperty(TEST_DIRECTORY_KEY, clusterTestBuildDirStr);
+    System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.getPath());
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. TODO: fix.
     // Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
@@ -167,7 +202,8 @@ public class HBaseTestingUtility {
     // Restore System property. minidfscluster accesses content of
     // the TEST_DIRECTORY_KEY to make bad blocks, a feature we are not using,
     // but otherwise, just in constructor.
-    System.setProperty(TEST_DIRECTORY_KEY, oldTestBuildDir);
+    System.setProperty(TEST_DIRECTORY_KEY, oldBuildTestDir);
+ 
     // Mangle conf so fs parameter points to minidfs we just started up
     FileSystem fs = this.dfsCluster.getFileSystem();
     this.conf.set("fs.defaultFS", fs.getUri().toString());
@@ -175,7 +211,7 @@ public class HBaseTestingUtility {
 
     // It could be created before the cluster
     if(this.zkCluster == null) {
-      startMiniZKCluster();
+      startMiniZKCluster(this.clusterTestBuildDir);
     }
 
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
@@ -192,8 +228,17 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * @return Current mini hbase cluster. Only has something in it after a call
+   * to {@link #startMiniCluster()}.
+   * @see #startMiniCluster()
+   */
+  public MiniHBaseCluster getMiniHBaseCluster() {
+    return this.hbaseCluster;
+  }
+
+  /**
    * @throws IOException
-   * @see {@link #startMiniCluster(boolean, int)}
+   * @see {@link #startMiniCluster(int)}
    */
   public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
@@ -202,7 +247,7 @@ public class HBaseTestingUtility {
       // Wait till hbase is down before going on to shutdown zk.
       this.hbaseCluster.join();
     }
-    if (this.zkCluster != null) this.zkCluster.shutdown();
+    shutdownMiniZKCluster();
     if (this.dfsCluster != null) {
       // The below throws an exception per dn, AsynchronousCloseException.
       this.dfsCluster.shutdown();
@@ -369,9 +414,24 @@ public class HBaseTestingUtility {
    * 
    * @param table  The table to use for the data.
    * @param columnFamily  The family to insert the data into.
+   * @return count of regions created.
    * @throws IOException When creating the regions fails.
    */
-  public void createMultiRegions(HTable table, byte[] columnFamily) 
+  public int createMultiRegions(HTable table, byte[] columnFamily) 
+  throws IOException {
+    return createMultiRegions(getConfiguration(), table, columnFamily);
+  }
+
+  /**
+   * Creates many regions names "aaa" to "zzz".
+   * @param c Configuration to use.
+   * @param table  The table to use for the data.
+   * @param columnFamily  The family to insert the data into.
+   * @return count of regions created.
+   * @throws IOException When creating the regions fails.
+   */
+  public int createMultiRegions(final Configuration c, final HTable table,
+      final byte[] columnFamily) 
   throws IOException {
     byte[][] KEYS = {
       HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
@@ -385,7 +445,6 @@ public class HBaseTestingUtility {
       Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
     };
 
-    Configuration c = getConfiguration();
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
     HTableDescriptor htd = table.getTableDescriptor();
     if(!htd.hasFamily(columnFamily)) {
@@ -398,6 +457,7 @@ public class HBaseTestingUtility {
     // including the new start region from empty to "bbb". lg 
     List<byte[]> rows = getMetaTableRows();
     // add custom ones
+    int count = 0;
     for (int i = 0; i < KEYS.length; i++) {
       int j = (i + 1) % KEYS.length;
       HRegionInfo hri = new HRegionInfo(table.getTableDescriptor(), 
@@ -407,6 +467,7 @@ public class HBaseTestingUtility {
         Writables.getBytes(hri));
       meta.put(put);
       LOG.info("createMultiRegions: inserted " + hri.toString());
+      count++;
     }
     // see comment above, remove "old" (or previous) single region
     for (byte[] row : rows) {
@@ -417,6 +478,7 @@ public class HBaseTestingUtility {
     // flush cache of regions
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
+    return count;
   }
 
   /**

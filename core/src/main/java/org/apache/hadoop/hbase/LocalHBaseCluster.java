@@ -20,8 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,10 +27,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.ReflectionUtils;
+import java.util.concurrent.CopyOnWriteArrayList;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -57,8 +56,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class LocalHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
   private final HMaster master;
-  private final List<RegionServerThread> regionThreads =
-    new ArrayList<RegionServerThread>();
+  private final List<JVMClusterUtil.RegionServerThread> regionThreads;
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
@@ -84,47 +82,50 @@ public class LocalHBaseCluster implements HConstants {
    * @param noRegionServers Count of regionservers to start.
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final Configuration conf,
     final int noRegionServers)
   throws IOException {
+    this(conf, noRegionServers, HMaster.class);
+  }
+
+  /**
+   * Constructor.
+   * @param conf Configuration to use.  Post construction has the master's
+   * address.
+   * @param noRegionServers Count of regionservers to start.
+   * @param masterClass
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public LocalHBaseCluster(final Configuration conf,
+    final int noRegionServers, final Class masterClass)
+  throws IOException {
     this.conf = conf;
     // Create the master
-    this.master = new HMaster(conf);
+    this.master = HMaster.constructMaster(masterClass, conf);
     // Start the HRegionServers.  Always have region servers come up on
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
     conf.set(REGIONSERVER_PORT, "0");
-    regionServerClass = (Class<? extends HRegionServer>)
-      conf.getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
+    this.regionThreads =
+      new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
+    this.regionServerClass =
+      (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
+       HRegionServer.class);
     for (int i = 0; i < noRegionServers; i++) {
-      addRegionServer();
+      addRegionServer(i);
     }
   }
 
-  /**
-   * Creates a region server.
-   * Call 'start' on the returned thread to make it run.
-   *
-   * @throws IOException
-   * @return Region server added.
-   */
-  public RegionServerThread addRegionServer() throws IOException {
-    synchronized (regionThreads) {
-      HRegionServer server; 
-      try {
-        server = regionServerClass.getConstructor(Configuration.class).
-          newInstance(conf);
-      } catch (Exception e) {
-        IOException ioe = new IOException();
-        ioe.initCause(e);
-        throw ioe;
-      }
-      RegionServerThread t = new RegionServerThread(server,
-          this.regionThreads.size());
-      this.regionThreads.add(t);
-      return t;
-    }
+  public JVMClusterUtil.RegionServerThread addRegionServer() throws IOException {
+    return addRegionServer(this.regionThreads.size());
+  }
+
+  public JVMClusterUtil.RegionServerThread addRegionServer(final int index) throws IOException {
+    JVMClusterUtil.RegionServerThread rst = JVMClusterUtil.createRegionServerThread(this.conf,
+        this.regionServerClass, index);
+    this.regionThreads.add(rst);
+    return rst;
   }
 
   /**
@@ -132,38 +133,7 @@ public class LocalHBaseCluster implements HConstants {
    * @return region server
    */
   public HRegionServer getRegionServer(int serverNumber) {
-    synchronized (regionThreads) {
-      return regionThreads.get(serverNumber).getRegionServer();
-    }
-  }
-
-  /** runs region servers */
-  public static class RegionServerThread extends Thread {
-    private final HRegionServer regionServer;
-    
-    RegionServerThread(final HRegionServer r, final int index) {
-      super(r, "RegionServer:" + index);
-      this.regionServer = r;
-    }
-
-    /** @return the region server */
-    public HRegionServer getRegionServer() {
-      return this.regionServer;
-    }
-    
-    /**
-     * Block until the region server has come online, indicating it is ready
-     * to be used.
-     */
-    public void waitForServerOnline() {
-      while (!regionServer.isOnline()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          // continue waiting
-        }
-      }
-    }
+    return regionThreads.get(serverNumber).getRegionServer();
   }
 
   /**
@@ -176,7 +146,7 @@ public class LocalHBaseCluster implements HConstants {
   /**
    * @return Read-only list of region server threads.
    */
-  public List<RegionServerThread> getRegionServers() {
+  public List<JVMClusterUtil.RegionServerThread> getRegionServers() {
     return Collections.unmodifiableList(this.regionThreads);
   }
 
@@ -187,10 +157,8 @@ public class LocalHBaseCluster implements HConstants {
    * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(int serverNumber) {
-    RegionServerThread regionServerThread;
-    synchronized (regionThreads) {
-      regionServerThread = this.regionThreads.remove(serverNumber);
-    }
+    JVMClusterUtil.RegionServerThread regionServerThread =
+      this.regionThreads.remove(serverNumber);
     while (regionServerThread.isAlive()) {
       try {
         LOG.info("Waiting on " +
@@ -211,14 +179,12 @@ public class LocalHBaseCluster implements HConstants {
    */
   public void join() {
     if (this.regionThreads != null) {
-      synchronized(this.regionThreads) {
         for(Thread t: this.regionThreads) {
           if (t.isAlive()) {
             try {
               t.join();
-            } catch (InterruptedException e) {
-              // continue
-            }
+          } catch (InterruptedException e) {
+            // continue
           }
         }
       }
@@ -234,79 +200,16 @@ public class LocalHBaseCluster implements HConstants {
   
   /**
    * Start the cluster.
-   * @return Address to use contacting master.
    */
-  public String startup() {
-    this.master.start();
-    synchronized (regionThreads) {
-      for (RegionServerThread t: this.regionThreads) {
-        t.start();
-      }
-    }
-    return this.master.getMasterAddress().toString();
+  public void startup() {
+    JVMClusterUtil.startup(this.master, this.regionThreads);
   }
 
   /**
    * Shut down the mini HBase cluster
-   * @throws IOException 
    */
-  public void shutdown() throws IOException {
-    LOG.debug("Shutting down HBase Cluster");
-    // Be careful about how we shutdown hdfs.  Its done elsewhere.
-    synchronized (this.regionThreads) {
-      for (RegionServerThread t: this.regionThreads) {
-        t.getRegionServer().setShutdownHDFS(false);
-      }
-    }
-    if(this.master != null) {
-      this.master.shutdown();
-    }
-    // regionServerThreads can never be null because they are initialized when
-    // the class is constructed.
-    synchronized(this.regionThreads) {
-      for(Thread t: this.regionThreads) {
-        if (t.isAlive()) {
-          try {
-            t.join();
-          } catch (InterruptedException e) {
-            // continue
-          }
-        }
-      }
-    }
-    if (this.master != null) {
-      while (this.master.isAlive()) {
-        try {
-          // The below has been replaced to debug sometime hangs on end of
-          // tests.
-          // this.master.join():
-          threadDumpingJoin(this.master);
-        } catch(InterruptedException e) {
-          // continue
-        }
-      }
-    }
-    LOG.info("Shutdown " + this.regionThreads.size() + " region server(s)");
-  }
-
-  /**
-   * @param t
-   * @throws InterruptedException
-   */
-  public void threadDumpingJoin(final Thread t) throws InterruptedException {
-    if (t == null) {
-      return;
-    }
-    long startTime = System.currentTimeMillis();
-    while (t.isAlive()) {
-      Thread.sleep(1000);
-      if (System.currentTimeMillis() - startTime > 60000) {
-        startTime = System.currentTimeMillis();
-        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
-            "Automatic Stack Trace every 60 seconds waiting on " +
-            t.getName());
-      }
-    }
+  public void shutdown() {
+    JVMClusterUtil.shutdown(this.master, this.regionThreads);
   }
 
   /**

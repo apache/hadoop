@@ -201,8 +201,8 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * regionservers and master threads are no long alive.
    */
   public void threadDumpingJoin() {
-    if (this.cluster.getRegionThreads() != null) {
-      for(Thread t: this.cluster.getRegionThreads()) {
+    if (this.cluster.getRegionServerThreads() != null) {
+      for(Thread t: this.cluster.getRegionServerThreads()) {
         threadDumpingJoin(t);
       }
     }
