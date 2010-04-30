@@ -162,6 +162,9 @@ Trunk (unreleased changes)
     HDFS-1100. Override unwrapException in TestFcHdfsSymlink to test 
     symlink API conformance. (Eli Collins via suresh).
 
+    HDFS-1089. Remove uses of FileContext#isFile, isDirectory, and exists.
+    (Eli Collins via hairong)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

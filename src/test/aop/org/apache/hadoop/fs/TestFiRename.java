@@ -31,6 +31,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
+
 /**
  * Rename names src to dst. Rename is done using following steps:
  * <ul>
@@ -206,7 +208,7 @@ public class TestFiRename {
     dst = getTestPath("testDeletionOfDstFile/newdir/dst");
     while (exception && count < 5) {
       try {
-        fc.exists(src);
+        exists(fc, src);
         exception = false;
       } catch (Exception e) {
         LOG.warn("Exception " + " count " + count + " " + e.getMessage());
@@ -214,8 +216,8 @@ public class TestFiRename {
         count++;
       }
     }
-    Assert.assertFalse(fc.exists(src));
-    Assert.assertTrue(fc.exists(dst));
+    Assert.assertFalse(exists(fc, src));
+    Assert.assertTrue(exists(fc, dst));
   }
 
   /** Rename test where both src and dst are directories */
@@ -242,7 +244,7 @@ public class TestFiRename {
     boolean exception = true;
     while (exception && count < 5) {
       try {
-        fc.exists(src);
+        exists(fc, src);
         exception = false;
       } catch (Exception e) {
         LOG.warn("Exception " + " count " + count + " " + e.getMessage());
@@ -250,8 +252,8 @@ public class TestFiRename {
         count++;
       }
     }
-    Assert.assertFalse(fc.exists(src));
-    Assert.assertTrue(fc.exists(dst));
+    Assert.assertFalse(exists(fc, src));
+    Assert.assertTrue(exists(fc, dst));
   }
 
   private void rename(Path src, Path dst, boolean exception, boolean srcExists,
@@ -263,7 +265,7 @@ public class TestFiRename {
       LOG.warn("Exception ", e);
       Assert.assertTrue(exception);
     }
-    Assert.assertEquals(srcExists, fc.exists(src));
-    Assert.assertEquals(dstExists, fc.exists(dst));
+    Assert.assertEquals(srcExists, exists(fc, src));
+    Assert.assertEquals(dstExists, exists(fc, dst));
   }
 }
