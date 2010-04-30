@@ -94,6 +94,8 @@ public class TestFilterFileSystem extends TestCase {
         Progressable progress) {
       return null;
     }
+    public String getName() { return null; }
+    public boolean delete(Path f) { return false; }
     public short getReplication(Path src) { return 0 ; }
     public void processDeleteOnExit() { }
     public ContentSummary getContentSummary(Path f) { return null; }

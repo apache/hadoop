@@ -388,6 +388,9 @@ Trunk (unreleased changes)
     HADOOP-6630. hadoop-config.sh fails to get executed if hadoop wrapper
     scripts are in path. (Allen Wittenauer via tomwhite)
 
+    HADOOP-6742. Add methods HADOOP-6709 from to TestFilterFileSystem.
+    (Eli Collins via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
