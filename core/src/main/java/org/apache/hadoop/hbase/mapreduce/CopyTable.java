@@ -154,7 +154,7 @@ public class CopyTable {
         }
 
         final String newNameArgKey = "--new.name=";
-        if (cmd.startsWith(rsClassArgKey)) {
+        if (cmd.startsWith(newNameArgKey)) {
           newTableName = cmd.substring(newNameArgKey.length());
           continue;
         }
