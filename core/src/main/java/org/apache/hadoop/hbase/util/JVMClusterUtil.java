@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 
@@ -74,12 +74,12 @@ public class JVMClusterUtil {
    * @throws IOException
    * @return Region server added.
    */
-  public static JVMClusterUtil.RegionServerThread createRegionServerThread(final HBaseConfiguration c,
+  public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
     final Class<? extends HRegionServer> hrsc, final int index)
   throws IOException {
       HRegionServer server; 
       try {
-        server = hrsc.getConstructor(HBaseConfiguration.class).newInstance(c);
+        server = hrsc.getConstructor(Configuration.class).newInstance(c);
       } catch (Exception e) {
         IOException ioe = new IOException();
         ioe.initCause(e);
@@ -112,15 +112,6 @@ public class JVMClusterUtil {
   public static void shutdown(final HMaster master,
       final List<RegionServerThread> regionservers) {
     LOG.debug("Shutting down HBase Cluster");
-    // Be careful how the hdfs shutdown thread runs in context where more than
-    // one regionserver in the mix.
-    Thread hdfsClientFinalizer = null;
-    for (JVMClusterUtil.RegionServerThread t: regionservers) {
-      Thread tt = t.getRegionServer().setHDFSShutdownThreadOnExit(null);
-      if (hdfsClientFinalizer == null && tt != null) {
-        hdfsClientFinalizer = tt;
-      }
-    }
     if (master != null) {
       master.shutdown();
     }
@@ -146,14 +137,6 @@ public class JVMClusterUtil {
           // continue
         }
       }
-    }
-    if (hdfsClientFinalizer != null) {
-      // Don't run the shutdown thread.  Plays havoc if we try to start a
-      // minihbasecluster immediately after this one has gone down (In
-      // Filesystem, the shutdown thread is kept in a static and is created
-      // on classloading.  Can only run it once).
-      // hdfsClientFinalizer.start();
-      // Threads.shutdown(hdfsClientFinalizer);
     }
     LOG.info("Shutdown " +
       ((regionservers != null)? master.getName(): "0 masters") +
