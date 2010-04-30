@@ -417,15 +417,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.support.append</name>
-  <value>false</value>
-  <description>Does HDFS allow appends to files?
-               This is currently set to false because there are bugs in the
-               "append code" and is not supported in any prodction cluster.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.plugins</name>
   <value></value>
   <description>Comma-separated list of datanode plug-ins to be activated.

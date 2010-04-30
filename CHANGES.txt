@@ -307,7 +307,7 @@ Trunk (unreleased changes)
     HDFS-1101. TestDiskError.testLocalDirs() fails. (cdouglas via jghoman)
 
     HDFS-1031. Enhance the webUi to list a few of the corrupted files in HDFS.
-    (André Orian via dhruba)
+    (Andre Orian via dhruba)
 
     HDFS-1078. Create static and dynamic versions of libhdfs.
     (Sam Rash via dhruba)
@@ -650,6 +650,8 @@ Release 0.21.0 - Unreleased
     HDFS-520. Create new tests for block recovery. (hairong)
 
     HDFS-1067. Create block recovery tests that handle errors. (hairong)
+
+    HDFS-1107. Turn on append by default. (shv)
 
   BUG FIXES
 
