@@ -312,6 +312,8 @@ Trunk (unreleased changes)
     HDFS-1078. Create static and dynamic versions of libhdfs.
     (Sam Rash via dhruba)
 
+    HDFS-1104. Fsck triggers full GC on NameNode. (hairong)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

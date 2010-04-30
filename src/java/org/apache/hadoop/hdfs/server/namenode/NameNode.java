@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -585,6 +586,19 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     myMetrics.numGetBlockLocations.inc();
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
+  }
+  
+  /**
+   * The specification of this method matches that of
+   * {@link getBlockLocations(Path)}
+   * except that it does not update the file's access time.
+   */
+  LocatedBlocks getBlockLocationsNoATime(String src, 
+                                         long offset, 
+                                         long length)
+      throws IOException {
+    myMetrics.numGetBlockLocations.inc();
+    return namesystem.getBlockLocations(src, offset, length, false);
   }
   
   private static String getClientMachine() {
