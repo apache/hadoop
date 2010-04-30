@@ -235,6 +235,9 @@ Trunk (unreleased changes)
     HADOOP-6515. Make maximum number of http threads configurable.
     (Scott Chen via zshao)
 
+    HADOOP-6563. Add more symlink tests to cover intermediate symlinks
+    in paths. (Eli Collins via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).

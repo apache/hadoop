@@ -792,7 +792,7 @@ public final class FileContext {
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnsupportedFileSystemException,
       UnresolvedLinkException, IOException {
-    final Path absSrc  = fixRelativePart(src);
+    final Path absSrc = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
     AbstractFileSystem srcFS = getFSofPath(absSrc);
     AbstractFileSystem dstFS = getFSofPath(absDst);
@@ -803,10 +803,10 @@ public final class FileContext {
       srcFS.rename(absSrc, absDst, options);
     } catch (UnresolvedLinkException e) {
       /* We do not know whether the source or the destination path
-       * was unresolved. Resolve the source path completely, then
-       * resolve the destination. 
+       * was unresolved. Resolve the source path up until the final
+       * path component, then fully resolve the destination. 
        */
-      final Path source = resolve(absSrc);    
+      final Path source = resolveIntermediate(absSrc);    
       new FSLinkResolver<Void>() {
         public Void next(final AbstractFileSystem fs, final Path p) 
           throws IOException, UnresolvedLinkException {
@@ -2121,6 +2121,21 @@ public final class FileContext {
     }.resolve(this, f).getPath();
   }
 
+  /**
+   * Resolves all symbolic links in the specified path leading up 
+   * to, but not including the final path component.
+   * @param f path to resolve
+   * @return the new path object.
+   */
+  protected Path resolveIntermediate(final Path f) throws IOException {
+    return new FSLinkResolver<FileStatus>() {
+      public FileStatus next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.getFileLinkStatus(p);
+      }
+    }.resolve(this, f).getPath();
+  }
+  
   /**
    * Class used to perform an operation on and resolve symlinks in a
    * path. The operation may potentially span multiple file systems.  

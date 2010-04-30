@@ -59,16 +59,6 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
     fc = FileContext.getLocalFSFileContext();
     super.setUp();
   }
-
-  @Test
-  /** Test access a symlink using FileSystem */
-  public void testAccessLinkFromFileSystem() throws IOException {
-    Path fileAbs = new Path(testBaseDir1()+"/file");
-    Path link    = new Path(testBaseDir1()+"/linkToFile");
-    createAndWriteFile(fileAbs);
-    fc.createSymlink(fileAbs, link, false);
-    readFile(link);
-  } 
   
   @Test
   /** lstat a non-existant file using a partially qualified path */
@@ -114,7 +104,8 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
     FileStatus fsd = fc.getFileLinkStatus(link);
     assertEquals(fileQual, fsd.getSymlink());
     assertTrue(fsd.isSymlink());
-    assertFalse(fsd.isDir());
+    // NB: isDir is true since we need !isDir to imply file (HADOOP-6584)
+    //assertTrue(fsd.isDir());
     assertEquals("", fsd.getOwner());
     assertEquals("", fsd.getGroup());
     assertEquals(link, fsd.getPath());
