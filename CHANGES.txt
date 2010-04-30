@@ -20,8 +20,6 @@ Release 0.21.0 - Unreleased
    HBASE-2392  Upgrade to ZooKeeper 3.3.0
    HBASE-2294  Enumerate ACID properties of HBase in a well defined spec
                (Todd Lipcon via Stack)
-   HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
-               regions
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -297,6 +295,8 @@ Release 0.21.0 - Unreleased
                master.jsp moved under webapps/master(Cristian Ivascu via Stack)
    HBASE-2487  Uncaught exceptions in receiving IPC responses orphan clients
                (Todd Lipcon via Stack)
+   HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
+               regiond (Miklos Kurucz via Stack)
    HBASE-2499  Race condition when disabling a table leaves regions in transition
 
   IMPROVEMENTS
