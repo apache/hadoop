@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.ipc.TransactionalRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 public class TestTHLogRecovery extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestTHLogRecovery.class);
@@ -141,8 +142,8 @@ public class TestTHLogRecovery extends HBaseClusterTestCase {
   // }
 
   private void flushRegionServer() {
-    List<LocalHBaseCluster.RegionServerThread> regionThreads = cluster
-        .getRegionThreads();
+    List<JVMClusterUtil.RegionServerThread> regionThreads = cluster
+        .getRegionServerThreads();
 
     HRegion region = null;
     int server = -1;
@@ -171,8 +172,8 @@ public class TestTHLogRecovery extends HBaseClusterTestCase {
    * just shut down.
    */
   private void stopOrAbortRegionServer(final boolean abort) {
-    List<LocalHBaseCluster.RegionServerThread> regionThreads = cluster
-        .getRegionThreads();
+    List<JVMClusterUtil.RegionServerThread> regionThreads = cluster
+        .getRegionServerThreads();
 
     int server = -1;
     for (int i = 0; i < regionThreads.size(); i++) {
