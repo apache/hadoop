@@ -287,6 +287,8 @@ Release 0.21.0 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2447  LogSyncer.addToSyncQueue doesn't check if syncer is still
                running before waiting (Todd Lipcon via Stack)
+   HBASE-2494  Does not apply new.name parameter to CopyTable
+               (Yoonsik Oh via Stack)
    HBASE-2481  Client is not getting UnknownScannerExceptions; they are
                being eaten (Jean-Daniel Cryans via Stack)
    HBASE-2448  Scanner threads are interrupted without acquiring lock properly
