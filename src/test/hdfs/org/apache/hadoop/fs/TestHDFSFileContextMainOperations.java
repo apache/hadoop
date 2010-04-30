@@ -40,7 +40,7 @@ import org.junit.Test;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 public class TestHDFSFileContextMainOperations extends
-    FileContextMainOperationsBaseTest {
+                                  FileContextMainOperationsBaseTest {
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
@@ -259,8 +259,8 @@ public class TestHDFSFileContextMainOperations extends
     } catch (Exception ex) {
       Assert.assertTrue(exception);
     }
-    Assert.assertEquals(renameSucceeds, !exists(fc, src));
-    Assert.assertEquals(renameSucceeds, exists(fc, dst));
+    Assert.assertEquals(renameSucceeds, !fc.exists(src));
+    Assert.assertEquals(renameSucceeds, fc.exists(dst));
   }
   
   private void rename(Path src, Path dst, boolean dstExists,
@@ -272,7 +272,7 @@ public class TestHDFSFileContextMainOperations extends
     } catch (Exception ex) {
       Assert.assertTrue(exception);
     }
-    Assert.assertEquals(renameSucceeds, !exists(fc, src));
-    Assert.assertEquals((dstExists||renameSucceeds), exists(fc, dst));
+    Assert.assertEquals(renameSucceeds, !fc.exists(src));
+    Assert.assertEquals((dstExists||renameSucceeds), fc.exists(dst));
   }
 }
