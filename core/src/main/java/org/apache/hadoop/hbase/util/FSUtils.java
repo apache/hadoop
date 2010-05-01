@@ -179,8 +179,10 @@ public class FSUtils {
     
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
-    String msg = "File system needs to be upgraded. Run " +
-      "the '${HBASE_HOME}/bin/hbase migrate' script.";
+    String msg = "File system needs to be upgraded."
+      + "  You have version " + version
+      + " and I want version " + HConstants.FILE_SYSTEM_VERSION
+      + ".  Run the '${HBASE_HOME}/bin/hbase migrate' script.";
     if (message) {
       System.out.println("WARNING! " + msg);
     }

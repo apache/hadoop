@@ -298,6 +298,10 @@ Release 0.21.0 - Unreleased
    HBASE-2497  ProcessServerShutdown throws NullPointerException for offline
                regiond (Miklos Kurucz via Stack)
    HBASE-2499  Race condition when disabling a table leaves regions in transition
+   HBASE-2489  Make the "Filesystem needs to be upgraded" error message more
+               useful (Benoit Sigoure via Stack)
+
+              
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
