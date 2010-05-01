@@ -90,7 +90,7 @@ public class TestMasterTransistions {
     private final int otherServerIndex;
     private final HRegionInfo hri;
     private int closeCount = 0;
-    static final int SERVER_DURATION = 10 * 1000;
+    static final int SERVER_DURATION = 3 * 1000;
     static final int CLOSE_DURATION = 1 * 1000;
  
     HBase2428Listener(final MiniHBaseCluster c, final HServerAddress metaAddress,
@@ -136,7 +136,7 @@ public class TestMasterTransistions {
     }
 
     public void processed(final RegionServerOperation op) {
-      if (isWantedCloseOperation(op) == null) return;
+      if (isWantedCloseOperation(op) != null) return;
       this.done = true;
     }
 
@@ -207,6 +207,7 @@ public class TestMasterTransistions {
       // We should not have retried the close more times than it took for the
       // server shutdown message to exit the delay queue and get processed
       // (Multiple by two to add in some slop in case of GC or something).
+      assertTrue(listener.getCloseCount() > 1);
       assertTrue(listener.getCloseCount() <
         ((HBase2428Listener.SERVER_DURATION/HBase2428Listener.CLOSE_DURATION) * 2));
 

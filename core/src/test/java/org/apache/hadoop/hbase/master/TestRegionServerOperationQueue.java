@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test the queue used to manage RegionServerOperations.
@@ -43,5 +44,9 @@ public class TestRegionServerOperationQueue {
 
   @After
   public void tearDown() throws Exception {
+  }
+  
+  @Test
+  public void testNothing() throws Exception {
   }
 }
