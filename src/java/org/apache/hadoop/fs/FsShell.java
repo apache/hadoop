@@ -350,9 +350,6 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
-        if (srcFs.getFileStatus(p).isDir()) {
-          throw new IOException("Source must be a file.");
-        }
         printToStdout(srcFs.open(p));
       }
     }.globAndProcess(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
@@ -367,11 +364,13 @@ public class FsShell extends Configured implements Tool {
     DataOutputBuffer outbuf;
 
     public TextRecordInputStream(FileStatus f) throws IOException {
-      r = new SequenceFile.Reader(fs, f.getPath(), getConf());
-      key = ReflectionUtils.newInstance(r.getKeyClass().asSubclass(WritableComparable.class),
-                                        getConf());
-      val = ReflectionUtils.newInstance(r.getValueClass().asSubclass(Writable.class),
-                                        getConf());
+      final Path fpath = f.getPath();
+      final Configuration lconf = getConf();
+      r = new SequenceFile.Reader(fpath.getFileSystem(lconf), fpath, lconf);
+      key = ReflectionUtils.newInstance(
+          r.getKeyClass().asSubclass(WritableComparable.class), lconf);
+      val = ReflectionUtils.newInstance(
+          r.getValueClass().asSubclass(Writable.class), lconf);
       inbuf = new DataInputBuffer();
       outbuf = new DataOutputBuffer();
     }
@@ -393,6 +392,11 @@ public class FsShell extends Configured implements Tool {
         ret = inbuf.read();
       }
       return ret;
+    }
+
+    public void close() throws IOException {
+      r.close();
+      super.close();
     }
   }
 
@@ -1293,6 +1297,12 @@ public class FsShell extends Configured implements Tool {
       Path srcPath = new Path(args[i]);
       FileSystem srcFs = srcPath.getFileSystem(getConf());
       Path[] paths = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
+      // if nothing matches to given glob pattern then increment error count
+      if(paths.length==0) {
+        System.err.println(handler.getName() + 
+            ": could not get status for '" + args[i] + "'");
+        errors++;
+      }
       for(Path path : paths) {
         try {
           FileStatus file = srcFs.getFileStatus(path);
@@ -1308,7 +1318,8 @@ public class FsShell extends Configured implements Tool {
             (e.getCause().getMessage() != null ? 
                 e.getCause().getLocalizedMessage() : "null"));
           System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);        
+                                        + path + "': " + msg.split("\n")[0]);
+          errors++;
         }
       }
     }
@@ -1503,6 +1514,8 @@ public class FsShell extends Configured implements Tool {
     
     String chgrp = FsShellPermissions.CHGRP_USAGE + "\n" +
       "\t\tThis is equivalent to -chown ... :GROUP ...\n";
+
+    String expunge = "-expunge: Empty the Trash.\n";
     
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -1525,6 +1538,8 @@ public class FsShell extends Configured implements Tool {
       System.out.println(dus);
     } else if ("rm".equals(cmd)) {
       System.out.println(rm);
+    } else if ("expunge".equals(cmd)) {
+      System.out.println(expunge);
     } else if ("rmr".equals(cmd)) {
       System.out.println(rmr);
     } else if ("mkdir".equals(cmd)) {
@@ -1569,7 +1584,7 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chown);
     } else if ("chgrp".equals(cmd)) {
       System.out.println(chgrp);
-    } else if (Count.matches(cmd)) {
+    } else if (Count.NAME.equals(cmd)) {
       System.out.println(Count.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
@@ -1861,7 +1876,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
-        FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
+        exitCode = FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);

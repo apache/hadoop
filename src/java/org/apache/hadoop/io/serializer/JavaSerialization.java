@@ -24,6 +24,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.Map;
+
+import org.apache.hadoop.io.RawComparator;
 
 /**
  * <p>
@@ -32,7 +35,7 @@ import java.io.Serializable;
  * @see JavaSerializationComparator
  */
 public class JavaSerialization implements Serialization<Serializable> {
-  
+
   static class JavaSerializationDeserializer<T extends Serializable>
     implements Deserializer<T> {
 
@@ -61,7 +64,7 @@ public class JavaSerialization implements Serialization<Serializable> {
     }
 
   }
-  
+
   static class JavaSerializationSerializer
     implements Serializer<Serializable> {
 

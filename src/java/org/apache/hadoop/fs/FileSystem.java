@@ -35,8 +35,6 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -138,6 +136,17 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
+  
+  /** @deprecated call #getUri() instead.*/
+  @Deprecated
+  public String getName() { return getUri().toString(); }
+
+  /** @deprecated call #get(URI,Configuration) instead. */
+  @Deprecated
+  public static FileSystem getNamed(String name, Configuration conf)
+    throws IOException {
+    return get(URI.create(fixName(name)), conf);
+  }
   
   /** Update old-format filesystem names, for back-compatibility.  This should
    * eventually be replaced with a checkName() method that throws an exception
@@ -815,6 +824,19 @@ public abstract class FileSystem extends Configured implements Closeable {
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
 
+ /**
+   * Get replication.
+   * 
+   * @deprecated Use getFileStatus() instead
+   * @param src file name
+   * @return file replication
+   * @throws IOException
+   */ 
+  @Deprecated
+  public short getReplication(Path src) throws IOException {
+    return getFileStatus(src).getReplication();
+  }
+
   /**
    * Set replication for an existing file.
    * 
@@ -924,6 +946,15 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
   }
   
+  /**
+   * Delete a file 
+   * @deprecated Use {@link #delete(Path, boolean)} instead.
+   */
+  @Deprecated
+  public boolean delete(Path f) throws IOException {
+    return delete(f, true);
+  }
+  
   /** Delete a file.
    *
    * @param f the path to delete.
@@ -1010,6 +1041,13 @@ public abstract class FileSystem extends Configured implements Closeable {
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
+  }
+  
+  /** The number of bytes in a file. */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
+  public long getLength(Path f) throws IOException {
+    return getFileStatus(f).getLen();
   }
     
   /** Return the {@link ContentSummary} of a given {@link Path}. */
@@ -1318,9 +1356,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     /** Default pattern character: Character set close. */
     private static final char  PAT_SET_CLOSE = ']';
       
-    GlobFilter() {
-    }
-      
     GlobFilter(String filePattern) throws IOException {
       setRegex(filePattern);
     }
@@ -1613,6 +1648,17 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     return used;
   }
+  
+  /**
+   * Get the block size for a particular file.
+   * @param f the filename
+   * @return the number of bytes in a block
+   */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
+  public long getBlockSize(Path f) throws IOException {
+    return getFileStatus(f).getBlockSize();
+  }
 
   /** Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time. */
@@ -1763,32 +1809,45 @@ public abstract class FileSystem extends Configured implements Closeable {
     /** A variable that makes all objects in the cache unique */
     private static AtomicLong unique = new AtomicLong(1);
 
-    synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
+    FileSystem get(URI uri, Configuration conf) throws IOException{
       Key key = new Key(uri, conf);
       return getInternal(uri, conf, key);
     }
 
     /** The objects inserted into the cache using this method are all unique */
-    synchronized FileSystem getUnique(URI uri, Configuration conf) throws IOException{
+    FileSystem getUnique(URI uri, Configuration conf) throws IOException{
       Key key = new Key(uri, conf, unique.getAndIncrement());
       return getInternal(uri, conf, key);
     }
 
     private FileSystem getInternal(URI uri, Configuration conf, Key key) throws IOException{
-      FileSystem fs = map.get(key);
-      if (fs == null) {
-        fs = createFileSystem(uri, conf);
+      FileSystem fs;
+      synchronized (this) {
+        fs = map.get(key);
+      }
+      if (fs != null) {
+        return fs;
+      }
+
+      fs = createFileSystem(uri, conf);
+      synchronized (this) { // refetch the lock again
+        FileSystem oldfs = map.get(key);
+        if (oldfs != null) { // a file system is created while lock is releasing
+          fs.close(); // close the new file system
+          return oldfs;  // return the old file system
+        }
+        
+        // now insert the new file system into the map
         if (map.isEmpty() && !clientFinalizer.isAlive()) {
           Runtime.getRuntime().addShutdownHook(clientFinalizer);
         }
         fs.key = key;
         map.put(key, fs);
-
         if (conf.getBoolean("fs.automatic.close", true)) {
           toAutoClose.add(key);
         }
+        return fs;
       }
-      return fs;
     }
 
     synchronized void remove(Key key, FileSystem fs) {
@@ -1859,7 +1918,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     static class Key {
       final String scheme;
       final String authority;
-      final String username;
+      final UserGroupInformation ugi;
       final long unique;   // an artificial way to make a key unique
 
       Key(URI uri, Configuration conf) throws IOException {
@@ -1870,20 +1929,13 @@ public abstract class FileSystem extends Configured implements Closeable {
         scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
         authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
         this.unique = unique;
-        UserGroupInformation ugi = UserGroupInformation.readFrom(conf);
-        if (ugi == null) {
-          try {
-            ugi = UserGroupInformation.login(conf);
-          } catch(LoginException e) {
-            LOG.warn("uri=" + uri, e);
-          }
-        }
-        username = ugi == null? null: ugi.getUserName();
+        
+        this.ugi = UserGroupInformation.getCurrentUser();
       }
 
       /** {@inheritDoc} */
       public int hashCode() {
-        return (scheme + authority + username).hashCode() + (int)unique;
+        return (scheme + authority).hashCode() + ugi.hashCode() + (int)unique;
       }
 
       static boolean isEqual(Object a, Object b) {
@@ -1899,7 +1951,7 @@ public abstract class FileSystem extends Configured implements Closeable {
           Key that = (Key)obj;
           return isEqual(this.scheme, that.scheme)
                  && isEqual(this.authority, that.authority)
-                 && isEqual(this.username, that.username)
+                 && isEqual(this.ugi, that.ugi)
                  && (this.unique == that.unique);
         }
         return false;        
@@ -1907,7 +1959,7 @@ public abstract class FileSystem extends Configured implements Closeable {
 
       /** {@inheritDoc} */
       public String toString() {
-        return username + "@" + scheme + "://" + authority;        
+        return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
       }
     }
   }

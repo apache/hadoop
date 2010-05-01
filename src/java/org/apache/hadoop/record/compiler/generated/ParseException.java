@@ -27,7 +27,10 @@ package org.apache.hadoop.record.compiler.generated;
  *
  * You can modify this class to customize your error reporting
  * mechanisms so long as you retain the public fields.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class ParseException extends Exception {
 
   /**

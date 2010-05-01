@@ -26,17 +26,19 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * A {@link SerializationBase} for {@link Writable}s that delegates to
+ * A {@link Serialization} for {@link Writable}s that delegates to
  * {@link Writable#write(java.io.DataOutput)} and
  * {@link Writable#readFields(java.io.DataInput)}.
  */
-public class WritableSerialization extends SerializationBase<Writable> {
-  
-  static class WritableDeserializer extends DeserializerBase<Writable> {
+public class WritableSerialization extends Configured
+	implements Serialization<Writable> {
+  static class WritableDeserializer extends Configured
+  	implements Deserializer<Writable> {
 
     private Class<?> writableClass;
     private DataInputStream dataIn;
@@ -75,14 +77,10 @@ public class WritableSerialization extends SerializationBase<Writable> {
     
   }
   
-  static class WritableSerializer extends SerializerBase<Writable> {
+  static class WritableSerializer extends Configured implements
+  	Serializer<Writable> {
     
-    private Map<String, String> metadata;
     private DataOutputStream dataOut;
-    
-    public WritableSerializer(Map<String, String> metadata) {
-      this.metadata = metadata;
-    }
     
     @Override
     public void open(OutputStream out) {
@@ -103,30 +101,20 @@ public class WritableSerialization extends SerializationBase<Writable> {
       dataOut.close();
     }
 
-    @Override
-    public Map<String, String> getMetadata() throws IOException {
-      return metadata;
-    }
-
   }
 
   @Override
-  public boolean accept(Map<String, String> metadata) {
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
-    }
-    Class<?> c = getClassFromMetadata(metadata);
-    return c == null ? false : Writable.class.isAssignableFrom(c);
+  public boolean accept(Class<?> c) {
+    return Writable.class.isAssignableFrom(c);
   }
 
   @Override
-  public SerializerBase<Writable> getSerializer(Map<String, String> metadata) {
-    return new WritableSerializer(metadata);
+  public Serializer<Writable> getSerializer(Class<Writable> c) {
+    return new WritableSerializer();
   }
   
   @Override
-  public DeserializerBase<Writable> getDeserializer(Map<String, String> metadata) {
-    Class<?> c = getClassFromMetadata(metadata);
+  public Deserializer<Writable> getDeserializer(Class<Writable> c) {
     return new WritableDeserializer(getConf(), c);
   }
 

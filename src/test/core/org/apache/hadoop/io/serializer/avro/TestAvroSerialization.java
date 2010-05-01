@@ -18,14 +18,9 @@
 
 package org.apache.hadoop.io.serializer.avro;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import junit.framework.TestCase;
 
-import org.apache.avro.util.Utf8;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.serializer.SerializationBase;
 import org.apache.hadoop.io.serializer.SerializationTestUtil;
 
 public class TestAvroSerialization extends TestCase {
@@ -65,16 +60,6 @@ public class TestAvroSerialization extends TestCase {
     assertEquals(before, after);
   }
   
-  public void testGeneric() throws Exception {
-    Utf8 before = new Utf8("hadoop");
-    Map<String, String> metadata = new HashMap<String, String>();
-    metadata.put(SerializationBase.SERIALIZATION_KEY,
-      AvroGenericSerialization.class.getName());
-    metadata.put(AvroSerialization.AVRO_SCHEMA_KEY, "\"string\"");
-    Utf8 after = SerializationTestUtil.testSerialization(conf, metadata, before);
-    assertEquals(before, after);
-  }
-
   public static class InnerRecord {
     public int x = 7;
 

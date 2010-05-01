@@ -19,7 +19,16 @@
 package org.apache.hadoop.io;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.util.EnumSet;
+import java.lang.reflect.Type;
+
+import org.apache.avro.Schema;
+import org.apache.avro.reflect.ReflectData;
+import org.apache.avro.reflect.ReflectDatumWriter;
+import org.apache.avro.reflect.ReflectDatumReader;
+import org.apache.avro.io.BinaryEncoder;
+import org.apache.avro.io.DecoderFactory;
 
 import junit.framework.TestCase;
 
@@ -100,4 +109,14 @@ public class TestEnumSetWritable extends TestCase {
         .readObject(in, null)).get();
     assertEquals(read, null);
   }
+
+  public EnumSetWritable<TestEnumSet> testField;
+
+  public void testAvroReflect() throws Exception {
+    String schema = "{\"type\":\"array\",\"items\":{\"type\":\"enum\",\"name\":\"TestEnumSet\",\"namespace\":\"org.apache.hadoop.io.TestEnumSetWritable$\",\"symbols\":[\"CREATE\",\"OVERWRITE\",\"APPEND\"]},\"java-class\":\"org.apache.hadoop.io.EnumSetWritable\"}";
+    Type type =
+      TestEnumSetWritable.class.getField("testField").getGenericType();
+    AvroTestUtil.testReflect(nonEmptyFlagWritable, type, schema);
+  }
+
 }

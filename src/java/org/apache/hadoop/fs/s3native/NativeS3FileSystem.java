@@ -86,20 +86,31 @@ public class NativeS3FileSystem extends FileSystem {
   static final String PATH_DELIMITER = Path.SEPARATOR;
   private static final int S3_MAX_LISTING_LENGTH = 1000;
   
-  private class NativeS3FsInputStream extends FSInputStream {
+  static class NativeS3FsInputStream extends FSInputStream {
     
+    private NativeFileSystemStore store;
+    private Statistics statistics;
     private InputStream in;
     private final String key;
     private long pos = 0;
     
-    public NativeS3FsInputStream(InputStream in, String key) {
+    public NativeS3FsInputStream(NativeFileSystemStore store, Statistics statistics, InputStream in, String key) {
+      this.store = store;
+      this.statistics = statistics;
       this.in = in;
       this.key = key;
     }
     
     @Override
     public synchronized int read() throws IOException {
-      int result = in.read();
+      int result = -1;
+      try {
+        result = in.read();
+      } catch (IOException e) {
+        LOG.info("Received IOException while reading '" + key + "', attempting to reopen.");
+        seek(pos);
+        result = in.read();
+      } 
       if (result != -1) {
         pos++;
       }
@@ -112,7 +123,14 @@ public class NativeS3FileSystem extends FileSystem {
     public synchronized int read(byte[] b, int off, int len)
       throws IOException {
       
-      int result = in.read(b, off, len);
+      int result = -1;
+      try {
+        result = in.read(b, off, len);
+      } catch (IOException e) {
+        LOG.info("Received IOException while reading '" + key + "', attempting to reopen.");
+        seek(pos);
+        result = in.read(b, off, len);
+      }
       if (result > 0) {
         pos += result;
       }
@@ -514,7 +532,7 @@ public class NativeS3FileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     return new FSDataInputStream(new BufferedFSInputStream(
-        new NativeS3FsInputStream(store.retrieve(key), key), bufferSize));
+        new NativeS3FsInputStream(store, statistics, store.retrieve(key), key), bufferSize));
   }
   
   // rename() and delete() use this method to ensure that the parent directory

@@ -23,7 +23,10 @@ import org.apache.hadoop.io.WritableComparator;
 
 /**
  * A raw record comparator base class
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public abstract class RecordComparator extends WritableComparator {
   
   /**

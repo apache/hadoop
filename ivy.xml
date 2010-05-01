@@ -50,7 +50,7 @@
               extends="mandatory"/>
    <conf name="jetty" description="Jetty provides the in-VM HTTP daemon" extends="commons-logging"/>
 
-   <conf name="common" extends="runtime,mandatory,httpclient,ftp,jetty"
+   <conf name="common" extends="runtime,mandatory,httpclient,ftp,jetty,jdiff"
 		      description="common artifacts"/>
     <!--Testing pulls in everything-->
    <conf name="test" extends="master,common" description="the classpath needed to run tests"/>
@@ -91,11 +91,6 @@
       name="jdiff"
       rev="${jdiff.version}"
       conf="jdiff->default"/>
-    <dependency org="xerces"
-      name="xerces"
-      rev="${xerces.version}"
-      conf="jdiff->default">
-    </dependency>
 
     <dependency org="xmlenc"
       name="xmlenc"
@@ -294,5 +289,10 @@
       rev="${aspectj.version}"
       conf="common->default">
     </dependency>
+    <dependency org="org.mockito" 
+      name="mockito-all" 
+      rev="${mockito-all.version}" 
+      conf="common->default">
+    </dependency> 
     </dependencies>
 </ivy-module>

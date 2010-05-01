@@ -28,6 +28,10 @@ import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+/**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
+ */
+@Deprecated
 public class Rcc implements RccConstants {
   private static String language = "java";
   private static String destDir = ".";

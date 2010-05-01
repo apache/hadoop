@@ -29,7 +29,10 @@ import javax.xml.parsers.SAXParser;
 
 /**
  * XML Deserializer.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class XmlRecordInput implements RecordInput {
     
   static private class Value {

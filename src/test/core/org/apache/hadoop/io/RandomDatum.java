@@ -64,7 +64,7 @@ public class RandomDatum implements WritableComparable {
 
   /** Returns a string representation of this object. */
   public String toString() {
-    StringBuffer buf = new StringBuffer(length*2);
+    StringBuilder buf = new StringBuilder(length*2);
     for (int i = 0; i < length; i++) {
       int b = data[i];
       buf.append(HEX_DIGITS[(b >> 4) & 0xf]);

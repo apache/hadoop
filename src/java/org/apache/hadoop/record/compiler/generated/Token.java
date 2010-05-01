@@ -21,8 +21,10 @@ package org.apache.hadoop.record.compiler.generated;
 
 /**
  * Describes the input token stream.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
-
+@Deprecated
 public class Token {
 
   /**

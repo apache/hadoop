@@ -23,7 +23,9 @@ import java.util.zip.Deflater;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
-import org.mortbay.log.Log;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A wrapper around java.util.zip.Deflater to make it conform 
@@ -31,6 +33,8 @@ import org.mortbay.log.Log;
  * 
  */
 public class BuiltInZlibDeflater extends Deflater implements Compressor {
+
+  private static final Log LOG = LogFactory.getLog(BuiltInZlibDeflater.class);
 
   public BuiltInZlibDeflater(int level, boolean nowrap) {
     super(level, nowrap);
@@ -69,9 +73,9 @@ public class BuiltInZlibDeflater extends Deflater implements Compressor {
     try {
       setStrategy(strategy.compressionStrategy());
     } catch (IllegalArgumentException ill) {
-      Log.warn(strategy + " not supported by BuiltInZlibDeflater.");
+      LOG.warn(strategy + " not supported by BuiltInZlibDeflater.");
       setStrategy(DEFAULT_STRATEGY);
     }
-    Log.debug("Reinit compressor with new compression configuration");
+    LOG.debug("Reinit compressor with new compression configuration");
   }
 }

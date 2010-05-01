@@ -27,7 +27,9 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * Abstract class that is extended by generated classes.
  * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public abstract class Record implements WritableComparable, Cloneable {
   
   /**

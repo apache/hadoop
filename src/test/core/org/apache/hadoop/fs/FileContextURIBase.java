@@ -20,13 +20,16 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.EnumSet;
+import java.util.Iterator;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 /**
  * <p>
@@ -49,32 +52,18 @@ import org.junit.Test;
  */
 public abstract class FileContextURIBase {
   private static final String basePath = System.getProperty("test.build.data",
-      "build/test/data") + "/testContextURI";
+  "build/test/data") + "/testContextURI";
   private static final Path BASE = new Path(basePath);
   protected FileContext fc1;
   protected FileContext fc2;
-
-  private static int BLOCK_SIZE = 1024;
-
-  private static byte[] data = new byte[BLOCK_SIZE * 2]; // two blocks of data
-  {
-    for (int i = 0; i < data.length; i++) {
-      data[i] = (byte) (i % 10);
-    }
-  }
 
   //Helper method to make path qualified
   protected Path qualifiedPath(String path, FileContext fc) {
     return fc.makeQualified(new Path(BASE, path));
   }
 
-  // Helper method to create file and write data to file
-  protected void createFile(Path path, FileContext fc) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CreateFlag.CREATE),
-        Options.CreateOpts.createParent());
-    out.write(data, 0, data.length);
-    out.close();
-  }
+  @Before
+  public void setUp() throws Exception { }
 
   @After
   public void tearDown() throws Exception {
@@ -97,12 +86,12 @@ public abstract class FileContextURIBase {
       // Create a file on fc2's file system using fc1
       Path testPath = qualifiedPath(f, fc2);
       // Ensure file does not exist
-      Assert.assertFalse(fc2.exists(testPath));
+      Assert.assertFalse(exists(fc2, testPath));
 
       // Now create file
-      createFile(testPath, fc1);
+      createFile(fc1, testPath);
       // Ensure fc2 has the created file
-      Assert.assertTrue(fc2.exists(testPath));
+      Assert.assertTrue(exists(fc2, testPath));
     }
   }
 
@@ -114,10 +103,10 @@ public abstract class FileContextURIBase {
 
       Path testPath = qualifiedPath(fileName, fc2);
       // Ensure file does not exist
-      Assert.assertFalse(fc2.exists(testPath));
+      Assert.assertFalse(exists(fc2, testPath));
 
       // Create a file on fc2's file system using fc1
-      createFile(testPath, fc1);
+      createFile(fc1, testPath);
       Assert.fail("Create file with null name should throw IllegalArgumentException.");
     } catch (IllegalArgumentException e) {
       // expected
@@ -131,21 +120,21 @@ public abstract class FileContextURIBase {
     Path testPath = qualifiedPath(fileName, fc2);
 
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
 
     // Create same file with fc1
     try {
-      createFile(testPath, fc2);
+      createFile(fc2, testPath);
       Assert.fail("Create existing file should throw an IOException.");
     } catch (IOException e) {
       // expected
     }
 
     // Ensure fc2 has the created file
-    Assert.assertTrue(fc2.exists(testPath));
+    Assert.assertTrue(exists(fc2, testPath));
   }
 
   @Test
@@ -155,15 +144,15 @@ public abstract class FileContextURIBase {
     Path testPath = qualifiedPath(fileName, fc2);
 
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
 
     // Ensure using fc2 that file is created
-    Assert.assertTrue(fc2.isDirectory(testPath.getParent()));
+    Assert.assertTrue(isDir(fc2, testPath.getParent()));
     Assert.assertEquals("testDir", testPath.getParent().getName());
-    Assert.assertTrue(fc2.exists(testPath));
+    Assert.assertTrue(exists(fc2, testPath));
 
   }
 
@@ -175,17 +164,17 @@ public abstract class FileContextURIBase {
     Path subDirPath = qualifiedPath("dir0", fc2);
 
     // Ensure that testPath does not exist in fc1
-    Assert.assertFalse(fc1.exists(path));
-    Assert.assertFalse(fc1.isFile(path));
-    Assert.assertFalse(fc1.isDirectory(path));
+    Assert.assertFalse(exists(fc1, path));
+    Assert.assertFalse(isFile(fc1, path));
+    Assert.assertFalse(isDir(fc1, path));
 
     // Create a directory on fc2's file system using fc1
    fc1.mkdir(path, FsPermission.getDefault(), true);
 
     // Ensure fc2 has directory
-    Assert.assertTrue(fc2.isDirectory(path));
-    Assert.assertTrue(fc2.exists(path));
-    Assert.assertFalse(fc2.isFile(path));
+    Assert.assertTrue(isDir(fc2, path));
+    Assert.assertTrue(exists(fc2, path));
+    Assert.assertFalse(isFile(fc2, path));
 
     // Test to create same dir twice, (HDFS mkdir is similar to mkdir -p )
    fc1.mkdir(subDirPath, FsPermission.getDefault(), true);
@@ -197,17 +186,17 @@ public abstract class FileContextURIBase {
 
     // Check parent dir
     Path parentDir = path.getParent();
-    Assert.assertTrue(fc2.exists(parentDir));
-    Assert.assertFalse(fc2.isFile(parentDir));
+    Assert.assertTrue(exists(fc2, parentDir));
+    Assert.assertFalse(isFile(fc2, parentDir));
 
     // Check parent parent dir
     Path grandparentDir = parentDir.getParent();
-    Assert.assertTrue(fc2.exists(grandparentDir));
-    Assert.assertFalse(fc2.isFile(grandparentDir));
+    Assert.assertTrue(exists(fc2, grandparentDir));
+    Assert.assertFalse(isFile(fc2, grandparentDir));
 
     // Negative test cases
-    Assert.assertFalse(fc2.exists(falsePath));
-    Assert.assertFalse(fc2.isDirectory(falsePath));
+    Assert.assertFalse(exists(fc2, falsePath));
+    Assert.assertFalse(isDir(fc2, falsePath));
 
     // TestCase - Create multiple directories
     String dirNames[] = { 
@@ -221,13 +210,13 @@ public abstract class FileContextURIBase {
       // Create a file on fc2's file system using fc1
       Path testPath = qualifiedPath(f, fc2);
       // Ensure file does not exist
-      Assert.assertFalse(fc2.exists(testPath));
+      Assert.assertFalse(exists(fc2, testPath));
 
       // Now create directory
      fc1.mkdir(testPath, FsPermission.getDefault(), true);
       // Ensure fc2 has the created directory
-      Assert.assertTrue(fc2.exists(testPath));
-      Assert.assertTrue(fc2.isDirectory(testPath));
+      Assert.assertTrue(exists(fc2, testPath));
+      Assert.assertTrue(isDir(fc2, testPath));
     }
 
   }
@@ -235,12 +224,12 @@ public abstract class FileContextURIBase {
   @Test
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = qualifiedPath("test/hadoop", fc2);
-    Assert.assertFalse(fc2.exists(testDir));
+    Assert.assertFalse(exists(fc2, testDir));
     fc2.mkdir(testDir, FsPermission.getDefault(), true);
-    Assert.assertTrue(fc2.exists(testDir));
+    Assert.assertTrue(exists(fc2, testDir));
 
     // Create file on fc1 using fc2 context
-    createFile(qualifiedPath("test/hadoop/file", fc2), fc1);
+    createFile(fc1, qualifiedPath("test/hadoop/file", fc2));
 
     Path testSubDir = qualifiedPath("test/hadoop/file/subdir", fc2);
     try {
@@ -249,7 +238,7 @@ public abstract class FileContextURIBase {
     } catch (IOException e) {
       // expected
     }
-    Assert.assertFalse(fc1.exists(testSubDir));
+    Assert.assertFalse(exists(fc1, testSubDir));
 
     Path testDeepSubDir = qualifiedPath("test/hadoop/file/deep/sub/dir", fc1);
     try {
@@ -258,7 +247,7 @@ public abstract class FileContextURIBase {
     } catch (IOException e) {
       // expected
     }
-    Assert.assertFalse(fc1.exists(testDeepSubDir));
+    Assert.assertFalse(exists(fc1, testDeepSubDir));
 
   }
 
@@ -276,11 +265,11 @@ public abstract class FileContextURIBase {
     fc1.mkdir(existingPath, FsPermission.getDefault(), true);
 
     // Ensure fc2 has directory
-    Assert.assertTrue(fc2.isDirectory(existingPath));
-    Assert.assertTrue(fc2.isDirectory(pathToRootDir));
+    Assert.assertTrue(isDir(fc2, existingPath));
+    Assert.assertTrue(isDir(fc2, pathToRootDir));
 
     // Negative test case
-    Assert.assertFalse(fc2.isDirectory(nonExistingPath));
+    Assert.assertFalse(isDir(fc2, nonExistingPath));
 
   }
 
@@ -289,19 +278,19 @@ public abstract class FileContextURIBase {
     Path testPath = qualifiedPath("testFile", fc2);
 
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
     // First create a file on file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
 
     // Ensure file exist
-    Assert.assertTrue(fc2.exists(testPath));
+    Assert.assertTrue(exists(fc2, testPath));
 
     // Delete file using fc2
     fc2.delete(testPath, false);
 
     // Ensure fc2 does not have deleted file
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
   }
 
@@ -312,21 +301,21 @@ public abstract class FileContextURIBase {
 
     // TestCase1 : Test delete on file never existed
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
     // Delete on non existing file should return false
     Assert.assertFalse(fc2.delete(testPath, false));
 
     // TestCase2 : Create , Delete , Delete file
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
     // Ensure file exist
-    Assert.assertTrue(fc2.exists(testPath));
+    Assert.assertTrue(exists(fc2, testPath));
 
     // Delete test file, deleting existing file should return true
     Assert.assertTrue(fc2.delete(testPath, false));
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
     // Delete on non existing file should return false
     Assert.assertFalse(fc2.delete(testPath, false));
 
@@ -339,21 +328,21 @@ public abstract class FileContextURIBase {
 
     // TestCase1 : Test delete on file never existed
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
     // Delete on non existing file should return false
     Assert.assertFalse(fc2.delete(testPath, false));
 
     // TestCase2 : Create , Delete , Delete file
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
     // Ensure file exist
-    Assert.assertTrue(fc2.exists(testPath));
+    Assert.assertTrue(exists(fc2, testPath));
 
     // Delete test file, deleting existing file should return true
     Assert.assertTrue(fc2.delete(testPath, false));
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
     // Delete on non existing file should return false
     Assert.assertFalse(fc2.delete(testPath, false));
 
@@ -364,19 +353,19 @@ public abstract class FileContextURIBase {
     String dirName = "dirTest";
     Path testDirPath = qualifiedPath(dirName, fc2);
     // Ensure directory does not exist
-    Assert.assertFalse(fc2.exists(testDirPath));
+    Assert.assertFalse(exists(fc2, testDirPath));
 
     // Create a directory on fc2's file system using fc1
    fc1.mkdir(testDirPath, FsPermission.getDefault(), true);
 
     // Ensure dir is created
-    Assert.assertTrue(fc2.exists(testDirPath));
-    Assert.assertTrue(fc2.isDirectory(testDirPath));
+    Assert.assertTrue(exists(fc2, testDirPath));
+    Assert.assertTrue(isDir(fc2, testDirPath));
 
     fc2.delete(testDirPath, true);
 
     // Ensure that directory is deleted
-    Assert.assertFalse(fc2.isDirectory(testDirPath));
+    Assert.assertFalse(isDir(fc2, testDirPath));
 
     // TestCase - Create and delete multiple directories
     String dirNames[] = { 
@@ -390,18 +379,18 @@ public abstract class FileContextURIBase {
       // Create a file on fc2's file system using fc1
       Path testPath = qualifiedPath(f, fc2);
       // Ensure file does not exist
-      Assert.assertFalse(fc2.exists(testPath));
+      Assert.assertFalse(exists(fc2, testPath));
 
       // Now create directory
      fc1.mkdir(testPath, FsPermission.getDefault(), true);
       // Ensure fc2 has the created directory
-      Assert.assertTrue(fc2.exists(testPath));
-      Assert.assertTrue(fc2.isDirectory(testPath));
+      Assert.assertTrue(exists(fc2, testPath));
+      Assert.assertTrue(isDir(fc2, testPath));
       // Delete dir
       Assert.assertTrue(fc2.delete(testPath, true));
       // verify if directory is deleted
-      Assert.assertFalse(fc2.exists(testPath));
-      Assert.assertFalse(fc2.isDirectory(testPath));
+      Assert.assertFalse(exists(fc2, testPath));
+      Assert.assertFalse(isDir(fc2, testPath));
     }
   }
 
@@ -412,7 +401,7 @@ public abstract class FileContextURIBase {
 
     // TestCase1 : Test delete on directory never existed
     // Ensure directory does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
 
     // Delete on non existing directory should return false
     Assert.assertFalse(fc2.delete(testPath, false));
@@ -422,12 +411,12 @@ public abstract class FileContextURIBase {
 
     fc1.mkdir(testPath, FsPermission.getDefault(), true);
     // Ensure dir exist
-    Assert.assertTrue(fc2.exists(testPath));
+    Assert.assertTrue(exists(fc2, testPath));
 
     // Delete test file, deleting existing file should return true
     Assert.assertTrue(fc2.delete(testPath, false));
     // Ensure file does not exist
-    Assert.assertFalse(fc2.exists(testPath));
+    Assert.assertFalse(exists(fc2, testPath));
     // Delete on non existing file should return false
     Assert.assertFalse(fc2.delete(testPath, false));
   }
@@ -440,7 +429,7 @@ public abstract class FileContextURIBase {
     Path testPath = qualifiedPath(testFile, fc2);
 
     // Create a file on fc2's file system using fc1
-    createFile(testPath, fc1);
+    createFile(fc1, testPath);
     // Get modification time using fc2 and fc1
     fc1ModificationTime = fc1.getFileStatus(testPath).getModificationTime();
     fc2ModificationTime = fc2.getFileStatus(testPath).getModificationTime();
@@ -454,7 +443,7 @@ public abstract class FileContextURIBase {
     Path path2 = fc2.makeQualified(new Path(BASE, fileName));
 
     // Create a file on fc2's file system using fc1
-    createFile(path2, fc1);
+    createFile(fc1, path2);
     FsStatus fc2Status = fc2.getFsStatus(path2);
 
     // FsStatus , used, free and capacity are non-negative longs
@@ -507,17 +496,18 @@ public abstract class FileContextURIBase {
     for (String d : dirs) {
       testDirs.add(qualifiedPath(d, fc2));
     }
-    Assert.assertFalse(fc1.exists(testDirs.get(0)));
+    Assert.assertFalse(exists(fc1, testDirs.get(0)));
 
     for (Path path : testDirs) {
      fc1.mkdir(path, FsPermission.getDefault(), true);
     }
 
-    FileStatus[] paths = fc1.listStatus(qualifiedPath("test", fc1));
+    // test listStatus that returns an array of FileStatus
+    FileStatus[] paths = fc1.util().listStatus(qualifiedPath("test", fc1));
     Assert.assertEquals(1, paths.length);
     Assert.assertEquals(qualifiedPath(hPrefix, fc1), paths[0].getPath());
 
-    paths = fc1.listStatus(qualifiedPath(hPrefix, fc1));
+    paths = fc1.util().listStatus(qualifiedPath(hPrefix, fc1));
     Assert.assertEquals(6, paths.length);
     for (int i = 0; i < dirs.length; i++) {
       boolean found = false;
@@ -529,7 +519,30 @@ public abstract class FileContextURIBase {
       Assert.assertTrue(dirs[i] + " not found", found);
     }
 
-    paths = fc1.listStatus(qualifiedPath(dirs[0], fc1));
+    paths = fc1.util().listStatus(qualifiedPath(dirs[0], fc1));
     Assert.assertEquals(0, paths.length);
+    
+    // test listStatus that returns an iterator of FileStatus
+    Iterator<FileStatus> pathsItor = fc1.listStatus(qualifiedPath("test", fc1));
+    Assert.assertEquals(qualifiedPath(hPrefix, fc1), pathsItor.next().getPath());
+    Assert.assertFalse(pathsItor.hasNext());
+
+    pathsItor = fc1.listStatus(qualifiedPath(hPrefix, fc1));
+    int dirLen = 0;
+    for (; pathsItor.hasNext(); dirLen++) {
+      boolean found = false;
+      FileStatus stat = pathsItor.next();
+      for (int j = 0; j < dirs.length; j++) {
+        if (qualifiedPath(dirs[j],fc1).equals(stat.getPath())) {
+          found = true;
+          break;
+        }
+      }
+      Assert.assertTrue(stat.getPath() + " not found", found);
+    }
+    Assert.assertEquals(6, dirLen);
+
+    pathsItor = fc1.listStatus(qualifiedPath(dirs[0], fc1));
+    Assert.assertFalse(pathsItor.hasNext());
   }
 }

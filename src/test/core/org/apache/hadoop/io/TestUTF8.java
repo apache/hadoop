@@ -29,7 +29,7 @@ public class TestUTF8 extends TestCase {
   private static final Random RANDOM = new Random();
 
   public static String getTestString() throws Exception {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     int length = RANDOM.nextInt(100);
     for (int i = 0; i < length; i++) {
       buffer.append((char)(RANDOM.nextInt(Character.MAX_VALUE)));
@@ -69,16 +69,16 @@ public class TestUTF8 extends TestCase {
       // test that it reads correctly
       in.reset(out.getData(), out.getLength());
       String after = UTF8.readString(in);
-      assertTrue(before.equals(after));
+      assertEquals(before, after);
 
       // test that it reads correctly with DataInput
       in.reset(out.getData(), out.getLength());
       String after2 = in.readUTF();
-      assertTrue(before.equals(after2));
+      assertEquals(before, after2);
 
       // test that it is compatible with Java's other decoder
       String after3 = new String(out.getData(), 2, out.getLength()-2, "UTF-8");
-      assertTrue(before.equals(after3));
+      assertEquals(before, after3);
 
     }
 

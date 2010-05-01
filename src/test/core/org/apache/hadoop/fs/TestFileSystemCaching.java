@@ -21,10 +21,21 @@ package org.apache.hadoop.fs;
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertNotSame;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
+import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.Semaphore;
+
+import static org.mockito.Mockito.mock;
+
+
 
 public class TestFileSystemCaching {
 
@@ -37,6 +48,47 @@ public class TestFileSystemCaching {
     assertSame(fs1, fs2);
   }
 
+  public static class InitializeForeverFileSystem extends LocalFileSystem {
+    final static Semaphore sem = new Semaphore(0);
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      // notify that InitializeForeverFileSystem started initialization
+      sem.release();
+      try {
+        while (true) {
+          Thread.sleep(1000);
+        }
+      } catch (InterruptedException e) {
+        return;
+      }
+    }
+  }
+  
+  @Test
+  public void testCacheEnabledWithInitializeForeverFS() throws Exception {
+    final Configuration conf = new Configuration();
+    Thread t = new Thread() {
+      public void run() {
+        conf.set("fs.localfs1.impl", "org.apache.hadoop.fs." +
+         "TestFileSystemCaching$InitializeForeverFileSystem");
+        try {
+          FileSystem.get(new URI("localfs1://a"), conf);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (URISyntaxException e) {
+          e.printStackTrace();
+        }
+      }
+    };
+    t.start();
+    // wait for InitializeForeverFileSystem to start initialization
+    InitializeForeverFileSystem.sem.acquire();
+    
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    FileSystem.get(new URI("cachedfile://a"), conf);
+    t.interrupt();
+    t.join();
+  }
+
   @Test
   public void testCacheDisabled() throws Exception {
     Configuration conf = new Configuration();
@@ -45,6 +97,61 @@ public class TestFileSystemCaching {
     FileSystem fs1 = FileSystem.get(new URI("uncachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("uncachedfile://a"), conf);
     assertNotSame(fs1, fs2);
+  }
+  
+  @SuppressWarnings("unchecked")
+  @Test
+  public <T extends TokenIdentifier> void testCacheForUgi() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
+    UserGroupInformation ugiB = UserGroupInformation.createRemoteUser("bar");
+    FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Since the UGIs are the same, we should have the same filesystem for both
+    assertSame(fsA, fsA1);
+    
+    FileSystem fsB = ugiB.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Since the UGIs are different, we should end up with different filesystems
+    //corresponding to the two UGIs
+    assertNotSame(fsA, fsB);
+    
+    Token<T> t1 = mock(Token.class);
+    ugiA = UserGroupInformation.createRemoteUser("foo");
+    ugiA.addToken(t1);
+    
+    fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Although the users in the UGI are same, ugiA has tokens in it, and
+    //we should end up with different filesystems corresponding to the two UGIs
+    assertNotSame(fsA, fsA1);
+    
+    ugiA = UserGroupInformation.createRemoteUser("foo");
+    ugiA.addToken(t1);
+    
+    fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Now the users in the UGI are the same, and they also have the same token.
+    //We should have the same filesystem for both
+    assertSame(fsA, fsA1);
   }
 
 }

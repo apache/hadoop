@@ -21,7 +21,10 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * Code generator for "int" type
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JInt extends JType {
   
   class JavaInt extends JavaType {

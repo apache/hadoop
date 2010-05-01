@@ -17,19 +17,13 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.security.Permission;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
-
-import javax.security.auth.Subject;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -37,19 +31,29 @@ import org.apache.hadoop.security.UserGroupInformation;
  * for incoming service requests.
  */
 public class ServiceAuthorizationManager {
+  private static final String HADOOP_POLICY_FILE = "hadoop-policy.xml";
 
-  private static final Log LOG = 
-    LogFactory.getLog(ServiceAuthorizationManager.class);
+  private static Map<Class<?>, AccessControlList> protocolToAcl =
+    new IdentityHashMap<Class<?>, AccessControlList>();
   
   /**
    * Configuration key for controlling service-level authorization for Hadoop.
+   * 
+   * @deprecated Use
+   *             {@link CommonConfigurationKeys#HADOOP_SECURITY_AUTHORIZATION}
+   *             Instead.
    */
+  @Deprecated
   public static final String SERVICE_AUTHORIZATION_CONFIG = 
     "hadoop.security.authorization";
   
-  private static Map<Class<?>, Permission> protocolToPermissionMap = 
-    Collections.synchronizedMap(new HashMap<Class<?>, Permission>());
+  public static final Log auditLOG =
+    LogFactory.getLog("SecurityLogger."+ServiceAuthorizationManager.class.getName());
 
+  private static final String AUTHZ_SUCCESSFULL_FOR = "Authorization successfull for ";
+  private static final String AUTHZ_FAILED_FOR = "Authorization failed for ";
+
+  
   /**
    * Authorize the user to access the protocol being used.
    * 
@@ -57,49 +61,50 @@ public class ServiceAuthorizationManager {
    * @param protocol service being accessed
    * @throws AuthorizationException on authorization failure
    */
-  public static void authorize(Subject user, Class<?> protocol) 
-  throws AuthorizationException {
-    Permission permission = protocolToPermissionMap.get(protocol);
-    if (permission == null) {
-      permission = new ConnectionPermission(protocol);
-      protocolToPermissionMap.put(protocol, permission);
+  public static void authorize(UserGroupInformation user, 
+                               Class<?> protocol
+                               ) throws AuthorizationException {
+    AccessControlList acl = protocolToAcl.get(protocol);
+    if (acl == null) {
+      throw new AuthorizationException("Protocol " + protocol + 
+                                       " is not known.");
     }
+    if (!acl.isUserAllowed(user)) {
+      auditLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);
+      throw new AuthorizationException("User " + user + 
+                                       " is not authorized for protocol " + 
+                                       protocol);
+    }
+    auditLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
+  }
+
+  public static synchronized void refresh(Configuration conf,
+                                          PolicyProvider provider) {
+    // Get the system property 'hadoop.policy.file'
+    String policyFile = 
+      System.getProperty("hadoop.policy.file", HADOOP_POLICY_FILE);
     
-    checkPermission(user, permission);
-  }
-  
-  /**
-   * Check if the given {@link Subject} has all of necessary {@link Permission} 
-   * set.
-   * 
-   * @param user <code>Subject</code> to be authorized
-   * @param permissions <code>Permission</code> set
-   * @throws AuthorizationException if the authorization failed
-   */
-  private static void checkPermission(final Subject user, 
-                                      final Permission... permissions) 
-  throws AuthorizationException {
-    try{
-      Subject.doAs(user, 
-                   new PrivilegedExceptionAction<Void>() {
-                     @Override
-                     public Void run() throws Exception {
-                       try {
-                         for(Permission permission : permissions) {
-                           AccessController.checkPermission(permission);
-                         }
-                       } catch (AccessControlException ace) {
-                         LOG.info("Authorization failed for " + 
-                                  UserGroupInformation.getCurrentUGI(), ace);
-                         throw new AuthorizationException(ace);
-                       }
-                      return null;
-                     }
-                   }
-                  );
-    } catch (PrivilegedActionException e) {
-      throw new AuthorizationException(e.getException());
+    // Make a copy of the original config, and load the policy file
+    Configuration policyConf = new Configuration(conf);
+    policyConf.addResource(policyFile);
+    
+    final Map<Class<?>, AccessControlList> newAcls =
+      new IdentityHashMap<Class<?>, AccessControlList>();
+
+    // Parse the config file
+    Service[] services = provider.getServices();
+    if (services != null) {
+      for (Service service : services) {
+        AccessControlList acl = 
+          new AccessControlList(
+              policyConf.get(service.getServiceKey(), 
+                             AccessControlList.WILDCARD_ACL_VALUE)
+              );
+        newAcls.put(service.getProtocol(), acl);
+      }
     }
+
+    // Flip to the newly parsed permissions
+    protocolToAcl = newAcls;
   }
-  
 }

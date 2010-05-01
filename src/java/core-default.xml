@@ -54,9 +54,26 @@
 </property>
 
 <property>
+  <name>hadoop.cluster.administrators</name>
+  <property>Users and/or groups who are designated as the administrators of a
+  hadoop cluster. For specifying a list of users and groups the format to use
+  is "user1,user2 group1,group". If set to '*', it allows all users/groups to
+  do administrations operations of the cluster. If set to '', it allows none.
+  </property>
+  <value>${user.name}</value>
+</property>
+
+<property>
   <name>hadoop.security.authorization</name>
   <value>false</value>
   <description>Is service-level authorization enabled?</description>
+</property>
+
+<property>
+  <name>hadoop.security.authentication</name>
+  <value>simple</value>
+  <description>Possible values are simple (no authentication), and kerberos
+  </description>
 </property>
 
 <!--- logging properties -->
@@ -107,7 +124,7 @@
 
 <property>
   <name>io.serializations</name>
-  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization,org.apache.hadoop.io.serializer.avro.AvroGenericSerialization</value>
+  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
   <description>A list of serialization classes that can be used for
   obtaining serializers and deserializers.</description>
 </property>
@@ -159,6 +176,19 @@
 <property>
   <name>fs.hdfs.impl</name>
   <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The FileSystem for hdfs: uris.</description>
+</property>
+
+<property>
+  <name>fs.AbstractFileSystem.file.impl</name>
+  <value>org.apache.hadoop.fs.local.LocalFs</value>
+  <description>The AbstractFileSystem for file: uris.</description>
+</property>
+
+
+<property>
+  <name>fs.AbstractFileSystem.hdfs.impl</name>
+  <value>org.apache.hadoop.fs.Hdfs</value>
   <description>The FileSystem for hdfs: uris.</description>
 </property>
 

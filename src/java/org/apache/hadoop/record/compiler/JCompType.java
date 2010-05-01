@@ -22,7 +22,10 @@ package org.apache.hadoop.record.compiler;
 /**
  * Abstract base class for all the "compound" types such as ustring,
  * buffer, vector, map, and record.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 abstract class JCompType extends JType {
   
   abstract class JavaCompType extends JavaType {

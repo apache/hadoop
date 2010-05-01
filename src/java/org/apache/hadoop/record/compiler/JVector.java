@@ -21,7 +21,9 @@ package org.apache.hadoop.record.compiler;
 import java.util.Map;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JVector extends JCompType {
   
   static private int level = 0;

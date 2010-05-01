@@ -26,7 +26,9 @@ import java.io.DataOutputStream;
 import java.io.OutputStream;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class BinaryRecordOutput implements RecordOutput {
     
   private DataOutput out;

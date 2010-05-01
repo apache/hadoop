@@ -22,8 +22,11 @@ import java.io.IOException;
 import org.apache.hadoop.record.RecordOutput;
 
 /** 
- * Represents typeID for basic types. 
+ * Represents typeID for basic types.
+ *  
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class TypeID {
 
   /**

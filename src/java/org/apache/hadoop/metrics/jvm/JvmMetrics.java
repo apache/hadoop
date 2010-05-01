@@ -104,10 +104,13 @@ public class JvmMetrics implements Updater {
                 memoryMXBean.getNonHeapMemoryUsage();
         MemoryUsage memHeap =
                 memoryMXBean.getHeapMemoryUsage();
+        Runtime runtime = Runtime.getRuntime();
+
         metrics.setMetric("memNonHeapUsedM", memNonHeap.getUsed()/M);
         metrics.setMetric("memNonHeapCommittedM", memNonHeap.getCommitted()/M);
         metrics.setMetric("memHeapUsedM", memHeap.getUsed()/M);
         metrics.setMetric("memHeapCommittedM", memHeap.getCommitted()/M);
+        metrics.setMetric("maxMemoryM", runtime.maxMemory()/M);
     }
     
     private void doGarbageCollectionUpdates() {

@@ -21,57 +21,57 @@ package org.apache.hadoop.io.serializer.avro;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 import org.apache.avro.Schema;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
-import org.apache.hadoop.io.serializer.DeserializerBase;
-import org.apache.hadoop.io.serializer.SerializationBase;
-import org.apache.hadoop.io.serializer.SerializerBase;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serialization;
+import org.apache.hadoop.io.serializer.Serializer;
 
 /**
  * Base class for providing serialization to Avro types.
  */
-public abstract class AvroSerialization<T> extends SerializationBase<T> {
+public abstract class AvroSerialization<T> extends Configured 
+	implements Serialization<T>{
   
   public static final String AVRO_SCHEMA_KEY = "Avro-Schema";
 
-  public DeserializerBase<T> getDeserializer(Map<String, String> metadata) {
-    return new AvroDeserializer(metadata);
+  public Deserializer<T> getDeserializer(Class<T> c) {
+    return new AvroDeserializer(c);
   }
 
-  public SerializerBase<T> getSerializer(Map<String, String> metadata) {
-    return new AvroSerializer(metadata);
+  public Serializer<T> getSerializer(Class<T> c) {
+    return new AvroSerializer(c);
   }
 
   /**
-   * Return an Avro Schema instance for the given class and metadata.
+   * Return an Avro Schema instance for the given class.
    */
-  protected abstract Schema getSchema(T t, Map<String, String> metadata);
+  public abstract Schema getSchema(T t);
 
   /**
-   * Create and return Avro DatumWriter for the given metadata.
+   * Create and return Avro DatumWriter for the given class.
    */
-  protected abstract DatumWriter<T> getWriter(Map<String, String> metadata);
+  public abstract DatumWriter<T> getWriter(Class<T> clazz);
 
   /**
-   * Create and return Avro DatumReader for the given metadata.
+   * Create and return Avro DatumReader for the given class.
    */
-  protected abstract DatumReader<T> getReader(Map<String, String> metadata);
+  public abstract DatumReader<T> getReader(Class<T> clazz);
 
-  class AvroSerializer extends SerializerBase<T> {
+  class AvroSerializer implements Serializer<T> {
 
-    private Map<String, String> metadata;
     private DatumWriter<T> writer;
     private BinaryEncoder encoder;
     private OutputStream outStream;
 
-    AvroSerializer(Map<String, String> metadata) {
-      this.metadata = metadata;
-      writer = getWriter(metadata);
+    AvroSerializer(Class<T> clazz) {
+      this.writer = getWriter(clazz);
     }
 
     @Override
@@ -88,25 +88,20 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
 
     @Override
     public void serialize(T t) throws IOException {
-      writer.setSchema(getSchema(t, metadata));
+      writer.setSchema(getSchema(t));
       writer.write(t, encoder);
-    }
-
-    @Override
-    public Map<String, String> getMetadata() throws IOException {
-      return metadata;
     }
 
   }
 
-  class AvroDeserializer extends DeserializerBase<T> {
+  class AvroDeserializer implements Deserializer<T> {
 
     private DatumReader<T> reader;
     private BinaryDecoder decoder;
     private InputStream inStream;
 
-    AvroDeserializer(Map<String, String> metadata) {
-      this.reader = getReader(metadata);
+    AvroDeserializer(Class<T> clazz) {
+      this.reader = getReader(clazz);
     }
 
     @Override
@@ -122,7 +117,7 @@ public abstract class AvroSerialization<T> extends SerializationBase<T> {
     @Override
     public void open(InputStream in) throws IOException {
       inStream = in;
-      decoder = new BinaryDecoder(in);
+      decoder = DecoderFactory.defaultFactory().createBinaryDecoder(in, null);
     }
 
   }

@@ -31,7 +31,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FilterInputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 
+import java.security.PrivilegedExceptionAction;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -44,11 +46,19 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SaslRpcClient;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -196,8 +206,13 @@ public class Client {
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
+    private String serverPrincipal;  // server's krb5 principal name
     private ConnectionHeader header;              // connection header
-    private ConnectionId remoteId;                // connection id
+    private final ConnectionId remoteId;                // connection id
+    private AuthMethod authMethod; // authentication method
+    private boolean useSasl;
+    private Token<? extends TokenIdentifier> token;
+    private SaslRpcClient saslRpcClient;
     
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
@@ -219,8 +234,46 @@ public class Client {
       
       UserGroupInformation ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
-      header = 
-        new ConnectionHeader(protocol == null ? null : protocol.getName(), ticket);
+      this.useSasl = UserGroupInformation.isSecurityEnabled();
+      if (useSasl && protocol != null) {
+        TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
+        if (tokenInfo != null) {
+          TokenSelector<? extends TokenIdentifier> tokenSelector = null;
+          try {
+            tokenSelector = tokenInfo.value().newInstance();
+          } catch (InstantiationException e) {
+            throw new IOException(e.toString());
+          } catch (IllegalAccessException e) {
+            throw new IOException(e.toString());
+          }
+          InetSocketAddress addr = remoteId.getAddress();
+          token = tokenSelector.selectToken(new Text(addr.getAddress()
+              .getHostAddress() + ":" + addr.getPort()), 
+              ticket.getTokens());
+        }
+        KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+        if (krbInfo != null) {
+          String serverKey = krbInfo.value();
+          if (serverKey != null) {
+            serverPrincipal = conf.get(serverKey);
+          }
+        }
+      }
+      
+      if (!useSasl) {
+        authMethod = AuthMethod.SIMPLE;
+      } else if (token != null) {
+        authMethod = AuthMethod.DIGEST;
+      } else {
+        authMethod = AuthMethod.KERBEROS;
+      }
+      
+      header = new ConnectionHeader(protocol == null ? null : protocol
+          .getName(), ticket, authMethod);
+      
+      if (LOG.isDebugEnabled())
+        LOG.debug("Use " + authMethod + " authentication for protocol "
+            + protocol.getSimpleName());
       
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
           remoteId.getAddress().toString() +
@@ -302,11 +355,50 @@ public class Client {
       }
     }
     
+    private synchronized void disposeSasl() {
+      if (saslRpcClient != null) {
+        try {
+          saslRpcClient.dispose();
+        } catch (IOException ignored) {
+        }
+      }
+    }
+    
+    private synchronized boolean setupSaslConnection(final InputStream in2, 
+        final OutputStream out2) 
+        throws IOException {
+      try {
+        saslRpcClient = new SaslRpcClient(authMethod, token,
+            serverPrincipal);
+        return saslRpcClient.saslConnect(in2, out2);
+      } catch (javax.security.sasl.SaslException je) {
+        if (authMethod == AuthMethod.KERBEROS && 
+            UserGroupInformation.isLoginKeytabBased()) {
+          //try re-login
+          UserGroupInformation.getCurrentUser().reloginFromKeytab();
+          //try setting up the connection again
+          try {
+            disposeSasl();
+            saslRpcClient = new SaslRpcClient(authMethod, token,
+                serverPrincipal);
+            return saslRpcClient.saslConnect(in2, out2);
+          } catch (javax.security.sasl.SaslException jee) {
+            UserGroupInformation.
+            setLastUnsuccessfulAuthenticationAttemptTime
+            (System.currentTimeMillis());
+            LOG.warn("Couldn't setup connection for " + 
+                UserGroupInformation.getCurrentUser().getUserName() +
+                " to " + serverPrincipal + " even after relogin.");
+            throw jee;
+          }
+        } else throw je;
+      }
+    }
     /** Connect to the server and set up the I/O streams. It then sends
      * a header to the server and starts
      * the connection thread that waits for responses.
      */
-    private synchronized void setupIOstreams() {
+    private synchronized void setupIOstreams() throws InterruptedException {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
@@ -334,15 +426,44 @@ public class Client {
             handleConnectionFailure(ioFailures++, maxRetries, ie);
           }
         }
+        InputStream inStream = NetUtils.getInputStream(socket);
+        OutputStream outStream = NetUtils.getOutputStream(socket);
+        writeRpcHeader(outStream);
+        if (useSasl) {
+          final InputStream in2 = inStream;
+          final OutputStream out2 = outStream;
+          UserGroupInformation ticket = remoteId.getTicket();
+          if (authMethod == AuthMethod.KERBEROS) {
+            if (ticket.getRealUser() != null) {
+              ticket = ticket.getRealUser();
+            }
+          }
+          if (ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
+            @Override
+            public Boolean run() throws IOException {
+              return setupSaslConnection(in2, out2);
+            }
+          })) {
+            // Sasl connect is successful. Let's set up Sasl i/o streams.
+            inStream = saslRpcClient.getInputStream(inStream);
+            outStream = saslRpcClient.getOutputStream(outStream);
+          } else {
+            // fall back to simple auth because server told us so.
+            authMethod = AuthMethod.SIMPLE;
+            header = new ConnectionHeader(header.getProtocol(),
+                header.getUgi(), authMethod);
+            useSasl = false;
+          }
+        }
         if (doPing) {
           this.in = new DataInputStream(new BufferedInputStream
-            (new PingInputStream(NetUtils.getInputStream(socket))));
+            (new PingInputStream(inStream)));
         } else {
           this.in = new DataInputStream(new BufferedInputStream
-            (NetUtils.getInputStream(socket)));
+            (inStream));
         }
         this.out = new DataOutputStream
-            (new BufferedOutputStream(NetUtils.getOutputStream(socket)));
+            (new BufferedOutputStream(outStream));
         writeHeader();
 
         // update last activity time
@@ -373,10 +494,12 @@ public class Client {
     private void handleConnectionFailure(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
       // close the current connection
-      try {
-        socket.close();
-      } catch (IOException e) {
-        LOG.warn("Not able to close a socket", e);
+      if (socket != null) {
+        try {
+          socket.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close a socket", e);
+        }
       }
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
@@ -396,14 +519,20 @@ public class Client {
           ". Already tried " + curRetries + " time(s).");
     }
 
-    /* Write the header for each connection
+    /* Write the RPC header */
+    private void writeRpcHeader(OutputStream outStream) throws IOException {
+      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(outStream));
+      // Write out the header, version and authentication method
+      out.write(Server.HEADER.array());
+      out.write(Server.CURRENT_VERSION);
+      authMethod.write(out);
+      out.flush();
+    }
+    
+    /* Write the protocol header for each connection
      * Out is not synchronized because only the first thread does this.
      */
     private void writeHeader() throws IOException {
-      // Write out the header and version
-      out.write(Server.HEADER.array());
-      out.write(Server.CURRENT_VERSION);
-
       // Write out the ConnectionHeader
       DataOutputBuffer buf = new DataOutputBuffer();
       header.write(buf);
@@ -575,6 +704,7 @@ public class Client {
       // close the streams and therefore the socket
       IOUtils.closeStream(out);
       IOUtils.closeStream(in);
+      disposeSasl();
 
       // clean up all calls
       if (closeException == null) {
@@ -815,7 +945,7 @@ public class Client {
    */
   @Deprecated
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
-    throws IOException {
+    throws IOException, InterruptedException {
     return call(params, addresses, null, null);
   }
   
@@ -825,7 +955,7 @@ public class Client {
    * contains nulls for calls that timed out or errored.  */
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses, 
                          Class<?> protocol, UserGroupInformation ticket)
-    throws IOException {
+    throws IOException, InterruptedException {
     if (addresses.length == 0) return new Writable[0];
 
     ParallelResults results = new ParallelResults(params.length);
@@ -859,7 +989,7 @@ public class Client {
                                    Class<?> protocol,
                                    UserGroupInformation ticket,
                                    Call call)
-                                   throws IOException {
+                                   throws IOException, InterruptedException {
     if (!running.get()) {
       // the client is stopped
       throw new IOException("The client is stopped");

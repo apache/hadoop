@@ -25,7 +25,10 @@ import org.apache.hadoop.record.RecordOutput;
 /** 
  * Represents a type information for a field, which is made up of its 
  * ID (name) and its type (a TypeID object).
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class FieldTypeInfo
 {
 

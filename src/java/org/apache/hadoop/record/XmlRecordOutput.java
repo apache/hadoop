@@ -28,7 +28,10 @@ import java.util.Stack;
 
 /**
  * XML Serializer.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class XmlRecordOutput implements RecordOutput {
 
   private PrintStream stream;
@@ -38,7 +41,7 @@ public class XmlRecordOutput implements RecordOutput {
   private Stack<String> compoundStack;
     
   private void putIndent() {
-    StringBuffer sb = new StringBuffer("");
+    StringBuilder sb = new StringBuilder("");
     for (int idx = 0; idx < indent; idx++) {
       sb.append("  ");
     }

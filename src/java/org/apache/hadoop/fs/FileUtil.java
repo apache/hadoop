@@ -27,12 +27,17 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.mortbay.log.Log;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A collection of file-processing util methods
  */
 public class FileUtil {
+
+  private static final Log LOG = LogFactory.getLog(FileUtil.class);
+
   /**
    * convert an array of FileStatus to an array of Path
    * 
@@ -71,6 +76,17 @@ public class FileUtil {
    * we return false, the directory may be partially-deleted.
    */
   public static boolean fullyDelete(File dir) throws IOException {
+    if (!fullyDeleteContents(dir)) {
+      return false;
+    }
+    return dir.delete();
+  }
+
+  /**
+   * Delete the contents of a directory, not the directory itself.  If
+   * we return false, the directory may be partially-deleted.
+   */
+  public static boolean fullyDeleteContents(File dir) throws IOException {
     File contents[] = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
@@ -95,7 +111,7 @@ public class FileUtil {
         }
       }
     }
-    return dir.delete();
+    return true;
   }
 
   /**
@@ -150,7 +166,7 @@ public class FileUtil {
                              throws IOException {
     boolean gotException = false;
     boolean returnVal = true;
-    StringBuffer exceptions = new StringBuffer();
+    StringBuilder exceptions = new StringBuilder();
 
     if (srcs.length == 1)
       return copy(srcFS, srcs[0], dstFS, dst, deleteSource, overwrite, conf);
@@ -513,7 +529,7 @@ public class FileUtil {
       }
     }
 
-    StringBuffer untarCommand = new StringBuffer();
+    StringBuilder untarCommand = new StringBuilder();
     boolean gzipped = inFile.toString().endsWith("gz");
     if (gzipped) {
       untarCommand.append(" gzip -dc '");
@@ -628,14 +644,18 @@ public class FileUtil {
      * Retrieves the number of links to the specified file.
      */
     public static int getLinkCount(File fileName) throws IOException {
+      if (!fileName.exists()) {
+        throw new FileNotFoundException(fileName + " not found.");
+      }
+
       int len = getLinkCountCommand.length;
       String[] cmd = new String[len + 1];
       for (int i = 0; i < len; i++) {
         cmd[i] = getLinkCountCommand[i];
       }
       cmd[len] = fileName.toString();
-      String inpMsg = "";
-      String errMsg = "";
+      String inpMsg = null;
+      String errMsg = null;
       int exitValue = -1;
       BufferedReader in = null;
       BufferedReader err = null;
@@ -647,14 +667,11 @@ public class FileUtil {
         in = new BufferedReader(new InputStreamReader(
                                     process.getInputStream()));
         inpMsg = in.readLine();
-        if (inpMsg == null)  inpMsg = "";
-        
         err = new BufferedReader(new InputStreamReader(
                                      process.getErrorStream()));
         errMsg = err.readLine();
-        if (errMsg == null)  errMsg = "";
-        if (exitValue != 0) {
-          throw new IOException(inpMsg + errMsg);
+        if (inpMsg == null || exitValue != 0) {
+          throw createIOException(fileName, inpMsg, errMsg, exitValue, null);
         }
         if (getOSType() == OSType.OS_TYPE_SOLARIS) {
           String[] result = inpMsg.split("\\s+");
@@ -663,19 +680,25 @@ public class FileUtil {
           return Integer.parseInt(inpMsg);
         }
       } catch (NumberFormatException e) {
-        throw new IOException(StringUtils.stringifyException(e) + 
-                              inpMsg + errMsg +
-                              " on file:" + fileName);
+        throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
       } catch (InterruptedException e) {
-        throw new IOException(StringUtils.stringifyException(e) + 
-                              inpMsg + errMsg +
-                              " on file:" + fileName);
+        throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
       } finally {
         process.destroy();
         if (in != null) in.close();
         if (err != null) err.close();
       }
     }
+  }
+
+  /** Create an IOException for failing to get link count. */
+  static private IOException createIOException(File f, String message,
+      String error, int exitvalue, Exception cause) {
+    final String s = "Failed to get link count on file " + f
+        + ": message=" + message
+        + "; error=" + error
+        + "; exit value=" + exitvalue;
+    return cause == null? new IOException(s): new IOException(s, cause);
   }
 
   /**
@@ -722,7 +745,7 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException, InterruptedException {
-    StringBuffer cmdBuf = new StringBuffer();
+    StringBuilder cmdBuf = new StringBuilder();
     cmdBuf.append("chmod ");
     if (recursive) {
       cmdBuf.append("-R ");
@@ -734,8 +757,8 @@ public class FileUtil {
     try {
       shExec.execute();
     }catch(Exception e) {
-      if(Log.isDebugEnabled()) {
-        Log.debug("Error while changing permission : " + filename 
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Error while changing permission : " + filename 
             +" Exception: " + StringUtils.stringifyException(e));
       }
     }

@@ -55,7 +55,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  */
 
 public class RpcActivityMBean extends MetricsDynamicMBeanBase {
-  final private ObjectName mbeanName;
+  private final ObjectName mbeanName;
 
   /**
    * 
@@ -63,9 +63,8 @@ public class RpcActivityMBean extends MetricsDynamicMBeanBase {
    * @param serviceName - the service name for the rpc service 
    * @param port - the rpc port.
    */
-  public RpcActivityMBean(final MetricsRegistry mr, final String serviceName, final String port) {
-
-    
+  public RpcActivityMBean(final MetricsRegistry mr, final String serviceName,
+      final String port) {
     super(mr, "Rpc layer statistics");
     mbeanName = MBeanUtil.registerMBean(serviceName,
           "RpcActivityForPort" + port, this);
@@ -76,5 +75,4 @@ public class RpcActivityMBean extends MetricsDynamicMBeanBase {
     if (mbeanName != null)
       MBeanUtil.unregisterMBean(mbeanName);
   }
-
 }

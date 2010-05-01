@@ -18,22 +18,11 @@
 
 package org.apache.hadoop.ipc;
 
-import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-
-import java.nio.ByteBuffer;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.WritableByteChannel;
-
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -41,33 +30,60 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-
-import java.security.PrivilegedActionException;
+import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.Channels;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import javax.security.auth.Subject;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
+import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
+import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.ipc.metrics.RpcMetrics;
-import org.apache.hadoop.security.authorize.AuthorizationException;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -76,6 +92,8 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
  * @see Client
  */
 public abstract class Server {
+  private final boolean authorize;
+  private boolean isSecurityEnabled;
   
   /**
    * The first four bytes of Hadoop RPC connections
@@ -84,16 +102,20 @@ public abstract class Server {
   
   // 1 : Introduce ping and server does not throw away RPCs
   // 3 : Introduce the protocol into the RPC connection header
-  public static final byte CURRENT_VERSION = 3;
+  // 4 : Introduced SASL security layer
+  public static final byte CURRENT_VERSION = 4;
 
   /**
    * Initial and max size of response buffer
    */
   static int INITIAL_RESP_BUF_SIZE = 10240;
-  static int MAX_RESP_BUF_SIZE = 1024*1024;
-    
-  public static final Log LOG = LogFactory.getLog(Server.class);
 
+  public static final Log LOG = LogFactory.getLog(Server.class);
+  public static final Log auditLOG = 
+    LogFactory.getLog("SecurityLogger."+Server.class.getName());
+  private static final String AUTH_FAILED_FOR = "Auth failed for ";
+  private static final String AUTH_SUCCESSFULL_FOR = "Auth successfull for ";
+  
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
   private static final Map<String, Class<?>> PROTOCOL_CACHE = 
@@ -143,6 +165,7 @@ public abstract class Server {
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
+  private int readThreads;                        // number of read threads
   private Class<? extends Writable> paramClass;   // class of call parameters
   private int maxIdleTime;                        // the maximum idle time after 
                                                   // which a client may be disconnected
@@ -154,11 +177,14 @@ public abstract class Server {
                                                   // connections to nuke
                                                   //during a cleanup
   
-  protected RpcMetrics  rpcMetrics;
+  protected RpcMetrics rpcMetrics;
+  protected RpcDetailedMetrics rpcDetailedMetrics;
   
   private Configuration conf;
+  private SecretManager<TokenIdentifier> secretManager;
 
   private int maxQueueSize;
+  private final int maxRespSize;
   private int socketSendBufferSize;
   private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
@@ -204,6 +230,11 @@ public abstract class Server {
       }
     }
   }
+  
+  /*Returns a handle to the rpcMetrics (required in tests)*/
+  public RpcMetrics getRpcMetrics() {
+    return rpcMetrics;
+  }
 
   /** A call queued for handling. */
   private static class Call {
@@ -237,6 +268,8 @@ public abstract class Server {
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
+    private Reader[] readers = null;
+    private int currentReader = 0;
     private InetSocketAddress address; //the address we bind at
     private Random rand = new Random();
     private long lastCleanupRunTime = 0; //the last time when a cleanup connec-
@@ -244,6 +277,7 @@ public abstract class Server {
     private long cleanupInterval = 10000; //the minimum interval between 
                                           //two cleanup runs
     private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
+    private ExecutorService readPool;
     
     public Listener() throws IOException {
       address = new InetSocketAddress(bindAddress, port);
@@ -256,11 +290,83 @@ public abstract class Server {
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
       // create a selector;
       selector= Selector.open();
+      readers = new Reader[readThreads];
+      readPool = Executors.newFixedThreadPool(readThreads);
+      for (int i = 0; i < readThreads; i++) {
+        Selector readSelector = Selector.open();
+        Reader reader = new Reader(readSelector);
+        readers[i] = reader;
+        readPool.execute(reader);
+      }
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
       this.setName("IPC Server listener on " + port);
       this.setDaemon(true);
+    }
+    
+    private class Reader implements Runnable {
+      private volatile boolean adding = false;
+      private Selector readSelector = null;
+
+      Reader(Selector readSelector) {
+        this.readSelector = readSelector;
+      }
+      public void run() {
+        LOG.info("Starting SocketReader");
+        synchronized (this) {
+          while (running) {
+            SelectionKey key = null;
+            try {
+              readSelector.select();
+              while (adding) {
+                this.wait(1000);
+              }              
+
+              Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
+              while (iter.hasNext()) {
+                key = iter.next();
+                iter.remove();
+                if (key.isValid()) {
+                  if (key.isReadable()) {
+                    doRead(key);
+                  }
+                }
+                key = null;
+              }
+            } catch (InterruptedException e) {
+              if (running) {                      // unexpected -- log it
+                LOG.info(getName() + " caught: " +
+                         StringUtils.stringifyException(e));
+              }
+            } catch (IOException ex) {
+              LOG.error("Error in Reader", ex);
+            }
+          }
+        }
+      }
+
+      /**
+       * This gets reader into the state that waits for the new channel
+       * to be registered with readSelector. If it was waiting in select()
+       * the thread will be woken up, otherwise whenever select() is called
+       * it will return even if there is nothing to read and wait
+       * in while(adding) for finishAdd call
+       */
+      public void startAdd() {
+        adding = true;
+        readSelector.wakeup();
+      }
+      
+      public synchronized SelectionKey registerChannel(SocketChannel channel)
+                                                          throws IOException {
+          return channel.register(readSelector, SelectionKey.OP_READ);
+      }
+
+      public synchronized void finishAdd() {
+        adding = false;
+        this.notify();        
+      }
     }
     /** cleanup connections from connectionList. Choose a random range
      * to scan and also have a limit on the number of the connections
@@ -326,8 +432,6 @@ public abstract class Server {
               if (key.isValid()) {
                 if (key.isAcceptable())
                   doAccept(key);
-                else if (key.isReadable())
-                  doRead(key);
               }
             } catch (IOException e) {
             }
@@ -341,11 +445,6 @@ public abstract class Server {
           closeCurrentConnection(key, e);
           cleanupConnections(true);
           try { Thread.sleep(60000); } catch (Exception ie) {}
-        } catch (InterruptedException e) {
-          if (running) {                          // unexpected -- log it
-            LOG.info(getName() + " caught: " +
-                     StringUtils.stringifyException(e));
-          }
         } catch (Exception e) {
           closeCurrentConnection(key, e);
         }
@@ -388,25 +487,29 @@ public abstract class Server {
     void doAccept(SelectionKey key) throws IOException,  OutOfMemoryError {
       Connection c = null;
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
-      // accept up to 10 connections
-      for (int i=0; i<10; i++) {
-        SocketChannel channel = server.accept();
-        if (channel==null) return;
+      SocketChannel channel;
+      while ((channel = server.accept()) != null) {
 
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
-        SelectionKey readKey = channel.register(getSelector(), 
-          SelectionKey.OP_READ);
-        c = new Connection(readKey, channel, System.currentTimeMillis());
-        readKey.attach(c);
-        synchronized (connectionList) {
-          connectionList.add(numConnections, c);
-          numConnections++;
+        
+        Reader reader = getReader();
+        try {
+          reader.startAdd();
+          SelectionKey readKey = reader.registerChannel(channel);
+          c = new Connection(readKey, channel, System.currentTimeMillis());
+          readKey.attach(c);
+          synchronized (connectionList) {
+            connectionList.add(numConnections, c);
+            numConnections++;
+          }
+          if (LOG.isDebugEnabled())
+            LOG.debug("Server connection from " + c.toString() +
+                "; # active connections: " + numConnections +
+                "; # queued calls: " + callQueue.size());          
+        } finally {
+          reader.finishAdd(); 
         }
-        if (LOG.isDebugEnabled())
-          LOG.debug("Server connection from " + c.toString() +
-              "; # active connections: " + numConnections +
-              "; # queued calls: " + callQueue.size());
       }
     }
 
@@ -430,7 +533,7 @@ public abstract class Server {
       if (count < 0) {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + ": disconnecting client " + 
-                    c.getHostAddress() + ". Number of active connections: "+
+                    c + ". Number of active connections: "+
                     numConnections);
         closeConnection(c);
         c = null;
@@ -452,9 +555,16 @@ public abstract class Server {
           LOG.info(getName() + ":Exception in closing listener socket. " + e);
         }
       }
+      readPool.shutdown();
     }
     
     synchronized Selector getSelector() { return selector; }
+    // The method that will return the next reader to work with
+    // Simplistic implementation of round robin for now
+    Reader getReader() {
+      currentReader = (currentReader + 1) % readers.length;
+      return readers[currentReader];
+    }
   }
 
   // Sends responses of RPC back to clients.
@@ -701,9 +811,8 @@ public abstract class Server {
   }
 
   /** Reads calls from a connection and queues them for handling. */
-  private class Connection {
-    private boolean versionRead = false; //if initial signature and
-                                         //version are read
+  public class Connection {
+    private boolean rpcHeaderRead = false; // if initial rpc header is read
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
 
@@ -722,14 +831,27 @@ public abstract class Server {
     
     ConnectionHeader header = new ConnectionHeader();
     Class<?> protocol;
+    boolean useSasl;
+    SaslServer saslServer;
+    private AuthMethod authMethod;
+    private boolean saslContextEstablished;
+    private boolean skipInitialSaslHandshake;
+    private ByteBuffer rpcHeaderBuffer;
+    private ByteBuffer unwrappedData;
+    private ByteBuffer unwrappedDataLengthBuffer;
     
-    Subject user = null;
+    UserGroupInformation user = null;
+    public UserGroupInformation attemptingUser = null; // user name before auth
 
     // Fake 'call' for failed authorization response
     private static final int AUTHROIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = 
-      new Call(AUTHROIZATION_FAILED_CALLID, null, null);
+      new Call(AUTHROIZATION_FAILED_CALLID, null, this);
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
+    // Fake 'call' for SASL context setup
+    private static final int SASL_CALLID = -33;
+    private final Call saslCall = new Call(SASL_CALLID, null, this);
+    private final ByteArrayOutputStream saslResponse = new ByteArrayOutputStream();
     
     public Connection(SelectionKey key, SocketChannel channel, 
                       long lastContact) {
@@ -737,6 +859,8 @@ public abstract class Server {
       this.lastContact = lastContact;
       this.data = null;
       this.dataLengthBuffer = ByteBuffer.allocate(4);
+      this.unwrappedData = null;
+      this.unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
       this.socket = channel.socket();
       InetAddress addr = socket.getInetAddress();
       if (addr == null) {
@@ -793,7 +917,139 @@ public abstract class Server {
         return true;
       return false;
     }
+    
+    private UserGroupInformation getAuthorizedUgi(String authorizedId)
+        throws IOException {
+      if (authMethod == SaslRpcServer.AuthMethod.DIGEST) {
+        TokenIdentifier tokenId = SaslRpcServer.getIdentifier(authorizedId,
+            secretManager);
+        return tokenId.getUser();
+      } else {
+        return UserGroupInformation.createRemoteUser(authorizedId);
+      }
+    }
 
+    private void saslReadAndProcess(byte[] saslToken) throws IOException,
+        InterruptedException {
+      if (!saslContextEstablished) {
+        byte[] replyToken = null;
+        try {
+          if (saslServer == null) {
+            switch (authMethod) {
+            case DIGEST:
+              if (secretManager == null) {
+                throw new AccessControlException(
+                    "Server is not configured to do DIGEST authentication.");
+              }
+              saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
+                  .getMechanismName(), null, SaslRpcServer.SASL_DEFAULT_REALM,
+                  SaslRpcServer.SASL_PROPS, new SaslDigestCallbackHandler(
+                      secretManager, this));
+              break;
+            default:
+              UserGroupInformation current = UserGroupInformation
+                  .getCurrentUser();
+              String fullName = current.getUserName();
+              if (LOG.isDebugEnabled())
+                LOG.debug("Kerberos principal name is " + fullName);
+              final String names[] = SaslRpcServer.splitKerberosName(fullName);
+              if (names.length != 3) {
+                throw new AccessControlException(
+                    "Kerberos principal name does NOT have the expected "
+                        + "hostname part: " + fullName);
+              }
+              current.doAs(new PrivilegedExceptionAction<Object>() {
+                @Override
+                public Object run() throws SaslException {
+                  saslServer = Sasl.createSaslServer(AuthMethod.KERBEROS
+                      .getMechanismName(), names[0], names[1],
+                      SaslRpcServer.SASL_PROPS, new SaslGssCallbackHandler());
+                  return null;
+                }
+              });
+            }
+            if (saslServer == null)
+              throw new AccessControlException(
+                  "Unable to find SASL server implementation for "
+                      + authMethod.getMechanismName());
+            if (LOG.isDebugEnabled())
+              LOG.debug("Created SASL server with mechanism = "
+                  + authMethod.getMechanismName());
+          }
+          if (LOG.isDebugEnabled())
+            LOG.debug("Have read input token of size " + saslToken.length
+                + " for processing by saslServer.evaluateResponse()");
+          replyToken = saslServer.evaluateResponse(saslToken);
+        } catch (IOException e) {
+          IOException sendToClient = e;
+          Throwable cause = e;
+          while (cause != null) {
+            if (cause instanceof InvalidToken) {
+              sendToClient = (InvalidToken) cause;
+              break;
+            }
+            cause = cause.getCause();
+          }
+          doSaslReply(SaslStatus.ERROR, null, sendToClient.getClass().getName(), 
+              sendToClient.getLocalizedMessage());
+          rpcMetrics.authenticationFailures.inc();
+          String clientIP = this.toString();
+          // attempting user could be null
+          auditLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser, e);
+          throw e;
+        }
+        if (replyToken != null) {
+          if (LOG.isDebugEnabled())
+            LOG.debug("Will send token of size " + replyToken.length
+                + " from saslServer.");
+          doSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null,
+              null);
+        }
+        if (saslServer.isComplete()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("SASL server context established. Negotiated QoP is "
+                + saslServer.getNegotiatedProperty(Sasl.QOP));
+          }
+          user = getAuthorizedUgi(saslServer.getAuthorizationID());
+          LOG.info("SASL server successfully authenticated client: " + user);
+          rpcMetrics.authenticationSuccesses.inc();
+          auditLOG.info(AUTH_SUCCESSFULL_FOR + user);
+          saslContextEstablished = true;
+        }
+      } else {
+        if (LOG.isDebugEnabled())
+          LOG.debug("Have read input token of size " + saslToken.length
+              + " for processing by saslServer.unwrap()");
+        byte[] plaintextData = saslServer
+            .unwrap(saslToken, 0, saslToken.length);
+        processUnwrappedData(plaintextData);
+      }
+    }
+    
+    private void doSaslReply(SaslStatus status, Writable rv,
+        String errorClass, String error) throws IOException {
+      saslResponse.reset();
+      DataOutputStream out = new DataOutputStream(saslResponse);
+      out.writeInt(status.state); // write status
+      if (status == SaslStatus.SUCCESS) {
+        rv.write(out);
+      } else {
+        WritableUtils.writeString(out, errorClass);
+        WritableUtils.writeString(out, error);
+      }
+      saslCall.setResponse(ByteBuffer.wrap(saslResponse.toByteArray()));
+      responder.doRespond(saslCall);
+    }
+    
+    private void disposeSasl() {
+      if (saslServer != null) {
+        try {
+          saslServer.dispose();
+        } catch (SaslException ignored) {
+        }
+      }
+    }
+    
     public int readAndProcess() throws IOException, InterruptedException {
       while (true) {
         /* Read at most one RPC. If the header is not read completely yet
@@ -806,14 +1062,42 @@ public abstract class Server {
             return count;
         }
       
-        if (!versionRead) {
+        if (!rpcHeaderRead) {
           //Every connection is expected to send the header.
-          ByteBuffer versionBuffer = ByteBuffer.allocate(1);
-          count = channelRead(channel, versionBuffer);
-          if (count <= 0) {
+          if (rpcHeaderBuffer == null) {
+            rpcHeaderBuffer = ByteBuffer.allocate(2);
+          }
+          count = channelRead(channel, rpcHeaderBuffer);
+          if (count < 0 || rpcHeaderBuffer.remaining() > 0) {
             return count;
           }
-          int version = versionBuffer.get(0);
+          int version = rpcHeaderBuffer.get(0);
+          byte[] method = new byte[] {rpcHeaderBuffer.get(1)};
+          authMethod = AuthMethod.read(new DataInputStream(
+              new ByteArrayInputStream(method)));
+          if (authMethod == null) {
+            throw new IOException("Unable to read authentication method");
+          }
+          if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
+            AccessControlException ae = new AccessControlException(
+                "Authentication is required");
+            setupResponse(authFailedResponse, authFailedCall, Status.FATAL,
+                null, ae.getClass().getName(), ae.getMessage());
+            responder.doRespond(authFailedCall);
+            throw ae;
+          }
+          if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+            doSaslReply(SaslStatus.SUCCESS, new IntWritable(
+                SaslRpcServer.SWITCH_TO_SIMPLE_AUTH), null, null);
+            authMethod = AuthMethod.SIMPLE;
+            // client has already sent the initial Sasl message and we
+            // should ignore it. Both client and server should fall back
+            // to simple auth from now on.
+            skipInitialSaslHandshake = true;
+          }
+          if (authMethod != AuthMethod.SIMPLE) {
+            useSasl = true;
+          }
           
           dataLengthBuffer.flip();          
           if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
@@ -825,7 +1109,8 @@ public abstract class Server {
             return -1;
           }
           dataLengthBuffer.clear();
-          versionRead = true;
+          rpcHeaderBuffer = null;
+          rpcHeaderRead = true;
           continue;
         }
         
@@ -833,12 +1118,11 @@ public abstract class Server {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
        
-          if (dataLength == Client.PING_CALL_ID) {
+          if (!useSasl && dataLength == Client.PING_CALL_ID) {
             dataLengthBuffer.clear();
             return 0;  //ping message
           }
           data = ByteBuffer.allocate(dataLength);
-          incRpcCount();  // Increment the rpc count
         }
         
         count = channelRead(channel, data);
@@ -846,33 +1130,19 @@ public abstract class Server {
         if (data.remaining() == 0) {
           dataLengthBuffer.clear();
           data.flip();
-          if (headerRead) {
-            processData();
+          if (skipInitialSaslHandshake) {
             data = null;
-            return count;
+            skipInitialSaslHandshake = false;
+            continue;
+          }
+          boolean isHeaderRead = headerRead;
+          if (useSasl) {
+            saslReadAndProcess(data.array());
           } else {
-            processHeader();
-            headerRead = true;
-            data = null;
-            
-            // Authorize the connection
-            try {
-              authorize(user, header);
-              
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Successfully authorized " + header);
-              }
-            } catch (AuthorizationException ae) {
-              authFailedCall.connection = this;
-              setupResponse(authFailedResponse, authFailedCall, 
-                            Status.FATAL, null, 
-                            ae.getClass().getName(), ae.getMessage());
-              responder.doRespond(authFailedCall);
-              
-              // Close this connection
-              return -1;
-            }
-
+            processOneRpc(data.array());
+          }
+          data = null;
+          if (!isHeaderRead) {
             continue;
           }
         } 
@@ -881,9 +1151,9 @@ public abstract class Server {
     }
 
     /// Reads the connection header following version
-    private void processHeader() throws IOException {
+    private void processHeader(byte[] buf) throws IOException {
       DataInputStream in =
-        new DataInputStream(new ByteArrayInputStream(data.array()));
+        new DataInputStream(new ByteArrayInputStream(buf));
       header.readFields(in);
       try {
         String protocolClassName = header.getProtocol();
@@ -894,27 +1164,136 @@ public abstract class Server {
         throw new IOException("Unknown protocol: " + header.getProtocol());
       }
       
-      // TODO: Get the user name from the GSS API for Kerberbos-based security
-      // Create the user subject
-      user = SecurityUtil.getSubject(header.getUgi());
+      UserGroupInformation protocolUser = header.getUgi();
+      if (!useSasl) {
+        user = protocolUser;
+        if (user != null) {
+          user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
+        }
+      } else {
+        // user is authenticated
+        user.setAuthenticationMethod(authMethod.authenticationMethod);
+        //Now we check if this is a proxy user case. If the protocol user is
+        //different from the 'user', it is a proxy user scenario. However, 
+        //this is not allowed if user authenticated with DIGEST.
+        if ((protocolUser != null)
+            && (!protocolUser.getUserName().equals(user.getUserName()))) {
+          if (authMethod == AuthMethod.DIGEST) {
+            // Not allowed to doAs if token authentication is used
+            throw new AccessControlException("Authenticated user (" + user
+                + ") doesn't match what the client claims to be ("
+                + protocolUser + ")");
+          } else {
+            // Effective user can be different from authenticated user
+            // for simple auth or kerberos auth
+            // The user is the real user. Now we create a proxy user
+            UserGroupInformation realUser = user;
+            user = UserGroupInformation.createProxyUser(protocolUser
+                .getUserName(), realUser);
+            // Now the user is a proxy user, set Authentication method Proxy.
+            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
+          }
+        }
+      }
     }
     
-    private void processData() throws  IOException, InterruptedException {
+    private void processUnwrappedData(byte[] inBuf) throws IOException,
+        InterruptedException {
+      ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(
+          inBuf));
+      // Read all RPCs contained in the inBuf, even partial ones
+      while (true) {
+        int count = -1;
+        if (unwrappedDataLengthBuffer.remaining() > 0) {
+          count = channelRead(ch, unwrappedDataLengthBuffer);
+          if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0)
+            return;
+        }
+
+        if (unwrappedData == null) {
+          unwrappedDataLengthBuffer.flip();
+          int unwrappedDataLength = unwrappedDataLengthBuffer.getInt();
+
+          if (unwrappedDataLength == Client.PING_CALL_ID) {
+            if (LOG.isDebugEnabled())
+              LOG.debug("Received ping message");
+            unwrappedDataLengthBuffer.clear();
+            continue; // ping message
+          }
+          unwrappedData = ByteBuffer.allocate(unwrappedDataLength);
+        }
+
+        count = channelRead(ch, unwrappedData);
+        if (count <= 0 || unwrappedData.remaining() > 0)
+          return;
+
+        if (unwrappedData.remaining() == 0) {
+          unwrappedDataLengthBuffer.clear();
+          unwrappedData.flip();
+          processOneRpc(unwrappedData.array());
+          unwrappedData = null;
+        }
+      }
+    }
+    
+    private void processOneRpc(byte[] buf) throws IOException,
+        InterruptedException {
+      if (headerRead) {
+        processData(buf);
+      } else {
+        processHeader(buf);
+        headerRead = true;
+        if (!authorizeConnection()) {
+          throw new AccessControlException("Connection from " + this
+              + " for protocol " + header.getProtocol()
+              + " is unauthorized for user " + user);
+        }
+      }
+    }
+    
+    private void processData(byte[] buf) throws  IOException, InterruptedException {
       DataInputStream dis =
-        new DataInputStream(new ByteArrayInputStream(data.array()));
+        new DataInputStream(new ByteArrayInputStream(buf));
       int id = dis.readInt();                    // try to read an id
         
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
 
-      Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
+      Writable param = ReflectionUtils.newInstance(paramClass, conf);//read param
       param.readFields(dis);        
         
       Call call = new Call(id, param, this);
       callQueue.put(call);              // queue the call; maybe blocked here
+      incRpcCount();  // Increment the rpc count
     }
 
+    private boolean authorizeConnection() throws IOException {
+      try {
+        // If auth method is DIGEST, the token was obtained by the
+        // real user for the effective user, therefore not required to
+        // authorize real user. doAs is allowed only for simple or kerberos
+        // authentication
+        if (user != null && user.getRealUser() != null
+            && (authMethod != AuthMethod.DIGEST)) {
+          ProxyUsers.authorize(user, this.getHostAddress(), conf);
+        }
+        authorize(user, header);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Successfully authorized " + header);
+        }
+        rpcMetrics.authorizationSuccesses.inc();
+      } catch (AuthorizationException ae) {
+        rpcMetrics.authorizationFailures.inc();
+        setupResponse(authFailedResponse, authFailedCall, Status.FATAL, null,
+            ae.getClass().getName(), ae.getMessage());
+        responder.doRespond(authFailedCall);
+        return false;
+      }
+      return true;
+    }
+    
     private synchronized void close() throws IOException {
+      disposeSasl();
       data = null;
       dataLengthBuffer = null;
       if (!channel.isOpen())
@@ -958,41 +1337,51 @@ public abstract class Server {
           try {
             // Make the call as the user via Subject.doAs, thus associating
             // the call with the Subject
-            value = 
-              Subject.doAs(call.connection.user, 
-                           new PrivilegedExceptionAction<Writable>() {
-                              @Override
-                              public Writable run() throws Exception {
-                                // make the call
-                                return call(call.connection.protocol, 
-                                            call.param, call.timestamp);
+            if (call.connection.user == null) {
+              value = call(call.connection.protocol, call.param, 
+                           call.timestamp);
+            } else {
+              value = 
+                call.connection.user.doAs
+                  (new PrivilegedExceptionAction<Writable>() {
+                     @Override
+                     public Writable run() throws Exception {
+                       // make the call
+                       return call(call.connection.protocol, 
+                                   call.param, call.timestamp);
 
-                              }
-                           }
-                          );
-              
-          } catch (PrivilegedActionException pae) {
-            Exception e = pae.getException();
-            LOG.info(getName()+", call "+call+": error: " + e, e);
-            errorClass = e.getClass().getName();
-            error = StringUtils.stringifyException(e);
+                     }
+                   }
+                  );
+            }
           } catch (Throwable e) {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
+            // Remove redundant error class name from the beginning of the stack trace
+            String exceptionHdr = errorClass + ": ";
+            if (error.startsWith(exceptionHdr)) {
+              error = error.substring(exceptionHdr.length());
+            }
           }
           CurCall.set(null);
-          setupResponse(buf, call, 
-                        (error == null) ? Status.SUCCESS : Status.ERROR, 
-                        value, errorClass, error);
-          // Discard the large buf and reset it back to 
-          // smaller size to freeup heap
-          if (buf.size() > MAX_RESP_BUF_SIZE) {
-            LOG.warn("Large response size " + buf.size() + " for call " + 
-                call.toString());
-            buf = new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
+          synchronized (call.connection.responseQueue) {
+            // setupResponse() needs to be sync'ed together with 
+            // responder.doResponse() since setupResponse may use
+            // SASL to encrypt response data and SASL enforces
+            // its own message ordering.
+            setupResponse(buf, call, (error == null) ? Status.SUCCESS
+                : Status.ERROR, value, errorClass, error);
+            
+            // Discard the large buf and reset it back to smaller size 
+            // to free up heap
+            if (buf.size() > maxRespSize) {
+              LOG.warn("Large response size " + buf.size() + " for call "
+                  + call.toString());
+              buf = new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
+            }
+            responder.doRespond(call);
           }
-          responder.doRespond(call);
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
             LOG.info(getName() + " caught: " +
@@ -1013,16 +1402,17 @@ public abstract class Server {
                   Configuration conf)
     throws IOException 
   {
-    this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port));
+    this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port), null);
   }
   /** Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.
    * 
    */
+  @SuppressWarnings("unchecked")
   protected Server(String bindAddress, int port, 
                   Class<? extends Writable> paramClass, int handlerCount, 
-                  Configuration conf, String serverName) 
+                  Configuration conf, String serverName, SecretManager<? extends TokenIdentifier> secretManager) 
     throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;
@@ -1031,18 +1421,31 @@ public abstract class Server {
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
     this.maxQueueSize = handlerCount * conf.getInt(
-                CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-                CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+    this.maxRespSize = conf.getInt(
+        CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
+        CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
+    this.readThreads = conf.getInt(
+        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
+        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
+    this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
+    this.authorize = 
+      conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
+                      false);
+    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();    
     this.rpcMetrics = new RpcMetrics(serverName,
                           Integer.toString(this.port), this);
+    this.rpcDetailedMetrics = new RpcDetailedMetrics(serverName,
+                            Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
 
 
@@ -1087,11 +1490,41 @@ public abstract class Server {
       WritableUtils.writeString(out, errorClass);
       WritableUtils.writeString(out, error);
     }
+    wrapWithSasl(response, call);
     call.setResponse(ByteBuffer.wrap(response.toByteArray()));
+  }
+  
+  private void wrapWithSasl(ByteArrayOutputStream response, Call call)
+      throws IOException {
+    if (call.connection.useSasl) {
+      byte[] token = response.toByteArray();
+      // synchronization may be needed since there can be multiple Handler
+      // threads using saslServer to wrap responses.
+      synchronized (call.connection.saslServer) {
+        token = call.connection.saslServer.wrap(token, 0, token.length);
+      }
+      if (LOG.isDebugEnabled())
+        LOG.debug("Adding saslServer wrapped token of size " + token.length
+            + " as call response.");
+      response.reset();
+      DataOutputStream saslOut = new DataOutputStream(response);
+      saslOut.writeInt(token.length);
+      saslOut.write(token, 0, token.length);
+    }
   }
   
   Configuration getConf() {
     return conf;
+  }
+  
+  /** for unit testing only, should be called before server is started */ 
+  void disableSecurity() {
+    this.isSecurityEnabled = false;
+  }
+  
+  /** for unit testing only, should be called before server is started */ 
+  void enableSecurity() {
+    this.isSecurityEnabled = true;
   }
   
   /** Sets the socket buffer size used for responding to RPCs */
@@ -1126,6 +1559,9 @@ public abstract class Server {
     notifyAll();
     if (this.rpcMetrics != null) {
       this.rpcMetrics.shutdown();
+    }
+    if (this.rpcDetailedMetrics != null) {
+      this.rpcDetailedMetrics.shutdown();
     }
   }
 
@@ -1168,8 +1604,20 @@ public abstract class Server {
    * @param connection incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public void authorize(Subject user, ConnectionHeader connection) 
-  throws AuthorizationException {}
+  public void authorize(UserGroupInformation user, 
+                        ConnectionHeader connection
+                        ) throws AuthorizationException {
+    if (authorize) {
+      Class<?> protocol = null;
+      try {
+        protocol = getProtocolClass(connection.getProtocol(), getConf());
+      } catch (ClassNotFoundException cfne) {
+        throw new AuthorizationException("Unknown protocol: " + 
+                                         connection.getProtocol());
+      }
+      ServiceAuthorizationManager.authorize(user, protocol);
+    }
+  }
   
   /**
    * The number of open RPC conections
@@ -1205,11 +1653,15 @@ public abstract class Server {
    *
    * @see WritableByteChannel#write(ByteBuffer)
    */
-  private static int channelWrite(WritableByteChannel channel, 
-                                  ByteBuffer buffer) throws IOException {
+  private int channelWrite(WritableByteChannel channel, 
+                           ByteBuffer buffer) throws IOException {
     
-    return (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
-           channel.write(buffer) : channelIO(null, channel, buffer);
+    int count =  (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
+                 channel.write(buffer) : channelIO(null, channel, buffer);
+    if (count > 0) {
+      rpcMetrics.sentBytes.inc(count);
+    }
+    return count;
   }
   
   
@@ -1221,11 +1673,15 @@ public abstract class Server {
    * 
    * @see ReadableByteChannel#read(ByteBuffer)
    */
-  private static int channelRead(ReadableByteChannel channel, 
-                                 ByteBuffer buffer) throws IOException {
+  private int channelRead(ReadableByteChannel channel, 
+                          ByteBuffer buffer) throws IOException {
     
-    return (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
-           channel.read(buffer) : channelIO(channel, null, buffer);
+    int count = (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
+                channel.read(buffer) : channelIO(channel, null, buffer);
+    if (count > 0) {
+      rpcMetrics.receivedBytes.inc(count);
+    }
+    return count;
   }
   
   /**

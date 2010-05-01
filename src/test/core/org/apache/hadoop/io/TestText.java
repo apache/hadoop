@@ -35,7 +35,7 @@ public class TestText extends TestCase {
   
   // generate a valid java String
   private static String getTestString(int len) throws Exception {
-    StringBuffer buffer = new StringBuffer();    
+    StringBuilder buffer = new StringBuilder();    
     int length = (len==RAND_LEN) ? RANDOM.nextInt(1000) : len;
     while (buffer.length()<length) {
       int codePoint = RANDOM.nextInt(Character.MAX_CODE_POINT);
@@ -60,7 +60,7 @@ public class TestText extends TestCase {
   public static String getLongString() throws Exception {
     String str = getTestString();
     int length = Short.MAX_VALUE+str.length();
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     while(buffer.length()<length)
       buffer.append(str);
       
@@ -251,6 +251,12 @@ public class TestText extends TestCase {
     
     thread2.join();
     thread2.join();
+  }
+
+  public void testAvroReflect() throws Exception {
+    AvroTestUtil.testReflect
+      (new Text("foo"),
+       "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");
   }
 
   public static void main(String[] args)  throws Exception

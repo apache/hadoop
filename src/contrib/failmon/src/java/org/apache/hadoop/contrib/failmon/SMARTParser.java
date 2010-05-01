@@ -66,12 +66,12 @@ public class SMARTParser extends ShellParser {
    */
   public EventRecord query(String device) throws Exception {
     String conf = Environment.getProperty("disks." + device + ".source");
-    StringBuffer sb;
+    CharSequence sb;
 
     if (conf == null)
-      sb = Environment.runCommand("sudo smartctl --all " + device);
+      sb = Environment.runCommandGeneric("sudo smartctl --all " + device);
     else
-      sb = Environment.runCommand("cat " + conf);
+      sb = Environment.runCommandGeneric("cat " + conf);
 
     EventRecord retval = new EventRecord(InetAddress.getLocalHost()
         .getCanonicalHostName(), InetAddress.getAllByName(InetAddress.getLocalHost()
@@ -146,11 +146,11 @@ public class SMARTParser extends ShellParser {
    * This format is mostly found in IDE and SATA disks.
    * 
    * @param er the EventRecord in which to store attributes found
-   * @param sb the StringBuffer with the text to parse
+   * @param sb the text to parse
    * 
    * @return the EventRecord in which new attributes are stored.
    */
-  private EventRecord readColumns(EventRecord er, StringBuffer sb) {
+  private EventRecord readColumns(EventRecord er, CharSequence sb) {
 
     Pattern pattern = Pattern.compile("^\\s{0,2}(\\d{1,3}\\s+.*)$",
         Pattern.MULTILINE);

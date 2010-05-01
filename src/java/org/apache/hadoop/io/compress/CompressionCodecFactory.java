@@ -42,14 +42,14 @@ public class CompressionCodecFactory {
   
   private void addCodec(CompressionCodec codec) {
     String suffix = codec.getDefaultExtension();
-    codecs.put(new StringBuffer(suffix).reverse().toString(), codec);
+    codecs.put(new StringBuilder(suffix).reverse().toString(), codec);
   }
   
   /**
    * Print the extension map out as a string.
    */
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     Iterator<Map.Entry<String, CompressionCodec>> itr = 
       codecs.entrySet().iterator();
     buf.append("{ ");
@@ -112,7 +112,7 @@ public class CompressionCodecFactory {
    */
   public static void setCodecClasses(Configuration conf,
                                      List<Class> classes) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     Iterator<Class> itr = classes.iterator();
     if (itr.hasNext()) {
       Class cls = itr.next();
@@ -154,7 +154,7 @@ public class CompressionCodecFactory {
     CompressionCodec result = null;
     if (codecs != null) {
       String filename = file.getName();
-      String reversedFilename = new StringBuffer(filename).reverse().toString();
+      String reversedFilename = new StringBuilder(filename).reverse().toString();
       SortedMap<String, CompressionCodec> subMap = 
         codecs.headMap(reversedFilename);
       if (!subMap.isEmpty()) {
@@ -199,29 +199,38 @@ public class CompressionCodecFactory {
           System.out.println("Codec for " + args[i] + " not found.");
         } else { 
           if (encode) {
-            CompressionOutputStream out = 
-              codec.createOutputStream(new java.io.FileOutputStream(args[i]));
-            byte[] buffer = new byte[100];
-            String inFilename = removeSuffix(args[i], 
-                                             codec.getDefaultExtension());
-            java.io.InputStream in = new java.io.FileInputStream(inFilename);
-            int len = in.read(buffer);
-            while (len > 0) {
-              out.write(buffer, 0, len);
-              len = in.read(buffer);
+            CompressionOutputStream out = null;
+            java.io.InputStream in = null;
+            try {
+              out = codec.createOutputStream(
+                  new java.io.FileOutputStream(args[i]));
+              byte[] buffer = new byte[100];
+              String inFilename = removeSuffix(args[i], 
+                  codec.getDefaultExtension());
+              in = new java.io.FileInputStream(inFilename);
+              int len = in.read(buffer);
+              while (len > 0) {
+                out.write(buffer, 0, len);
+                len = in.read(buffer);
+              }
+            } finally {
+              if(out != null) { out.close(); }
+              if(in  != null) { in.close(); }
             }
-            in.close();
-            out.close();
           } else {
-            CompressionInputStream in = 
-              codec.createInputStream(new java.io.FileInputStream(args[i]));
-            byte[] buffer = new byte[100];
-            int len = in.read(buffer);
-            while (len > 0) {
-              System.out.write(buffer, 0, len);
-              len = in.read(buffer);
+            CompressionInputStream in = null;
+            try {
+              in = codec.createInputStream(
+                  new java.io.FileInputStream(args[i]));
+              byte[] buffer = new byte[100];
+              int len = in.read(buffer);
+              while (len > 0) {
+                System.out.write(buffer, 0, len);
+                len = in.read(buffer);
+              }
+            } finally {
+              if(in != null) { in.close(); }
             }
-            in.close();
           }
         }
       }

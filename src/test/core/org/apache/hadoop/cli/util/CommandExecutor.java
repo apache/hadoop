@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.cli.util;
 
+import org.apache.hadoop.cli.CLITestHelper;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.StringTokenizer;
-
-import org.apache.hadoop.cli.TestCLI;
 
 /**
  *
@@ -41,7 +41,7 @@ public abstract class CommandExecutor {
 
       args[i] = args[i].replaceAll(masterKey, master);
       args[i] = args[i].replaceAll("CLITEST_DATA", 
-        new File(TestCLI.TEST_CACHE_DATA_DIR).
+        new File(CLITestHelper.TEST_CACHE_DATA_DIR).
         toURI().toString().replace(' ', '+'));
       args[i] = args[i].replaceAll("USERNAME", System.getProperty("user.name"));
 

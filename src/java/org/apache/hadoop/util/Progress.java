@@ -211,12 +211,12 @@ public class Progress {
   }
 
   public String toString() {
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     toString(result);
     return result.toString();
   }
 
-  private synchronized void toString(StringBuffer buffer) {
+  private synchronized void toString(StringBuilder buffer) {
     buffer.append(status);
     if (phases.size() != 0 && currentPhase < phases.size()) {
       buffer.append(" > ");

@@ -35,10 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.serializer.DeserializerBase;
-import org.apache.hadoop.io.serializer.SerializationBase;
+import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.SerializerBase;
+import org.apache.hadoop.io.serializer.Serializer;
 
 /**
  * General reflection utils
@@ -47,7 +46,7 @@ import org.apache.hadoop.io.serializer.SerializerBase;
 public class ReflectionUtils {
     
   private static final Class<?>[] EMPTY_ARRAY = new Class[]{};
-  private static SerializationFactory serialFactory = null;
+  volatile private static SerializationFactory serialFactory = null;
 
   /** 
    * Cache of constructors for each class. Pins the classes so they
@@ -275,12 +274,11 @@ public class ReflectionUtils {
     buffer.outBuffer.reset();
     SerializationFactory factory = getFactory(conf);
     Class<T> cls = (Class<T>) src.getClass();
-    Map<String, String> metadata = SerializationBase.getMetadataFromClass(cls);
-    SerializerBase<T> serializer = factory.getSerializer(metadata);
+    Serializer<T> serializer = factory.getSerializer(cls);
     serializer.open(buffer.outBuffer);
     serializer.serialize(src);
     buffer.moveData();
-    DeserializerBase<T> deserializer = factory.getDeserializer(metadata);
+    Deserializer<T> deserializer = factory.getDeserializer(cls);
     deserializer.open(buffer.inBuffer);
     dst = deserializer.deserialize(dst);
     return dst;

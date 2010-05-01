@@ -580,7 +580,7 @@ public class NetworkTopology {
   /** convert a network tree to a string */
   public String toString() {
     // print the number of racks
-    StringBuffer tree = new StringBuffer();
+    StringBuilder tree = new StringBuilder();
     tree.append("Number of racks: ");
     tree.append(numOfRacks);
     tree.append("\n");

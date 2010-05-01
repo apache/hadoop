@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URL;
@@ -47,11 +48,13 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -67,6 +70,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
+import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -153,6 +157,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private ArrayList<Object> resources = new ArrayList<Object>();
 
   /**
+   * The value reported as the setting resource when a key is set
+   * by code rather than a file resource.
+   */
+  static final String UNKNOWN_RESOURCE = "Unknown";
+
+  /**
    * List of configuration parameters marked <b>final</b>. 
    */
   private Set<String> finalParameters = new HashSet<String>();
@@ -174,13 +184,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   private static final Map<ClassLoader, Map<String, Class<?>>>
     CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
-  
-  /**
-   * Flag to indicate if the storage of resource which updates a key needs 
-   * to be stored for each key
-   */
-  private boolean storeResource;
-  
+
   /**
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
@@ -204,9 +208,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.newKeys = newKeys;
       this.customMessage = customMessage;
       accessed = false;
-    }
-    DeprecatedKeyInfo(String[] newKeys) {
-      this(newKeys, null);
     }
 
     /**
@@ -262,12 +263,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     if (!isDeprecated(key)) {
       DeprecatedKeyInfo newKeyInfo;
-      if (customMessage == null) {
-        newKeyInfo = new DeprecatedKeyInfo(newKeys);
-      }
-      else {
-        newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
-      }
+      newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
       deprecatedKeyMap.put(key, newKeyInfo);
     }
   }
@@ -298,20 +294,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return deprecatedKeyMap.containsKey(key);
   }
  
-  /**
-   * Check whether or not the deprecated key has been specified in the
-   * configuration file rather than the new key
-   * 
-   * Returns false if the specified key is not included in the deprecated
-   * key mapping.
-   * 
-   * @param oldKey Old configuration key 
-   * @return If the old configuration key was specified rather than the new one
-   */
-  public boolean deprecatedKeyWasSet(String oldKey) {
-    return isDeprecated(oldKey) && deprecatedKeyMap.get(oldKey).accessed;
-  }
-  
   /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
@@ -384,28 +366,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(StringUtils.stringifyException(new IOException("config()")));
-    }
+    updatingResource = new HashMap<String, String>();
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
-    }
-    this.storeResource = false;
-  }
-  
-  /**
-   * A new configuration with the same settings and additional facility for
-   * storage of resource to each key which loads or updates 
-   * the key most recently
-   * @param other the configuration from which to clone settings
-   * @param storeResource flag to indicate if the storage of resource to 
-   * each key is to be stored
-   */
-  private Configuration(Configuration other, boolean storeResource) {
-    this(other);
-    this.storeResource = storeResource;
-    if (storeResource) {
-      updatingResource = new HashMap<String, String>();
     }
   }
   
@@ -416,11 +379,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(StringUtils.stringifyException
-                (new IOException("config(config)")));
-    }
-   
    this.resources = (ArrayList)other.resources.clone();
    synchronized(other) {
      if (other.properties != null) {
@@ -430,6 +388,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
      if (other.overlay!=null) {
        this.overlay = (Properties)other.overlay.clone();
      }
+
+     this.updatingResource = new HashMap<String, String>(other.updatingResource);
    }
    
     this.finalParameters = new HashSet<String>(other.finalParameters);
@@ -611,6 +571,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (!isDeprecated(name)) {
       getOverlay().setProperty(name, value);
       getProps().setProperty(name, value);
+      updatingResource.put(name, UNKNOWN_RESOURCE);
     }
     else {
       DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
@@ -840,6 +801,45 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Get the value of the <code>name</code> property as a <code>Pattern</code>.
+   * If no such property is specified, or if the specified value is not a valid
+   * <code>Pattern</code>, then <code>DefaultValue</code> is returned.
+   *
+   * @param name property name
+   * @param defaultValue default value
+   * @return property value as a compiled Pattern, or defaultValue
+   */
+  public Pattern getPattern(String name, Pattern defaultValue) {
+    String valString = get(name);
+    if (null == valString || "".equals(valString)) {
+      return defaultValue;
+    }
+    try {
+      return Pattern.compile(valString);
+    } catch (PatternSyntaxException pse) {
+      LOG.warn("Regular expression '" + valString + "' for property '" +
+               name + "' not valid. Using default", pse);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Set the given property to <code>Pattern</code>.
+   * If the pattern is passed as null, sets the empty pattern which results in
+   * further calls to getPattern(...) returning the default value.
+   *
+   * @param name property name
+   * @param pattern new value
+   */
+  public void setPattern(String name, Pattern pattern) {
+    if (null == pattern) {
+      set(name, null);
+    } else {
+      set(name, pattern.pattern());
+    }
+  }
+
+  /**
    * A class that represents a set of positive integer ranges. It parses 
    * strings of the form: "2-3,5,7-" where ranges are separated by comma and 
    * the lower/upper bounds are separated by dash. Either the lower or upper 
@@ -911,7 +911,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     
     @Override
     public String toString() {
-      StringBuffer result = new StringBuffer();
+      StringBuilder result = new StringBuilder();
       boolean first = true;
       for(Range r: ranges) {
         if (first) {
@@ -1045,7 +1045,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public void setStrings(String name, String... values) {
     set(name, StringUtils.arrayToString(values));
   }
- 
+
   /**
    * Load a class by name.
    * 
@@ -1320,10 +1320,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       loadResources(properties, resources, quietmode);
       if (overlay!= null) {
         properties.putAll(overlay);
-        if (storeResource) {
-          for (Map.Entry<Object,Object> item: overlay.entrySet()) {
-            updatingResource.put((String) item.getKey(), "Unknown");
-          }
+        for (Map.Entry<Object,Object> item: overlay.entrySet()) {
+          updatingResource.put((String) item.getKey(), UNKNOWN_RESOURCE);
         }
       }
     }
@@ -1384,60 +1382,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     
     for (Object resource : resources) {
       loadResource(properties, resource, quiet);
-    }
-    // process for deprecation.
-    processDeprecatedKeys();
-  }
-  /**
-   * Updates the keys that are replacing the deprecated keys and removes the 
-   * deprecated keys from memory.
-   */
-  private void processDeprecatedKeys() {
-    for (Map.Entry<String, DeprecatedKeyInfo> item : 
-      deprecatedKeyMap.entrySet()) {
-      if (!properties.containsKey(item.getKey())) {
-        continue;
-      }
-      String oldKey = item.getKey();
-      deprecatedKeyMap.get(oldKey).accessed = false;
-      setDeprecatedValue(oldKey, properties.getProperty(oldKey),
-          finalParameters.contains(oldKey));
-      properties.remove(oldKey);
-      if (finalParameters.contains(oldKey)) {
-        finalParameters.remove(oldKey);
-      }
-      if (storeResource) {
-        updatingResource.remove(oldKey);
-      }
-    }
-  }
-  
-  /**
-   * Sets the deprecated key's value to the associated mapped keys
-   * @param attr the deprecated key
-   * @param value the value corresponding to the deprecated key
-   * @param finalParameter flag to indicate if <code>attr</code> is
-   *        marked as final
-   */
-  private void setDeprecatedValue(String attr,
-      String value, boolean finalParameter) {
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
-    for (String key:keyInfo.newKeys) {
-      // update replacing keys with deprecated key's value in all cases,
-      // except when the replacing key is already set to final
-      // and finalParameter is false
-      if (finalParameters.contains(key) && !finalParameter) {
-        LOG.warn("An attempt to override final parameter: "+key
-            +";  Ignoring.");
-        continue;
-      }
-      properties.setProperty(key, value);
-      if (storeResource) {
-        updatingResource.put(key, updatingResource.get(attr));
-      }
-      if (finalParameter) {
-        finalParameters.add(key);
-      }
     }
   }
   
@@ -1546,19 +1490,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         
         // Ignore this parameter if it has already been marked as 'final'
         if (attr != null) {
-          if (value != null) {
-            if (!finalParameters.contains(attr)) {
-              properties.setProperty(attr, value);
-              if (storeResource) {
-                updatingResource.put(attr, name.toString());
-              }
-            } else {
-              LOG.warn(name+":a attempt to override final parameter: "+attr
-                     +";  Ignoring.");
+          if (deprecatedKeyMap.containsKey(attr)) {
+            DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
+            keyInfo.accessed = false;
+            for (String key:keyInfo.newKeys) {
+              // update new keys with deprecated key's value 
+              loadProperty(properties, name, key, value, finalParameter);
             }
           }
-          if (finalParameter) {
-            finalParameters.add(attr);
+          else {
+            loadProperty(properties, name, attr, value, finalParameter);
           }
         }
       }
@@ -1578,13 +1519,39 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  private void loadProperty(Properties properties, Object name, String attr,
+      String value, boolean finalParameter) {
+    if (value != null) {
+      if (!finalParameters.contains(attr)) {
+        properties.setProperty(attr, value);
+        updatingResource.put(attr, name.toString());
+      } else {
+        LOG.warn(name+":an attempt to override final parameter: "+attr
+            +";  Ignoring.");
+      }
+    }
+    if (finalParameter) {
+      finalParameters.add(attr);
+    }
+  }
+
   /** 
-   * Write out the non-default properties in this configuration to the give
+   * Write out the non-default properties in this configuration to the given
    * {@link OutputStream}.
    * 
    * @param out the output stream to write to.
    */
   public void writeXml(OutputStream out) throws IOException {
+    writeXml(new OutputStreamWriter(out));
+  }
+
+  /** 
+   * Write out the non-default properties in this configuration to the given
+   * {@link Writer}.
+   * 
+   * @param out the writer to write to.
+   */
+  public synchronized void writeXml(Writer out) throws IOException {
     Properties properties = getProps();
     try {
       Document doc =
@@ -1603,7 +1570,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
         Element propNode = doc.createElement("property");
         conf.appendChild(propNode);
-      
+
+        if (updatingResource != null) {
+          Comment commentNode = doc.createComment(
+            "Loaded from " + updatingResource.get(name));
+          propNode.appendChild(commentNode);
+        }
         Element nameNode = doc.createElement("name");
         nameNode.appendChild(doc.createTextNode(name));
         propNode.appendChild(nameNode);
@@ -1620,8 +1592,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       TransformerFactory transFactory = TransformerFactory.newInstance();
       Transformer transformer = transFactory.newTransformer();
       transformer.transform(source, result);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+    } catch (TransformerException te) {
+      throw new IOException(te);
+    } catch (ParserConfigurationException pe) {
+      throw new IOException(pe);
     }
   }
 
@@ -1636,26 +1610,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param out the Writer to write to
    * @throws IOException
    */
-  public static void dumpConfiguration(Configuration conf, 
+  public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    Configuration config = new Configuration(conf,true);
-    config.reloadConfiguration();
     JsonFactory dumpFactory = new JsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();
     dumpGenerator.flush();
-    for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
-      dumpGenerator.writeStartObject();
-      dumpGenerator.writeStringField("key", (String) item.getKey());
-      dumpGenerator.writeStringField("value", 
-          config.get((String) item.getKey()));
-      dumpGenerator.writeBooleanField("isFinal",
-          config.finalParameters.contains(item.getKey()));
-      dumpGenerator.writeStringField("resource",
-          config.updatingResource.get(item.getKey()));
-      dumpGenerator.writeEndObject();
+    synchronized (config) {
+      for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
+        dumpGenerator.writeStartObject();
+        dumpGenerator.writeStringField("key", (String) item.getKey());
+        dumpGenerator.writeStringField("value", 
+                                       config.get((String) item.getKey()));
+        dumpGenerator.writeBooleanField("isFinal",
+                                        config.finalParameters.contains(item.getKey()));
+        dumpGenerator.writeStringField("resource",
+                                       config.updatingResource.get(item.getKey()));
+        dumpGenerator.writeEndObject();
+      }
     }
     dumpGenerator.writeEndArray();
     dumpGenerator.writeEndObject();
@@ -1682,7 +1656,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("Configuration: ");
     if(loadDefaults) {
       toString(defaultResources, sb);
@@ -1694,8 +1668,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return sb.toString();
   }
 
-  private void toString(List resources, StringBuffer sb) {
-    ListIterator i = resources.listIterator();
+  private <T> void toString(List<T> resources, StringBuilder sb) {
+    ListIterator<T> i = resources.listIterator();
     while (i.hasNext()) {
       if (i.nextIndex() != 0) {
         sb.append(", ");
@@ -1755,11 +1729,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY});
     Configuration.addDeprecation("topology.node.switch.mapping.impl", 
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY});
-    Configuration.addDeprecation("dfs.umask", 
-               new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY},
-               "dfs.umask is deprecated, use " + 
-               CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY + 
-               " with octal or symbolic specifications.");
     Configuration.addDeprecation("dfs.df.interval", 
                new String[]{CommonConfigurationKeys.FS_DF_INTERVAL_KEY});
     Configuration.addDeprecation("dfs.client.buffer.dir", 

@@ -30,7 +30,10 @@ import org.apache.hadoop.record.RecordOutput;
  * 
  * Type information for a record comprises metadata about the record, 
  * as well as a collection of type information for each field in the record. 
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class RecordTypeInfo extends org.apache.hadoop.record.Record 
 {
 

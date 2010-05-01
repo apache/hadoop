@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.net.*;
 import java.io.*;
+import org.apache.avro.reflect.Stringable;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
  * Path strings use slash as the directory separator.  A path string is
  * absolute if it begins with a slash.
  */
+@Stringable
 public class Path implements Comparable {
 
   /** The directory separator, a slash. */
@@ -191,7 +193,7 @@ public class Path implements Comparable {
     return uri.getPath().startsWith(SEPARATOR, start);
    }
   
-  /** True if the directory of this path is absolute. */
+  /** True if the path component of this URI is absolute. */
   /**
    * There is some ambiguity here. An absolute path is a slash
    * relative name without a scheme or an authority.
@@ -236,7 +238,7 @@ public class Path implements Comparable {
   public String toString() {
     // we can't use uri.toString(), which escapes everything, because we want
     // illegal characters unescaped in the string, for glob processing, etc.
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     if (uri.getScheme() != null) {
       buffer.append(uri.getScheme());
       buffer.append(":");

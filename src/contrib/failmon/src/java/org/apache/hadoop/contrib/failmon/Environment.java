@@ -247,7 +247,7 @@ public class Environment {
         
         if (!file_present) 
           if (superuser) {
-              StringBuffer sb = runCommand("sudo smartctl -i " + devices[i]);
+              CharSequence sb = runCommandGeneric("sudo smartctl -i " + devices[i]);
               String patternStr = "[(failed)(device not supported)]";
               Pattern pattern = Pattern.compile(patternStr);
               Matcher matcher = pattern.matcher(sb.toString());
@@ -263,7 +263,7 @@ public class Environment {
       } 
       
       // now remove disks that dont exist
-      StringBuffer resetSB = new StringBuffer();
+      StringBuilder resetSB = new StringBuilder();
       for (int j = 0; j < devices.length; j++) {
         resetSB.append(devices[j] == null ? "" : devices[j] + ", ");
 	if (devices[j] != null)
@@ -323,7 +323,7 @@ public class Environment {
    *  @return true, if the command is availble, false otherwise
    */
   public static boolean checkExistence(String cmd) {
-    StringBuffer sb = runCommand("which " + cmd);
+    CharSequence sb = runCommandGeneric("which " + cmd);
     if (sb.length() > 1)
       return true;
 
@@ -331,15 +331,30 @@ public class Environment {
   }
 
   /**
-   * Runs a shell command in the system and provides a StringBuffer
+   * Runs a shell command in the system and provides a StringBuilder
+   * with the output of the command.
+   * <p>This method is deprecated. See related method that returns a CharSequence as oppposed to a StringBuffer.
+   * 
+   *  @param cmd an array of string that form the command to run 
+   *  
+   *  @return a text that contains the output of the command 
+   *  @see #runCommandGeneric(String[])
+   *  @deprecated
+   */
+  public static StringBuffer runCommand(String[] cmd) {
+    return new StringBuffer(runCommandGeneric(cmd));
+  }
+
+  /**
+   * Runs a shell command in the system and provides a StringBuilder
    * with the output of the command.
    * 
    *  @param cmd an array of string that form the command to run 
    *  
-   *  @return a StringBuffer that contains the output of the command 
+   *  @return a text that contains the output of the command 
    */
-  public static StringBuffer runCommand(String[] cmd) {
-    StringBuffer retval = new StringBuffer(MAX_OUTPUT_LENGTH);
+  public static CharSequence runCommandGeneric(String[] cmd) {
+    StringBuilder retval = new StringBuilder(MAX_OUTPUT_LENGTH);
     Process p;
     try {
       p = Runtime.getRuntime().exec(cmd);
@@ -356,19 +371,32 @@ public class Environment {
 
     return retval;
   }
+  
+  /**
+   * Runs a shell command in the system and provides a StringBuilder
+   * with the output of the command.
+   * <p>This method is deprecated in favor of the one that returns CharSequence as opposed to StringBuffer
+   *  @param cmd the command to run 
+   *  
+   *  @return a text that contains the output of the command 
+   *  @see #runCommandGeneric(String)
+   *  @deprecated
+   */
+  public static StringBuffer runCommand(String cmd) {
+    return new StringBuffer(runCommandGeneric(cmd));
+  }
 
   /**
-   * Runs a shell command in the system and provides a StringBuffer
+   * Runs a shell command in the system and provides a StringBuilder
    * with the output of the command.
    * 
    *  @param cmd the command to run 
    *  
-   *  @return a StringBuffer that contains the output of the command 
+   *  @return a text that contains the output of the command 
    */
-  public static StringBuffer runCommand(String cmd) {
-    return runCommand(cmd.split("\\s+"));
-  }
-
+  public static CharSequence runCommandGeneric(String cmd) {
+    return runCommandGeneric(cmd.split("\\s+"));
+  }  
   /**
    * Determines the greatest common divisor (GCD) of two integers.
    * 

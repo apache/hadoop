@@ -21,21 +21,20 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
-import java.util.Map;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.serializer.DeserializerBase;
-import org.apache.hadoop.io.serializer.SerializationBase;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.SerializerBase;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.util.GenericsUtil;
 
 /**
  * DefaultStringifier is the default implementation of the {@link Stringifier}
  * interface which stringifies the objects using base64 encoding of the
- * serialized version of the objects. The {@link SerializerBase} and
- * {@link DeserializerBase} are obtained from the {@link SerializationFactory}.
+ * serialized version of the objects. The {@link Serializer} and
+ * {@link Deserializer} are obtained from the {@link SerializationFactory}.
  * <br>
  * DefaultStringifier offers convenience methods to store/load objects to/from
  * the configuration.
@@ -46,9 +45,9 @@ public class DefaultStringifier<T> implements Stringifier<T> {
 
   private static final String SEPARATOR = ",";
 
-  private SerializerBase<T> serializer;
+  private Serializer<T> serializer;
 
-  private DeserializerBase<T> deserializer;
+  private Deserializer<T> deserializer;
 
   private DataInputBuffer inBuf;
 
@@ -57,9 +56,8 @@ public class DefaultStringifier<T> implements Stringifier<T> {
   public DefaultStringifier(Configuration conf, Class<T> c) {
 
     SerializationFactory factory = new SerializationFactory(conf);
-    Map<String, String> metadata = SerializationBase.getMetadataFromClass(c);
-    this.serializer = factory.getSerializer(metadata);
-    this.deserializer = factory.getDeserializer(metadata);
+    this.serializer = factory.getSerializer(c);
+    this.deserializer = factory.getDeserializer(c);
     this.inBuf = new DataInputBuffer();
     this.outBuf = new DataOutputBuffer();
     try {
@@ -104,7 +102,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
    * @param item the object to be stored
    * @param keyName the name of the key to use
    * @throws IOException : forwards Exceptions from the underlying 
-   * {@link SerializationBase} classes. 
+   * {@link Serialization} classes. 
    */
   public static <K> void store(Configuration conf, K item, String keyName)
   throws IOException {
@@ -124,7 +122,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
    * @param itemClass the class of the item
    * @return restored object
    * @throws IOException : forwards Exceptions from the underlying 
-   * {@link SerializationBase} classes.
+   * {@link Serialization} classes.
    */
   public static <K> K load(Configuration conf, String keyName,
       Class<K> itemClass) throws IOException {
@@ -147,7 +145,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
    * @param keyName the name of the key to use
    * @throws IndexOutOfBoundsException if the items array is empty
    * @throws IOException : forwards Exceptions from the underlying 
-   * {@link SerializationBase} classes.         
+   * {@link Serialization} classes.         
    */
   public static <K> void storeArray(Configuration conf, K[] items,
       String keyName) throws IOException {
@@ -175,7 +173,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
    * @param itemClass the class of the item
    * @return restored object
    * @throws IOException : forwards Exceptions from the underlying 
-   * {@link SerializationBase} classes.
+   * {@link Serialization} classes.
    */
   public static <K> K[] loadArray(Configuration conf, String keyName,
       Class<K> itemClass) throws IOException {

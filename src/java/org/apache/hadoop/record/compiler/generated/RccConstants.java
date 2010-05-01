@@ -19,6 +19,10 @@
 
 package org.apache.hadoop.record.compiler.generated;
 
+/**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
+ */
+@Deprecated
 public interface RccConstants {
 
   int EOF = 0;

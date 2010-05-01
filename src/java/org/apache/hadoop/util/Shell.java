@@ -47,11 +47,20 @@ abstract public class Shell {
   public static String[] getGROUPS_COMMAND() {
     return new String[]{"bash", "-c", "groups"};
   }
+  /** a Unix command to get a given user's groups list */
+  public static String[] getGROUPS_FOR_USER_COMMAND(final String user) {
+    //'groups username' command return is non-consistent across different unixes
+    return new String [] {"bash", "-c", "id -Gn " + user};
+  }
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
   /** a Unix command to set owner */
   public static final String SET_OWNER_COMMAND = "chown";
   public static final String SET_GROUP_COMMAND = "chgrp";
+  /** a Unix command to create a link */
+  public static final String LINK_COMMAND = "ln";
+  /** a Unix command to get a link target */
+  public static final String READ_LINK_COMMAND = "readlink";
   /** Return a Unix command to get permission information. */
   public static String[] getGET_PERMISSION_COMMAND() {
     //force /bin/ls, except on windows.

@@ -28,7 +28,9 @@ package org.apache.hadoop.io;
  *  
  * <p>Example:</p>
  * <p><blockquote><pre>
- *     public class MyWritableComparable implements WritableComparable {
+ *     public class MyWritableComparable implements
+ *         WritableComparable&lt;MyWritableComparable&gt; {
+ *
  *       // Some data
  *       private int counter;
  *       private long timestamp;
@@ -43,10 +45,10 @@ package org.apache.hadoop.io;
  *         timestamp = in.readLong();
  *       }
  *       
- *       public int compareTo(MyWritableComparable w) {
- *         int thisValue = this.value;
- *         int thatValue = ((IntWritable)o).value;
- *         return (thisValue &lt; thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+ *       public int compareTo(MyWritableComparable other) {
+ *         int thisValue = this.counter;
+ *         int thatValue = other.counter;
+ *         return (thisValue &lt; thatValue ? -1 : (thisValue == thatValue ? 0 : 1));
  *       }
  *     }
  * </pre></blockquote></p>

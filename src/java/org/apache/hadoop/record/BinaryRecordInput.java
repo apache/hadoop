@@ -24,7 +24,9 @@ import java.io.DataInputStream;
 import java.io.InputStream;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class BinaryRecordInput implements RecordInput {
     
   private DataInput in;

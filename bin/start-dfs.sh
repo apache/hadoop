@@ -22,7 +22,7 @@
 
 usage="Usage: start-dfs.sh [-upgrade|-rollback]"
 
-bin=`dirname "$0"`
+bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/hdfs-config.sh

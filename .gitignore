@@ -20,6 +20,7 @@
 .svn
 build/
 build-fi/
+build.properties
 conf/masters
 conf/slaves
 conf/hadoop-env.sh

@@ -24,7 +24,9 @@ import org.apache.hadoop.record.RecordOutput;
 
 /** 
  * Represents typeID for vector. 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class VectorTypeID extends TypeID {
   private TypeID typeIDElement; 
   

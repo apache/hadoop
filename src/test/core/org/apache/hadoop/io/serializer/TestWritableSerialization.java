@@ -37,7 +37,6 @@ public class TestWritableSerialization extends TestCase {
     assertEquals(before, after);
   }
   
-  
   public void testWritableConfigurable() throws Exception {
     
     //set the configuration parameter

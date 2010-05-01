@@ -33,9 +33,8 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
-import org.apache.hadoop.io.serializer.DeserializerBase;
-import org.apache.hadoop.io.serializer.SerializationBase;
-import org.apache.hadoop.io.serializer.SerializerBase;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
@@ -706,14 +705,6 @@ public class SequenceFile {
       return new TreeMap<Text, Text>(this.theMetadata);
     }
     
-    public Map<String, String> getMetadataAsStringMap() {
-      Map<String, String> map = new HashMap<String, String>();
-      for (Map.Entry<Text, Text> entry : theMetadata.entrySet()) {
-        map.put(entry.getKey().toString(), entry.getValue().toString());
-      }
-      return map;
-    }
-    
     public void write(DataOutput out) throws IOException {
       out.writeInt(this.theMetadata.size());
       Iterator<Map.Entry<Text, Text>> iter =
@@ -780,7 +771,7 @@ public class SequenceFile {
     }
     
     public String toString() {
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       sb.append("size: ").append(this.theMetadata.size()).append("\n");
       Iterator<Map.Entry<Text, Text>> iter =
         this.theMetadata.entrySet().iterator();
@@ -810,9 +801,9 @@ public class SequenceFile {
     Metadata metadata = null;
     Compressor compressor = null;
     
-    protected SerializerBase keySerializer;
-    protected SerializerBase uncompressedValSerializer;
-    protected SerializerBase compressedValSerializer;
+    protected Serializer keySerializer;
+    protected Serializer uncompressedValSerializer;
+    protected Serializer compressedValSerializer;
     
     // Insert a globally unique 16-byte value every few entries, so that one
     // can seek into the middle of a file and then synchronize with record
@@ -923,10 +914,9 @@ public class SequenceFile {
       this.codec = codec;
       this.metadata = metadata;
       SerializationFactory serializationFactory = new SerializationFactory(conf);
-      this.keySerializer = getSerializer(serializationFactory, keyClass, metadata);
+      this.keySerializer = serializationFactory.getSerializer(keyClass);
       this.keySerializer.open(buffer);
-      this.uncompressedValSerializer = getSerializer(serializationFactory,
-        valClass, metadata);
+      this.uncompressedValSerializer = serializationFactory.getSerializer(valClass);
       this.uncompressedValSerializer.open(buffer);
       if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
@@ -934,18 +924,9 @@ public class SequenceFile {
         this.deflateFilter = this.codec.createOutputStream(buffer, compressor);
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
-        this.compressedValSerializer = getSerializer(serializationFactory,
-          valClass, metadata);
+        this.compressedValSerializer = serializationFactory.getSerializer(valClass);
         this.compressedValSerializer.open(deflateOut);
       }
-    }
-    
-    @SuppressWarnings("unchecked")
-    private SerializerBase getSerializer(SerializationFactory sf, Class c,
-	Metadata metadata) {
-      Map<String, String> stringMetadata = metadata.getMetadataAsStringMap();
-      stringMetadata.put(SerializationBase.CLASS_KEY, c.getName());
-      return sf.getSerializer(stringMetadata);
     }
     
     /** Returns the class of keys in this file. */
@@ -1432,8 +1413,8 @@ public class SequenceFile {
     private DataInputStream valIn = null;
     private Decompressor valDecompressor = null;
     
-    private DeserializerBase keyDeserializer;
-    private DeserializerBase valDeserializer;
+    private Deserializer keyDeserializer;
+    private Deserializer valDeserializer;
 
     /**
      * Construct a reader by opening a file from the given file system.
@@ -1630,24 +1611,21 @@ public class SequenceFile {
         SerializationFactory serializationFactory =
           new SerializationFactory(conf);
         this.keyDeserializer =
-          getDeserializer(serializationFactory, getKeyClass(), metadata);
+          getDeserializer(serializationFactory, getKeyClass());
         if (!blockCompressed) {
           this.keyDeserializer.open(valBuffer);
         } else {
           this.keyDeserializer.open(keyIn);
         }
         this.valDeserializer =
-          getDeserializer(serializationFactory, getValueClass(), metadata);
+          getDeserializer(serializationFactory, getValueClass());
         this.valDeserializer.open(valIn);
       }
     }
     
     @SuppressWarnings("unchecked")
-    private DeserializerBase getDeserializer(SerializationFactory sf, Class c,
-	Metadata metadata) {
-      Map<String, String> stringMetadata = metadata.getMetadataAsStringMap();
-      stringMetadata.put(SerializationBase.CLASS_KEY, c.getName());
-      return sf.getDeserializer(stringMetadata);
+    private Deserializer getDeserializer(SerializationFactory sf, Class c) {
+      return sf.getDeserializer(c);
     }
     
     /** Close the file. */

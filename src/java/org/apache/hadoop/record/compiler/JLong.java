@@ -20,7 +20,10 @@ package org.apache.hadoop.record.compiler;
 
 /**
  * Code generator for "long" type
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JLong extends JType {
   
   class JavaLong extends JavaType {

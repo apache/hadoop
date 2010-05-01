@@ -25,7 +25,9 @@ import java.io.UnsupportedEncodingException;
  * It is resizable and distinguishes between the count of the seqeunce and
  * the current capacity.
  * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class Buffer implements Comparable, Cloneable {
   /** Number of valid bytes in this.bytes. */
   private int count;
@@ -219,7 +221,7 @@ public class Buffer implements Comparable, Cloneable {
   
   // inheric javadoc
   public String toString() {
-    StringBuffer sb = new StringBuffer(2*count);
+    StringBuilder sb = new StringBuilder(2*count);
     for(int idx = 0; idx < count; idx++) {
       sb.append(Character.forDigit((bytes[idx] & 0xF0) >> 4, 16));
       sb.append(Character.forDigit(bytes[idx] & 0x0F, 16));

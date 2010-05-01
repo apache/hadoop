@@ -33,6 +33,8 @@ import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
 
+import org.apache.avro.reflect.Stringable;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -45,6 +47,7 @@ import org.apache.commons.logging.LogFactory;
  * byte array contains valid UTF8 code, calculating the length of an encoded
  * string.
  */
+@Stringable
 public class Text extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
   private static final Log LOG= LogFactory.getLog(Text.class);

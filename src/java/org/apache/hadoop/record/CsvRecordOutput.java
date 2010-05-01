@@ -26,7 +26,9 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 
 /**
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class CsvRecordOutput implements RecordOutput {
 
   private PrintStream stream;

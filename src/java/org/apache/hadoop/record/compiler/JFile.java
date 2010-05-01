@@ -25,7 +25,10 @@ import java.util.ArrayList;
  * Container for the Hadoop Record DDL.
  * The main components of the file are filename, list of included files,
  * and records defined in that file.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class JFile {
   /** Possibly full name of the file */
   private String mName;

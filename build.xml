@@ -28,7 +28,7 @@
  
   <property name="Name" value="Hadoop-core"/>
   <property name="name" value="hadoop-core"/>
-  <property name="version" value="0.21.0-SNAPSHOT"/>
+  <property name="version" value="0.22.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
@@ -50,9 +50,10 @@
   <property name="build.webapps" value="${build.dir}/webapps"/>
 
   <!-- convert spaces to _ so that mac os doesn't break things -->
-  <exec executable="sed" inputstring="${os.name}" 
+  <exec executable="tr" inputstring="${os.name}" 
         outputproperty="nonspace.os">
-     <arg value="s/ /_/g"/>
+     <arg value="[:space:]"/>
+     <arg value="_"/>
   </exec>
   <property name="build.platform" 
             value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
@@ -113,7 +114,9 @@
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
   <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
-  <property name="jdiff.stable" value="0.20.1"/>
+  <property name="jdiff.stability" value="-unstable"/>
+  <property name="jdiff.compatibility" value=""/>
+  <property name="jdiff.stable" value="0.20.2"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
@@ -158,6 +161,8 @@
   <property name="ivy.publish.pattern" value="[artifact]-[revision].[ext]"/>
   <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
   <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
+  <property name="hadoop-core-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
+  <property name="hadoop-core-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -166,6 +171,12 @@
 
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
+	
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value="build/eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+  <property name="build.dir.eclipse-test-generated-classes" value="${build.dir.eclipse}/classes-test-generated"/>
 
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
@@ -415,6 +426,11 @@
       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
       <fileset file="${jar.extra.properties.list}" />
     </jar>
+
+    <jar jarfile="${hadoop-core-sources.jar}">
+      <fileset dir="${java.src.dir}" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${build.src}" includes="org/apache/hadoop/**/*.java"/>
+    </jar>
   </target>
 
   <!-- ================================================================== -->
@@ -518,6 +534,11 @@
             <attribute name="Implementation-Vendor" value="Apache"/>
           </section>
          </manifest>
+    </jar>
+
+    <jar jarfile="${hadoop-core-test-sources.jar}">
+      <fileset dir="${test.generated.dir}" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${test.src.dir}/core" includes="org/apache/hadoop/**/*.java"/>
     </jar>
   </target>
 
@@ -860,7 +881,7 @@
     </uptodate>
   </target>
  
-  <target name="javadoc" description="Generate javadoc" depends="javadoc-uptodate"
+  <target name="javadoc" description="Generate javadoc" depends="jar, javadoc-uptodate"
        unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
@@ -891,15 +912,19 @@
 
        <group title="Core" packages="org.apache.*"/>
        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet"
+               path="${build.dir}/${final.name}.jar"/>
     </javadoc>
   </target>	
 
   <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
     <javadoc maxmemory="${javadoc.maxmemory}">
-       <doclet name="jdiff.JDiff"
-               path="${jdiff.jar}:${xerces.jar}">
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+               path="${build.dir}/${final.name}.jar:${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop-core ${version}"/>
+         <param name="${jdiff.stability}"/>
+         <param name="${jdiff.compatibility}"/>
        </doclet>
        <packageset dir="src/java"/>
        <classpath >
@@ -922,8 +947,8 @@
              destdir="${jdiff.build.dir}"
 	     sourceFiles="${jdiff.home}/Null.java"
 	     maxmemory="${javadoc.maxmemory}">
-       <doclet name="jdiff.JDiff"
-               path="${jdiff.jar}:${xerces.jar}">
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+              path="${build.dir}/${final.name}.jar:${jdiff.jar}:${xerces.jar}">
          <param name="-oldapi" value="hadoop-core ${jdiff.stable}"/>
          <param name="-newapi" value="hadoop-core ${version}"/>
          <param name="-oldapidir" value="${jdiff.xml.dir}"/>
@@ -931,6 +956,8 @@
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
          <param name="-javadocnew" value="../../api/"/>
          <param name="-stats"/>
+         <param name="${jdiff.stability}"/>
+         <param name="${jdiff.compatibility}"/>
        </doclet>
        <classpath >
          <path refid="classpath" />
@@ -1154,9 +1181,11 @@
      <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
      <artifact:install file="${hadoop-core.jar}">
         <pom refid="hadoop.core"/>
+	<attach file="${hadoop-core-sources.jar}" classifier="sources" />
      </artifact:install>
      <artifact:install file="${hadoop-core-test.jar}">
         <pom refid="hadoop.core.test"/>
+	<attach file="${hadoop-core-test-sources.jar}" classifier="sources" />
      </artifact:install>
   </target>
 
@@ -1169,10 +1198,12 @@
      <artifact:deploy file="${hadoop-core.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core"/>
+	<attach file="${hadoop-core-sources.jar}" classifier="sources" />
      </artifact:deploy>
      <artifact:deploy file="${hadoop-core-test.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core.test"/>
+	<attach file="${hadoop-core-test-sources.jar}" classifier="sources" />
      </artifact:deploy>
   </target>
   
@@ -1209,6 +1240,7 @@
         <exclude name="**/native/*"/>
         <exclude name="**/native/config/*"/>
         <exclude name="**/VERSION"/>
+        <exclude name="**/*.json"/>
         <exclude name="**/hod/*.txt"/>
       </fileset>
     </rat:report>
@@ -1330,20 +1362,51 @@
   </exec>
 </target>
 	
-  <target name="eclipse-files" depends="init"
-          description="Generate files for Eclipse">
-    <pathconvert property="eclipse.project">
-      <path path="${basedir}"/>
-      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
-    </pathconvert>
-    <copy todir="." overwrite="true">
-      <fileset dir=".eclipse.templates">
-      	<exclude name="**/README.txt"/>
-      </fileset>
-      <filterset>
-        <filter token="PROJECT" value="${eclipse.project}"/>
-      </filterset>
-    </copy>
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
+
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" />
+  </target>
+
+  <target name="eclipse" 
+          depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test,compile-core-test"
+          description="Create eclipse project files">
+	     <pathconvert property="eclipse.project">
+	       <path path="${basedir}"/>
+	       <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+	     </pathconvert>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse updatealways="true">
+      <project name="${eclipse.project}" />
+      <classpath>
+        <source path="${java.src.dir}"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${test.src.dir}/core"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.src.dir}/aop"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.generated.dir}"
+                output="${build.dir.eclipse-test-generated-classes}" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <library pathref="ivy-common.classpath" exported="true" />
+        <library pathref="ivy-test.classpath" exported="false" />
+        <library path="${conf.dir}" exported="false" />
+      </classpath>
+    </eclipse>
   </target>
 
   <target name="ivy-init-dirs">
@@ -1385,6 +1448,8 @@
     </fail>
   </target>
 
+  <property name="ivyresolvelog" value="download-only"/>
+  <property name="ivyretrievelog" value="quiet"/>
 
   <target name="ivy-init" depends="ivy-init-antlib" >
 
@@ -1397,78 +1462,92 @@
   </target>
 
   <target name="ivy-resolve" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings"
+    	log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-resolve-javadoc" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="javadoc"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="javadoc"
+    	log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-resolve-releaseaudit" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="releaseaudit"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="releaseaudit"
+  		log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-resolve-test" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test"
+    	log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-resolve-common" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common"
+    	log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-resolve-jdiff" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="jdiff" />
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="jdiff"
+    	log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-resolve-checkstyle" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="checkstyle"/>
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="checkstyle"
+  		log="${ivyresolvelog}"/>
   </target>
 
   <target name="ivy-retrieve" depends="ivy-resolve"
     description="Retrieve Ivy-managed artifacts">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+    		log="${ivyretrievelog}"/>
   </target>
 
   <target name="ivy-retrieve-checkstyle" depends="ivy-resolve-checkstyle"
     description="Retrieve Ivy-managed artifacts for the checkstyle configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+  			log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="checkstyle-classpath" conf="checkstyle"/>
   </target>
 
   <target name="ivy-retrieve-jdiff" depends="ivy-resolve-jdiff"
     description="Retrieve Ivy-managed artifacts for the jdiff configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+  			log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="jdiff-classpath" conf="jdiff"/>
   </target>
 
   <target name="ivy-retrieve-javadoc" depends="ivy-resolve-javadoc"
     description="Retrieve Ivy-managed artifacts for the javadoc configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+  			log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="javadoc-classpath" conf="javadoc"/>
   </target>
 
   <target name="ivy-retrieve-test" depends="ivy-resolve-test"
     description="Retrieve Ivy-managed artifacts for the test configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+    		log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="ivy-test.classpath" conf="test"/>
   </target>
 
   <target name="ivy-retrieve-common" depends="ivy-resolve-common"
     description="Retrieve Ivy-managed artifacts for the compile configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+    		log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="ivy-common.classpath" conf="common"/>
   </target>
 
   <target name="ivy-retrieve-releaseaudit" depends="ivy-resolve-releaseaudit"
     description="Retrieve Ivy-managed artifacts for the compile configurations">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" />
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+    		log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
   </target>
 

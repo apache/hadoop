@@ -54,7 +54,7 @@ public class NICParser extends ShellParser {
    * @return the EventRecord created
    */
   public EventRecord query(String device) throws UnknownHostException {
-    StringBuffer sb = Environment.runCommand("/sbin/ifconfig " + device);
+    CharSequence sb = Environment.runCommandGeneric("/sbin/ifconfig " + device);
     EventRecord retval = new EventRecord(InetAddress.getLocalHost()
         .getCanonicalHostName(), InetAddress.getAllByName(InetAddress.getLocalHost()
         .getHostName()), Calendar.getInstance(), "NIC", "Unknown", device, "-");

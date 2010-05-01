@@ -17,45 +17,29 @@
  */
 package org.apache.hadoop.io.serializer;
 
-import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.util.GenericsUtil;
 
 public class SerializationTestUtil {
-
-  /**
-   * A utility that tests serialization/deserialization. 
-   * @param <K> the class of the item
-   * @param conf configuration to use, "io.serializations" is read to 
-   * determine the serialization
-   * @param before item to (de)serialize
-   * @return deserialized item
-   */
-  public static<K> K testSerialization(Configuration conf, K before) 
-      throws Exception {
-    Map<String, String> metadata =
-      SerializationBase.getMetadataFromClass(GenericsUtil.getClass(before));
-    return testSerialization(conf, metadata, before);
-  }
   
   /**
    * A utility that tests serialization/deserialization. 
    * @param conf configuration to use, "io.serializations" is read to 
    * determine the serialization
-   * @param metadata the metadata to pass to the serializer/deserializer
    * @param <K> the class of the item
    * @param before item to (de)serialize
    * @return deserialized item
    */
-  public static <K> K testSerialization(Configuration conf, 
-      Map<String, String> metadata, K before) throws Exception {
+  public static <K> K testSerialization(Configuration conf, K before)
+  	throws Exception {
 
     SerializationFactory factory = new SerializationFactory(conf);
-    SerializerBase<K> serializer = factory.getSerializer(metadata);
-    DeserializerBase<K> deserializer = factory.getDeserializer(metadata);
+    Serializer<K> serializer 
+      = factory.getSerializer(GenericsUtil.getClass(before));
+    Deserializer<K> deserializer 
+      = factory.getDeserializer(GenericsUtil.getClass(before));
 
     DataOutputBuffer out = new DataOutputBuffer();
     serializer.open(out);

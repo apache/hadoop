@@ -19,14 +19,15 @@ package org.apache.hadoop.fs;
 
 
 import java.io.IOException;
-import java.util.EnumSet;
 
-import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
+import org.apache.commons.logging.impl.Log4JLogger;
 
 /**
  * <p>
@@ -48,31 +49,13 @@ import org.junit.Test;
  * </p>
  */
 
-public class FileContextCreateMkdirBaseTest {
+public abstract class FileContextCreateMkdirBaseTest {
    
   protected static FileContext fc;
-  static final String TEST_ROOT_DIR = new Path(System.getProperty(
-      "test.build.data", "build/test/data")).toString().replace(' ', '_')
-      + "/test";
-  
-  
-  protected Path getTestRootRelativePath(String pathString) {
-    return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
-  }
-  
-  private Path rootPath = null;
-  protected Path getTestRoot() {
-    if (rootPath == null) {
-      rootPath = fc.makeQualified(new Path(TEST_ROOT_DIR));
-    }
-    return rootPath;   
-  }
-
-
+      
   {
     try {
-      ((org.apache.commons.logging.impl.Log4JLogger)FileSystem.LOG).getLogger()
-      .setLevel(org.apache.log4j.Level.DEBUG);
+      ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.DEBUG);
     }
     catch(Exception e) {
       System.out.println("Cannot change log level\n"
@@ -81,15 +64,14 @@ public class FileContextCreateMkdirBaseTest {
   }
   
 
-
   @Before
   public void setUp() throws Exception {
-    fc.mkdir(getTestRoot(), FileContext.DEFAULT_PERM, true);
+    fc.mkdir(getTestRootPath(fc), FileContext.DEFAULT_PERM, true);
   }
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestRoot(), true);
+    fc.delete(getTestRootPath(fc), true);
   }
   
   
@@ -100,15 +82,15 @@ public class FileContextCreateMkdirBaseTest {
   
   @Test
   public void testMkdirNonRecursiveWithExistingDir() throws IOException {
-    Path f = getTestRootRelativePath("aDir");
+    Path f = getTestRootPath(fc, "aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, false);
-    Assert.assertTrue(fc.isDirectory(f));
+    Assert.assertTrue(isDir(fc, f));
   }
   
   @Test
   public void testMkdirNonRecursiveWithNonExistingDir() {
     try {
-      fc.mkdir(getTestRootRelativePath("NonExistant/aDir"),
+      fc.mkdir(getTestRootPath(fc,"NonExistant/aDir"),
           FileContext.DEFAULT_PERM, false);
       Assert.fail("Mkdir with non existing parent dir should have failed");
     } catch (IOException e) {
@@ -119,17 +101,17 @@ public class FileContextCreateMkdirBaseTest {
   
   @Test
   public void testMkdirRecursiveWithExistingDir() throws IOException {
-    Path f = getTestRootRelativePath("aDir");
+    Path f = getTestRootPath(fc, "aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(fc.isDirectory(f));
+    Assert.assertTrue(isDir(fc, f));
   }
   
   
   @Test
   public void testMkdirRecursiveWithNonExistingDir() throws IOException {
-    Path f = getTestRootRelativePath("NonExistant2/aDir");
+    Path f = getTestRootPath(fc, "NonExistant2/aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
-    Assert.assertTrue(fc.isDirectory(f));
+    Assert.assertTrue(isDir(fc, f));
   }
  
   ///////////////////////
@@ -137,15 +119,15 @@ public class FileContextCreateMkdirBaseTest {
   ////////////////////////
   @Test
   public void testCreateNonRecursiveWithExistingDir() throws IOException {
-    Path f = getTestRootRelativePath("foo");
-    createFile(f);
-    Assert.assertTrue(fc.isFile(f));
+    Path f = getTestRootPath(fc, "foo");
+    createFile(fc, f);
+    Assert.assertTrue(isFile(fc, f));
   }
   
   @Test
   public void testCreateNonRecursiveWithNonExistingDir() {
     try {
-      createFile(getTestRootRelativePath("NonExisting/foo"));
+      createFileNonRecursive(fc, getTestRootPath(fc, "NonExisting/foo"));
       Assert.fail("Create with non existing parent dir should have failed");
     } catch (IOException e) {
       // As expected
@@ -155,36 +137,16 @@ public class FileContextCreateMkdirBaseTest {
   
   @Test
   public void testCreateRecursiveWithExistingDir() throws IOException {
-    Path f = getTestRootRelativePath("foo");
-    createFile(f, CreateOpts.createParent());
-    Assert.assertTrue(fc.isFile(f));
+    Path f = getTestRootPath(fc,"foo");
+    createFile(fc, f);
+    Assert.assertTrue(isFile(fc, f));
   }
   
   
   @Test
   public void testCreateRecursiveWithNonExistingDir() throws IOException {
-    Path f = getTestRootRelativePath("NonExisting/foo");
-    createFile(f, CreateOpts.createParent());
-    Assert.assertTrue(fc.isFile(f));
-  }
-  
-  
-  protected static int getBlockSize() {
-    return 1024;
-  }
-  
-  private static byte[] data = new byte[getBlockSize() * 2]; // two blocks of data
-  {
-    for (int i = 0; i < data.length; i++) {
-      data[i] = (byte) (i % 10);
-    }
-  }
-
-  protected void createFile(Path path, 
-      CreateOpts.CreateParent ... opt) throws IOException {
-    
-    FSDataOutputStream out = fc.create(path,EnumSet.of(CreateFlag.CREATE), opt);
-    out.write(data, 0, data.length);
-    out.close();
+    Path f = getTestRootPath(fc,"NonExisting/foo");
+    createFile(fc, f);
+    Assert.assertTrue(isFile(fc, f));
   }
 }

@@ -21,7 +21,10 @@ import java.util.ArrayList;
 
 /**
  * A wrapper around StringBuffer that automatically does indentation
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class CodeBuffer {
   
   static private ArrayList<Character> startMarkers = new ArrayList<Character>();

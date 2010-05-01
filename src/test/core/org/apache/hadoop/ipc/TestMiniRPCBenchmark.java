@@ -17,21 +17,19 @@
  */
 package org.apache.hadoop.ipc;
 
-import java.io.IOException;
-
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * Test {@link MiniRPCBenchmark}
  */
-public class TestMiniRPCBenchmark extends TestCase {
-  public void testSimple() throws IOException {
+public class TestMiniRPCBenchmark {
+  @Test
+  public void testSimple() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.authentication", "simple");
     MiniRPCBenchmark mb = new MiniRPCBenchmark(Level.DEBUG);
-    mb.runMiniBenchmark(conf, 10);
+    mb.runMiniBenchmark(conf, 10, null, null);
   }
 }

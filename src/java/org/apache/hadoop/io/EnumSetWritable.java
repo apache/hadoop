@@ -23,21 +23,33 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.Collection;
+import java.util.AbstractCollection;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
 /** A Writable wrapper for EnumSet. */
-public class EnumSetWritable<E extends Enum<E>> implements Writable,
-    Configurable {
+public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
+  implements Writable, Configurable  {
 
   private EnumSet<E> value;
 
-  private Class<E> elementType;
+  private transient Class<E> elementType;
 
-  private Configuration conf;
-
+  private transient Configuration conf;
+  
   EnumSetWritable() {
+  }
+
+  public Iterator<E> iterator() { return value.iterator(); }
+  public int size() { return value.size(); }
+  public boolean add(E e) {
+    if (value == null) {
+      value = EnumSet.of(e);
+      set(value, null);
+    }
+    return value.add(e);
   }
 
   /**

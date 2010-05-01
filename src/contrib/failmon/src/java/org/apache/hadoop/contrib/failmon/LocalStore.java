@@ -144,11 +144,25 @@ public class LocalStore {
 
   /**
    * Pack a SerializedRecord into an array of bytes
-   * 
+   * <p>
+   * This method is deprecated. 
    * @param sr the SerializedRecord to be packed
+   * @return Packed representation fo the Serialized Record
+   * @see #packConcurrent(SerializedRecord)
+   * @deprecated
    */
   public static StringBuffer pack(SerializedRecord sr) {
-    StringBuffer sb = new StringBuffer();
+    return new StringBuffer(packConcurrent(sr));
+  }
+
+  /**
+   * Pack a SerializedRecord into an array of bytes
+   * 
+   * @param sr the SerializedRecord to be packed
+   * @return Packed representation fo the Serialized Record
+   */
+  public static CharSequence packConcurrent(SerializedRecord sr) {
+    StringBuilder sb = new StringBuilder();
 
     ArrayList<String> keys = new ArrayList<String>(sr.fields.keySet());
 
@@ -162,7 +176,7 @@ public class LocalStore {
     }
     return sb;
   }
-
+  
   /**
    * Upload the local file store into HDFS, after it 
    * compressing it. Then a new local file is created 

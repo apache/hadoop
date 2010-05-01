@@ -46,7 +46,7 @@ public class CPUParser extends ShellParser {
    * @return the EventRecord created
    */
   public EventRecord query(String s) throws Exception {
-    StringBuffer sb = Environment.runCommand("cat /proc/cpuinfo");
+    CharSequence sb = Environment.runCommandGeneric("cat /proc/cpuinfo");
     EventRecord retval = new EventRecord(InetAddress.getLocalHost()
         .getCanonicalHostName(), InetAddress.getAllByName(InetAddress.getLocalHost()
         .getHostName()), Calendar.getInstance(), "CPU", "Unknown", "CPU", "-");

@@ -42,10 +42,10 @@ public class SensorsParser extends ShellParser {
    * @return the EventRecord created
    */
   public EventRecord query(String s) throws Exception {
-    StringBuffer sb;
+    CharSequence sb;
 
-    //sb = Environment.runCommand("sensors -A");
-     sb = Environment.runCommand("cat sensors.out");
+    //sb = Environment.runCommandGeneric("sensors -A");
+     sb = Environment.runCommandGeneric("cat sensors.out");
 
     EventRecord retval = new EventRecord(InetAddress.getLocalHost()
         .getCanonicalHostName(), InetAddress.getAllByName(InetAddress.getLocalHost()
@@ -70,7 +70,7 @@ public class SensorsParser extends ShellParser {
    * 
    * @return the EventRecord created
    */
-  private EventRecord readGroup(EventRecord er, StringBuffer sb, String prefix) {
+  private EventRecord readGroup(EventRecord er, CharSequence sb, String prefix) {
 
     Pattern pattern = Pattern.compile(".*(" + prefix
         + "\\s*\\d*)\\s*:\\s*(\\+?\\d+)", Pattern.MULTILINE);

@@ -19,7 +19,6 @@
 package org.apache.hadoop.io.serializer.avro;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.avro.Schema;
@@ -28,7 +27,6 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.reflect.ReflectDatumReader;
 import org.apache.avro.reflect.ReflectDatumWriter;
-import org.apache.avro.specific.SpecificRecord;
 
 /**
  * Serialization for Avro Reflect classes. For a class to be accepted by this 
@@ -50,16 +48,9 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
   private Set<String> packages; 
 
   @Override
-  public synchronized boolean accept(Map<String, String> metadata) {
+  public synchronized boolean accept(Class<?> c) {
     if (packages == null) {
       getPackages();
-    }
-    if (getClass().getName().equals(metadata.get(SERIALIZATION_KEY))) {
-      return true;
-    }
-    Class<?> c = getClassFromMetadata(metadata);
-    if (c == null) {
-      return false;
     }
     return AvroReflectSerializable.class.isAssignableFrom(c) || 
       packages.contains(c.getPackage().getName());
@@ -76,21 +67,21 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
   }
 
   @Override
-  protected DatumReader getReader(Map<String, String> metadata) {
+  public DatumReader getReader(Class<Object> clazz) {
     try {
-      return new ReflectDatumReader(getClassFromMetadata(metadata));
+      return new ReflectDatumReader(clazz);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
   @Override
-  protected Schema getSchema(Object t, Map<String, String> metadata) {
+  public Schema getSchema(Object t) {
     return ReflectData.get().getSchema(t.getClass());
   }
 
   @Override
-  protected DatumWriter getWriter(Map<String, String> metadata) {
+  public DatumWriter getWriter(Class<Object> clazz) {
     return new ReflectDatumWriter();
   }
 

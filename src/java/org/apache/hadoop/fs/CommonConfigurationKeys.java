@@ -119,6 +119,13 @@ public class CommonConfigurationKeys {
   public static final int     IPC_CLIENT_IDLETHRESHOLD_DEFAULT = 4000;
   public static final String  IPC_SERVER_TCPNODELAY_KEY = "ipc.server.tcpnodelay";
   public static final boolean IPC_SERVER_TCPNODELAY_DEFAULT = false;
+  public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY = 
+                                       "ipc.server.max.response.size";
+  public static final int     IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT = 
+                                        1024*1024;
+  public static final String IPC_SERVER_RPC_READ_THREADS_KEY =
+                                        "ipc.server.read.threadpool.size";
+  public static final int IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
   /**
    * How many calls per handler are allowed in the queue.
    */
@@ -128,7 +135,6 @@ public class CommonConfigurationKeys {
    * The default number of calls per handler in the queue.
    */
   public static final int IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT = 100;
-  
 
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY = 
                                        "hadoop.rpc.socket.factory.class.default";
@@ -136,5 +142,15 @@ public class CommonConfigurationKeys {
   public static final String  HADOOP_JOB_UGI_KEY = "hadoop.job.ugi";
   public static final String  HADOOP_UTIL_HASH_TYPE_KEY = "hadoop.util.hash.type";
   public static final String  HADOOP_UTIL_HASH_TYPE_DEFAULT = "murmur";
+  public static final String  HADOOP_SECURITY_GROUP_MAPPING = "hadoop.security.group.mapping";
+  public static final String  HADOOP_SECURITY_GROUPS_CACHE_SECS = "hadoop.security.groups.cache.secs";
+  public static final String  HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
+  public static final String HADOOP_SECURITY_AUTHORIZATION =
+      "hadoop.security.authorization";
+  /**
+   * ACL denoting the administrator ACLs for a hadoop cluster.
+   */
+  public final static String HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY =
+      "hadoop.cluster.administrators";
 }
 

@@ -24,7 +24,10 @@ import org.apache.hadoop.record.RecordInput;
 
 /**
  * Various utility functions for Hadooop record I/O platform.
+ * 
+ * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
+@Deprecated
 public class Utils {
   
   /** Cannot create a new instance of Utils */
