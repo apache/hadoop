@@ -1,396 +1,5 @@
 Hadoop Change Log
 
-Trunk (unreleased changes)
-
-  INCOMPATIBLE CHANGES
-
-    HADOOP-6299. Reimplement the UserGroupInformation to use the OS
-    specific and Kerberos JAAS login. (omalley)
-
-    HADOOP-6686. Remove redundant exception class name from the exception
-    message for the exceptions thrown at RPC client. (suresh)
-
-    HADOOP-6701. Fix incorrect exit codes returned from chmod, chown and chgrp
-    commands from FsShell. (Ravi Phulari via suresh)
-
-  NEW FEATURES
-
-    HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
-    hadoop-config.sh so that it allows setting java command options for
-    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
-
-    HADOOP-6337. Updates FilterInitializer class to be more visible,
-    and the init of the class is made to take a Configuration argument.
-    (Jakob Homan via ddas)
-
-    HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
-
-    Hadoop-6223. Add new file system interface AbstractFileSystem with
-    implementation of some file systems that delegate to old FileSystem.
-    (Sanjay Radia via suresh)
-
-    HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
-    (tomwhite)
-
-    HADOOP-6433. Introduce asychronous deletion of files via a pool of
-    threads. This can be used to delete files in the Distributed
-    Cache. (Zheng Shao via dhruba)
-
-    HADOOP-6415. Adds a common token interface for both job token and 
-    delegation token. (Kan Zhang via ddas)
-
-    HADOOP-6466. Add a ZooKeeper service to the cloud scripts. (tomwhite)
-
-    HADOOP-6408. Add a /conf servlet to dump running configuration.
-    (Todd Lipcon via tomwhite)
-
-    HADOOP-6464. Write a Rackspace cloud provider. (tomwhite)
-
-    HADOOP-6520. Adds APIs to read/write Token and secret keys. Also
-    adds the automatic loading of tokens into UserGroupInformation
-    upon login. The tokens are read from a file specified in the
-    environment variable. (ddas)
-
-    HADOOP-6419. Adds SASL based authentication to RPC.
-    (Kan Zhang via ddas)
-
-    HADOOP-6510. Adds a way for superusers to impersonate other users
-    in a secure environment. (Jitendra Nath Pandey via ddas)
-
-    HADOOP-6421. Adds Symbolic links to FileContext, AbstractFileSystem.
-    It also adds a limited implementation for the local file system
-     (RawLocalFs) that allows local symlinks. (Eli Collins via Sanjay Radia)
-
-    HADOOP-6577. Add hidden configuration option "ipc.server.max.response.size"
-    to change the default 1 MB, the maximum size when large IPC handler 
-    response buffer is reset. (suresh)
-
-    HADOOP-6568. Adds authorization for the default servlets. 
-    (Vinod Kumar Vavilapalli via ddas)
-
-    HADOOP-6586. Log authentication and authorization failures and successes
-    for RPC (boryas)
-
-    HADOOP-6580. UGI should contain authentication method. (jnp via boryas)
-    
-    HADOOP-6657. Add a capitalization method to StringUtils for MAPREDUCE-1545.
-    (Luke Lu via Steve Loughran)
-
-    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
-    (hairong)
-
-  IMPROVEMENTS
-
-    HADOOP-6283. Improve the exception messages thrown by
-    FileUtil$HardLink.getLinkCount(..).  (szetszwo)
-
-    HADOOP-6279. Add Runtime::maxMemory to JVM metrics. (Todd Lipcon via
-    cdouglas)
-
-    HADOOP-6305. Unify build property names to facilitate cross-projects
-    modifications (cos)
-
-    HADOOP-6312. Remove unnecessary debug logging in Configuration constructor.
-    (Aaron Kimball via cdouglas)
-
-    HADOOP-6366. Reduce ivy console output to ovservable level (cos)
-
-    HADOOP-6400. Log errors getting Unix UGI. (Todd Lipcon via tomwhite)
-
-    HADOOP-6346. Add support for specifying unpack pattern regex to
-    RunJar.unJar. (Todd Lipcon via tomwhite)
-
-    HADOOP-6422. Make RPC backend plugable, protocol-by-protocol, to
-    ease evolution towards Avro.  (cutting)
-
-    HADOOP-5958. Use JDK 1.6 File APIs in DF.java wherever possible.
-    (Aaron Kimball via tomwhite)
-
-    HADOOP-6222. Core doesn't have TestCommonCLI facility. (cos)
-
-    HADOOP-6394. Add a helper class to simplify FileContext related tests and
-    improve code reusability. (Jitendra Nath Pandey via suresh)
-
-    HADOOP-6426. Create ant build for running EC2 unit tests. (tomwhite)
-
-    HADOOP-4656. Add a user to groups mapping service. (boryas, acmurthy)
-
-    HADOOP-6444. Support additional security group option in hadoop-ec2 script.
-    (Paul Egan via tomwhite)
-
-    HADOOP-6454. Create setup.py for EC2 cloud scripts. (tomwhite)
-
-    HADOOP-6435. Make RPC.waitForProxy with timeout public. (Steve Loughran
-    via tomwhite)
-  
-    HADOOP-6472. add tokenCache option to GenericOptionsParser for passing
-     file with secret keys to a map reduce job. (boryas)
-
-    HADOOP-3205. Read multiple chunks directly from FSInputChecker subclass
-    into user buffers. (Todd Lipcon via tomwhite)
-
-    HADOOP-6479. TestUTF8 assertions could fail with better text.
-    (Steve Loughran via tomwhite)
-
-    HADOOP-6155. Deprecate RecordIO anticipating Avro. (Tom White via cdouglas)
-
-    HADOOP-6492. Make some Avro serialization APIs public.
-    (Aaron Kimball via cutting)
-
-    HADOOP-6497. Add an adapter for Avro's SeekableInput interface, so
-    that Avro can read FileSystem data.
-    (Aaron Kimball via cutting)
-
-    HADOOP-6495.  Identifier should be serialized after the password is
-     created In Token constructor (jnp via boryas)
-
-    HADOOP-6518. Makes the UGI honor the env var KRB5CCNAME. 
-    (Owen O'Malley via ddas)
-
-    HADOOP-6531. Enhance FileUtil with an API to delete all contents of a
-    directory. (Amareshwari Sriramadasu via yhemanth)
-
-    HADOOP-6547. Move DelegationToken into Common, so that it can be used by
-    MapReduce also. (devaraj via omalley)
-
-    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab
-    kerberos options. (ddas)
-
-    HADOOP-6534. Trim whitespace from directory lists initializing
-    LocalDirAllocator. (Todd Lipcon via cdouglas)
-
-    HADOOP-6559. Makes the RPC client automatically re-login when the SASL 
-    connection setup fails. This is applicable only to keytab based logins.
-    (Devaraj Das)
-
-    HADOOP-6551. Delegation token renewing and cancelling should provide
-    meaningful exceptions when there are failures instead of returning 
-    false. (omalley)
-
-    HADOOP-6583. Captures authentication and authorization metrics. (ddas)
-
-    HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
-    (Kan Zhang via ddas)
-
-    HADOOP-6579. Provide a mechanism for encoding/decoding Tokens from
-    a url-safe string and change the commons-code library to 1.4. (omalley)
-
-    HADOOP-6596. Add a version field to the AbstractDelegationTokenIdentifier's
-    serialized value. (omalley)
-
-    HADOOP-6573. Support for persistent delegation tokens.
-    (Jitendra Pandey via shv)
-
-    HADOOP-6594. Provide a fetchdt tool via bin/hdfs. (jhoman via acmurthy) 
-
-    HADOOP-6589. Provide better error messages when RPC authentication fails.
-    (Kan Zhang via omalley)
-
-    HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
-    (Suresh Srinivas via Sanjay Radia)
-
-    HADOOP-6537 Declare more detailed exceptions in FileContext and 
-    AbstractFileSystem (Suresh Srinivas via Sanjay Radia)
-
-    HADOOP-6486. fix common classes to work with Avro 1.3 reflection.
-    (cutting via tomwhite)
-
-    HADOOP-6591. HarFileSystem can handle paths with the whitespace characters.
-    (Rodrigo Schmidt via dhruba)
-
-    HADOOP-6407. Have a way to automatically update Eclipse .classpath file
-    when new libs are added to the classpath through Ivy. (tomwhite)
-
-    HADOOP-3659. Patch to allow hadoop native to compile on Mac OS X.
-    (Colin Evans and Allen Wittenauer via tomwhite)
-
-    HADOOP-6471. StringBuffer -> StringBuilder - conversion of references
-    as necessary. (Kay Kay via tomwhite)
-
-    HADOOP-6646. Move HarfileSystem out of Hadoop Common. (mahadev)
-
-    HADOOP-6566. Add methods supporting, enforcing narrower permissions on
-    local daemon directories. (Arun Murthy and Luke Lu via cdouglas)
-
-    HADOOP-6705. Fix to work with 1.5 version of jiracli
-    (Giridharan Kesavan)
-
-    HADOOP-6658. Exclude Private elements from generated Javadoc. (tomwhite)
-
-    HADOOP-6635. Install/deploy source jars to Maven repo. 
-    (Patrick Angeles via jghoman)
-
-    HADOOP-6717. Log levels in o.a.h.security.Groups too high 
-    (Todd Lipcon via jghoman)
-
-    HADOOP-6667. RPC.waitForProxy should retry through NoRouteToHostException.
-    (Todd Lipcon via tomwhite)
-
-    HADOOP-6677. InterfaceAudience.LimitedPrivate should take a string not an
-    enum. (tomwhite)
-
-    HADOOP-678. Remove FileContext#isFile, isDirectory, and exists.
-    (Eli Collins via hairong)
-
-    HADOOP-6515. Make maximum number of http threads configurable.
-    (Scott Chen via zshao)
-
-    HADOOP-6563. Add more symlink tests to cover intermediate symlinks
-    in paths. (Eli Collins via suresh)
-
-  OPTIMIZATIONS
-
-    HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
-    (mahadev via szetszwo)
-
-    HADOOP-6569. FsShell#cat should avoid calling unecessary getFileStatus
-    before opening a file to read. (hairong)
-
-    HADOOP-6689. Add directory renaming test to existing FileContext tests.
-    (Eli Collins via suresh)
-
-    HADOOP-6713. The RPC server Listener thread is a scalability bottleneck.
-    (Dmytro Molkov via hairong)
-
-  BUG FIXES
-
-    HADOOP-6293. Fix FsShell -text to work on filesystems other than the
-    default. (cdouglas)
-
-    HADOOP-6341. Fix test-patch.sh for checkTests function. (gkesavan)
-
-    HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
-    szetszwo)
-
-    HADOOP-6405. Update Eclipse configuration to match changes to Ivy
-    configuration (Edwin Chan via cos)
-
-    HADOOP-6411. Remove deprecated file src/test/hadoop-site.xml. (cos)
-
-    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
-    IllegalArgumentException is thrown (cos)
-
-    HADOOP-6254. Slow reads cause s3n to fail with SocketTimeoutException.
-    (Andrew Hitchcock via tomwhite)
-
-    HADOOP-6428. HttpServer sleeps with negative values. (cos)
-
-    HADOOP-6414. Add command line help for -expunge command.
-    (Ravi Phulari via tomwhite)
-
-    HADOOP-6391. Classpath should not be part of command line arguments.
-    (Cristian Ivascu via tomwhite)
-
-    HADOOP-6462. Target "compile" does not exist in contrib/cloud. (tomwhite)
-
-    HADOOP-6402. testConf.xsl is not well-formed XML. (Steve Loughran
-    via tomwhite)
-
-    HADOOP-6489. Fix 3 findbugs warnings. (Erik Steffl via suresh)
-
-    HADOOP-6517. Fix UserGroupInformation so that tokens are saved/retrieved
-    to/from the embedded Subject (Owen O'Malley & Kan Zhang via ddas)
-
-    HADOOP-6538. Sets hadoop.security.authentication to simple by default.
-    (ddas)
-
-    HADOOP-6540. Contrib unit tests have invalid XML for core-site, etc.
-    (Aaron Kimball via tomwhite)
-
-    HADOOP-6521. User specified umask using deprecated dfs.umask must override
-    server configured using new dfs.umaskmode for backward compatibility.
-    (suresh)
-    
-    HADOOP-6522. Fix decoding of codepoint zero in UTF8. (cutting)
-
-    HADOOP-6505. Use tr rather than sed to effect literal substitution in the
-    build script. (Allen Wittenauer via cdouglas)
-
-    HADOOP-6548. Replace mortbay imports with commons logging. (cdouglas)
-
-    HADOOP-6560. Handle invalid har:// uri in HarFileSystem.  (szetszwo)
-
-    HADOOP-6549. TestDoAsEffectiveUser should use ip address of the host
-     for superuser ip check(jnp via boryas)
-
-    HADOOP-6570. RPC#stopProxy throws NPE if getProxyEngine(proxy) returns
-    null. (hairong)
-
-    HADOOP-6558. Return null in HarFileSystem.getFileChecksum(..) since no
-    checksum algorithm is implemented.  (szetszwo)
-
-    HADOOP-6572. Makes sure that SASL encryption and push to responder
-    queue for the RPC response happens atomically. (Kan Zhang via ddas)
-
-    HADOOP-6545. Changes the Key for the FileSystem cache to be UGI (ddas)
-
-    HADOOP-6609. Fixed deadlock in RPC by replacing shared static 
-    DataOutputBuffer in the UTF8 class with a thread local variable. (omalley)
-
-    HADOOP-6504. Invalid example in the documentation of
-    org.apache.hadoop.util.Tool. (Benoit Sigoure via tomwhite)
-
-    HADOOP-6546. BloomMapFile can return false negatives. (Clark Jefcoat
-    via tomwhite)
-
-    HADOOP-6593. TextRecordInputStream doesn't close SequenceFile.Reader.
-    (Chase Bradford via tomwhite)
-
-    HADOOP-6175. Incorrect version compilation with es_ES.ISO8859-15 locale
-    on Solaris 10. (Urko Benito via tomwhite)
-
-    HADOOP-6645.  Bugs on listStatus for HarFileSystem (rodrigo via mahadev)
-
-    HADOOP-6645. Re: Bugs on listStatus for HarFileSystem (rodrigo via
-    mahadev)
-
-    HADOOP-6654. Fix code example in WritableComparable javadoc.  (Tom White
-    via szetszwo)
-
-    HADOOP-6640. FileSystem.get() does RPC retries within a static
-    synchronized block. (hairong)
-
-    HADOOP-6680. hadoop-cloud push command invokes proxy creation.
-    (Andrew Klochkov via tomwhite)
-
-    HADOOP-6691. TestFileSystemCaching sometimes hangs. (hairong)
-
-    HADOOP-6507. Hadoop Common Docs - delete 3 doc files that do not belong
-    under Common. (Corinne Chandel via tomwhite)
-
-    HADOOP-6439. Fixes handling of deprecated keys to follow order in which
-    keys are defined. (V.V.Chaitanya Krishna via yhemanth)
-
-    HADOOP-6690. FilterFileSystem correctly handles setTimes call.
-    (Rodrigo Schmidt via dhruba)
-
-    HADOOP-6703. Prevent renaming a file, directory or symbolic link to
-    itself. (Eli Collins via suresh)
-
-    HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
-    (suresh)
-    
-    HADOOP-6719. Insert all missing methods in FilterFs.
-    (Rodrigo Schmidt via dhruba)
-
-    HADOOP-6724. IPC doesn't properly handle IOEs thrown by socket factory.
-    (Todd Lipcon via tomwhite)
-
-    HADOOP-6722. NetUtils.connect should check that it hasn't connected a socket
-    to itself. (Todd Lipcon via tomwhite)
-
-    HADOOP-6634. Fix AccessControlList to use short names to verify access 
-    control. (Vinod Kumar Vavilapalli via sharad)
-
-    HADOOP-6709. Re-instate deprecated FileSystem methods that were removed
-    after 0.20. (tomwhite)
- 
-    HADOOP-6630. hadoop-config.sh fails to get executed if hadoop wrapper
-    scripts are in path. (Allen Wittenauer via tomwhite)
-
-    HADOOP-6742. Add methods HADOOP-6709 from to TestFilterFileSystem.
-    (Eli Collins via tomwhite)
-
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -481,6 +90,15 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6396. Fix uninformative exception message when unable to parse
     umask. (jghoman)
+
+    HADOOP-6299. Reimplement the UserGroupInformation to use the OS
+    specific and Kerberos JAAS login. (omalley)
+
+    HADOOP-6686. Remove redundant exception class name from the exception
+    message for the exceptions thrown at RPC client. (suresh)
+
+    HADOOP-6701. Fix incorrect exit codes returned from chmod, chown and chgrp
+    commands from FsShell. (Ravi Phulari via suresh)
 
   NEW FEATURES
 
@@ -606,6 +224,70 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6313. Implement Syncable interface in FSDataOutputStream to expose
     flush APIs to application users. (Hairong Kuang via suresh)
+
+    HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
+    hadoop-config.sh so that it allows setting java command options for
+    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
+
+    HADOOP-6337. Updates FilterInitializer class to be more visible,
+    and the init of the class is made to take a Configuration argument.
+    (Jakob Homan via ddas)
+
+    HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
+
+    Hadoop-6223. Add new file system interface AbstractFileSystem with
+    implementation of some file systems that delegate to old FileSystem.
+    (Sanjay Radia via suresh)
+
+    HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
+    (tomwhite)
+
+    HADOOP-6433. Introduce asychronous deletion of files via a pool of
+    threads. This can be used to delete files in the Distributed
+    Cache. (Zheng Shao via dhruba)
+
+    HADOOP-6415. Adds a common token interface for both job token and 
+    delegation token. (Kan Zhang via ddas)
+
+    HADOOP-6466. Add a ZooKeeper service to the cloud scripts. (tomwhite)
+
+    HADOOP-6408. Add a /conf servlet to dump running configuration.
+    (Todd Lipcon via tomwhite)
+
+    HADOOP-6464. Write a Rackspace cloud provider. (tomwhite)
+
+    HADOOP-6520. Adds APIs to read/write Token and secret keys. Also
+    adds the automatic loading of tokens into UserGroupInformation
+    upon login. The tokens are read from a file specified in the
+    environment variable. (ddas)
+
+    HADOOP-6419. Adds SASL based authentication to RPC.
+    (Kan Zhang via ddas)
+
+    HADOOP-6510. Adds a way for superusers to impersonate other users
+    in a secure environment. (Jitendra Nath Pandey via ddas)
+
+    HADOOP-6421. Adds Symbolic links to FileContext, AbstractFileSystem.
+    It also adds a limited implementation for the local file system
+     (RawLocalFs) that allows local symlinks. (Eli Collins via Sanjay Radia)
+
+    HADOOP-6577. Add hidden configuration option "ipc.server.max.response.size"
+    to change the default 1 MB, the maximum size when large IPC handler 
+    response buffer is reset. (suresh)
+
+    HADOOP-6568. Adds authorization for the default servlets. 
+    (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-6586. Log authentication and authorization failures and successes
+    for RPC (boryas)
+
+    HADOOP-6580. UGI should contain authentication method. (jnp via boryas)
+    
+    HADOOP-6657. Add a capitalization method to StringUtils for MAPREDUCE-1545.
+    (Luke Lu via Steve Loughran)
+
+    HADOOP-6692. Add FileContext#listStatus that returns an iterator.
+    (hairong)
 
   IMPROVEMENTS
 
@@ -1009,6 +691,163 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6413. Move TestReflectionUtils to Common. (Todd Lipcon via tomwhite)
 
+    HADOOP-6283. Improve the exception messages thrown by
+    FileUtil$HardLink.getLinkCount(..).  (szetszwo)
+
+    HADOOP-6279. Add Runtime::maxMemory to JVM metrics. (Todd Lipcon via
+    cdouglas)
+
+    HADOOP-6305. Unify build property names to facilitate cross-projects
+    modifications (cos)
+
+    HADOOP-6312. Remove unnecessary debug logging in Configuration constructor.
+    (Aaron Kimball via cdouglas)
+
+    HADOOP-6366. Reduce ivy console output to ovservable level (cos)
+
+    HADOOP-6400. Log errors getting Unix UGI. (Todd Lipcon via tomwhite)
+
+    HADOOP-6346. Add support for specifying unpack pattern regex to
+    RunJar.unJar. (Todd Lipcon via tomwhite)
+
+    HADOOP-6422. Make RPC backend plugable, protocol-by-protocol, to
+    ease evolution towards Avro.  (cutting)
+
+    HADOOP-5958. Use JDK 1.6 File APIs in DF.java wherever possible.
+    (Aaron Kimball via tomwhite)
+
+    HADOOP-6222. Core doesn't have TestCommonCLI facility. (cos)
+
+    HADOOP-6394. Add a helper class to simplify FileContext related tests and
+    improve code reusability. (Jitendra Nath Pandey via suresh)
+
+    HADOOP-6426. Create ant build for running EC2 unit tests. (tomwhite)
+
+    HADOOP-4656. Add a user to groups mapping service. (boryas, acmurthy)
+
+    HADOOP-6444. Support additional security group option in hadoop-ec2 script.
+    (Paul Egan via tomwhite)
+
+    HADOOP-6454. Create setup.py for EC2 cloud scripts. (tomwhite)
+
+    HADOOP-6435. Make RPC.waitForProxy with timeout public. (Steve Loughran
+    via tomwhite)
+  
+    HADOOP-6472. add tokenCache option to GenericOptionsParser for passing
+     file with secret keys to a map reduce job. (boryas)
+
+    HADOOP-3205. Read multiple chunks directly from FSInputChecker subclass
+    into user buffers. (Todd Lipcon via tomwhite)
+
+    HADOOP-6479. TestUTF8 assertions could fail with better text.
+    (Steve Loughran via tomwhite)
+
+    HADOOP-6155. Deprecate RecordIO anticipating Avro. (Tom White via cdouglas)
+
+    HADOOP-6492. Make some Avro serialization APIs public.
+    (Aaron Kimball via cutting)
+
+    HADOOP-6497. Add an adapter for Avro's SeekableInput interface, so
+    that Avro can read FileSystem data.
+    (Aaron Kimball via cutting)
+
+    HADOOP-6495.  Identifier should be serialized after the password is
+     created In Token constructor (jnp via boryas)
+
+    HADOOP-6518. Makes the UGI honor the env var KRB5CCNAME. 
+    (Owen O'Malley via ddas)
+
+    HADOOP-6531. Enhance FileUtil with an API to delete all contents of a
+    directory. (Amareshwari Sriramadasu via yhemanth)
+
+    HADOOP-6547. Move DelegationToken into Common, so that it can be used by
+    MapReduce also. (devaraj via omalley)
+
+    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab
+    kerberos options. (ddas)
+
+    HADOOP-6534. Trim whitespace from directory lists initializing
+    LocalDirAllocator. (Todd Lipcon via cdouglas)
+
+    HADOOP-6559. Makes the RPC client automatically re-login when the SASL 
+    connection setup fails. This is applicable only to keytab based logins.
+    (Devaraj Das)
+
+    HADOOP-6551. Delegation token renewing and cancelling should provide
+    meaningful exceptions when there are failures instead of returning 
+    false. (omalley)
+
+    HADOOP-6583. Captures authentication and authorization metrics. (ddas)
+
+    HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
+    (Kan Zhang via ddas)
+
+    HADOOP-6579. Provide a mechanism for encoding/decoding Tokens from
+    a url-safe string and change the commons-code library to 1.4. (omalley)
+
+    HADOOP-6596. Add a version field to the AbstractDelegationTokenIdentifier's
+    serialized value. (omalley)
+
+    HADOOP-6573. Support for persistent delegation tokens.
+    (Jitendra Pandey via shv)
+
+    HADOOP-6594. Provide a fetchdt tool via bin/hdfs. (jhoman via acmurthy) 
+
+    HADOOP-6589. Provide better error messages when RPC authentication fails.
+    (Kan Zhang via omalley)
+
+    HADOOP-6599  Split existing RpcMetrics into RpcMetrics & RpcDetailedMetrics.
+    (Suresh Srinivas via Sanjay Radia)
+
+    HADOOP-6537 Declare more detailed exceptions in FileContext and 
+    AbstractFileSystem (Suresh Srinivas via Sanjay Radia)
+
+    HADOOP-6486. fix common classes to work with Avro 1.3 reflection.
+    (cutting via tomwhite)
+
+    HADOOP-6591. HarFileSystem can handle paths with the whitespace characters.
+    (Rodrigo Schmidt via dhruba)
+
+    HADOOP-6407. Have a way to automatically update Eclipse .classpath file
+    when new libs are added to the classpath through Ivy. (tomwhite)
+
+    HADOOP-3659. Patch to allow hadoop native to compile on Mac OS X.
+    (Colin Evans and Allen Wittenauer via tomwhite)
+
+    HADOOP-6471. StringBuffer -> StringBuilder - conversion of references
+    as necessary. (Kay Kay via tomwhite)
+
+    HADOOP-6646. Move HarfileSystem out of Hadoop Common. (mahadev)
+
+    HADOOP-6566. Add methods supporting, enforcing narrower permissions on
+    local daemon directories. (Arun Murthy and Luke Lu via cdouglas)
+
+    HADOOP-6705. Fix to work with 1.5 version of jiracli
+    (Giridharan Kesavan)
+
+    HADOOP-6658. Exclude Private elements from generated Javadoc. (tomwhite)
+
+    HADOOP-6635. Install/deploy source jars to Maven repo. 
+    (Patrick Angeles via jghoman)
+
+    HADOOP-6717. Log levels in o.a.h.security.Groups too high 
+    (Todd Lipcon via jghoman)
+
+    HADOOP-6667. RPC.waitForProxy should retry through NoRouteToHostException.
+    (Todd Lipcon via tomwhite)
+
+    HADOOP-6677. InterfaceAudience.LimitedPrivate should take a string not an
+    enum. (tomwhite)
+
+    HADOOP-678. Remove FileContext#isFile, isDirectory, and exists.
+    (Eli Collins via hairong)
+
+    HADOOP-6515. Make maximum number of http threads configurable.
+    (Scott Chen via zshao)
+
+    HADOOP-6563. Add more symlink tests to cover intermediate symlinks
+    in paths. (Eli Collins via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
@@ -1032,6 +871,18 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6307. Add a new SequenceFile.Reader constructor in order to support
     reading on un-closed file.  (szetszwo)
+
+    HADOOP-6467. Improve the performance on HarFileSystem.listStatus(..).
+    (mahadev via szetszwo)
+
+    HADOOP-6569. FsShell#cat should avoid calling unecessary getFileStatus
+    before opening a file to read. (hairong)
+
+    HADOOP-6689. Add directory renaming test to existing FileContext tests.
+    (Eli Collins via suresh)
+
+    HADOOP-6713. The RPC server Listener thread is a scalability bottleneck.
+    (Dmytro Molkov via hairong)
 
   BUG FIXES
     
@@ -1525,6 +1376,143 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6290. Prevent duplicate slf4j-simple jar via Avro's classpath.
     (Owen O'Malley via cdouglas)
+
+    HADOOP-6293. Fix FsShell -text to work on filesystems other than the
+    default. (cdouglas)
+
+    HADOOP-6341. Fix test-patch.sh for checkTests function. (gkesavan)
+
+    HADOOP-6314. Fix "fs -help" for the "-count" commond.  (Ravi Phulari via
+    szetszwo)
+
+    HADOOP-6405. Update Eclipse configuration to match changes to Ivy
+    configuration (Edwin Chan via cos)
+
+    HADOOP-6411. Remove deprecated file src/test/hadoop-site.xml. (cos)
+
+    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
+    IllegalArgumentException is thrown (cos)
+
+    HADOOP-6254. Slow reads cause s3n to fail with SocketTimeoutException.
+    (Andrew Hitchcock via tomwhite)
+
+    HADOOP-6428. HttpServer sleeps with negative values. (cos)
+
+    HADOOP-6414. Add command line help for -expunge command.
+    (Ravi Phulari via tomwhite)
+
+    HADOOP-6391. Classpath should not be part of command line arguments.
+    (Cristian Ivascu via tomwhite)
+
+    HADOOP-6462. Target "compile" does not exist in contrib/cloud. (tomwhite)
+
+    HADOOP-6402. testConf.xsl is not well-formed XML. (Steve Loughran
+    via tomwhite)
+
+    HADOOP-6489. Fix 3 findbugs warnings. (Erik Steffl via suresh)
+
+    HADOOP-6517. Fix UserGroupInformation so that tokens are saved/retrieved
+    to/from the embedded Subject (Owen O'Malley & Kan Zhang via ddas)
+
+    HADOOP-6538. Sets hadoop.security.authentication to simple by default.
+    (ddas)
+
+    HADOOP-6540. Contrib unit tests have invalid XML for core-site, etc.
+    (Aaron Kimball via tomwhite)
+
+    HADOOP-6521. User specified umask using deprecated dfs.umask must override
+    server configured using new dfs.umaskmode for backward compatibility.
+    (suresh)
+    
+    HADOOP-6522. Fix decoding of codepoint zero in UTF8. (cutting)
+
+    HADOOP-6505. Use tr rather than sed to effect literal substitution in the
+    build script. (Allen Wittenauer via cdouglas)
+
+    HADOOP-6548. Replace mortbay imports with commons logging. (cdouglas)
+
+    HADOOP-6560. Handle invalid har:// uri in HarFileSystem.  (szetszwo)
+
+    HADOOP-6549. TestDoAsEffectiveUser should use ip address of the host
+     for superuser ip check(jnp via boryas)
+
+    HADOOP-6570. RPC#stopProxy throws NPE if getProxyEngine(proxy) returns
+    null. (hairong)
+
+    HADOOP-6558. Return null in HarFileSystem.getFileChecksum(..) since no
+    checksum algorithm is implemented.  (szetszwo)
+
+    HADOOP-6572. Makes sure that SASL encryption and push to responder
+    queue for the RPC response happens atomically. (Kan Zhang via ddas)
+
+    HADOOP-6545. Changes the Key for the FileSystem cache to be UGI (ddas)
+
+    HADOOP-6609. Fixed deadlock in RPC by replacing shared static 
+    DataOutputBuffer in the UTF8 class with a thread local variable. (omalley)
+
+    HADOOP-6504. Invalid example in the documentation of
+    org.apache.hadoop.util.Tool. (Benoit Sigoure via tomwhite)
+
+    HADOOP-6546. BloomMapFile can return false negatives. (Clark Jefcoat
+    via tomwhite)
+
+    HADOOP-6593. TextRecordInputStream doesn't close SequenceFile.Reader.
+    (Chase Bradford via tomwhite)
+
+    HADOOP-6175. Incorrect version compilation with es_ES.ISO8859-15 locale
+    on Solaris 10. (Urko Benito via tomwhite)
+
+    HADOOP-6645.  Bugs on listStatus for HarFileSystem (rodrigo via mahadev)
+
+    HADOOP-6645. Re: Bugs on listStatus for HarFileSystem (rodrigo via
+    mahadev)
+
+    HADOOP-6654. Fix code example in WritableComparable javadoc.  (Tom White
+    via szetszwo)
+
+    HADOOP-6640. FileSystem.get() does RPC retries within a static
+    synchronized block. (hairong)
+
+    HADOOP-6680. hadoop-cloud push command invokes proxy creation.
+    (Andrew Klochkov via tomwhite)
+
+    HADOOP-6691. TestFileSystemCaching sometimes hangs. (hairong)
+
+    HADOOP-6507. Hadoop Common Docs - delete 3 doc files that do not belong
+    under Common. (Corinne Chandel via tomwhite)
+
+    HADOOP-6439. Fixes handling of deprecated keys to follow order in which
+    keys are defined. (V.V.Chaitanya Krishna via yhemanth)
+
+    HADOOP-6690. FilterFileSystem correctly handles setTimes call.
+    (Rodrigo Schmidt via dhruba)
+
+    HADOOP-6703. Prevent renaming a file, directory or symbolic link to
+    itself. (Eli Collins via suresh)
+
+    HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
+    (suresh)
+    
+    HADOOP-6719. Insert all missing methods in FilterFs.
+    (Rodrigo Schmidt via dhruba)
+
+    HADOOP-6724. IPC doesn't properly handle IOEs thrown by socket factory.
+    (Todd Lipcon via tomwhite)
+
+    HADOOP-6722. NetUtils.connect should check that it hasn't connected a socket
+    to itself. (Todd Lipcon via tomwhite)
+
+    HADOOP-6634. Fix AccessControlList to use short names to verify access 
+    control. (Vinod Kumar Vavilapalli via sharad)
+
+    HADOOP-6709. Re-instate deprecated FileSystem methods that were removed
+    after 0.20. (tomwhite)
+ 
+    HADOOP-6630. hadoop-config.sh fails to get executed if hadoop wrapper
+    scripts are in path. (Allen Wittenauer via tomwhite)
+
+    HADOOP-6742. Add methods HADOOP-6709 from to TestFilterFileSystem.
+    (Eli Collins via tomwhite)
 
 Release 0.20.3 - Unreleased
 
