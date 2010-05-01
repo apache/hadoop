@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Helper class for unit tests.
@@ -144,5 +148,20 @@ public final class FileContextTestHelper {
     } catch (FileNotFoundException e) {
       return false;
     }
+  }
+  
+  public static void writeFile(FileContext fc, Path path,byte b[]) throws Exception {
+    FSDataOutputStream out = 
+      fc.create(path,EnumSet.of(CreateFlag.CREATE), CreateOpts.createParent());
+    out.write(b);
+    out.close();
+  }
+  
+  public static byte[] readFile(FileContext fc, Path path, int len ) throws Exception {
+    DataInputStream dis = fc.open(path);
+    byte[] buffer = new byte[len];
+    IOUtils.readFully(dis, buffer, 0, len);
+    dis.close();
+    return buffer;
   }
 }

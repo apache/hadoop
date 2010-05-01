@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  BUG FIXES
+
+    HADOOP-6730. Bug in FileContext#copy and provide base class for FileContext 
+    tests. (Ravi Phulari via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

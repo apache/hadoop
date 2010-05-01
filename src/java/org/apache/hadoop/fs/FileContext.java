@@ -2050,8 +2050,8 @@ public final class FileContext {
    */
   private void checkDest(String srcName, Path dst, boolean overwrite)
       throws AccessControlException, IOException {
-    FileStatus dstFs = getFileStatus(dst);
     try {
+      FileStatus dstFs = getFileStatus(dst);
       if (dstFs.isDir()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");
