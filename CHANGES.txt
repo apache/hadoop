@@ -1514,6 +1514,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6742. Add methods HADOOP-6709 from to TestFilterFileSystem.
     (Eli Collins via tomwhite)
 
+    HADOOP-6727. Remove UnresolvedLinkException from public FileContext APIs.
+    (Eli Collins via tomwhite)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
