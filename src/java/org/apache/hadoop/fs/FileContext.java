@@ -528,8 +528,6 @@ public final class FileContext {
    *           directory.
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -545,7 +543,7 @@ public final class FileContext {
       final EnumSet<CreateFlag> createFlag, Options.CreateOpts... opts)
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, ParentNotDirectoryException,
-      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+      UnsupportedFileSystemException, IOException {
     Path absF = fixRelativePart(f);
 
     // If one of the options is a permission, extract it & apply umask
@@ -562,7 +560,7 @@ public final class FileContext {
                       CreateOpts.setOpt(CreateOpts.perms(permission), opts);
     return new FSLinkResolver<FSDataOutputStream>() {
       public FSDataOutputStream next(final AbstractFileSystem fs, final Path p) 
-        throws IOException, UnresolvedLinkException {
+        throws IOException {
         return fs.create(p, createFlag, updatedOpts);
       }
     }.resolve(this, absF);
@@ -583,8 +581,6 @@ public final class FileContext {
    *           and <code>createParent</code> is false
    * @throws ParentNotDirectoryException If parent of <code>dir</code> is not a
    *           directory
-   * @throws UnresolvedLinkException If symbolic link <code>dir</code> could not
-   *           be resolved
    * @throws UnsupportedFileSystemException If file system for <code>dir</code>
    *         is not supported
    * @throws IOException If an I/O error occurred
@@ -600,8 +596,8 @@ public final class FileContext {
   public void mkdir(final Path dir, final FsPermission permission,
       final boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
-      ParentNotDirectoryException, UnresolvedLinkException,
-      UnsupportedFileSystemException, IOException {
+      ParentNotDirectoryException, UnsupportedFileSystemException, 
+      IOException {
     final Path absDir = fixRelativePart(dir);
     final FsPermission absFerms = (permission == null ? 
           FsPermission.getDefault() : permission).applyUMask(umask);
@@ -625,8 +621,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -640,7 +634,7 @@ public final class FileContext {
    */
   public boolean delete(final Path f, final boolean recursive)
       throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+      UnsupportedFileSystemException, IOException {
     Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
       public Boolean next(final AbstractFileSystem fs, final Path p) 
@@ -659,8 +653,6 @@ public final class FileContext {
    * @throws FileNotFoundException If file <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code>
    *         is not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -670,8 +662,7 @@ public final class FileContext {
    *           undeclared exception to RPC server
    */
   public FSDataInputStream open(final Path f) throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException,
-      UnresolvedLinkException, IOException {
+      FileNotFoundException, UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FSDataInputStream>() {
       public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
@@ -691,8 +682,6 @@ public final class FileContext {
    * @throws FileNotFoundException If file <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -703,7 +692,7 @@ public final class FileContext {
    */
   public FSDataInputStream open(final Path f, final int bufferSize)
       throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+      UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FSDataInputStream>() {
       public FSDataInputStream next(final AbstractFileSystem fs, final Path p) 
@@ -723,8 +712,6 @@ public final class FileContext {
    *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException If file <code>f</code> does not exist
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -735,7 +722,7 @@ public final class FileContext {
    */
   public boolean setReplication(final Path f, final short replication)
       throws AccessControlException, FileNotFoundException,
-      UnresolvedLinkException, IOException {
+      IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<Boolean>() {
       public Boolean next(final AbstractFileSystem fs, final Path p) 
@@ -777,8 +764,6 @@ public final class FileContext {
    *           directory
    * @throws UnsupportedFileSystemException If file system for <code>src</code>
    *           and <code>dst</code> is not supported
-   * @throws UnresolvedLinkException If symbolic link <code>src</code> or
-   *           <code>dst</code> could not be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -791,7 +776,7 @@ public final class FileContext {
       final Options.Rename... options) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnsupportedFileSystemException,
-      UnresolvedLinkException, IOException {
+      IOException {
     final Path absSrc = fixRelativePart(src);
     final Path absDst = fixRelativePart(dst);
     AbstractFileSystem srcFS = getFSofPath(absSrc);
@@ -826,8 +811,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code>
    *         is not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -838,7 +821,7 @@ public final class FileContext {
    */
   public void setPermission(final Path f, final FsPermission permission)
       throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+      UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -861,8 +844,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -878,7 +859,7 @@ public final class FileContext {
   public void setOwner(final Path f, final String username,
       final String groupname) throws AccessControlException,
       UnsupportedFileSystemException, FileNotFoundException,
-      UnresolvedLinkException, IOException {
+      IOException {
     if ((username == null) && (groupname == null)) {
       throw new HadoopIllegalArgumentException(
           "username and groupname cannot both be null");
@@ -907,8 +888,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -919,7 +898,7 @@ public final class FileContext {
    */
   public void setTimes(final Path f, final long mtime, final long atime)
       throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+      UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -941,8 +920,6 @@ public final class FileContext {
    *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException If <code>f</code> does not exist
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -953,7 +930,7 @@ public final class FileContext {
    */
   public FileChecksum getFileChecksum(final Path f)
       throws AccessControlException, FileNotFoundException,
-      UnresolvedLinkException, IOException {
+      IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileChecksum>() {
       public FileChecksum next(final AbstractFileSystem fs, final Path p) 
@@ -999,8 +976,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -1010,8 +985,7 @@ public final class FileContext {
    *           undeclared exception to RPC server
    */
   public FileStatus getFileStatus(final Path f) throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException,
-      UnresolvedLinkException, IOException {
+      FileNotFoundException, UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<FileStatus>() {
       public FileStatus next(final AbstractFileSystem fs, final Path p) 
@@ -1121,8 +1095,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -1138,7 +1110,7 @@ public final class FileContext {
   @InterfaceStability.Evolving
   public BlockLocation[] getFileBlockLocations(final Path f, final long start,
       final long len) throws AccessControlException, FileNotFoundException,
-      UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+      UnsupportedFileSystemException, IOException {
     final Path absF = fixRelativePart(f);
     return new FSLinkResolver<BlockLocation[]>() {
       public BlockLocation[] next(final AbstractFileSystem fs, final Path p) 
@@ -1164,8 +1136,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-   *           be resolved
    * @throws IOException If an I/O error occurred
    * 
    * Exceptions applicable to file systems accessed over RPC:
@@ -1175,8 +1145,7 @@ public final class FileContext {
    *           undeclared exception to RPC server
    */
   public FsStatus getFsStatus(final Path f) throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException,
-      UnresolvedLinkException, IOException {
+      FileNotFoundException, UnsupportedFileSystemException, IOException {
     if (f == null) {
       return defaultFS.getFsStatus();
     }
@@ -1264,8 +1233,6 @@ public final class FileContext {
    * @throws FileNotFoundException If <code>target</code> does not exist
    * @throws ParentNotDirectoryException If parent of <code>link</code> is not a
    *           directory.
-   * @throws UnresolvedLinkException If symbolic link <code>target</code> could not
-   *           be resolved
    * @throws UnsupportedFileSystemException If file system for 
    *           <code>target</code> or <code>link</code> is not supported
    * @throws IOException If an I/O error occurred
@@ -1273,8 +1240,8 @@ public final class FileContext {
   public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
-      ParentNotDirectoryException, UnresolvedLinkException,
-      UnsupportedFileSystemException, IOException { 
+      ParentNotDirectoryException, UnsupportedFileSystemException, 
+      IOException { 
     final Path nonRelLink = fixRelativePart(link);
     new FSLinkResolver<Void>() {
       public Void next(final AbstractFileSystem fs, final Path p) 
@@ -1441,8 +1408,6 @@ public final class FileContext {
      * @throws FileNotFoundException If <code>f</code> does not exist
      * @throws UnsupportedFileSystemException If file system for 
      *         <code>f</code> is not supported
-     * @throws UnresolvedLinkException If symbolic link <code>f</code> could not
-     *           be resolved
      * @throws IOException If an I/O error occurred
      * 
      * Exceptions applicable to file systems accessed over RPC:
@@ -1453,7 +1418,7 @@ public final class FileContext {
      */
     public ContentSummary getContentSummary(Path f)
         throws AccessControlException, FileNotFoundException,
-        UnsupportedFileSystemException, UnresolvedLinkException, IOException {
+        UnsupportedFileSystemException, IOException {
       FileStatus status = FileContext.this.getFileStatus(f);
       if (!status.isDir()) {
         // f is a file
@@ -1839,7 +1804,7 @@ public final class FileContext {
     public boolean copy(final Path src, final Path dst)
         throws AccessControlException, FileAlreadyExistsException,
         FileNotFoundException, ParentNotDirectoryException,
-        UnresolvedLinkException, UnsupportedFileSystemException, IOException {
+        UnsupportedFileSystemException, IOException {
       return copy(src, dst, false, false);
     }
     
@@ -1858,8 +1823,6 @@ public final class FileContext {
      * @throws FileNotFoundException If <code>src</code> does not exist
      * @throws ParentNotDirectoryException If parent of <code>dst</code> is not
      *           a directory
-     * @throws UnresolvedLinkException If symbolic link <code>src</code> could 
-     *           not be resolved
      * @throws UnsupportedFileSystemException If file system for 
      *         <code>src</code> or <code>dst</code> is not supported
      * @throws IOException If an I/O error occurred
@@ -1876,8 +1839,8 @@ public final class FileContext {
     public boolean copy(final Path src, final Path dst, boolean deleteSource,
         boolean overwrite) throws AccessControlException,
         FileAlreadyExistsException, FileNotFoundException,
-        ParentNotDirectoryException, UnresolvedLinkException,
-        UnsupportedFileSystemException, IOException {
+        ParentNotDirectoryException, UnsupportedFileSystemException, 
+	IOException {
       checkNotSchemeWithRelative(src);
       checkNotSchemeWithRelative(dst);
       Path qSrc = makeQualified(src);
