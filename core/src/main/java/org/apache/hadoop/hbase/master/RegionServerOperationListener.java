@@ -21,12 +21,27 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HServerInfo;
+
 /**
  * Listener for regionserver events in master.
  * @see HMaster#registerRegionServerOperationListener(RegionServerOperationListener)
  * @see HMaster#unregisterRegionServerOperationListener(RegionServerOperationListener)
  */
 public interface RegionServerOperationListener {
+  /**
+   * Called for each message passed the master.  Most of the messages that come
+   * in here will go on to become {@link #process(RegionServerOperation)}s but
+   * others like {@linke HMsg.Type#MSG_REPORT_PROCESS_OPEN} go no further;
+   * only in here can you see them come in.
+   * @param serverInfo Server we got the message from.
+   * @param incomingMsg The message received.
+   * @return True to continue processing, false to skip.
+   */
+  public boolean process(final HServerInfo serverInfo,
+      final HMsg incomingMsg);
+
   /**
    * Called before processing <code>op</code>
    * @param op

@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.ipc.RemoteException;
@@ -214,6 +216,24 @@ public class RegionServerOperationQueue {
     for (RegionServerOperationListener listener: this.listeners) {
       listener.processed(op);
     }
+  }
+
+  /**
+   * Called for each message passed the master.  Most of the messages that come
+   * in here will go on to become {@link #process(RegionServerOperation)}s but
+   * others like {@linke HMsg.Type#MSG_REPORT_PROCESS_OPEN} go no further;
+   * only in here can you see them come in.
+   * @param serverInfo Server we got the message from.
+   * @param incomingMsg The message received.
+   * @return True to continue processing, false to skip.
+   */
+  boolean process(final HServerInfo serverInfo,
+      final HMsg incomingMsg) {
+    if (this.listeners.isEmpty()) return true;
+    for (RegionServerOperationListener listener: this.listeners) {
+      if (!listener.process(serverInfo, incomingMsg)) return false;
+    }
+    return true;
   }
 
   /*

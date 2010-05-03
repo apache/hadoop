@@ -109,13 +109,24 @@ public class MiniHBaseCluster implements HConstants {
     }
   }
 
+  /**
+   * Subclass so can get at protected methods (none at moment).
+   */
+  public static class MiniHBaseClusterRegionServer extends HRegionServer {
+    public MiniHBaseClusterRegionServer(HBaseConfiguration conf)
+        throws IOException {
+      super(conf);
+    }
+  }
+
   private void init(final int nRegionNodes) throws IOException {
     try {
       // start up a LocalHBaseCluster
       while (true) {
         try {
           hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes,
-              MiniHBaseCluster.MiniHBaseClusterMaster.class);
+              MiniHBaseCluster.MiniHBaseClusterMaster.class,
+              MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
           hbaseCluster.startup();
         } catch (BindException e) {
           //this port is already in use. try to use another (for multiple testing)
@@ -137,13 +148,13 @@ public class MiniHBaseCluster implements HConstants {
    * Starts a region server thread running
    *
    * @throws IOException
-   * @return Name of regionserver started.
+   * @return New RegionServerThread
    */
-  public String startRegionServer() throws IOException {
+  public JVMClusterUtil.RegionServerThread startRegionServer() throws IOException {
     JVMClusterUtil.RegionServerThread t = this.hbaseCluster.addRegionServer();
     t.start();
     t.waitForServerOnline();
-    return t.getName();
+    return t;
   }
 
   /**
@@ -296,7 +307,21 @@ public class MiniHBaseCluster implements HConstants {
   public void addMessageToSendRegionServer(final int serverNumber,
     final HMsg msg)
   throws IOException {
-    HRegionServer hrs = getRegionServer(serverNumber);
+    MiniHBaseClusterRegionServer hrs =
+      (MiniHBaseClusterRegionServer)getRegionServer(serverNumber);
+    addMessageToSendRegionServer(hrs, msg);
+  }
+
+  /**
+   * Add a message to include in the responses send a regionserver when it
+   * checks back in.
+   * @param hrs Which region server.
+   * @param msg The MESSAGE
+   * @throws IOException
+   */
+  public void addMessageToSendRegionServer(final MiniHBaseClusterRegionServer hrs,
+    final HMsg msg)
+  throws IOException {
     ((MiniHBaseClusterMaster)getMaster()).addMessage(hrs.getHServerInfo(), msg);
   }
 }

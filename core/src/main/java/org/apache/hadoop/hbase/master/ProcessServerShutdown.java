@@ -30,11 +30,13 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** 
@@ -78,6 +80,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     // check to see if I am responsible for either ROOT or any of the META tables.
 
+    // TODO Why do we do this now instead of at processing time?
     closeMetaRegions();
   }
 
@@ -116,6 +119,19 @@ class ProcessServerShutdown extends RegionServerOperation {
     return this.deadServerAddress;
   }
 
+  private void closeRegionsInTransition() {    
+    Map<String, RegionState> inTransition =
+      master.getRegionManager().getRegionsInTransitionOnServer(deadServer);
+    for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
+      String regionName = entry.getKey();
+      RegionState state = entry.getValue();
+      
+      LOG.info("Region " + regionName + " was in transition " +
+          state + " on dead server " + deadServer + " - marking unassigned");
+      master.getRegionManager().setUnassigned(state.getRegionInfo(), true);
+    }
+  }
+  
   @Override
   public String toString() {
     return "ProcessServerShutdown of " + this.deadServer;
@@ -282,7 +298,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     if (!logSplit) {
       // Process the old log file
       if (this.master.getFileSystem().exists(rsLogDir)) {
-        if (!master.getRegionManager().splitLogLock.tryLock()) {
+        if (!master.splitLogLock.tryLock()) {
           return false;
         }
         try {
@@ -290,7 +306,7 @@ class ProcessServerShutdown extends RegionServerOperation {
               this.master.getOldLogDir(), this.master.getFileSystem(),
             this.master.getConfiguration());
         } finally {
-          master.getRegionManager().splitLogLock.unlock();
+          master.splitLogLock.unlock();
         }
       }
       logSplit = true;
@@ -355,6 +371,9 @@ class ProcessServerShutdown extends RegionServerOperation {
           Bytes.toString(r.getRegionName()) + " on " + r.getServer());
       }
     }
+    
+    closeRegionsInTransition();
+
     // Remove this server from dead servers list.  Finished splitting logs.
     this.master.getServerManager().removeDeadServer(deadServer);
     if (LOG.isDebugEnabled()) {

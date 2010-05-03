@@ -132,7 +132,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
   protected volatile boolean abortRequested;
-  
+
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
   
@@ -666,7 +666,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
 
     join();
-    zooKeeperWrapper.close();
+    this.zooKeeperWrapper.close();
 
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
@@ -1423,6 +1423,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
               region.flushcache();
               break;
               
+            case TESTING_MSG_BLOCK_RS:
+              while (!stopRequested.get()) {
+                Threads.sleep(1000);
+                LOG.info("Regionserver blocked by " +
+                  HMsg.Type.TESTING_MSG_BLOCK_RS + "; " + stopRequested.get());
+              }
+              break;
+
             default:
               throw new AssertionError(
                   "Impossible state during msg processing.  Instruction: "
@@ -1461,7 +1469,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       }
     }
   }
-  
+
   void openRegion(final HRegionInfo regionInfo) {
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
@@ -2383,7 +2391,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
    */
   public static Thread startRegionServer(final HRegionServer hrs) {
     return startRegionServer(hrs,
-      "regionserver" + hrs.server.getListenerAddress());
+      "regionserver" + hrs.getServerInfo().getServerAddress().getPort());
   }
 
   /**
@@ -2409,6 +2417,24 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     System.err.println("Usage: java org.apache.hbase.HRegionServer start|stop");
     System.exit(0);
+  }
+
+  /**
+   * Utility for constructing an instance of the passed HRegionServer class.
+   * @param regionServerClass
+   * @param conf2
+   * @return HRegionServer instance.
+   */
+  public static HRegionServer constructRegionServer(Class<? extends HRegionServer> regionServerClass,
+      final Configuration conf2)  {
+    try {
+      Constructor<? extends HRegionServer> c =
+        regionServerClass.getConstructor(HBaseConfiguration.class);
+      return c.newInstance(conf2);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed construction of " +
+        "Master: " + regionServerClass.toString(), e);
+    }
   }
 
   /**
@@ -2438,9 +2464,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
             if (runtime != null) {
               LOG.info("vmInputArguments=" + runtime.getInputArguments());
             }
-            Constructor<? extends HRegionServer> c =
-              regionServerClass.getConstructor(Configuration.class);
-            startRegionServer(c.newInstance(conf));
+            HRegionServer hrs = constructRegionServer(regionServerClass, conf);
+            startRegionServer(hrs);
           }
         } catch (Throwable t) {
           LOG.error( "Can not start region server because "+

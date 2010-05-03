@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -125,6 +125,13 @@ public class HMsg implements Writable {
      * rather than send them individually in MSG_REPORT_OPEN messages.
      */
     MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS,
+
+    /**
+     * When RegionServer receives this message, it goes into a sleep that only
+     * an exit will cure.  This message is sent by unit tests simulating
+     * pathological states.
+     */
+    TESTING_MSG_BLOCK_RS,
   }
 
   private Type type = null;

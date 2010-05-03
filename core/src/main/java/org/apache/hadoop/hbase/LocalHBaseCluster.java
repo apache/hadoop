@@ -82,10 +82,15 @@ public class LocalHBaseCluster implements HConstants {
    * @param noRegionServers Count of regionservers to start.
    * @throws IOException
    */
-  public LocalHBaseCluster(final Configuration conf,
-    final int noRegionServers)
+  public LocalHBaseCluster(final Configuration conf, final int noRegionServers)
   throws IOException {
-    this(conf, noRegionServers, HMaster.class);
+    this(conf, noRegionServers, HMaster.class, getRegionServerImplementation(conf));
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Class<? extends HRegionServer> getRegionServerImplementation(final Configuration conf) {
+    return (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
+       HRegionServer.class);
   }
 
   /**
@@ -98,7 +103,8 @@ public class LocalHBaseCluster implements HConstants {
    */
   @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final Configuration conf,
-    final int noRegionServers, final Class masterClass)
+    final int noRegionServers, final Class<? extends HMaster> masterClass,
+    final Class<? extends HRegionServer> regionServerClass)
   throws IOException {
     this.conf = conf;
     // Create the master
@@ -111,7 +117,7 @@ public class LocalHBaseCluster implements HConstants {
       new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
     this.regionServerClass =
       (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
-       HRegionServer.class);
+       regionServerClass);
     for (int i = 0; i < noRegionServers; i++) {
       addRegionServer(i);
     }
