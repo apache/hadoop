@@ -113,7 +113,7 @@ public class MiniHBaseCluster implements HConstants {
    * Subclass so can get at protected methods (none at moment).
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
-    public MiniHBaseClusterRegionServer(HBaseConfiguration conf)
+    public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException {
       super(conf);
     }
