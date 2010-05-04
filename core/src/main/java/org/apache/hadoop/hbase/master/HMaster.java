@@ -445,15 +445,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             break;
           }
         }
-        if (this.regionManager.getRootRegionLocation() != null) {
-          switch(this.regionServerOperationQueue.process()) {
-          case FAILED:
+        boolean doDelayQueue = this.regionManager.getRootRegionLocation() != null;
+        switch (this.regionServerOperationQueue.process(doDelayQueue)) {
+        case FAILED:
+          break FINISHED;
+        case REQUEUED_BUT_PROBLEM:
+          if (!checkFileSystem())
             break FINISHED;
-          case REQUEUED_BUT_PROBLEM:
-            if (!checkFileSystem()) break FINISHED;
-          default: // PROCESSED, NOOP, REQUEUED:
-            break;
-          }
+        default: // PROCESSED, NOOP, REQUEUED:
+          break;
         }
       }
     } catch (Throwable t) {

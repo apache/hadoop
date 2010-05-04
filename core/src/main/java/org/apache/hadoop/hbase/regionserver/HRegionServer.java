@@ -2429,7 +2429,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       final Configuration conf2)  {
     try {
       Constructor<? extends HRegionServer> c =
-        regionServerClass.getConstructor(HBaseConfiguration.class);
+        regionServerClass.getConstructor(Configuration.class);
       return c.newInstance(conf2);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " +

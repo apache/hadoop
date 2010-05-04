@@ -109,11 +109,16 @@ public class RegionServerOperationQueue {
 
   /**
    * Try to get an operation off of the queue and process it.
+   * @param skipDelayedToDos If true, do not do delayed todos first but instead
+   * move straight to the current todos list.  This is set when we want to be
+   * sure that recently queued events are processed first such as the onlining
+   * of root region (Root region needs to be online before we can do meta
+   * onlining; meta onlining needs to be done before we can do... and so on). 
    * @return {@link ProcessingResultCode#PROCESSED},
    * {@link ProcessingResultCode#REQUEUED},
    * {@link ProcessingResultCode#REQUEUED_BUT_PROBLEM}
    */ 
-  public synchronized ProcessingResultCode process() {
+  public synchronized ProcessingResultCode process(final boolean skipDelayedToDos) {
     RegionServerOperation op = delayedToDoQueue.poll();
     // if there aren't any todo items in the queue, sleep for a bit.
     if (op == null) {
