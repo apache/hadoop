@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     HADOOP-6730. Bug in FileContext#copy and provide base class for FileContext 
     tests. (Ravi Phulari via jghoman)
 
+    HADOOP-6669. Respect compression configuration when creating DefaultCodec
+    instances. (Koji Noguchi via cdouglas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

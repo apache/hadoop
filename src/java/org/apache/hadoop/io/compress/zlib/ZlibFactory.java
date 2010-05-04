@@ -86,7 +86,8 @@ public class ZlibFactory {
    */
   public static Compressor getZlibCompressor(Configuration conf) {
     return (isNativeZlibLoaded(conf)) ? 
-      new ZlibCompressor() : new BuiltInZlibDeflater(); 
+      new ZlibCompressor(conf) :
+      new BuiltInZlibDeflater(ZlibFactory.getCompressionLevel(conf).compressionLevel());
   }
 
   /**
