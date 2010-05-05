@@ -122,8 +122,8 @@ public class RegionServerOperationQueue {
     // it first.
     if (rootRegionLocation != null) {
       op = delayedToDoQueue.poll();
-    } else {
-    // if there aren't any todo items in the queue, sleep for a bit.
+    }
+    if (op == null) {
       try {
         op = toDoQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
