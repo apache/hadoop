@@ -445,14 +445,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             break;
           }
         }
-        boolean doDelayQueue = this.regionManager.getRootRegionLocation() != null;
-        switch (this.regionServerOperationQueue.process(doDelayQueue)) {
+        final HServerAddress root = this.regionManager.getRootRegionLocation();
+        switch (this.regionServerOperationQueue.process(root)) {
         case FAILED:
+            // If FAILED op processing, bad. Exit.
           break FINISHED;
         case REQUEUED_BUT_PROBLEM:
           if (!checkFileSystem())
+              // If bad filesystem, exit.
             break FINISHED;
-        default: // PROCESSED, NOOP, REQUEUED:
+          default:
+            // Continue run loop if conditions are PROCESSED, NOOP, REQUEUED
           break;
         }
       }

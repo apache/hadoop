@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.ipc.RemoteException;
@@ -109,19 +110,20 @@ public class RegionServerOperationQueue {
 
   /**
    * Try to get an operation off of the queue and process it.
-   * @param skipDelayedToDos If true, do not do delayed todos first but instead
-   * move straight to the current todos list.  This is set when we want to be
-   * sure that recently queued events are processed first such as the onlining
-   * of root region (Root region needs to be online before we can do meta
-   * onlining; meta onlining needs to be done before we can do... and so on). 
+   * @param rootRegionLocation Location of the root region.
    * @return {@link ProcessingResultCode#PROCESSED},
    * {@link ProcessingResultCode#REQUEUED},
    * {@link ProcessingResultCode#REQUEUED_BUT_PROBLEM}
    */ 
-  public synchronized ProcessingResultCode process(final boolean skipDelayedToDos) {
-    RegionServerOperation op = delayedToDoQueue.poll();
+  public synchronized ProcessingResultCode process(final HServerAddress rootRegionLocation) {
+    RegionServerOperation op = null;
+    // Only process the delayed queue if root region is online.  If offline,
+    // the operation to put it online is probably in the toDoQueue.  Process
+    // it first.
+    if (rootRegionLocation != null) {
+      op = delayedToDoQueue.poll();
+    } else {
     // if there aren't any todo items in the queue, sleep for a bit.
-    if (op == null) {
       try {
         op = toDoQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
