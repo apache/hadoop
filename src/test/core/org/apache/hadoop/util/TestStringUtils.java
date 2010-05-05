@@ -78,6 +78,21 @@ public class TestStringUtils extends TestCase {
     assertEquals(ESCAPED_STR_WITH_BOTH2, splits[0]);    
   }
   
+  public void testSimpleSplit() throws Exception {
+    final String[] TO_TEST = {
+        "a/b/c",
+        "a/b/c////",
+        "///a/b/c",
+        "",
+        "/",
+        "////"};
+    for (String testSubject : TO_TEST) {
+      assertArrayEquals("Testing '" + testSubject + "'",
+        testSubject.split("/"),
+        StringUtils.split(testSubject, '/'));
+    }
+  }
+
   public void testUnescapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.unEscapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.unEscapeString(EMPTY_STR));
@@ -187,5 +202,33 @@ public class TestStringUtils extends TestCase {
     assertEquals("Xx", StringUtils.camelize("xX"));
     assertEquals("Yy", StringUtils.camelize("yY"));
     assertEquals("Zz", StringUtils.camelize("zZ"));
+  }
+
+  // Benchmark for StringUtils split
+  public static void main(String []args) {
+    final String TO_SPLIT = "foo,bar,baz,blah,blah";
+    for (boolean useOurs : new boolean[] { false, true }) {
+      for (int outer=0; outer < 10; outer++) {
+        long st = System.nanoTime();
+        int components = 0;
+        for (int inner=0; inner < 1000000; inner++) {
+          String[] res;
+          if (useOurs) {
+            res = StringUtils.split(TO_SPLIT, ',');
+          } else {
+            res = TO_SPLIT.split(",");
+          }
+           // be sure to use res, otherwise might be optimized out
+          components += res.length;
+        }
+        long et = System.nanoTime();
+        if (outer > 3) {
+          System.out.println(
+            (useOurs ? "StringUtils impl" : "Java impl") +
+            " #" + outer + ":" +
+            (et - st)/1000000 + "ms");
+        }
+      }
+    }
   }
 }

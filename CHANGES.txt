@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  IMPROVEMENTS
+
+    HADOOP-6623. Add StringUtils.split for non-escaped single-character
+    separator. (Todd Lipcon via tomwhite)
+
   BUG FIXES
 
     HADOOP-6730. Bug in FileContext#copy and provide base class for FileContext 

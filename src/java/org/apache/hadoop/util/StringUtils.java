@@ -383,6 +383,35 @@ public class StringUtils {
     }
     return strList.toArray(new String[strList.size()]);
   }
+
+  /**
+   * Split a string using the given separator, with no escaping performed.
+   * @param str a string to be split. Note that this may not be null.
+   * @param separator a separator char
+   * @return an array of strings
+   */
+  public static String[] split(
+      String str, char separator) {
+    // String.split returns a single empty result for splitting the empty
+    // string.
+    if ("".equals(str)) {
+      return new String[]{""};
+    }
+    ArrayList<String> strList = new ArrayList<String>();
+    int startIndex = 0;
+    int nextIndex = 0;
+    while ((nextIndex = str.indexOf((int)separator, startIndex)) != -1) {
+      strList.add(str.substring(startIndex, nextIndex));
+      startIndex = nextIndex + 1;
+    }
+    strList.add(str.substring(startIndex));
+    // remove trailing empty split(s)
+    int last = strList.size(); // last split
+    while (--last>=0 && "".equals(strList.get(last))) {
+      strList.remove(last);
+    }
+    return strList.toArray(new String[strList.size()]);
+  }
   
   /**
    * Finds the first occurrence of the separator character ignoring the escaped
