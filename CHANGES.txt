@@ -1517,6 +1517,10 @@ Release 0.21.0 - Unreleased
     HADOOP-6727. Remove UnresolvedLinkException from public FileContext APIs.
     (Eli Collins via tomwhite)
 
+    HADOOP-6631. Fix FileUtil.fullyDelete() to continue deleting other files 
+    despite failure at any level. (Contributed by Ravi Gummadi and 
+    Vinod Kumar Vavilapalli)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
