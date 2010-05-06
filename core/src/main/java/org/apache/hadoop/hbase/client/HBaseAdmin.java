@@ -44,6 +44,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -162,14 +163,87 @@ public class HBaseAdmin {
    */
   public void createTable(HTableDescriptor desc)
   throws IOException {
+    createTable(desc, null);
+  }
+
+  /**
+   * Creates a new table with the specified number of regions.  The start key
+   * specified will become the end key of the first region of the table, and
+   * the end key specified will become the start key of the last region of the
+   * table (the first region has a null start key and the last region has a
+   * null end key).
+   *
+   * BigInteger math will be used to divide the key range specified into
+   * enough segments to make the required number of total regions.
+   *
+   * Synchronous operation.
+   *
+   * @param desc table descriptor for table
+   * @param startKey beginning of key range
+   * @param endKey end of key range
+   * @param numRegions the total number of regions to create
+   *
+   * @throws IllegalArgumentException if the table name is reserved
+   * @throws MasterNotRunningException if master is not running
+   * @throws TableExistsException if table already exists (If concurrent
+   * threads, the table may have been created between test-for-existence
+   * and attempt-at-creation).
+   * @throws IOException
+   */
+  public void createTable(HTableDescriptor desc, byte [] startKey,
+      byte [] endKey, int numRegions)
+  throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
-    createTableAsync(desc);
+    if(numRegions < 3) {
+      throw new IllegalArgumentException("Must create at least three regions");
+    } else if(Bytes.compareTo(startKey, endKey) >= 0) {
+      throw new IllegalArgumentException("Start key must be smaller than end key");
+    }
+    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    if(splitKeys == null || splitKeys.length != numRegions - 1) {
+      throw new IllegalArgumentException("Unable to split key range into enough regions");
+    }
+    createTable(desc, splitKeys);
+  }
+
+  /**
+   * Creates a new table with an initial set of empty regions defined by the
+   * specified split keys.  The total number of regions created will be the
+   * number of split keys plus one (the first region has a null start key and
+   * the last region has a null end key).
+   * Synchronous operation.
+   *
+   * @param desc table descriptor for table
+   * @param splitKeys array of split keys for the initial regions of the table
+   *
+   * @throws IllegalArgumentException if the table name is reserved
+   * @throws MasterNotRunningException if master is not running
+   * @throws TableExistsException if table already exists (If concurrent
+   * threads, the table may have been created between test-for-existence
+   * and attempt-at-creation).
+   * @throws IOException
+   */
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+  throws IOException {
+    HTableDescriptor.isLegalTableName(desc.getName());
+    if(splitKeys != null && splitKeys.length > 1) {
+      Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
+      // Verify there are no duplicate split keys
+      byte [] lastKey = null;
+      for(byte [] splitKey : splitKeys) {
+        if(lastKey != null && Bytes.equals(splitKey, lastKey)) {
+          throw new IllegalArgumentException("All split keys must be unique, found duplicate");
+        }
+        lastKey = splitKey;
+      }
+    }
+    createTableAsync(desc, splitKeys);
     for (int tries = 0; tries < numRetries; tries++) {
       try {
         // Wait for new table to come on-line
         connection.locateRegion(desc.getName(), HConstants.EMPTY_START_ROW);
         break;
-        
+
       } catch (RegionException e) {
         if (tries == numRetries - 1) {
           // Ran out of tries
@@ -183,28 +257,28 @@ public class HBaseAdmin {
       }
     }
   }
-  
+
   /**
    * Creates a new table but does not block and wait for it to come online.
    * Asynchronous operation.
-   * 
+   *
    * @param desc table descriptor for table
-   * 
+   *
    * @throws IllegalArgumentException Bad table name.
    * @throws MasterNotRunningException if master is not running
    * @throws TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
-   * @throws IOException if a remote or network exception occurs
+   * @throws IOException
    */
-  public void createTableAsync(HTableDescriptor desc)
+  public void createTableAsync(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
     HTableDescriptor.isLegalTableName(desc.getName());
     try {
-      this.master.createTable(desc);
+      this.master.createTable(desc, splitKeys);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }

@@ -70,6 +70,31 @@ public class TestBytes extends TestCase {
     assertTrue(Bytes.equals(parts[1], middle));
   }
 
+  public void testSplit3() throws Exception {
+    // Test invalid split cases
+    byte [] low = { 1, 1, 1 };
+    byte [] high = { 1, 1, 3 };
+
+    // If swapped, should throw IAE
+    try {
+      Bytes.split(high, low, 1);
+      assertTrue("Should not be able to split if low > high", false);
+    } catch(IllegalArgumentException iae) {
+      // Correct
+    }
+
+    // Single split should work
+    byte [][] parts = Bytes.split(low, high, 1);
+    for (int i = 0; i < parts.length; i++) {
+      System.out.println("" + i + " -> " + Bytes.toStringBinary(parts[i]));
+    }
+    assertTrue("Returned split should have 3 parts but has " + parts.length, parts.length == 3);
+
+    // If split more than once, this should fail
+    parts = Bytes.split(low, high, 2);
+    assertTrue("Returned split but should have failed", parts == null);
+  }
+
   public void testToLong() throws Exception {
     long [] longs = {-1l, 123l, 122232323232l};
     for (int i = 0; i < longs.length; i++) {

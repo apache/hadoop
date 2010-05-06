@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -82,6 +83,166 @@ public class TestAdmin {
       HConstants.CATALOG_FAMILY);
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
+  }
+
+  @Test
+  public void testCreateTableWithRegions() throws IOException {
+
+    byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");
+
+    byte [][] splitKeys = {
+        new byte [] { 1, 1, 1 },
+        new byte [] { 2, 2, 2 },
+        new byte [] { 3, 3, 3 },
+        new byte [] { 4, 4, 4 },
+        new byte [] { 5, 5, 5 },
+        new byte [] { 6, 6, 6 },
+        new byte [] { 7, 7, 7 },
+        new byte [] { 8, 8, 8 },
+        new byte [] { 9, 9, 9 },
+    };
+    int expectedRegions = splitKeys.length + 1;
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(desc, splitKeys);
+
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Map<HRegionInfo,HServerAddress> regions = ht.getRegionsInfo();
+    assertEquals("Tried to create " + expectedRegions + " regions " +
+        "but only found " + regions.size(),
+        expectedRegions, regions.size());
+    System.err.println("Found " + regions.size() + " regions");
+
+    Iterator<HRegionInfo> hris = regions.keySet().iterator();
+    HRegionInfo hri = hris.next();
+    assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[0]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[0]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[1]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[1]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[2]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[2]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[3]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[3]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[4]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[4]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[5]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[5]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[6]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[6]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[7]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[7]));
+    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[8]));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
+    assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+
+    // Now test using start/end with a number of regions
+
+    // Use 80 bit numbers to make sure we aren't limited
+    byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+
+    // Splitting into 10 regions, we expect (null,1) ... (9, null)
+    // with (1,2) (2,3) (3,4) (4,5) (5,6) (6,7) (7,8) (8,9) in the middle
+
+    expectedRegions = 10;
+
+    byte [] TABLE_2 = Bytes.add(tableName, Bytes.toBytes("_2"));
+
+    desc = new HTableDescriptor(TABLE_2);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin.createTable(desc, startKey, endKey, expectedRegions);
+
+    ht = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
+    regions = ht.getRegionsInfo();
+    assertEquals("Tried to create " + expectedRegions + " regions " +
+        "but only found " + regions.size(),
+        expectedRegions, regions.size());
+    System.err.println("Found " + regions.size() + " regions");
+
+    hris = regions.keySet().iterator();
+    hri = hris.next();
+    assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {1,1,1,1,1,1,1,1,1,1}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {1,1,1,1,1,1,1,1,1,1}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {2,2,2,2,2,2,2,2,2,2}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {2,2,2,2,2,2,2,2,2,2}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {3,3,3,3,3,3,3,3,3,3}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {3,3,3,3,3,3,3,3,3,3}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {4,4,4,4,4,4,4,4,4,4}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {4,4,4,4,4,4,4,4,4,4}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {5,5,5,5,5,5,5,5,5,5}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {5,5,5,5,5,5,5,5,5,5}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {6,6,6,6,6,6,6,6,6,6}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {6,6,6,6,6,6,6,6,6,6}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {7,7,7,7,7,7,7,7,7,7}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {7,7,7,7,7,7,7,7,7,7}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {8,8,8,8,8,8,8,8,8,8}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {8,8,8,8,8,8,8,8,8,8}));
+    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {9,9,9,9,9,9,9,9,9,9}));
+    hri = hris.next();
+    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {9,9,9,9,9,9,9,9,9,9}));
+    assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+
+    // Try once more with something that divides into something infinite
+
+    startKey = new byte [] { 0, 0, 0, 0, 0, 0 };
+    endKey = new byte [] { 1, 0, 0, 0, 0, 0 };
+
+    expectedRegions = 5;
+
+    byte [] TABLE_3 = Bytes.add(tableName, Bytes.toBytes("_3"));
+
+    desc = new HTableDescriptor(TABLE_3);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin.createTable(desc, startKey, endKey, expectedRegions);
+
+    ht = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
+    regions = ht.getRegionsInfo();
+    assertEquals("Tried to create " + expectedRegions + " regions " +
+        "but only found " + regions.size(),
+        expectedRegions, regions.size());
+    System.err.println("Found " + regions.size() + " regions");
+
+    // Try an invalid case where there are duplicate split keys
+    splitKeys = new byte [][] {
+        new byte [] { 1, 1, 1 },
+        new byte [] { 2, 2, 2 },
+        new byte [] { 3, 3, 3 },
+        new byte [] { 2, 2, 2 }
+    };
+
+    byte [] TABLE_4 = Bytes.add(tableName, Bytes.toBytes("_4"));
+    desc = new HTableDescriptor(TABLE_4);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    try {
+      admin.createTable(desc, splitKeys);
+      assertTrue("Should not be able to create this table because of " +
+          "duplicate split keys", false);
+    } catch(IllegalArgumentException iae) {
+      // Expected
+    }
   }
 
   @Test

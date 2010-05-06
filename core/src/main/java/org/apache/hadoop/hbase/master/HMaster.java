@@ -694,12 +694,25 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.zooKeeperWrapper.setClusterState(false);
   }
 
-  public void createTable(HTableDescriptor desc)
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {    
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    HRegionInfo newRegion = new HRegionInfo(desc, null, null);
+    HRegionInfo [] newRegions = null;
+    if(splitKeys == null || splitKeys.length == 0) {
+      newRegions = new HRegionInfo [] { new HRegionInfo(desc, null, null) };
+    } else {
+      int numRegions = splitKeys.length + 1;
+      newRegions = new HRegionInfo[numRegions];
+      byte [] startKey = null;
+      byte [] endKey = null;
+      for(int i=0;i<numRegions;i++) {
+        endKey = (i == splitKeys.length) ? null : splitKeys[i];
+        newRegions[i] = new HRegionInfo(desc, startKey, endKey);
+        startKey = endKey;
+      }
+    }
     for (int tries = 0; tries < this.numRetries; tries++) {
       try {
         // We can not create a table unless meta regions have already been
@@ -710,7 +723,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         if (!this.serverManager.canAssignUserRegions()) {
           throw new IOException("not enough servers to create table yet");
         }
-        createTable(newRegion);
+        createTable(newRegions);
         LOG.info("created table " + desc.getNameAsString());
         break;
       } catch (TableExistsException e) {
@@ -724,14 +737,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  private synchronized void createTable(final HRegionInfo newRegion) 
+  private synchronized void createTable(final HRegionInfo [] newRegions) 
   throws IOException {
-    String tableName = newRegion.getTableDesc().getNameAsString();
+    String tableName = newRegions[0].getTableDesc().getNameAsString();
     // 1. Check to see if table already exists. Get meta region where
     // table would sit should it exist. Open scanner on it. If a region
     // for the table we want to create already exists, then table already
     // created. Throw already-exists exception.
-    MetaRegion m = this.regionManager.getFirstMetaRegionForRegion(newRegion);
+    MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);    
     byte [] metaRegionName = m.getRegionName();
     HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
     byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
@@ -751,7 +764,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     } finally {
       srvr.close(scannerid);
     }
-    this.regionManager.createRegion(newRegion, srvr, metaRegionName);
+    for(HRegionInfo newRegion : newRegions) {
+      regionManager.createRegion(newRegion, srvr, metaRegionName);
+    }
   }
 
   public void deleteTable(final byte [] tableName) throws IOException {

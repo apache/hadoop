@@ -44,11 +44,15 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
   // Admin tools would use these cmds
 
   /**
-   * Creates a new table
+   * Creates a new table.  If splitKeys are specified, then the table will be
+   * created with an initial set of multiple regions.  If splitKeys is null,
+   * the table will be created with a single region.
    * @param desc table descriptor
-   * @throws IOException e
+   * @param splitKeys
+   * @throws IOException
    */
-  public void createTable(HTableDescriptor desc) throws IOException;
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+  throws IOException;
 
   /**
    * Deletes a table

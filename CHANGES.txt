@@ -579,6 +579,8 @@ Release 0.21.0 - Unreleased
    HBASE-2319  [stargate] multiuser mode: request shaping
    HBASE-2403  [stargate] client HTable interface to REST connector
    HBASE-2438  Addition of a Column Pagination Filter (Paul Kist via Stack)
+   HBASE-2473  Add to admin create table start and end key params and
+               desired number of regions
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

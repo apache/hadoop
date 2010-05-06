@@ -1028,8 +1028,8 @@ public class Bytes {
       aPadded = a;
       bPadded = b;
     }
-    if (compareTo(aPadded, bPadded) > 1) {
-      throw new IllegalArgumentException("b > a");
+    if (compareTo(aPadded,bPadded) >= 0) {
+      throw new IllegalArgumentException("b <= a");
     }
     if (num <= 0) {
       throw new IllegalArgumentException("num cannot be < 0");
@@ -1039,7 +1039,7 @@ public class Bytes {
     BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
     BigInteger diffBI = stopBI.subtract(startBI);
     BigInteger splitsBI = BigInteger.valueOf(num + 1);
-    if(diffBI.compareTo(splitsBI) <= 0) {
+    if(diffBI.compareTo(splitsBI) < 0) {
       return null;
     }
     BigInteger intervalBI;
