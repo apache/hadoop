@@ -19,12 +19,19 @@ package org.apache.hadoop.fs;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class TestFileUtil {
+  private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
+
   final static private File TEST_DIR = new File(System.getProperty(
       "test.build.data", "/tmp"), "fu");
   private static String FILE = "x";
@@ -103,52 +110,143 @@ public class TestFileUtil {
     Assert.assertEquals(1, tmp.listFiles().length);
     Assert.assertTrue(new File(tmp, FILE).exists());
   }
+
+  private File xSubDir = new File(del, "xsubdir");
+  private File ySubDir = new File(del, "ysubdir");
+  static String file1Name = "file1";
+  private File file2 = new File(xSubDir, "file2");
+  private File file3 = new File(ySubDir, "file3");
+  private File zlink = new File(del, "zlink");
   
   /**
-   * Creates a directory which can not be deleted.
+   * Creates a directory which can not be deleted completely.
    * 
-   * Contents of the directory are :
-   * dir : del
-   *   dir : dir1 : x. this directory is not writable
+   * Directory structure. The naming is important in that {@link MyFile}
+   * is used to return them in alphabetical order when listed.
+   * 
+   *                     del(+w)
+   *                       |
+   *    .---------------------------------------,
+   *    |            |              |           |
+   *  file1(!w)   xsubdir(-w)   ysubdir(+w)   zlink
+   *                 |              |
+   *               file2          file3
+   *
    * @throws IOException
    */
   private void setupDirsAndNonWritablePermissions() throws IOException {
-    Assert.assertFalse(del.exists());
+    Assert.assertFalse("The directory del should not have existed!",
+        del.exists());
     del.mkdirs();
-    new File(del, FILE).createNewFile();
+    new MyFile(del, file1Name).createNewFile();
 
-    // create directory 
-    dir1.mkdirs();
-    new File(dir1, FILE).createNewFile();
-    changePermissions(false);
+    // "file1" is non-deletable by default, see MyFile.delete().
+
+    xSubDir.mkdirs();
+    file2.createNewFile();
+    xSubDir.setWritable(false);
+    ySubDir.mkdirs();
+    file3.createNewFile();
+
+    Assert.assertFalse("The directory tmp should not have existed!",
+        tmp.exists());
+    tmp.mkdirs();
+    File tmpFile = new File(tmp, FILE);
+    tmpFile.createNewFile();
+    FileUtil.symLink(tmpFile.toString(), zlink.toString());
   }
   
-  // sets writable permissions for dir1
-  private void changePermissions(boolean perm) {
-    dir1.setWritable(perm);
-  }
-
-  // validates the return value
-  // validates the directory:dir1 exists
-  // sets writable permissions for the directory so that it can be deleted in 
-  // tearDown() 
+  // Validates the return value.
+  // Validates the existence of directory "xsubdir" and the file "file1"
+  // Sets writable permissions for the non-deleted dir "xsubdir" so that it can
+  // be deleted in tearDown().
   private void validateAndSetWritablePermissions(boolean ret) {
-    Assert.assertFalse(ret);
-    Assert.assertTrue(dir1.exists());
-    changePermissions(true);
+    xSubDir.setWritable(true);
+    Assert.assertFalse("The return value should have been false!", ret);
+    Assert.assertTrue("The file file1 should not have been deleted!",
+        new File(del, file1Name).exists());
+    Assert.assertTrue(
+        "The directory xsubdir should not have been deleted!",
+        xSubDir.exists());
+    Assert.assertTrue("The file file2 should not have been deleted!",
+        file2.exists());
+    Assert.assertFalse("The directory ysubdir should have been deleted!",
+        ySubDir.exists());
+    Assert.assertFalse("The link zlink should have been deleted!",
+        zlink.exists());
   }
-  
+
   @Test
   public void testFailFullyDelete() throws IOException {
+    LOG.info("Running test to verify failure of fullyDelete()");
     setupDirsAndNonWritablePermissions();
-    boolean ret = FileUtil.fullyDelete(del);
+    boolean ret = FileUtil.fullyDelete(new MyFile(del));
     validateAndSetWritablePermissions(ret);
+  }
+
+  /**
+   * Extend {@link File}. Same as {@link File} except for two things: (1) This
+   * treats file1Name as a very special file which is not delete-able
+   * irrespective of it's parent-dir's permissions, a peculiar file instance for
+   * testing. (2) It returns the files in alphabetically sorted order when
+   * listed.
+   * 
+   */
+  public static class MyFile extends File {
+
+    private static final long serialVersionUID = 1L;
+
+    public MyFile(File f) {
+      super(f.getAbsolutePath());
+    }
+
+    public MyFile(File parent, String child) {
+      super(parent, child);
+    }
+
+    /**
+     * Same as {@link File#delete()} except for file1Name which will never be
+     * deleted (hard-coded)
+     */
+    @Override
+    public boolean delete() {
+      LOG.info("Trying to delete myFile " + getAbsolutePath());
+      boolean bool = false;
+      if (getName().equals(file1Name)) {
+        bool = false;
+      } else {
+        bool = super.delete();
+      }
+      if (bool) {
+        LOG.info("Deleted " + getAbsolutePath() + " successfully");
+      } else {
+        LOG.info("Cannot delete " + getAbsolutePath());
+      }
+      return bool;
+    }
+
+    /**
+     * Return the list of files in an alphabetically sorted order
+     */
+    @Override
+    public File[] listFiles() {
+      File[] files = super.listFiles();
+      List<File> filesList = Arrays.asList(files);
+      Collections.sort(filesList);
+      File[] myFiles = new MyFile[files.length];
+      int i=0;
+      for(File f : filesList) {
+        myFiles[i++] = new MyFile(f);
+      }
+      return myFiles;
+    }
   }
 
   @Test
   public void testFailFullyDeleteContents() throws IOException {
+    LOG.info("Running test to verify failure of fullyDeleteContents()");
     setupDirsAndNonWritablePermissions();
-    boolean ret = FileUtil.fullyDeleteContents(del);
+    boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
     validateAndSetWritablePermissions(ret);
   }
 }
