@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -357,7 +358,7 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
       throw new AssertionError("Absolute path required");
     }
-    return path.split(Path.SEPARATOR);
+    return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
   /**
