@@ -303,6 +303,7 @@ Release 0.21.0 - Unreleased
    HBASE-2482  regions in transition do not get reassigned by master when RS
                crashes (Todd Lipcon via Stack)
    HBASE-2513  hbase-2414 added bug where we'd tight-loop if no root available
+   HBASE-2503  PriorityQueue isn't thread safe, KeyValueHeap uses it that way
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
