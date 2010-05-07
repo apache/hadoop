@@ -45,7 +45,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
- * Test class fosr the Store 
+ * Test class fosr the Store
  */
 public class TestStore extends TestCase {
   Store store;
@@ -97,7 +97,7 @@ public class TestStore extends TestCase {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     HBaseConfiguration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
-    Path reconstructionLog = null; 
+    Path reconstructionLog = null;
     Progressable reporter = null;
 
     fs.delete(logdir, true);
@@ -107,12 +107,12 @@ public class TestStore extends TestCase {
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HLog hlog = new HLog(fs, logdir, oldLogDir, conf, null);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
-    
+
     store = new Store(basedir, region, hcd, fs, reconstructionLog, conf,
         reporter);
   }
 
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
@@ -154,7 +154,7 @@ public class TestStore extends TestCase {
    */
   public void testGet_FromMemStoreOnly() throws IOException {
     init(this.getName());
-    
+
     //Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, null));
     this.store.add(new KeyValue(row, family, qf2, null));

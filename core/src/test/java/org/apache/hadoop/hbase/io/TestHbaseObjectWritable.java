@@ -98,7 +98,7 @@ public class TestHbaseObjectWritable extends TestCase {
       PrefixFilter.class);
     assertTrue(obj instanceof PrefixFilter);
   }
-  
+
   private Object doType(final HBaseConfiguration conf, final Object value,
       final Class<?> clazz)
   throws IOException {
@@ -113,5 +113,5 @@ public class TestHbaseObjectWritable extends TestCase {
     dis.close();
     return product;
   }
- 
+
 }

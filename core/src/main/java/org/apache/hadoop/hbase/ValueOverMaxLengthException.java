@@ -23,7 +23,7 @@ package org.apache.hadoop.hbase;
  * Thrown when a value is longer than the specified LENGTH
  */
 public class ValueOverMaxLengthException extends DoNotRetryIOException {
-  
+
   private static final long serialVersionUID = -5525656352372008316L;
 
   /**

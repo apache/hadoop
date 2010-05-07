@@ -129,7 +129,7 @@ class GetClosestRowBeforeTracker {
     return isDeleted(kv, rowdeletes);
   }
 
-  /** 
+  /**
    * Check if the specified KeyValue buffer has been deleted by a previously
    * seen delete.
    * @param kv
@@ -237,4 +237,4 @@ class GetClosestRowBeforeTracker {
         this.tablenamePlusDelimiterLength,
       kv.getBuffer(), kv.getRowOffset(), this.tablenamePlusDelimiterLength) == 0;
   }
-} 
+}

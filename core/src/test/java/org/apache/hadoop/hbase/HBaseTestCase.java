@@ -72,11 +72,11 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   protected String START_KEY;
   protected static final int MAXVERSIONS = 3;
-  
+
   static {
     initialize();
   }
-  
+
   public volatile HBaseConfiguration conf;
 
   /** constructor */
@@ -84,7 +84,7 @@ public abstract class HBaseTestCase extends TestCase {
     super();
     init();
   }
-  
+
   /**
    * @param name
    */
@@ -92,7 +92,7 @@ public abstract class HBaseTestCase extends TestCase {
     super(name);
     init();
   }
-  
+
   private void init() {
     conf = new HBaseConfiguration();
     try {
@@ -102,7 +102,7 @@ public abstract class HBaseTestCase extends TestCase {
       fail();
     }
   }
-  
+
   /**
    * Note that this method must be called after the mini hdfs cluster has
    * started or we end up with a local file system.
@@ -131,7 +131,7 @@ public abstract class HBaseTestCase extends TestCase {
       throw e;
     }
   }
-  
+
   @Override
   protected void tearDown() throws Exception {
     try {
@@ -158,11 +158,11 @@ public abstract class HBaseTestCase extends TestCase {
     Path rootdir = filesystem.makeQualified(
         new Path(conf.get(HConstants.HBASE_DIR)));
     filesystem.mkdirs(rootdir);
-    
+
     return HRegion.createHRegion(new HRegionInfo(desc, startKey, endKey),
         rootdir, conf);
   }
-  
+
   protected HRegion openClosedRegion(final HRegion closedRegion)
   throws IOException {
     HRegion r = new HRegion(closedRegion.getBaseDir(), closedRegion.getLog(),
@@ -171,7 +171,7 @@ public abstract class HBaseTestCase extends TestCase {
     r.initialize(null, null);
     return r;
   }
-  
+
   /**
    * Create a table of name <code>name</code> with {@link COLUMNS} for
    * families.
@@ -181,7 +181,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected HTableDescriptor createTableDescriptor(final String name) {
     return createTableDescriptor(name, MAXVERSIONS);
   }
-  
+
   /**
    * Create a table of name <code>name</code> with {@link COLUMNS} for
    * families.
@@ -204,7 +204,7 @@ public abstract class HBaseTestCase extends TestCase {
         false, HConstants.REPLICATION_SCOPE_LOCAL));
     return htd;
   }
-  
+
   /**
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
@@ -261,13 +261,13 @@ public abstract class HBaseTestCase extends TestCase {
   throws IOException {
     return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
   }
-  
+
   protected static long addContent(final Incommon updater, final String family,
                                    final String column, final byte [] startKeyBytes,
                                    final byte [] endKey) throws IOException {
     return addContent(updater, family, column, startKeyBytes, endKey, -1);
   }
-  
+
   /**
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
@@ -337,7 +337,7 @@ public abstract class HBaseTestCase extends TestCase {
             } catch (IOException ex) {
               ex.printStackTrace();
               throw ex;
-            } 
+            }
           } catch (RuntimeException ex) {
             ex.printStackTrace();
             throw ex;
@@ -353,7 +353,7 @@ public abstract class HBaseTestCase extends TestCase {
     }
     return count;
   }
-  
+
   /**
    * Implementors can flushcache.
    */
@@ -363,16 +363,16 @@ public abstract class HBaseTestCase extends TestCase {
      */
     public void flushcache() throws IOException;
   }
-  
+
   /**
    * Interface used by tests so can do common operations against an HTable
    * or an HRegion.
-   * 
+   *
    * TOOD: Come up w/ a better name for this interface.
    */
   public static interface Incommon {
     /**
-     * 
+     *
      * @param delete
      * @param lockid
      * @param writeToWAL
@@ -388,7 +388,7 @@ public abstract class HBaseTestCase extends TestCase {
     public void put(Put put) throws IOException;
 
     public Result get(Get get) throws IOException;
-    
+
     /**
      * @param family
      * @param qualifiers
@@ -401,35 +401,35 @@ public abstract class HBaseTestCase extends TestCase {
         byte [] firstRow, long ts)
     throws IOException;
   }
-  
+
   /**
    * A class that makes a {@link Incommon} out of a {@link HRegion}
    */
   public static class HRegionIncommon implements Incommon, FlushCache {
     final HRegion region;
-    
+
     /**
      * @param HRegion
      */
     public HRegionIncommon(final HRegion HRegion) {
       this.region = HRegion;
     }
-    
+
     public void put(Put put) throws IOException {
       region.put(put);
     }
-    
+
     public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
     throws IOException {
       this.region.delete(delete, lockid, writeToWAL);
     }
-    
+
     public Result get(Get get) throws IOException {
       return region.get(get, null);
     }
-    
+
     public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
-        byte [] firstRow, long ts) 
+        byte [] firstRow, long ts)
       throws IOException {
         Scan scan = new Scan(firstRow);
         if(qualifiers == null || qualifiers.length == 0) {
@@ -440,14 +440,14 @@ public abstract class HBaseTestCase extends TestCase {
           }
         }
         scan.setTimeRange(0, ts);
-        return new 
+        return new
           InternalScannerIncommon(region.getScanner(scan));
       }
-    
+
     public Result get(Get get, Integer lockid) throws IOException{
       return this.region.get(get, lockid);
     }
-    
+
 
     public void flushcache() throws IOException {
       this.region.flushcache();
@@ -467,23 +467,23 @@ public abstract class HBaseTestCase extends TestCase {
       super();
       this.table = table;
     }
-    
+
     public void put(Put put) throws IOException {
       table.put(put);
     }
-    
-    
+
+
     public void delete(Delete delete,  Integer lockid, boolean writeToWAL)
     throws IOException {
       this.table.delete(delete);
     }
-    
+
     public Result get(Get get) throws IOException {
       return table.get(get);
     }
 
     public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
-        byte [] firstRow, long ts) 
+        byte [] firstRow, long ts)
       throws IOException {
       Scan scan = new Scan(firstRow);
       if(qualifiers == null || qualifiers.length == 0) {
@@ -494,25 +494,25 @@ public abstract class HBaseTestCase extends TestCase {
         }
       }
       scan.setTimeRange(0, ts);
-      return new 
+      return new
         ClientScannerIncommon(table.getScanner(scan));
     }
   }
-  
-  public interface ScannerIncommon 
+
+  public interface ScannerIncommon
   extends Iterable<Result> {
     public boolean next(List<KeyValue> values)
     throws IOException;
-    
+
     public void close() throws IOException;
   }
-  
+
   public static class ClientScannerIncommon implements ScannerIncommon {
     ResultScanner scanner;
     public ClientScannerIncommon(ResultScanner scanner) {
       this.scanner = scanner;
     }
-    
+
     public boolean next(List<KeyValue> values)
     throws IOException {
       Result results = scanner.next();
@@ -523,38 +523,38 @@ public abstract class HBaseTestCase extends TestCase {
       values.addAll(results.list());
       return true;
     }
-    
+
     public void close() throws IOException {
       scanner.close();
     }
-    
+
     @SuppressWarnings("unchecked")
     public Iterator iterator() {
       return scanner.iterator();
     }
   }
-  
+
   public static class InternalScannerIncommon implements ScannerIncommon {
     InternalScanner scanner;
-    
+
     public InternalScannerIncommon(InternalScanner scanner) {
       this.scanner = scanner;
     }
-    
+
     public boolean next(List<KeyValue> results)
     throws IOException {
       return scanner.next(results);
     }
-    
+
     public void close() throws IOException {
       scanner.close();
     }
-    
+
     public Iterator<Result> iterator() {
       throw new UnsupportedOperationException();
     }
   }
-  
+
 //  protected void assertCellEquals(final HRegion region, final byte [] row,
 //    final byte [] column, final long timestamp, final String value)
 //  throws IOException {
@@ -565,11 +565,11 @@ public abstract class HBaseTestCase extends TestCase {
 //        cell_value);
 //    } else {
 //      if (cell_value == null) {
-//        fail(Bytes.toString(column) + " at timestamp " + timestamp + 
+//        fail(Bytes.toString(column) + " at timestamp " + timestamp +
 //          "\" was expected to be \"" + value + " but was null");
 //      }
 //      if (cell_value != null) {
-//        assertEquals(Bytes.toString(column) + " at timestamp " 
+//        assertEquals(Bytes.toString(column) + " at timestamp "
 //            + timestamp, value, new String(cell_value.getValue()));
 //      }
 //    }
@@ -582,30 +582,30 @@ public abstract class HBaseTestCase extends TestCase {
       Get get = new Get(row);
       get.setTimeStamp(timestamp);
       Result res = region.get(get, null);
-      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = 
+      NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
         res.getMap();
       byte [] res_value = map.get(family).get(qualifier).get(timestamp);
-    
+
       if (value == null) {
         assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
             " at timestamp " + timestamp, null, res_value);
       } else {
         if (res_value == null) {
-          fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) + 
-              " at timestamp " + timestamp + "\" was expected to be \"" + 
+          fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
+              " at timestamp " + timestamp + "\" was expected to be \"" +
               Bytes.toStringBinary(value) + " but was null");
         }
         if (res_value != null) {
           assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-              " at timestamp " + 
+              " at timestamp " +
               timestamp, value, new String(res_value));
         }
       }
     }
-  
+
   /**
    * Initializes parameters used in the test environment:
-   * 
+   *
    * Sets the configuration parameter TEST_DIRECTORY_KEY if not already set.
    * Sets the boolean debugging if "DEBUGGING" is set in the environment.
    * If debugging is enabled, reconfigures logging so that the root log level is
@@ -620,7 +620,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * Common method to close down a MiniDFSCluster and the associated file system
-   * 
+   *
    * @param cluster
    */
   public static void shutdownDfs(MiniDFSCluster cluster) {
@@ -645,14 +645,14 @@ public abstract class HBaseTestCase extends TestCase {
       }
     }
   }
-  
+
   protected void createRootAndMetaRegions() throws IOException {
     root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir, conf);
-    meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir, 
+    meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
         conf);
     HRegion.addRegionToMETA(root, meta);
   }
-  
+
   protected void closeRootAndMeta() throws IOException {
     if (meta != null) {
       meta.close();

@@ -20,10 +20,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.IOException;
 import java.util.List;
 
-/** 
+/**
  * Exception thrown by HTable methods when an attempt to do something (like
- * commit changes) fails after a bunch of retries. 
- */ 
+ * commit changes) fails after a bunch of retries.
+ */
 public class RetriesExhaustedException extends IOException {
   private static final long serialVersionUID = 1876775844L;
 
@@ -31,14 +31,14 @@ public class RetriesExhaustedException extends IOException {
     super(msg);
   }
 
-  /** 
+  /**
    * Create a new RetriesExhaustedException from the list of prior failures.
    * @param serverName name of HRegionServer
    * @param regionName name of region
    * @param row The row we were pursuing when we ran out of retries
    * @param numTries The number of tries we made
    * @param exceptions List of exceptions that failed before giving up
-   */ 
+   */
   public RetriesExhaustedException(String serverName, final byte [] regionName,
       final byte []  row, int numTries, List<Throwable> exceptions) {
     super(getMessage(serverName, regionName, row, numTries, exceptions));

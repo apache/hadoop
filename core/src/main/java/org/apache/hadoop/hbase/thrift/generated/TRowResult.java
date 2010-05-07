@@ -107,11 +107,11 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
   // isset id assignments
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+    put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-        new MapMetaData(TType.MAP, 
-            new FieldValueMetaData(TType.STRING), 
+    put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+        new MapMetaData(TType.MAP,
+            new FieldValueMetaData(TType.STRING),
             new StructMetaData(TType.STRUCT, TCell.class))));
   }});
 
@@ -336,7 +336,7 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -347,7 +347,7 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
           case ROW:
             if (field.type == TType.STRING) {
               this.row = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -367,7 +367,7 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
                 }
                 iprot.readMapEnd();
               }
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

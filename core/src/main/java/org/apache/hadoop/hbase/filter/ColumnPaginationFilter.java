@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
- * This filter can be used for row-based indexing, where references to other tables are stored across many columns, 
+ * This filter can be used for row-based indexing, where references to other tables are stored across many columns,
  * in order to efficient lookups and paginated results for end users.
  */
 public class ColumnPaginationFilter implements Filter
@@ -57,11 +57,11 @@ public class ColumnPaginationFilter implements Filter
 
   public ReturnCode filterKeyValue(KeyValue v)
   {
-    if(count >= offset + limit) 
+    if(count >= offset + limit)
     {
       return ReturnCode.NEXT_ROW;
     }
-      
+
     ReturnCode code = count < offset ? ReturnCode.SKIP : ReturnCode.INCLUDE;
     count++;
     return code;

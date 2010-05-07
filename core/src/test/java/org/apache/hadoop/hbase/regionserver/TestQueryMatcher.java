@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestQueryMatcher extends HBaseTestCase
 implements HConstants {
   private static final boolean PRINT = false;
-  
+
   private byte [] row1;
   private byte [] row2;
   private byte [] fam1;
@@ -80,10 +80,10 @@ implements HConstants {
 
   }
 
-  public void testMatch_ExplicitColumns() 
+  public void testMatch_ExplicitColumns()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
-    //of just byte [] 
+    //of just byte []
 
     //Expected result
     List<MatchCode> expected = new ArrayList<MatchCode>();
@@ -116,17 +116,17 @@ implements HConstants {
     for(int i=0; i< expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));
       if(PRINT){
-        System.out.println("expected "+expected.get(i)+ 
+        System.out.println("expected "+expected.get(i)+
             ", actual " +actual.get(i));
       }
     }
   }
 
 
-  public void testMatch_Wildcard() 
+  public void testMatch_Wildcard()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
-    //of just byte [] 
+    //of just byte []
 
     //Expected result
     List<MatchCode> expected = new ArrayList<MatchCode>();
@@ -157,24 +157,24 @@ implements HConstants {
     for(int i=0; i< expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));
       if(PRINT){
-        System.out.println("expected "+expected.get(i)+ 
+        System.out.println("expected "+expected.get(i)+
             ", actual " +actual.get(i));
       }
     }
   }
 
-  
+
   /**
-   * Verify that {@link QueryMatcher} only skips expired KeyValue 
-   * instances and does not exit early from the row (skipping 
+   * Verify that {@link QueryMatcher} only skips expired KeyValue
+   * instances and does not exit early from the row (skipping
    * later non-expired KeyValues).  This version mimics a Get with
    * explicitly specified column qualifiers.
-   * 
+   *
    * @throws IOException
    */
   public void testMatch_ExpiredExplicit()
   throws IOException {
-    
+
     long testTTL = 1000;
     MatchCode [] expected = new MatchCode[] {
         MatchCode.SKIP,
@@ -184,10 +184,10 @@ implements HConstants {
         MatchCode.SKIP,
         MatchCode.NEXT
     };
-        
+
     QueryMatcher qm = new QueryMatcher(get, fam2,
         get.getFamilyMap().get(fam2), testTTL, rowComparator, 1);
-    
+
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
         new KeyValue(row1, fam2, col1, now-100, data),
@@ -195,36 +195,36 @@ implements HConstants {
         new KeyValue(row1, fam2, col3, now-5000, data),
         new KeyValue(row1, fam2, col4, now-500, data),
         new KeyValue(row1, fam2, col5, now-10000, data),
-        new KeyValue(row2, fam1, col1, now-10, data)        
+        new KeyValue(row2, fam1, col1, now-10, data)
     };
 
     List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
       actual.add( qm.match(kv) );
     }
-    
+
     assertEquals(expected.length, actual.size());
     for (int i=0; i<expected.length; i++) {
       if(PRINT){
-        System.out.println("expected "+expected[i]+ 
+        System.out.println("expected "+expected[i]+
             ", actual " +actual.get(i));
       }
       assertEquals(expected[i], actual.get(i));
     }
   }
-  
-  
+
+
   /**
-   * Verify that {@link QueryMatcher} only skips expired KeyValue 
-   * instances and does not exit early from the row (skipping 
+   * Verify that {@link QueryMatcher} only skips expired KeyValue
+   * instances and does not exit early from the row (skipping
    * later non-expired KeyValues).  This version mimics a Get with
    * wildcard-inferred column qualifiers.
-   * 
+   *
    * @throws IOException
-   */ 
+   */
   public void testMatch_ExpiredWildcard()
   throws IOException {
-    
+
     long testTTL = 1000;
     MatchCode [] expected = new MatchCode[] {
         MatchCode.INCLUDE,
@@ -234,10 +234,10 @@ implements HConstants {
         MatchCode.SKIP,
         MatchCode.NEXT
     };
-        
+
     QueryMatcher qm = new QueryMatcher(get, fam2,
         null, testTTL, rowComparator, 1);
-    
+
     long now = System.currentTimeMillis();
     KeyValue [] kvs = new KeyValue[] {
         new KeyValue(row1, fam2, col1, now-100, data),
@@ -245,18 +245,18 @@ implements HConstants {
         new KeyValue(row1, fam2, col3, now-5000, data),
         new KeyValue(row1, fam2, col4, now-500, data),
         new KeyValue(row1, fam2, col5, now-10000, data),
-        new KeyValue(row2, fam1, col1, now-10, data)        
+        new KeyValue(row2, fam1, col1, now-10, data)
     };
 
     List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
       actual.add( qm.match(kv) );
     }
-    
+
     assertEquals(expected.length, actual.size());
     for (int i=0; i<expected.length; i++) {
       if(PRINT){
-        System.out.println("expected "+expected[i]+ 
+        System.out.println("expected "+expected[i]+
             ", actual " +actual.get(i));
       }
       assertEquals(expected[i], actual.get(i));

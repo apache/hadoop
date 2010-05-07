@@ -29,10 +29,10 @@ import java.io.IOException;
  * A KeyValue scanner that iterates over a single HFile
  */
 class StoreFileScanner implements KeyValueScanner {
-  
+
   private HFileScanner hfs;
   private KeyValue cur = null;
-  
+
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
@@ -44,11 +44,11 @@ class StoreFileScanner implements KeyValueScanner {
   public String toString() {
     return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
   }
-  
+
   public KeyValue peek() {
     return cur;
   }
-  
+
   public KeyValue next() {
     KeyValue retKey = cur;
     cur = hfs.getKeyValue();
@@ -62,7 +62,7 @@ class StoreFileScanner implements KeyValueScanner {
     }
     return retKey;
   }
-  
+
   public boolean seek(KeyValue key) {
     try {
       if(!seekAtOrAfter(hfs, key)) {
@@ -77,14 +77,14 @@ class StoreFileScanner implements KeyValueScanner {
       return false;
     }
   }
-  
+
   public void close() {
     // Nothing to close on HFileScanner?
     cur = null;
   }
-  
+
   /**
-   * 
+   *
    * @param s
    * @param k
    * @return

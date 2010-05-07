@@ -100,7 +100,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * start of a cache flush and the completion point, appends are allowed but log
  * rolling is not. To prevent log rolling taking place during this period, a
  * separate reentrant lock is used.
- * 
+ *
  * <p>To read an HLog, call {@link #getReader(org.apache.hadoop.fs.FileSystem,
  * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
  *
@@ -141,7 +141,7 @@ public class HLog implements HConstants, Syncable {
     void close() throws IOException;
     void sync() throws IOException;
     void append(Entry entry) throws IOException;
-    long getLength() throws IOException; 
+    long getLength() throws IOException;
   }
 
   // used to indirectly tell syncFs to force the sync
@@ -153,7 +153,7 @@ public class HLog implements HConstants, Syncable {
   Writer writer;
 
   /*
-   * Map of all log files but the current one. 
+   * Map of all log files but the current one.
    */
   final SortedMap<Long, Path> outputfiles =
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
@@ -169,7 +169,7 @@ public class HLog implements HConstants, Syncable {
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
   private volatile long filenum = -1;
-  
+
   private final AtomicInteger numEntries = new AtomicInteger(0);
 
   // If > than this size, roll the log.
@@ -311,7 +311,7 @@ public class HLog implements HConstants, Syncable {
       LOG.debug("Change sequence number from " + logSeqNum + " to " + newvalue);
     }
   }
-  
+
   /**
    * @return log sequence number
    */
@@ -432,7 +432,7 @@ public class HLog implements HConstants, Syncable {
       throw ie;
     }
   }
-  
+
   /*
    * Clean up old commit logs.
    * @return If lots of logs, flush the returned region so next time through
@@ -541,7 +541,7 @@ public class HLog implements HConstants, Syncable {
         FailedLogCloseException flce =
           new FailedLogCloseException("#" + currentfilenum);
         flce.initCause(e);
-        throw e; 
+        throw e;
       }
       if (currentfilenum >= 0) {
         oldFile = computeFilename(currentfilenum);
@@ -616,7 +616,7 @@ public class HLog implements HConstants, Syncable {
   }
 
    /** Append an entry to the log.
-   * 
+   *
    * @param regionInfo
    * @param logEdit
    * @param now Time of this edit write.
@@ -640,11 +640,11 @@ public class HLog implements HConstants, Syncable {
   protected HLogKey makeKey(byte[] regionName, byte[] tableName, long seqnum, long now) {
     return new HLogKey(regionName, tableName, seqnum, now);
   }
-  
-  
-  
+
+
+
   /** Append an entry to the log.
-   * 
+   *
    * @param regionInfo
    * @param logEdit
    * @param logKey
@@ -876,7 +876,7 @@ public class HLog implements HConstants, Syncable {
       this.listener.logRollRequested();
     }
   }
-  
+
   protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
   throws IOException {
     if (!this.enabled) {
@@ -1013,7 +1013,7 @@ public class HLog implements HConstants, Syncable {
   public static boolean isMetaFamily(byte [] family) {
     return Bytes.equals(METAFAMILY, family);
   }
-  
+
   /**
    * Split up a bunch of regionserver commit log files that are no longer
    * being written to, into new files, one per region for region to replay on
@@ -1029,7 +1029,7 @@ public class HLog implements HConstants, Syncable {
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileSystem fs, final Configuration conf) throws IOException {
-    
+
     long millis = System.currentTimeMillis();
     List<Path> splits = null;
     if (!fs.exists(srcDir)) {
@@ -1076,13 +1076,13 @@ public class HLog implements HConstants, Syncable {
       this.w = w;
     }
   }
-  
+
   @SuppressWarnings("unchecked")
   public static Class<? extends HLogKey> getKeyClass(Configuration conf) {
-     return (Class<? extends HLogKey>) 
+     return (Class<? extends HLogKey>)
        conf.getClass("hbase.regionserver.hlog.keyclass", HLogKey.class);
   }
-  
+
   public static HLogKey newKey(Configuration conf) throws IOException {
     Class<? extends HLogKey> keyClass = getKeyClass(conf);
     try {
@@ -1109,28 +1109,28 @@ public class HLog implements HConstants, Syncable {
       Collections.synchronizedMap(
         new TreeMap<byte [], WriterAndPath>(Bytes.BYTES_COMPARATOR));
     List<Path> splits = null;
-    
+
     // Number of threads to use when log splitting to rewrite the logs.
     // More means faster but bigger mem consumption.
     int logWriterThreads =
       conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
-    
+
     // Number of logs to read concurrently when log splitting.
     // More means faster but bigger mem consumption  */
     int concurrentLogReads =
       conf.getInt("hbase.regionserver.hlog.splitlog.reader.threads", 3);
     // Is append supported?
     try {
-      int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) / 
+      int maxSteps = Double.valueOf(Math.ceil((logfiles.length * 1.0) /
           concurrentLogReads)).intValue();
       for (int step = 0; step < maxSteps; step++) {
-        final Map<byte[], LinkedList<HLog.Entry>> logEntries = 
+        final Map<byte[], LinkedList<HLog.Entry>> logEntries =
           new TreeMap<byte[], LinkedList<HLog.Entry>>(Bytes.BYTES_COMPARATOR);
         // Stop at logfiles.length when it's the last step
-        int endIndex = step == maxSteps - 1? logfiles.length: 
+        int endIndex = step == maxSteps - 1? logfiles.length:
           step * concurrentLogReads + concurrentLogReads;
         for (int i = (step * concurrentLogReads); i < endIndex; i++) {
-          // Check for possibly empty file. With appends, currently Hadoop 
+          // Check for possibly empty file. With appends, currently Hadoop
           // reports a zero length even if the file has been sync'd. Revisit if
           // HADOOP-4751 is committed.
           long length = logfiles[i].getLen();
@@ -1347,7 +1347,7 @@ public class HLog implements HConstants, Syncable {
 
   /**
    * Construct the HLog directory name
-   * 
+   *
    * @param info HServerInfo for server
    * @return the HLog directory name
    */
@@ -1357,7 +1357,7 @@ public class HLog implements HConstants, Syncable {
 
   /**
    * Construct the HLog directory name
-   * 
+   *
    * @param serverAddress
    * @param startCode
    * @return the HLog directory name
@@ -1370,10 +1370,10 @@ public class HLog implements HConstants, Syncable {
     return getHLogDirectoryName(
         HServerInfo.getServerName(serverAddress, startCode));
   }
-  
+
   /**
    * Construct the HLog directory name
-   * 
+   *
    * @param serverName
    * @return the HLog directory name
    */

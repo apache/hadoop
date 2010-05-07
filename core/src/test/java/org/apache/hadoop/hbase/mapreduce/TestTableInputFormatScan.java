@@ -51,10 +51,10 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests various scan start and stop row scenarios. This is set in a scan and
  * tested in a MapReduce job to see if that is handed over and done properly
- * too. 
+ * too.
  */
 public class TestTableInputFormatScan {
-   
+
   static final Log LOG = LogFactory.getLog(TestTableInputFormatScan.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -62,9 +62,9 @@ public class TestTableInputFormatScan {
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final String KEY_STARTROW = "startRow";
   static final String KEY_LASTROW = "stpRow";
-  
+
   private static HTable table = null;
-  
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // switch TIF to log at DEBUG level
@@ -90,7 +90,7 @@ public class TestTableInputFormatScan {
   public void setUp() throws Exception {
     // nothing
   }
-  
+
   /**
    * @throws java.lang.Exception
    */
@@ -105,229 +105,229 @@ public class TestTableInputFormatScan {
    */
   public static class ScanMapper
   extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
-  
+
     /**
      * Pass the key and value to reduce.
-     * 
-     * @param key  The key, here "aaa", "aab" etc. 
+     *
+     * @param key  The key, here "aaa", "aab" etc.
      * @param value  The value is the same as the key.
      * @param context  The task context.
      * @throws IOException When reading the rows fails.
      */
     @Override
     public void map(ImmutableBytesWritable key, Result value,
-      Context context) 
+      Context context)
     throws IOException, InterruptedException {
       if (value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
-      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> 
+      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
         cf = value.getMap();
       if(!cf.containsKey(INPUT_FAMILY)) {
-        throw new IOException("Wrong input columns. Missing: '" + 
+        throw new IOException("Wrong input columns. Missing: '" +
           Bytes.toString(INPUT_FAMILY) + "'.");
       }
       String val = Bytes.toStringBinary(value.getValue(INPUT_FAMILY, null));
-      LOG.info("map: key -> " + Bytes.toStringBinary(key.get()) + 
+      LOG.info("map: key -> " + Bytes.toStringBinary(key.get()) +
         ", value -> " + val);
       context.write(key, key);
     }
-    
+
   }
-  
+
   /**
    * Checks the last and first key seen against the scanner boundaries.
    */
-  public static class ScanReducer 
-  extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable, 
+  public static class ScanReducer
+  extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
                   NullWritable, NullWritable> {
-    
+
     private String first = null;
     private String last = null;
-    
-    protected void reduce(ImmutableBytesWritable key, 
-        Iterable<ImmutableBytesWritable> values, Context context) 
+
+    protected void reduce(ImmutableBytesWritable key,
+        Iterable<ImmutableBytesWritable> values, Context context)
     throws IOException ,InterruptedException {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
-        LOG.info("reduce: key[" + count + "] -> " + 
+        LOG.info("reduce: key[" + count + "] -> " +
           Bytes.toStringBinary(key.get()) + ", value -> " + val);
         if (first == null) first = val;
         last = val;
         count++;
       }
     }
-    
-    protected void cleanup(Context context) 
+
+    protected void cleanup(Context context)
     throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
-      String startRow = c.get(KEY_STARTROW);    
+      String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
       LOG.info("cleanup: first -> \"" + first + "\", start row -> \"" + startRow + "\"");
       LOG.info("cleanup: last -> \"" + last + "\", last row -> \"" + lastRow + "\"");
-      if (startRow != null && startRow.length() > 0) { 
+      if (startRow != null && startRow.length() > 0) {
         assertEquals(startRow, first);
       }
-      if (lastRow != null && lastRow.length() > 0) { 
+      if (lastRow != null && lastRow.length() > 0) {
         assertEquals(lastRow, last);
       }
     }
-    
+
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanEmptyToEmpty() 
+  public void testScanEmptyToEmpty()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, null, null);
   }
 
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanEmptyToAPP() 
+  public void testScanEmptyToAPP()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "app", "apo");
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanEmptyToBBA() 
+  public void testScanEmptyToBBA()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "bba", "baz");
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanEmptyToBBB() 
+  public void testScanEmptyToBBB()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "bbb", "bba");
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanEmptyToOPP() 
+  public void testScanEmptyToOPP()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "opp", "opo");
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanOBBToOPP() 
+  public void testScanOBBToOPP()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("obb", "opp", "opo");
   }
 
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanOBBToQPP() 
+  public void testScanOBBToQPP()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("obb", "qpp", "qpo");
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanOPPToEmpty() 
+  public void testScanOPPToEmpty()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("opp", null, "zzz");
   }
-  
+
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanYYXToEmpty() 
+  public void testScanYYXToEmpty()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("yyx", null, "zzz");
   }
 
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanYYYToEmpty() 
+  public void testScanYYYToEmpty()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("yyy", null, "zzz");
   }
 
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @Test
-  public void testScanYZYToEmpty() 
+  public void testScanYZYToEmpty()
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan("yzy", null, "zzz");
   }
 
   /**
    * Tests a MR scan using specific start and stop rows.
-   * 
+   *
    * @throws IOException
-   * @throws ClassNotFoundException 
-   * @throws InterruptedException 
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
    */
   @SuppressWarnings("deprecation")
-  private void testScan(String start, String stop, String last) 
+  private void testScan(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") +
     "To" + (stop != null ? stop.toUpperCase() : "Empty");
@@ -346,11 +346,11 @@ public class TestTableInputFormatScan {
     LOG.info("scan before: " + scan);
     Job job = new Job(c, jobName);
     TableMapReduceUtil.initTableMapperJob(
-      Bytes.toString(TABLE_NAME), scan, ScanMapper.class, 
+      Bytes.toString(TABLE_NAME), scan, ScanMapper.class,
       ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1); // one to get final "first" and "last" key
-    FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));      
+    FileOutputFormat.setOutputPath(job, new Path(job.getJobName()));
     LOG.info("Started " + job.getJobName());
     job.waitForCompletion(true);
     assertTrue(job.isComplete());

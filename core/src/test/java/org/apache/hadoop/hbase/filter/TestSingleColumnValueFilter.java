@@ -41,9 +41,9 @@ public class TestSingleColumnValueFilter extends TestCase {
   private static final byte[] VAL_2 = Bytes.toBytes("ab");
   private static final byte[] VAL_3 = Bytes.toBytes("abc");
   private static final byte[] VAL_4 = Bytes.toBytes("abcd");
-  private static final byte[] FULLSTRING_1 = 
+  private static final byte[] FULLSTRING_1 =
     Bytes.toBytes("The quick brown fox jumps over the lazy dog.");
-  private static final byte[] FULLSTRING_2 = 
+  private static final byte[] FULLSTRING_2 =
     Bytes.toBytes("The slow grey fox trips over the lazy dog.");
   private static final String QUICK_SUBSTR = "quick";
   private static final String QUICK_REGEX = ".+quick.+";
@@ -102,7 +102,7 @@ public class TestSingleColumnValueFilter extends TestCase {
     assertFalse("basicFilterNotNull", filter.filterRow());
   }
 
-  private void substrFilterTests(Filter filter) 
+  private void substrFilterTests(Filter filter)
       throws Exception {
     KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
       FULLSTRING_1);
@@ -115,7 +115,7 @@ public class TestSingleColumnValueFilter extends TestCase {
     assertFalse("substrFilterNotNull", filter.filterRow());
   }
 
-  private void regexFilterTests(Filter filter) 
+  private void regexFilterTests(Filter filter)
       throws Exception {
     KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
       FULLSTRING_1);
@@ -126,8 +126,8 @@ public class TestSingleColumnValueFilter extends TestCase {
     assertTrue("regexFalse", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
     assertFalse("regexFilterNotNull", filter.filterRow());
-  }    
-                 
+  }
+
   private Filter serializationTest(Filter filter)
       throws Exception {
     // Decompose filter to bytes.
@@ -136,13 +136,13 @@ public class TestSingleColumnValueFilter extends TestCase {
     filter.write(out);
     out.close();
     byte[] buffer = stream.toByteArray();
-  
+
     // Recompose filter.
     DataInputStream in =
       new DataInputStream(new ByteArrayInputStream(buffer));
     Filter newFilter = new SingleColumnValueFilter();
     newFilter.readFields(in);
-  
+
     return newFilter;
   }
 
@@ -154,12 +154,12 @@ public class TestSingleColumnValueFilter extends TestCase {
     basicFilterTests((SingleColumnValueFilter)basicFilter);
     substrFilterTests(substrFilter);
     regexFilterTests(regexFilter);
-  }                               
+  }
 
   /**
    * Tests serialization
    * @throws Exception
-   */                       
+   */
   public void testSerialization() throws Exception {
     Filter newFilter = serializationTest(basicFilter);
     basicFilterTests((SingleColumnValueFilter)newFilter);
@@ -167,5 +167,5 @@ public class TestSingleColumnValueFilter extends TestCase {
     substrFilterTests(newFilter);
     newFilter = serializationTest(regexFilter);
     regexFilterTests(newFilter);
-  }                   
+  }
 }

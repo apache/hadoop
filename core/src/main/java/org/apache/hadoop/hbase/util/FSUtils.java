@@ -102,11 +102,11 @@ public class FSUtils {
 
   /**
    * Checks to see if the specified file system is available
-   * 
+   *
    * @param fs filesystem
    * @throws IOException e
    */
-  public static void checkFileSystemAvailable(final FileSystem fs) 
+  public static void checkFileSystemAvailable(final FileSystem fs)
   throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
@@ -129,10 +129,10 @@ public class FSUtils {
     io.initCause(exception);
     throw io;
   }
-  
+
   /**
    * Verifies current version of file system
-   * 
+   *
    * @param fs filesystem object
    * @param rootdir root hbase directory
    * @return null if no version file exists, version string otherwise.
@@ -153,20 +153,20 @@ public class FSUtils {
     }
     return version;
   }
-  
+
   /**
    * Verifies current version of file system
-   * 
+   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
-   * @param message if true, issues a message on System.out 
-   * 
+   * @param message if true, issues a message on System.out
+   *
    * @throws IOException e
    */
-  public static void checkVersion(FileSystem fs, Path rootdir, 
+  public static void checkVersion(FileSystem fs, Path rootdir,
       boolean message) throws IOException {
     String version = getVersion(fs, rootdir);
-    
+
     if (version == null) {
       if (!rootRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
@@ -176,7 +176,7 @@ public class FSUtils {
       }
     } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0)
         return;
-    
+
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
     String msg = "File system needs to be upgraded."
@@ -188,28 +188,28 @@ public class FSUtils {
     }
     throw new FileSystemVersionException(msg);
   }
-  
+
   /**
    * Sets version of file system
-   * 
+   *
    * @param fs filesystem object
    * @param rootdir hbase root
    * @throws IOException e
    */
-  public static void setVersion(FileSystem fs, Path rootdir) 
+  public static void setVersion(FileSystem fs, Path rootdir)
   throws IOException {
     setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION);
   }
 
   /**
    * Sets version of file system
-   * 
+   *
    * @param fs filesystem object
    * @param rootdir hbase root directory
    * @param version version to set
    * @throws IOException e
    */
-  public static void setVersion(FileSystem fs, Path rootdir, String version) 
+  public static void setVersion(FileSystem fs, Path rootdir, String version)
   throws IOException {
     FSDataOutputStream s =
       fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
@@ -220,7 +220,7 @@ public class FSUtils {
 
   /**
    * Verifies root directory path is a valid URI with a scheme
-   * 
+   *
    * @param root root directory path
    * @return Passed <code>root</code> argument.
    * @throws IOException if not a valid URI with a scheme
@@ -288,7 +288,7 @@ public class FSUtils {
    * This method is useful if you want to print out a Path without qualifying
    * Filesystem instance.
    * @param p Filesystem Path whose 'path' component we are to return.
-   * @return Path portion of the Filesystem 
+   * @return Path portion of the Filesystem
    */
   public static String getPath(Path p) {
     return p.toUri().getPath();
@@ -306,7 +306,7 @@ public class FSUtils {
 
   /**
    * Checks if root region exists
-   * 
+   *
    * @param fs file system
    * @param rootdir root directory of HBase installation
    * @return true if exists
@@ -366,42 +366,42 @@ public class FSUtils {
   }
 
   /**
-   * Returns the total overall fragmentation percentage. Includes .META. and 
+   * Returns the total overall fragmentation percentage. Includes .META. and
    * -ROOT- as well.
-   *  
+   *
    * @param master  The master defining the HBase root and file system.
    * @return A map for each table and its percentage.
    * @throws IOException When scanning the directory fails.
    */
-  public static int getTotalTableFragmentation(final HMaster master) 
+  public static int getTotalTableFragmentation(final HMaster master)
   throws IOException {
     Map<String, Integer> map = getTableFragmentation(master);
     return map != null && map.size() > 0 ? map.get("-TOTAL-") : -1;
   }
-    
+
   /**
    * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and .META. too. The total 
-   * percentage across all tables is stored under the special key "-TOTAL-". 
-   * 
+   * have more than one file in them. Checks -ROOT- and .META. too. The total
+   * percentage across all tables is stored under the special key "-TOTAL-".
+   *
    * @param master  The master defining the HBase root and file system.
    * @return A map for each table and its percentage.
    * @throws IOException When scanning the directory fails.
    */
   public static Map<String, Integer> getTableFragmentation(
-    final HMaster master) 
+    final HMaster master)
   throws IOException {
     Path path = master.getRootDir();
     // since HMaster.getFileSystem() is package private
     FileSystem fs = path.getFileSystem(master.getConfiguration());
     return getTableFragmentation(fs, path);
   }
-    
+
   /**
    * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and .META. too. The total 
-   * percentage across all tables is stored under the special key "-TOTAL-". 
-   * 
+   * have more than one file in them. Checks -ROOT- and .META. too. The total
+   * percentage across all tables is stored under the special key "-TOTAL-".
+   *
    * @param fs  The file system to use.
    * @param hbaseRootDir  The root directory to scan.
    * @return A map for each table and its percentage.

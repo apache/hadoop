@@ -50,7 +50,7 @@ public class PageFilter implements Filter {
 
   /**
    * Constructor that takes a maximum page size.
-   * 
+   *
    * @param pageSize Maximum result size.
    */
   public PageFilter(final long pageSize) {

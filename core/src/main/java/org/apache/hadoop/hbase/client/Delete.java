@@ -36,7 +36,7 @@ import java.util.TreeMap;
 /**
  * Used to perform Delete operations on a single row.
  * <p>
- * To delete an entire row, instantiate a Delete object with the row 
+ * To delete an entire row, instantiate a Delete object with the row
  * to delete.  To further define the scope of what to delete, perform
  * additional methods as outlined below.
  * <p>
@@ -45,7 +45,7 @@ import java.util.TreeMap;
  * <p>
  * To delete multiple versions of specific columns, execute
  * {@link #deleteColumns(byte[], byte[]) deleteColumns}
- * for each column to delete.  
+ * for each column to delete.
  * <p>
  * To delete specific versions of specific columns, execute
  * {@link #deleteColumn(byte[], byte[], long) deleteColumn}
@@ -69,10 +69,10 @@ public class Delete implements Writable, Row, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)1;
 
   private byte [] row = null;
-  // This ts is only used when doing a deleteRow.  Anything less, 
+  // This ts is only used when doing a deleteRow.  Anything less,
   private long ts;
   private long lockId = -1L;
-  private final Map<byte [], List<KeyValue>> familyMap = 
+  private final Map<byte [], List<KeyValue>> familyMap =
     new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
 
   /** Constructor for Writable.  DO NOT USE */
@@ -95,12 +95,12 @@ public class Delete implements Writable, Row, Comparable<Row> {
   /**
    * Create a Delete operation for the specified row and timestamp, using
    * an optional row lock.<p>
-   * 
+   *
    * If no further operations are done, this will delete all columns in all
-   * families of the specified row with a timestamp less than or equal to the 
+   * families of the specified row with a timestamp less than or equal to the
    * specified timestamp.<p>
-   * 
-   * This timestamp is ONLY used for a delete row operation.  If specifying 
+   *
+   * This timestamp is ONLY used for a delete row operation.  If specifying
    * families or columns, you must specify each timestamp individually.
    * @param row row key
    * @param timestamp maximum version timestamp (only for delete row)
@@ -170,7 +170,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     familyMap.put(family, list);
     return this;
   }
-  
+
   /**
    * Delete all versions of the specified column.
    * @param family family name
@@ -181,7 +181,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     this.deleteColumns(family, qualifier, HConstants.LATEST_TIMESTAMP);
     return this;
   }
-  
+
   /**
    * Delete all versions of the specified column with a timestamp less than
    * or equal to the specified timestamp.
@@ -200,7 +200,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     familyMap.put(family, list);
     return this;
   }
-  
+
   /**
    * Delete the latest version of the specified column.
    * This is an expensive call in that on the server-side, it first does a
@@ -214,7 +214,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     this.deleteColumn(family, qualifier, HConstants.LATEST_TIMESTAMP);
     return this;
   }
-  
+
   /**
    * Delete the specified version of the specified column.
    * @param family family name
@@ -232,15 +232,15 @@ public class Delete implements Writable, Row, Comparable<Row> {
     familyMap.put(family, list);
     return this;
   }
-  
+
   /**
-   * Method for retrieving the delete's familyMap 
+   * Method for retrieving the delete's familyMap
    * @return familyMap
    */
   public Map<byte [], List<KeyValue>> getFamilyMap() {
     return this.familyMap;
   }
-  
+
   /**
    *  Method for retrieving the delete's row
    * @return row
@@ -248,7 +248,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
   public byte [] getRow() {
     return this.row;
   }
-  
+
   /**
    * Method for retrieving the delete's RowLock
    * @return RowLock
@@ -256,16 +256,16 @@ public class Delete implements Writable, Row, Comparable<Row> {
   public RowLock getRowLock() {
     return new RowLock(this.row, this.lockId);
   }
-  
+
   /**
    * Method for retrieving the delete's lock ID.
-   * 
+   *
    * @return The lock ID.
    */
   public long getLockId() {
 	return this.lockId;
   }
-  
+
   /**
    * Method for retrieving the delete's timestamp
    * @return timestamp
@@ -273,7 +273,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
   public long getTimeStamp() {
     return this.ts;
   }
-  
+
   /**
    * @return string
    */
@@ -309,7 +309,7 @@ public class Delete implements Writable, Row, Comparable<Row> {
     sb.append("}");
     return sb.toString();
   }
-  
+
   //Writable
   public void readFields(final DataInput in) throws IOException {
     int version = in.readByte();
@@ -332,8 +332,8 @@ public class Delete implements Writable, Row, Comparable<Row> {
       }
       this.familyMap.put(family, list);
     }
-  }  
-  
+  }
+
   public void write(final DataOutput out) throws IOException {
     out.writeByte(DELETE_VERSION);
     Bytes.writeByteArray(out, this.row);

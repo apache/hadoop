@@ -32,9 +32,9 @@ public interface ServerConnection extends HConnection {
    * @param rootRegion region location for root region
    */
   public void setRootRegionLocation(HRegionLocation rootRegion);
-  
+
   /**
-   * Unset the root region location in the connection. Called by 
+   * Unset the root region location in the connection. Called by
    * ServerManager.processRegionClose.
    */
   public void unsetRootRegionLocation();

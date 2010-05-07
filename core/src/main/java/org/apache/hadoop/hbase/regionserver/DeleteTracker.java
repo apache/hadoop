@@ -26,10 +26,10 @@ package org.apache.hadoop.hbase.regionserver;
  * This class is utilized through three methods:
  * <ul><li>{@link #add} when encountering a Delete
  * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
- * <li>{@link #update} when reaching the end of a StoreFile 
+ * <li>{@link #update} when reaching the end of a StoreFile
  */
 public interface DeleteTracker {
-  
+
   /**
    * Add the specified KeyValue to the list of deletes to check against for
    * this row operation.
@@ -43,7 +43,7 @@ public interface DeleteTracker {
    */
   public void add(byte [] buffer, int qualifierOffset, int qualifierLength,
       long timestamp, byte type);
-  
+
   /**
    * Check if the specified KeyValue buffer has been deleted by a previously
    * seen delete.
@@ -55,12 +55,12 @@ public interface DeleteTracker {
    */
   public boolean isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp);
-  
+
   /**
    * @return true if there are no current delete, false otherwise
    */
   public boolean isEmpty();
-  
+
   /**
    * Called at the end of every StoreFile.
    * <p>
@@ -68,14 +68,14 @@ public interface DeleteTracker {
    * when the end of each StoreFile is reached.
    */
   public void update();
-  
+
   /**
    * Called between rows.
    * <p>
    * This clears everything as if a new DeleteTracker was instantiated.
    */
   public void reset();
-  
+
 
   /**
    * Return codes for comparison of two Deletes.
@@ -85,7 +85,7 @@ public interface DeleteTracker {
    * INCLUDE means add the specified Delete to the merged list.
    * NEXT means move to the next element in the specified list(s).
    */
-  enum DeleteCompare { 
+  enum DeleteCompare {
     INCLUDE_OLD_NEXT_OLD,
     INCLUDE_OLD_NEXT_BOTH,
     INCLUDE_NEW_NEXT_NEW,
@@ -93,5 +93,5 @@ public interface DeleteTracker {
     NEXT_OLD,
     NEXT_NEW
   }
-  
+
 }

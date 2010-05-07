@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * This class is used for the tracking and enforcement of columns and numbers 
+ * This class is used for the tracking and enforcement of columns and numbers
  * of versions during the course of a Get or Scan operation, when explicit
  * column qualifiers have been asked for in the query.
  *
@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * for both scans and gets.  The main difference is 'next' and 'done' collapse
  * for the scan case (since we see all columns in order), and we only reset
  * between rows.
- * 
+ *
  * <p>
  * This class is utilized by {@link QueryMatcher} through two methods:
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * what action should be taken.
  * <li>{@link #update} is called at the end of every StoreFile or memstore.
  * <p>
- * This class is NOT thread-safe as queries are never multi-threaded 
+ * This class is NOT thread-safe as queries are never multi-threaded
  */
 public class ExplicitColumnTracker implements ColumnTracker {
 
@@ -51,7 +51,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   private final List<ColumnCount> columnsToReuse;
   private int index;
   private ColumnCount column;
-  
+
   /**
    * Default constructor.
    * @param columns columns specified user in query
@@ -66,7 +66,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
     }
     reset();
   }
-  
+
   /**
    * Done when there are no more columns to match against.
    */
@@ -77,7 +77,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   public ColumnCount getColumnHint() {
     return this.column;
   }
-  
+
   /**
    * Checks against the parameters of the query and the columns which have
    * already been processed by this query.
@@ -135,7 +135,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       }
     } while(true);
   }
-  
+
   /**
    * Called at the end of every StoreFile or memstore.
    */

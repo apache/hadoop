@@ -45,7 +45,7 @@ public class TestRegionServerOperationQueue {
   @After
   public void tearDown() throws Exception {
   }
-  
+
   @Test
   public void testNothing() throws Exception {
   }

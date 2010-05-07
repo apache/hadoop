@@ -119,15 +119,15 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
   private BitSet __isset_bit_vector = new BitSet(2);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.START_KEY, new FieldMetaData("startKey", TFieldRequirementType.DEFAULT, 
+    put(_Fields.START_KEY, new FieldMetaData("startKey", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.END_KEY, new FieldMetaData("endKey", TFieldRequirementType.DEFAULT, 
+    put(_Fields.END_KEY, new FieldMetaData("endKey", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+    put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I64)));
-    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT, 
+    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.VERSION, new FieldMetaData("version", TFieldRequirementType.DEFAULT, 
+    put(_Fields.VERSION, new FieldMetaData("version", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BYTE)));
   }});
 
@@ -546,7 +546,7 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -557,14 +557,14 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
           case START_KEY:
             if (field.type == TType.STRING) {
               this.startKey = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
           case END_KEY:
             if (field.type == TType.STRING) {
               this.endKey = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -572,14 +572,14 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
             if (field.type == TType.I64) {
               this.id = iprot.readI64();
               setIdIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
           case NAME:
             if (field.type == TType.STRING) {
               this.name = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -587,7 +587,7 @@ public class TRegionInfo implements TBase<TRegionInfo._Fields>, java.io.Serializ
             if (field.type == TType.BYTE) {
               this.version = iprot.readByte();
               setVersionIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

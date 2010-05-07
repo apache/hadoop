@@ -26,10 +26,10 @@ import java.io.IOException;
 
 /**
  * ProcessRegionClose is the way we do post-processing on a closed region. We
- * only spawn one of these asynchronous tasks when the region needs to be 
+ * only spawn one of these asynchronous tasks when the region needs to be
  * either offlined or deleted. We used to create one of these tasks whenever
  * a region was closed, but since closing a region that isn't being offlined
- * or deleted doesn't actually require post processing, it's no longer 
+ * or deleted doesn't actually require post processing, it's no longer
  * necessary.
  */
 class ProcessRegionClose extends ProcessRegionStatusChange {
@@ -42,7 +42,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   * @param offlineRegion if true, set the region to offline in meta
   * @param reassignRegion if true, region is to be reassigned
   */
-  public ProcessRegionClose(HMaster master, HRegionInfo regionInfo, 
+  public ProcessRegionClose(HMaster master, HRegionInfo regionInfo,
       boolean offlineRegion, boolean reassignRegion) {
 
    super(master, regionInfo);
@@ -74,7 +74,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
 
             // We can't proceed unless the meta region we are going to update
             // is online. metaRegionAvailable() will put this operation on the
-            // delayedToDoQueue, so return true so the operation is not put 
+            // delayedToDoQueue, so return true so the operation is not put
             // back on the toDoQueue
 
             if (metaRegionAvailable()) {

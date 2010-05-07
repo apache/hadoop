@@ -35,7 +35,7 @@ public class TableRecordReader
 implements RecordReader<ImmutableBytesWritable, Result> {
 
   private TableRecordReaderImpl recordReaderImpl = new TableRecordReaderImpl();
-  
+
   /**
    * Restart from survivable exceptions by creating a new scanner.
    *
@@ -114,7 +114,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
   }
 
   public long getPos() {
-    
+
     // This should be the ordinal tuple in the range;
     // not clear how to calculate...
     return this.recordReaderImpl.getPos();

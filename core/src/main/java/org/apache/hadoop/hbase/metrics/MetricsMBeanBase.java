@@ -38,8 +38,8 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 /**
  * Extends the Hadoop MetricsDynamicMBeanBase class to provide JMX support for
- * custom HBase MetricsBase implementations.  MetricsDynamicMBeanBase ignores 
- * registered MetricsBase instance that are not instances of one of the 
+ * custom HBase MetricsBase implementations.  MetricsDynamicMBeanBase ignores
+ * registered MetricsBase instance that are not instances of one of the
  * org.apache.hadoop.metrics.util implementations.
  *
  */
@@ -50,13 +50,13 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
   protected final MetricsRegistry registry;
   protected final String description;
   protected int registryLength;
-  /** HBase MetricsBase implementations that MetricsDynamicMBeanBase does 
-   * not understand 
+  /** HBase MetricsBase implementations that MetricsDynamicMBeanBase does
+   * not understand
    */
-  protected Map<String,MetricsBase> extendedAttributes = 
+  protected Map<String,MetricsBase> extendedAttributes =
       new HashMap<String,MetricsBase>();
   protected MBeanInfo extendedInfo;
-  
+
   protected MetricsMBeanBase( MetricsRegistry mr, String description ) {
     super(copyMinusHBaseMetrics(mr), description);
     this.registry = mr;
@@ -87,45 +87,45 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
       attributes.add(attr);
       parentAttributes.add(attr.getName());
     }
-    
+
     this.registryLength = this.registry.getMetricsList().size();
-    
+
     for (MetricsBase metric : this.registry.getMetricsList()) {
       if (metric.getName() == null || parentAttributes.contains(metric.getName()))
         continue;
-      
+
       // add on custom HBase metric types
       if (metric instanceof org.apache.hadoop.hbase.metrics.MetricsRate) {
-        attributes.add( new MBeanAttributeInfo(metric.getName(), 
+        attributes.add( new MBeanAttributeInfo(metric.getName(),
             "java.lang.Float", metric.getDescription(), true, false, false) );
         extendedAttributes.put(metric.getName(), metric);
       }
       // else, its probably a hadoop metric already registered. Skip it.
     }
 
-    this.extendedInfo = new MBeanInfo( this.getClass().getName(), 
-        this.description, attributes.toArray( new MBeanAttributeInfo[0] ), 
-        parentInfo.getConstructors(), parentInfo.getOperations(), 
+    this.extendedInfo = new MBeanInfo( this.getClass().getName(),
+        this.description, attributes.toArray( new MBeanAttributeInfo[0] ),
+        parentInfo.getConstructors(), parentInfo.getOperations(),
         parentInfo.getNotifications() );
   }
 
   private void checkAndUpdateAttributes() {
-    if (this.registryLength != this.registry.getMetricsList().size()) 
+    if (this.registryLength != this.registry.getMetricsList().size())
       this.init();
   }
-  
+
   @Override
   public Object getAttribute( String name )
       throws AttributeNotFoundException, MBeanException,
       ReflectionException {
-    
+
     if (name == null) {
       throw new IllegalArgumentException("Attribute name is NULL");
     }
 
     /*
      * Ugly.  Since MetricsDynamicMBeanBase implementation is private,
-     * we need to first check the parent class for the attribute.  
+     * we need to first check the parent class for the attribute.
      * In case that the MetricsRegistry contents have changed, this will
      * allow the parent to update it's internal structures (which we rely on
      * to update our own.
@@ -133,9 +133,9 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
     try {
       return super.getAttribute(name);
     } catch (AttributeNotFoundException ex) {
-      
+
       checkAndUpdateAttributes();
-      
+
       MetricsBase metric = this.extendedAttributes.get(name);
       if (metric != null) {
         if (metric instanceof MetricsRate) {
@@ -146,7 +146,7 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
         }
       }
     }
-    
+
     throw new AttributeNotFoundException();
   }
 

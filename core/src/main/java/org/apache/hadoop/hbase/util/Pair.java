@@ -24,8 +24,8 @@ import java.io.Serializable;
 
 /**
  * A generic class for pairs.
- * @param <T1> 
- * @param <T2> 
+ * @param <T1>
+ * @param <T2>
  */
 public class Pair<T1, T2> implements Serializable
 {

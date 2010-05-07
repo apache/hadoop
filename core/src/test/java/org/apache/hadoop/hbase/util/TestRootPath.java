@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
  */
 public class TestRootPath extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestRootPath.class);
-  
+
   /** The test */
   public void testRootPath() {
     try {

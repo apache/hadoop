@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
  * <li>{@link #update} when reaching the end of a StoreFile
  * <p>
- * This class is NOT thread-safe as queries are never multi-threaded 
+ * This class is NOT thread-safe as queries are never multi-threaded
  */
 public class GetDeleteTracker implements DeleteTracker {
   private static long UNSET = -1L;
@@ -76,7 +76,7 @@ public class GetDeleteTracker implements DeleteTracker {
     }
   }
 
-  /** 
+  /**
    * Check if the specified KeyValue buffer has been deleted by a previously
    * seen delete.
    * @param buffer KeyValue buffer
@@ -100,7 +100,7 @@ public class GetDeleteTracker implements DeleteTracker {
 
     // Check column
     int ret = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
-        this.delete.buffer, this.delete.qualifierOffset, 
+        this.delete.buffer, this.delete.qualifierOffset,
         this.delete.qualifierLength);
     while (ret != 0) {
       if (ret <= -1) {
@@ -120,7 +120,7 @@ public class GetDeleteTracker implements DeleteTracker {
 
       }
     }
-   
+
     // Check Timestamp
     if(timestamp > this.delete.timestamp) {
       return false;
@@ -186,7 +186,7 @@ public class GetDeleteTracker implements DeleteTracker {
     }
 
     // Merge previous deletes with new deletes
-    List<Delete> mergeDeletes = 
+    List<Delete> mergeDeletes =
       new ArrayList<Delete>(this.newDeletes.size());
     int oldIndex = 0;
     int newIndex = 0;
@@ -295,7 +295,7 @@ public class GetDeleteTracker implements DeleteTracker {
     }
   }
 
-  private void mergeDown(List<Delete> mergeDeletes, List<Delete> srcDeletes, 
+  private void mergeDown(List<Delete> mergeDeletes, List<Delete> srcDeletes,
       int srcIndex) {
     int index = srcIndex;
     while(index < srcDeletes.size()) {
@@ -335,7 +335,7 @@ public class GetDeleteTracker implements DeleteTracker {
       }
       if(oldDelete.timestamp < newDelete.timestamp) {
         return DeleteCompare.INCLUDE_NEW_NEXT_BOTH;
-      } 
+      }
       return DeleteCompare.INCLUDE_OLD_NEXT_BOTH;
     }
 

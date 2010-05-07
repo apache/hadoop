@@ -78,7 +78,7 @@ public class StoreFile implements HConstants {
   private boolean blockcache;
   // Is this from an in-memory store
   private boolean inMemory;
-  
+
   // Keys for metadata stored in backing HFile.
   private static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
   // Set when we obtain a Reader.
@@ -89,7 +89,7 @@ public class StoreFile implements HConstants {
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
-  
+
   /*
    * Regex that will work for straight filenames and for reference names.
    * If reference, then the regex has more than just one group.  Group 1 is
@@ -105,17 +105,17 @@ public class StoreFile implements HConstants {
   private final Configuration conf;
 
   /**
-   * Constructor, loads a reader and it's indices, etc. May allocate a 
+   * Constructor, loads a reader and it's indices, etc. May allocate a
    * substantial amount of ram depending on the underlying files (10-20MB?).
-   * 
+   *
    * @param fs  The current file system to use.
    * @param p  The path of the file.
    * @param blockcache  <code>true</code> if the block cache is enabled.
    * @param conf  The current configuration.
    * @throws IOException When opening the reader fails.
    */
-  StoreFile(final FileSystem fs, final Path p, final boolean blockcache, 
-      final Configuration conf, final boolean inMemory) 
+  StoreFile(final FileSystem fs, final Path p, final boolean blockcache,
+      final Configuration conf, final boolean inMemory)
   throws IOException {
     this.conf = conf;
     this.fs = fs;
@@ -220,7 +220,7 @@ public class StoreFile implements HConstants {
 
   /**
    * Returns the block cache or <code>null</code> in case none should be used.
-   * 
+   *
    * @param conf  The current configuration.
    * @return The block cache or <code>null</code>.
    */
@@ -263,7 +263,7 @@ public class StoreFile implements HConstants {
       throw new IllegalAccessError("Already open");
     }
     if (isReference()) {
-      this.reader = new HalfHFileReader(this.fs, this.referencePath, 
+      this.reader = new HalfHFileReader(this.fs, this.referencePath,
           getBlockCache(), this.reference);
     } else {
       this.reader = new Reader(this.fs, this.path, getBlockCache(),
@@ -285,7 +285,7 @@ public class StoreFile implements HConstants {
           this.sequenceid += 1;
         }
       }
-      
+
     }
     b = map.get(MAJOR_COMPACTION_KEY);
     if (b != null) {
@@ -327,7 +327,7 @@ public class StoreFile implements HConstants {
 
   /**
    * Delete this file
-   * @throws IOException 
+   * @throws IOException
    */
   public void delete() throws IOException {
     close();
@@ -446,7 +446,7 @@ public class StoreFile implements HConstants {
    * Write file metadata.
    * Call before you call close on the passed <code>w</code> since its written
    * as metadata to that file.
-   * 
+   *
    * @param w hfile writer
    * @param maxSequenceId Maximum sequence id.
    * @throws IOException
@@ -487,7 +487,7 @@ public class StoreFile implements HConstants {
   throws IOException {
     // A reference to the bottom half of the hsf store file.
     Reference r = new Reference(splitRow, range);
-    // Add the referred-to regions name as a dot separated suffix. 
+    // Add the referred-to regions name as a dot separated suffix.
     // See REF_NAME_PARSER regex above.  The referred-to regions name is
     // up in the path of the passed in <code>f</code> -- parentdir is family,
     // then the directory above is the region name.

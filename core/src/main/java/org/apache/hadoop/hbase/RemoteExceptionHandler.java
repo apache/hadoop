@@ -25,14 +25,14 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.ipc.RemoteException;
 
-/** 
+/**
  * An immutable class which contains a static method for handling
  * org.apache.hadoop.ipc.RemoteException exceptions.
  */
 public class RemoteExceptionHandler {
   /* Not instantiable */
   private RemoteExceptionHandler() {super();}
-  
+
   /**
    * Examine passed Throwable.  See if its carrying a RemoteException. If so,
    * run {@link #decodeRemoteException(RemoteException)} on it.  Otherwise,
@@ -53,7 +53,7 @@ public class RemoteExceptionHandler {
     }
     return result;
   }
-  
+
   /**
    * Examine passed IOException.  See if its carrying a RemoteException. If so,
    * run {@link #decodeRemoteException(RemoteException)} on it.  Otherwise,
@@ -66,17 +66,17 @@ public class RemoteExceptionHandler {
     Throwable t = checkThrowable(e);
     return t instanceof IOException? (IOException)t: new IOException(t);
   }
-  
+
   /**
    * Converts org.apache.hadoop.ipc.RemoteException into original exception,
    * if possible. If the original exception is an Error or a RuntimeException,
    * throws the original exception.
-   * 
+   *
    * @param re original exception
    * @return decoded RemoteException if it is an instance of or a subclass of
    *         IOException, or the original RemoteException if it cannot be decoded.
-   * 
-   * @throws IOException indicating a server error ocurred if the decoded 
+   *
+   * @throws IOException indicating a server error ocurred if the decoded
    *         exception is not an IOException. The decoded exception is set as
    *         the cause.
    */
@@ -89,10 +89,10 @@ public class RemoteExceptionHandler {
 
       Class<?>[] parameterTypes = { String.class };
       Constructor<?> ctor = c.getConstructor(parameterTypes);
-      
+
       Object[] arguments = { re.getMessage() };
       Throwable t = (Throwable) ctor.newInstance(arguments);
-      
+
       if (t instanceof IOException) {
         i = (IOException) t;
 

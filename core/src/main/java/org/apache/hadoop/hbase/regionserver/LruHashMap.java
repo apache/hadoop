@@ -36,8 +36,8 @@ import java.util.Set;
  * The LruHashMap is a memory-aware HashMap with a configurable maximum
  * memory footprint.
  * <p>
- * It maintains an ordered list of all entries in the map ordered by 
- * access time.  When space needs to be freed becase the maximum has been 
+ * It maintains an ordered list of all entries in the map ordered by
+ * access time.  When space needs to be freed becase the maximum has been
  * reached, or the application has asked to free memory, entries will be
  * evicted according to an LRU (least-recently-used) algorithm.  That is,
  * those entries which have not been accessed the longest will be evicted
@@ -52,8 +52,8 @@ public class LruHashMap<K extends HeapSize, V extends HeapSize>
 implements HeapSize, Map<K,V> {
 
   static final Log LOG = LogFactory.getLog(LruHashMap.class);
-  
-  /** The default size (in bytes) of the LRU */  
+
+  /** The default size (in bytes) of the LRU */
   private static final long DEFAULT_MAX_MEM_USAGE = 50000;
   /** The default capacity of the hash table */
   private static final int DEFAULT_INITIAL_CAPACITY = 16;
@@ -61,12 +61,12 @@ implements HeapSize, Map<K,V> {
   private static final int MAXIMUM_CAPACITY = 1 << 30;
   /** The default load factor to use */
   private static final float DEFAULT_LOAD_FACTOR = 0.75f;
-  
+
   /** Memory overhead of this Object (for HeapSize) */
-  private static final int OVERHEAD = 5 * Bytes.SIZEOF_LONG + 
-    2 * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_FLOAT + 3 * ClassSize.REFERENCE + 
+  private static final int OVERHEAD = 5 * Bytes.SIZEOF_LONG +
+    2 * Bytes.SIZEOF_INT + 2 * Bytes.SIZEOF_FLOAT + 3 * ClassSize.REFERENCE +
     1 * ClassSize.ARRAY;
-  
+
   /** Load factor allowed (usually 75%) */
   private final float loadFactor;
   /** Number of key/vals in the map */
@@ -85,7 +85,7 @@ implements HeapSize, Map<K,V> {
   private long memTotal = 0;
   /** Amount of available memory */
   private long memFree = 0;
-  
+
   /** Number of successful (found) get() calls */
   private long hitCount = 0;
   /** Number of unsuccessful (not found) get() calls */
@@ -120,7 +120,7 @@ implements HeapSize, Map<K,V> {
       throw new IllegalArgumentException("Max memory usage too small to " +
       "support base overhead");
     }
-  
+
     /** Find a power of 2 >= initialCapacity */
     int capacity = calculateCapacity(initialCapacity);
     this.loadFactor = loadFactor;
@@ -145,7 +145,7 @@ implements HeapSize, Map<K,V> {
   public LruHashMap(int initialCapacity, float loadFactor) {
     this(initialCapacity, loadFactor, DEFAULT_MAX_MEM_USAGE);
   }
-  
+
   /**
    * Constructs a new, empty map with the specified initial capacity and
    * with the default load factor and maximum memory usage.
@@ -173,14 +173,14 @@ implements HeapSize, Map<K,V> {
   }
 
   /**
-   * Constructs a new, empty map with the default initial capacity, 
+   * Constructs a new, empty map with the default initial capacity,
    * load factor and maximum memory usage.
    */
   public LruHashMap() {
     this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR,
     DEFAULT_MAX_MEM_USAGE);
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * Get the currently available memory for this LRU in bytes.
@@ -191,7 +191,7 @@ implements HeapSize, Map<K,V> {
   public long getMemFree() {
     return memFree;
   }
-  
+
   /**
    * Get the maximum memory allowed for this LRU in bytes.
    *
@@ -200,7 +200,7 @@ implements HeapSize, Map<K,V> {
   public long getMemMax() {
     return memTotal;
   }
-  
+
   /**
    * Get the currently used memory for this LRU in bytes.
    *
@@ -209,7 +209,7 @@ implements HeapSize, Map<K,V> {
   public long getMemUsed() {
     return (memTotal - memFree); // FindBugs IS2_INCONSISTENT_SYNC
   }
-  
+
   /**
    * Get the number of hits to the map.  This is the number of times
    * a call to get() returns a matched key.
@@ -219,7 +219,7 @@ implements HeapSize, Map<K,V> {
   public long getHitCount() {
     return hitCount;
   }
-  
+
   /**
    * Get the number of misses to the map.  This is the number of times
    * a call to get() returns null.
@@ -229,7 +229,7 @@ implements HeapSize, Map<K,V> {
   public long getMissCount() {
     return missCount; // FindBugs IS2_INCONSISTENT_SYNC
   }
-  
+
   /**
    * Get the hit ratio.  This is the number of hits divided by the
    * total number of requests.
@@ -240,7 +240,7 @@ implements HeapSize, Map<K,V> {
     return (double)((double)hitCount/
       ((double)(hitCount+missCount)));
   }
-  
+
   /**
    * Free the requested amount of memory from the LRU map.
    *
@@ -261,7 +261,7 @@ implements HeapSize, Map<K,V> {
     }
     return freedMemory;
   }
-  
+
   /**
    * The total memory usage of this map
    *
@@ -270,7 +270,7 @@ implements HeapSize, Map<K,V> {
   public long heapSize() {
     return (memTotal - memFree);
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * Retrieves the value associated with the specified key.
@@ -286,7 +286,7 @@ implements HeapSize, Map<K,V> {
     checkKey((K)key);
     int hash = hash(key);
     int i = hashIndex(hash, entries.length);
-    Entry<K,V> e = entries[i]; 
+    Entry<K,V> e = entries[i];
     while (true) {
       if (e == null) {
         missCount++;
@@ -313,7 +313,7 @@ implements HeapSize, Map<K,V> {
    * @param key the key
    * @param value the value
    * @return the value that was previously mapped to this key, null if none
-   * @throws UnsupportedOperationException if either objects do not 
+   * @throws UnsupportedOperationException if either objects do not
    * implement HeapSize
    * @throws NullPointerException if the key or value is null
    */
@@ -322,7 +322,7 @@ implements HeapSize, Map<K,V> {
     checkValue(value);
     int hash = hash(key);
     int i = hashIndex(hash, entries.length);
-    
+
     // For old values
     for (Entry<K,V> e = entries[i]; e != null; e = e.next) {
       if (e.hash == hash && isEqual(key, e.key)) {
@@ -338,7 +338,7 @@ implements HeapSize, Map<K,V> {
     checkAndFreeMemory(memChange);
     return null;
   }
-  
+
   /**
    * Deletes the mapping for the specified key if it exists.
    *
@@ -381,7 +381,7 @@ implements HeapSize, Map<K,V> {
   public synchronized void clear() {
     memFree += clearAll();
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * Checks whether there is a value in the map for the specified key.
@@ -396,9 +396,9 @@ implements HeapSize, Map<K,V> {
     checkKey((K)key);
     int hash = hash(key);
     int i = hashIndex(hash, entries.length);
-    Entry e = entries[i]; 
+    Entry e = entries[i];
     while (e != null) {
-      if (e.hash == hash && isEqual(key, e.key)) 
+      if (e.hash == hash && isEqual(key, e.key))
           return true;
       e = e.next;
     }
@@ -407,7 +407,7 @@ implements HeapSize, Map<K,V> {
 
   /**
    * Checks whether this is a mapping which contains the specified value.
-   * 
+   *
    * Does not affect the LRU.  This is an inefficient operation.
    *
    * @param value the value to check
@@ -443,7 +443,7 @@ implements HeapSize, Map<K,V> {
       throw new NullPointerException("null keys are not allowed");
     }
   }
-  
+
   /**
    * Enforces value constraints.  Null values are not permitted and value must
    * implement HeapSize.  It should not be necessary to verify the second
@@ -461,7 +461,7 @@ implements HeapSize, Map<K,V> {
       throw new NullPointerException("null values are not allowed");
     }
   }
-  
+
   /**
    * Returns the minimum memory usage of the base map structure.
    *
@@ -470,7 +470,7 @@ implements HeapSize, Map<K,V> {
   private long getMinimumUsage() {
     return OVERHEAD + (entries.length * ClassSize.REFERENCE);
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * Evicts and frees based on LRU until at least as much memory as requested
@@ -497,7 +497,7 @@ implements HeapSize, Map<K,V> {
     removeEntry(headPtr);
     return freed;
   }
-  
+
   /**
    * Moves the specified entry to the most recently used slot of the
    * LRU.  This is called whenever an entry is fetched.
@@ -543,10 +543,10 @@ implements HeapSize, Map<K,V> {
           } else {
             prev.next = next;
           }
-          
+
           Entry<K,V> prevPtr = e.getPrevPtr();
           Entry<K,V> nextPtr = e.getNextPtr();
-          
+
           if(prevPtr != null && nextPtr != null) {
             prevPtr.setNextPtr(nextPtr);
             nextPtr.setPrevPtr(prevPtr);
@@ -557,7 +557,7 @@ implements HeapSize, Map<K,V> {
             headPtr = nextPtr;
             nextPtr.setPrevPtr(null);
           }
-          
+
           return;
       }
       prev = e;
@@ -587,7 +587,7 @@ implements HeapSize, Map<K,V> {
           } else {
             prev.next = next;
           }
-          
+
           // Updating LRU
           Entry<K,V> prevPtr = e.getPrevPtr();
           Entry<K,V> nextPtr = e.getNextPtr();
@@ -601,7 +601,7 @@ implements HeapSize, Map<K,V> {
             headPtr = nextPtr;
             nextPtr.setPrevPtr(null);
           }
-          
+
           return e;
       }
       prev = e;
@@ -668,7 +668,7 @@ implements HeapSize, Map<K,V> {
     size = 0;
     return freedMemory;
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * Recreates the entire contents of the hashmap into a new array
@@ -680,7 +680,7 @@ implements HeapSize, Map<K,V> {
   private void growTable(int newCapacity) {
     Entry [] oldTable = entries;
     int oldCapacity = oldTable.length;
-    
+
     // Do not allow growing the table beyond the max capacity
     if (oldCapacity == MAXIMUM_CAPACITY) {
       threshold = Integer.MAX_VALUE;
@@ -689,12 +689,12 @@ implements HeapSize, Map<K,V> {
 
     // Determine how much additional space will be required to grow the array
     long requiredSpace = (newCapacity - oldCapacity) * ClassSize.REFERENCE;
-    
+
     // Verify/enforce we have sufficient memory to grow
     checkAndFreeMemory(requiredSpace);
 
     Entry [] newTable = new Entry[newCapacity];
-    
+
     // Transfer existing entries to new hash table
     for(int i=0; i < oldCapacity; i++) {
       Entry<K,V> entry = oldTable[i];
@@ -731,7 +731,7 @@ implements HeapSize, Map<K,V> {
     h ^=  (h >>> 10);
     return h;
   }
-  
+
   /**
    * Compares two objects for equality.  Method uses equals method and
    * assumes neither value is null.
@@ -743,7 +743,7 @@ implements HeapSize, Map<K,V> {
   private boolean isEqual(Object x, Object y) {
     return (x == y || x.equals(y));
   }
-  
+
   /**
    * Determines the index into the current hash table for the specified
    * hashValue.
@@ -778,7 +778,7 @@ implements HeapSize, Map<K,V> {
     }
     return newCapacity;
   }
-  
+
   /**
    * Calculates the threshold of the map given the capacity and load
    * factor.  Once the number of entries in the map grows to the
@@ -799,7 +799,7 @@ implements HeapSize, Map<K,V> {
     memFree -= OVERHEAD;
     memFree -= (entries.length * ClassSize.REFERENCE);
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * Debugging function that returns a List sorted by access time.
@@ -833,7 +833,7 @@ implements HeapSize, Map<K,V> {
     }
     return entrySet;
   }
-  
+
   /**
    * Get the head of the linked list (least recently used).
    *
@@ -842,16 +842,16 @@ implements HeapSize, Map<K,V> {
   public Entry getHeadPtr() {
     return headPtr;
   }
-  
+
   /**
    * Get the tail of the linked list (most recently used).
-   * 
+   *
    * @return tail of linked list
    */
   public Entry getTailPtr() {
     return tailPtr;
   }
-  
+
   //--------------------------------------------------------------------------
   /**
    * To best optimize this class, some of the methods that are part of a
@@ -860,7 +860,7 @@ implements HeapSize, Map<K,V> {
    * significant overhead and code complexity to support and are
    * unnecessary for the requirements of this class.
    */
-  
+
   /**
    * Intentionally unimplemented.
    */
@@ -884,7 +884,7 @@ implements HeapSize, Map<K,V> {
     throw new UnsupportedOperationException(
     "hashCode(Object) is intentionally unimplemented");
   }
-  
+
   /**
    * Intentionally unimplemented.
    */
@@ -892,7 +892,7 @@ implements HeapSize, Map<K,V> {
     throw new UnsupportedOperationException(
     "keySet() is intentionally unimplemented");
   }
-  
+
   /**
    * Intentionally unimplemented.
    */
@@ -900,7 +900,7 @@ implements HeapSize, Map<K,V> {
     throw new UnsupportedOperationException(
     "putAll() is intentionally unimplemented");
   }
-  
+
   /**
    * Intentionally unimplemented.
    */
@@ -922,9 +922,9 @@ implements HeapSize, Map<K,V> {
   protected static class Entry<K extends HeapSize, V extends HeapSize>
   implements Map.Entry<K,V>, HeapSize {
     /** The baseline overhead memory usage of this class */
-    static final int OVERHEAD = 1 * Bytes.SIZEOF_LONG + 
+    static final int OVERHEAD = 1 * Bytes.SIZEOF_LONG +
       5 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT;
-    
+
     /** The key */
     protected final K key;
     /** The value */
@@ -933,12 +933,12 @@ implements HeapSize, Map<K,V> {
     protected final int hash;
     /** The next entry in the hash chain (for collisions) */
     protected Entry<K,V> next;
-    
+
     /** The previous entry in the LRU list (towards LRU) */
     protected Entry<K,V> prevPtr;
     /** The next entry in the LRU list (towards MRU) */
     protected Entry<K,V> nextPtr;
-    
+
     /** The precomputed heap size of this entry */
     protected long heapSize;
 
@@ -979,7 +979,7 @@ implements HeapSize, Map<K,V> {
     public V getValue() {
       return value;
     }
-  
+
     /**
      * Set the value of this entry.
      *
@@ -995,7 +995,7 @@ implements HeapSize, Map<K,V> {
       value = newValue;
       return oldValue;
     }
-  
+
     /**
      * Replace the value of this entry.
      *
@@ -1011,7 +1011,7 @@ implements HeapSize, Map<K,V> {
       heapSize += sizeDiff;
       return sizeDiff;
     }
-  
+
     /**
      * Returns true is the specified entry has the same key and the
      * same value as this entry.
@@ -1028,13 +1028,13 @@ implements HeapSize, Map<K,V> {
       if (k1 == k2 || (k1 != null && k1.equals(k2))) {
           Object v1 = getValue();
           Object v2 = e.getValue();
-          if (v1 == v2 || (v1 != null && v1.equals(v2))) 
+          if (v1 == v2 || (v1 != null && v1.equals(v2)))
             return true;
       }
       return false;
     }
-    
-    /** 
+
+    /**
      * Returns the hash code of the entry by xor'ing the hash values
      * of the key and value of this entry.
      *
@@ -1043,7 +1043,7 @@ implements HeapSize, Map<K,V> {
     public int hashCode() {
       return (key.hashCode() ^ value.hashCode());
     }
-  
+
     /**
      * Returns String representation of the entry in form "key=value"
      *
@@ -1061,15 +1061,15 @@ implements HeapSize, Map<K,V> {
     protected void setPrevPtr(Entry<K,V> prevPtr){
       this.prevPtr = prevPtr;
     }
-    
+
     /**
      * Returns the previous pointer for the entry in the LRU.
      * @return previous entry
      */
     protected Entry<K,V> getPrevPtr(){
       return prevPtr;
-    }    
-    
+    }
+
     /**
      * Sets the next pointer for the entry in the LRU.
      * @param nextPtr next entry
@@ -1077,7 +1077,7 @@ implements HeapSize, Map<K,V> {
     protected void setNextPtr(Entry<K,V> nextPtr){
       this.nextPtr = nextPtr;
     }
-    
+
     /**
      * Returns the next pointer for the entry in teh LRU.
      * @return next entry
@@ -1085,7 +1085,7 @@ implements HeapSize, Map<K,V> {
     protected Entry<K,V> getNextPtr(){
       return nextPtr;
     }
-    
+
     /**
      * Returns the pre-computed and "deep" size of the Entry
      * @return size of the entry in bytes

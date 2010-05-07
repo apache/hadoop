@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * This filter is used to filter based on the key. It takes an operator
- * (equal, greater, not equal, etc) and a byte [] comparator for the row, 
+ * (equal, greater, not equal, etc) and a byte [] comparator for the row,
  * and column qualifier portions of a key.
  * <p>
  * This filter can be wrapped with {@link WhileMatchFilter} to add more control.
@@ -51,7 +51,7 @@ public class RowFilter extends CompareFilter {
    * @param rowCompareOp the compare op for row matching
    * @param rowComparator the comparator for row matching
    */
-  public RowFilter(final CompareOp rowCompareOp, 
+  public RowFilter(final CompareOp rowCompareOp,
       final WritableByteArrayComparable rowComparator) {
     super(rowCompareOp, rowComparator);
   }
@@ -68,7 +68,7 @@ public class RowFilter extends CompareFilter {
     }
     return ReturnCode.INCLUDE;
   }
-  
+
   @Override
   public boolean filterRowKey(byte[] data, int offset, int length) {
     if(doCompare(this.compareOp, this.comparator, data, offset, length)) {

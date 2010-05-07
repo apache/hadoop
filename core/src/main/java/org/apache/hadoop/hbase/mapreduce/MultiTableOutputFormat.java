@@ -46,7 +46,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * {@link Put} or a {@link Delete} instance. All tables must already exist, and
  * all Puts and Deletes must reference only valid column families.
  * </p>
- * 
+ *
  * <p>
  * Write-ahead logging (HLog) for Puts can be disabled by setting
  * {@link #WAL_PROPERTY} to {@link #WAL_OFF}. Default value is {@link #WAL_ON}.
@@ -114,7 +114,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
 
     /**
      * Writes an action (Put or Delete) to the specified table.
-     * 
+     *
      * @param tableName
      *          the table being updated.
      * @param action

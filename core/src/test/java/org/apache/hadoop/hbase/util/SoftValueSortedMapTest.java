@@ -33,9 +33,9 @@ public class SoftValueSortedMapTest {
     byte[] block = new byte[849*1024*1024]; // FindBugs DLS_DEAD_LOCAL_STORE
     System.out.println(map.size());
   }
-  
+
   public static void main(String[] args) {
     testMap(new SoftValueSortedMap<Integer, Integer>());
-    testMap(new TreeMap<Integer, Integer>());    
+    testMap(new TreeMap<Integer, Integer>());
   }
 }

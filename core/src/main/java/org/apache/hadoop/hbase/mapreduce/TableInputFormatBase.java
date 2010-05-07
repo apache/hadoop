@@ -40,8 +40,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an 
- * {@link Scan} instance that defines the input columns etc. Subclasses may use 
+ * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an
+ * {@link Scan} instance that defines the input columns etc. Subclasses may use
  * other TableRecordReader implementations.
  * <p>
  * An example of a subclass:
@@ -69,7 +69,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public abstract class TableInputFormatBase
 extends InputFormat<ImmutableBytesWritable, Result> {
-  
+
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
 
   /** Holds the details for the internal scanner. */
@@ -79,17 +79,17 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
 
- 
+
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
    * the default.
-   * 
+   *
    * @param split  The split to work with.
    * @param context  The current context.
    * @return The newly created record reader.
    * @throws IOException When creating the reader fails.
    * @see org.apache.hadoop.mapreduce.InputFormat#createRecordReader(
-   *   org.apache.hadoop.mapreduce.InputSplit, 
+   *   org.apache.hadoop.mapreduce.InputSplit,
    *   org.apache.hadoop.mapreduce.TaskAttemptContext)
    */
   @Override
@@ -124,7 +124,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
-    if (keys == null || keys.getFirst() == null || 
+    if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
       throw new IOException("Expecting at least one region.");
     }
@@ -132,7 +132,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       throw new IOException("No table was provided.");
     }
     int count = 0;
-    List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length); 
+    List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length);
     for (int i = 0; i < keys.getFirst().length; i++) {
       if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
         continue;
@@ -144,19 +144,19 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       // determine if the given start an stop key fall into the region
       if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
            Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
-          (stopRow.length == 0 || 
+          (stopRow.length == 0 ||
            Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
-        byte[] splitStart = startRow.length == 0 || 
-          Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ? 
+        byte[] splitStart = startRow.length == 0 ||
+          Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ?
             keys.getFirst()[i] : startRow;
-        byte[] splitStop = (stopRow.length == 0 || 
+        byte[] splitStop = (stopRow.length == 0 ||
           Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
-          keys.getSecond()[i].length > 0 ? 
+          keys.getSecond()[i].length > 0 ?
             keys.getSecond()[i] : stopRow;
         InputSplit split = new TableSplit(table.getTableName(),
           splitStart, splitStop, regionLocation);
         splits.add(split);
-        if (LOG.isDebugEnabled()) 
+        if (LOG.isDebugEnabled())
           LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
       }
     }
@@ -209,7 +209,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Gets the scan defining the actual details like columns etc.
-   *  
+   *
    * @return The internal scan instance.
    */
   public Scan getScan() {
@@ -219,7 +219,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Sets the scan defining the actual details like columns etc.
-   *  
+   *
    * @param scan  The scan to set.
    */
   public void setScan(Scan scan) {
@@ -229,7 +229,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   /**
    * Allows subclasses to set the {@link TableRecordReader}.
    *
-   * @param tableRecordReader A different {@link TableRecordReader} 
+   * @param tableRecordReader A different {@link TableRecordReader}
    *   implementation.
    */
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {

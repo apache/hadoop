@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.client.HTable;
  */
 public class TestInfoServers extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
-  
+
   @Override
   protected void preHBaseClusterSetup() {
     // Bring up info servers on 'odd' port numbers in case the test is not
@@ -41,7 +41,7 @@ public class TestInfoServers extends HBaseClusterTestCase {
     conf.setInt("hbase.master.info.port", 60011);
     conf.setInt("hbase.regionserver.info.port", 60031);
   }
-  
+
   /**
    * @throws Exception
    */
@@ -56,7 +56,7 @@ public class TestInfoServers extends HBaseClusterTestCase {
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "regionserver");
   }
-  
+
   private void assertHasExpectedContent(final URL u, final String expected)
   throws IOException {
     LOG.info("Testing " + u.toString() + " has " + expected);

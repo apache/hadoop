@@ -99,7 +99,7 @@ below. If running the reduce step makes sense in your case, its usually better
 to have lots of reducers so load is spread across the hbase cluster.</p>
 
 <p>There is also a new hbase partitioner that will run as many reducers as
-currently existing regions.  The 
+currently existing regions.  The
 {@link org.apache.hadoop.hbase.mapreduce.HRegionPartitioner} is suitable
 when your table is large and your upload is not such that it will greatly
 alter the number of existing regions when done; otherwise use the default
@@ -119,7 +119,7 @@ The row id must be formatted as a {@link org.apache.hadoop.hbase.io.ImmutableByt
 value as a {@link org.apache.hadoop.hbase.KeyValue} (A KeyValue holds the value for a cell and
 its coordinates; row/family/qualifier/timestamp, etc.).  Note that you must
 specify a timestamp when you create the KeyValue in your map task
-otherwise the KeyValue will be created with the default LATEST_TIMESTAMP (Long.MAX_VALUE).  
+otherwise the KeyValue will be created with the default LATEST_TIMESTAMP (Long.MAX_VALUE).
 Use System.currentTimeMillis() if your data does not inherently bear a timestamp.
 Your reduce task
 will also need to emit the KeyValues in order.  See {@link org.apache.hadoop.hbase.mapreduce.KeyValueSortReducer}
@@ -143,7 +143,7 @@ that is intimate with your tables key namespace and that knows how
 to distribute keys among the reducers so a total order is maintained.  If your
 keys are distributed with some regularity across a defined key space -- i.e.
 you know the start and end keys -- then the
- {@link org.apache.hadoop.hbase.mapreduce.SimpleTotalOrderPartitioner} 
+ {@link org.apache.hadoop.hbase.mapreduce.SimpleTotalOrderPartitioner}
 may be all you need.
 </p>
 <p>See org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat for an example

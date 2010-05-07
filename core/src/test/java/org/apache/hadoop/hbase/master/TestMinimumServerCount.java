@@ -76,7 +76,7 @@ public class TestMinimumServerCount extends HBaseClusterTestCase {
     }
     Thread.sleep(10 * 1000);
     assertFalse(admin.isTableAvailable(TABLE_NAME));
-    
+
     // now start another region server
     cluster.startRegionServer();
 

@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This class is used for the tracking and enforcement of columns and numbers 
+ * This class is used for the tracking and enforcement of columns and numbers
  * of versions during the course of a Get or Scan operation, when all available
  * column qualifiers have been asked for in the query.
  * <p>
@@ -36,20 +36,20 @@ import java.util.List;
  * what action should be taken.
  * <li>{@link #update} is called at the end of every StoreFile or memstore.
  * <p>
- * This class is NOT thread-safe as queries are never multi-threaded 
+ * This class is NOT thread-safe as queries are never multi-threaded
  */
 public class WildcardColumnTracker implements ColumnTracker {
-  
+
   private int maxVersions;
-  
+
   protected List<ColumnCount> columns;
   private int index;
   private ColumnCount column;
-  
-  private List<ColumnCount> newColumns; 
+
+  private List<ColumnCount> newColumns;
   private int newIndex;
   private ColumnCount newColumn;
-  
+
   /**
    * Default constructor.
    * @param maxVersions maximum versions to return per columns
@@ -58,7 +58,7 @@ public class WildcardColumnTracker implements ColumnTracker {
     this.maxVersions = maxVersions;
     reset();
   }
-  
+
   public void reset() {
     this.index = 0;
     this.column = null;
@@ -67,7 +67,7 @@ public class WildcardColumnTracker implements ColumnTracker {
     this.newIndex = 0;
     this.newColumn = null;
   }
-  
+
   /**
    * Can never early-out from reading more storefiles in Wildcard case.
    */
@@ -241,7 +241,7 @@ public class WildcardColumnTracker implements ColumnTracker {
       }
     } while(true);
   }
-  
+
   /**
    * Called at the end of every StoreFile or memstore.
    */
@@ -253,14 +253,14 @@ public class WildcardColumnTracker implements ColumnTracker {
       }
       return;
     }
-    
+
     // If no new columns, retain previous columns and return
     if(this.newColumns.size() == 0) {
       this.index = 0;
       this.column = this.columns.get(index);
       return;
     }
-    
+
     // Merge previous columns with new columns
     // There will be no overlapping
     List<ColumnCount> mergeColumns = new ArrayList<ColumnCount>(
@@ -271,14 +271,14 @@ public class WildcardColumnTracker implements ColumnTracker {
     newColumn = newColumns.get(0);
     while(true) {
       int ret = Bytes.compareTo(
-          column.getBuffer(), column.getOffset(),column.getLength(), 
+          column.getBuffer(), column.getOffset(),column.getLength(),
           newColumn.getBuffer(), newColumn.getOffset(), newColumn.getLength());
-      
+
       // Existing is smaller than new, add existing and iterate it
       if(ret <= -1) {
         mergeColumns.add(column);
         if(++index == columns.size()) {
-          // No more existing left, merge down rest of new and return 
+          // No more existing left, merge down rest of new and return
           mergeDown(mergeColumns, newColumns, newIndex);
           finish(mergeColumns);
           return;
@@ -286,7 +286,7 @@ public class WildcardColumnTracker implements ColumnTracker {
         column = columns.get(index);
         continue;
       }
-      
+
       // New is smaller than existing, add new and iterate it
       mergeColumns.add(newColumn);
       if(++newIndex == newColumns.size()) {
@@ -299,23 +299,23 @@ public class WildcardColumnTracker implements ColumnTracker {
       continue;
     }
   }
-  
-  private void mergeDown(List<ColumnCount> mergeColumns, 
+
+  private void mergeDown(List<ColumnCount> mergeColumns,
       List<ColumnCount> srcColumns, int srcIndex) {
     int index = srcIndex;
     while(index < srcColumns.size()) {
       mergeColumns.add(srcColumns.get(index++));
     }
   }
-  
+
   private void finish(List<ColumnCount> mergeColumns) {
     this.columns = mergeColumns;
     this.index = 0;
     this.column = this.columns.size() > 0? columns.get(index) : null;
-    
+
     this.newColumns = new ArrayList<ColumnCount>();
     this.newIndex = 0;
     this.newColumn = null;
   }
-  
+
 }

@@ -40,7 +40,7 @@ public class TestPageFilter extends TestCase {
     Filter f = new PageFilter(ROW_LIMIT);
     pageSizeTests(f);
   }
-  
+
   /**
    * Test filter serialization
    * @throws Exception
@@ -57,33 +57,33 @@ public class TestPageFilter extends TestCase {
     DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
     Filter newFilter = new PageFilter();
     newFilter.readFields(in);
-    
+
     // Ensure the serialization preserved the filter by running a full test.
     pageSizeTests(newFilter);
   }
-  
+
   private void pageSizeTests(Filter f) throws Exception {
     testFiltersBeyondPageSize(f, ROW_LIMIT);
   }
-  
+
   private void testFiltersBeyondPageSize(final Filter f, final int pageSize) {
     int count = 0;
     for (int i = 0; i < (pageSize * 2); i++) {
       boolean filterOut = f.filterRow();
-      
+
       if(filterOut) {
         break;
       } else {
         count++;
       }
-      
+
       // If at last row, should tell us to skip all remaining
       if(count == pageSize) {
         assertTrue(f.filterAllRemaining());
       } else {
         assertFalse(f.filterAllRemaining());
       }
-      
+
     }
     assertEquals(pageSize, count);
   }

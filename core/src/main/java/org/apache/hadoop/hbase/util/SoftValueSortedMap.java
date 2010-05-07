@@ -33,19 +33,19 @@ import java.util.TreeSet;
  * A SortedMap implementation that uses Soft Reference values
  * internally to make it play well with the GC when in a low-memory
  * situation. Use as a cache where you also need SortedMap functionality.
- * 
+ *
  * @param <K> key class
  * @param <V> value class
  */
 public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   private final SortedMap<K, SoftValue<K,V>> internalMap;
   private final ReferenceQueue rq = new ReferenceQueue();
-  
+
   /** Constructor */
   public SoftValueSortedMap() {
     this(new TreeMap<K, SoftValue<K,V>>());
   }
-  
+
   /**
    * Constructor
    * @param c comparator
@@ -53,7 +53,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   public SoftValueSortedMap(final Comparator<K> c) {
     this(new TreeMap<K, SoftValue<K,V>>(c));
   }
-  
+
   /** For headMap and tailMap support
    * @param original object to wrap
    */
@@ -83,12 +83,12 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
       new SoftValue<K,V>(key, value, this.rq));
     return oldValue == null ? null : oldValue.get();
   }
-  
+
   @SuppressWarnings("unchecked")
   public synchronized void putAll(Map map) {
     throw new RuntimeException("Not implemented");
   }
-  
+
   @SuppressWarnings({"SuspiciousMethodCalls"})
   public synchronized V get(Object key) {
     checkReferences();
@@ -110,10 +110,10 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public synchronized boolean containsKey(Object key) {
-    checkReferences(); 
+    checkReferences();
     return this.internalMap.containsKey(key);
   }
-  
+
   public synchronized boolean containsValue(Object value) {
 /*    checkReferences();
     return internalMap.containsValue(value);*/
@@ -129,22 +129,22 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
     checkReferences();
     return internalMap.lastKey();
   }
-  
+
   public synchronized SoftValueSortedMap<K,V> headMap(K key) {
     checkReferences();
     return new SoftValueSortedMap<K,V>(this.internalMap.headMap(key));
   }
-  
+
   public synchronized SoftValueSortedMap<K,V> tailMap(K key) {
     checkReferences();
     return new SoftValueSortedMap<K,V>(this.internalMap.tailMap(key));
   }
-  
+
   public synchronized SoftValueSortedMap<K,V> subMap(K fromKey, K toKey) {
     checkReferences();
     return new SoftValueSortedMap<K,V>(this.internalMap.subMap(fromKey, toKey));
   }
-  
+
   public synchronized boolean isEmpty() {
     checkReferences();
     return this.internalMap.isEmpty();

@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestGetRowVersions extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetRowVersions.class);
-  
+
   private static final String TABLE_NAME = "test";
   private static final byte [] CONTENTS = Bytes.toBytes("contents");
   private static final byte [] ROW = Bytes.toBytes("row");
@@ -92,7 +92,7 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
     assertTrue(Bytes.equals(value, VALUE2));
     NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
       r.getMap();
-    NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap = 
+    NavigableMap<byte[], NavigableMap<Long, byte[]>> familyMap =
       map.get(CONTENTS);
     NavigableMap<Long, byte[]> versionMap = familyMap.get(CONTENTS);
     assertTrue(versionMap.size() == 2);

@@ -29,7 +29,7 @@ public class TableExistsException extends IOException {
 
   /**
    * Constructor
-   * 
+   *
    * @param s message
    */
   public TableExistsException(String s) {

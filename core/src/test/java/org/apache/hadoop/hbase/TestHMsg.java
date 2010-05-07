@@ -54,7 +54,7 @@ public class TestHMsg extends TestCase {
      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b));
     assertNotSame(-1, msgs.indexOf(hmsg));
   }
-  
+
   public void testSerialization() throws IOException {
     // Check out new HMsg that carries two daughter split regions.
     byte [] abytes = Bytes.toBytes("a");

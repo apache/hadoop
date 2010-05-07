@@ -30,7 +30,7 @@ import java.io.IOException;
  * the value of a given column. Use it to test if a given substring appears
  * in a cell value in the column. The comparison is case insensitive.
  * <p>
- * Only EQUAL or NOT_EQUAL tests are valid with this comparator. 
+ * Only EQUAL or NOT_EQUAL tests are valid with this comparator.
  * <p>
  * For example:
  * <p>

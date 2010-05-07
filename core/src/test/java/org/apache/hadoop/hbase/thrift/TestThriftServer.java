@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Unit testing for ThriftServer.HBaseHandler, a part of the 
- * org.apache.hadoop.hbase.thrift package.  
+ * Unit testing for ThriftServer.HBaseHandler, a part of the
+ * org.apache.hadoop.hbase.thrift package.
  */
 public class TestThriftServer extends HBaseClusterTestCase {
 
@@ -49,11 +49,11 @@ public class TestThriftServer extends HBaseClusterTestCase {
   private static byte[] valueDname = Bytes.toBytes("valueD");
 
   /**
-   * Runs all of the tests under a single JUnit test method.  We 
+   * Runs all of the tests under a single JUnit test method.  We
    * consolidate all testing to one method because HBaseClusterTestCase
-   * is prone to OutOfMemoryExceptions when there are three or more 
+   * is prone to OutOfMemoryExceptions when there are three or more
    * JUnit test methods.
-   * 
+   *
    * @throws Exception
    */
   public void testAll() throws Exception {
@@ -65,10 +65,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * Tests for creating, enabling, disabling, and deleting tables.  Also 
-   * tests that creating a table with an invalid column name yields an 
+   * Tests for creating, enabling, disabling, and deleting tables.  Also
+   * tests that creating a table with an invalid column name yields an
    * IllegalArgument exception.
-   * 
+   *
    * @throws Exception
    */
   public void doTestTableCreateDrop() throws Exception {
@@ -95,10 +95,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * Tests adding a series of Mutations and BatchMutations, including a 
-   * delete mutation.  Also tests data retrieval, and getting back multiple 
-   * versions.  
-   * 
+   * Tests adding a series of Mutations and BatchMutations, including a
+   * delete mutation.  Also tests data retrieval, and getting back multiple
+   * versions.
+   *
    * @throws Exception
    */
   public void doTestTableMutations() throws Exception {
@@ -159,10 +159,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * Similar to testTableMutations(), except Mutations are applied with 
-   * specific timestamps and data retrieval uses these timestamps to 
-   * extract specific versions of data.  
-   * 
+   * Similar to testTableMutations(), except Mutations are applied with
+   * specific timestamps and data retrieval uses these timestamps to
+   * extract specific versions of data.
+   *
    * @throws Exception
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
@@ -199,10 +199,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
     //assertTrue(Bytes.equals(rowResult1.columns.get(columnAname).value, valueAname));
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertTrue(Bytes.equals(rowResult2.columns.get(columnBname).value, valueCname));
-    
+
     // ColumnAname has been deleted, and will never be visible even with a getRowTs()
     assertFalse(rowResult2.columns.containsKey(columnAname));
-    
+
     List<byte[]> columns = new ArrayList<byte[]>();
     columns.add(columnBname);
 
@@ -213,7 +213,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1).get(0);
     assertTrue(Bytes.equals(rowResult1.columns.get(columnBname).value, valueBname));
     assertFalse(rowResult1.columns.containsKey(columnAname));
-    
+
     // Apply some timestamped deletes
     // this actually deletes _everything_.
     // nukes everything in columnB: forever.
@@ -238,9 +238,9 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * Tests the four different scanner-opening methods (with and without 
-   * a stoprow, with and without a timestamp).  
-   * 
+   * Tests the four different scanner-opening methods (with and without
+   * a stoprow, with and without a timestamp).
+   *
    * @throws Exception
    */
   public void doTestTableScanners() throws Exception {
@@ -289,12 +289,12 @@ public class TestThriftServer extends HBaseClusterTestCase {
     closeScanner(scanner2, handler);
 
     // Test a scanner on the first row and first column only, no timestamp
-    int scanner3 = handler.scannerOpenWithStop(tableAname, rowAname, rowBname, 
+    int scanner3 = handler.scannerOpenWithStop(tableAname, rowAname, rowBname,
         getColumnList(true, false));
     closeScanner(scanner3, handler);
 
     // Test a scanner on the first row and second column only, with timestamp
-    int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname, 
+    int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname,
         getColumnList(false, true), time1);
     TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
     assertEquals(rowResult4a.columns.size(), 1);
@@ -306,8 +306,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * 
-   * @return a List of ColumnDescriptors for use in creating a table.  Has one 
+   *
+   * @return a List of ColumnDescriptors for use in creating a table.  Has one
    * default ColumnDescriptor and one ColumnDescriptor with fewer versions
    */
   private List<ColumnDescriptor> getColumnDescriptors() {
@@ -319,7 +319,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
     cDescriptors.add(cDescA);
 
     // A slightly customized ColumnDescriptor (only 2 versions)
-    ColumnDescriptor cDescB = new ColumnDescriptor(columnBname, 2, "NONE", 
+    ColumnDescriptor cDescB = new ColumnDescriptor(columnBname, 2, "NONE",
         false, "NONE", 0, 0, false, -1);
     cDescriptors.add(cDescB);
 
@@ -327,7 +327,7 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * 
+   *
    * @param includeA whether or not to include columnA
    * @param includeB whether or not to include columnB
    * @return a List of column names for use in retrieving a scanner
@@ -340,8 +340,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * 
-   * @return a List of Mutations for a row, with columnA having valueA 
+   *
+   * @return a List of Mutations for a row, with columnA having valueA
    * and columnB having valueB
    */
   private List<Mutation> getMutations() {
@@ -352,12 +352,12 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * 
+   *
    * @return a List of BatchMutations with the following effects:
    * (rowA, columnA): delete
    * (rowA, columnB): place valueC
    * (rowB, columnA): place valueC
-   * (rowB, columnB): place valueD  
+   * (rowB, columnB): place valueD
    */
   private List<BatchMutation> getBatchMutations() {
     List<BatchMutation> batchMutations = new ArrayList<BatchMutation>();
@@ -381,9 +381,9 @@ public class TestThriftServer extends HBaseClusterTestCase {
   }
 
   /**
-   * Asserts that the passed scanner is exhausted, and then closes 
+   * Asserts that the passed scanner is exhausted, and then closes
    * the scanner.
-   * 
+   *
    * @param scannerId the scanner to close
    * @param handler the HBaseHandler interfacing to HBase
    * @throws Exception

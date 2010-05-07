@@ -34,19 +34,19 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /**
- * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp} 
- * operator (equal, greater, not equal, etc), and either a byte [] value or 
+ * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
+ * operator (equal, greater, not equal, etc), and either a byte [] value or
  * a WritableByteArrayComparable.
  * <p>
- * If we have a byte [] value then we just do a lexicographic compare. For 
- * example, if passed value is 'b' and cell has 'a' and the compare operator 
- * is LESS, then we will filter out this cell (return true).  If this is not 
- * sufficient (eg you want to deserialize a long and then compare it to a fixed 
+ * If we have a byte [] value then we just do a lexicographic compare. For
+ * example, if passed value is 'b' and cell has 'a' and the compare operator
+ * is LESS, then we will filter out this cell (return true).  If this is not
+ * sufficient (eg you want to deserialize a long and then compare it to a fixed
  * long value), then you can pass in your own comparator instead.
  * <p>
- * You must also specify a family and qualifier.  Only the value of this column 
- * will be tested. When using this filter on a {@link Scan} with specified 
- * inputs, the column to be tested should also be added as input (otherwise 
+ * You must also specify a family and qualifier.  Only the value of this column
+ * will be tested. When using this filter on a {@link Scan} with specified
+ * inputs, the column to be tested should also be added as input (otherwise
  * the filter will regard the column as missing).
  * <p>
  * To prevent the entire row from being emitted if the column is not found
@@ -64,7 +64,7 @@ public class SingleColumnValueFilter implements Filter {
   static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
 
   protected byte [] columnFamily;
-  protected byte [] columnQualifier; 
+  protected byte [] columnQualifier;
   private CompareOp compareOp;
   private WritableByteArrayComparable comparator;
   private boolean foundColumn = false;
@@ -77,13 +77,13 @@ public class SingleColumnValueFilter implements Filter {
    */
   public SingleColumnValueFilter() {
   }
-  
+
   /**
    * Constructor for binary compare of the value of a single column.  If the
    * column is found and the condition passes, all columns of the row will be
    * emitted.  If the column is not found or the condition fails, the row will
    * not be emitted.
-   * 
+   *
    * @param family name of column family
    * @param qualifier name of column qualifier
    * @param compareOp operator
@@ -102,7 +102,7 @@ public class SingleColumnValueFilter implements Filter {
    * Use the filterIfColumnMissing flag to set whether the rest of the columns
    * in a row will be emitted if the specified column to check is not found in
    * the row.
-   * 
+   *
    * @param family name of column family
    * @param qualifier name of column qualifier
    * @param compareOp operator

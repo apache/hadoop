@@ -29,7 +29,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
 
   /**
    * Constructor
-   * 
+   *
    * @param regionInfo the HRegionInfo for the region
    * @param serverAddress the HServerAddress for the region server
    */
@@ -73,7 +73,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     result ^= this.serverAddress.hashCode();
     return result;
   }
-  
+
   /** @return HRegionInfo */
   public HRegionInfo getRegionInfo(){
     return regionInfo;
@@ -87,7 +87,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   //
   // Comparable
   //
-  
+
   public int compareTo(HRegionLocation o) {
     int result = this.regionInfo.compareTo(o.regionInfo);
     if(result == 0) {

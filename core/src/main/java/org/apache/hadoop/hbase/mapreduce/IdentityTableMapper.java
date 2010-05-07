@@ -33,9 +33,9 @@ public class IdentityTableMapper
 extends TableMapper<ImmutableBytesWritable, Result> {
 
   /**
-   * Use this before submitting a TableMap job. It will appropriately set up 
+   * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
-   * 
+   *
    * @param table  The table name.
    * @param scan  The scan with the columns to scan.
    * @param mapper  The mapper class.
@@ -51,16 +51,16 @@ extends TableMapper<ImmutableBytesWritable, Result> {
 
   /**
    * Pass the key, value to reduce.
-   * 
-   * @param key  The current key. 
+   *
+   * @param key  The current key.
    * @param value  The current value.
-   * @param context  The current context. 
+   * @param context  The current context.
    * @throws IOException When writing the record fails.
    * @throws InterruptedException When the job is aborted.
    */
-  public void map(ImmutableBytesWritable key, Result value, Context context) 
+  public void map(ImmutableBytesWritable key, Result value, Context context)
   throws IOException, InterruptedException {
     context.write(key, value);
   }
-  
+
 }

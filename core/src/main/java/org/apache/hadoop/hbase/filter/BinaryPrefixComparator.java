@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A comparator which compares against a specified byte array, but only compares
  * up to the length of this byte array. For the rest it is similar to
  * {@link BinaryComparator}.
- */ 
+ */
 public class BinaryPrefixComparator extends WritableByteArrayComparable {
 
   /** Nullary constructor for Writable, do not use */
@@ -42,7 +42,7 @@ public class BinaryPrefixComparator extends WritableByteArrayComparable {
 
   @Override
   public int compareTo(byte [] value) {
-    return Bytes.compareTo(this.value, 0, this.value.length, value, 0, 
+    return Bytes.compareTo(this.value, 0, this.value.length, value, 0,
       this.value.length);
   }
 

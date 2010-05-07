@@ -43,14 +43,14 @@ public class TestMetricsMBeanBase extends TestCase {
       super(registry, "TestStatistics");
     }
   }
-  
+
   private MetricsRegistry registry;
   private MetricsRecord metricsRecord;
   private TestStatistics stats;
   private MetricsRate metricsRate;
   private MetricsIntValue intValue;
   private MetricsTimeVaryingRate varyRate;
-  
+
   public void setUp() {
     this.registry = new MetricsRegistry();
     this.metricsRate = new MetricsRate("metricsRate", registry, "test");
@@ -61,13 +61,13 @@ public class TestMetricsMBeanBase extends TestCase {
     this.metricsRecord = MetricsUtil.createRecord(context, "test");
     this.metricsRecord.setTag("TestStatistics", "test");
     //context.registerUpdater(this);
-    
+
   }
-  
+
   public void tearDown() {
-    
+
   }
-  
+
   public void testGetAttribute() throws Exception {
     this.metricsRate.inc(2);
     this.metricsRate.pushMetric(this.metricsRecord);
@@ -76,8 +76,8 @@ public class TestMetricsMBeanBase extends TestCase {
     this.varyRate.inc(10);
     this.varyRate.inc(50);
     this.varyRate.pushMetric(this.metricsRecord);
-    
-    
+
+
     assertEquals( 2.0, (Float)this.stats.getAttribute("metricsRate"), 0.001 );
     assertEquals( 5, this.stats.getAttribute("intValue") );
     assertEquals( 10L, this.stats.getAttribute("varyRateMinTime") );
@@ -85,17 +85,17 @@ public class TestMetricsMBeanBase extends TestCase {
     assertEquals( 30L, this.stats.getAttribute("varyRateAvgTime") );
     assertEquals( 2, this.stats.getAttribute("varyRateNumOps") );
   }
-  
+
   public void testGetMBeanInfo() {
     MBeanInfo info = this.stats.getMBeanInfo();
     MBeanAttributeInfo[] attributes = info.getAttributes();
     assertEquals( 6, attributes.length );
-    
-    Map<String,MBeanAttributeInfo> attributeByName = 
+
+    Map<String,MBeanAttributeInfo> attributeByName =
         new HashMap<String,MBeanAttributeInfo>(attributes.length);
     for (MBeanAttributeInfo attr : attributes)
       attributeByName.put(attr.getName(), attr);
-    
+
     assertAttribute( attributeByName.get("metricsRate"),
         "metricsRate", "java.lang.Float", "test");
     assertAttribute( attributeByName.get("intValue"),
@@ -109,10 +109,10 @@ public class TestMetricsMBeanBase extends TestCase {
     assertAttribute( attributeByName.get("varyRateNumOps"),
         "varyRateNumOps", "java.lang.Integer", "test");
   }
-  
+
   protected void assertAttribute(MBeanAttributeInfo attr, String name,
       String type, String description) {
-    
+
     assertEquals(attr.getName(), name);
     assertEquals(attr.getType(), type);
     assertEquals(attr.getDescription(), description);

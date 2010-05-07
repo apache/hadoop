@@ -23,8 +23,8 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 
 /**
- * This filter is used to filter based on column value. It takes an 
- * operator (equal, greater, not equal, etc) and a byte [] comparator for the 
+ * This filter is used to filter based on column value. It takes an
+ * operator (equal, greater, not equal, etc) and a byte [] comparator for the
  * cell value.
  * <p>
  * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter}
@@ -55,7 +55,7 @@ public class ValueFilter extends CompareFilter {
 
   @Override
   public ReturnCode filterKeyValue(KeyValue v) {
-    if (doCompare(this.compareOp, this.comparator, v.getBuffer(), 
+    if (doCompare(this.compareOp, this.comparator, v.getBuffer(),
         v.getValueOffset(), v.getValueLength())) {
       return ReturnCode.SKIP;
     }

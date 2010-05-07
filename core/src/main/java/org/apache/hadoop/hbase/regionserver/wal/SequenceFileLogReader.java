@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.SequenceFile;
 
 public class SequenceFileLogReader implements HLog.Reader {
-  
+
   /**
    * Hack just to set the correct file length up in SequenceFile.Reader.
    * See HADOOP-6307.  The below is all about setting the right length on the
@@ -40,7 +40,7 @@ public class SequenceFileLogReader implements HLog.Reader {
    * the available on the stream.  The below is ugly.  It makes getPos, the
    * first time its called, return length of the file -- i.e. tell a lie -- just
    * so this line up in SF.Reader's constructor ends up with right answer:
-   * 
+   *
    *         this.end = in.getPos() + length;
    *
    */
@@ -49,14 +49,14 @@ public class SequenceFileLogReader implements HLog.Reader {
     WALReader(final FileSystem fs, final Path p, final Configuration c)
     throws IOException {
       super(fs, p, c);
-      
+
     }
 
     @Override
     protected FSDataInputStream openFile(FileSystem fs, Path file,
       int bufferSize, long length)
     throws IOException {
-      return new WALReaderFSDataInputStream(super.openFile(fs, file, 
+      return new WALReaderFSDataInputStream(super.openFile(fs, file,
         bufferSize, length), length);
     }
 
@@ -93,7 +93,7 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   Configuration conf;
   WALReader reader;
-  
+
   public SequenceFileLogReader() { }
 
   @Override

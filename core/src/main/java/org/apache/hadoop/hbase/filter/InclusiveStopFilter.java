@@ -64,7 +64,7 @@ public class InclusiveStopFilter implements Filter {
     // if stopRowKey is <= buffer, then true, filter row.
     int cmp = Bytes.compareTo(stopRowKey, 0, stopRowKey.length,
       buffer, offset, length);
-    
+
     if(cmp < 0) {
       done = true;
     }

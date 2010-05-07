@@ -30,20 +30,20 @@ public interface KeyValueScanner {
    * @return the next KeyValue
    */
   public KeyValue peek();
-  
+
   /**
-   * Return the next KeyValue in this scanner, iterating the scanner 
+   * Return the next KeyValue in this scanner, iterating the scanner
    * @return the next KeyValue
    */
   public KeyValue next();
-  
+
   /**
    * Seek the scanner at or after the specified KeyValue.
    * @param key seek value
    * @return true if scanner has values left, false if end of scanner
    */
   public boolean seek(KeyValue key);
-  
+
   /**
    * Close the KeyValue scanner.
    */

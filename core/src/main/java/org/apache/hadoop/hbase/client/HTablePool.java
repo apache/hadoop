@@ -125,15 +125,15 @@ public class HTablePool {
   protected HTableInterface createHTable(String tableName) {
     return this.tableFactory.createHTableInterface(config, Bytes.toBytes(tableName));
   }
-  
+
   /**
    * Closes all the HTable instances , belonging to the given table, in the table pool.
    * <p>
-   * Note: this is a 'shutdown' of the given table pool and different from 
-   * {@link #putTable(HTableInterface)}, that is used to return the table 
+   * Note: this is a 'shutdown' of the given table pool and different from
+   * {@link #putTable(HTableInterface)}, that is used to return the table
    * instance to the pool for future re-use.
-   *  
-   * @param tableName 
+   *
+   * @param tableName
    */
   public void closeTablePool(final String tableName)  {
     Queue<HTableInterface> queue = tables.get(tableName);
@@ -149,7 +149,7 @@ public class HTablePool {
 
   /**
    * See {@link #closeTablePool(String)}.
-   * 
+   *
    * @param tableName
    */
   public void closeTablePool(final byte[] tableName)  {
@@ -161,5 +161,5 @@ public class HTablePool {
     synchronized(queue) {
       return queue.size();
     }
-  }  
+  }
 }

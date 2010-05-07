@@ -45,8 +45,8 @@ class ChangeTableState extends TableOperation {
     new TreeMap<String, HashSet<HRegionInfo>>();
   protected long lockid;
 
-  ChangeTableState(final HMaster master, final byte [] tableName, 
-    final boolean onLine) 
+  ChangeTableState(final HMaster master, final byte [] tableName,
+    final boolean onLine)
   throws IOException {
     super(master, tableName);
     this.online = onLine;

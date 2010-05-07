@@ -32,7 +32,7 @@ public class MasterStatistics extends MetricsMBeanBase {
 
   public MasterStatistics(MetricsRegistry registry) {
     super(registry, "MasterStatistics");
-    mbeanName = MBeanUtil.registerMBean("Master", "MasterStatistics", this);    
+    mbeanName = MBeanUtil.registerMBean("Master", "MasterStatistics", this);
   }
 
   public void shutdown() {

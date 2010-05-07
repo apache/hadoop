@@ -25,10 +25,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 
 /**
- * Class that provides static method needed when putting deletes into memstore 
+ * Class that provides static method needed when putting deletes into memstore
  */
 public class DeleteCompare {
-  
+
   /**
    * Return codes from deleteCompare.
    */
@@ -37,12 +37,12 @@ public class DeleteCompare {
      * Do nothing.  Move to next KV in memstore
      */
     SKIP,
-    
+
     /**
      * Add to the list of deletes.
      */
     DELETE,
-    
+
     /**
      * Stop looking at KVs in memstore.  Finalize.
      */
@@ -134,5 +134,5 @@ public class DeleteCompare {
     } else {
       return DeleteCode.SKIP;
     }
-  } 
+  }
 }

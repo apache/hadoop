@@ -27,7 +27,7 @@ import java.io.IOException;
  */
 public class RegionServerRunningException extends IOException {
   private static final long serialVersionUID = 1L << 31 - 1L;
-  
+
   /** Default Constructor */
   public RegionServerRunningException() {
     super();

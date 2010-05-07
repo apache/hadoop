@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Test comparing HBase objects.
  */
 public class TestCompare extends TestCase {
-    
+
   /**
    * Sort of HRegionInfo.
    */

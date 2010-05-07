@@ -31,16 +31,16 @@ import java.io.IOException;
  * Clients interact with the HMasterInterface to gain access to meta-level
  * HBase functionality, like finding an HRegionServer and creating/destroying
  * tables.
- * 
+ *
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
- * 
+ *
  */
 public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /** @return true if master is available */
   public boolean isMasterRunning();
-  
+
   // Admin tools would use these cmds
 
   /**
@@ -60,7 +60,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public void deleteTable(final byte [] tableName) throws IOException;
-  
+
   /**
    * Adds a column to the specified table
    * @param tableName table to modify
@@ -77,8 +77,8 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @param descriptor new column descriptor
    * @throws IOException e
    */
-  public void modifyColumn(final byte [] tableName, final byte [] columnName, 
-    HColumnDescriptor descriptor) 
+  public void modifyColumn(final byte [] tableName, final byte [] columnName,
+    HColumnDescriptor descriptor)
   throws IOException;
 
 
@@ -90,17 +90,17 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    */
   public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException;
-  
+
   /**
    * Puts the table on-line (only needed if table has been previously taken offline)
    * @param tableName table to enable
    * @throws IOException e
    */
   public void enableTable(final byte [] tableName) throws IOException;
-  
+
   /**
    * Take table offline
-   * 
+   *
    * @param tableName table to take offline
    * @throws IOException e
    */
@@ -108,7 +108,7 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Modify a table's metadata
-   * 
+   *
    * @param tableName table to modify
    * @param op the operation to do
    * @param args arguments for operation

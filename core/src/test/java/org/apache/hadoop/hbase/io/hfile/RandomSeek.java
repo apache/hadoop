@@ -56,14 +56,14 @@ public class RandomSeek {
     return "2" + Integer.toString(7+r.nextInt(2)) + Integer.toString(r.nextInt(100));
     //return new String(r.nextInt(100));
   }
-  
+
   public static void main(String [] argv) throws IOException {
     Configuration conf = new Configuration();
     conf.setInt("io.file.buffer.size", 64*1024);
     RawLocalFileSystem rlfs = new RawLocalFileSystem();
     rlfs.setConf(conf);
     LocalFileSystem lfs = new LocalFileSystem(rlfs);
-    
+
     Path path = new Path("/Users/ryan/rfile.big.txt");
     long start = System.currentTimeMillis();
     SimpleBlockCache cache = new SimpleBlockCache();
@@ -72,11 +72,11 @@ public class RandomSeek {
     reader.loadFileInfo();
     System.out.println(reader.trailer);
     long end = System.currentTimeMillis();
-    
+
     System.out.println("Index read time: " + (end - start));
 
     List<String> keys = slurp("/Users/ryan/xaa.50k");
-    
+
     // Get a scanner that doesn't cache and that uses pread.
     HFileScanner scanner = reader.getScanner(false, true);
     int count;
@@ -108,17 +108,17 @@ public class RandomSeek {
         totalBytes += k.limit();
         totalBytes += v.limit();
       }
-      
+
       if ( count % 1000 == 0 ) {
         end = System.nanoTime();
-        
+
             System.out.println("Cache block count: " + cache.size() + " dumped: "+ cache.dumps);
             //System.out.println("Cache size: " + cache.heapSize());
             double msTime = ((end - start) / 1000000.0);
-            System.out.println("Seeked: "+ count + " in " + msTime + " (ms) " 
+            System.out.println("Seeked: "+ count + " in " + msTime + " (ms) "
                 + (1000.0 / msTime ) + " seeks/ms "
                 + (msTime / 1000.0) + " ms/seek");
-            
+
             start = System.nanoTime();
       }
     }

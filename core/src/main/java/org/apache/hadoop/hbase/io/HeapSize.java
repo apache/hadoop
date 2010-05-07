@@ -31,7 +31,7 @@ package org.apache.hadoop.hbase.io;
  * For example:
  * <pre>
  * public class SampleObject implements HeapSize {
- *   
+ *
  *   int [] numbers;
  *   int x;
  * }
@@ -43,5 +43,5 @@ public interface HeapSize {
    * count of payload and hosting object sizings.
   */
   public long heapSize();
-  
+
 }

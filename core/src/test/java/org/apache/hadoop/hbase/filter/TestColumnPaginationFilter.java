@@ -39,19 +39,19 @@ public class TestColumnPaginationFilter extends TestCase
     private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
     private static final byte[] VAL_1 = Bytes.toBytes("a");
     private static final byte [] COLUMN_QUALIFIER = Bytes.toBytes("foo");
-    
+
     private Filter columnPaginationFilter;
-    
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         columnPaginationFilter = getColumnPaginationFilter();
-        
+
     }
     private Filter getColumnPaginationFilter() {
         return new ColumnPaginationFilter(1,0);
     }
-    
+
     private Filter serializationTest(Filter filter) throws Exception {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         DataOutputStream out = new DataOutputStream(stream);
@@ -66,29 +66,29 @@ public class TestColumnPaginationFilter extends TestCase
 
         return newFilter;
     }
-    
-    
+
+
     /**
      * The more specific functionality tests are contained within the TestFilters class.  This class is mainly for testing
      * serialization
-     * 
+     *
      * @param filter
      * @throws Exception
      */
-    private void basicFilterTests(ColumnPaginationFilter filter) throws Exception 
+    private void basicFilterTests(ColumnPaginationFilter filter) throws Exception
     {
       KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
       assertTrue("basicFilter1", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     }
-    
+
     /**
      * Tests serialization
      * @throws Exception
-     */                       
+     */
     public void testSerialization() throws Exception {
       Filter newFilter = serializationTest(columnPaginationFilter);
       basicFilterTests((ColumnPaginationFilter)newFilter);
-    }   
-    
+    }
+
 
 }

@@ -35,7 +35,7 @@ import org.apache.hadoop.io.Writable;
 /**
  * A reference to the top or bottom half of a store file.  The file referenced
  * lives under a different region.  References are made at region split time.
- * 
+ *
  * <p>References work with a special half store file type.  References know how
  * to write out the reference format in the file system and are whats juggled
  * when references are mixed in with direct store files.  The half store file
@@ -52,7 +52,7 @@ public class Reference implements Writable {
   private byte [] splitkey;
   private Range region;
 
-  /** 
+  /**
    * For split HStoreFiles, it specifies if the file covers the lower half or
    * the upper half of the key range
    */
@@ -82,7 +82,7 @@ public class Reference implements Writable {
   }
 
   /**
-   * 
+   *
    * @return Range
    */
   public Range getFileRegion() {

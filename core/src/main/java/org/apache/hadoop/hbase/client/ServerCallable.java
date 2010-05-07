@@ -47,9 +47,9 @@ public abstract class ServerCallable<T> implements Callable<T> {
     this.tableName = tableName;
     this.row = row;
   }
-  
+
   /**
-   * 
+   *
    * @param reload set this to true if connection should re-find the region
    * @throws IOException e
    */
@@ -65,7 +65,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     }
     return location.getServerAddress().toString();
   }
-  
+
   /** @return the region name */
   public byte[] getRegionName() {
     if (location == null) {
@@ -73,7 +73,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     }
     return location.getRegionInfo().getRegionName();
   }
-  
+
   /** @return the row */
   public byte [] getRow() {
     return row;

@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /**
- * This is a generic filter to be used to filter by comparison.  It takes an 
+ * This is a generic filter to be used to filter by comparison.  It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator.
  * <p>
  * To filter by row key, use {@link RowFilter}.
@@ -60,7 +60,7 @@ public abstract class CompareFilter implements Filter {
     /** greater than */
     GREATER,
   }
-  
+
   protected CompareOp compareOp;
   protected WritableByteArrayComparable comparator;
 
@@ -75,7 +75,7 @@ public abstract class CompareFilter implements Filter {
    * @param compareOp the compare op for row matching
    * @param comparator the comparator for row matching
    */
-  public CompareFilter(final CompareOp compareOp, 
+  public CompareFilter(final CompareOp compareOp,
       final WritableByteArrayComparable comparator) {
     this.compareOp = compareOp;
     this.comparator = comparator;
@@ -101,7 +101,7 @@ public abstract class CompareFilter implements Filter {
   public ReturnCode filterKeyValue(KeyValue v) {
     return ReturnCode.INCLUDE;
   }
-  
+
   public boolean filterRowKey(byte[] data, int offset, int length) {
     return false;
   }
@@ -109,7 +109,7 @@ public abstract class CompareFilter implements Filter {
   public boolean filterRow() {
     return false;
   }
-  
+
   public boolean filterAllRemaining() {
     return false;
   }
@@ -117,8 +117,8 @@ public abstract class CompareFilter implements Filter {
   protected boolean doCompare(final CompareOp compareOp,
       final WritableByteArrayComparable comparator, final byte [] data,
       final int offset, final int length) {
-    int compareResult = 
-      comparator.compareTo(Arrays.copyOfRange(data, offset, 
+    int compareResult =
+      comparator.compareTo(Arrays.copyOfRange(data, offset,
         offset + length));
     switch (compareOp) {
       case LESS:

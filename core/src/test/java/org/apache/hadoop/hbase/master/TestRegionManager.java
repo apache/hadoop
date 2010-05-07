@@ -44,11 +44,11 @@ public class TestRegionManager extends HBaseClusterTestCase {
      // 1st .META. region will be something like .META.,,1253625700761
      HRegionInfo metaRegionInfo0 = new HRegionInfo(metaTableDesc, Bytes.toBytes(""), regionInfo0.getRegionName());
      MetaRegion meta0 = new MetaRegion(address, metaRegionInfo0);
-   
+
      byte[] startKey1 = Bytes.toBytes("j");
      byte[] endKey1 = Bytes.toBytes("m");
      HRegionInfo regionInfo1 = new HRegionInfo(tableDesc, startKey1, endKey1);
-     // 2nd .META. region will be something like .META.,_MY_TABLE_,f,1253625700761,1253625700761 
+     // 2nd .META. region will be something like .META.,_MY_TABLE_,f,1253625700761,1253625700761
      HRegionInfo metaRegionInfo1 = new HRegionInfo(metaTableDesc, regionInfo0.getRegionName(), regionInfo1.getRegionName());
      MetaRegion meta1 = new MetaRegion(address, metaRegionInfo1);
 
@@ -60,13 +60,13 @@ public class TestRegionManager extends HBaseClusterTestCase {
      byte[] startKeyX = Bytes.toBytes("h");
      byte[] endKeyX = Bytes.toBytes("j");
      HRegionInfo regionInfoX = new HRegionInfo(tableDesc, startKeyX, endKeyX);
-   
-   
+
+
      master.getRegionManager().offlineMetaRegion(startKey0);
      master.getRegionManager().putMetaRegionOnline(meta0);
      master.getRegionManager().putMetaRegionOnline(meta1);
      master.getRegionManager().putMetaRegionOnline(meta2);
-   
+
 //    for (byte[] b : master.regionManager.getOnlineMetaRegions().keySet()) {
 //      System.out.println("FROM TEST KEY " + b +"  " +new String(b));
 //    }

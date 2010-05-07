@@ -112,9 +112,9 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
   private BitSet __isset_bit_vector = new BitSet(1);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+    put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I64)));
   }});
 
@@ -343,7 +343,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -354,7 +354,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
           case VALUE:
             if (field.type == TType.STRING) {
               this.value = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -362,7 +362,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
             if (field.type == TType.I64) {
               this.timestamp = iprot.readI64();
               setTimestampIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

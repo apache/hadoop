@@ -50,7 +50,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     super(connection, tableName, scan.getStartRow());
     this.scan = scan;
   }
-  
+
   /**
    * @param reload force reload of server location
    * @throws IOException
@@ -95,7 +95,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     }
     return null;
   }
-  
+
   private void close() {
     if (this.scannerId == -1L) {
       return;
@@ -112,18 +112,18 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     return this.server.openScanner(this.location.getRegionInfo().getRegionName(),
       this.scan);
   }
-  
+
   protected Scan getScan() {
     return scan;
   }
-  
+
   /**
    * Call this when the next invocation of call should close the scanner
    */
   public void setClose() {
     this.closed = true;
   }
-  
+
   /**
    * @return the HRegionInfo for the current region
    */

@@ -56,11 +56,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Base HRegion scanner class. Holds utilty common to <code>ROOT</code> and
  * <code>META</code> HRegion scanners.
- * 
+ *
  * <p>How do we know if all regions are assigned? After the initial scan of
  * the <code>ROOT</code> and <code>META</code> regions, all regions known at
  * that time will have been or are in the process of being assigned.</p>
- * 
+ *
  * <p>When a region is split the region server notifies the master of the
  * split and the new regions are assigned. But suppose the master loses the
  * split message? We need to periodically rescan the <code>ROOT</code> and
@@ -69,34 +69,34 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *    <li>If we rescan, any regions that are new but not assigned will have
  *    no server info. Any regions that are not being served by the same
  *    server will get re-assigned.</li>
- *      
+ *
  *    <li>Thus a periodic rescan of the root region will find any new
  *    <code>META</code> regions where we missed the <code>META</code> split
  *    message or we failed to detect a server death and consequently need to
  *    assign the region to a new server.</li>
- *        
+ *
  *    <li>if we keep track of all the known <code>META</code> regions, then
  *    we can rescan them periodically. If we do this then we can detect any
  *    regions for which we missed a region split message.</li>
  *    </ul>
- *    
+ *
  * Thus just keeping track of all the <code>META</code> regions permits
  * periodic rescanning which will detect unassigned regions (new or
  * otherwise) without the need to keep track of every region.</p>
- * 
+ *
  * <p>So the <code>ROOT</code> region scanner needs to wake up:
  * <ol>
  * <li>when the master receives notification that the <code>ROOT</code>
  * region has been opened.</li>
  * <li>periodically after the first scan</li>
  * </ol>
- * 
+ *
  * The <code>META</code>  scanner needs to wake up:
  * <ol>
  * <li>when a <code>META</code> region comes on line</li>
  * </li>periodically to rescan the online <code>META</code> regions</li>
  * </ol>
- * 
+ *
  * <p>A <code>META</code> region is not 'online' until it has been scanned
  * once.
  */
@@ -120,16 +120,16 @@ abstract class BaseScanner extends Chore implements HConstants {
   }
   private final boolean rootRegion;
   protected final HMaster master;
-  
+
   protected boolean initialScanComplete;
-  
+
   protected abstract boolean initialScan();
   protected abstract void maintenanceScan();
-  
-  // will use this variable to synchronize and make sure we aren't interrupted 
+
+  // will use this variable to synchronize and make sure we aren't interrupted
   // mid-scan
   final Object scannerLock = new Object();
-  
+
   BaseScanner(final HMaster master, final boolean rootRegion,
       final AtomicBoolean stop) {
     super(master.getConfiguration().
@@ -138,17 +138,17 @@ abstract class BaseScanner extends Chore implements HConstants {
     this.master = master;
     this.initialScanComplete = false;
   }
-  
+
   /** @return true if initial scan completed successfully */
   public boolean isInitialScanComplete() {
     return initialScanComplete;
   }
-  
+
   @Override
   protected boolean initialChore() {
     return initialScan();
   }
-  
+
   @Override
   protected void chore() {
     maintenanceScan();
@@ -205,7 +205,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         if (e instanceof UnknownScannerException) {
           // Reset scannerId so we do not try closing a scanner the other side
-          // has lost account of: prevents duplicated stack trace out of the 
+          // has lost account of: prevents duplicated stack trace out of the
           // below close in the finally.
           scannerId = -1L;
         }
@@ -223,7 +223,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
 
     // Scan is finished.
-    
+
     // First clean up any meta region rows which had null HRegionInfos
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo " +
@@ -284,7 +284,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * the filesystem, then a daughters was not added to .META. -- must have been
    * a crash before their addition.  Add them here.
    * @param metaRegionName Meta region name: e.g. .META.,,1
-   * @param server HRegionInterface of meta server to talk to 
+   * @param server HRegionInterface of meta server to talk to
    * @param parent HRegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
    * <code>metaRegionName</code>
@@ -292,7 +292,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * the filesystem.
    * @throws IOException
    */
-  private boolean cleanupAndVerifySplits(final byte [] metaRegionName, 
+  private boolean cleanupAndVerifySplits(final byte [] metaRegionName,
     final HRegionInterface srvr, final HRegionInfo parent,
     Result rowContent)
   throws IOException {
@@ -315,7 +315,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     return result;
   }
 
-  
+
   /*
    * See if the passed daughter has references in the filesystem to the parent
    * and if not, remove the note of daughter region in the parent row: its
@@ -331,7 +331,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @return True if this daughter still has references to the parent.
    * @throws IOException
    */
-  private boolean checkDaughter(final byte [] metaRegionName, 
+  private boolean checkDaughter(final byte [] metaRegionName,
     final HRegionInterface srvr, final HRegionInfo parent,
     final Result rowContent, final byte [] qualifier)
   throws IOException {
@@ -397,7 +397,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param daughter
    * @throws IOException
    */
-  private void addDaughterRowChecked(final byte [] metaRegionName, 
+  private void addDaughterRowChecked(final byte [] metaRegionName,
     final HRegionInterface srvr, final byte [] parent,
     final HRegionInfo split, final byte [] daughter)
   throws IOException {
@@ -460,7 +460,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param qualifier
    * @throws IOException
    */
-  private void removeDaughterFromParent(final byte [] metaRegionName, 
+  private void removeDaughterFromParent(final byte [] metaRegionName,
     final HRegionInterface srvr, final HRegionInfo parent,
     final HRegionInfo split, final byte [] qualifier)
   throws IOException {
@@ -473,20 +473,20 @@ abstract class BaseScanner extends Chore implements HConstants {
     srvr.delete(metaRegionName, delete);
   }
 
-  /* 
+  /*
    * Checks if a daughter region -- either splitA or splitB -- still holds
    * references to parent.  If not, removes reference to the split from
    * the parent meta region row so we don't check it any more.
    * @param metaRegionName Name of meta region to look in.
    * @param srvr Where region resides.
-   * @param parent Parent region name. 
+   * @param parent Parent region name.
    * @param rowContent Keyed content of the parent row in meta region.
    * @param split Which column family.
    * @param qualifier Which of the daughters to look at, splitA or splitB.
    * @return True if still has references to parent.
    * @throws IOException
    */
-  private boolean hasReferences(final byte [] metaRegionName, 
+  private boolean hasReferences(final byte [] metaRegionName,
     final HRegionInterface srvr, final HRegionInfo parent,
     Result rowContent, final HRegionInfo split, byte [] qualifier)
   throws IOException {
@@ -532,13 +532,13 @@ abstract class BaseScanner extends Chore implements HConstants {
    */
   protected void checkAssigned(final HRegionInterface regionServer,
     final MetaRegion meta, final HRegionInfo info,
-    final String serverAddress, final long startCode) 
+    final String serverAddress, final long startCode)
   throws IOException {
     String serverName = null;
     String sa = serverAddress;
     long sc = startCode;
     if (sa == null || sa.length() <= 0) {
-      // Scans are sloppy.  They don't respect row locks and they get and 
+      // Scans are sloppy.  They don't respect row locks and they get and
       // cache a row internally so may have data that is a little stale.  Make
       // sure that for sure this serverAddress is null.  We are trying to
       // avoid double-assignments.  See hbase-1784.  Will have to wait till

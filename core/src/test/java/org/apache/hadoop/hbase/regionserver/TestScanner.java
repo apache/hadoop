@@ -52,7 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  */
 public class TestScanner extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  
+
   private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
   private static final byte [][] COLS = { HConstants.CATALOG_FAMILY };
   private static final byte [][] EXPLICIT_COLS = {
@@ -60,7 +60,7 @@ public class TestScanner extends HBaseTestCase {
       // TODO ryan
       //HConstants.STARTCODE_QUALIFIER
   };
-  
+
   static final HTableDescriptor TESTTABLEDESC =
     new HTableDescriptor("testscanner");
   static {
@@ -73,9 +73,9 @@ public class TestScanner extends HBaseTestCase {
   public static final HRegionInfo REGION_INFO =
     new HRegionInfo(TESTTABLEDESC, HConstants.EMPTY_BYTE_ARRAY,
     HConstants.EMPTY_BYTE_ARRAY);
-  
+
   private static final byte [] ROW_KEY = REGION_INFO.getRegionName();
-  
+
   private static final long START_CODE = Long.MAX_VALUE;
 
   private MiniDFSCluster cluster = null;
@@ -89,12 +89,12 @@ public class TestScanner extends HBaseTestCase {
     this.conf.set(HConstants.HBASE_DIR,
       this.cluster.getFileSystem().getHomeDirectory().toString());
     super.setUp();
-    
+
   }
 
   /**
    * Test basic stop row filter works.
-   * @throws Exception 
+   * @throws Exception
    */
   public void testStopRow() throws Exception {
     byte [] startrow = Bytes.toBytes("bbb");
@@ -140,7 +140,7 @@ public class TestScanner extends HBaseTestCase {
       shutdownDfs(this.cluster);
     }
   }
-  
+
   void rowPrefixFilter(Scan scan) throws IOException {
     List<KeyValue> results = new ArrayList<KeyValue>();
     scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -156,7 +156,7 @@ public class TestScanner extends HBaseTestCase {
     }
     s.close();
   }
-  
+
   void rowInclusiveStopFilter(Scan scan, byte[] stopRow) throws IOException {
     List<KeyValue> results = new ArrayList<KeyValue>();
     scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -171,7 +171,7 @@ public class TestScanner extends HBaseTestCase {
     }
     s.close();
   }
-  
+
   public void testFilters() throws IOException {
     try {
       this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
@@ -181,7 +181,7 @@ public class TestScanner extends HBaseTestCase {
       Scan scan = new Scan();
       scan.setFilter(newFilter);
       rowPrefixFilter(scan);
-      
+
       byte[] stopRow = Bytes.toBytes("bbc");
       newFilter = new WhileMatchFilter(new InclusiveStopFilter(stopRow));
       scan = new Scan();
@@ -202,7 +202,7 @@ public class TestScanner extends HBaseTestCase {
     try {
       r = createNewHRegion(TESTTABLEDESC, null, null);
       region = new HRegionIncommon(r);
-      
+
       // Write information to the meta table
 
       Put put = new Put(ROW_KEY, System.currentTimeMillis(), null);
@@ -216,23 +216,23 @@ public class TestScanner extends HBaseTestCase {
 
       // What we just committed is in the memstore. Verify that we can get
       // it back both with scanning and get
-      
+
       scan(false, null);
       getRegionInfo();
-      
+
       // Close and re-open
-      
+
       r.close();
       r = openClosedRegion(r);
       region = new HRegionIncommon(r);
 
       // Verify we can get the data back now that it is on disk.
-      
+
       scan(false, null);
       getRegionInfo();
-      
+
       // Store some new information
- 
+
       HServerAddress address = new HServerAddress("foo.bar.com:1234");
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
@@ -242,45 +242,45 @@ public class TestScanner extends HBaseTestCase {
 //      put.add(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
 
       region.put(put);
-      
+
       // Validate that we can still get the HRegionInfo, even though it is in
       // an older row on disk and there is a newer row in the memstore
-      
+
       scan(true, address.toString());
       getRegionInfo();
-      
+
       // flush cache
 
       region.flushcache();
 
       // Validate again
-      
+
       scan(true, address.toString());
       getRegionInfo();
 
       // Close and reopen
-      
+
       r.close();
       r = openClosedRegion(r);
       region = new HRegionIncommon(r);
 
       // Validate again
-      
+
       scan(true, address.toString());
       getRegionInfo();
 
       // Now update the information again
 
       address = new HServerAddress("bar.foo.com:4321");
-      
+
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
 
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes(address.toString()));
       region.put(put);
-      
+
       // Validate again
-      
+
       scan(true, address.toString());
       getRegionInfo();
 
@@ -289,26 +289,26 @@ public class TestScanner extends HBaseTestCase {
       region.flushcache();
 
       // Validate again
-      
+
       scan(true, address.toString());
       getRegionInfo();
 
       // Close and reopen
-      
+
       r.close();
       r = openClosedRegion(r);
       region = new HRegionIncommon(r);
 
       // Validate again
-      
+
       scan(true, address.toString());
       getRegionInfo();
-      
+
       // clean up
-      
+
       r.close();
       r.getLog().closeAndDelete();
-      
+
     } finally {
       shutdownDfs(cluster);
     }
@@ -318,17 +318,17 @@ public class TestScanner extends HBaseTestCase {
   private void validateRegionInfo(byte [] regionBytes) throws IOException {
     HRegionInfo info =
       (HRegionInfo) Writables.getWritable(regionBytes, new HRegionInfo());
-    
+
     assertEquals(REGION_INFO.getRegionId(), info.getRegionId());
     assertEquals(0, info.getStartKey().length);
     assertEquals(0, info.getEndKey().length);
     assertEquals(0, Bytes.compareTo(info.getRegionName(), REGION_INFO.getRegionName()));
     assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
   }
-  
+
   /** Use a scanner to get the region info and then validate the results */
   private void scan(boolean validateStartcode, String serverName)
-  throws IOException {  
+  throws IOException {
     InternalScanner scanner = null;
     Scan scan = null;
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -336,7 +336,7 @@ public class TestScanner extends HBaseTestCase {
         COLS,
         EXPLICIT_COLS
     };
-    
+
     for(int i = 0; i < scanColumns.length; i++) {
       try {
         scan = new Scan(FIRST_ROW);
@@ -345,26 +345,26 @@ public class TestScanner extends HBaseTestCase {
         }
         scanner = r.getScanner(scan);
         while (scanner.next(results)) {
-          assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
+          assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER));
-          byte [] val = getColumn(results, HConstants.CATALOG_FAMILY, 
+          byte [] val = getColumn(results, HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER).getValue();
           validateRegionInfo(val);
           if(validateStartcode) {
-//            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
+//            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
 //                HConstants.STARTCODE_QUALIFIER));
-//            val = getColumn(results, HConstants.CATALOG_FAMILY, 
+//            val = getColumn(results, HConstants.CATALOG_FAMILY,
 //                HConstants.STARTCODE_QUALIFIER).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
             long startCode = Bytes.toLong(val);
             assertEquals(START_CODE, startCode);
           }
-          
+
           if(serverName != null) {
-            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY, 
+            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
                 HConstants.SERVER_QUALIFIER));
-            val = getColumn(results, HConstants.CATALOG_FAMILY, 
+            val = getColumn(results, HConstants.CATALOG_FAMILY,
                 HConstants.SERVER_QUALIFIER).getValue();
             assertNotNull(val);
             assertFalse(val.length == 0);
@@ -389,9 +389,9 @@ public class TestScanner extends HBaseTestCase {
         return true;
       }
     }
-    return false;    
+    return false;
   }
-  
+
   private KeyValue getColumn(final List<KeyValue> kvs, final byte [] family,
       final byte [] qualifier) {
     for (KeyValue kv: kvs) {
@@ -401,15 +401,15 @@ public class TestScanner extends HBaseTestCase {
     }
     return null;
   }
-  
-  
+
+
   /** Use get to retrieve the HRegionInfo and validate it */
   private void getRegionInfo() throws IOException {
     Get get = new Get(ROW_KEY);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     Result result = region.get(get, null);
     byte [] bytes = result.value();
-    validateRegionInfo(bytes);  
+    validateRegionInfo(bytes);
   }
 
   /**
@@ -460,7 +460,7 @@ public class TestScanner extends HBaseTestCase {
     }
   }
 
- 
+
   /*
    * @param hri Region
    * @param flushIndex At what row we start the flush.

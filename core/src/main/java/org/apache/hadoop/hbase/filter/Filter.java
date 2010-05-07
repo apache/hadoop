@@ -29,7 +29,7 @@ import org.apache.hadoop.io.Writable;
  *<ul>
  * <li>{@link #reset()}</li>
  * <li>{@link #filterAllRemaining()} -> true indicates scan is over, false, keep going on.</li>
- * <li>{@link #filterRowKey(byte[],int,int)} -> true to drop this row, 
+ * <li>{@link #filterRowKey(byte[],int,int)} -> true to drop this row,
  * if false, we will also call</li>
  * <li>{@link #filterKeyValue(KeyValue)} -> true to drop this key/value</li>
  * <li>{@link #filterRow()} -> last chance to drop entire row based on the sequence of

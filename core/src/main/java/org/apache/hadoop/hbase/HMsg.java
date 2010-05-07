@@ -27,9 +27,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
- * HMsg is for communicating instructions between the HMaster and the 
+ * HMsg is for communicating instructions between the HMaster and the
  * HRegionServers.
- * 
+ *
  * Most of the time the messages are simple but some messages are accompanied
  * by the region affected.  HMsg may also carry optional message.
  */
@@ -48,11 +48,11 @@ public class HMsg implements Writable {
   public static enum Type {
     /** null message */
     MSG_NONE,
-    
+
     // Message types sent from master to region server
     /** Start serving the specified region */
     MSG_REGION_OPEN,
-    
+
     /** Stop serving the specified region */
     MSG_REGION_CLOSE,
 
@@ -64,22 +64,22 @@ public class HMsg implements Writable {
 
     /** Region server is unknown to master. Restart */
     MSG_CALL_SERVER_STARTUP,
-    
+
     /** Master tells region server to stop */
     MSG_REGIONSERVER_STOP,
-    
+
     /** Stop serving the specified region and don't report back that it's
      * closed
      */
     MSG_REGION_CLOSE_WITHOUT_REPORT,
-  
+
     /** Stop serving user regions */
     MSG_REGIONSERVER_QUIESCE,
 
     // Message types sent from the region server to the master
     /** region server is now serving the specified region */
     MSG_REPORT_OPEN,
-    
+
     /** region server is no longer serving the specified region */
     MSG_REPORT_CLOSE,
 
@@ -88,7 +88,7 @@ public class HMsg implements Writable {
 
     /**
      * Region server split the region associated with this message.
-     * 
+     *
      * Note that this message is immediately followed by two MSG_REPORT_OPEN
      * messages, one for each of the new regions resulting from the split
      * @deprecated See MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS
@@ -97,7 +97,7 @@ public class HMsg implements Writable {
 
     /**
      * Region server is shutting down
-     * 
+     *
      * Note that this message is followed by MSG_REPORT_CLOSE messages for each
      * region the region server was serving, unless it was told to quiesce.
      */
@@ -107,12 +107,12 @@ public class HMsg implements Writable {
      * regions
      */
     MSG_REPORT_QUIESCED,
-    
+
     /**
      * Flush
      */
     MSG_REGION_FLUSH,
-    
+
     /**
      * Run Major Compaction
      */
@@ -120,7 +120,7 @@ public class HMsg implements Writable {
 
     /**
      * Region server split the region associated with this message.
-     * 
+     *
      * Its like MSG_REPORT_SPLIT only it carries the daughters in the message
      * rather than send them individually in MSG_REPORT_OPEN messages.
      */
@@ -152,7 +152,7 @@ public class HMsg implements Writable {
   public HMsg(final HMsg.Type type) {
     this(type, new HRegionInfo(), null);
   }
-  
+
   /**
    * Construct a message with the specified message and HRegionInfo
    * @param type Message type
@@ -164,7 +164,7 @@ public class HMsg implements Writable {
 
   /**
    * Construct a message with the specified message and HRegionInfo
-   * 
+   *
    * @param type Message type
    * @param hri Region to which message <code>type</code> applies.  Cannot be
    * null.  If no info associated, used other Constructor.
@@ -176,7 +176,7 @@ public class HMsg implements Writable {
 
   /**
    * Construct a message with the specified message and HRegionInfo
-   * 
+   *
    * @param type Message type
    * @param hri Region to which message <code>type</code> applies.  Cannot be
    * null.  If no info associated, used other Constructor.
@@ -210,7 +210,7 @@ public class HMsg implements Writable {
   public Type getType() {
     return this.type;
   }
-  
+
   /**
    * @param other Message type to compare to
    * @return True if we are of same message type as <code>other</code>
@@ -289,7 +289,7 @@ public class HMsg implements Writable {
     }
     return result;
   }
-  
+
   // ////////////////////////////////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////////////////////////////////

@@ -62,7 +62,7 @@ public class TestHFileOutputFormat extends HBaseTestCase {
      */
     static class PEInputSplit extends InputSplit implements Writable {
       private int index = -1;
-   
+
       PEInputSplit() {
         super();
       }
@@ -97,12 +97,12 @@ public class TestHFileOutputFormat extends HBaseTestCase {
         InterruptedException {
       final int startrow = ((PEInputSplit)split).getIndex() * ROWSPERSPLIT;
       return new RecordReader<ImmutableBytesWritable, ImmutableBytesWritable>() {
-        // Starts at a particular row 
+        // Starts at a particular row
         private int counter = startrow;
         private ImmutableBytesWritable key;
         private ImmutableBytesWritable value;
         private final Random random = new Random(System.currentTimeMillis());
-        
+
         public void close() throws IOException {
           // Nothing to do.
         }
@@ -124,7 +124,7 @@ public class TestHFileOutputFormat extends HBaseTestCase {
         public void initialize(InputSplit arg0, TaskAttemptContext arg1)
             throws IOException, InterruptedException {
           // Nothing to do.
-          
+
         }
 
         public boolean nextKeyValue() throws IOException, InterruptedException {

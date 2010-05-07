@@ -45,7 +45,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
   private HLog log;
   private String tableName;
   private byte[] value;
-  
+
   /**
    * constructor
    * @throws Exception
@@ -58,14 +58,14 @@ public class TestLogRolling extends HBaseClusterTestCase {
       this.log = null;
       this.tableName = null;
       this.value = null;
-      
+
       String className = this.getClass().getName();
       StringBuilder v = new StringBuilder(className);
       while (v.length() < 1000) {
         v.append(className);
       }
       value = Bytes.toBytes(v.toString());
-      
+
     } catch (Exception e) {
       LOG.fatal("error in constructor", e);
       throw e;
@@ -95,13 +95,13 @@ public class TestLogRolling extends HBaseClusterTestCase {
     // a chance to run.
     conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
   }
-  
+
   private void startAndWriteData() throws Exception {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getLog();
-    
+
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
@@ -125,7 +125,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
 
   /**
    * Tests that logs are deleted
-   * 
+   *
    * @throws Exception
    */
   public void testLogRolling() throws Exception {
@@ -133,18 +133,18 @@ public class TestLogRolling extends HBaseClusterTestCase {
     try {
       startAndWriteData();
       LOG.info("after writing there are " + log.getNumLogFiles() + " log files");
-      
+
       // flush all regions
-      
+
       List<HRegion> regions =
         new ArrayList<HRegion>(server.getOnlineRegions());
       for (HRegion r: regions) {
         r.flushcache();
       }
-      
+
       // Now roll the log
       log.rollWriter();
-      
+
       int count = log.getNumLogFiles();
       LOG.info("after flushing all regions and rolling logs there are " +
           log.getNumLogFiles() + " log files");

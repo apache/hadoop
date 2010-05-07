@@ -31,7 +31,7 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * HServerInfo contains metainfo about an HRegionServer, Currently it only
  * contains the server start code.
- * 
+ *
  * In the future it will contain information about the source machine and
  * load statistics.
  */
@@ -46,10 +46,10 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   /** default constructor - used by Writable */
   public HServerInfo() {
-    this(new HServerAddress(), 0, 
+    this(new HServerAddress(), 0,
         HConstants.DEFAULT_REGIONSERVER_INFOPORT, "default name");
   }
-  
+
   /**
    * Constructor
    * @param serverAddress
@@ -64,7 +64,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.infoPort = infoPort;
     this.name = name;
   }
-  
+
   /**
    * Construct a new object using another as input (like a copy constructor)
    * @param other
@@ -95,7 +95,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   public synchronized HServerAddress getServerAddress() {
     return new HServerAddress(serverAddress);
   }
-  
+
   /**
    * Change the server address.
    * @param serverAddress New server address
@@ -104,26 +104,26 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.serverAddress = serverAddress;
     this.serverName = null;
   }
- 
+
   /** @return the server start code */
   public synchronized long getStartCode() {
     return startCode;
   }
-  
+
   /**
    * @return Port the info server is listening on.
    */
   public int getInfoPort() {
     return this.infoPort;
   }
-  
+
   /**
    * @param infoPort - new port of info server
    */
   public void setInfoPort(int infoPort) {
     this.infoPort = infoPort;
   }
-  
+
   /**
    * @param startCode the startCode to set
    */
@@ -131,7 +131,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = startCode;
     this.serverName = null;
   }
-  
+
   /**
    * @return the server name in the form hostname_startcode_port
    */
@@ -148,7 +148,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     }
     return this.serverName;
   }
-  
+
   /**
    * Get the hostname of the server
    * @return hostname
@@ -156,7 +156,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   public String getName() {
     return name;
   }
- 
+
   /**
    * Set the hostname of the server
    * @param name hostname
@@ -201,7 +201,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
 
   // Writable
-  
+
   public void readFields(DataInput in) throws IOException {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
@@ -229,7 +229,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private static String getServerName(HServerInfo info) {
     return getServerName(info.getServerAddress(), info.getStartCode());
   }
-  
+
   /**
    * @param serverAddress in the form hostname:port
    * @param startCode

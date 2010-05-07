@@ -51,22 +51,22 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   public HBaseClusterTestCase() {
     this(1);
   }
-  
+
   /**
    * Start a MiniHBaseCluster with regionServers region servers in-process to
    * start with. Also, start a MiniDfsCluster before starting the hbase cluster.
    * The configuration used will be edited so that this works correctly.
    * @param regionServers number of region servers to start.
-   */  
+   */
   public HBaseClusterTestCase(int regionServers) {
     this(regionServers, true);
   }
-  
+
   /**  in-process to
    * start with. Optionally, startDfs indicates if a MiniDFSCluster should be
    * started. If startDfs is false, the assumption is that an external DFS is
    * configured in hbase-site.xml and is already started, or you have started a
-   * MiniDFSCluster on your own and edited the configuration in memory. (You 
+   * MiniDFSCluster on your own and edited the configuration in memory. (You
    * can modify the config used by overriding the preHBaseClusterSetup method.)
    * @param regionServers number of region servers to start.
    * @param startDfs set to true if MiniDFS should be started
@@ -83,12 +83,12 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
   /**
    * Subclass hook.
-   * 
+   *
    * Run after dfs is ready but before hbase cluster is started up.
    */
   protected void preHBaseClusterSetup() throws Exception {
     // continue
-  } 
+  }
 
   /**
    * Actually start the MiniHBase instance.
@@ -110,13 +110,13 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       new HTable(conf, HConstants.META_TABLE_NAME);
     }
   }
-  
+
   /**
    * Run after hbase cluster is started up.
    */
   protected void postHBaseClusterSetup() throws Exception {
     // continue
-  } 
+  }
 
   @Override
   protected void setUp() throws Exception {
@@ -139,9 +139,9 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       // do the super setup now. if we had done it first, then we would have
       // gotten our conf all mangled and a local fs started up.
       super.setUp();
-    
+
       // run the pre-cluster setup
-      preHBaseClusterSetup();    
+      preHBaseClusterSetup();
 
       // start the instance
       hBaseClusterSetup();
@@ -194,7 +194,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }
 
-  
+
   /**
    * Use this utility method debugging why cluster won't go down.  On a
    * period it throws a thread dump.  Method ends when all cluster

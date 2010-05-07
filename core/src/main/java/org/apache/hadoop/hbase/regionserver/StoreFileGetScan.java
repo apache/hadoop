@@ -35,7 +35,7 @@ public class StoreFileGetScan {
   private QueryMatcher matcher;
 
   private KeyValue startKey;
-  
+
   /**
    * Constructor
    * @param scanners
@@ -55,7 +55,7 @@ public class StoreFileGetScan {
    * proceeding to the next StoreFile.
    * <p>
    * This strategy allows for optimal, stateless (no persisted Scanners)
-   * early-out scenarios.    
+   * early-out scenarios.
    * @param result List to add results to
    * @throws IOException
    */
@@ -67,15 +67,15 @@ public class StoreFileGetScan {
       }
     }
   }
-  
+
   /**
    * Performs a GET operation on a single StoreFile.
    * @param scanner
    * @param result
    * @return true if done with this store, false if must continue to next
-   * @throws IOException 
+   * @throws IOException
    */
-  public boolean getStoreFile(HFileScanner scanner, List<KeyValue> result) 
+  public boolean getStoreFile(HFileScanner scanner, List<KeyValue> result)
   throws IOException {
     if (scanner.seekTo(startKey.getBuffer(), startKey.getKeyOffset(),
         startKey.getKeyLength()) == -1) {
@@ -108,5 +108,5 @@ public class StoreFileGetScan {
     } while(scanner.next());
     return false;
   }
-  
+
 }

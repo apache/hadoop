@@ -53,21 +53,21 @@ public class TestSeekTo extends HBaseTestCase {
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(Bytes.toBytes("a")));
-    
+
     assertEquals(false, scanner.seekBefore(Bytes.toBytes("c")));
-    
+
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("d")));
     assertEquals("c", scanner.getKeyString());
-    
+
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("e")));
     assertEquals("c", scanner.getKeyString());
-    
+
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("f")));
     assertEquals("e", scanner.getKeyString());
-    
+
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("g")));
     assertEquals("e", scanner.getKeyString());
-    
+
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("h")));
     assertEquals("g", scanner.getKeyString());
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("i")));
@@ -79,7 +79,7 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals(true, scanner.seekBefore(Bytes.toBytes("l")));
     assertEquals("k", scanner.getKeyString());
   }
-  
+
   public void testSeekTo() throws Exception {
     Path p = makeNewFile();
     HFile.Reader reader = new HFile.Reader(fs, p, null, false);
@@ -88,18 +88,18 @@ public class TestSeekTo extends HBaseTestCase {
     HFileScanner scanner = reader.getScanner(false, true);
     // lies before the start of the file.
     assertEquals(-1, scanner.seekTo(Bytes.toBytes("a")));
-  
+
     assertEquals(1, scanner.seekTo(Bytes.toBytes("d")));
     assertEquals("c", scanner.getKeyString());
-    
+
     // Across a block boundary now.
     assertEquals(1, scanner.seekTo(Bytes.toBytes("h")));
     assertEquals("g", scanner.getKeyString());
-    
+
     assertEquals(1, scanner.seekTo(Bytes.toBytes("l")));
     assertEquals("k", scanner.getKeyString());
   }
-  
+
   public void testBlockContainingKey() throws Exception {
     Path p = makeNewFile();
     HFile.Reader reader = new HFile.Reader(fs, p, null, false);
@@ -118,6 +118,6 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals(1, reader.blockIndex.blockContainingKey(Bytes.toBytes("l"), 0, 1));
 
 
-    
+
   }
 }

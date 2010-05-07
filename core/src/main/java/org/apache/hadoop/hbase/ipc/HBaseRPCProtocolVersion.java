@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 public interface HBaseRPCProtocolVersion extends VersionedProtocol {
   /**
    * Interface version.
-   * 
+   *
    * HMasterInterface version history:
    * <ul>
    * <li>Version was incremented to 2 when we brought the hadoop RPC local to

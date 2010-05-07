@@ -40,10 +40,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * of the file with keys that sort greater than those of the bottom half.
  * The top includes the split files midkey, of the key that follows if it does
  * not exist in the file.
- * 
+ *
  * <p>This type works in tandem with the {@link Reference} type.  This class
  * is used reading while Reference is used writing.
- * 
+ *
  * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
  */
 public class HalfHFileReader extends HFile.Reader {
@@ -116,7 +116,7 @@ public class HalfHFileReader extends HFile.Reader {
 
       public boolean next() throws IOException {
         if (atEnd) return false;
-        
+
         boolean b = delegate.next();
         if (!b) {
           return b;
@@ -215,7 +215,7 @@ public class HalfHFileReader extends HFile.Reader {
   @Override
   public byte[] getLastKey() {
     if (top) {
-      return super.getLastKey(); 
+      return super.getLastKey();
     }
     // Get a scanner that caches the block and that uses pread.
     HFileScanner scanner = getScanner(true, true);

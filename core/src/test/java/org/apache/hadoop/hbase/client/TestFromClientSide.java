@@ -123,7 +123,7 @@ public class TestFromClientSide {
   /**
    * Test from client side of an involved filter against a multi family that
    * involves deletes.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -294,7 +294,7 @@ public class TestFromClientSide {
     assertEquals(endKeyCount - 1, minusOneCount);
     // For above test... study logs.  Make sure we do "Finished with scanning.."
     // in first region and that we do not fall into the next region.
-    
+
     key = new byte [] {'a', 'a', 'a'};
     int countBBB = countRows(t,
       createScanWithRowFilter(key, null, CompareFilter.CompareOp.EQUAL));
@@ -443,10 +443,10 @@ public class TestFromClientSide {
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte [][] ROWS = makeN(ROW, 10);
     byte [][] QUALIFIERS = {
-        Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"), 
-        Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"), 
-        Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"), 
-        Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"), 
+        Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"),
         Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
     };
     for(int i=0;i<10;i++) {
@@ -464,7 +464,7 @@ public class TestFromClientSide {
     for(Result result : ht.getScanner(scan)) {
       assertEquals(result.size(), 1);
       assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[expectedIndex]));
-      assertTrue(Bytes.equals(result.raw()[0].getQualifier(), 
+      assertTrue(Bytes.equals(result.raw()[0].getQualifier(),
           QUALIFIERS[expectedIndex]));
       expectedIndex++;
     }
@@ -480,108 +480,108 @@ public class TestFromClientSide {
     byte [] TABLE = Bytes.toBytes("testSimpleMissing");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte [][] ROWS = makeN(ROW, 4);
-    
+
     // Try to get a row on an empty table
     Get get = new Get(ROWS[0]);
     Result result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[0]);
     get.addFamily(FAMILY);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[0]);
     get.addColumn(FAMILY, QUALIFIER);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     Scan scan = new Scan();
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
-    
+
+
     scan = new Scan(ROWS[0]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan(ROWS[0],ROWS[1]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan();
     scan.addFamily(FAMILY);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILY, QUALIFIER);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Insert a row
-    
+
     Put put = new Put(ROWS[2]);
     put.add(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
-    
+
     // Try to get empty rows around it
-    
+
     get = new Get(ROWS[1]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[0]);
     get.addFamily(FAMILY);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[3]);
     get.addColumn(FAMILY, QUALIFIER);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to scan empty rows around it
-    
+
     scan = new Scan(ROWS[3]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan(ROWS[0],ROWS[2]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Make sure we can actually get the row
-    
+
     get = new Get(ROWS[2]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
-    
+
     get = new Get(ROWS[2]);
     get.addFamily(FAMILY);
     result = ht.get(get);
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
-    
+
     get = new Get(ROWS[2]);
     get.addColumn(FAMILY, QUALIFIER);
     result = ht.get(get);
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
-    
+
     // Make sure we can scan the row
-    
+
     scan = new Scan();
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
-    
+
     scan = new Scan(ROWS[0],ROWS[3]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
-    
+
     scan = new Scan(ROWS[2],ROWS[3]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[2], FAMILY, QUALIFIER, VALUE);
   }
-  
+
   /**
    * Test basic puts, gets, scans, and deletes for a single row
    * in a multiple family table.
@@ -593,51 +593,51 @@ public class TestFromClientSide {
     byte [][] FAMILIES = makeNAscii(FAMILY, 10);
     byte [][] QUALIFIERS = makeN(QUALIFIER, 10);
     byte [][] VALUES = makeN(VALUE, 10);
-   
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
-    
+
     Get get;
     Scan scan;
     Delete delete;
     Put put;
     Result result;
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Insert one column to one family
     ////////////////////////////////////////////////////////////////////////////
-    
+
     put = new Put(ROWS[0]);
     put.add(FAMILIES[4], QUALIFIERS[0], VALUES[0]);
     ht.put(put);
-    
+
     // Get the single column
     getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
-    
+
     // Scan the single column
     scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
-    
+
     // Get empty results around inserted column
     getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
-    
+
     // Scan empty results around inserted column
     scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Flush memstore and run same tests from storefiles
     ////////////////////////////////////////////////////////////////////////////
-    
+
     TEST_UTIL.flush();
-    
+
     // Redo get and scan tests from storefile
     getVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
     scanVerifySingleColumn(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0, VALUES, 0);
     getVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
     scanVerifySingleEmpty(ht, ROWS, 0, FAMILIES, 4, QUALIFIERS, 0);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Now, Test reading from memstore and storefiles at once
     ////////////////////////////////////////////////////////////////////////////
-    
+
     // Insert multiple columns to two other families
     put = new Put(ROWS[0]);
     put.add(FAMILIES[2], QUALIFIERS[2], VALUES[2]);
@@ -648,23 +648,23 @@ public class TestFromClientSide {
     put.add(FAMILIES[7], QUALIFIERS[7], VALUES[7]);
     put.add(FAMILIES[9], QUALIFIERS[0], VALUES[0]);
     ht.put(put);
-    
+
     // Get multiple columns across multiple families and get empties around it
     singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
- 
+
     // Scan multiple columns across multiple families and scan empties around it
     singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
 
     ////////////////////////////////////////////////////////////////////////////
     // Flush the table again
     ////////////////////////////////////////////////////////////////////////////
-    
+
     TEST_UTIL.flush();
-    
+
     // Redo tests again
     singleRowGetTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
     singleRowScanTest(ht, ROWS, FAMILIES, QUALIFIERS, VALUES);
-    
+
     // Insert more data to memstore
     put = new Put(ROWS[0]);
     put.add(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
@@ -672,225 +672,225 @@ public class TestFromClientSide {
     put.add(FAMILIES[6], QUALIFIERS[9], VALUES[9]);
     put.add(FAMILIES[4], QUALIFIERS[3], VALUES[3]);
     ht.put(put);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Delete a storefile column
     ////////////////////////////////////////////////////////////////////////////
     delete = new Delete(ROWS[0]);
     delete.deleteColumns(FAMILIES[6], QUALIFIERS[7]);
     ht.delete(delete);
-    
+
     // Try to get deleted column
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[7]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to scan deleted column
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[7]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Make sure we can still get a column before it and after it
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    
+
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[8]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
-    
+
     // Make sure we can still scan a column before it and after it
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[8], VALUES[8]);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Delete a memstore column
     ////////////////////////////////////////////////////////////////////////////
     delete = new Delete(ROWS[0]);
     delete.deleteColumns(FAMILIES[6], QUALIFIERS[8]);
     ht.delete(delete);
-    
+
     // Try to get deleted column
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[8]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to scan deleted column
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[8]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Make sure we can still get a column before it and after it
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    
+
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[9]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    
+
     // Make sure we can still scan a column before it and after it
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Delete joint storefile/memstore family
     ////////////////////////////////////////////////////////////////////////////
-    
+
     delete = new Delete(ROWS[0]);
     delete.deleteFamily(FAMILIES[4]);
     ht.delete(delete);
-    
+
     // Try to get storefile column in deleted family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to get memstore column in deleted family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to get deleted family
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[4]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to scan storefile column in deleted family
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Try to scan memstore column in deleted family
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Try to scan deleted family
     scan = new Scan();
     scan.addFamily(FAMILIES[4]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Make sure we can still get another family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
-    
+
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[9]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    
+
     // Make sure we can still scan another family
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Flush everything and rerun delete tests
     ////////////////////////////////////////////////////////////////////////////
-    
+
     TEST_UTIL.flush();
-    
+
     // Try to get storefile column in deleted family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to get memstore column in deleted family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to get deleted family
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[4]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     // Try to scan storefile column in deleted family
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Try to scan memstore column in deleted family
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Try to scan deleted family
     scan = new Scan();
     scan.addFamily(FAMILIES[4]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     // Make sure we can still get another family
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
-    
+
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[6], QUALIFIERS[9]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    
+
     // Make sure we can still scan another family
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[6]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[6], QUALIFIERS[9]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    
+
   }
 
   @Test
   public void testNull() throws Exception {
     byte [] TABLE = Bytes.toBytes("testNull");
-    
+
     // Null table name (should NOT work)
     try {
       TEST_UTIL.createTable(null, FAMILY);
@@ -902,9 +902,9 @@ public class TestFromClientSide {
       TEST_UTIL.createTable(TABLE, (byte[])null);
       fail("Creating a table with a null family passed, should fail");
     } catch(Exception e) {}
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
-    
+
     // Null row (should NOT work)
     try {
       Put put = new Put((byte[])null);
@@ -912,7 +912,7 @@ public class TestFromClientSide {
       ht.put(put);
       fail("Inserting a null row worked, should throw exception");
     } catch(Exception e) {}
-    
+
     // Null qualifier (should work)
     {
       Put put = new Put(ROW);
@@ -941,55 +941,55 @@ public class TestFromClientSide {
       Put put = new Put(ROW);
       put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
       ht.put(put);
-      
+
       getTestNull(ht, ROW, FAMILY, VALUE);
-      
+
       scanTestNull(ht, ROW, FAMILY, VALUE);
-      
+
       // Flush and try again
-      
+
       TEST_UTIL.flush();
-      
+
       getTestNull(ht, ROW, FAMILY, VALUE);
-      
+
       scanTestNull(ht, ROW, FAMILY, VALUE);
-      
+
       Delete delete = new Delete(ROW);
       delete.deleteColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
       ht.delete(delete);
-      
+
       Get get = new Get(ROW);
       Result result = ht.get(get);
       assertEmptyResult(result);
-      
+
     } catch(Exception e) {
       throw new IOException("Using a row with null qualifier threw exception, should ");
     }
-    
+
     // Null value
     try {
       Put put = new Put(ROW);
       put.add(FAMILY, QUALIFIER, null);
       ht.put(put);
-      
+
       Get get = new Get(ROW);
       get.addColumn(FAMILY, QUALIFIER);
       Result result = ht.get(get);
       assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
-      
+
       Scan scan = new Scan();
       scan.addColumn(FAMILY, QUALIFIER);
       result = getSingleScanResult(ht, scan);
       assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
-      
+
       Delete delete = new Delete(ROW);
       delete.deleteColumns(FAMILY, QUALIFIER);
       ht.delete(delete);
-      
+
       get = new Get(ROW);
       result = ht.get(get);
       assertEmptyResult(result);
-    
+
     } catch(Exception e) {
       throw new IOException("Null values should be allowed, but threw exception");
     }
@@ -998,12 +998,12 @@ public class TestFromClientSide {
   @Test
   public void testVersions() throws Exception {
     byte [] TABLE = Bytes.toBytes("testVersions");
-    
+
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     // Insert 4 versions of same column
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -1011,7 +1011,7 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
-    
+
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -1021,7 +1021,7 @@ public class TestFromClientSide {
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    
+
     // Verify we don't accidentally get others
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
@@ -1029,30 +1029,30 @@ public class TestFromClientSide {
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    
+
     // Ensure maxVersions in query is respected
     Get get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(2);
     Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
+
     Scan scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(2);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
+
     // Flush and redo
 
     TEST_UTIL.flush();
-    
+
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -1062,7 +1062,7 @@ public class TestFromClientSide {
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    
+
     // Verify we don't accidentally get others
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
@@ -1070,27 +1070,27 @@ public class TestFromClientSide {
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    
+
     // Ensure maxVersions in query is respected
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(2);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(2);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
-    
+
+
     // Add some memstore and retest
 
     // Insert 4 more versions of same column and a dupe
@@ -1100,42 +1100,42 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
     put.add(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
     ht.put(put);
-    
+
     // Ensure maxVersions in query is respected
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions();
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 7);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions();
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 7);
-    
+
     get = new Get(ROW);
     get.setMaxVersions();
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 7);
-    
+
     scan = new Scan(ROW);
     scan.setMaxVersions();
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 7);
-    
+
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -1145,13 +1145,13 @@ public class TestFromClientSide {
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    
+
     // Verify we don't accidentally get others
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
-    
+
     // Ensure maxVersions of table is respected
 
     TEST_UTIL.flush();
@@ -1163,50 +1163,50 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
     put.add(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
     ht.put(put);
-    
+
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
         0, 9);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
         0, 9);
-    
+
     // Delete a version in the memstore and a version in a storefile
     Delete delete = new Delete(ROW);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[11]);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[7]);
     ht.delete(delete);
-    
+
     // Test that it's gone
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
         0, 9);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
         0, 9);
-    
+
   }
 
   @Test
@@ -1216,8 +1216,8 @@ public class TestFromClientSide {
     int [] LIMITS = {1,3,5};
     long [] STAMPS = makeStamps(10);
     byte [][] VALUES = makeNAscii(VALUE, 10);
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, LIMITS); 
-    
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, LIMITS);
+
     // Insert limit + 1 on each family
     Put put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, STAMPS[0], VALUES[0]);
@@ -1234,123 +1234,123 @@ public class TestFromClientSide {
     put.add(FAMILIES[2], QUALIFIER, STAMPS[5], VALUES[5]);
     put.add(FAMILIES[2], QUALIFIER, STAMPS[6], VALUES[6]);
     ht.put(put);
-    
+
     // Verify we only get the right number out of each
 
     // Family0
-    
+
     Get get = new Get(ROW);
     get.addColumn(FAMILIES[0], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {STAMPS[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-    
+
     get = new Get(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {STAMPS[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-    
+
     Scan scan = new Scan(ROW);
     scan.addColumn(FAMILIES[0], QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {STAMPS[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-    
+
     scan = new Scan(ROW);
     scan.addFamily(FAMILIES[0]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {STAMPS[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-    
+
     // Family1
-    
+
     get = new Get(ROW);
     get.addColumn(FAMILIES[1], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     get = new Get(ROW);
     get.addFamily(FAMILIES[1]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILIES[1], QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     scan = new Scan(ROW);
     scan.addFamily(FAMILIES[1]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[1], QUALIFIER,
         new long [] {STAMPS[1], STAMPS[2], STAMPS[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     // Family2
-    
+
     get = new Get(ROW);
     get.addColumn(FAMILIES[2], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
         0, 4);
-    
+
     get = new Get(ROW);
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
         0, 4);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILIES[2], QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
         0, 4);
-    
+
     scan = new Scan(ROW);
     scan.addFamily(FAMILIES[2]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[2], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[2], QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4], VALUES[5], VALUES[6]},
         0, 4);
-    
+
     // Try all families
 
     get = new Get(ROW);
@@ -1358,7 +1358,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
-    
+
     get = new Get(ROW);
     get.addFamily(FAMILIES[0]);
     get.addFamily(FAMILIES[1]);
@@ -1367,7 +1367,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
-    
+
     get = new Get(ROW);
     get.addColumn(FAMILIES[0], QUALIFIER);
     get.addColumn(FAMILIES[1], QUALIFIER);
@@ -1376,13 +1376,13 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
-    
+
     scan = new Scan(ROW);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
-    
+
     scan = new Scan(ROW);
     scan.setMaxVersions(Integer.MAX_VALUE);
     scan.addFamily(FAMILIES[0]);
@@ -1391,7 +1391,7 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
-    
+
     scan = new Scan(ROW);
     scan.setMaxVersions(Integer.MAX_VALUE);
     scan.addColumn(FAMILIES[0], QUALIFIER);
@@ -1400,47 +1400,47 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertTrue("Expected 9 keys but received " + result.size(),
         result.size() == 9);
-    
+
   }
 
   @Test
   public void testDeletes() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDeletes");
-    
+
     byte [][] ROWS = makeNAscii(ROW, 6);
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
-    
+
     Put put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
     put.add(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
     ht.put(put);
-    
+
     Delete delete = new Delete(ROW);
     delete.deleteFamily(FAMILIES[0], ts[0]);
     ht.delete(delete);
-    
+
     Get get = new Get(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
     Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-    
+
     Scan scan = new Scan(ROW);
     scan.addFamily(FAMILIES[0]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1]},
         new byte[][] {VALUES[1]},
         0, 0);
-    
+
     // Test delete latest version
     put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
@@ -1450,107 +1450,107 @@ public class TestFromClientSide {
     put.add(FAMILIES[0], null, ts[2], VALUES[2]);
     put.add(FAMILIES[0], null, ts[3], VALUES[3]);
     ht.put(put);
-    
+
     delete = new Delete(ROW);
     delete.deleteColumn(FAMILIES[0], QUALIFIER);
     ht.delete(delete);
-    
+
     get = new Get(ROW);
     get.addColumn(FAMILIES[0], QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILIES[0], QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     // Test for HBASE-1847
     delete = new Delete(ROW);
     delete.deleteColumn(FAMILIES[0], null);
     ht.delete(delete);
-    
+
     // Cleanup null qualifier
     delete = new Delete(ROW);
     delete.deleteColumns(FAMILIES[0], null);
     ht.delete(delete);
-    
+
     // Expected client behavior might be that you can re-put deleted values
     // But alas, this is not to be.  We can't put them back in either case.
-    
+
     put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
     put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
     ht.put(put);
-    
+
     // The Get returns the latest value but then does not return the
-    // oldest, which was never deleted, ts[1]. 
-    
+    // oldest, which was never deleted, ts[1].
+
     get = new Get(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[2], ts[3], ts[4]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[4]},
         0, 2);
-    
+
     // The Scanner returns the previous values, the expected-unexpected behavior
-    
+
     scan = new Scan(ROW);
     scan.addFamily(FAMILIES[0]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
-    
+
     // Test deleting an entire family from one row but not the other various ways
-    
+
     put = new Put(ROWS[0]);
     put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
     put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
     put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
-    
+
     put = new Put(ROWS[1]);
     put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
     put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
     put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
-    
+
     put = new Put(ROWS[2]);
     put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
     put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
     put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
-    
+
     delete = new Delete(ROWS[0]);
     delete.deleteFamily(FAMILIES[2]);
     ht.delete(delete);
-    
+
     delete = new Delete(ROWS[1]);
     delete.deleteColumns(FAMILIES[1], QUALIFIER);
     ht.delete(delete);
-    
+
     delete = new Delete(ROWS[2]);
     delete.deleteColumn(FAMILIES[1], QUALIFIER);
     delete.deleteColumn(FAMILIES[1], QUALIFIER);
     delete.deleteColumn(FAMILIES[2], QUALIFIER);
     ht.delete(delete);
-    
+
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
@@ -1558,11 +1558,11 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
         new long [] {ts[0], ts[1]},
         new byte[][] {VALUES[0], VALUES[1]},
         0, 1);
-    
+
     scan = new Scan(ROWS[0]);
     scan.addFamily(FAMILIES[1]);
     scan.addFamily(FAMILIES[2]);
@@ -1570,11 +1570,11 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER, 
+    assertNResult(result, ROWS[0], FAMILIES[1], QUALIFIER,
         new long [] {ts[0], ts[1]},
         new byte[][] {VALUES[0], VALUES[1]},
         0, 1);
-    
+
     get = new Get(ROWS[1]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
@@ -1590,7 +1590,7 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    
+
     get = new Get(ROWS[2]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
@@ -1598,7 +1598,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER, 
+    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
         new byte[][] {VALUES[2]},
         0, 0);
@@ -1610,26 +1610,26 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER, 
+    assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
         new byte[][] {VALUES[2]},
         0, 0);
-    
+
     // Test if we delete the family first in one row (HBASE-1541)
-    
+
     delete = new Delete(ROWS[3]);
     delete.deleteFamily(FAMILIES[1]);
     ht.delete(delete);
-    
+
     put = new Put(ROWS[3]);
     put.add(FAMILIES[2], QUALIFIER, VALUES[0]);
     ht.put(put);
-    
+
     put = new Put(ROWS[4]);
     put.add(FAMILIES[1], QUALIFIER, VALUES[1]);
     put.add(FAMILIES[2], QUALIFIER, VALUES[2]);
     ht.put(put);
-    
+
     get = new Get(ROWS[3]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
@@ -1637,7 +1637,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    
+
     get = new Get(ROWS[4]);
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
@@ -1664,7 +1664,7 @@ public class TestFromClientSide {
     assertTrue(Bytes.equals(result.sorted()[0].getValue(), VALUES[1]));
     assertTrue(Bytes.equals(result.sorted()[1].getValue(), VALUES[2]));
     scanner.close();
-    
+
     // Add test of bulk deleting.
     for (int i = 0; i < 10; i++) {
       byte [] bytes = Bytes.toBytes(i);
@@ -1698,65 +1698,65 @@ public class TestFromClientSide {
 
   /**
    * Baseline "scalability" test.
-   * 
+   *
    * Tests one hundred families, one million columns, one million versions
    */
   @Ignore @Test
   public void testMillions() throws Exception {
-    
+
     // 100 families
-    
+
     // millions of columns
-    
+
     // millions of versions
-    
+
   }
 
   @Ignore @Test
   public void testMultipleRegionsAndBatchPuts() throws Exception {
     // Two family table
-    
+
     // Insert lots of rows
-    
+
     // Insert to the same row with batched puts
-    
+
     // Insert to multiple rows with batched puts
-    
+
     // Split the table
-    
+
     // Get row from first region
-    
+
     // Get row from second region
-    
+
     // Scan all rows
-    
+
     // Insert to multiple regions with batched puts
-    
+
     // Get row from first region
-    
+
     // Get row from second region
-    
+
     // Scan all rows
-    
-    
+
+
   }
 
   @Ignore @Test
   public void testMultipleRowMultipleFamily() throws Exception {
-    
+
   }
 
   //
   // JIRA Testers
   //
-  
+
   /**
    * HBASE-867
    *    If millions of columns in a column family, hbase scanner won't come up
-   *    
-   *    Test will create numRows rows, each with numColsPerRow columns 
+   *
+   *    Test will create numRows rows, each with numColsPerRow columns
    *    (1 version each), and attempt to scan them all.
-   *    
+   *
    *    To test at scale, up numColsPerRow to the millions
    *    (have not gotten that to work running as junit though)
    */
@@ -1764,16 +1764,16 @@ public class TestFromClientSide {
   public void testJiraTest867() throws Exception {
     int numRows = 10;
     int numColsPerRow = 2000;
-    
+
     byte [] TABLE = Bytes.toBytes("testJiraTest867");
-    
+
     byte [][] ROWS = makeN(ROW, numRows);
     byte [][] QUALIFIERS = makeN(QUALIFIER, numColsPerRow);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
-    
+
     // Insert rows
-    
+
     for(int i=0;i<numRows;i++) {
       Put put = new Put(ROWS[i]);
       for(int j=0;j<numColsPerRow;j++) {
@@ -1783,7 +1783,7 @@ public class TestFromClientSide {
           "only contains " + put.size(), put.size() == numColsPerRow);
       ht.put(put);
     }
-    
+
     // Get a row
     Get get = new Get(ROWS[numRows-1]);
     Result result = ht.get(get);
@@ -1792,7 +1792,7 @@ public class TestFromClientSide {
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
-    
+
     // Scan the rows
     Scan scan = new Scan();
     ResultScanner scanner = ht.getScanner(scan);
@@ -1808,11 +1808,11 @@ public class TestFromClientSide {
     scanner.close();
     assertTrue("Expected to scan " + numRows + " rows but actually scanned "
         + rowCount + " rows", rowCount == numRows);
-    
+
     // flush and try again
-    
+
     TEST_UTIL.flush();
-    
+
     // Get a row
     get = new Get(ROWS[numRows-1]);
     result = ht.get(get);
@@ -1821,7 +1821,7 @@ public class TestFromClientSide {
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
-    
+
     // Scan the rows
     scan = new Scan();
     scanner = ht.getScanner(scan);
@@ -1837,52 +1837,52 @@ public class TestFromClientSide {
     scanner.close();
     assertTrue("Expected to scan " + numRows + " rows but actually scanned "
         + rowCount + " rows", rowCount == numRows);
-    
+
   }
-  
+
   /**
    * HBASE-861
-   *    get with timestamp will return a value if there is a version with an 
+   *    get with timestamp will return a value if there is a version with an
    *    earlier timestamp
    */
   @Test
   public void testJiraTest861() throws Exception {
-    
+
     byte [] TABLE = Bytes.toBytes("testJiraTest861");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     // Insert three versions
-    
+
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
     put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     ht.put(put);
-    
+
     // Get the middle value
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    
-    // Try to get one version before (expect fail) 
+
+    // Try to get one version before (expect fail)
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
-    
+
     // Try to get one version after (expect fail)
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
-    
+
     // Try same from storefile
     TEST_UTIL.flush();
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
-    
+
     // Insert two more versions surrounding others, into memstore
     put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     put.add(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
     ht.put(put);
-    
+
     // Check we can get everything we should and can't get what we shouldn't
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[1]);
@@ -1891,7 +1891,7 @@ public class TestFromClientSide {
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    
+
     // Try same from two storefiles
     TEST_UTIL.flush();
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
@@ -1901,12 +1901,12 @@ public class TestFromClientSide {
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[5]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    
+
   }
-  
+
   /**
    * HBASE-33
-   *    Add a HTable get/obtainScanner method that retrieves all versions of a 
+   *    Add a HTable get/obtainScanner method that retrieves all versions of a
    *    particular column and row between two timestamps
    */
   @Test
@@ -1915,11 +1915,11 @@ public class TestFromClientSide {
     byte [] TABLE = Bytes.toBytes("testJiraTest33");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     // Insert lots versions
-    
+
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -1928,12 +1928,12 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
-    
+
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
-    
+
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
@@ -1946,14 +1946,14 @@ public class TestFromClientSide {
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
-    
+
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 2);
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
     scanVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 3);
-    
+
   }
-  
+
   /**
    * HBASE-1014
    *    commit(BatchUpdate) method should return timestamp
@@ -1962,13 +1962,13 @@ public class TestFromClientSide {
   public void testJiraTest1014() throws Exception {
 
     byte [] TABLE = Bytes.toBytes("testJiraTest1014");
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     long manualStamp = 12345;
-    
+
     // Insert lots versions
-    
+
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, manualStamp, VALUE);
     ht.put(put);
@@ -1976,12 +1976,12 @@ public class TestFromClientSide {
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, manualStamp, VALUE);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, manualStamp-1);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, manualStamp+1);
-    
+
   }
-  
+
   /**
    * HBASE-1182
-   *    Scan for columns > some timestamp 
+   *    Scan for columns > some timestamp
    */
   @Test
   public void testJiraTest1182() throws Exception {
@@ -1989,11 +1989,11 @@ public class TestFromClientSide {
     byte [] TABLE = Bytes.toBytes("testJiraTest1182");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     // Insert lots versions
-    
+
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -2002,27 +2002,27 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
-    
+
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    
+
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    
+
     // Try same from storefile
     TEST_UTIL.flush();
 
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
-    
+
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 2, 5);
     scanVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 4, 5);
   }
-  
+
   /**
    * HBASE-52
    *    Add a means of scanning over all versions
@@ -2032,11 +2032,11 @@ public class TestFromClientSide {
     byte [] TABLE = Bytes.toBytes("testJiraTest52");
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     // Insert lots versions
-    
+
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
     put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -2045,25 +2045,25 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
-    
+
     getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    
+
     scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
 
     // Try same from storefile
     TEST_UTIL.flush();
 
     getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
-    
+
     scanAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
   }
 
   //
   // Bulk Testers
   //
-  
-  private void getVersionRangeAndVerifyGreaterThan(HTable ht, byte [] row, 
-      byte [] family, byte [] qualifier, long [] stamps, byte [][] values, 
+
+  private void getVersionRangeAndVerifyGreaterThan(HTable ht, byte [] row,
+      byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
       int start, int end)
   throws IOException {
     Get get = new Get(row);
@@ -2073,7 +2073,7 @@ public class TestFromClientSide {
     Result result = ht.get(get);
     assertNResult(result, row, family, qualifier, stamps, values, start+1, end);
   }
-  
+
   private void getVersionRangeAndVerify(HTable ht, byte [] row, byte [] family,
       byte [] qualifier, long [] stamps, byte [][] values, int start, int end)
   throws IOException {
@@ -2084,7 +2084,7 @@ public class TestFromClientSide {
     Result result = ht.get(get);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
-  
+
   private void getAllVersionsAndVerify(HTable ht, byte [] row, byte [] family,
       byte [] qualifier, long [] stamps, byte [][] values, int start, int end)
   throws IOException {
@@ -2094,9 +2094,9 @@ public class TestFromClientSide {
     Result result = ht.get(get);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
-  
-  private void scanVersionRangeAndVerifyGreaterThan(HTable ht, byte [] row, 
-      byte [] family, byte [] qualifier, long [] stamps, byte [][] values, 
+
+  private void scanVersionRangeAndVerifyGreaterThan(HTable ht, byte [] row,
+      byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
       int start, int end)
   throws IOException {
     Scan scan = new Scan(row);
@@ -2106,7 +2106,7 @@ public class TestFromClientSide {
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start+1, end);
   }
-  
+
   private void scanVersionRangeAndVerify(HTable ht, byte [] row, byte [] family,
       byte [] qualifier, long [] stamps, byte [][] values, int start, int end)
   throws IOException {
@@ -2127,7 +2127,7 @@ public class TestFromClientSide {
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
-  
+
   private void getVersionAndVerify(HTable ht, byte [] row, byte [] family,
       byte [] qualifier, long stamp, byte [] value)
   throws Exception {
@@ -2138,7 +2138,7 @@ public class TestFromClientSide {
     Result result = ht.get(get);
     assertSingleResult(result, row, family, qualifier, stamp, value);
   }
-  
+
   private void getVersionAndVerifyMissing(HTable ht, byte [] row, byte [] family,
       byte [] qualifier, long stamp)
   throws Exception {
@@ -2149,7 +2149,7 @@ public class TestFromClientSide {
     Result result = ht.get(get);
     assertEmptyResult(result);
   }
-  
+
   private void scanVersionAndVerify(HTable ht, byte [] row, byte [] family,
       byte [] qualifier, long stamp, byte [] value)
   throws Exception {
@@ -2160,8 +2160,8 @@ public class TestFromClientSide {
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, qualifier, stamp, value);
   }
-  
-  private void scanVersionAndVerifyMissing(HTable ht, byte [] row, 
+
+  private void scanVersionAndVerifyMissing(HTable ht, byte [] row,
       byte [] family, byte [] qualifier, long stamp)
   throws Exception {
     Scan scan = new Scan(row);
@@ -2171,79 +2171,79 @@ public class TestFromClientSide {
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
   }
-  
-  private void getTestNull(HTable ht, byte [] row, byte [] family, 
+
+  private void getTestNull(HTable ht, byte [] row, byte [] family,
       byte [] value)
   throws Exception {
-      
+
     Get get = new Get(row);
     get.addColumn(family, null);
     Result result = ht.get(get);
     assertSingleResult(result, row, family, null, value);
-    
+
     get = new Get(row);
     get.addColumn(family, HConstants.EMPTY_BYTE_ARRAY);
     result = ht.get(get);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
     get = new Get(row);
     get.addFamily(family);
     result = ht.get(get);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
     get = new Get(row);
     result = ht.get(get);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
   }
-  
-  private void scanTestNull(HTable ht, byte [] row, byte [] family, 
+
+  private void scanTestNull(HTable ht, byte [] row, byte [] family,
       byte [] value)
   throws Exception {
-    
+
     Scan scan = new Scan();
     scan.addColumn(family, null);
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
     scan = new Scan();
     scan.addColumn(family, HConstants.EMPTY_BYTE_ARRAY);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
     scan = new Scan();
     scan.addFamily(family);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
     scan = new Scan();
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
-    
+
   }
-  
-  private void singleRowGetTest(HTable ht, byte [][] ROWS, byte [][] FAMILIES, 
+
+  private void singleRowGetTest(HTable ht, byte [][] ROWS, byte [][] FAMILIES,
       byte [][] QUALIFIERS, byte [][] VALUES)
   throws Exception {
-    
+
     // Single column from memstore
     Get get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[0]);
     Result result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0]);
-    
+
     // Single column from storefile
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
-    
+
     // Single column from storefile, family match
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[7]);
     result = ht.get(get);
     assertSingleResult(result, ROWS[0], FAMILIES[7], QUALIFIERS[7], VALUES[7]);
-    
+
     // Two columns, one from memstore one from storefile, same family,
     // wildcard match
     get = new Get(ROWS[0]);
@@ -2251,7 +2251,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
-    
+
     // Two columns, one from memstore one from storefile, same family,
     // explicit match
     get = new Get(ROWS[0]);
@@ -2260,7 +2260,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
-  
+
     // Three column, one from memstore two from storefile, different families,
     // wildcard match
     get = new Get(ROWS[0]);
@@ -2269,7 +2269,7 @@ public class TestFromClientSide {
     result = ht.get(get);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
         new int [][] { {4, 0, 0}, {4, 4, 4}, {7, 7, 7} });
-    
+
     // Multiple columns from everywhere storefile, many family, wildcard
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[2]);
@@ -2278,10 +2278,10 @@ public class TestFromClientSide {
     get.addFamily(FAMILIES[7]);
     result = ht.get(get);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-        new int [][] { 
+        new int [][] {
           {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
     });
-    
+
     // Multiple columns from everywhere storefile, many family, wildcard
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[2], QUALIFIERS[2]);
@@ -2294,54 +2294,54 @@ public class TestFromClientSide {
     get.addColumn(FAMILIES[7], QUALIFIERS[8]);
     result = ht.get(get);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-        new int [][] { 
+        new int [][] {
           {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
     });
-    
+
     // Everything
     get = new Get(ROWS[0]);
     result = ht.get(get);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-        new int [][] { 
+        new int [][] {
           {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}, {9, 0, 0}
     });
-    
+
     // Get around inserted columns
-    
+
     get = new Get(ROWS[1]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[3]);
     get.addColumn(FAMILIES[2], QUALIFIERS[3]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
   }
-  
-  private void singleRowScanTest(HTable ht, byte [][] ROWS, byte [][] FAMILIES, 
+
+  private void singleRowScanTest(HTable ht, byte [][] ROWS, byte [][] FAMILIES,
       byte [][] QUALIFIERS, byte [][] VALUES)
   throws Exception {
-  
+
     // Single column from memstore
     Scan scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[0]);
     Result result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0]);
-    
+
     // Single column from storefile
     scan = new Scan();
     scan.addColumn(FAMILIES[2], QUALIFIERS[2]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[2], QUALIFIERS[2], VALUES[2]);
-    
+
     // Single column from storefile, family match
     scan = new Scan();
     scan.addFamily(FAMILIES[7]);
     result = getSingleScanResult(ht, scan);
     assertSingleResult(result, ROWS[0], FAMILIES[7], QUALIFIERS[7], VALUES[7]);
-    
+
     // Two columns, one from memstore one from storefile, same family,
     // wildcard match
     scan = new Scan();
@@ -2349,7 +2349,7 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
-    
+
     // Two columns, one from memstore one from storefile, same family,
     // explicit match
     scan = new Scan();
@@ -2358,7 +2358,7 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
         FAMILIES[4], QUALIFIERS[4], VALUES[4]);
-  
+
     // Three column, one from memstore two from storefile, different families,
     // wildcard match
     scan = new Scan();
@@ -2367,7 +2367,7 @@ public class TestFromClientSide {
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
         new int [][] { {4, 0, 0}, {4, 4, 4}, {7, 7, 7} });
-    
+
     // Multiple columns from everywhere storefile, many family, wildcard
     scan = new Scan();
     scan.addFamily(FAMILIES[2]);
@@ -2376,10 +2376,10 @@ public class TestFromClientSide {
     scan.addFamily(FAMILIES[7]);
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-        new int [][] { 
+        new int [][] {
           {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
     });
-    
+
     // Multiple columns from everywhere storefile, many family, wildcard
     scan = new Scan();
     scan.addColumn(FAMILIES[2], QUALIFIERS[2]);
@@ -2392,24 +2392,24 @@ public class TestFromClientSide {
     scan.addColumn(FAMILIES[7], QUALIFIERS[8]);
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-        new int [][] { 
+        new int [][] {
           {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
     });
-    
+
     // Everything
     scan = new Scan();
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-        new int [][] { 
+        new int [][] {
           {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}, {9, 0, 0}
     });
-    
+
     // Scan around inserted columns
-    
+
     scan = new Scan(ROWS[1]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[3]);
     scan.addColumn(FAMILIES[2], QUALIFIERS[3]);
@@ -2419,7 +2419,7 @@ public class TestFromClientSide {
 
   /**
    * Verify a single column using gets.
-   * Expects family and qualifier arrays to be valid for at least 
+   * Expects family and qualifier arrays to be valid for at least
    * the range:  idx-2 < idx < idx+2
    */
   private void getVerifySingleColumn(HTable ht,
@@ -2428,39 +2428,39 @@ public class TestFromClientSide {
       byte [][] QUALIFIERS, int QUALIFIERIDX,
       byte [][] VALUES, int VALUEIDX)
   throws Exception {
-    
+
     Get get = new Get(ROWS[ROWIDX]);
     Result result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[FAMILYIDX]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[FAMILYIDX-2]);
     get.addFamily(FAMILIES[FAMILYIDX]);
     get.addFamily(FAMILIES[FAMILYIDX+2]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[0]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[1]);
     get.addFamily(FAMILIES[FAMILYIDX]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[FAMILYIDX]);
     get.addColumn(FAMILIES[FAMILYIDX+1], QUALIFIERS[1]);
@@ -2468,17 +2468,17 @@ public class TestFromClientSide {
     get.addFamily(FAMILIES[FAMILYIDX-1]);
     get.addFamily(FAMILIES[FAMILYIDX+2]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
   }
-  
-  
+
+
   /**
    * Verify a single column using scanners.
-   * Expects family and qualifier arrays to be valid for at least 
+   * Expects family and qualifier arrays to be valid for at least
    * the range:  idx-2 to idx+2
-   * Expects row array to be valid for at least idx to idx+2 
+   * Expects row array to be valid for at least idx to idx+2
    */
   private void scanVerifySingleColumn(HTable ht,
       byte [][] ROWS, int ROWIDX,
@@ -2489,112 +2489,112 @@ public class TestFromClientSide {
 
     Scan scan = new Scan();
     Result result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     scan = new Scan(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-  
+
     scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX+1]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX+1]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     scan = new Scan();
     scan.addFamily(FAMILIES[FAMILYIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX+1]);
     scan.addFamily(FAMILIES[FAMILYIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[FAMILYIDX-1], QUALIFIERS[QUALIFIERIDX+1]);
     scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX]);
     scan.addFamily(FAMILIES[FAMILYIDX+1]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], 
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
         QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
 
   }
-  
+
   /**
    * Verify we do not read any values by accident around a single column
    * Same requirements as getVerifySingleColumn
    */
-  private void getVerifySingleEmpty(HTable ht, 
-      byte [][] ROWS, int ROWIDX, 
-      byte [][] FAMILIES, int FAMILYIDX, 
+  private void getVerifySingleEmpty(HTable ht,
+      byte [][] ROWS, int ROWIDX,
+      byte [][] FAMILIES, int FAMILYIDX,
       byte [][] QUALIFIERS, int QUALIFIERIDX)
   throws Exception {
-  
+
     Get get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[4]);
     get.addColumn(FAMILIES[4], QUALIFIERS[1]);
     Result result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[4]);
     get.addColumn(FAMILIES[4], QUALIFIERS[2]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[3]);
     get.addColumn(FAMILIES[4], QUALIFIERS[2]);
     get.addFamily(FAMILIES[5]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
     get = new Get(ROWS[ROWIDX+1]);
     result = ht.get(get);
     assertEmptyResult(result);
-    
+
   }
 
-  private void scanVerifySingleEmpty(HTable ht, 
-      byte [][] ROWS, int ROWIDX, 
-      byte [][] FAMILIES, int FAMILYIDX, 
+  private void scanVerifySingleEmpty(HTable ht,
+      byte [][] ROWS, int ROWIDX,
+      byte [][] FAMILIES, int FAMILYIDX,
       byte [][] QUALIFIERS, int QUALIFIERIDX)
   throws Exception {
-  
-    Scan scan = new Scan(ROWS[ROWIDX+1]); 
+
+    Scan scan = new Scan(ROWS[ROWIDX+1]);
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan(ROWS[ROWIDX+1],ROWS[ROWIDX+2]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
     scan = new Scan();
     scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX+1]);
     scan.addFamily(FAMILIES[FAMILYIDX-1]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
-    
+
   }
 
   //
@@ -2617,24 +2617,24 @@ public class TestFromClientSide {
         "Got value [" + Bytes.toString(key.getValue()) + "]",
         equals(value, key.getValue()));
   }
-  
+
   private void assertNumKeys(Result result, int n) throws Exception {
     assertTrue("Expected " + n + " keys but got " + result.size(),
         result.size() == n);
   }
 
-  private void assertNResult(Result result, byte [] row, 
+  private void assertNResult(Result result, byte [] row,
       byte [][] families, byte [][] qualifiers, byte [][] values,
       int [][] idxs)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
         "Got row [" + Bytes.toString(result.getRow()) +"]",
         equals(row, result.getRow()));
-    assertTrue("Expected " + idxs.length + " keys but result contains " 
+    assertTrue("Expected " + idxs.length + " keys but result contains "
         + result.size(), result.size() == idxs.length);
-    
+
     KeyValue [] keys = result.sorted();
-    
+
     for(int i=0;i<keys.length;i++) {
       byte [] family = families[idxs[i][0]];
       byte [] qualifier = qualifiers[idxs[i][1]];
@@ -2644,7 +2644,7 @@ public class TestFromClientSide {
       assertTrue("(" + i + ") Expected family [" + Bytes.toString(family)
           + "] " + "Got family [" + Bytes.toString(key.getFamily()) + "]",
           equals(family, key.getFamily()));
-      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier) 
+      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier)
           + "] " + "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
           equals(qualifier, key.getQualifier()));
       assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] "
@@ -2653,19 +2653,19 @@ public class TestFromClientSide {
     }
   }
 
-  private void assertNResult(Result result, byte [] row, 
-      byte [] family, byte [] qualifier, long [] stamps, byte [][] values, 
+  private void assertNResult(Result result, byte [] row,
+      byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
       int start, int end)
   throws IOException {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
         "Got row [" + Bytes.toString(result.getRow()) +"]",
         equals(row, result.getRow()));
     int expectedResults = end - start + 1;
-    assertTrue("Expected " + expectedResults + " keys but result contains " 
+    assertTrue("Expected " + expectedResults + " keys but result contains "
         + result.size(), result.size() == expectedResults);
-    
+
     KeyValue [] keys = result.sorted();
-    
+
     for(int i=0;i<keys.length;i++) {
       byte [] value = values[end-i];
       long ts = stamps[end-i];
@@ -2674,7 +2674,7 @@ public class TestFromClientSide {
       assertTrue("(" + i + ") Expected family [" + Bytes.toString(family)
           + "] " + "Got family [" + Bytes.toString(key.getFamily()) + "]",
           equals(family, key.getFamily()));
-      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier) 
+      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier)
           + "] " + "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
           equals(qualifier, key.getQualifier()));
       assertTrue("Expected ts [" + ts + "] " +
@@ -2689,7 +2689,7 @@ public class TestFromClientSide {
    * Validate that result contains two specified keys, exactly.
    * It is assumed key A sorts before key B.
    */
-  private void assertDoubleResult(Result result, byte [] row, 
+  private void assertDoubleResult(Result result, byte [] row,
       byte [] familyA, byte [] qualifierA, byte [] valueA,
       byte [] familyB, byte [] qualifierB, byte [] valueB)
   throws Exception {
@@ -2721,7 +2721,7 @@ public class TestFromClientSide {
         equals(valueB, kvB.getValue()));
   }
 
-  private void assertSingleResult(Result result, byte [] row, byte [] family, 
+  private void assertSingleResult(Result result, byte [] row, byte [] family,
       byte [] qualifier, byte [] value)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
@@ -2740,8 +2740,8 @@ public class TestFromClientSide {
         "Got value [" + Bytes.toString(kv.getValue()) + "]",
         equals(value, kv.getValue()));
   }
-  
-  private void assertSingleResult(Result result, byte [] row, byte [] family, 
+
+  private void assertSingleResult(Result result, byte [] row, byte [] family,
       byte [] qualifier, long ts, byte [] value)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
@@ -2764,7 +2764,7 @@ public class TestFromClientSide {
   }
 
   private void assertEmptyResult(Result result) throws Exception {
-    assertTrue("expected an empty result but result contains " + 
+    assertTrue("expected an empty result but result contains " +
         result.size() + " keys", result.isEmpty());
   }
 
@@ -2772,7 +2772,7 @@ public class TestFromClientSide {
     assertTrue("expected null result but received a non-null result",
         result == null);
   }
-  
+
   //
   // Helpers
   //
@@ -2783,7 +2783,7 @@ public class TestFromClientSide {
     scanner.close();
     return result;
   }
-  
+
   private byte [][] makeNAscii(byte [] base, int n) {
     if(n > 256) {
       return makeNBig(base, n);
@@ -2795,7 +2795,7 @@ public class TestFromClientSide {
     }
     return ret;
   }
-  
+
   private byte [][] makeN(byte [] base, int n) {
     if (n > 256) {
       return makeNBig(base, n);
@@ -2806,7 +2806,7 @@ public class TestFromClientSide {
     }
     return ret;
   }
-  
+
   private byte [][] makeNBig(byte [] base, int n) {
     byte [][] ret = new byte[n][];
     for(int i=0;i<n;i++) {
@@ -2816,7 +2816,7 @@ public class TestFromClientSide {
     }
     return ret;
   }
-  
+
   private long [] makeStamps(int n) {
     long [] stamps = new long[n];
     for(int i=0;i<n;i++) stamps[i] = i+1;
@@ -2833,12 +2833,12 @@ public class TestFromClientSide {
   @Ignore @Test
   public void testDuplicateVersions() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDuplicateVersions");
-    
+
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
-    
+
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    
+
     // Insert 4 versions of same column
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
@@ -2846,7 +2846,7 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
-    
+
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -2856,7 +2856,7 @@ public class TestFromClientSide {
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    
+
     // Verify we don't accidentally get others
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
@@ -2864,30 +2864,30 @@ public class TestFromClientSide {
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    
+
     // Ensure maxVersions in query is respected
     Get get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(2);
     Result result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
+
     Scan scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(2);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
+
     // Flush and redo
 
     TEST_UTIL.flush();
-    
+
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -2897,7 +2897,7 @@ public class TestFromClientSide {
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
-    
+
     // Verify we don't accidentally get others
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
@@ -2905,27 +2905,27 @@ public class TestFromClientSide {
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[3]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[6]);
-    
+
     // Ensure maxVersions in query is respected
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(2);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(2);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[4], STAMPS[5]},
         new byte[][] {VALUES[4], VALUES[5]},
         0, 1);
-    
-    
+
+
     // Add some memstore and retest
 
     // Insert 4 more versions of same column and a dupe
@@ -2936,42 +2936,42 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
     put.add(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
     ht.put(put);
-    
+
     // Ensure maxVersions in query is respected
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(7);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(7);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
-    
+
     get = new Get(ROW);
     get.setMaxVersions(7);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
-    
+
     scan = new Scan(ROW);
     scan.setMaxVersions(7);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8]},
         new byte[][] {VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8]},
         0, 6);
-    
+
     // Verify we can get each one properly
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
@@ -2981,13 +2981,13 @@ public class TestFromClientSide {
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
     scanVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    
+
     // Verify we don't accidentally get others
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     getVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[0]);
     scanVersionAndVerifyMissing(ht, ROW, FAMILY, QUALIFIER, STAMPS[9]);
-    
+
     // Ensure maxVersions of table is respected
 
     TEST_UTIL.flush();
@@ -2999,46 +2999,46 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
     put.add(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
     ht.put(put);
-    
+
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
         0, 9);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[7], STAMPS[8], STAMPS[9], STAMPS[11], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[7], VALUES[8], VALUES[9], VALUES[11], VALUES[13], VALUES[15]},
         0, 9);
-    
+
     // Delete a version in the memstore and a version in a storefile
     Delete delete = new Delete(ROW);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[11]);
     delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[7]);
     ht.delete(delete);
-    
+
     // Test that it's gone
     get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
         0, 7);
-    
+
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROW, FAMILY, QUALIFIER, 
+    assertNResult(result, ROW, FAMILY, QUALIFIER,
         new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
         new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
         0, 7);
@@ -3060,13 +3060,13 @@ public class TestFromClientSide {
     put.add(FAMILY, QUALIFIER, VALUE);
     table.put(put);
     LOG.info("Row put");
-    
+
     Get get = new Get(ROW);
     get.addFamily(FAMILY);
     Result r = table.get(get);
     assertFalse(r.isEmpty());
     System.out.println("Row retrieved successfully");
-    
+
     byte [] missingrow = Bytes.toBytes("missingrow");
     get = new Get(missingrow);
     get.addFamily(FAMILY);
@@ -3090,18 +3090,18 @@ public class TestFromClientSide {
 
     put = new Put(row2);
     put.add(CONTENTS_FAMILY, null, value);
-    
+
     assertEquals(put.size(), 1);
     assertEquals(put.getFamilyMap().get(CONTENTS_FAMILY).size(), 1);
-    
+
     KeyValue kv = put.getFamilyMap().get(CONTENTS_FAMILY).get(0);
-    
+
     assertTrue(Bytes.equals(kv.getFamily(), CONTENTS_FAMILY));
     // will it return null or an empty byte array?
     assertTrue(Bytes.equals(kv.getQualifier(), new byte[0]));
-    
+
     assertTrue(Bytes.equals(kv.getValue(), value));
-    
+
     table.put(put);
 
     Scan scan = new Scan();
@@ -3261,11 +3261,11 @@ public class TestFromClientSide {
     } catch (InterruptedException i) {
       //ignore
     }
-    
+
     put = new Put(ROW);
     put.add(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
     table.put(put);
-    
+
     try {
       Thread.sleep(1000);
     } catch (InterruptedException i) {
@@ -3275,11 +3275,11 @@ public class TestFromClientSide {
     put = new Put(ROW);
     put.add(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
     table.put(put);
-    
+
     long times[] = new long[3];
-    
+
     // First scan the memstore
-    
+
     Scan scan = new Scan();
     scan.addFamily(FAM1);
     scan.addFamily(FAM2);
@@ -3300,15 +3300,15 @@ public class TestFromClientSide {
         assertTrue(times[j] > times[i]);
       }
     }
-    
+
     // Flush data to disk and try again
     TEST_UTIL.flush();
-    
+
     // Reset times
     for(int i=0;i<times.length;i++) {
       times[i] = 0;
     }
-    
+
     try {
       Thread.sleep(1000);
     } catch (InterruptedException i) {
@@ -3372,7 +3372,7 @@ public class TestFromClientSide {
     final byte[] attrName = Bytes.toBytes("TESTATTR");
     final byte[] attrValue = Bytes.toBytes("somevalue");
     byte[] value = Bytes.toBytes("value");
-    
+
     HTable a = TEST_UTIL.createTable(tableAname, HConstants.CATALOG_FAMILY);
     HTable b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY);
     Put put = new Put(ROW);
@@ -3447,45 +3447,45 @@ public class TestFromClientSide {
     final byte [] tableAname = Bytes.toBytes("testGetClosestRowBefore");
     final byte [] row = Bytes.toBytes("row");
 
-    
+
     byte[] firstRow = Bytes.toBytes("ro");
     byte[] beforeFirstRow = Bytes.toBytes("rn");
     byte[] beforeSecondRow = Bytes.toBytes("rov");
-    
+
     HTable table = TEST_UTIL.createTable(tableAname,
       new byte [][] {HConstants.CATALOG_FAMILY, Bytes.toBytes("info2")});
     Put put = new Put(firstRow);
     Put put2 = new Put(row);
     byte[] zero = new byte[]{0};
     byte[] one = new byte[]{1};
-    
+
     put.add(HConstants.CATALOG_FAMILY, null, zero);
     put2.add(HConstants.CATALOG_FAMILY, null, one);
-    
+
     table.put(put);
     table.put(put2);
-    
+
     Result result = null;
-    
+
     // Test before first that null is returned
     result = table.getRowOrBefore(beforeFirstRow, HConstants.CATALOG_FAMILY);
     assertTrue(result == null);
-    
+
     // Test at first that first is returned
     result = table.getRowOrBefore(firstRow, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), zero));
-    
+
     // Test in between first and second that first is returned
     result = table.getRowOrBefore(beforeSecondRow, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), zero));
-    
+
     // Test at second make sure second is returned
     result = table.getRowOrBefore(row, HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
-    
+
     // Test after second, make sure second is returned
     result = table.getRowOrBefore(Bytes.add(row,one), HConstants.CATALOG_FAMILY);
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));

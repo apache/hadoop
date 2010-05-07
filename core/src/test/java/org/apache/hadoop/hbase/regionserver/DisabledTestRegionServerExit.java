@@ -51,11 +51,11 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
   public DisabledTestRegionServerExit() {
     super(2);
     conf.setInt("ipc.client.connect.max.retries", 5); // reduce ipc retries
-    conf.setInt("ipc.client.timeout", 10000);         // and ipc timeout 
+    conf.setInt("ipc.client.timeout", 10000);         // and ipc timeout
     conf.setInt("hbase.client.pause", 10000);         // increase client timeout
     conf.setInt("hbase.client.retries.number", 10);   // increase HBase retries
   }
-  
+
   /**
    * Test abort of region server.
    * @throws IOException
@@ -77,7 +77,7 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
     t.start();
     threadDumpingJoin(t);
   }
-  
+
   /**
    * Test abort of region server.
    * Test is flakey up on hudson.  Needs work.
@@ -100,7 +100,7 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
     t.start();
     threadDumpingJoin(t);
   }
-  
+
   private byte [] createTableAndAddRow(final String tableName)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -119,14 +119,14 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
   /*
    * Stop the region server serving the meta region and wait for the meta region
    * to get reassigned. This is always the most problematic case.
-   * 
+   *
    * @param abort set to true if region server should be aborted, if false it
    * is just shut down.
    */
   private void stopOrAbortMetaRegionServer(boolean abort) {
     List<JVMClusterUtil.RegionServerThread> regionThreads =
       cluster.getRegionServerThreads();
-    
+
     int server = -1;
     for (int i = 0; i < regionThreads.size() && server == -1; i++) {
       HRegionServer s = regionThreads.get(i).getRegionServer();
@@ -144,14 +144,14 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
     }
     if (abort) {
       this.cluster.abortRegionServer(server);
-      
+
     } else {
       this.cluster.stopRegionServer(server);
     }
     LOG.info(this.cluster.waitOnRegionServer(server) + " has been " +
         (abort ? "aborted" : "shut down"));
   }
-  
+
   /*
    * Run verification in a thread so I can concurrently run a thread-dumper
    * while we're waiting (because in this test sometimes the meta scanner
@@ -173,7 +173,7 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
 
           ResultScanner s = t.getScanner(scan);
           s.close();
-          
+
         } catch (IOException e) {
           LOG.fatal("could not re-open meta table because", e);
           fail();

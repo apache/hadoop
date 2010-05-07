@@ -52,7 +52,7 @@ public interface HConnection {
 
   /** @return - true if the master server is running */
   public boolean isMasterRunning();
-  
+
   /**
    * Checks if <code>tableName</code> exists.
    * @param tableName Table to check.
@@ -71,7 +71,7 @@ public interface HConnection {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException;
-  
+
   /**
    * @param tableName table name
    * @return true if the table is disabled, false otherwise
@@ -93,51 +93,51 @@ public interface HConnection {
    * catalog table that just contains table names and their descriptors.
    * Right now, it only exists as part of the META table's region info.
    *
-   * @return - returns an array of HTableDescriptors 
+   * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor[] listTables() throws IOException;
-  
+
   /**
    * @param tableName table name
-   * @return table metadata 
+   * @return table metadata
    * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor getHTableDescriptor(byte[] tableName)
   throws IOException;
-  
+
   /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in.
    * @param tableName name of the table <i>row</i> is in
    * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the reigon in 
+   * @return HRegionLocation that describes where to find the reigon in
    * question
    * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation locateRegion(final byte [] tableName,
       final byte [] row)
   throws IOException;
-  
+
   /**
    * Allows flushing the region cache.
    */
-  public void clearRegionCache(); 
-  
+  public void clearRegionCache();
+
   /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in, ignoring any value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in
    * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the reigon in 
+   * @return HRegionLocation that describes where to find the reigon in
    * question
    * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation relocateRegion(final byte [] tableName,
       final byte [] row)
-  throws IOException;  
-  
-  /** 
+  throws IOException;
+
+  /**
    * Establishes a connection to the region server at the specified address.
    * @param regionServer - the server to connect to
    * @return proxy for HRegionServer
@@ -145,8 +145,8 @@ public interface HConnection {
    */
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
   throws IOException;
-  
-  /** 
+
+  /**
    * Establishes a connection to the region server at the specified address.
    * @param regionServer - the server to connect to
    * @param getMaster - do we check if master is alive
@@ -156,7 +156,7 @@ public interface HConnection {
   public HRegionInterface getHRegionConnection(
       HServerAddress regionServer, boolean getMaster)
   throws IOException;
-  
+
   /**
    * Find region location hosting passed row
    * @param tableName table name
@@ -170,8 +170,8 @@ public interface HConnection {
   throws IOException;
 
   /**
-   * Pass in a ServerCallable with your particular bit of logic defined and 
-   * this method will manage the process of doing retries with timed waits 
+   * Pass in a ServerCallable with your particular bit of logic defined and
+   * this method will manage the process of doing retries with timed waits
    * and refinds of missing regions.
    *
    * @param <T> the type of the return value
@@ -180,9 +180,9 @@ public interface HConnection {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
+  public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
-  
+
   /**
    * Pass in a ServerCallable with your particular bit of logic defined and
    * this method will pass it to the defined region server.
@@ -192,10 +192,10 @@ public interface HConnection {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable) 
+  public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
-  
-    
+
+
   /**
    * Process a batch of Puts. Does the retries.
    * @param list A batch of Puts to process.
@@ -215,9 +215,9 @@ public interface HConnection {
    */
   public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
   throws IOException;
-  
+
   public void processBatchOfPuts(List<Put> list,
                                  final byte[] tableName, ExecutorService pool) throws IOException;
 
-  
+
 }

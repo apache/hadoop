@@ -134,7 +134,7 @@ public class TestBytes extends TestCase {
     byte [] key2 = {4,9};
     byte [] key2_2 = {4};
     byte [] key3 = {5,11};
-    
+
     assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1,
       Bytes.BYTES_RAWCOMPARATOR));
     assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1,
@@ -150,7 +150,7 @@ public class TestBytes extends TestCase {
     assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1,
       Bytes.BYTES_RAWCOMPARATOR));
   }
-  
+
   public void testIncrementBytes() throws IOException {
 
     assertTrue(checkTestIncrementBytes(10, 1));
@@ -171,8 +171,8 @@ public class TestBytes extends TestCase {
     assertTrue(checkTestIncrementBytes(-12, -34565445));
     assertTrue(checkTestIncrementBytes(-1546543452, -34565445));
   }
-  
-  private static boolean checkTestIncrementBytes(long val, long amount) 
+
+  private static boolean checkTestIncrementBytes(long val, long amount)
   throws IOException {
     byte[] value = Bytes.toBytes(val);
     byte [] testValue = {-1, -1, -1, -1, -1, -1, -1, -1};

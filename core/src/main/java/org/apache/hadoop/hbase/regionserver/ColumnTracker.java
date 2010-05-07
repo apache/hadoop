@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
 
 /**
  * Implementing classes of this interface will be used for the tracking
- * and enforcement of columns and numbers of versions during the course of a 
+ * and enforcement of columns and numbers of versions during the course of a
  * Get or Scan operation.
  * <p>
  * Currently there are two different types of Store/Family-level queries.
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
  * what action should be taken.
  * <li>{@link #update} is called at the end of every StoreFile or memstore.
  * <p>
- * This class is NOT thread-safe as queries are never multi-threaded 
+ * This class is NOT thread-safe as queries are never multi-threaded
  */
 public interface ColumnTracker {
   /**
@@ -49,19 +49,19 @@ public interface ColumnTracker {
    * @return The match code instance.
    */
   public MatchCode checkColumn(byte [] bytes, int offset, int length);
-  
+
   /**
    * Updates internal variables in between files
    */
   public void update();
-  
+
   /**
    * Resets the Matcher
    */
   public void reset();
-  
+
   /**
-   * 
+   *
    * @return <code>true</code> when done.
    */
   public boolean done();

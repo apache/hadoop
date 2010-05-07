@@ -44,29 +44,29 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
-/** 
+/**
  * A non-instantiable class that has a static method capable of compacting
  * a table by merging adjacent regions.
  */
 class HMerge implements HConstants {
   static final Log LOG = LogFactory.getLog(HMerge.class);
   static final Random rand = new Random();
-  
+
   /*
    * Not instantiable
    */
   private HMerge() {
     super();
   }
-  
+
   /**
    * Scans the table and merges two adjacent regions if they are small. This
    * only happens when a lot of rows are deleted.
-   * 
+   *
    * When merging the META region, the HBase instance must be offline.
    * When merging a normal table, the HBase instance must be online, but the
-   * table must be disabled. 
-   * 
+   * table must be disabled.
+   *
    * @param conf        - configuration object for HBase
    * @param fs          - FileSystem where regions reside
    * @param tableName   - Table to be compacted
@@ -100,7 +100,7 @@ class HMerge implements HConstants {
     protected final HLog hlog;
     private final long maxFilesize;
 
-    
+
     protected Merger(Configuration conf, FileSystem fs,
       final byte [] tableName)
     throws IOException {
@@ -119,7 +119,7 @@ class HMerge implements HConstants {
       this.hlog =
         new HLog(fs, logdir, oldLogDir, conf, null);
     }
-    
+
     void process() throws IOException {
       try {
         for(HRegionInfo[] regionsToMerge = next();
@@ -132,19 +132,19 @@ class HMerge implements HConstants {
       } finally {
         try {
           hlog.closeAndDelete();
-          
+
         } catch(IOException e) {
           LOG.error(e);
         }
       }
     }
-    
+
     protected boolean merge(final HRegionInfo[] info) throws IOException {
       if(info.length < 2) {
         LOG.info("only one region - nothing to merge");
         return false;
       }
-      
+
       HRegion currentRegion = null;
       long currentSize = 0;
       HRegion nextRegion = null;
@@ -183,13 +183,13 @@ class HMerge implements HConstants {
       }
       return true;
     }
-    
+
     protected abstract HRegionInfo[] next() throws IOException;
-    
+
     protected abstract void updateMeta(final byte [] oldRegion1,
       final byte [] oldRegion2, HRegion newRegion)
     throws IOException;
-    
+
   }
 
   /** Instantiated to compact a normal user table */
@@ -198,7 +198,7 @@ class HMerge implements HConstants {
     private final HTable table;
     private final ResultScanner metaScanner;
     private HRegionInfo latestRegion;
-    
+
     OnlineMerger(Configuration conf, FileSystem fs,
       final byte [] tableName)
     throws IOException {
@@ -208,7 +208,7 @@ class HMerge implements HConstants {
       this.metaScanner = table.getScanner(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       this.latestRegion = null;
     }
-    
+
     private HRegionInfo nextRegion() throws IOException {
       try {
         Result results = getMetaRow();
@@ -234,7 +234,7 @@ class HMerge implements HConstants {
         throw e;
       }
     }
-    
+
     protected void checkOfflined(final HRegionInfo hri)
     throws TableNotDisabledException {
       if (!hri.isOffline()) {
@@ -242,7 +242,7 @@ class HMerge implements HConstants {
           hri.getRegionNameAsString() + " is not disabled");
       }
     }
-    
+
     /*
      * Check current row has a HRegionInfo.  Skip to next row if HRI is empty.
      * @return A Map of the row content else null if we are off the end.
@@ -282,7 +282,7 @@ class HMerge implements HConstants {
 
     @Override
     protected void updateMeta(final byte [] oldRegion1,
-        final byte [] oldRegion2, 
+        final byte [] oldRegion2,
       HRegion newRegion)
     throws IOException {
       byte[][] regionsToDelete = {oldRegion1, oldRegion2};
@@ -314,10 +314,10 @@ class HMerge implements HConstants {
   private static class OfflineMerger extends Merger {
     private final List<HRegionInfo> metaRegions = new ArrayList<HRegionInfo>();
     private final HRegion root;
-    
+
     OfflineMerger(Configuration conf, FileSystem fs)
         throws IOException {
-      
+
       super(conf, fs, META_TABLE_NAME);
 
       Path rootTableDir = HTableDescriptor.getTableDir(
@@ -325,16 +325,16 @@ class HMerge implements HConstants {
           ROOT_TABLE_NAME);
 
       // Scan root region to find all the meta regions
-      
+
       root = new HRegion(rootTableDir, hlog, fs, conf,
           HRegionInfo.ROOT_REGIONINFO, null);
       root.initialize(null, null);
 
       Scan scan = new Scan();
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
-      InternalScanner rootScanner = 
+      InternalScanner rootScanner =
         root.getScanner(scan);
-      
+
       try {
         List<KeyValue> results = new ArrayList<KeyValue>();
         while(rootScanner.next(results)) {
@@ -349,7 +349,7 @@ class HMerge implements HConstants {
         rootScanner.close();
         try {
           root.close();
-          
+
         } catch(IOException e) {
           LOG.error(e);
         }
@@ -384,7 +384,7 @@ class HMerge implements HConstants {
         delete.deleteColumns(HConstants.CATALOG_FAMILY,
             HConstants.SPLITB_QUALIFIER);
         root.delete(delete, null, true);
-        
+
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + Bytes.toString(regionsToDelete[r]));
         }

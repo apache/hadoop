@@ -30,8 +30,8 @@ import java.io.IOException;
 class DeleteColumn extends ColumnOperation {
   private final byte [] columnName;
 
-  DeleteColumn(final HMaster master, final byte [] tableName, 
-    final byte [] columnName) 
+  DeleteColumn(final HMaster master, final byte [] tableName,
+    final byte [] columnName)
   throws IOException {
     super(master, tableName);
     this.columnName = columnName;

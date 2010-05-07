@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -49,7 +49,7 @@ import org.apache.hadoop.io.BytesWritable;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-public class TestHFileSeek extends TestCase { 
+public class TestHFileSeek extends TestCase {
   private MyOptions options;
   private Configuration conf;
   private Path path;
@@ -85,7 +85,7 @@ public class TestHFileSeek extends TestCase {
         new KVGenerator(rng, true, keyLenGen, valLenGen, wordLenGen,
             options.dictSize);
   }
-  
+
   @Override
   public void tearDown() {
     try {
@@ -95,7 +95,7 @@ public class TestHFileSeek extends TestCase {
       // Nothing
     }
   }
-  
+
   private static FSDataOutputStream createFSOutput(Path name, FileSystem fs)
     throws IOException {
     if (fs.exists(name)) {
@@ -149,7 +149,7 @@ public class TestHFileSeek extends TestCase {
     System.out.printf("time: %s...file size: %.2fMB...disk thrpt: %.2fMB/s\n",
         timer.toString(), (double) fsize / 1024 / 1024, fsize / duration);
   }
-  
+
   public void seekTFile() throws IOException {
     int miss = 0;
     long totalBytes = 0;
@@ -186,7 +186,7 @@ public class TestHFileSeek extends TestCase {
         (double) totalBytes / 1024 / (options.seekCount - miss));
 
   }
-  
+
   public void testSeeks() throws IOException {
     if (options.doCreate()) {
       createTFile();
@@ -200,7 +200,7 @@ public class TestHFileSeek extends TestCase {
       fs.delete(path, true);
     }
   }
-  
+
   private static class IntegerRange {
     private final int from, to;
 
@@ -233,7 +233,7 @@ public class TestHFileSeek extends TestCase {
     int dictSize = 1000;
     int minWordLen = 5;
     int maxWordLen = 20;
-   
+
     String rootDir =
         System.getProperty("test.build.data", "/tmp/TestTFileSeek");
     String file = "TestTFileSeek";
@@ -391,7 +391,7 @@ public class TestHFileSeek extends TestCase {
       if (line.hasOption('o')) {
         fsOutputBufferSize = Integer.parseInt(line.getOptionValue('o'));
       }
-      
+
       if (line.hasOption('n')) {
         seekCount = Integer.parseInt(line.getOptionValue('n'));
       }
@@ -415,7 +415,7 @@ public class TestHFileSeek extends TestCase {
       if (line.hasOption('r')) {
         rootDir = line.getOptionValue('r');
       }
-      
+
       if (line.hasOption('f')) {
         file = line.getOptionValue('f');
       }
@@ -478,11 +478,11 @@ public class TestHFileSeek extends TestCase {
       return (op & OP_READ) != 0;
     }
   }
-  
+
   public static void main(String[] argv) throws IOException {
     TestHFileSeek testCase = new TestHFileSeek();
     MyOptions options = new MyOptions(argv);
-    
+
     if (options.proceed == false) {
       return;
     }

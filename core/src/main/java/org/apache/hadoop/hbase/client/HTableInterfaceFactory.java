@@ -37,8 +37,8 @@ public interface HTableInterfaceFactory {
    * @return HTableInterface instance.
    */
   HTableInterface createHTableInterface(Configuration config, byte[] tableName);
-  
-  
+
+
   /**
    * Release the HTable resource represented by the table.
    * @param table

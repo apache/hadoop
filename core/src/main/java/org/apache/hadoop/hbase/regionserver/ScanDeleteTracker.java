@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
  * <li>{@link #update} when reaching the end of a StoreFile or row for scans
  * <p>
- * This class is NOT thread-safe as queries are never multi-threaded 
+ * This class is NOT thread-safe as queries are never multi-threaded
  */
 public class ScanDeleteTracker implements DeleteTracker {
 
@@ -53,7 +53,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   public ScanDeleteTracker() {
     super();
   }
-  
+
   /**
    * Add the specified KeyValue to the list of deletes to check against for
    * this row operation.
@@ -91,7 +91,7 @@ public class ScanDeleteTracker implements DeleteTracker {
     // missing else is never called.
   }
 
-  /** 
+  /**
    * Check if the specified KeyValue buffer has been deleted by a previously
    * seen delete.
    *
@@ -107,7 +107,7 @@ public class ScanDeleteTracker implements DeleteTracker {
     if (timestamp < familyStamp) {
       return true;
     }
-    
+
     if (deleteBuffer != null) {
       int ret = Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
           buffer, qualifierOffset, qualifierLength);
@@ -150,7 +150,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   }
 
   @Override
-  // should not be called at all even (!)  
+  // should not be called at all even (!)
   public void update() {
     this.reset();
   }

@@ -42,11 +42,11 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   HTable table;
 
   HTableDescriptor desc;
-  
+
   final byte[] FIVE_HUNDRED_KBYTES;
-  
+
   final byte [] FAMILY_NAME = Bytes.toBytes("col");
-  
+
   /** constructor */
   public TestRegionRebalancing() {
     super(1);
@@ -54,11 +54,11 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     for (int i = 0; i < 500 * 1024; i++) {
       FIVE_HUNDRED_KBYTES[i] = 'x';
     }
-    
+
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
-  
+
   /**
    * Before the hbase cluster starts up, create some dummy regions.
    */
@@ -72,32 +72,32 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     }
     startKeys.add(null);
     LOG.info(startKeys.size() + " start keys generated");
-        
+
     List<HRegion> regions = new ArrayList<HRegion>();
     for (int i = 0; i < 20; i++) {
       regions.add(createAregion(startKeys.get(i), startKeys.get(i+1)));
     }
-    
+
     // Now create the root and meta regions and insert the data regions
     // created above into the meta
-    
+
     createRootAndMetaRegions();
     for (HRegion region : regions) {
       HRegion.addRegionToMETA(meta, region);
     }
     closeRootAndMeta();
   }
-  
+
   /**
    * For HBASE-71. Try a few different configurations of starting and stopping
    * region servers to see if the assignment or regions is pretty balanced.
-   * @throws IOException 
+   * @throws IOException
    */
   public void testRebalancing() throws IOException {
     table = new HTable(conf, "test");
-    assertEquals("Test table should have 20 regions", 
+    assertEquals("Test table should have 20 regions",
       20, table.getStartKeys().length);
-    
+
     // verify that the region assignments are balanced to start out
     assertRegionsAreBalanced();
 
@@ -105,32 +105,32 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     // add a region server - total of 2
     cluster.startRegionServer();
     assertRegionsAreBalanced();
-  
+
     // add a region server - total of 3
-    LOG.debug("Adding 3rd region server.");    
+    LOG.debug("Adding 3rd region server.");
     cluster.startRegionServer();
     assertRegionsAreBalanced();
-    
+
     // kill a region server - total of 2
     LOG.debug("Killing the 3rd region server.");
     cluster.stopRegionServer(2, false);
     cluster.waitOnRegionServer(2);
     assertRegionsAreBalanced();
-    
+
     // start two more region servers - total of 4
     LOG.debug("Adding 3rd region server");
     cluster.startRegionServer();
-    LOG.debug("Adding 4th region server");    
-    cluster.startRegionServer();    
+    LOG.debug("Adding 4th region server");
+    cluster.startRegionServer();
     assertRegionsAreBalanced();
 
     for (int i = 0; i < 6; i++){
-      LOG.debug("Adding " + (i + 5) + "th region server");    
+      LOG.debug("Adding " + (i + 5) + "th region server");
       cluster.startRegionServer();
     }
     assertRegionsAreBalanced();
   }
-    
+
   /** figure out how many regions are currently being served. */
   private int getRegionCount() {
     int total = 0;
@@ -139,7 +139,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     }
     return total;
   }
-  
+
   /**
    * Determine if regions are balanced. Figure out the total, divide by the
    * number of online servers, then test if each server is +/- 1 of average
@@ -160,39 +160,39 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
       double avg = cluster.getMaster().getAverageLoad();
       int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
       int avgLoadMinusSlop = (int)Math.floor(avg * (1 - slop)) - 1;
-      LOG.debug("There are " + servers.size() + " servers and " + regionCount 
+      LOG.debug("There are " + servers.size() + " servers and " + regionCount
         + " regions. Load Average: " + avg + " low border: " + avgLoadMinusSlop
         + ", up border: " + avgLoadPlusSlop + "; attempt: " + i);
 
       for (HRegionServer server : servers) {
         int serverLoad = server.getOnlineRegions().size();
         LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);
-        if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop 
+        if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
           LOG.debug(server.hashCode() + " Isn't balanced!!! Avg: " + avg +
               " actual: " + serverLoad + " slop: " + slop);
           success = false;
         }
       }
-      
+
       if (!success) {
-        // one or more servers are not balanced. sleep a little to give it a 
+        // one or more servers are not balanced. sleep a little to give it a
         // chance to catch up. then, go back to the retry loop.
         try {
           Thread.sleep(10000);
         } catch (InterruptedException e) {}
-        
+
         continue;
       }
-      
+
       // if we get here, all servers were balanced, so we should just return.
       return;
     }
-    // if we get here, we tried 5 times and never got to short circuit out of 
+    // if we get here, we tried 5 times and never got to short circuit out of
     // the retry loop, so this is a failure.
     fail("After 5 attempts, region assignments were not balanced.");
   }
-  
+
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
     for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
@@ -204,7 +204,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   }
 
   /**
-   * Wait until all the regions are assigned. 
+   * Wait until all the regions are assigned.
    */
   private void waitForAllRegionsAssigned() {
     while (getRegionCount() < 22) {
@@ -218,9 +218,9 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
 
   /**
    * create a region with the specified start and end key and exactly one row
-   * inside. 
+   * inside.
    */
-  private HRegion createAregion(byte [] startKey, byte [] endKey) 
+  private HRegion createAregion(byte [] startKey, byte [] endKey)
   throws IOException {
     HRegion region = createNewHRegion(desc, startKey, endKey);
     byte [] keyToWrite = startKey == null ? Bytes.toBytes("row_000") : startKey;

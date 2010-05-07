@@ -204,7 +204,7 @@ public class MemStore implements HeapSize {
     return s;
   }
 
-  /** 
+  /**
    * Write a delete
    * @param delete
    * @return approximate size of the passed key and value.
@@ -221,7 +221,7 @@ public class MemStore implements HeapSize {
     //TODO Would be nice with if we had an iterator for this, so we could remove
     //things that needs to be removed while iterating and don't have to go
     //back and do it afterwards
-    
+
     try {
       boolean notpresent = false;
       List<KeyValue> deletes = new ArrayList<KeyValue>();
@@ -230,34 +230,34 @@ public class MemStore implements HeapSize {
       //Parse the delete, so that it is only done once
       byte [] deleteBuffer = delete.getBuffer();
       int deleteOffset = delete.getOffset();
-  
+
       int deleteKeyLen = Bytes.toInt(deleteBuffer, deleteOffset);
       deleteOffset += Bytes.SIZEOF_INT + Bytes.SIZEOF_INT;
-  
+
       short deleteRowLen = Bytes.toShort(deleteBuffer, deleteOffset);
       deleteOffset += Bytes.SIZEOF_SHORT;
       int deleteRowOffset = deleteOffset;
-  
+
       deleteOffset += deleteRowLen;
-  
+
       byte deleteFamLen = deleteBuffer[deleteOffset];
       deleteOffset += Bytes.SIZEOF_BYTE + deleteFamLen;
-  
+
       int deleteQualifierOffset = deleteOffset;
       int deleteQualifierLen = deleteKeyLen - deleteRowLen - deleteFamLen -
-        Bytes.SIZEOF_SHORT - Bytes.SIZEOF_BYTE - Bytes.SIZEOF_LONG - 
+        Bytes.SIZEOF_SHORT - Bytes.SIZEOF_BYTE - Bytes.SIZEOF_LONG -
         Bytes.SIZEOF_BYTE;
-      
+
       deleteOffset += deleteQualifierLen;
-  
+
       int deleteTimestampOffset = deleteOffset;
       deleteOffset += Bytes.SIZEOF_LONG;
       byte deleteType = deleteBuffer[deleteOffset];
-      
+
       //Comparing with tail from memstore
       for (KeyValue kv : tail) {
-        DeleteCode res = DeleteCompare.deleteCompare(kv, deleteBuffer, 
-            deleteRowOffset, deleteRowLen, deleteQualifierOffset, 
+        DeleteCode res = DeleteCompare.deleteCompare(kv, deleteBuffer,
+            deleteRowOffset, deleteRowLen, deleteQualifierOffset,
             deleteQualifierLen, deleteTimestampOffset, deleteType,
             comparator.getRawComparator());
         if (res == DeleteCode.DONE) {
@@ -272,7 +272,7 @@ public class MemStore implements HeapSize {
         notpresent = this.kvset.remove(kv);
         s -= heapSizeChange(kv, notpresent);
       }
-      
+
       // Adding the delete to memstore. Add any value, as long as
       // same instance each time.
       s += heapSizeChange(delete, this.kvset.add(delete));
@@ -282,7 +282,7 @@ public class MemStore implements HeapSize {
     this.size.addAndGet(s);
     return s;
   }
-  
+
   /**
    * @param kv Find the row that comes after this one.  If null, we return the
    * first.
@@ -533,7 +533,7 @@ public class MemStore implements HeapSize {
   void readLockUnlock() {
     this.lock.readLock().unlock();
   }
-  
+
   /**
    *
    * @param set memstore or snapshot
@@ -566,7 +566,7 @@ public class MemStore implements HeapSize {
     }
     return false;
   }
-  
+
 
   /*
    * MemStoreScanner implements the KeyValueScanner.
@@ -730,7 +730,7 @@ public class MemStore implements HeapSize {
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (8 * ClassSize.REFERENCE));
-  
+
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
@@ -744,11 +744,11 @@ public class MemStore implements HeapSize {
    * @return Size
    */
   long heapSizeChange(final KeyValue kv, final boolean notpresent) {
-    return notpresent ? 
+    return notpresent ?
         ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize()):
         0;
   }
-  
+
   /**
    * Get the entire heap usage for this MemStore not including keys in the
    * snapshot.
@@ -757,7 +757,7 @@ public class MemStore implements HeapSize {
   public long heapSize() {
     return size.get();
   }
-  
+
   /**
    * Get the heap usage of KVs in this MemStore.
    */

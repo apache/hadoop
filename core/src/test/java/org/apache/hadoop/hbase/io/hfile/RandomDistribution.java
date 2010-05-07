@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -36,7 +36,7 @@ public class RandomDistribution {
   public static interface DiscreteRNG {
     /**
      * Get the next random number
-     * 
+     *
      * @return the next random number.
      */
     public int nextInt();
@@ -53,14 +53,14 @@ public class RandomDistribution {
     /**
      * Generate random integers from min (inclusive) to max (exclusive)
      * following even distribution.
-     * 
+     *
      * @param random
      *          The basic random number generator.
      * @param min
      *          Minimum integer
      * @param max
      *          maximum integer (exclusive).
-     * 
+     *
      */
     public Flat(Random random, int min, int max) {
       if (min >= max) {
@@ -70,7 +70,7 @@ public class RandomDistribution {
       this.min = min;
       this.max = max;
     }
-    
+
     /**
      * @see DiscreteRNG#nextInt()
      */
@@ -83,7 +83,7 @@ public class RandomDistribution {
   /**
    * Zipf distribution. The ratio of the probabilities of integer i and j is
    * defined as follows:
-   * 
+   *
    * P(i)/P(j)=((j-min+1)/(i-min+1))^sigma.
    */
   public static final class Zipf implements DiscreteRNG {
@@ -94,7 +94,7 @@ public class RandomDistribution {
 
     /**
      * Constructor
-     * 
+     *
      * @param r
      *          The random number generator.
      * @param min
@@ -110,7 +110,7 @@ public class RandomDistribution {
 
     /**
      * Constructor.
-     * 
+     *
      * @param r
      *          The random number generator.
      * @param min
@@ -186,9 +186,9 @@ public class RandomDistribution {
 
   /**
    * Binomial distribution.
-   * 
+   *
    * P(k)=select(n, k)*p^k*(1-p)^(n-k) (k = 0, 1, ..., n)
-   * 
+   *
    * P(k)=select(max-min-1, k-min)*p^(k-min)*(1-p)^(k-min)*(1-p)^(max-k-1)
    */
   public static final class Binomial implements DiscreteRNG {
@@ -204,7 +204,7 @@ public class RandomDistribution {
       }
       return ret;
     }
-    
+
     private static double power(double p, int k) {
       return Math.exp(k * Math.log(p));
     }
@@ -212,7 +212,7 @@ public class RandomDistribution {
     /**
      * Generate random integers from min (inclusive) to max (exclusive)
      * following Binomial distribution.
-     * 
+     *
      * @param random
      *          The basic random number generator.
      * @param min
@@ -221,7 +221,7 @@ public class RandomDistribution {
      *          maximum integer (exclusive).
      * @param p
      *          parameter.
-     * 
+     *
      */
     public Binomial(Random random, int min, int max, double p) {
       if (min >= max) {

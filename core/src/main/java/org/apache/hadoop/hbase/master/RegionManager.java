@@ -58,16 +58,16 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
- */ 
+ */
 public class RegionManager implements HConstants {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
-  
+
   private AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
 
   private final RootScanner rootScannerThread;
   final MetaScanner metaScannerThread;
-  
+
   /** Set by root scanner to indicate the number of meta regions */
   private final AtomicInteger numberOfMetaRegions = new AtomicInteger();
 
@@ -76,20 +76,20 @@ public class RegionManager implements HConstants {
     new ConcurrentSkipListMap<byte [], MetaRegion>(Bytes.BYTES_COMPARATOR);
 
   private static final byte[] OVERLOADED = Bytes.toBytes("Overloaded");
-  
+
   private static final byte [] META_REGION_PREFIX = Bytes.toBytes(".META.,");
 
   /**
    * Map of region name to RegionState for regions that are in transition such as
-   * 
+   *
    * unassigned -> pendingOpen -> open
    * closing -> pendingClose -> closed; if (closed && !offline) -> unassigned
-   * 
+   *
    * At the end of a transition, removeRegion is used to remove the region from
    * the map (since it is no longer in transition)
-   * 
+   *
    * Note: Needs to be SortedMap so we can specify a comparator
-   * 
+   *
    * @see RegionState inner-class below
    */
    final SortedMap<String, RegionState> regionsInTransition =
@@ -147,7 +147,7 @@ public class RegionManager implements HConstants {
     Threads.setDaemonThreadRunning(rootScannerThread,
       "RegionManager.rootScanner");
     Threads.setDaemonThreadRunning(metaScannerThread,
-      "RegionManager.metaScanner");    
+      "RegionManager.metaScanner");
   }
 
   void unsetRootRegion() {
@@ -158,7 +158,7 @@ public class RegionManager implements HConstants {
       LOG.info("-ROOT- region unset (but not set to be reassigned)");
     }
   }
-  
+
   void reassignRootRegion() {
     unsetRootRegion();
     if (!master.getShutdownRequested().get()) {
@@ -171,12 +171,12 @@ public class RegionManager implements HConstants {
       }
     }
   }
-  
+
   /*
    * Assigns regions to region servers attempting to balance the load across
-   * all region servers. Note that no synchronization is necessary as the caller 
+   * all region servers. Note that no synchronization is necessary as the caller
    * (ServerManager.processMsgs) already owns the monitor for the RegionManager.
-   * 
+   *
    * @param info
    * @param mostLoadedRegions
    * @param returnMsgs
@@ -198,21 +198,21 @@ public class RegionManager implements HConstants {
       if (isSingleServer) {
         assignRegionsToOneServer(regionsToAssign, info, returnMsgs);
       } else {
-        // otherwise, give this server a few regions taking into account the 
+        // otherwise, give this server a few regions taking into account the
         // load of all the other servers.
         assignRegionsToMultipleServers(thisServersLoad, regionsToAssign,
             info, returnMsgs);
       }
     }
   }
-  
+
   /*
    * Make region assignments taking into account multiple servers' loads.
    *
    * Note that no synchronization is needed while we iterate over
    * regionsInTransition because this method is only called by assignRegions
    * whose caller owns the monitor for RegionManager
-   * 
+   *
    * TODO: This code is unintelligible.  REWRITE. Add TESTS! St.Ack 09/30/2009
    * @param thisServersLoad
    * @param regionsToAssign
@@ -220,7 +220,7 @@ public class RegionManager implements HConstants {
    * @param returnMsgs
    */
   private void assignRegionsToMultipleServers(final HServerLoad thisServersLoad,
-    final Set<RegionState> regionsToAssign, final HServerInfo info, 
+    final Set<RegionState> regionsToAssign, final HServerInfo info,
     final ArrayList<HMsg> returnMsgs) {
     boolean isMetaAssign = false;
     for (RegionState s : regionsToAssign) {
@@ -300,11 +300,11 @@ public class RegionManager implements HConstants {
 
   /*
    * Assign all to the only server. An unlikely case but still possible.
-   * 
+   *
    * Note that no synchronization is needed on regionsInTransition while
-   * iterating on it because the only caller is assignRegions whose caller owns 
+   * iterating on it because the only caller is assignRegions whose caller owns
    * the monitor for RegionManager
-   * 
+   *
    * @param regionsToAssign
    * @param serverName
    * @param returnMsgs
@@ -366,11 +366,11 @@ public class RegionManager implements HConstants {
 
   /*
    * Get the set of regions that should be assignable in this pass.
-   * 
+   *
    * Note that no synchronization on regionsInTransition is needed because the
    * only caller (assignRegions, whose caller is ServerManager.processMsgs) owns
    * the monitor for RegionManager
-   */ 
+   */
   private Set<RegionState> regionsAwaitingAssignment(HServerAddress addr,
                                                      boolean isSingleServer) {
     // set of regions we want to assign to this server
@@ -413,7 +413,7 @@ public class RegionManager implements HConstants {
           // and are on-line
           continue;
         }
-        if (!i.isMetaRegion() && 
+        if (!i.isMetaRegion() &&
             !master.getServerManager().canAssignUserRegions()) {
           LOG.debug("user region " + i.getRegionNameAsString() +
             " is in transition but not enough servers yet");
@@ -422,18 +422,18 @@ public class RegionManager implements HConstants {
         if (s.isUnassigned()) {
           regionsToAssign.add(s);
         }
-      }      
+      }
     }
     return regionsToAssign;
   }
-  
+
   /*
    * Figure out the load that is next highest amongst all regionservers. Also,
-   * return how many servers exist at that load. 
+   * return how many servers exist at that load.
    */
-  private int computeNextHeaviestLoad(HServerLoad referenceLoad, 
+  private int computeNextHeaviestLoad(HServerLoad referenceLoad,
     HServerLoad heavierLoad) {
-    
+
     SortedMap<HServerLoad, Set<String>> heavyServers =
       new TreeMap<HServerLoad, Set<String>>();
     synchronized (master.getLoadToServers()) {
@@ -464,14 +464,14 @@ public class RegionManager implements HConstants {
    * some or all of its most loaded regions, allowing it to reduce its load.
    * The closed regions will then get picked up by other underloaded machines.
    *
-   * Note that no synchronization is needed because the only caller 
+   * Note that no synchronization is needed because the only caller
    * (assignRegions) whose caller owns the monitor for RegionManager
    */
-  void unassignSomeRegions(final HServerInfo info, 
+  void unassignSomeRegions(final HServerInfo info,
       int numRegionsToClose, final HRegionInfo[] mostLoadedRegions,
       ArrayList<HMsg> returnMsgs) {
-    LOG.debug("Choosing to reassign " + numRegionsToClose 
-      + " regions. mostLoadedRegions has " + mostLoadedRegions.length 
+    LOG.debug("Choosing to reassign " + numRegionsToClose
+      + " regions. mostLoadedRegions has " + mostLoadedRegions.length
       + " regions in it.");
     int regionIdx = 0;
     int regionsClosed = 0;
@@ -516,23 +516,23 @@ public class RegionManager implements HConstants {
       return !pathname.equals(HLog.HREGION_LOGDIR_NAME) &&
         !pathname.equals(VERSION_FILE_NAME);
     }
-    
+
   }
 
   /*
    * PathFilter that accepts all but compaction.dir names.
    */
   static class RegionDirFilter implements PathFilter {
-    public boolean accept(Path path) { 
+    public boolean accept(Path path) {
       return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
     }
   }
 
   /**
    * @return the rough number of the regions on fs
-   * Note: this method simply counts the regions on fs by accumulating all the dirs 
+   * Note: this method simply counts the regions on fs by accumulating all the dirs
    * in each table dir (${HBASE_ROOT}/$TABLE) and skipping logfiles, compaction dirs.
-   * @throws IOException 
+   * @throws IOException
    */
   public int countRegionsOnFS() throws IOException {
     int regions = 0;
@@ -569,7 +569,7 @@ public class RegionManager implements HConstants {
     }
     return false;
   }
-  
+
   /**
    * Return a map of the regions in transition on a server.
    * Returned map entries are region name -> RegionState
@@ -604,9 +604,9 @@ public class RegionManager implements HConstants {
       LOG.debug("meta and root scanners notified");
     }
   }
-  
+
   /** Stop the region assigner */
-  public void stop() {  
+  public void stop() {
     try {
       if (rootScannerThread.isAlive()) {
         rootScannerThread.join();       // Wait for the root scanner to finish.
@@ -624,7 +624,7 @@ public class RegionManager implements HConstants {
     master.getZooKeeperWrapper().clearRSDirectory();
     master.getZooKeeperWrapper().close();
   }
-  
+
   /**
    * Block until meta regions are online or we're shutting down.
    * @return true if we found meta regions, false if we're closing.
@@ -635,9 +635,9 @@ public class RegionManager implements HConstants {
           numberOfMetaRegions.get() == onlineMetaRegions.size());
     }
   }
-  
+
   /**
-   * Search our map of online meta regions to find the first meta region that 
+   * Search our map of online meta regions to find the first meta region that
    * should contain a pointer to <i>newRegion</i>.
    * @param newRegion
    * @return MetaRegion where the newRegion should live
@@ -651,13 +651,13 @@ public class RegionManager implements HConstants {
       } else {
         if (onlineMetaRegions.containsKey(newRegion.getRegionName())) {
           return onlineMetaRegions.get(newRegion.getRegionName());
-        } 
+        }
         return onlineMetaRegions.get(onlineMetaRegions.headMap(
             newRegion.getRegionName()).lastKey());
       }
     }
   }
-  
+
   /**
    * Get a set of all the meta regions that contain info about a given table.
    * @param tableName Table you need to know all the meta regions for
@@ -724,8 +724,8 @@ public class RegionManager implements HConstants {
    * written
    * @throws IOException
    */
-  public void createRegion(HRegionInfo newRegion, HRegionInterface server, 
-      byte [] metaRegionName) 
+  public void createRegion(HRegionInfo newRegion, HRegionInterface server,
+      byte [] metaRegionName)
   throws IOException {
     // 2. Create the HRegion
     HRegion region = HRegion.createHRegion(newRegion, this.master.getRootDir(),
@@ -734,11 +734,11 @@ public class RegionManager implements HConstants {
     // 3. Insert into meta
     HRegionInfo info = region.getRegionInfo();
     byte [] regionName = region.getRegionName();
-    
+
     Put put = new Put(regionName);
     put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
     server.put(metaRegionName, put);
-    
+
     // 4. Close the new region to flush it to disk.  Close its log file too.
     region.close();
     region.getLog().closeAndDelete();
@@ -746,17 +746,17 @@ public class RegionManager implements HConstants {
     // 5. Get it assigned to a server
     setUnassigned(info, true);
   }
-  
-  /** 
-   * Set a MetaRegion as online. 
-   * @param metaRegion 
+
+  /**
+   * Set a MetaRegion as online.
+   * @param metaRegion
    */
   public void putMetaRegionOnline(MetaRegion metaRegion) {
     onlineMetaRegions.put(metaRegion.getStartKey(), metaRegion);
   }
 
-  /** 
-   * Get a list of online MetaRegions 
+  /**
+   * Get a list of online MetaRegions
    * @return list of MetaRegion objects
    */
   public List<MetaRegion> getListOfOnlineMetaRegions() {
@@ -766,26 +766,26 @@ public class RegionManager implements HConstants {
     }
     return regions;
   }
-  
-  /** 
-   * Count of online meta regions 
+
+  /**
+   * Count of online meta regions
    * @return count of online meta regions
    */
   public int numOnlineMetaRegions() {
     return onlineMetaRegions.size();
   }
-  
-  /** 
-   * Check if a meta region is online by its name 
+
+  /**
+   * Check if a meta region is online by its name
    * @param startKey name of the meta region to check
    * @return true if the region is online, false otherwise
    */
   public boolean isMetaRegionOnline(byte [] startKey) {
     return onlineMetaRegions.containsKey(startKey);
   }
-  
-  /** 
-   * Set an online MetaRegion offline - remove it from the map. 
+
+  /**
+   * Set an online MetaRegion offline - remove it from the map.
    * @param startKey region name
    * @return the MetaRegion that was taken offline.
    */
@@ -845,7 +845,7 @@ public class RegionManager implements HConstants {
           // Has an outstanding meta region to be assigned.
           return true;
         }
-      }      
+      }
     }
     return false;
   }
@@ -931,7 +931,7 @@ public class RegionManager implements HConstants {
 
   /**
    * Remove a region from the region state map.
-   * 
+   *
    * @param info
    */
   public void removeRegion(HRegionInfo info) {
@@ -939,7 +939,7 @@ public class RegionManager implements HConstants {
       this.regionsInTransition.remove(info.getRegionNameAsString());
     }
   }
-  
+
   /**
    * @param regionName
    * @return true if the named region is in a transition state
@@ -964,8 +964,8 @@ public class RegionManager implements HConstants {
     return false;
   }
 
-  /** 
-   * Set a region to unassigned 
+  /**
+   * Set a region to unassigned
    * @param info Region to set unassigned
    * @param force if true mark region unassigned whatever its current state
    */
@@ -982,8 +982,8 @@ public class RegionManager implements HConstants {
       s.setUnassigned();
     }
   }
-  
-  /** 
+
+  /**
    * Check if a region is on the unassigned list
    * @param info HRegionInfo to check for
    * @return true if on the unassigned list, false if it isn't. Note that this
@@ -999,11 +999,11 @@ public class RegionManager implements HConstants {
     }
     return false;
   }
-  
+
   /**
    * Check if a region has been assigned and we're waiting for a response from
    * the region server.
-   * 
+   *
    * @param regionName name of the region
    * @return true if open, false otherwise
    */
@@ -1029,7 +1029,7 @@ public class RegionManager implements HConstants {
       }
     }
   }
-  
+
   /**
    * @param regionName
    * @return true if region is marked to be offlined.
@@ -1044,8 +1044,8 @@ public class RegionManager implements HConstants {
     return false;
   }
 
-  /** 
-   * Mark a region as closing 
+  /**
+   * Mark a region as closing
    * @param serverName
    * @param regionInfo
    * @param setOffline
@@ -1067,11 +1067,11 @@ public class RegionManager implements HConstants {
       this.regionsInTransition.put(regionInfo.getRegionNameAsString(), s);
     }
   }
-  
-  /** 
-   * Remove the map of region names to region infos waiting to be offlined for a 
+
+  /**
+   * Remove the map of region names to region infos waiting to be offlined for a
    * given server
-   *  
+   *
    * @param serverName
    * @return set of infos to close
    */
@@ -1087,10 +1087,10 @@ public class RegionManager implements HConstants {
     }
     return result;
   }
-  
+
   /**
    * Called when we have told a region server to close the region
-   * 
+   *
    * @param regionName
    */
   public void setPendingClose(String regionName) {
@@ -1101,7 +1101,7 @@ public class RegionManager implements HConstants {
       }
     }
   }
-  
+
   /**
    * @param regionName
    */
@@ -1120,8 +1120,8 @@ public class RegionManager implements HConstants {
   public void addMetaRegionToScan(MetaRegion m) {
     metaScannerThread.addMetaRegionToScan(m);
   }
-  
-  /** 
+
+  /**
    * Check if the initial root scan has been completed.
    * @return true if scan completed, false otherwise
    */
@@ -1129,22 +1129,22 @@ public class RegionManager implements HConstants {
     return rootScannerThread.isInitialScanComplete();
   }
 
-  /** 
+  /**
    * Check if the initial meta scan has been completed.
    * @return true if meta completed, false otherwise
-   */  
+   */
   public boolean isInitialMetaScanComplete() {
     return metaScannerThread.isInitialScanComplete();
   }
 
-  /** 
+  /**
    * Get the root region location.
    * @return HServerAddress describing root region server.
    */
   public HServerAddress getRootRegionLocation() {
     return rootRegionLocation.get();
   }
-  
+
   /**
    * Block until either the root region location is available or we're shutting
    * down.
@@ -1164,7 +1164,7 @@ public class RegionManager implements HConstants {
       }
     }
   }
-  
+
   /**
    * Return the number of meta regions.
    * @return number of meta regions
@@ -1172,7 +1172,7 @@ public class RegionManager implements HConstants {
   public int numMetaRegions() {
     return numberOfMetaRegions.get();
   }
-  
+
   /**
    * Bump the count of meta regions up one
    */
@@ -1221,9 +1221,9 @@ public class RegionManager implements HConstants {
     synchronized (rootRegionLocation) {
       rootRegionLocation.set(new HServerAddress(address));
       rootRegionLocation.notifyAll();
-    } 
+    }
   }
-  
+
   /**
    * Set the number of meta regions.
    * @param num Number of meta regions
@@ -1317,7 +1317,7 @@ public class RegionManager implements HConstants {
     applyActions(serverInfo, returnMsgs, this.regionsToMajorCompact,
         HMsg.Type.MSG_REGION_MAJOR_COMPACT);
   }
-  
+
   private void applyActions(final HServerInfo serverInfo,
       final ArrayList<HMsg> returnMsgs,
       final SortedMap<byte[], Pair<HRegionInfo,HServerAddress>> map,
@@ -1342,28 +1342,28 @@ public class RegionManager implements HConstants {
    * Class to balance region servers load.
    * It keeps Region Servers load in slop range by unassigning Regions
    * from most loaded servers.
-   * 
+   *
    * Equilibrium is reached when load of all serves are in slop range
-   * [avgLoadMinusSlop, avgLoadPlusSlop], where 
+   * [avgLoadMinusSlop, avgLoadPlusSlop], where
    *  avgLoadPlusSlop = Math.ceil(avgLoad * (1 + this.slop)), and
    *  avgLoadMinusSlop = Math.floor(avgLoad * (1 - this.slop)) - 1.
    */
   private class LoadBalancer {
     private float slop;                 // hbase.regions.slop
     private final int maxRegToClose;    // hbase.regions.close.max
-    
+
     LoadBalancer(Configuration conf) {
       this.slop = conf.getFloat("hbase.regions.slop", (float)0.3);
       if (this.slop <= 0) this.slop = 1;
       //maxRegToClose to constrain balance closing per one iteration
-      // -1 to turn off 
+      // -1 to turn off
       // TODO: change default in HBASE-862, need a suggestion
       this.maxRegToClose = conf.getInt("hbase.regions.close.max", -1);
     }
 
     /**
      * Balance server load by unassigning some regions.
-     * 
+     *
      * @param info - server info
      * @param mostLoadedRegions - array of most loaded regions
      * @param returnMsgs - array of return massages
@@ -1377,27 +1377,27 @@ public class RegionManager implements HConstants {
       if(servLoad.getLoad() <= Math.ceil(avg) || avg <= 2.0) {
         return;
       }
-      
+
       // check if current server is overloaded
       int numRegionsToClose = balanceFromOverloaded(servLoad, avg);
-      
+
       // check if we can unload server by low loaded servers
       if(numRegionsToClose <= 0) {
-        numRegionsToClose = balanceToLowloaded(info.getServerName(), servLoad, 
+        numRegionsToClose = balanceToLowloaded(info.getServerName(), servLoad,
             avg);
       }
-      
+
       if(maxRegToClose > 0) {
         numRegionsToClose = Math.min(numRegionsToClose, maxRegToClose);
       }
-      
+
       if(numRegionsToClose > 0) {
-        unassignSomeRegions(info, numRegionsToClose, mostLoadedRegions, 
+        unassignSomeRegions(info, numRegionsToClose, mostLoadedRegions,
             returnMsgs);
       }
     }
 
-    /* 
+    /*
      * Check if server load is not overloaded (with load > avgLoadPlusSlop).
      * @return number of regions to unassign.
      */
@@ -1414,12 +1414,12 @@ public class RegionManager implements HConstants {
       return 0;
     }
 
-    /* 
-     * Check if server is most loaded and can be unloaded to 
+    /*
+     * Check if server is most loaded and can be unloaded to
      * low loaded servers (with load < avgLoadMinusSlop).
      * @return number of regions to unassign.
      */
-    private int balanceToLowloaded(String srvName, HServerLoad srvLoad, 
+    private int balanceToLowloaded(String srvName, HServerLoad srvLoad,
         double avgLoad) {
 
       SortedMap<HServerLoad, Set<String>> loadToServers =
@@ -1427,18 +1427,18 @@ public class RegionManager implements HConstants {
       // check if server most loaded
       if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
         return 0;
-       
+
       // this server is most loaded, we will try to unload it by lowest
       // loaded servers
       int avgLoadMinusSlop = (int)Math.floor(avgLoad * (1 - this.slop)) - 1;
       int lowestLoad = loadToServers.firstKey().getNumberOfRegions();
-      
+
       if(lowestLoad >= avgLoadMinusSlop)
         return 0; // there is no low loaded servers
-      
+
       int lowSrvCount = loadToServers.get(loadToServers.firstKey()).size();
       int numRegionsToClose = 0;
-      
+
       int numSrvRegs = srvLoad.getNumberOfRegions();
       int numMoveToLowLoaded = (avgLoadMinusSlop - lowestLoad) * lowSrvCount;
       numRegionsToClose = numSrvRegs - (int)Math.ceil(avgLoad);
@@ -1494,7 +1494,7 @@ public class RegionManager implements HConstants {
    */
   static class RegionState implements Comparable<RegionState> {
     private final HRegionInfo regionInfo;
-    
+
     enum State {
       UNASSIGNED, // awaiting a server to be assigned
       PENDING_OPEN, // told a server to open, hasn't opened yet
@@ -1502,13 +1502,13 @@ public class RegionManager implements HConstants {
       CLOSING, // a msg has been enqueued to close ths region, but not delivered to RS yet
       PENDING_CLOSE, // msg has been delivered to RS to close this region
       CLOSED // region has been closed but not yet marked in meta
-      
+
     }
-    
+
     private State state;
-    
+
     private boolean isOfflined;
-    
+
     /* Set when region is assigned or closing */
     private String serverName = null;
 
@@ -1517,11 +1517,11 @@ public class RegionManager implements HConstants {
       this.regionInfo = info;
       this.state = state;
     }
-    
+
     synchronized HRegionInfo getRegionInfo() {
       return this.regionInfo;
     }
-    
+
     synchronized byte [] getRegionName() {
       return this.regionInfo.getRegionName();
     }
@@ -1537,7 +1537,7 @@ public class RegionManager implements HConstants {
      * @return true if the region is being opened
      */
     synchronized boolean isOpening() {
-      return state == State.UNASSIGNED || 
+      return state == State.UNASSIGNED ||
         state == State.PENDING_OPEN ||
         state == State.OPEN;
     }
@@ -1550,7 +1550,7 @@ public class RegionManager implements HConstants {
     }
 
     /*
-     * Note: callers of this method (reassignRootRegion, 
+     * Note: callers of this method (reassignRootRegion,
      * regionsAwaitingAssignment, setUnassigned) ensure that this method is not
      * called unless it is safe to do so.
      */
@@ -1596,7 +1596,7 @@ public class RegionManager implements HConstants {
       this.serverName = serverName;
       this.isOfflined = setOffline;
     }
-    
+
     synchronized boolean isPendingClose() {
       return state == State.PENDING_CLOSE;
     }
@@ -1612,7 +1612,7 @@ public class RegionManager implements HConstants {
     synchronized boolean isClosed() {
       return state == State.CLOSED;
     }
-    
+
     synchronized void setClosed() {
       if (state != State.PENDING_CLOSE &&
           state != State.PENDING_OPEN &&
@@ -1623,7 +1623,7 @@ public class RegionManager implements HConstants {
       }
       state = State.CLOSED;
     }
-    
+
     synchronized boolean isOfflined() {
       return (state == State.CLOSING ||
         state == State.PENDING_CLOSE) && isOfflined;
@@ -1634,7 +1634,7 @@ public class RegionManager implements HConstants {
       return ("name=" + Bytes.toString(getRegionName()) +
           ", state=" + this.state);
     }
-    
+
     @Override
     public boolean equals(Object o) {
       if (this == o) {
@@ -1645,12 +1645,12 @@ public class RegionManager implements HConstants {
       }
       return this.compareTo((RegionState) o) == 0;
     }
-    
+
     @Override
     public int hashCode() {
       return Bytes.toString(getRegionName()).hashCode();
     }
-    
+
     public int compareTo(RegionState o) {
       if (o == null) {
         return 1;

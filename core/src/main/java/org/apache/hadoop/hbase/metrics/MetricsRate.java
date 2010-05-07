@@ -30,12 +30,12 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class MetricsRate extends MetricsBase {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.hbase.metrics");
-  
+
   private int value;
   private float prevRate;
   private long ts;
-  
-  public MetricsRate(final String name, final MetricsRegistry registry, 
+
+  public MetricsRate(final String name, final MetricsRegistry registry,
       final String description) {
     super(name, description);
     this.value = 0;
@@ -43,19 +43,19 @@ public class MetricsRate extends MetricsBase {
     this.ts = System.currentTimeMillis();
     registry.add(name, this);
   }
-  
+
   public MetricsRate(final String name, final MetricsRegistry registry) {
     this(name, registry, NO_DESCRIPTION);
   }
-  
+
   public synchronized void inc(final int incr) {
     value += incr;
   }
-  
+
   public synchronized void inc() {
     value++;
   }
-  
+
   private synchronized void intervalHeartBeat() {
     long now = System.currentTimeMillis();
     long diff = (now-ts)/1000;
@@ -64,18 +64,18 @@ public class MetricsRate extends MetricsBase {
     this.value = 0;
     this.ts = now;
   }
-  
+
   @Override
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
     try {
       mr.setMetric(getName(), getPreviousIntervalValue());
     } catch (Exception e) {
-      LOG.info("pushMetric failed for " + getName() + "\n" + 
+      LOG.info("pushMetric failed for " + getName() + "\n" +
           StringUtils.stringifyException(e));
     }
   }
-  
+
   public synchronized float getPreviousIntervalValue() {
     return this.prevRate;
   }

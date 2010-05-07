@@ -108,7 +108,7 @@ public class TestMasterTransistions {
       this.copyOfOnlineRegions =
         this.victim.getCopyOfOnlineRegionsSortedBySize().values();
     }
- 
+
     @Override
     public boolean process(HServerInfo serverInfo, HMsg incomingMsg) {
       if (!victim.getServerInfo().equals(serverInfo) ||
@@ -161,7 +161,7 @@ public class TestMasterTransistions {
    * we kill it.  We then wait on all regions to combe back on line.  If bug
    * is fixed, this should happen soon as the processing of the killed server is
    * done.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a> 
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a>
    */
   @Test public void testKillRSWithOpeningRegion2482() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -209,7 +209,7 @@ public class TestMasterTransistions {
    * @param cluster
    * @param hrs
    * @return Count of regions closed.
-   * @throws IOException 
+   * @throws IOException
    */
   private int closeAlltNonCatalogRegions(final MiniHBaseCluster cluster,
     final MiniHBaseCluster.MiniHBaseClusterRegionServer hrs)
@@ -247,7 +247,7 @@ public class TestMasterTransistions {
     private int closeCount = 0;
     static final int SERVER_DURATION = 3 * 1000;
     static final int CLOSE_DURATION = 1 * 1000;
- 
+
     HBase2428Listener(final MiniHBaseCluster c, final HServerAddress metaAddress,
         final HRegionInfo closingHRI, final int otherServerIndex) {
       this.cluster = c;
@@ -332,7 +332,7 @@ public class TestMasterTransistions {
   /**
    * In 2428, the meta region has just been set offline and then a close comes
    * in.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a> 
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a>
    */
   @Test public void testRegionCloseWhenNoMetaHBase2428() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -351,7 +351,7 @@ public class TestMasterTransistions {
     // Get a region out on the otherServer.
     final HRegionInfo hri =
       otherServer.getOnlineRegions().iterator().next().getRegionInfo();
- 
+
     // Add our ReionServerOperationsListener
     HBase2428Listener listener = new HBase2428Listener(cluster,
       metaHRS.getHServerInfo().getServerAddress(), hri, otherServerIndex);
@@ -414,10 +414,10 @@ public class TestMasterTransistions {
       // If I get to here and all rows have a Server, then all have been assigned.
       if (rows == countOfRegions) break;
       LOG.info("Found=" + rows);
-      Threads.sleep(1000); 
+      Threads.sleep(1000);
     }
   }
-    
+
   /*
    * @return Count of regions in meta table.
    * @throws IOException

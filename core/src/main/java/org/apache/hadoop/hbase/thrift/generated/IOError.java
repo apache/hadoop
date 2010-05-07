@@ -106,7 +106,7 @@ public class IOError extends Exception implements TBase<IOError._Fields>, java.i
   // isset id assignments
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT, 
+    put(_Fields.MESSAGE, new FieldMetaData("message", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
   }});
 
@@ -271,7 +271,7 @@ public class IOError extends Exception implements TBase<IOError._Fields>, java.i
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -282,7 +282,7 @@ public class IOError extends Exception implements TBase<IOError._Fields>, java.i
           case MESSAGE:
             if (field.type == TType.STRING) {
               this.message = iprot.readString();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

@@ -39,7 +39,7 @@ public class MetaRegion implements Comparable<MetaRegion> {
     }
     this.regionInfo = regionInfo;
   }
-  
+
   @Override
   public String toString() {
     return "{server: " + this.server.toString() + ", regionname: " +
@@ -62,13 +62,13 @@ public class MetaRegion implements Comparable<MetaRegion> {
     return regionInfo.getStartKey();
   }
 
-  
+
   /** @return the endKey */
   public byte [] getEndKey() {
     return regionInfo.getEndKey();
   }
 
-  
+
   public HRegionInfo getRegionInfo() {
     return regionInfo;
   }

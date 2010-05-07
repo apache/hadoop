@@ -49,10 +49,10 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     this.stringValue = address.getAddress().getHostAddress() + ":" +
       address.getPort();
   }
-  
+
   /**
    * Construct a HServerAddress from a string of the form hostname:port
-   * 
+   *
    * @param hostAndPort format 'hostname:port'
    */
   public HServerAddress(String hostAndPort) {
@@ -66,7 +66,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     this.address = new InetSocketAddress(host, port);
     this.stringValue = hostAndPort;
   }
-  
+
   /**
    * Construct a HServerAddress from hostname, port number
    * @param bindAddress host name
@@ -76,10 +76,10 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     this.address = new InetSocketAddress(bindAddress, port);
     this.stringValue = bindAddress + ":" + port;
   }
-  
+
   /**
    * Construct a HServerAddress from another HServerAddress
-   * 
+   *
    * @param other the HServerAddress to copy from
    */
   public HServerAddress(HServerAddress other) {
@@ -98,7 +98,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   public int getPort() {
     return address.getPort();
   }
-  
+
   /** @return host name */
   public String getHostname() {
     return address.getHostName();
@@ -143,7 +143,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     result ^= this.stringValue.hashCode();
     return result;
   }
-  
+
   //
   // Writable
   //
@@ -151,11 +151,11 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   public void readFields(DataInput in) throws IOException {
     String bindAddress = in.readUTF();
     int port = in.readInt();
-    
+
     if(bindAddress == null || bindAddress.length() == 0) {
       address = null;
       stringValue = null;
-      
+
     } else {
       address = new InetSocketAddress(bindAddress, port);
       stringValue = bindAddress + ":" + port;
@@ -166,17 +166,17 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     if (address == null) {
       out.writeUTF("");
       out.writeInt(0);
-      
+
     } else {
       out.writeUTF(address.getAddress().getHostAddress());
       out.writeInt(address.getPort());
     }
   }
-  
+
   //
   // Comparable
   //
-  
+
   public int compareTo(HServerAddress o) {
     // Addresses as Strings may not compare though address is for the one
     // server with only difference being that one address has hostname

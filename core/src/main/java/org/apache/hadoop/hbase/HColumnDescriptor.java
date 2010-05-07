@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * An HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
- * 
+ *
  * It is used as input when creating a table or adding a column. Once set, the
  * parameters that specify a column cannot be changed without deleting the
  * column and recreating it. If there is data stored in the column, it will be
@@ -52,7 +52,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)7;
 
-  /** 
+  /**
    * The type of compression.
    * @see org.apache.hadoop.io.SequenceFile.Writer
    * @deprecated Compression now means which compression library
@@ -61,7 +61,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   @Deprecated
   public static enum CompressionType {
     /** Do not compress records. */
-    NONE, 
+    NONE,
     /** Compress values only, each separately. */
     RECORD,
     /** Compress sequences of records together in blocks. */
@@ -116,7 +116,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Default setting for whether or not to use bloomfilters.
    */
   public static final boolean DEFAULT_BLOOMFILTER = false;
-  
+
   /**
    * Default time to live of cell contents.
    */
@@ -147,20 +147,20 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * Construct a column descriptor specifying only the family name 
+   * Construct a column descriptor specifying only the family name
    * The other attributes are defaulted.
-   * 
+   *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:<code>
    */
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
   }
-  
+
   /**
-   * Construct a column descriptor specifying only the family name 
+   * Construct a column descriptor specifying only the family name
    * The other attributes are defaulted.
-   * 
+   *
    * @param familyName Column family name. Must be 'printable' -- digit or
    * letter -- and may not contain a <code>:<code>
    */
@@ -173,7 +173,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * Constructor.
-   * Makes a deep copy of the supplied descriptor. 
+   * Makes a deep copy of the supplied descriptor.
    * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
    * @param desc The descriptor.
    */
@@ -198,8 +198,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
-   * 
-   * @throws IllegalArgumentException if passed a family name that is made of 
+   *
+   * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
@@ -211,7 +211,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
       DEFAULT_BLOCKSIZE, timeToLive, bloomFilter, DEFAULT_REPLICATION_SCOPE);
   }
-  
+
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
@@ -226,8 +226,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Enable the specified bloom filter for this column
    * @param scope The scope tag for this column
-   * 
-   * @throws IllegalArgumentException if passed a family name that is made of 
+   *
+   * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
@@ -287,7 +287,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public byte [] getName() {
     return name;
   }
-  
+
   /**
    * @return Name of this column family
    */
@@ -353,7 +353,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     String n = getValue(COMPRESSION);
     return Compression.Algorithm.valueOf(n.toUpperCase());
   }
-  
+
   /** @return maximum number of versions */
   public synchronized int getMaxVersions() {
     if (this.cachedMaxVersions == -1) {
@@ -424,7 +424,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       return Boolean.valueOf(value).booleanValue();
     return DEFAULT_IN_MEMORY;
   }
-  
+
   /**
    * @param inMemory True if we are to keep all values in the HRegionServer
    * cache
@@ -564,7 +564,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     result ^= values.hashCode();
     return result;
   }
-  
+
   // Writable
 
   public void readFields(DataInput in) throws IOException {

@@ -95,7 +95,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             byte [] family = Bytes.toBytes("column");
             byte [] qualifier = Bytes.toBytes(Integer.toString(j));
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
-            edit.add(new KeyValue(rowName, family, qualifier, 
+            edit.add(new KeyValue(rowName, family, qualifier,
                 System.currentTimeMillis(), column));
             System.out.println("Region " + i + ": " + edit);
             log.append(infos[i], tableName, edit,
@@ -223,7 +223,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         Bytes.equals(regions[i], "2".getBytes()));
     }
   }
- 
+
   private void verifySplits(List<Path> splits, final int howmany)
   throws IOException {
     assertEquals(howmany, splits.size());
@@ -270,7 +270,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long timestamp = System.currentTimeMillis();
       WALEdit cols = new WALEdit();
       for (int i = 0; i < COL_COUNT; i++) {
-        cols.add(new KeyValue(row, Bytes.toBytes("column"), 
+        cols.add(new KeyValue(row, Bytes.toBytes("column"),
             Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }

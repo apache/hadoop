@@ -38,7 +38,7 @@ public class HBaseRPCStatistics extends MetricsDynamicMBeanBase {
       String hostName, String port) {
 	  super(registry, "HBaseRPCStatistics");
 
-    String name = String.format("RPCStatistics-%s", 
+    String name = String.format("RPCStatistics-%s",
         (port != null ? port : "unknown"));
 
     mbeanName = MBeanUtil.registerMBean("HBase", name, this);

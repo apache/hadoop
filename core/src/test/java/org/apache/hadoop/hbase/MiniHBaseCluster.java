@@ -49,12 +49,12 @@ public class MiniHBaseCluster implements HConstants {
   public LocalHBaseCluster hbaseCluster;
 
   /**
-   * Start a MiniHBaseCluster. 
+   * Start a MiniHBaseCluster.
    * @param conf Configuration to be used for cluster
    * @param numRegionServers initial number of region servers to start.
    * @throws IOException
    */
-  public MiniHBaseCluster(Configuration conf, int numRegionServers) 
+  public MiniHBaseCluster(Configuration conf, int numRegionServers)
   throws IOException {
     this.conf = conf;
     init(numRegionServers);
@@ -239,7 +239,7 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Shut down the mini HBase cluster
-   * @throws IOException 
+   * @throws IOException
    */
   public void shutdown() throws IOException {
     if (this.hbaseCluster != null) {

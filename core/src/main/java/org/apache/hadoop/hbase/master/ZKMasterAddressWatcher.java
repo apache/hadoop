@@ -71,7 +71,7 @@ class ZKMasterAddressWatcher implements Watcher {
         LOG.debug("Master address ZNode deleted, notifying waiting masters");
         notifyAll();
       }
-    } else if(type.equals(EventType.NodeCreated) && 
+    } else if(type.equals(EventType.NodeCreated) &&
         event.getPath().equals(this.zookeeper.clusterStateZNode)) {
       LOG.debug("Resetting watch on cluster state node.");
       this.zookeeper.setClusterStateWatch(this);

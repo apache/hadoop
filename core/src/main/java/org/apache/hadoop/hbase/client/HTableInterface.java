@@ -230,7 +230,7 @@ public interface HTableInterface {
    * @throws IOException if a remote or network exception occurs.
    */
   long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-      long amount, boolean writeToWAL) throws IOException; 
+      long amount, boolean writeToWAL) throws IOException;
 
   /**
    * Tells whether or not 'auto-flush' is turned on.

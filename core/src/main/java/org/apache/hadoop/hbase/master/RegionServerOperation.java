@@ -28,13 +28,13 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
 abstract class RegionServerOperation implements Delayed, HConstants {
-  protected static final Log LOG = 
+  protected static final Log LOG =
     LogFactory.getLog(RegionServerOperation.class.getName());
-  
+
   private long expire;
   protected final HMaster master;
   private int delay;
-  
+
   protected RegionServerOperation(HMaster master) {
     this.master = master;
     this.delay = this.master.getConfiguration().
@@ -63,12 +63,12 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   void setDelay(final int d) {
     this.delay = d;
   }
-  
+
   public int compareTo(Delayed o) {
     return Long.valueOf(getDelay(TimeUnit.MILLISECONDS)
         - o.getDelay(TimeUnit.MILLISECONDS)).intValue();
   }
-  
+
   protected void requeue() {
     this.master.getRegionServerOperationQueue().putOnDelayQueue(this);
   }
@@ -97,9 +97,9 @@ abstract class RegionServerOperation implements Delayed, HConstants {
       // in the run queue, put this request on the delay queue to give
       // other threads the opportunity to get the meta regions on-line.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("numberOfMetaRegions: " + 
+        LOG.debug("numberOfMetaRegions: " +
             master.getRegionManager().numMetaRegions() +
-            ", onlineMetaRegions.size(): " + 
+            ", onlineMetaRegions.size(): " +
             master.getRegionManager().numOnlineMetaRegions());
         LOG.debug("Requeuing because not all meta regions are online");
       }

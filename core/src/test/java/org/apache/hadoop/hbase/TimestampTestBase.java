@@ -35,10 +35,10 @@ public class TimestampTestBase extends HBaseTestCase {
   private static final long T0 = 10L;
   private static final long T1 = 100L;
   private static final long T2 = 200L;
-  
+
   private static final byte [] FAMILY_NAME = Bytes.toBytes("colfamily1");
   private static final byte [] QUALIFIER_NAME = Bytes.toBytes("contents");
-  
+
   private static final byte [] ROW = Bytes.toBytes("row");
 
     /*
@@ -64,11 +64,11 @@ public class TimestampTestBase extends HBaseTestCase {
     // Verify that I get back T2 through T1 -- that the latest version has
     // been deleted.
     assertVersions(incommon, new long [] {T2, T1, T0});
-    
+
     // Flush everything out to disk and then retry
     flusher.flushcache();
     assertVersions(incommon, new long [] {T2, T1, T0});
-    
+
     // Now add, back a latest so I can test remove other than the latest.
     put(incommon);
     assertVersions(incommon, new long [] {HConstants.LATEST_TIMESTAMP, T2, T1});
@@ -88,15 +88,15 @@ public class TimestampTestBase extends HBaseTestCase {
     Delete delete = new Delete(ROW);
     delete.deleteColumns(FAMILY_NAME, QUALIFIER_NAME, T2);
     incommon.delete(delete, null, true);
- 
+
     // Should only be current value in set.  Assert this is so
     assertOnlyLatest(incommon, HConstants.LATEST_TIMESTAMP);
-    
+
     // Flush everything out to disk and then redo above tests
     flusher.flushcache();
     assertOnlyLatest(incommon, HConstants.LATEST_TIMESTAMP);
   }
-  
+
   private static void assertOnlyLatest(final Incommon incommon,
     final long currentTime)
   throws IOException {
@@ -109,7 +109,7 @@ public class TimestampTestBase extends HBaseTestCase {
     long time = Bytes.toLong(result.sorted()[0].getValue());
     assertEquals(time, currentTime);
   }
-  
+
   /*
    * Assert that returned versions match passed in timestamps and that results
    * are returned in the right order.  Assert that values when converted to
@@ -141,10 +141,10 @@ public class TimestampTestBase extends HBaseTestCase {
       t = Bytes.toLong(kvs[i].getValue());
       assertEquals(tss[i], t);
     }
-    
+
     // Determine highest stamp to set as next max stamp
     long maxStamp = kvs[0].getTimestamp();
-        
+
     // Specify a timestamp get multiple versions.
     get = new Get(ROW);
     get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
@@ -157,11 +157,11 @@ public class TimestampTestBase extends HBaseTestCase {
       t = Bytes.toLong(kvs[i-1].getValue());
       assertEquals(tss[i], t);
     }
-        
+
     // Test scanner returns expected version
     assertScanContentTimestamp(incommon, tss[0]);
   }
-  
+
   /*
    * Run test scanning different timestamps.
    * @param incommon
@@ -186,9 +186,9 @@ public class TimestampTestBase extends HBaseTestCase {
     assertEquals(count, assertScanContentTimestamp(incommon, T0));
     assertEquals(count, assertScanContentTimestamp(incommon, T1));
   }
-  
+
   /*
-   * Assert that the scan returns only values < timestamp. 
+   * Assert that the scan returns only values < timestamp.
    * @param r
    * @param ts
    * @return Count of items scanned.
@@ -215,22 +215,22 @@ public class TimestampTestBase extends HBaseTestCase {
 //        value.clear();
 //      }
     } finally {
-      scanner.close(); 
+      scanner.close();
     }
     return count;
   }
-  
+
   public static void put(final Incommon loader, final long ts)
   throws IOException {
     put(loader, Bytes.toBytes(ts), ts);
   }
-  
+
   public static void put(final Incommon loader)
   throws IOException {
     long ts = HConstants.LATEST_TIMESTAMP;
     put(loader, Bytes.toBytes(ts), ts);
   }
-  
+
   /*
    * Put values.
    * @param loader
@@ -245,7 +245,7 @@ public class TimestampTestBase extends HBaseTestCase {
     put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
   }
-  
+
   public static void delete(final Incommon loader) throws IOException {
     delete(loader, null);
   }

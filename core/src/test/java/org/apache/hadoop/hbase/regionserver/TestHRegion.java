@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Basic stand-alone testing of HRegion.
- * 
+ *
  * A lot of the meta information for an HRegion now lives inside other
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
@@ -60,7 +60,7 @@ public class TestHRegion extends HBaseTestCase {
 
   HRegion region = null;
   private final String DIR = "test/build/data/TestHRegion/";
-  
+
   private final int MAX_VERSIONS = 2;
 
   // Test names
@@ -81,11 +81,11 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  // New tests that doesn't spin up a mini cluster but rather just test the 
+  // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. Putting files locally in
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
-  
+
 
   /**
    * An involved filter test.  Has multiple column families and deletes in mix.
@@ -235,7 +235,7 @@ public class TestHRegion extends HBaseTestCase {
     byte [] val1  = Bytes.toBytes("value1");
     byte [] val2  = Bytes.toBytes("value2");
     Integer lockId = null;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
@@ -258,7 +258,7 @@ public class TestHRegion extends HBaseTestCase {
     res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertTrue(res);
   }
-  
+
   public void testCheckAndPut_WithWrongValue() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -276,7 +276,7 @@ public class TestHRegion extends HBaseTestCase {
     Put put = new Put(row1);
     put.add(fam1, qf1, val1);
     region.put(put);
-    
+
     //checkAndPut with wrong value
     boolean res = region.checkAndPut(row1, fam1, qf1, val2, put, lockId, true);
     assertEquals(false, res);
@@ -298,12 +298,12 @@ public class TestHRegion extends HBaseTestCase {
     Put put = new Put(row1);
     put.add(fam1, qf1, val1);
     region.put(put);
-    
+
     //checkAndPut with correct value
     boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
   }
-  
+
   public void testCheckAndPut_ThatPutWasWritten() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -315,7 +315,7 @@ public class TestHRegion extends HBaseTestCase {
     Integer lockId = null;
 
     byte [][] families = {fam1, fam2};
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
@@ -324,34 +324,34 @@ public class TestHRegion extends HBaseTestCase {
     Put put = new Put(row1);
     put.add(fam1, qf1, val1);
     region.put(put);
-    
+
     //Creating put to add
     long ts = System.currentTimeMillis();
     KeyValue kv = new KeyValue(row1, fam2, qf1, ts, KeyValue.Type.Put, val2);
     put = new Put(row1);
     put.add(kv);
-    
+
     //checkAndPut with wrong value
     Store store = region.getStore(fam1);
     store.memstore.kvset.size();
-    
+
     boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
     store.memstore.kvset.size();
-    
+
     Get get = new Get(row1);
     get.addColumn(fam2, qf1);
     KeyValue [] actual = region.get(get, null).raw();
-    
+
     KeyValue [] expected = {kv};
-    
+
     assertEquals(expected.length, actual.length);
     for(int i=0; i<actual.length; i++) {
       assertEquals(expected[i], actual[i]);
     }
-    
+
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Delete tests
   //////////////////////////////////////////////////////////////////////////////
@@ -383,8 +383,8 @@ public class TestHRegion extends HBaseTestCase {
       assertTrue("Family " +new String(family)+ " does not exist", false);
     }
 
-    //testing non existing family 
-    boolean ok = false; 
+    //testing non existing family
+    boolean ok = false;
     family = fam4;
     try {
       Map<byte[], List<KeyValue>> deleteMap = new HashMap<byte[], List<KeyValue>>();
@@ -447,12 +447,12 @@ public class TestHRegion extends HBaseTestCase {
     get = new Get(row);
     result = region.get(get, null);
     assertEquals(3, result.size());
-    
+
     // Now delete all... then test I can add stuff back
     delete = new Delete(row);
     region.delete(delete, null, false);
     assertEquals(0, region.get(get, null).size());
-    try { 
+    try {
       Thread.sleep(10);
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -461,7 +461,7 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(1, result.size());
   }
-  
+
   public void testDeleteRowWithFutureTs() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] fam = Bytes.toBytes("info");
@@ -486,7 +486,7 @@ public class TestHRegion extends HBaseTestCase {
     Get get = new Get(row).addColumn(fam, serverinfo);
     Result result = region.get(get, null);
     assertEquals(1, result.size());
-    
+
     // delete the future row
     delete = new Delete(row,HConstants.LATEST_TIMESTAMP-3,null);
     region.delete(delete, null, true);
@@ -557,7 +557,7 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     Thread.sleep(10);
-    
+
     // now delete the value:
     region.delete(delete, null, true);
 
@@ -593,19 +593,19 @@ public class TestHRegion extends HBaseTestCase {
   }
 
 
-  
+
   public void testDelete_CheckTimestampUpdated()
   throws IOException {
     byte [] row1 = Bytes.toBytes("row1");
     byte [] col1 = Bytes.toBytes("col1");
     byte [] col2 = Bytes.toBytes("col2");
     byte [] col3 = Bytes.toBytes("col3");
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
-    
-    //Building checkerList 
+
+    //Building checkerList
     List<KeyValue> kvs  = new ArrayList<KeyValue>();
     kvs.add(new KeyValue(row1, fam1, col1, null));
     kvs.add(new KeyValue(row1, fam1, col2, null));
@@ -626,7 +626,7 @@ public class TestHRegion extends HBaseTestCase {
       now = kv.getTimestamp();
     }
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Get tests
   //////////////////////////////////////////////////////////////////////////////
@@ -636,14 +636,14 @@ public class TestHRegion extends HBaseTestCase {
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [] fam2 = Bytes.toBytes("False");
     byte [] col1 = Bytes.toBytes("col1");
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
-    
+
     Get get = new Get(row1);
     get.addColumn(fam2, col1);
-    
+
     //Test
     try {
       region.get(get, null);
@@ -663,11 +663,11 @@ public class TestHRegion extends HBaseTestCase {
     byte [] col3 = Bytes.toBytes("col3");
     byte [] col4 = Bytes.toBytes("col4");
     byte [] col5 = Bytes.toBytes("col5");
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
-    
+
     //Add to memstore
     Put put = new Put(row1);
     put.add(fam1, col1, null);
@@ -710,17 +710,17 @@ public class TestHRegion extends HBaseTestCase {
     byte [] tableName = Bytes.toBytes("emptytable");
     byte [] row = Bytes.toBytes("row");
     byte [] fam = Bytes.toBytes("fam");
-    
+
     String method = this.getName();
     initHRegion(tableName, method, fam);
-    
+
     Get get = new Get(row);
     get.addFamily(fam);
     Result r = region.get(get, null);
-    
+
     assertTrue(r.isEmpty());
   }
-  
+
   //Test that checked if there was anything special when reading from the ROOT
   //table. To be able to use this test you need to comment the part in
   //HTableDescriptor that checks for '-' and '.'. You also need to remove the
@@ -734,7 +734,7 @@ public class TestHRegion extends HBaseTestCase {
     Put put = new Put(HConstants.EMPTY_START_ROW);
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, null);
     region.put(put);
-    
+
     Get get = new Get(HConstants.EMPTY_START_ROW);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
 
@@ -742,10 +742,10 @@ public class TestHRegion extends HBaseTestCase {
     KeyValue kv1 = new KeyValue(HConstants.EMPTY_START_ROW,
         HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     KeyValue [] expected = {kv1};
-    
+
     //Test from memstore
     Result res = region.get(get, null);
-    
+
     assertEquals(expected.length, res.size());
     for(int i=0; i<res.size(); i++){
       assertEquals(0,
@@ -756,13 +756,13 @@ public class TestHRegion extends HBaseTestCase {
           Bytes.compareTo(
               expected[i].getQualifier(), res.raw()[i].getQualifier()));
     }
-    
+
     //flush
     region.flushcache();
-    
+
     //test2
     res = region.get(get, null);
-    
+
     assertEquals(expected.length, res.size());
     for(int i=0; i<res.size(); i++){
       assertEquals(0,
@@ -773,14 +773,14 @@ public class TestHRegion extends HBaseTestCase {
           Bytes.compareTo(
               expected[i].getQualifier(), res.raw()[i].getQualifier()));
     }
-    
+
     //Scan
     Scan scan = new Scan();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     InternalScanner s = region.getScanner(scan);
     List<KeyValue> result = new ArrayList<KeyValue>();
     s.next(result);
-    
+
     assertEquals(expected.length, result.size());
     for(int i=0; i<res.size(); i++){
       assertEquals(0,
@@ -791,23 +791,23 @@ public class TestHRegion extends HBaseTestCase {
           Bytes.compareTo(
               expected[i].getQualifier(), result.get(i).getQualifier()));
     }
-  }  
-  
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Lock test
-  ////////////////////////////////////////////////////////////////////////////// 
+  //////////////////////////////////////////////////////////////////////////////
   public void testLocks() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [][] families = {fam1, fam2, fam3};
-    
+
     HBaseConfiguration hc = initSplit();
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
-    
+
     final int threadCount = 10;
     final int lockCount = 10;
-    
+
     List<Thread>threads = new ArrayList<Thread>(threadCount);
     for (int i = 0; i < threadCount; i++) {
       threads.add(new Thread(Integer.toString(i)) {
@@ -827,7 +827,7 @@ public class TestHRegion extends HBaseTestCase {
           }
           LOG.debug(getName() + " set " +
               Integer.toString(lockCount) + " locks");
-          
+
           // Abort outstanding locks.
           for (int i = lockCount - 1; i >= 0; i--) {
             region.releaseRowLock(lockids[i]);
@@ -838,12 +838,12 @@ public class TestHRegion extends HBaseTestCase {
         }
       });
     }
-    
+
     // Startup all our threads.
     for (Thread t : threads) {
       t.start();
     }
-    
+
     // Now wait around till all are done.
     for (Thread t: threads) {
       while (t.isAlive()) {
@@ -856,19 +856,19 @@ public class TestHRegion extends HBaseTestCase {
     }
     LOG.info("locks completed.");
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Merge test
-  ////////////////////////////////////////////////////////////////////////////// 
+  //////////////////////////////////////////////////////////////////////////////
   public void testMerge() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [][] families = {fam1, fam2, fam3};
-    
+
     HBaseConfiguration hc = initSplit();
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
-    
+
     try {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
@@ -923,7 +923,7 @@ public class TestHRegion extends HBaseTestCase {
       }
     }
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Scanner tests
   //////////////////////////////////////////////////////////////////////////////
@@ -931,13 +931,13 @@ public class TestHRegion extends HBaseTestCase {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [] fam2 = Bytes.toBytes("fam2");
-    
+
     byte [][] families = {fam1, fam2};
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     Scan scan = new Scan();
     scan.addFamily(fam1);
     scan.addFamily(fam2);
@@ -947,7 +947,7 @@ public class TestHRegion extends HBaseTestCase {
       assertTrue("Families could not be found in Region", false);
     }
   }
-  
+
   public void testGetScanner_WithNotOkFamilies() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -969,7 +969,7 @@ public class TestHRegion extends HBaseTestCase {
     }
     assertTrue("Families could not be found in Region", ok);
   }
-  
+
   public void testGetScanner_WithNoFamilies() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -977,13 +977,13 @@ public class TestHRegion extends HBaseTestCase {
     byte [] fam2 = Bytes.toBytes("fam2");
     byte [] fam3 = Bytes.toBytes("fam3");
     byte [] fam4 = Bytes.toBytes("fam4");
-    
+
     byte [][] families = {fam1, fam2, fam3, fam4};
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     //Putting data in Region
     Put put = new Put(row1);
     put.add(fam1, null, null);
@@ -991,21 +991,21 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam3, null, null);
     put.add(fam4, null, null);
     region.put(put);
-    
+
     Scan scan = null;
     InternalScanner is = null;
-    
-    //Testing to see how many scanners that is produced by getScanner, starting 
+
+    //Testing to see how many scanners that is produced by getScanner, starting
     //with known number, 2 - current = 1
     scan = new Scan();
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     is = region.getScanner(scan);
     assertEquals(1, ((RegionScanner)is).getStoreHeap().getHeap().size());
-    
+
     scan = new Scan();
     is = region.getScanner(scan);
-    assertEquals(families.length -1, 
+    assertEquals(families.length -1,
         ((RegionScanner)is).getStoreHeap().getHeap().size());
   }
 
@@ -1017,14 +1017,14 @@ public class TestHRegion extends HBaseTestCase {
     byte [] fam2 = Bytes.toBytes("fam2");
     byte [] fam3 = Bytes.toBytes("fam3");
     byte [] fam4 = Bytes.toBytes("fam4");
-    
+
     byte [][] families = {fam1, fam2, fam3, fam4};
     long ts = System.currentTimeMillis();
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     //Putting data in Region
     Put put = null;
     put = new Put(row1);
@@ -1040,39 +1040,39 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam3, null, ts, null);
     put.add(fam4, null, ts, null);
     region.put(put);
-    
+
     Scan scan = new Scan();
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     InternalScanner is = region.getScanner(scan);
-    
+
     List<KeyValue> res = null;
-    
+
     //Result 1
     List<KeyValue> expected1 = new ArrayList<KeyValue>();
     expected1.add(new KeyValue(row1, fam2, null, ts, KeyValue.Type.Put, null));
     expected1.add(new KeyValue(row1, fam4, null, ts, KeyValue.Type.Put, null));
-    
+
     res = new ArrayList<KeyValue>();
     is.next(res);
     for(int i=0; i<res.size(); i++) {
       assertEquals(expected1.get(i), res.get(i));
     }
-    
+
     //Result 2
     List<KeyValue> expected2 = new ArrayList<KeyValue>();
     expected2.add(new KeyValue(row2, fam2, null, ts, KeyValue.Type.Put, null));
     expected2.add(new KeyValue(row2, fam4, null, ts, KeyValue.Type.Put, null));
-    
+
     res = new ArrayList<KeyValue>();
     is.next(res);
     for(int i=0; i<res.size(); i++) {
       assertEquals(expected2.get(i), res.get(i));
     }
-    
+
   }
-  
-  public void testScanner_ExplicitColumns_FromMemStore_EnforceVersions() 
+
+  public void testScanner_ExplicitColumns_FromMemStore_EnforceVersions()
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -1080,25 +1080,25 @@ public class TestHRegion extends HBaseTestCase {
     byte [] qf2 = Bytes.toBytes("qualifier2");
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [][] families = {fam1};
-    
+
     long ts1 = System.currentTimeMillis();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     //Putting data in Region
     Put put = null;
     KeyValue kv13 = new KeyValue(row1, fam1, qf1, ts3, KeyValue.Type.Put, null);
     KeyValue kv12 = new KeyValue(row1, fam1, qf1, ts2, KeyValue.Type.Put, null);
     KeyValue kv11 = new KeyValue(row1, fam1, qf1, ts1, KeyValue.Type.Put, null);
-    
+
     KeyValue kv23 = new KeyValue(row1, fam1, qf2, ts3, KeyValue.Type.Put, null);
     KeyValue kv22 = new KeyValue(row1, fam1, qf2, ts2, KeyValue.Type.Put, null);
     KeyValue kv21 = new KeyValue(row1, fam1, qf2, ts1, KeyValue.Type.Put, null);
-    
+
     put = new Put(row1);
     put.add(kv13);
     put.add(kv12);
@@ -1107,28 +1107,28 @@ public class TestHRegion extends HBaseTestCase {
     put.add(kv22);
     put.add(kv21);
     region.put(put);
-    
+
     //Expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(kv13);
     expected.add(kv12);
-    
+
     Scan scan = new Scan(row1);
     scan.addColumn(fam1, qf1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<KeyValue> actual = new ArrayList<KeyValue>();
     InternalScanner scanner = region.getScanner(scan);
-    
+
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
-    
+
     //Verify result
     for(int i=0; i<expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
-  public void testScanner_ExplicitColumns_FromFilesOnly_EnforceVersions() 
+
+  public void testScanner_ExplicitColumns_FromFilesOnly_EnforceVersions()
   throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -1136,25 +1136,25 @@ public class TestHRegion extends HBaseTestCase {
     byte [] qf2 = Bytes.toBytes("qualifier2");
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [][] families = {fam1};
-    
+
     long ts1 = 1; //System.currentTimeMillis();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     //Putting data in Region
     Put put = null;
     KeyValue kv13 = new KeyValue(row1, fam1, qf1, ts3, KeyValue.Type.Put, null);
     KeyValue kv12 = new KeyValue(row1, fam1, qf1, ts2, KeyValue.Type.Put, null);
     KeyValue kv11 = new KeyValue(row1, fam1, qf1, ts1, KeyValue.Type.Put, null);
-    
+
     KeyValue kv23 = new KeyValue(row1, fam1, qf2, ts3, KeyValue.Type.Put, null);
     KeyValue kv22 = new KeyValue(row1, fam1, qf2, ts2, KeyValue.Type.Put, null);
     KeyValue kv21 = new KeyValue(row1, fam1, qf2, ts1, KeyValue.Type.Put, null);
-    
+
     put = new Put(row1);
     put.add(kv13);
     put.add(kv12);
@@ -1164,30 +1164,30 @@ public class TestHRegion extends HBaseTestCase {
     put.add(kv21);
     region.put(put);
     region.flushcache();
-    
+
     //Expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
     expected.add(kv22);
-    
+
     Scan scan = new Scan(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
     scan.setMaxVersions(MAX_VERSIONS);
     List<KeyValue> actual = new ArrayList<KeyValue>();
     InternalScanner scanner = region.getScanner(scan);
-    
+
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
-    
+
     //Verify result
     for(int i=0; i<expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
+
   public void testScanner_ExplicitColumns_FromMemStoreAndFiles_EnforceVersions()
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
@@ -1196,51 +1196,51 @@ public class TestHRegion extends HBaseTestCase {
     byte [][] families = {fam1};
     byte [] qf1 = Bytes.toBytes("qualifier1");
     byte [] qf2 = Bytes.toBytes("qualifier2");
-    
+
     long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     long ts4 = ts1 + 3;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     //Putting data in Region
     KeyValue kv14 = new KeyValue(row1, fam1, qf1, ts4, KeyValue.Type.Put, null);
     KeyValue kv13 = new KeyValue(row1, fam1, qf1, ts3, KeyValue.Type.Put, null);
     KeyValue kv12 = new KeyValue(row1, fam1, qf1, ts2, KeyValue.Type.Put, null);
     KeyValue kv11 = new KeyValue(row1, fam1, qf1, ts1, KeyValue.Type.Put, null);
-    
+
     KeyValue kv24 = new KeyValue(row1, fam1, qf2, ts4, KeyValue.Type.Put, null);
     KeyValue kv23 = new KeyValue(row1, fam1, qf2, ts3, KeyValue.Type.Put, null);
     KeyValue kv22 = new KeyValue(row1, fam1, qf2, ts2, KeyValue.Type.Put, null);
     KeyValue kv21 = new KeyValue(row1, fam1, qf2, ts1, KeyValue.Type.Put, null);
-    
+
     Put put = null;
     put = new Put(row1);
     put.add(kv14);
     put.add(kv24);
     region.put(put);
     region.flushcache();
-    
+
     put = new Put(row1);
     put.add(kv23);
     put.add(kv13);
     region.put(put);
     region.flushcache();
-    
+
     put = new Put(row1);
     put.add(kv22);
     put.add(kv12);
     region.put(put);
     region.flushcache();
-    
+
     put = new Put(row1);
     put.add(kv21);
     put.add(kv11);
     region.put(put);
-    
+
     //Expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(kv14);
@@ -1249,7 +1249,7 @@ public class TestHRegion extends HBaseTestCase {
     expected.add(kv24);
     expected.add(kv23);
     expected.add(kv22);
-    
+
     Scan scan = new Scan(row1);
     scan.addColumn(fam1, qf1);
     scan.addColumn(fam1, qf2);
@@ -1257,17 +1257,17 @@ public class TestHRegion extends HBaseTestCase {
     scan.setMaxVersions(versions);
     List<KeyValue> actual = new ArrayList<KeyValue>();
     InternalScanner scanner = region.getScanner(scan);
-    
+
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
-    
+
     //Verify result
     for(int i=0; i<expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
-  public void testScanner_Wildcard_FromMemStore_EnforceVersions() 
+
+  public void testScanner_Wildcard_FromMemStore_EnforceVersions()
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -1275,25 +1275,25 @@ public class TestHRegion extends HBaseTestCase {
     byte [] qf2 = Bytes.toBytes("qualifier2");
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [][] families = {fam1};
-    
+
     long ts1 = System.currentTimeMillis();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, families);
-    
+
     //Putting data in Region
     Put put = null;
     KeyValue kv13 = new KeyValue(row1, fam1, qf1, ts3, KeyValue.Type.Put, null);
     KeyValue kv12 = new KeyValue(row1, fam1, qf1, ts2, KeyValue.Type.Put, null);
     KeyValue kv11 = new KeyValue(row1, fam1, qf1, ts1, KeyValue.Type.Put, null);
-    
+
     KeyValue kv23 = new KeyValue(row1, fam1, qf2, ts3, KeyValue.Type.Put, null);
     KeyValue kv22 = new KeyValue(row1, fam1, qf2, ts2, KeyValue.Type.Put, null);
     KeyValue kv21 = new KeyValue(row1, fam1, qf2, ts1, KeyValue.Type.Put, null);
-    
+
     put = new Put(row1);
     put.add(kv13);
     put.add(kv12);
@@ -1302,30 +1302,30 @@ public class TestHRegion extends HBaseTestCase {
     put.add(kv22);
     put.add(kv21);
     region.put(put);
-    
+
     //Expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
     expected.add(kv22);
-    
+
     Scan scan = new Scan(row1);
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<KeyValue> actual = new ArrayList<KeyValue>();
     InternalScanner scanner = region.getScanner(scan);
-    
+
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
-    
+
     //Verify result
     for(int i=0; i<expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
-  public void testScanner_Wildcard_FromFilesOnly_EnforceVersions() 
+
+  public void testScanner_Wildcard_FromFilesOnly_EnforceVersions()
   throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -1336,21 +1336,21 @@ public class TestHRegion extends HBaseTestCase {
     long ts1 = 1; //System.currentTimeMillis();
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
-    
+
     //Putting data in Region
     Put put = null;
     KeyValue kv13 = new KeyValue(row1, fam1, qf1, ts3, KeyValue.Type.Put, null);
     KeyValue kv12 = new KeyValue(row1, fam1, qf1, ts2, KeyValue.Type.Put, null);
     KeyValue kv11 = new KeyValue(row1, fam1, qf1, ts1, KeyValue.Type.Put, null);
-    
+
     KeyValue kv23 = new KeyValue(row1, fam1, qf2, ts3, KeyValue.Type.Put, null);
     KeyValue kv22 = new KeyValue(row1, fam1, qf2, ts2, KeyValue.Type.Put, null);
     KeyValue kv21 = new KeyValue(row1, fam1, qf2, ts1, KeyValue.Type.Put, null);
-    
+
     put = new Put(row1);
     put.add(kv13);
     put.add(kv12);
@@ -1360,23 +1360,23 @@ public class TestHRegion extends HBaseTestCase {
     put.add(kv21);
     region.put(put);
     region.flushcache();
-    
+
     //Expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
     expected.add(kv22);
-    
+
     Scan scan = new Scan(row1);
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
     List<KeyValue> actual = new ArrayList<KeyValue>();
     InternalScanner scanner = region.getScanner(scan);
-    
+
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
-    
+
     //Verify result
     for(int i=0; i<expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
@@ -1439,7 +1439,7 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
-    
+
     assertEquals(value+amount, result);
 
     Store store = region.getStore(fam1);
@@ -1586,7 +1586,7 @@ public class TestHRegion extends HBaseTestCase {
   }
 
 
-  
+
   public void testScanner_Wildcard_FromMemStoreAndFiles_EnforceVersions()
   throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
@@ -1594,51 +1594,51 @@ public class TestHRegion extends HBaseTestCase {
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [] qf1 = Bytes.toBytes("qualifier1");
     byte [] qf2 = Bytes.toBytes("quateslifier2");
-    
+
     long ts1 = 1;
     long ts2 = ts1 + 1;
     long ts3 = ts1 + 2;
     long ts4 = ts1 + 3;
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, fam1);
-    
+
     //Putting data in Region
     KeyValue kv14 = new KeyValue(row1, fam1, qf1, ts4, KeyValue.Type.Put, null);
     KeyValue kv13 = new KeyValue(row1, fam1, qf1, ts3, KeyValue.Type.Put, null);
     KeyValue kv12 = new KeyValue(row1, fam1, qf1, ts2, KeyValue.Type.Put, null);
     KeyValue kv11 = new KeyValue(row1, fam1, qf1, ts1, KeyValue.Type.Put, null);
-    
+
     KeyValue kv24 = new KeyValue(row1, fam1, qf2, ts4, KeyValue.Type.Put, null);
     KeyValue kv23 = new KeyValue(row1, fam1, qf2, ts3, KeyValue.Type.Put, null);
     KeyValue kv22 = new KeyValue(row1, fam1, qf2, ts2, KeyValue.Type.Put, null);
     KeyValue kv21 = new KeyValue(row1, fam1, qf2, ts1, KeyValue.Type.Put, null);
-    
+
     Put put = null;
     put = new Put(row1);
     put.add(kv14);
     put.add(kv24);
     region.put(put);
     region.flushcache();
-    
+
     put = new Put(row1);
     put.add(kv23);
     put.add(kv13);
     region.put(put);
     region.flushcache();
-    
+
     put = new Put(row1);
     put.add(kv22);
     put.add(kv12);
     region.put(put);
     region.flushcache();
-    
+
     put = new Put(row1);
     put.add(kv21);
     put.add(kv11);
     region.put(put);
-    
+
     //Expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(kv14);
@@ -1647,22 +1647,22 @@ public class TestHRegion extends HBaseTestCase {
     expected.add(kv24);
     expected.add(kv23);
     expected.add(kv22);
-    
+
     Scan scan = new Scan(row1);
     int versions = 3;
     scan.setMaxVersions(versions);
     List<KeyValue> actual = new ArrayList<KeyValue>();
     InternalScanner scanner = region.getScanner(scan);
-    
+
     boolean hasNext = scanner.next(actual);
     assertEquals(false, hasNext);
-    
+
     //Verify result
     for(int i=0; i<expected.size(); i++) {
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Split test
   //////////////////////////////////////////////////////////////////////////////
@@ -1673,12 +1673,12 @@ public class TestHRegion extends HBaseTestCase {
   public void testBasicSplit() throws Exception {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [][] families = {fam1, fam2, fam3};
-    
+
     HBaseConfiguration hc = initSplit();
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
-    
+
     try {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
@@ -1757,14 +1757,14 @@ public class TestHRegion extends HBaseTestCase {
       }
     }
   }
-  
+
   public void testSplitRegion() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] qualifier = Bytes.toBytes("qualifier");
     HBaseConfiguration hc = initSplit();
     int numRows = 10;
     byte [][] families = {fam1, fam3};
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
@@ -1775,22 +1775,22 @@ public class TestHRegion extends HBaseTestCase {
     int splitRow = startRow + numRows;
     putData(splitRow, numRows, qualifier, families);
     region.flushcache();
-    
+
     HRegion [] regions = null;
     try {
       regions = region.splitRegion(Bytes.toBytes("" + splitRow));
-      //Opening the regions returned. 
+      //Opening the regions returned.
       for (int i = 0; i < regions.length; i++) {
         regions[i] = openClosedRegion(regions[i]);
       }
       //Verifying that the region has been split
       assertEquals(2, regions.length);
-      
+
       //Verifying that all data is still there and that data is in the right
       //place
       verifyData(regions[0], startRow, numRows, qualifier, families);
       verifyData(regions[1], splitRow, numRows, qualifier, families);
-      
+
     } finally {
       if (region != null) {
         region.close();
@@ -1798,7 +1798,7 @@ public class TestHRegion extends HBaseTestCase {
       }
     }
   }
-  
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {
@@ -1812,7 +1812,7 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   private void verifyData(HRegion newReg, int startRow, int numRows, byte [] qf,
-      byte [] ... families) 
+      byte [] ... families)
   throws IOException {
     for(int i=startRow; i<startRow + numRows; i++) {
       byte [] row = Bytes.toBytes("" + i);
@@ -1842,7 +1842,7 @@ public class TestHRegion extends HBaseTestCase {
       assertTrue(Bytes.equals(k, tmp));
     }
   }
-  
+
   /*
    * Assert first value in the passed region is <code>firstValue</code>.
    * @param r
@@ -1877,7 +1877,7 @@ public class TestHRegion extends HBaseTestCase {
       s.close();
     }
   }
-  
+
   protected HRegion [] split(final HRegion r, final byte [] splitRow)
   throws IOException {
     // Assert can get mid key from passed region.
@@ -1886,17 +1886,17 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(regions.length, 2);
     return regions;
   }
-  
+
   private HBaseConfiguration initSplit() {
     HBaseConfiguration conf = new HBaseConfiguration();
     // Always compact if there is more than one store file.
     conf.setInt("hbase.hstore.compactionThreshold", 2);
-    
+
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
-    
+
     conf.setInt(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, 10 * 1000);
-    
+
     // Increase the amount of time between client retries
     conf.setLong("hbase.client.pause", 15 * 1000);
 
@@ -1904,14 +1904,14 @@ public class TestHRegion extends HBaseTestCase {
     // below.  After adding all data, the first region is 1.3M
     conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
     return conf;
-  }  
+  }
 
   private void initHRegion (byte [] tableName, String callingMethod,
     byte[] ... families)
   throws IOException {
     initHRegion(tableName, callingMethod, new HBaseConfiguration(), families);
   }
-  
+
   private void initHRegion (byte [] tableName, String callingMethod,
     HBaseConfiguration conf, byte [] ... families)
   throws IOException{
@@ -1920,7 +1920,7 @@ public class TestHRegion extends HBaseTestCase {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    Path path = new Path(DIR + callingMethod); 
+    Path path = new Path(DIR + callingMethod);
     region = HRegion.createHRegion(info, path, conf);
   }
 }

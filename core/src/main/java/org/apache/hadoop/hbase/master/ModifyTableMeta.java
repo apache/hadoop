@@ -38,8 +38,8 @@ class ModifyTableMeta extends TableOperation {
 
   private HTableDescriptor desc;
 
-  ModifyTableMeta(final HMaster master, final byte [] tableName, 
-    HTableDescriptor desc) 
+  ModifyTableMeta(final HMaster master, final byte [] tableName,
+    HTableDescriptor desc)
   throws IOException {
     super(master, tableName);
     this.desc = desc;

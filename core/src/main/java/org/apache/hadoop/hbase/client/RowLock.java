@@ -35,7 +35,7 @@ public class RowLock {
     this.row = row;
     this.lockId = lockId;
   }
-  
+
   /**
    * Creates a RowLock with only a lock id
    * @param lockId lock id

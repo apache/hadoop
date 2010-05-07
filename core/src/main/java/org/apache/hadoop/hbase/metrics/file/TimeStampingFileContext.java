@@ -40,7 +40,7 @@ public class TimeStampingFileContext extends FileContext {
   private File file = null;
   private PrintWriter writer = null;
   private final SimpleDateFormat sdf;
-  
+
   public TimeStampingFileContext() {
     super();
     this.sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");

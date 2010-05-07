@@ -62,7 +62,7 @@ public class MultiPut implements Writable {
     }
     return size;
   }
-  
+
   public void add(byte[] regionName, Put aPut) {
     List<Put> rsput = puts.get(regionName);
     if (rsput == null) {

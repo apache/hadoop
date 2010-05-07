@@ -120,7 +120,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
     server = servers.get(Long.valueOf(0));
     assertEquals("foo.bar", server.addr.getHostName());
   }
-  
+
   /**
    * Test Case for HBASE-2305
    */

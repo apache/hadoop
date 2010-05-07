@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import junit.framework.TestCase;
 
 public class TestCachedBlockQueue extends TestCase {
-  
+
   public void testQueue() throws Exception {
 
     CachedBlock cb1 = new CachedBlock(1000, "cb1", 1);
@@ -36,9 +36,9 @@ public class TestCachedBlockQueue extends TestCase {
     CachedBlock cb8 = new CachedBlock(1500, "cb8", 8);
     CachedBlock cb9 = new CachedBlock(1000, "cb9", 9);
     CachedBlock cb10 = new CachedBlock(1500, "cb10", 10);
-    
+
     CachedBlockQueue queue = new CachedBlockQueue(10000,1000);
-    
+
     queue.add(cb1);
     queue.add(cb2);
     queue.add(cb3);
@@ -49,14 +49,14 @@ public class TestCachedBlockQueue extends TestCase {
     queue.add(cb8);
     queue.add(cb9);
     queue.add(cb10);
-    
+
     // We expect cb1 through cb8 to be in the queue
     long expectedSize = cb1.heapSize() + cb2.heapSize() + cb3.heapSize() +
       cb4.heapSize() + cb5.heapSize() + cb6.heapSize() + cb7.heapSize() +
       cb8.heapSize();
-    
+
     assertEquals(queue.heapSize(), expectedSize);
-    
+
     org.apache.hadoop.hbase.io.hfile.CachedBlock [] blocks = queue.get();
     assertEquals(blocks[0].getName(), "cb1");
     assertEquals(blocks[1].getName(), "cb2");
@@ -66,9 +66,9 @@ public class TestCachedBlockQueue extends TestCase {
     assertEquals(blocks[5].getName(), "cb6");
     assertEquals(blocks[6].getName(), "cb7");
     assertEquals(blocks[7].getName(), "cb8");
-    
+
   }
-  
+
   public void testQueueSmallBlockEdgeCase() throws Exception {
 
     CachedBlock cb1 = new CachedBlock(1000, "cb1", 1);
@@ -81,9 +81,9 @@ public class TestCachedBlockQueue extends TestCase {
     CachedBlock cb8 = new CachedBlock(1500, "cb8", 8);
     CachedBlock cb9 = new CachedBlock(1000, "cb9", 9);
     CachedBlock cb10 = new CachedBlock(1500, "cb10", 10);
-    
+
     CachedBlockQueue queue = new CachedBlockQueue(10000,1000);
-    
+
     queue.add(cb1);
     queue.add(cb2);
     queue.add(cb3);
@@ -94,21 +94,21 @@ public class TestCachedBlockQueue extends TestCase {
     queue.add(cb8);
     queue.add(cb9);
     queue.add(cb10);
-    
+
     CachedBlock cb0 = new CachedBlock(10 + CachedBlock.PER_BLOCK_OVERHEAD, "cb0", 0);
     queue.add(cb0);
-    
+
     // This is older so we must include it, but it will not end up kicking
     // anything out because (heapSize - cb8.heapSize + cb0.heapSize < maxSize)
     // and we must always maintain heapSize >= maxSize once we achieve it.
-    
+
     // We expect cb0 through cb8 to be in the queue
     long expectedSize = cb1.heapSize() + cb2.heapSize() + cb3.heapSize() +
       cb4.heapSize() + cb5.heapSize() + cb6.heapSize() + cb7.heapSize() +
       cb8.heapSize() + cb0.heapSize();
-    
+
     assertEquals(queue.heapSize(), expectedSize);
-    
+
     org.apache.hadoop.hbase.io.hfile.CachedBlock [] blocks = queue.get();
     assertEquals(blocks[0].getName(), "cb0");
     assertEquals(blocks[1].getName(), "cb1");
@@ -119,9 +119,9 @@ public class TestCachedBlockQueue extends TestCase {
     assertEquals(blocks[6].getName(), "cb6");
     assertEquals(blocks[7].getName(), "cb7");
     assertEquals(blocks[8].getName(), "cb8");
-    
+
   }
-  
+
   private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
   {
     public CachedBlock(long heapSize, String name, long accessTime) {
@@ -130,5 +130,5 @@ public class TestCachedBlockQueue extends TestCase {
           accessTime,false);
     }
   }
-  
+
 }

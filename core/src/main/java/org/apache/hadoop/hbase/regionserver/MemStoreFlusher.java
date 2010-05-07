@@ -45,14 +45,14 @@ import java.util.concurrent.locks.ReentrantLock;
  * NOTE: This class extends Thread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
- * 
+ *
  * @see FlushRequester
  */
 class MemStoreFlusher extends Thread implements FlushRequester {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
   private final BlockingQueue<HRegion> flushQueue =
     new LinkedBlockingQueue<HRegion>();
-  
+
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
   private final long threadWakeFrequency;
@@ -61,7 +61,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
 
   protected final long globalMemStoreLimit;
   protected final long globalMemStoreLimitLowMark;
-  
+
   private static final float DEFAULT_UPPER = 0.4f;
   private static final float DEFAULT_LOWER = 0.25f;
   private static final String UPPER_KEY =
@@ -91,7 +91,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
         "because supplied " + LOWER_KEY + " was > " + UPPER_KEY);
     }
     this.globalMemStoreLimitLowMark = lower;
-    this.blockingStoreFilesNumber = 
+    this.blockingStoreFilesNumber =
       conf.getInt("hbase.hstore.blockingStoreFiles", -1);
     if (this.blockingStoreFilesNumber == -1) {
       this.blockingStoreFilesNumber = 1 +
@@ -120,7 +120,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     float limit = c.getFloat(key, defaultLimit);
     return getMemStoreLimit(max, limit, defaultLimit);
   }
-  
+
   static long getMemStoreLimit(final long max, final float limit,
       final float defaultLimit) {
     if (limit >= 0.9f || limit < 0.1f) {
@@ -129,7 +129,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
     return (long)(max * limit);
   }
-  
+
   @Override
   public void run() {
     while (!this.server.isStopRequested()) {
@@ -159,7 +159,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     this.flushQueue.clear();
     LOG.info(getName() + " exiting");
   }
-  
+
   public void request(HRegion r) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {
@@ -168,10 +168,10 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       }
     }
   }
-  
+
   /**
    * Only interrupt once it's done with a run through the work loop.
-   */ 
+   */
   void interruptIfNecessary() {
     lock.lock();
     try {
@@ -180,10 +180,10 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       lock.unlock();
     }
   }
-  
+
   /*
    * Flush a region.
-   * 
+   *
    * @param region the region to be flushed
    * @param removeFromQueue True if the region needs to be removed from the
    * flush queue. False if called from the main flusher run loop and true if
@@ -196,21 +196,21 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * That compactions do not run when called out of flushSomeRegions means that
    * compactions can be reported by the historian without danger of deadlock
    * (HBASE-670).
-   * 
+   *
    * <p>In the main run loop, regions have already been removed from the flush
    * queue, and if this method is called for the relief of memory pressure,
-   * this may not be necessarily true. We want to avoid trying to remove 
+   * this may not be necessarily true. We want to avoid trying to remove
    * region from the queue because if it has already been removed, it requires a
    * sequential scan of the queue to determine that it is not in the queue.
-   * 
+   *
    * <p>If called from flushSomeRegions, the region may be in the queue but
-   * it may have been determined that the region had a significant amount of 
+   * it may have been determined that the region had a significant amount of
    * memory in use and needed to be flushed to relieve memory pressure. In this
    * case, its flush may preempt the pending request in the queue, and if so,
    * it needs to be removed from the queue to avoid flushing the region
    * multiple times.
-   * 
-   * @return true if the region was successfully flushed, false otherwise. If 
+   *
+   * @return true if the region was successfully flushed, false otherwise. If
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
@@ -334,7 +334,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
   }
 
   /**
-   * Check if the regionserver's memstore memory usage is greater than the 
+   * Check if the regionserver's memstore memory usage is greater than the
    * limit. If so, flush regions with the biggest memstores until we're down
    * to the lower limit. This method blocks callers until we're down to a safe
    * amount of memstore consumption.

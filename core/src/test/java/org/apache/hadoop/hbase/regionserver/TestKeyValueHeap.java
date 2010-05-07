@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestKeyValueHeap extends HBaseTestCase
 implements HConstants {
   private static final boolean PRINT = false;
-  
+
   List<Scanner> scanners = new ArrayList<Scanner>();
 
   private byte [] row1;
@@ -103,7 +103,7 @@ implements HConstants {
     //Creating KeyValueHeap
     KeyValueHeap kvh =
       new KeyValueHeap(scanners.toArray(new Scanner[0]), KeyValue.COMPARATOR);
-    
+
     List<KeyValue> actual = new ArrayList<KeyValue>();
     while(kvh.peek() != null){
       actual.add(kvh.next());
@@ -117,20 +117,20 @@ implements HConstants {
             "\nactual   " +actual.get(i) +"\n");
       }
     }
-    
+
     //Check if result is sorted according to Comparator
     for(int i=0; i<actual.size()-1; i++){
       int ret = KeyValue.COMPARATOR.compare(actual.get(i), actual.get(i+1));
       assertTrue(ret < 0);
     }
-    
+
   }
 
   public void testSeek(){
     //Cases:
     //1. Seek KeyValue that is not in scanner
     //2. Check that smallest that is returned from a seek is correct
-    
+
     List<KeyValue> l1 = new ArrayList<KeyValue>();
     l1.add(new KeyValue(row1, fam1, col5, data));
     l1.add(new KeyValue(row2, fam1, col1, data));
@@ -152,17 +152,17 @@ implements HConstants {
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(new KeyValue(row2, fam1, col1, data));
-    
+
     //Creating KeyValueHeap
     KeyValueHeap kvh =
       new KeyValueHeap(scanners.toArray(new Scanner[0]), KeyValue.COMPARATOR);
-    
+
     KeyValue seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
-    
+
     List<KeyValue> actual = new ArrayList<KeyValue>();
     actual.add(kvh.peek());
-    
+
     assertEquals(expected.size(), actual.size());
     for(int i=0; i<expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));
@@ -171,12 +171,12 @@ implements HConstants {
             "\nactual   " +actual.get(i) +"\n");
       }
     }
-    
+
   }
 
   public void testScannerLeak() {
     // Test for unclosed scanners (HBASE-1927)
-    
+
     List<KeyValue> l1 = new ArrayList<KeyValue>();
     l1.add(new KeyValue(row1, fam1, col5, data));
     l1.add(new KeyValue(row2, fam1, col1, data));
@@ -195,21 +195,21 @@ implements HConstants {
     l3.add(new KeyValue(row1, fam2, col2, data));
     l3.add(new KeyValue(row2, fam1, col3, data));
     scanners.add(new Scanner(l3));
-    
+
     List<KeyValue> l4 = new ArrayList<KeyValue>();
     scanners.add(new Scanner(l4));
 
     //Creating KeyValueHeap
     KeyValueHeap kvh =
       new KeyValueHeap(scanners.toArray(new Scanner[0]), KeyValue.COMPARATOR);
-    
+
     while(kvh.next() != null);
-    
+
     for(Scanner scanner : scanners) {
       assertTrue(scanner.isClosed());
     }
   }
-  
+
   private static class Scanner implements KeyValueScanner {
     private Iterator<KeyValue> iter;
     private KeyValue current;
@@ -220,9 +220,9 @@ implements HConstants {
       iter = list.iterator();
       if(iter.hasNext()){
         current = iter.next();
-      } 
+      }
     }
-    
+
     public KeyValue peek() {
       return current;
     }
@@ -240,11 +240,11 @@ implements HConstants {
     public void close(){
       closed = true;
     }
-    
+
     public boolean isClosed() {
       return closed;
     }
-    
+
     public boolean seek(KeyValue seekKv) {
       while(iter.hasNext()){
         KeyValue next = iter.next();

@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class ThriftUtilities {
-  
+
   /**
    * This utility method creates a new Hbase HColumnDescriptor object based on a
    * Thrift ColumnDescriptor "struct".
-   * 
+   *
    * @param in
    *          Thrift ColumnDescriptor object
    * @return HColumnDescriptor
@@ -51,7 +51,7 @@ public class ThriftUtilities {
     if (in.bloomFilterType.compareTo("NONE") != 0) {
       bloom = true;
     }
-    
+
     if (in.name == null || in.name.length <= 0) {
       throw new IllegalArgument("column name is empty");
     }
@@ -61,11 +61,11 @@ public class ThriftUtilities {
         in.timeToLive, bloom);
     return col;
   }
-  
+
   /**
    * This utility method creates a new Thrift ColumnDescriptor "struct" based on
    * an Hbase HColumnDescriptor object.
-   * 
+   *
    * @param in
    *          Hbase HColumnDescriptor object
    * @return Thrift ColumnDescriptor
@@ -84,7 +84,7 @@ public class ThriftUtilities {
   /**
    * This utility method creates a list of Thrift TCell "struct" based on
    * an Hbase Cell object. The empty list is returned if the input is null.
-   * 
+   *
    * @param in
    *          Hbase Cell object
    * @return Thrift TCell array
@@ -120,7 +120,7 @@ public class ThriftUtilities {
    * This utility method creates a list of Thrift TRowResult "struct" based on
    * an Hbase RowResult object. The empty list is returned if the input is
    * null.
-   * 
+   *
    * @param in
    *          Hbase RowResult object
    * @return Thrift TRowResult array
@@ -135,14 +135,14 @@ public class ThriftUtilities {
         result.row = result_.getRow();
         result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
         for(KeyValue kv : result_.sorted()) {
-          result.columns.put(KeyValue.makeColumn(kv.getFamily(), 
+          result.columns.put(KeyValue.makeColumn(kv.getFamily(),
               kv.getQualifier()), new TCell(kv.getValue(), kv.getTimestamp()));
         }
         results.add(result);
     }
     return results;
   }
-  
+
   static public List<TRowResult> rowResultFromHBase(Result in) {
     Result [] result = { in };
     return rowResultFromHBase(result);

@@ -43,8 +43,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
       throws IOException {
-    writer = SequenceFile.createWriter(fs, conf, path, 
-      HLog.getKeyClass(conf), WALEdit.class, 
+    writer = SequenceFile.createWriter(fs, conf, path,
+      HLog.getKeyClass(conf), WALEdit.class,
       fs.getConf().getInt("io.file.buffer.size", 4096),
       (short) conf.getInt("hbase.regionserver.hlog.replication",
         fs.getDefaultReplication()),

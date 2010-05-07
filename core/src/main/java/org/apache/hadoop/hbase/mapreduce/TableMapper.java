@@ -24,9 +24,9 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * Extends the base <code>Mapper</code> class to add the required input key 
+ * Extends the base <code>Mapper</code> class to add the required input key
  * and value classes.
- * 
+ *
  * @param <KEYOUT>  The type of the key.
  * @param <VALUEOUT>  The type of the value.
  * @see org.apache.hadoop.mapreduce.Mapper

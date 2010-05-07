@@ -73,21 +73,21 @@ public class TestDeleteCompare extends TestCase {
     int deleteQualifierLen = delete.getQualifierLength();
     int deleteTimestampOffset = deleteQualifierOffset + deleteQualifierLen;
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
-    
+
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
     for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
-      
+
     }
-    
+
     assertEquals(expected.size(), actual.size());
     for(int i=0; i<expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
+
   public void testDeleteCompare_DeleteColumn() {
     //Creating memstore
     Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
@@ -103,7 +103,7 @@ public class TestDeleteCompare extends TestCase {
     expected.add(DeleteCode.DELETE);
     expected.add(DeleteCode.DELETE);
     expected.add(DeleteCode.DONE);
-    
+
     KeyValue delete = KeyValueTestUtil.create("row11", "fam", "col1", 2,
         KeyValue.Type.DeleteColumn, "dont-care");
     byte [] deleteBuffer = delete.getBuffer();
@@ -113,22 +113,22 @@ public class TestDeleteCompare extends TestCase {
     int deleteQualifierLen = delete.getQualifierLength();
     int deleteTimestampOffset = deleteQualifierOffset + deleteQualifierLen;
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
-    
+
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
     for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
-      
+
     }
-    
+
     assertEquals(expected.size(), actual.size());
     for(int i=0; i<expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
-  
+
+
   public void testDeleteCompare_Delete() {
     //Creating memstore
     Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
@@ -141,7 +141,7 @@ public class TestDeleteCompare extends TestCase {
     expected.add(DeleteCode.SKIP);
     expected.add(DeleteCode.DELETE);
     expected.add(DeleteCode.DONE);
-    
+
     KeyValue delete = KeyValueTestUtil.create("row11", "fam", "col1", 2,
         KeyValue.Type.Delete, "dont-care");
     byte [] deleteBuffer = delete.getBuffer();
@@ -151,20 +151,20 @@ public class TestDeleteCompare extends TestCase {
     int deleteQualifierLen = delete.getQualifierLength();
     int deleteTimestampOffset = deleteQualifierOffset + deleteQualifierLen;
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
-    
+
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
     for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
     }
-    
+
     assertEquals(expected.size(), actual.size());
     for(int i=0; i<expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));
     }
   }
-  
+
   public void testDeleteCompare_Multiple() {
     //Creating memstore
     Set<KeyValue> memstore = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
@@ -194,15 +194,15 @@ public class TestDeleteCompare extends TestCase {
     int deleteQualifierLen = delete.getQualifierLength();
     int deleteTimestampOffset = deleteQualifierOffset + deleteQualifierLen;
     byte deleteType = deleteBuffer[deleteTimestampOffset +Bytes.SIZEOF_LONG];
-    
+
     List<DeleteCode> actual = new ArrayList<DeleteCode>();
     for(KeyValue mem : memstore){
     actual.add(DeleteCompare.deleteCompare(mem, deleteBuffer, deleteRowOffset,
         deleteRowLen, deleteQualifierOffset, deleteQualifierLen,
         deleteTimestampOffset, deleteType, KeyValue.KEY_COMPARATOR));
-      
+
     }
-    
+
     assertEquals(expected.size(), actual.size());
     for(int i=0; i<expected.size(); i++){
       assertEquals(expected.get(i), actual.get(i));

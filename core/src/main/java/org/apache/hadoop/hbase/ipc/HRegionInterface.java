@@ -35,26 +35,26 @@ import java.io.IOException;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
- * 
+ *
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
  */
 public interface HRegionInterface extends HBaseRPCProtocolVersion {
-  /** 
+  /**
    * Get metainfo about an HRegion
-   * 
+   *
    * @param regionName name of the region
    * @return HRegionInfo object for region
    * @throws NotServingRegionException e
    */
   public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException;
-  
+
 
   /**
-   * Return all the data for the row that matches <i>row</i> exactly, 
+   * Return all the data for the row that matches <i>row</i> exactly,
    * or the one that immediately preceeds it.
-   * 
+   *
    * @param regionName region name
    * @param row row key
    * @param family Column family to look for row in.
@@ -66,11 +66,11 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
   throws IOException;
 
   /**
-   * 
+   *
    * @return the regions served by this regionserver
    */
   public HRegion [] getOnlineRegionsAsArray();
-  
+
   /**
    * Perform Get operation.
    * @param regionName name of region to get from
@@ -90,17 +90,17 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
   public boolean exists(byte [] regionName, Get get) throws IOException;
 
   /**
-   * Put data into the specified region 
+   * Put data into the specified region
    * @param regionName region name
    * @param put the data to be put
    * @throws IOException e
    */
   public void put(final byte [] regionName, final Put put)
   throws IOException;
-  
+
   /**
    * Put an array of puts into the specified region
-   * 
+   *
    * @param regionName region name
    * @param puts array of puts to execute
    * @return The number of processed put's.  Returns -1 if all Puts
@@ -111,7 +111,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
   throws IOException;
 
   /**
-   * Deletes all the KeyValues that match those found in the Delete object, 
+   * Deletes all the KeyValues that match those found in the Delete object,
    * if their ts <= to the Delete. In case of a delete with a specific ts it
    * only deletes that specific KeyValue.
    * @param regionName region name
@@ -123,7 +123,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Put an array of deletes into the specified region
-   * 
+   *
    * @param regionName region name
    * @param deletes delete array to execute
    * @return The number of processed deletes.  Returns -1 if all Deletes
@@ -137,7 +137,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * Atomically checks if a row/family/qualifier value match the expectedValue.
    * If it does, it adds the put. If passed expected value is null, then the
    * check is for non-existance of the row/column.
-   * 
+   *
    * @param regionName region name
    * @param row row to check
    * @param family column family
@@ -147,16 +147,16 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    * @return true if the new put was execute, false otherwise
    */
-  public boolean checkAndPut(final byte[] regionName, final byte [] row, 
+  public boolean checkAndPut(final byte[] regionName, final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException;
-  
+
   /**
    * Atomically increments a column value. If the column value isn't long-like,
    * this could throw an exception. If passed expected value is null, then the
    * check is for non-existance of the row/column.
-   * 
+   *
    * @param regionName region name
    * @param row row to check
    * @param family column family
@@ -166,18 +166,18 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @return new incremented column value
    * @throws IOException e
    */
-  public long incrementColumnValue(byte [] regionName, byte [] row, 
+  public long incrementColumnValue(byte [] regionName, byte [] row,
       byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException;
-  
-  
+
+
   //
   // remote scanner interface
   //
 
   /**
    * Opens a remote scanner with a RowFilter.
-   * 
+   *
    * @param regionName name of region to scan
    * @param scan configured scan object
    * @return scannerId scanner identifier used in other calls
@@ -185,7 +185,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public long openScanner(final byte [] regionName, final Scan scan)
   throws IOException;
-  
+
   /**
    * Get the next set of values
    * @param scannerId clientId passed to openScanner
@@ -193,7 +193,7 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public Result next(long scannerId) throws IOException;
-  
+
   /**
    * Get the next set of values
    * @param scannerId clientId passed to openScanner
@@ -204,10 +204,10 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public Result [] next(long scannerId, int numberOfRows) throws IOException;
-  
+
   /**
    * Close a scanner
-   * 
+   *
    * @param scannerId the scanner id returned by openScanner
    * @throws IOException e
    */
@@ -233,15 +233,15 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    */
   public void unlockRow(final byte [] regionName, final long lockId)
   throws IOException;
-  
-  
+
+
   /**
    * Method used when a master is taking the place of another failed one.
    * @return All regions assigned on this region server
    * @throws IOException e
    */
   public HRegionInfo[] getRegionsAssignment() throws IOException;
-  
+
   /**
    * Method used when a master is taking the place of another failed one.
    * @return The HSI

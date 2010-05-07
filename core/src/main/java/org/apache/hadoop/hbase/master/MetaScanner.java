@@ -30,24 +30,24 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * MetaScanner <code>META</code> table.
- * 
+ *
  * When a <code>META</code> server comes on line, a MetaRegion object is
  * queued up by regionServerReport() and this thread wakes up.
  *
- * It's important to do this work in a separate thread, or else the blocking 
+ * It's important to do this work in a separate thread, or else the blocking
  * action would prevent other work from getting done.
  */
 class MetaScanner extends BaseScanner {
   /** Initial work for the meta scanner is queued up here */
   private volatile BlockingQueue<MetaRegion> metaRegionsToScan =
     new LinkedBlockingQueue<MetaRegion>();
-    
+
   private final List<MetaRegion> metaRegionsToRescan =
     new ArrayList<MetaRegion>();
-    
+
   /**
    * Constructor
-   * 
+   *
    * @param master
    */
   public MetaScanner(HMaster master) {
@@ -88,7 +88,7 @@ class MetaScanner extends BaseScanner {
       // Make sure the file system is still available
       this.master.checkFileSystem();
     } catch (Exception e) {
-      // If for some reason we get some other kind of exception, 
+      // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.
       LOG.error("Unexpected exception", e);
     }
@@ -102,7 +102,7 @@ class MetaScanner extends BaseScanner {
         (region == null && metaRegionsToScan.size() > 0) &&
           !metaRegionsScanned()) {
       try {
-        region = metaRegionsToScan.poll(this.master.getThreadWakeFrequency(), 
+        region = metaRegionsToScan.poll(this.master.getThreadWakeFrequency(),
           TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         // continue
@@ -134,7 +134,7 @@ class MetaScanner extends BaseScanner {
   }
 
   /*
-   * Called by the meta scanner when it has completed scanning all meta 
+   * Called by the meta scanner when it has completed scanning all meta
    * regions. This wakes up any threads that were waiting for this to happen.
    * @param totalRows Total rows scanned.
    * @param regionCount Count of regions in  .META. table.
@@ -171,10 +171,10 @@ class MetaScanner extends BaseScanner {
     }
     return this.master.isClosed();
   }
-  
+
   /**
    * Add another meta region to scan to the queue.
-   */ 
+   */
   void addMetaRegionToScan(MetaRegion m) {
     metaRegionsToScan.add(m);
   }

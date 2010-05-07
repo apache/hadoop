@@ -85,7 +85,7 @@ public class Merge extends Configured implements Tool {
       LOG.fatal("File system is not available", e);
       return -1;
     }
-    
+
     // Verify HBase is down
     LOG.info("Verifying that HBase is not running...");
     try {
@@ -95,9 +95,9 @@ public class Merge extends Configured implements Tool {
     } catch (MasterNotRunningException e) {
       // Expected. Ignore.
     }
-    
+
     // Initialize MetaUtils and and get the root of the HBase installation
-    
+
     this.utils = new MetaUtils(getConf());
     this.rootdir = FSUtils.getRootDir(getConf());
     try {
@@ -119,14 +119,14 @@ public class Merge extends Configured implements Tool {
       );
 
       return -1;
-    
+
     } finally {
       if (this.utils != null) {
         this.utils.shutdown();
       }
     }
   }
-  
+
   /** @return HRegionInfo for merge result */
   HRegionInfo getMergedHRegionInfo() {
     return this.mergeInfo;
@@ -150,25 +150,25 @@ public class Merge extends Configured implements Tool {
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells2 =  rootRegion.get(get, null).list();
     HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
-    HRegion merged = merge(info1, rootRegion, info2, rootRegion); 
+    HRegion merged = merge(info1, rootRegion, info2, rootRegion);
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
     HRegion.addRegionToMETA(rootRegion, merged);
     merged.close();
   }
-  
+
   private static class MetaScannerListener
   implements MetaUtils.ScannerListener {
     private final byte [] region1;
     private final byte [] region2;
     private HRegionInfo meta1 = null;
     private HRegionInfo meta2 = null;
-    
+
     MetaScannerListener(final byte [] region1, final byte [] region2) {
       this.region1 = region1;
       this.region2 = region2;
     }
-    
+
     public boolean processRow(HRegionInfo info) {
       if (meta1 == null && HRegion.rowIsInRange(info, region1)) {
         meta1 = info;
@@ -179,16 +179,16 @@ public class Merge extends Configured implements Tool {
       }
       return meta1 == null || (region2 != null && meta2 == null);
     }
-    
+
     HRegionInfo getMeta1() {
       return meta1;
     }
-    
+
     HRegionInfo getMeta2() {
       return meta2;
     }
   }
-  
+
   /*
    * Merges two regions from a user table.
    */
@@ -257,7 +257,7 @@ public class Merge extends Configured implements Tool {
     HRegion.addRegionToMETA(mergeMeta, merged);
     merged.close();
   }
-  
+
   /*
    * Actually merge two regions and update their info in the meta region(s)
    * If the meta is split, meta1 may be different from meta2. (and we may have
@@ -292,21 +292,21 @@ public class Merge extends Configured implements Tool {
         r1.close();
       }
     }
-    
+
     // Remove the old regions from meta.
     // HRegion.merge has already deleted their files
-    
+
     removeRegionFromMeta(meta1, info1);
     removeRegionFromMeta(meta2, info2);
 
     this.mergeInfo = merged.getRegionInfo();
     return merged;
   }
-  
+
   /*
    * Removes a region's meta information from the passed <code>meta</code>
    * region.
-   * 
+   *
    * @param meta META HRegion to be updated
    * @param regioninfo HRegionInfo of region to remove from <code>meta</code>
    *
@@ -317,8 +317,8 @@ public class Merge extends Configured implements Tool {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing region: " + regioninfo + " from " + meta);
     }
-    
-    Delete delete  = new Delete(regioninfo.getRegionName(), 
+
+    Delete delete  = new Delete(regioninfo.getRegionName(),
         System.currentTimeMillis(), null);
     meta.delete(delete, null, true);
   }
@@ -326,7 +326,7 @@ public class Merge extends Configured implements Tool {
   /*
    * Adds a region's meta information from the passed <code>meta</code>
    * region.
-   * 
+   *
    * @param metainfo META HRegionInfo to be updated
    * @param region HRegion to add to <code>meta</code>
    *
@@ -335,7 +335,7 @@ public class Merge extends Configured implements Tool {
   private int parseArgs(String[] args) throws IOException {
     GenericOptionsParser parser =
       new GenericOptionsParser(getConf(), args);
-    
+
     String[] remainingArgs = parser.getRemainingArgs();
     if (remainingArgs.length != 3) {
       usage();
@@ -343,7 +343,7 @@ public class Merge extends Configured implements Tool {
     }
     tableName = Bytes.toBytes(remainingArgs[0]);
     isMetaTable = Bytes.compareTo(tableName, HConstants.META_TABLE_NAME) == 0;
-    
+
     region1 = Bytes.toBytesBinary(remainingArgs[1]);
     region2 = Bytes.toBytesBinary(remainingArgs[2]);
     int status = 0;
@@ -355,7 +355,7 @@ public class Merge extends Configured implements Tool {
     }
     return status;
   }
-  
+
   private boolean notInTable(final byte [] tn, final byte [] rn) {
     if (WritableComparator.compareBytes(tn, 0, tn.length, rn, 0, tn.length) != 0) {
       LOG.error("Region " + Bytes.toString(rn) + " does not belong to table " +
@@ -364,12 +364,12 @@ public class Merge extends Configured implements Tool {
     }
     return false;
   }
-  
+
   private void usage() {
     System.err.println(
         "Usage: bin/hbase merge <table-name> <region-1> <region-2>\n");
   }
-  
+
   public static void main(String[] args) {
     int status;
     try {

@@ -42,7 +42,7 @@ public class NotServingRegionException extends IOException {
   public NotServingRegionException(String s) {
     super(s);
   }
-  
+
   /**
    * Constructor
    * @param s message

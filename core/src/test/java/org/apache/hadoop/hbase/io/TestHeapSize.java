@@ -49,14 +49,14 @@ import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * Testing the sizing that HeapSize offers and compares to the size given by
- * ClassSize. 
+ * ClassSize.
  */
 public class TestHeapSize extends TestCase {
   static final Log LOG = LogFactory.getLog(TestHeapSize.class);
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, HLogKey
-  
+
   /**
    * Test our hard-coded sizing of native java objects
    */
@@ -65,7 +65,7 @@ public class TestHeapSize extends TestCase {
     Class cl = null;
     long expected = 0L;
     long actual = 0L;
-    
+
     // ArrayList
     cl = ArrayList.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -74,7 +74,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // ByteBuffer
     cl = ByteBuffer.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -83,7 +83,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // Integer
     cl = Integer.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -92,7 +92,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // Map.Entry
     // Interface is public, all others are not.  Hard to size via ClassSize
 //    cl = Map.Entry.class;
@@ -102,7 +102,7 @@ public class TestHeapSize extends TestCase {
 //      ClassSize.estimateBase(cl, true);
 //      assertEquals(expected, actual);
 //    }
-    
+
     // Object
     cl = Object.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -111,7 +111,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // TreeMap
     cl = TreeMap.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -120,7 +120,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // String
     cl = String.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -183,7 +183,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // CopyOnWriteArraySet
     cl = CopyOnWriteArraySet.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -192,7 +192,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // CopyOnWriteArrayList
     cl = CopyOnWriteArrayList.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -201,22 +201,22 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
-    
+
+
   }
-  
+
   /**
-   * Testing the classes that implements HeapSize and are a part of 0.20. 
-   * Some are not tested here for example BlockIndex which is tested in 
+   * Testing the classes that implements HeapSize and are a part of 0.20.
+   * Some are not tested here for example BlockIndex which is tested in
    * TestHFile since it is a non public class
-   * @throws IOException 
+   * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public void testSizes() throws IOException {
     Class cl = null;
     long expected = 0L;
     long actual = 0L;
-    
+
     //KeyValue
     cl = KeyValue.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -226,7 +226,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     //Put
     cl = Put.class;
     expected = ClassSize.estimateBase(cl, false);
@@ -238,7 +238,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     //LruBlockCache Overhead
     cl = LruBlockCache.class;
     actual = LruBlockCache.CACHE_FIXED_OVERHEAD;
@@ -247,7 +247,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // CachedBlock Fixed Overhead
     // We really need "deep" sizing but ClassSize does not do this.
     // Perhaps we should do all these more in this style....
@@ -262,7 +262,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(ByteBuffer.class, true);
       assertEquals(expected, actual);
     }
-    
+
     // MemStore Overhead
     cl = MemStore.class;
     actual = MemStore.FIXED_OVERHEAD;
@@ -271,7 +271,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // MemStore Deep Overhead
     actual = MemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
@@ -290,7 +290,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(CopyOnWriteArrayList.class, true);
       assertEquals(expected, actual);
     }
-    
+
     // Store Overhead
     cl = Store.class;
     actual = Store.FIXED_OVERHEAD;
@@ -299,7 +299,7 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // Region Overhead
     cl = HRegion.class;
     actual = HRegion.FIXED_OVERHEAD;
@@ -308,12 +308,12 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-    
+
     // Currently NOT testing Deep Overheads of many of these classes.
     // Deep overheads cover a vast majority of stuff, but will not be 100%
     // accurate because it's unclear when we're referencing stuff that's already
     // accounted for.  But we have satisfied our two core requirements.
-    // Sizing is quite accurate now, and our tests will throw errors if 
+    // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
 
   }

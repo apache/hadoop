@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.VersionAnnotation;
 public class VersionInfo {
   private static Package myPackage;
   private static VersionAnnotation version;
-  
+
   static {
     myPackage = VersionAnnotation.class.getPackage();
     version = myPackage.getAnnotation(VersionAnnotation.class);
@@ -42,7 +42,7 @@ public class VersionInfo {
   static Package getPackage() {
     return myPackage;
   }
-  
+
   /**
    * Get the hbase version.
    * @return the hbase version string, eg. "0.6.3-dev"
@@ -50,7 +50,7 @@ public class VersionInfo {
   public static String getVersion() {
     return version != null ? version.version() : "Unknown";
   }
-  
+
   /**
    * Get the subversion revision number for the root directory
    * @return the revision number, eg. "451451"
@@ -58,7 +58,7 @@ public class VersionInfo {
   public static String getRevision() {
     return version != null ? version.revision() : "Unknown";
   }
-  
+
   /**
    * The date that hbase was compiled.
    * @return the compilation date in unix date format
@@ -66,7 +66,7 @@ public class VersionInfo {
   public static String getDate() {
     return version != null ? version.date() : "Unknown";
   }
-  
+
   /**
    * The user that compiled hbase.
    * @return the username of the user
@@ -74,7 +74,7 @@ public class VersionInfo {
   public static String getUser() {
     return version != null ? version.user() : "Unknown";
   }
-  
+
   /**
    * Get the subversion URL for the root hbase directory.
    * @return the url
@@ -82,7 +82,7 @@ public class VersionInfo {
   public static String getUrl() {
     return version != null ? version.url() : "Unknown";
   }
-  
+
   public static void main(String[] args) {
     System.out.println("HBase " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());

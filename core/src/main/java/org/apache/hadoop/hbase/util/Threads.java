@@ -31,7 +31,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
  */
 public class Threads {
   protected static final Log LOG = LogFactory.getLog(Threads.class);
-  
+
   /**
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t thread to frob
@@ -42,7 +42,7 @@ public class Threads {
     final String name) {
     return setDaemonThreadRunning(t, name, null);
   }
-    
+
   /**
    * Utility method that sets name, daemon status and starts passed thread.
    * @param t thread to frob

@@ -42,7 +42,7 @@ public class Hbase {
 
     /**
      * Brings a table on-line (enables it)
-     * 
+     *
      * @param tableName name of the table
      */
     public void enableTable(byte[] tableName) throws IOError, TException;
@@ -50,14 +50,14 @@ public class Hbase {
     /**
      * Disables a table (takes it off-line) If it is being served, the master
      * will tell the servers to stop serving it.
-     * 
+     *
      * @param tableName name of the table
      */
     public void disableTable(byte[] tableName) throws IOError, TException;
 
     /**
      * @return true if table is on-line
-     * 
+     *
      * @param tableName name of the table to check
      */
     public boolean isTableEnabled(byte[] tableName) throws IOError, TException;
@@ -75,7 +75,7 @@ public class Hbase {
     /**
      * List all the column families assoicated with a table.
      * @return list of column family descriptors
-     * 
+     *
      * @param tableName table name
      */
     public Map<byte[],ColumnDescriptor> getColumnDescriptors(byte[] tableName) throws IOError, TException;
@@ -83,7 +83,7 @@ public class Hbase {
     /**
      * List the regions associated with a table.
      * @return list of region descriptors
-     * 
+     *
      * @param tableName table name
      */
     public List<TRegionInfo> getTableRegions(byte[] tableName) throws IOError, TException;
@@ -93,22 +93,22 @@ public class Hbase {
      * field for each ColumnDescriptor must be set and must end in a
      * colon (:). All other fields are optional and will get default
      * values if not explicitly specified.
-     * 
+     *
      * @throws IllegalArgument if an input parameter is invalid
      * @throws AlreadyExists if the table name already exists
-     * 
+     *
      * @param tableName name of table to create
-     * 
+     *
      * @param columnFamilies list of column family descriptors
      */
     public void createTable(byte[] tableName, List<ColumnDescriptor> columnFamilies) throws IOError, IllegalArgument, AlreadyExists, TException;
 
     /**
      * Deletes a table
-     * 
+     *
      * @throws IOError if table doesn't exist on server or there was some other
      * problem
-     * 
+     *
      * @param tableName name of table to delete
      */
     public void deleteTable(byte[] tableName) throws IOError, TException;
@@ -116,13 +116,13 @@ public class Hbase {
     /**
      * Get a single TCell for the specified table, row, and column at the
      * latest timestamp. Returns an empty list if no such value exists.
-     * 
+     *
      * @return value for specified row/column
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param column column name
      */
     public List<TCell> get(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
@@ -130,15 +130,15 @@ public class Hbase {
     /**
      * Get the specified number of versions for the specified table,
      * row, and column.
-     * 
+     *
      * @return list of cells for specified row/column
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param column column name
-     * 
+     *
      * @param numVersions number of versions to retrieve
      */
     public List<TCell> getVer(byte[] tableName, byte[] row, byte[] column, int numVersions) throws IOError, TException;
@@ -147,17 +147,17 @@ public class Hbase {
      * Get the specified number of versions for the specified table,
      * row, and column.  Only versions less than or equal to the specified
      * timestamp will be returned.
-     * 
+     *
      * @return list of cells for specified row/column
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param column column name
-     * 
+     *
      * @param timestamp timestamp
-     * 
+     *
      * @param numVersions number of versions to retrieve
      */
     public List<TCell> getVerTs(byte[] tableName, byte[] row, byte[] column, long timestamp, int numVersions) throws IOError, TException;
@@ -165,11 +165,11 @@ public class Hbase {
     /**
      * Get all the data for the specified table and row at the latest
      * timestamp. Returns an empty list if the row does not exist.
-     * 
+     *
      * @return TRowResult containing the row and map of columns to TCells
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
      */
     public List<TRowResult> getRow(byte[] tableName, byte[] row) throws IOError, TException;
@@ -177,13 +177,13 @@ public class Hbase {
     /**
      * Get the specified columns for the specified table and row at the latest
      * timestamp. Returns an empty list if the row does not exist.
-     * 
+     *
      * @return TRowResult containing the row and map of columns to TCells
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param columns List of columns to return, null for all columns
      */
     public List<TRowResult> getRowWithColumns(byte[] tableName, byte[] row, List<byte[]> columns) throws IOError, TException;
@@ -191,13 +191,13 @@ public class Hbase {
     /**
      * Get all the data for the specified table and row at the specified
      * timestamp. Returns an empty list if the row does not exist.
-     * 
+     *
      * @return TRowResult containing the row and map of columns to TCells
-     * 
+     *
      * @param tableName name of the table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param timestamp timestamp
      */
     public List<TRowResult> getRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
@@ -205,15 +205,15 @@ public class Hbase {
     /**
      * Get the specified columns for the specified table and row at the specified
      * timestamp. Returns an empty list if the row does not exist.
-     * 
+     *
      * @return TRowResult containing the row and map of columns to TCells
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param columns List of columns to return, null for all columns
-     * 
+     *
      * @param timestamp
      */
     public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row, List<byte[]> columns, long timestamp) throws IOError, TException;
@@ -223,11 +223,11 @@ public class Hbase {
      * single transaction.  If an exception is thrown, then the
      * transaction is aborted.  Default current timestamp is used, and
      * all entries will have an identical timestamp.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param mutations list of mutation commands
      */
     public void mutateRow(byte[] tableName, byte[] row, List<Mutation> mutations) throws IOError, IllegalArgument, TException;
@@ -237,13 +237,13 @@ public class Hbase {
      * single transaction.  If an exception is thrown, then the
      * transaction is aborted.  The specified timestamp is used, and
      * all entries will have an identical timestamp.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row key
-     * 
+     *
      * @param mutations list of mutation commands
-     * 
+     *
      * @param timestamp timestamp
      */
     public void mutateRowTs(byte[] tableName, byte[] row, List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
@@ -253,9 +253,9 @@ public class Hbase {
      * in a single transaction.  If an exception is thrown, then the
      * transaction is aborted.  Default current timestamp is used, and
      * all entries will have an identical timestamp.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param rowBatches list of row batches
      */
     public void mutateRows(byte[] tableName, List<BatchMutation> rowBatches) throws IOError, IllegalArgument, TException;
@@ -265,35 +265,35 @@ public class Hbase {
      * in a single transaction.  If an exception is thrown, then the
      * transaction is aborted.  The specified timestamp is used, and
      * all entries will have an identical timestamp.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param rowBatches list of row batches
-     * 
+     *
      * @param timestamp timestamp
      */
     public void mutateRowsTs(byte[] tableName, List<BatchMutation> rowBatches, long timestamp) throws IOError, IllegalArgument, TException;
 
     /**
      * Atomically increment the column value specified.  Returns the next value post increment.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row row to increment
-     * 
+     *
      * @param column name of column
-     * 
+     *
      * @param value amount to increment by
      */
     public long atomicIncrement(byte[] tableName, byte[] row, byte[] column, long value) throws IOError, IllegalArgument, TException;
 
     /**
      * Delete all cells that match the passed row and column.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row Row to update
-     * 
+     *
      * @param column name of column whose value is to be deleted
      */
     public void deleteAll(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
@@ -301,22 +301,22 @@ public class Hbase {
     /**
      * Delete all cells that match the passed row and column and whose
      * timestamp is equal-to or older than the passed timestamp.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row Row to update
-     * 
+     *
      * @param column name of column whose value is to be deleted
-     * 
+     *
      * @param timestamp timestamp
      */
     public void deleteAllTs(byte[] tableName, byte[] row, byte[] column, long timestamp) throws IOError, TException;
 
     /**
      * Completely delete the row's cells.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row key of the row to be completely deleted.
      */
     public void deleteAllRow(byte[] tableName, byte[] row) throws IOError, TException;
@@ -324,11 +324,11 @@ public class Hbase {
     /**
      * Completely delete the row's cells marked with a timestamp
      * equal-to or older than the passed timestamp.
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param row key of the row to be completely deleted.
-     * 
+     *
      * @param timestamp timestamp
      */
     public void deleteAllRowTs(byte[] tableName, byte[] row, long timestamp) throws IOError, TException;
@@ -336,14 +336,14 @@ public class Hbase {
     /**
      * Get a scanner on the current table starting at the specified row and
      * ending at the last row in the table.  Return the specified columns.
-     * 
+     *
      * @return scanner id to be used with other scanner procedures
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param startRow Starting row in table to scan.
      * Send "" (empty string) to start at the first row.
-     * 
+     *
      * @param columns columns to scan. If column name is a column family, all
      * columns of the specified column family are returned. It's also possible
      * to pass a regex in the column qualifier.
@@ -354,17 +354,17 @@ public class Hbase {
      * Get a scanner on the current table starting and stopping at the
      * specified rows.  ending at the last row in the table.  Return the
      * specified columns.
-     * 
+     *
      * @return scanner id to be used with other scanner procedures
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param startRow Starting row in table to scan.
      * Send "" (empty string) to start at the first row.
-     * 
+     *
      * @param stopRow row to stop scanning on. This row is *not* included in the
      * scanner's results
-     * 
+     *
      * @param columns columns to scan. If column name is a column family, all
      * columns of the specified column family are returned. It's also possible
      * to pass a regex in the column qualifier.
@@ -374,13 +374,13 @@ public class Hbase {
     /**
      * Open a scanner for a given prefix.  That is all rows will have the specified
      * prefix. No other rows will be returned.
-     * 
+     *
      * @return scanner id to use with other scanner calls
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param startAndPrefix the prefix (and thus start row) of the keys you want
-     * 
+     *
      * @param columns the columns you want returned
      */
     public int scannerOpenWithPrefix(byte[] tableName, byte[] startAndPrefix, List<byte[]> columns) throws IOError, TException;
@@ -389,18 +389,18 @@ public class Hbase {
      * Get a scanner on the current table starting at the specified row and
      * ending at the last row in the table.  Return the specified columns.
      * Only values with the specified timestamp are returned.
-     * 
+     *
      * @return scanner id to be used with other scanner procedures
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param startRow Starting row in table to scan.
      * Send "" (empty string) to start at the first row.
-     * 
+     *
      * @param columns columns to scan. If column name is a column family, all
      * columns of the specified column family are returned. It's also possible
      * to pass a regex in the column qualifier.
-     * 
+     *
      * @param timestamp timestamp
      */
     public int scannerOpenTs(byte[] tableName, byte[] startRow, List<byte[]> columns, long timestamp) throws IOError, TException;
@@ -410,21 +410,21 @@ public class Hbase {
      * specified rows.  ending at the last row in the table.  Return the
      * specified columns.  Only values with the specified timestamp are
      * returned.
-     * 
+     *
      * @return scanner id to be used with other scanner procedures
-     * 
+     *
      * @param tableName name of table
-     * 
+     *
      * @param startRow Starting row in table to scan.
      * Send "" (empty string) to start at the first row.
-     * 
+     *
      * @param stopRow row to stop scanning on. This row is *not* included in the
      * scanner's results
-     * 
+     *
      * @param columns columns to scan. If column name is a column family, all
      * columns of the specified column family are returned. It's also possible
      * to pass a regex in the column qualifier.
-     * 
+     *
      * @param timestamp timestamp
      */
     public int scannerOpenWithStopTs(byte[] tableName, byte[] startRow, byte[] stopRow, List<byte[]> columns, long timestamp) throws IOError, TException;
@@ -434,11 +434,11 @@ public class Hbase {
      * row in the table.  When there are no more rows in the table, or a key
      * greater-than-or-equal-to the scanner's specified stopRow is reached,
      * an empty list is returned.
-     * 
+     *
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
-     * 
+     *
      * @param id id of a scanner returned by scannerOpen
      */
     public List<TRowResult> scannerGet(int id) throws IOError, IllegalArgument, TException;
@@ -448,22 +448,22 @@ public class Hbase {
      * rows and advances to the next row in the table.  When there are no more
      * rows in the table, or a key greater-than-or-equal-to the scanner's
      * specified stopRow is reached,  an empty list is returned.
-     * 
+     *
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * @throws IllegalArgument if ScannerID is invalid
      * @throws NotFound when the scanner reaches the end
-     * 
+     *
      * @param id id of a scanner returned by scannerOpen
-     * 
+     *
      * @param nbRows number of results to return
      */
     public List<TRowResult> scannerGetList(int id, int nbRows) throws IOError, IllegalArgument, TException;
 
     /**
      * Closes the server-state associated with an open scanner.
-     * 
+     *
      * @throws IllegalArgument if ScannerID is invalid
-     * 
+     *
      * @param id id of a scanner returned by scannerOpen
      */
     public void scannerClose(int id) throws IOError, IllegalArgument, TException;
@@ -2876,7 +2876,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -3047,7 +3047,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -3058,7 +3058,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -3172,7 +3172,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -3337,7 +3337,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -3349,7 +3349,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -3468,7 +3468,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -3639,7 +3639,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -3650,7 +3650,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -3764,7 +3764,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -3929,7 +3929,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -3941,7 +3941,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -4060,7 +4060,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -4231,7 +4231,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -4242,7 +4242,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -4361,9 +4361,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.BOOL)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -4592,7 +4592,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -4604,7 +4604,7 @@ public class Hbase {
               if (field.type == TType.BOOL) {
                 this.success = iprot.readBool();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -4612,7 +4612,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -4733,7 +4733,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME_OR_REGION_NAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME_OR_REGION_NAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -4898,7 +4898,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -4909,7 +4909,7 @@ public class Hbase {
             case TABLE_NAME_OR_REGION_NAME:
               if (field.type == TType.STRING) {
                 this.tableNameOrRegionName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -5023,7 +5023,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -5188,7 +5188,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -5200,7 +5200,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -5313,7 +5313,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME_OR_REGION_NAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME_OR_REGION_NAME, new FieldMetaData("tableNameOrRegionName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -5478,7 +5478,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -5489,7 +5489,7 @@ public class Hbase {
             case TABLE_NAME_OR_REGION_NAME:
               if (field.type == TType.STRING) {
                 this.tableNameOrRegionName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -5603,7 +5603,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -5768,7 +5768,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -5780,7 +5780,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -5982,7 +5982,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -6091,10 +6091,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -6342,7 +6342,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -6363,7 +6363,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -6371,7 +6371,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -6509,7 +6509,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -6680,7 +6680,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -6691,7 +6691,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -6808,11 +6808,11 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new MapMetaData(TType.MAP, 
-              new FieldValueMetaData(TType.STRING), 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new MapMetaData(TType.MAP,
+              new FieldValueMetaData(TType.STRING),
               new StructMetaData(TType.STRUCT, ColumnDescriptor.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -7037,7 +7037,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -7061,7 +7061,7 @@ public class Hbase {
                   }
                   iprot.readMapEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -7069,7 +7069,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -7208,7 +7208,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -7379,7 +7379,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -7390,7 +7390,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -7507,10 +7507,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRegionInfo.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -7758,7 +7758,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -7780,7 +7780,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -7788,7 +7788,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -7935,10 +7935,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN_FAMILIES, new FieldMetaData("columnFamilies", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMN_FAMILIES, new FieldMetaData("columnFamilies", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, ColumnDescriptor.class))));
     }});
 
@@ -8198,7 +8198,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -8209,7 +8209,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -8227,7 +8227,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -8367,11 +8367,11 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.EXIST, new FieldMetaData("exist", TFieldRequirementType.DEFAULT, 
+      put(_Fields.EXIST, new FieldMetaData("exist", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -8664,7 +8664,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -8676,7 +8676,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -8684,7 +8684,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -8692,7 +8692,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.exist = new AlreadyExists();
                 this.exist.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -8835,7 +8835,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -9006,7 +9006,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -9017,7 +9017,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -9131,7 +9131,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -9296,7 +9296,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -9308,7 +9308,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -9445,11 +9445,11 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -9760,7 +9760,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -9771,21 +9771,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case COLUMN:
               if (field.type == TType.STRING) {
                 this.column = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -9928,10 +9928,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TCell.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -10179,7 +10179,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -10201,7 +10201,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -10209,7 +10209,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -10376,13 +10376,13 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.NUM_VERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT, 
+      put(_Fields.NUM_VERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -10763,7 +10763,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -10774,21 +10774,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case COLUMN:
               if (field.type == TType.STRING) {
                 this.column = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -10796,7 +10796,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.numVersions = iprot.readI32();
                 setNumVersionsIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -10946,10 +10946,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TCell.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -11197,7 +11197,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -11219,7 +11219,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -11227,7 +11227,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -11404,15 +11404,15 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(2);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
-      put(_Fields.NUM_VERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT, 
+      put(_Fields.NUM_VERSIONS, new FieldMetaData("numVersions", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -11861,7 +11861,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -11872,21 +11872,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case COLUMN:
               if (field.type == TType.STRING) {
                 this.column = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -11894,7 +11894,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -11902,7 +11902,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.numVersions = iprot.readI32();
                 setNumVersionsIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -12059,10 +12059,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TCell.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -12310,7 +12310,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -12332,7 +12332,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -12340,7 +12340,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -12487,9 +12487,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -12730,7 +12730,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -12741,14 +12741,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -12878,10 +12878,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -13102,7 +13102,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -13124,7 +13124,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -13132,7 +13132,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -13288,12 +13288,12 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
     }});
 
@@ -13623,7 +13623,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -13634,14 +13634,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -13658,7 +13658,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -13808,10 +13808,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -14032,7 +14032,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -14054,7 +14054,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -14062,7 +14062,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -14220,11 +14220,11 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -14535,7 +14535,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -14546,14 +14546,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -14561,7 +14561,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -14698,10 +14698,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -14922,7 +14922,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -14944,7 +14944,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -14952,7 +14952,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -15113,14 +15113,14 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -15514,7 +15514,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -15525,14 +15525,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -15549,7 +15549,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -15557,7 +15557,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -15714,10 +15714,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -15938,7 +15938,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -15960,7 +15960,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -15968,7 +15968,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -16124,12 +16124,12 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, Mutation.class))));
     }});
 
@@ -16459,7 +16459,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -16470,14 +16470,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -16495,7 +16495,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -16645,9 +16645,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -16876,7 +16876,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -16888,7 +16888,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -16896,7 +16896,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -17056,14 +17056,14 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, Mutation.class))));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -17463,7 +17463,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -17474,14 +17474,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -17499,7 +17499,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -17507,7 +17507,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -17664,9 +17664,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -17895,7 +17895,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -17907,7 +17907,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -17915,7 +17915,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -18055,10 +18055,10 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW_BATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.ROW_BATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, BatchMutation.class))));
     }});
 
@@ -18318,7 +18318,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -18329,7 +18329,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -18347,7 +18347,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -18484,9 +18484,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -18715,7 +18715,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -18727,7 +18727,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -18735,7 +18735,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -18886,12 +18886,12 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW_BATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.ROW_BATCHES, new FieldMetaData("rowBatches", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, BatchMutation.class))));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -19221,7 +19221,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -19232,7 +19232,7 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -19250,7 +19250,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -19258,7 +19258,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -19402,9 +19402,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -19633,7 +19633,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -19645,7 +19645,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -19653,7 +19653,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -19813,13 +19813,13 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+      put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -20200,7 +20200,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -20211,21 +20211,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case COLUMN:
               if (field.type == TType.STRING) {
                 this.column = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -20233,7 +20233,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.value = iprot.readI64();
                 setValueIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -20388,11 +20388,11 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -20685,7 +20685,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -20697,7 +20697,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.success = iprot.readI64();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -20705,7 +20705,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -20713,7 +20713,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -20870,11 +20870,11 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -21185,7 +21185,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -21196,21 +21196,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case COLUMN:
               if (field.type == TType.STRING) {
                 this.column = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -21350,7 +21350,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -21515,7 +21515,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -21527,7 +21527,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -21675,13 +21675,13 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+      put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -22062,7 +22062,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -22073,21 +22073,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case COLUMN:
               if (field.type == TType.STRING) {
                 this.column = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -22095,7 +22095,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -22242,7 +22242,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -22407,7 +22407,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -22419,7 +22419,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -22547,9 +22547,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
     }});
 
@@ -22790,7 +22790,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -22801,14 +22801,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -22935,7 +22935,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -23100,7 +23100,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -23112,7 +23112,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -23251,11 +23251,11 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -23566,7 +23566,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -23577,14 +23577,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case ROW:
               if (field.type == TType.STRING) {
                 this.row = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -23592,7 +23592,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -23726,7 +23726,7 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -23891,7 +23891,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -23903,7 +23903,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -24046,12 +24046,12 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
     }});
 
@@ -24387,7 +24387,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -24398,14 +24398,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case START_ROW:
               if (field.type == TType.STRING) {
                 this.startRow = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -24422,7 +24422,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -24574,9 +24574,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -24805,7 +24805,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -24817,7 +24817,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.success = iprot.readI32();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -24825,7 +24825,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -24987,14 +24987,14 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.STOP_ROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.STOP_ROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
     }});
 
@@ -25402,7 +25402,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -25413,21 +25413,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case START_ROW:
               if (field.type == TType.STRING) {
                 this.startRow = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case STOP_ROW:
               if (field.type == TType.STRING) {
                 this.stopRow = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -25444,7 +25444,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -25609,9 +25609,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -25840,7 +25840,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -25852,7 +25852,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.success = iprot.readI32();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -25860,7 +25860,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -26005,12 +26005,12 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.START_AND_PREFIX, new FieldMetaData("startAndPrefix", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_AND_PREFIX, new FieldMetaData("startAndPrefix", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
     }});
 
@@ -26340,7 +26340,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -26351,14 +26351,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case START_AND_PREFIX:
               if (field.type == TType.STRING) {
                 this.startAndPrefix = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -26375,7 +26375,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -26527,9 +26527,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -26758,7 +26758,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -26770,7 +26770,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.success = iprot.readI32();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -26778,7 +26778,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -26940,14 +26940,14 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -27353,7 +27353,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -27364,14 +27364,14 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case START_ROW:
               if (field.type == TType.STRING) {
                 this.startRow = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -27388,7 +27388,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -27396,7 +27396,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -27555,9 +27555,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -27786,7 +27786,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -27798,7 +27798,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.success = iprot.readI32();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -27806,7 +27806,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -27979,16 +27979,16 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TABLE_NAME, new FieldMetaData("tableName", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.START_ROW, new FieldMetaData("startRow", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.STOP_ROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT, 
+      put(_Fields.STOP_ROW, new FieldMetaData("stopRow", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRING)));
-      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new FieldValueMetaData(TType.STRING))));
-      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+      put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I64)));
     }});
 
@@ -28466,7 +28466,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -28477,21 +28477,21 @@ public class Hbase {
             case TABLE_NAME:
               if (field.type == TType.STRING) {
                 this.tableName = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case START_ROW:
               if (field.type == TType.STRING) {
                 this.startRow = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
             case STOP_ROW:
               if (field.type == TType.STRING) {
                 this.stopRow = iprot.readBinary();
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -28508,7 +28508,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -28516,7 +28516,7 @@ public class Hbase {
               if (field.type == TType.I64) {
                 this.timestamp = iprot.readI64();
                 setTimestampIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -28688,9 +28688,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -28919,7 +28919,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -28931,7 +28931,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.success = iprot.readI32();
                 setSuccessIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -28939,7 +28939,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -29068,7 +29068,7 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -29239,7 +29239,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -29251,7 +29251,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.id = iprot.readI32();
                 setIdIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -29365,12 +29365,12 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -29647,7 +29647,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -29669,7 +29669,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -29677,7 +29677,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -29685,7 +29685,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -29847,9 +29847,9 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(2);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
-      put(_Fields.NB_ROWS, new FieldMetaData("nbRows", TFieldRequirementType.DEFAULT, 
+      put(_Fields.NB_ROWS, new FieldMetaData("nbRows", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -30088,7 +30088,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -30100,7 +30100,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.id = iprot.readI32();
                 setIdIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -30108,7 +30108,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.nbRows = iprot.readI32();
                 setNbRowsIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -30229,12 +30229,12 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new ListMetaData(TType.LIST, 
+      put(_Fields.SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT,
+          new ListMetaData(TType.LIST,
               new StructMetaData(TType.STRUCT, TRowResult.class))));
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -30511,7 +30511,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -30533,7 +30533,7 @@ public class Hbase {
                   }
                   iprot.readListEnd();
                 }
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -30541,7 +30541,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -30549,7 +30549,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -30701,7 +30701,7 @@ public class Hbase {
     private BitSet __isset_bit_vector = new BitSet(1);
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT, 
+      put(_Fields.ID, new FieldMetaData("id", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.I32)));
     }});
 
@@ -30872,7 +30872,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -30884,7 +30884,7 @@ public class Hbase {
               if (field.type == TType.I32) {
                 this.id = iprot.readI32();
                 setIdIsSet(true);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -30995,9 +30995,9 @@ public class Hbase {
     // isset id assignments
 
     public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IO, new FieldMetaData("io", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
-      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT, 
+      put(_Fields.IA, new FieldMetaData("ia", TFieldRequirementType.DEFAULT,
           new FieldValueMetaData(TType.STRUCT)));
     }});
 
@@ -31226,7 +31226,7 @@ public class Hbase {
       while (true)
       {
         field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
+        if (field.type == TType.STOP) {
           break;
         }
         _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -31238,7 +31238,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.io = new IOError();
                 this.io.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;
@@ -31246,7 +31246,7 @@ public class Hbase {
               if (field.type == TType.STRUCT) {
                 this.ia = new IllegalArgument();
                 this.ia.read(iprot);
-              } else { 
+              } else {
                 TProtocolUtil.skip(iprot, field.type);
               }
               break;

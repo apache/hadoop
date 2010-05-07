@@ -35,7 +35,7 @@ import java.io.IOException;
 public class Writables {
   /**
    * @param w writable
-   * @return The bytes of <code>w</code> gotten by running its 
+   * @return The bytes of <code>w</code> gotten by running its
    * {@link Writable#write(java.io.DataOutput)} method.
    * @throws IOException e
    * @see #getWritable(byte[], Writable)
@@ -118,7 +118,7 @@ public class Writables {
   throws IOException {
     return (HRegionInfo)getWritable(bytes, new HRegionInfo());
   }
- 
+
   /**
    * @param bytes serialized bytes
    * @return A HRegionInfo instance built out of passed <code>bytes</code>

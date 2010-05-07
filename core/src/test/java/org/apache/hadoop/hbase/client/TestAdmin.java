@@ -589,8 +589,8 @@ public class TestAdmin {
     this.admin.createTable(htd);
     HTable table = new HTable("myTestTable");
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
-    
-    assertEquals(htd.compareTo(confirmedHtd), 0);  
+
+    assertEquals(htd.compareTo(confirmedHtd), 0);
   }
 }
 

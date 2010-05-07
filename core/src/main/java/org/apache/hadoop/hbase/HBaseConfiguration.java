@@ -30,11 +30,11 @@ import org.apache.hadoop.conf.Configuration;
  * Adds HBase configuration files to a Configuration
  */
 public class HBaseConfiguration extends Configuration {
-  
+
   private static final Log LOG = LogFactory.getLog(HBaseConfiguration.class);
-  
+
   /**
-   * Instantinating HBaseConfiguration() is deprecated. Please use 
+   * Instantinating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create() to construct a plain Configuration
    */
   @Deprecated
@@ -45,9 +45,9 @@ public class HBaseConfiguration extends Configuration {
     LOG.warn("instantinating HBaseConfiguration() is deprecated. Please use" +
     		" HBaseConfiguration#create() to construct a plain Configuration");
   }
-  
+
   /**
-   * Instantiating HBaseConfiguration() is deprecated. Please use 
+   * Instantiating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create(conf) to construct a plain Configuration
    */
   @Deprecated
@@ -58,13 +58,13 @@ public class HBaseConfiguration extends Configuration {
       set(e.getKey(), e.getValue());
     }
   }
-  
+
   public static Configuration addHbaseResources(Configuration conf) {
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
     return conf;
   }
-  
+
   /**
    * Creates a Configuration with HBase resources
    * @return a Configuration with HBase resources
@@ -73,11 +73,11 @@ public class HBaseConfiguration extends Configuration {
     Configuration conf = new Configuration();
     return addHbaseResources(conf);
   }
-  
+
   /**
    * Creates a clone of passed configuration.
    * @param that Configuration to clone.
-   * @return a Configuration created with the hbase-*.xml files plus 
+   * @return a Configuration created with the hbase-*.xml files plus
    * the given configuration.
    */
   public static Configuration create(final Configuration that) {
@@ -87,11 +87,11 @@ public class HBaseConfiguration extends Configuration {
     }
     return conf;
   }
-  
+
   /**
    * Returns the hash code value for this HBaseConfiguration. The hash code of a
    * HBaseConfiguration is defined by the xor of the hash codes of its entries.
-   * 
+   *
    * @see Configuration#iterator() How the entries are obtained.
    */
   @Override
@@ -103,7 +103,7 @@ public class HBaseConfiguration extends Configuration {
   /**
    * Returns the hash code value for this HBaseConfiguration. The hash code of a
    * Configuration is defined by the xor of the hash codes of its entries.
-   * 
+   *
    * @see Configuration#iterator() How the entries are obtained.
    */
   public static int hashCode(Configuration conf) {

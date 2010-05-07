@@ -33,12 +33,12 @@ import java.util.List;
 
 /**
  * Implementation of {@link Filter} that represents an ordered List of Filters
- * which will be evaluated with a specified boolean operator {@link Operator#MUST_PASS_ALL} 
+ * which will be evaluated with a specified boolean operator {@link Operator#MUST_PASS_ALL}
  * (<code>!AND</code>) or {@link Operator#MUST_PASS_ONE} (<code>!OR</code>).
  * Since you can use Filter Lists as children of Filter Lists, you can create a
  * hierarchy of filters to be evaluated.
  * Defaults to {@link Operator#MUST_PASS_ALL}.
- * <p>TODO: Fix creation of Configuration on serialization and deserialization. 
+ * <p>TODO: Fix creation of Configuration on serialization and deserialization.
  */
 public class FilterList implements Filter {
   /** set operator */
@@ -64,7 +64,7 @@ public class FilterList implements Filter {
   /**
    * Constructor that takes a set of {@link Filter}s. The default operator
    * MUST_PASS_ALL is assumed.
-   * 
+   *
    * @param rowFilters list of filters
    */
   public FilterList(final List<Filter> rowFilters) {
@@ -73,7 +73,7 @@ public class FilterList implements Filter {
 
   /**
    * Constructor that takes an operator.
-   * 
+   *
    * @param operator Operator to process filter set with.
    */
   public FilterList(final Operator operator) {
@@ -82,7 +82,7 @@ public class FilterList implements Filter {
 
   /**
    * Constructor that takes a set of {@link Filter}s and an operator.
-   * 
+   *
    * @param operator Operator to process filter set with.
    * @param rowFilters Set of row filters.
    */
@@ -93,7 +93,7 @@ public class FilterList implements Filter {
 
   /**
    * Get the operator.
-   * 
+   *
    * @return operator
    */
   public Operator getOperator() {
@@ -102,7 +102,7 @@ public class FilterList implements Filter {
 
   /**
    * Get the filters.
-   * 
+   *
    * @return filters
    */
   public List<Filter> getFilters() {
@@ -111,7 +111,7 @@ public class FilterList implements Filter {
 
   /**
    * Add a filter.
-   * 
+   *
    * @param filter another filter
    */
   public void addFilter(Filter filter) {

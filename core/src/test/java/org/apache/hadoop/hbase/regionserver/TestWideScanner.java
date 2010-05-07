@@ -65,10 +65,10 @@ public class TestWideScanner extends HBaseTestCase {
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
       this.cluster.getFileSystem().getHomeDirectory().toString());
-    super.setUp();    
+    super.setUp();
   }
 
-  private int addWideContent(HRegion region, byte[] family) 
+  private int addWideContent(HRegion region, byte[] family)
       throws IOException {
     int count = 0;
     // add a few rows of 2500 columns (we'll use batch of 1000) to make things

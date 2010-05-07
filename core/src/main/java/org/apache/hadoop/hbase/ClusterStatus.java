@@ -176,7 +176,7 @@ public class ClusterStatus extends VersionedWritable {
   /**
    * Returns detailed region server information: A list of
    * {@link HServerInfo}, containing server load and resource usage
-   * statistics as {@link HServerLoad}, containing per-region 
+   * statistics as {@link HServerLoad}, containing per-region
    * statistics as {@link HServerLoad.RegionLoad}.
    * @return region server information
    */

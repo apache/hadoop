@@ -33,7 +33,7 @@ import java.util.NavigableSet;
  * This is the primary class used to process KeyValues during a Get or Scan
  * operation.
  * <p>
- * It encapsulates the handling of the column and version input parameters to 
+ * It encapsulates the handling of the column and version input parameters to
  * the query through a {@link ColumnTracker}.
  * <p>
  * Deletes are handled using the {@link DeleteTracker}.
@@ -41,10 +41,10 @@ import java.util.NavigableSet;
  * All other query parameters are accessed from the client-specified Get.
  * <p>
  * The primary method used is {@link #match} with the current KeyValue.  It will
- * return a {@link QueryMatcher.MatchCode} 
- * 
+ * return a {@link QueryMatcher.MatchCode}
+ *
  * , deletes,
- * versions, 
+ * versions,
  */
 public class QueryMatcher {
   /**
@@ -59,17 +59,17 @@ public class QueryMatcher {
      * Include KeyValue in the returned result
      */
     INCLUDE,
-    
+
     /**
      * Do not include KeyValue in the returned result
      */
     SKIP,
-    
+
     /**
      * Do not include, jump to next StoreFile or memstore (in time order)
      */
     NEXT,
-    
+
     /**
      * Do not include, return current result
      */
@@ -93,25 +93,25 @@ public class QueryMatcher {
      */
     DONE_SCAN,
   }
-  
+
   /** Keeps track of deletes */
   protected DeleteTracker deletes;
-  
+
   /** Keeps track of columns and versions */
   protected ColumnTracker columns;
-  
+
   /** Key to seek to in memstore and StoreFiles */
   protected KeyValue startKey;
-  
+
   /** Row comparator for the region this query is for */
   KeyComparator rowComparator;
-  
+
   /** Row the query is on */
   protected byte [] row;
-  
+
   /** TimeRange the query is for */
   protected TimeRange tr;
-  
+
   /** Oldest allowed version stamp for TTL enforcement */
   protected long oldestStamp;
 
@@ -125,7 +125,7 @@ public class QueryMatcher {
    * @param ttl
    * @param rowComparator
    */
-  public QueryMatcher(Get get, byte [] family, 
+  public QueryMatcher(Get get, byte [] family,
       NavigableSet<byte[]> columns, long ttl, KeyComparator rowComparator,
       int maxVersions) {
     this.row = get.getRow();
@@ -164,7 +164,7 @@ public class QueryMatcher {
     this.startKey = matcher.getStartKey();
     reset();
   }
-  
+
   /**
    * Main method for ColumnMatcher.
    * <p>
@@ -195,10 +195,10 @@ public class QueryMatcher {
     // Directly act on KV buffer
     byte [] bytes = kv.getBuffer();
     int offset = kv.getOffset();
-    
+
     int keyLength = Bytes.toInt(bytes, offset);
     offset += KeyValue.ROW_OFFSET;
-    
+
     short rowLength = Bytes.toShort(bytes, offset);
     offset += Bytes.SIZEOF_SHORT;
 
@@ -207,7 +207,7 @@ public class QueryMatcher {
     /* Check ROW
      * If past query's row, go to next StoreFile
      * If not reached query's row, go to next KeyValue
-     */ 
+     */
     int ret = this.rowComparator.compareRows(row, 0, row.length,
         bytes, offset, rowLength);
     if (ret <= -1) {
@@ -220,7 +220,7 @@ public class QueryMatcher {
     offset += rowLength;
     byte familyLength = bytes[offset];
     offset += Bytes.SIZEOF_BYTE + familyLength;
-    
+
     int columnLength = keyLength + KeyValue.ROW_OFFSET -
       (offset - kv.getOffset()) - KeyValue.TIMESTAMP_TYPE_SIZE;
     int columnOffset = offset;
@@ -244,14 +244,14 @@ public class QueryMatcher {
      */
     byte type = bytes[offset];
     // if delete type == delete family, return done_row
-    
+
     if (isDelete(type)) {
       if (tr.withinOrAfterTimeRange(timestamp)) {
         this.deletes.add(bytes, columnOffset, columnLength, timestamp, type);
       }
       return MatchCode.SKIP;  // skip the delete cell.
     }
-    
+
     /* Check TimeRange
      * If outside of range, move to next KeyValue
      */
@@ -274,8 +274,8 @@ public class QueryMatcher {
      * Returns a MatchCode directly, identical language
      * If matched column without enough versions, include
      * If enough versions of this column or does not match, skip
-     * If have moved past 
-     * If enough versions of everything, 
+     * If have moved past
+     * If enough versions of everything,
      * TODO: No mapping from Filter.ReturnCode to MatchCode.
      */
     MatchCode mc = columns.checkColumn(bytes, columnOffset, columnLength);
@@ -293,7 +293,7 @@ public class QueryMatcher {
   protected boolean isDelete(byte type) {
     return (type != KeyValue.Type.Put.getCode());
   }
-  
+
   protected boolean isExpired(long timestamp) {
     return (timestamp < oldestStamp);
   }
@@ -309,18 +309,18 @@ public class QueryMatcher {
   public ColumnCount getSeekColumn() {
     return this.columns.getColumnHint();
   }
-  
+
   /**
    * Called after reading each section (memstore, snapshot, storefiles).
    * <p>
    * This method will update the internal structures to be accurate for
-   * the next section. 
+   * the next section.
    */
   public void update() {
     this.deletes.update();
     this.columns.update();
   }
-  
+
   /**
    * Resets the current columns and deletes
    */
@@ -336,52 +336,52 @@ public class QueryMatcher {
   public void setRow(byte [] row) {
     this.row = row;
   }
-  
+
   /**
-   * 
+   *
    * @return the start key
    */
   public KeyValue getStartKey() {
     return this.startKey;
   }
-  
+
   /**
    * @return the TimeRange
    */
   public TimeRange getTimeRange() {
     return this.tr;
   }
-  
+
   /**
    * @return the oldest stamp
    */
   public long getOldestStamp() {
     return this.oldestStamp;
   }
-  
+
   /**
    * @return current KeyComparator
    */
   public KeyComparator getRowComparator() {
     return this.rowComparator;
   }
-  
+
   /**
    * @return ColumnTracker
    */
   public ColumnTracker getColumnTracker() {
     return this.columns;
   }
-  
+
   /**
    * @return DeleteTracker
    */
   public DeleteTracker getDeleteTracker() {
     return this.deletes;
   }
-  
+
   /**
-   * 
+   *
    * @return <code>true</code> when done.
    */
   public boolean isDone() {

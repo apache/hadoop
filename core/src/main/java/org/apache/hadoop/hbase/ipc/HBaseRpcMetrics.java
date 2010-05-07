@@ -30,7 +30,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
- * 
+ *
  * This class is for maintaining  the various RPC statistics
  * and publishing them through the metrics interfaces.
  * This also registers the JMX MBean for RPC.
@@ -45,22 +45,22 @@ public class HBaseRpcMetrics implements Updater {
   private MetricsRecord metricsRecord;
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
   private final HBaseRPCStatistics rpcStatistics;
-  
+
   public HBaseRpcMetrics(String hostName, String port) {
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
 
     metricsRecord.setTag("port", port);
 
-    LOG.info("Initializing RPC Metrics with hostName=" 
+    LOG.info("Initializing RPC Metrics with hostName="
         + hostName + ", port=" + port);
 
     context.registerUpdater(this);
-    
+
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }
-  
-  
+
+
   /**
    * The metrics variables are public:
    *  - they can be set directly by calling their set/inc methods

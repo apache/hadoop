@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -31,7 +31,7 @@ public class NanoTimer {
 
   /**
    * Constructor
-   * 
+   *
    * @param start
    *          Start the timer upon construction.
    */
@@ -41,7 +41,7 @@ public class NanoTimer {
 
   /**
    * Start the timer.
-   * 
+   *
    * Note: No effect if timer is already started.
    */
   public void start() {
@@ -53,7 +53,7 @@ public class NanoTimer {
 
   /**
    * Stop the timer.
-   * 
+   *
    * Note: No effect if timer is already stopped.
    */
   public void stop() {
@@ -65,7 +65,7 @@ public class NanoTimer {
 
   /**
    * Read the timer.
-   * 
+   *
    * @return the elapsed time in nano-seconds. Note: If the timer is never
    *         started before, -1 is returned.
    */
@@ -86,7 +86,7 @@ public class NanoTimer {
 
   /**
    * Checking whether the timer is started
-   * 
+   *
    * @return true if timer is started.
    */
   public boolean isStarted() {
@@ -95,7 +95,7 @@ public class NanoTimer {
 
   /**
    * Format the elapsed time to a human understandable string.
-   * 
+   *
    * Note: If timer is never started, "ERR" will be returned.
    */
   public String toString() {
@@ -109,7 +109,7 @@ public class NanoTimer {
   /**
    * A utility method to format a time duration in nano seconds into a human
    * understandable stirng.
-   * 
+   *
    * @param t
    *          Time duration in nano seconds.
    * @return String representation.
@@ -161,19 +161,19 @@ public class NanoTimer {
 
     /**
      * StringBuilder sb = new StringBuilder(); String sep = "";
-     * 
+     *
      * if (dd > 0) { String unit = (dd > 1) ? "days" : "day";
      * sb.append(String.format("%s%d%s", sep, dd, unit)); sep = " "; }
-     * 
+     *
      * if (hh > 0) { String unit = (hh > 1) ? "hrs" : "hr";
      * sb.append(String.format("%s%d%s", sep, hh, unit)); sep = " "; }
-     * 
+     *
      * if (mm > 0) { String unit = (mm > 1) ? "mins" : "min";
      * sb.append(String.format("%s%d%s", sep, mm, unit)); sep = " "; }
-     * 
+     *
      * if (ss > 0) { String unit = (ss > 1) ? "secs" : "sec";
      * sb.append(String.format("%s%.3f%s", sep, ss, unit)); sep = " "; }
-     * 
+     *
      * return sb.toString();
      */
   }
@@ -184,7 +184,7 @@ public class NanoTimer {
 
   /**
    * Simple tester.
-   * 
+   *
    * @param args
    */
   public static void main(String[] args) {

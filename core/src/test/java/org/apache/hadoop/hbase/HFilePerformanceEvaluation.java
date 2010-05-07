@@ -42,14 +42,14 @@ import org.apache.hadoop.hbase.util.Bytes;
  * </p>
  */
 public class HFilePerformanceEvaluation {
-  
+
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 1000000;
   private static final int RFILE_BLOCKSIZE = 8 * 1024;
-  
+
   static final Log LOG =
     LogFactory.getLog(HFilePerformanceEvaluation.class.getName());
-  
+
   static byte [] format(final int i) {
     String v = Integer.toString(i);
     return Bytes.toBytes("0000000000".substring(v.length()) + v);
@@ -110,9 +110,9 @@ public class HFilePerformanceEvaluation {
         }
       }
     });
-    
+
   }
-  
+
   protected void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
     throws Exception {
     LOG.info("Running " + benchmark.getClass().getSimpleName() + " for " +
@@ -121,14 +121,14 @@ public class HFilePerformanceEvaluation {
     LOG.info("Running " + benchmark.getClass().getSimpleName() + " for " +
         rowCount + " rows took " + elapsedTime + "ms.");
   }
-  
+
   static abstract class RowOrientedBenchmark {
-    
+
     protected final Configuration conf;
     protected final FileSystem fs;
     protected final Path mf;
     protected final int totalRows;
-    
+
     public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
       this.conf = conf;
@@ -136,21 +136,21 @@ public class HFilePerformanceEvaluation {
       this.mf = mf;
       this.totalRows = totalRows;
     }
-    
+
     void setUp() throws Exception {
       // do nothing
     }
-    
+
     abstract void doRow(int i) throws Exception;
-    
+
     protected int getReportingPeriod() {
       return this.totalRows / 10;
     }
-    
+
     void tearDown() throws Exception {
       // do nothing
     }
-    
+
     /**
      * Run benchmark
      * @return elapsed time.
@@ -173,76 +173,76 @@ public class HFilePerformanceEvaluation {
       }
       return elapsedTime;
     }
-    
+
   }
-  
+
   static class SequentialWriteBenchmark extends RowOrientedBenchmark {
     protected HFile.Writer writer;
     private Random random = new Random();
     private byte[] bytes = new byte[ROW_LENGTH];
-    
+
     public SequentialWriteBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
       super(conf, fs, mf, totalRows);
     }
-    
+
     @Override
     void setUp() throws Exception {
       writer = new HFile.Writer(this.fs, this.mf, RFILE_BLOCKSIZE, (Compression.Algorithm) null, null);
     }
-    
+
     @Override
     void doRow(int i) throws Exception {
-      writer.append(format(i), generateValue()); 
+      writer.append(format(i), generateValue());
     }
-    
+
     private byte[] generateValue() {
       random.nextBytes(bytes);
       return bytes;
     }
-    
+
     @Override
     protected int getReportingPeriod() {
       return this.totalRows; // don't report progress
     }
-    
+
     @Override
     void tearDown() throws Exception {
       writer.close();
     }
-    
+
   }
-  
+
   static abstract class ReadBenchmark extends RowOrientedBenchmark {
-    
+
     protected HFile.Reader reader;
-    
+
     public ReadBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
       super(conf, fs, mf, totalRows);
     }
-    
+
     @Override
     void setUp() throws Exception {
       reader = new HFile.Reader(this.fs, this.mf, null, false);
       this.reader.loadFileInfo();
     }
-    
+
     @Override
     void tearDown() throws Exception {
       reader.close();
     }
-    
+
   }
 
   static class SequentialReadBenchmark extends ReadBenchmark {
     private HFileScanner scanner;
-    
+
     public SequentialReadBenchmark(Configuration conf, FileSystem fs,
       Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
     }
-    
+
     @Override
     void setUp() throws Exception {
       super.setUp();
@@ -259,16 +259,16 @@ public class HFilePerformanceEvaluation {
         PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
       }
     }
-    
+
     @Override
     protected int getReportingPeriod() {
       return this.totalRows; // don't report progress
     }
-    
+
   }
-  
+
   static class UniformRandomReadBenchmark extends ReadBenchmark {
-    
+
     private Random random = new Random();
 
     public UniformRandomReadBenchmark(Configuration conf, FileSystem fs,
@@ -286,12 +286,12 @@ public class HFilePerformanceEvaluation {
       ByteBuffer v = scanner.getValue();
       PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
     }
-    
+
     private byte [] getRandomRow() {
       return format(random.nextInt(totalRows));
     }
   }
-  
+
   static class UniformRandomSmallScan extends ReadBenchmark {
     private Random random = new Random();
 
@@ -319,14 +319,14 @@ public class HFilePerformanceEvaluation {
         PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
       }
     }
-    
+
     private byte [] getRandomRow() {
       return format(random.nextInt(totalRows));
     }
   }
-  
+
   static class GaussianRandomReadBenchmark extends ReadBenchmark {
-    
+
     private RandomData randomData = new RandomDataImpl();
 
     public GaussianRandomReadBenchmark(Configuration conf, FileSystem fs,
@@ -353,11 +353,11 @@ public class HFilePerformanceEvaluation {
       return format(r);
     }
   }
-  
+
   /**
    * @param args
-   * @throws Exception 
-   * @throws IOException 
+   * @throws Exception
+   * @throws IOException
    */
   public static void main(String[] args) throws Exception {
     new HFilePerformanceEvaluation().runBenchmarks();

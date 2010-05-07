@@ -29,7 +29,7 @@ public class ColumnCount {
   private final int offset;
   private final int length;
   private int count;
-  
+
   /**
    * Constructor
    * @param column the qualifier to count the versions for
@@ -37,7 +37,7 @@ public class ColumnCount {
   public ColumnCount(byte [] column) {
     this(column, 0);
   }
-  
+
   /**
    * Constructor
    * @param column the qualifier to count the versions for
@@ -46,7 +46,7 @@ public class ColumnCount {
   public ColumnCount(byte [] column, int count) {
     this(column, 0, column.length, count);
   }
-  
+
   /**
    * Constuctor
    * @param column the qualifier to count the versions for
@@ -60,28 +60,28 @@ public class ColumnCount {
     this.length = length;
     this.count = count;
   }
-  
+
   /**
    * @return the buffer
    */
   public byte [] getBuffer(){
     return this.bytes;
   }
-  
+
   /**
    * @return the offset
    */
   public int getOffset(){
     return this.offset;
   }
-  
+
   /**
    * @return the length
    */
   public int getLength(){
     return this.length;
-  }  
-  
+  }
+
   /**
    * Decrement the current version count
    * @return current count
@@ -104,9 +104,9 @@ public class ColumnCount {
    */
   public void setCount(int count) {
     this.count = count;
-  }  
+  }
 
-  
+
   /**
    * Check to see if needed to fetch more versions
    * @param max

@@ -49,7 +49,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /** per-region load metrics */
   private ArrayList<RegionLoad> regionLoad = new ArrayList<RegionLoad>();
 
-  /** 
+  /**
    * Encapsulates per-region loading metrics.
    */
   public static class RegionLoad implements Writable {
@@ -82,7 +82,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      * @param storefileIndexSizeMB
      */
     public RegionLoad(final byte[] name, final int stores,
-        final int storefiles, final int storefileSizeMB, 
+        final int storefiles, final int storefileSizeMB,
         final int memstoreSizeMB, final int storefileIndexSizeMB) {
       this.name = name;
       this.stores = stores;
@@ -239,7 +239,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public HServerLoad() {
     super();
   }
-  
+
   /**
    * Constructor
    * @param numberOfRequests
@@ -265,7 +265,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   /**
    * Originally, this method factored in the effect of requests going to the
    * server as well. However, this does not interact very well with the current
-   * region rebalancing code, which only factors number of regions. For the 
+   * region rebalancing code, which only factors number of regions. For the
    * interim, until we can figure out how to make rebalancing use all the info
    * available, we're just going to make load purely the number of regions.
    *
@@ -285,7 +285,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   public String toString() {
     return toString(1);
   }
-  
+
   /**
    * Returns toString() with the number of requests divided by the message
    * interval in seconds
@@ -330,9 +330,9 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     result ^= Integer.valueOf(numberOfRegions).hashCode();
     return result;
   }
-  
+
   // Getters
-  
+
   /**
    * @return the numberOfRegions
    */

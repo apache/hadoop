@@ -48,7 +48,7 @@ public class TimeRange implements Writable {
   public TimeRange() {
     allTime = true;
   }
-  
+
   /**
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
@@ -56,7 +56,7 @@ public class TimeRange implements Writable {
   public TimeRange(long minStamp) {
     this.minStamp = minStamp;
   }
-  
+
   /**
    * Represents interval [minStamp, Long.MAX_VALUE)
    * @param minStamp the minimum timestamp value, inclusive
@@ -64,9 +64,9 @@ public class TimeRange implements Writable {
   public TimeRange(byte [] minStamp) {
   	this.minStamp = Bytes.toLong(minStamp);
   }
-  
+
   /**
-   * Represents interval [minStamp, maxStamp) 
+   * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    * @throws IOException
@@ -81,7 +81,7 @@ public class TimeRange implements Writable {
   }
 
   /**
-   * Represents interval [minStamp, maxStamp) 
+   * Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    * @throws IOException
@@ -90,7 +90,7 @@ public class TimeRange implements Writable {
   throws IOException {
     this(Bytes.toLong(minStamp), Bytes.toLong(maxStamp));
   }
-  
+
   /**
    * @return the smallest timestamp that should be considered
    */
@@ -104,11 +104,11 @@ public class TimeRange implements Writable {
   public long getMax() {
     return maxStamp;
   }
-  
+
   /**
    * Check if the specified timestamp is within this TimeRange.
    * <p>
-   * Returns true if within interval [minStamp, maxStamp), false 
+   * Returns true if within interval [minStamp, maxStamp), false
    * if not.
    * @param bytes timestamp to check
    * @param offset offset into the bytes
@@ -118,11 +118,11 @@ public class TimeRange implements Writable {
   	if(allTime) return true;
   	return withinTimeRange(Bytes.toLong(bytes, offset));
   }
-  
+
   /**
    * Check if the specified timestamp is within this TimeRange.
    * <p>
-   * Returns true if within interval [minStamp, maxStamp), false 
+   * Returns true if within interval [minStamp, maxStamp), false
    * if not.
    * @param timestamp timestamp to check
    * @return true if within TimeRange, false if not
@@ -132,11 +132,11 @@ public class TimeRange implements Writable {
   	// check if >= minStamp
   	return (minStamp <= timestamp && timestamp < maxStamp);
   }
-  
+
   /**
    * Check if the specified timestamp is within this TimeRange.
    * <p>
-   * Returns true if within interval [minStamp, maxStamp), false 
+   * Returns true if within interval [minStamp, maxStamp), false
    * if not.
    * @param timestamp timestamp to check
    * @return true if within TimeRange, false if not
@@ -146,7 +146,7 @@ public class TimeRange implements Writable {
     // check if >= minStamp
     return (timestamp >= minStamp);
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -156,14 +156,14 @@ public class TimeRange implements Writable {
     sb.append(this.minStamp);
     return sb.toString();
   }
-  
+
   //Writable
   public void readFields(final DataInput in) throws IOException {
     this.minStamp = in.readLong();
     this.maxStamp = in.readLong();
     this.allTime = in.readBoolean();
   }
-  
+
   public void write(final DataOutput out) throws IOException {
     out.writeLong(minStamp);
     out.writeLong(maxStamp);

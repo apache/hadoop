@@ -43,7 +43,7 @@ public class MapFilePerformanceEvaluation {
   protected final HBaseConfiguration conf;
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 100000;
-  
+
   static final Log LOG =
     LogFactory.getLog(MapFilePerformanceEvaluation.class.getName());
 
@@ -54,7 +54,7 @@ public class MapFilePerformanceEvaluation {
     super();
     this.conf = c;
   }
-  
+
   static ImmutableBytesWritable format(final int i, ImmutableBytesWritable w) {
     String v = Integer.toString(i);
     w.set(Bytes.toBytes("0000000000".substring(v.length()) + v));
@@ -69,7 +69,7 @@ public class MapFilePerformanceEvaluation {
     }
     runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT),
         ROW_COUNT);
-    
+
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
       public void run() {
         try {
@@ -111,7 +111,7 @@ public class MapFilePerformanceEvaluation {
       }
     });
   }
-  
+
   protected void runBenchmark(RowOrientedBenchmark benchmark, int rowCount)
     throws Exception {
     LOG.info("Running " + benchmark.getClass().getSimpleName() + " for " +
@@ -120,14 +120,14 @@ public class MapFilePerformanceEvaluation {
     LOG.info("Running " + benchmark.getClass().getSimpleName() + " for " +
         rowCount + " rows took " + elapsedTime + "ms.");
   }
-  
+
   static abstract class RowOrientedBenchmark {
-    
+
     protected final Configuration conf;
     protected final FileSystem fs;
     protected final Path mf;
     protected final int totalRows;
-    
+
     public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
       this.conf = conf;
@@ -135,21 +135,21 @@ public class MapFilePerformanceEvaluation {
       this.mf = mf;
       this.totalRows = totalRows;
     }
-    
+
     void setUp() throws Exception {
       // do nothing
     }
-    
+
     abstract void doRow(int i) throws Exception;
-    
+
     protected int getReportingPeriod() {
       return this.totalRows / 10;
     }
-    
+
     void tearDown() throws Exception {
       // do nothing
     }
-    
+
     /**
      * Run benchmark
      * @return elapsed time.
@@ -172,77 +172,77 @@ public class MapFilePerformanceEvaluation {
       }
       return elapsedTime;
     }
-    
+
   }
-  
+
   static class SequentialWriteBenchmark extends RowOrientedBenchmark {
-    
+
     protected MapFile.Writer writer;
     private Random random = new Random();
     private byte[] bytes = new byte[ROW_LENGTH];
     private ImmutableBytesWritable key = new ImmutableBytesWritable();
     private ImmutableBytesWritable value = new ImmutableBytesWritable();
-    
+
     public SequentialWriteBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
       super(conf, fs, mf, totalRows);
     }
-    
+
     @Override
     void setUp() throws Exception {
       writer = new MapFile.Writer(conf, fs, mf.toString(),
         ImmutableBytesWritable.class, ImmutableBytesWritable.class);
     }
-    
+
     @Override
     void doRow(int i) throws Exception {
       value.set(generateValue());
-      writer.append(format(i, key), value); 
+      writer.append(format(i, key), value);
     }
-    
+
     private byte[] generateValue() {
       random.nextBytes(bytes);
       return bytes;
     }
-    
+
     @Override
     protected int getReportingPeriod() {
       return this.totalRows; // don't report progress
     }
-    
+
     @Override
     void tearDown() throws Exception {
       writer.close();
     }
-    
+
   }
-  
+
   static abstract class ReadBenchmark extends RowOrientedBenchmark {
     ImmutableBytesWritable key = new ImmutableBytesWritable();
     ImmutableBytesWritable value = new ImmutableBytesWritable();
-    
+
     protected MapFile.Reader reader;
-    
+
     public ReadBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
       super(conf, fs, mf, totalRows);
     }
-    
+
     @Override
     void setUp() throws Exception {
       reader = new MapFile.Reader(fs, mf.toString(), conf);
     }
-    
+
     @Override
     void tearDown() throws Exception {
       reader.close();
     }
-    
+
   }
 
   static class SequentialReadBenchmark extends ReadBenchmark {
     ImmutableBytesWritable verify = new ImmutableBytesWritable();
-    
+
     public SequentialReadBenchmark(Configuration conf, FileSystem fs,
         Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
@@ -255,16 +255,16 @@ public class MapFilePerformanceEvaluation {
         format(i, this.verify).get());
       PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, value.getSize());
     }
-    
+
     @Override
     protected int getReportingPeriod() {
       return this.totalRows; // don't report progress
     }
-    
+
   }
-  
+
   static class UniformRandomReadBenchmark extends ReadBenchmark {
-    
+
     private Random random = new Random();
 
     public UniformRandomReadBenchmark(Configuration conf, FileSystem fs,
@@ -278,13 +278,13 @@ public class MapFilePerformanceEvaluation {
       ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
       PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
     }
-    
+
     private ImmutableBytesWritable getRandomRow() {
       return format(random.nextInt(totalRows), key);
     }
-    
+
   }
-  
+
   static class UniformRandomSmallScan extends ReadBenchmark {
     private Random random = new Random();
 
@@ -308,7 +308,7 @@ public class MapFilePerformanceEvaluation {
         PerformanceEvaluationCommons.assertValueSize(this.value.getSize(), ROW_LENGTH);
       }
     }
-    
+
     private ImmutableBytesWritable getRandomRow() {
       return format(random.nextInt(totalRows), key);
     }
@@ -328,19 +328,19 @@ public class MapFilePerformanceEvaluation {
       ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
       PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
     }
-    
+
     private ImmutableBytesWritable getGaussianRandomRow() {
       int r = (int) randomData.nextGaussian((double)totalRows / 2.0,
           (double)totalRows / 10.0);
       return format(r, key);
     }
-    
+
   }
 
   /**
    * @param args
-   * @throws Exception 
-   * @throws IOException 
+   * @throws Exception
+   * @throws IOException
    */
   public static void main(String[] args) throws Exception {
     new MapFilePerformanceEvaluation(new HBaseConfiguration()).

@@ -28,7 +28,7 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 
-/** 
+/**
  * This class is for maintaining the various master statistics
  * and publishing them through the metrics interfaces.
  * <p>
@@ -43,7 +43,7 @@ public class MasterMetrics implements Updater {
   /*
    * Count of requests to the cluster since last call to metrics update
    */
-  private final MetricsRate cluster_requests = 
+  private final MetricsRate cluster_requests =
     new MetricsRate("cluster_requests", registry);
 
   public MasterMetrics(final String name) {
@@ -58,16 +58,16 @@ public class MasterMetrics implements Updater {
 
     LOG.info("Initialized");
   }
-  
+
   public void shutdown() {
     if (masterStatistics != null)
       masterStatistics.shutdown();
   }
-    
+
   /**
    * Since this object is a registered updater, this method will be called
    * periodically, e.g. every 5 seconds.
-   * @param unused 
+   * @param unused
    */
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
@@ -75,7 +75,7 @@ public class MasterMetrics implements Updater {
     }
     this.metricsRecord.update();
   }
-  
+
   public void resetAllMinMax() {
     // Nothing to do
   }
@@ -86,7 +86,7 @@ public class MasterMetrics implements Updater {
   public float getRequests() {
     return this.cluster_requests.getPreviousIntervalValue();
   }
-  
+
   /**
    * @param inc How much to add to requests.
    */

@@ -37,19 +37,19 @@ public class SimpleBlockCache implements BlockCache {
       this.blockId = blockId;
     }
   }
-  private Map<String,Ref> cache = 
+  private Map<String,Ref> cache =
     new HashMap<String,Ref>();
 
   private ReferenceQueue q = new ReferenceQueue();
   public int dumps = 0;
-  
+
   /**
    * Constructor
    */
   public SimpleBlockCache() {
     super();
   }
-  
+
   void processQueue() {
     Ref r;
     while ( (r = (Ref)q.poll()) != null) {
@@ -78,7 +78,7 @@ public class SimpleBlockCache implements BlockCache {
     cache.put(blockName, new Ref(blockName, buf, q));
   }
 
-  public synchronized void cacheBlock(String blockName, ByteBuffer buf, 
+  public synchronized void cacheBlock(String blockName, ByteBuffer buf,
       boolean inMemory) {
     cache.put(blockName, new Ref(blockName, buf, q));
   }

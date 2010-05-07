@@ -107,10 +107,10 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
   // isset id assignments
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT, 
+    put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT, 
-        new ListMetaData(TType.LIST, 
+    put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
+        new ListMetaData(TType.LIST,
             new StructMetaData(TType.STRUCT, Mutation.class))));
   }});
 
@@ -358,7 +358,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -369,7 +369,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
           case ROW:
             if (field.type == TType.STRING) {
               this.row = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -387,7 +387,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
                 }
                 iprot.readListEnd();
               }
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

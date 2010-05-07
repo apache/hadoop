@@ -39,8 +39,8 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   UnmodifyableHTableDescriptor(final HTableDescriptor desc) {
     super(desc.getName(), getUnmodifyableFamilies(desc), desc.getValues());
   }
-  
-  
+
+
   /*
    * @param desc
    * @return Families as unmodifiable array.
@@ -73,7 +73,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   public HColumnDescriptor removeFamily(final byte [] column) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
-  
+
   /**
    * @see org.apache.hadoop.hbase.HTableDescriptor#setReadOnly(boolean)
    */
@@ -119,6 +119,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
 //   */
 //  @Override
 //  public void addIndex(IndexSpecification index) {
-//    throw new UnsupportedOperationException("HTableDescriptor is read-only"); 
+//    throw new UnsupportedOperationException("HTableDescriptor is read-only");
 //  }
 }

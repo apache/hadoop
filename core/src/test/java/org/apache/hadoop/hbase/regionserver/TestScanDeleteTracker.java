@@ -31,83 +31,83 @@ public class TestScanDeleteTracker extends HBaseTestCase implements HConstants {
   private ScanDeleteTracker sdt;
   private long timestamp = 10L;
   private byte deleteType = 0;
-  
+
   public void setUp() throws Exception {
     super.setUp();
     sdt = new ScanDeleteTracker();
   }
-  
+
   public void testDeletedBy_Delete() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.Delete.getCode();
-    
+
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
     boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(true, ret);
   }
-  
+
   public void testDeletedBy_DeleteColumn() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.DeleteColumn.getCode();
-    
+
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
     timestamp -= 5;
     boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(true, ret);
   }
-  
+
   public void testDeletedBy_DeleteFamily() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.DeleteFamily.getCode();
-    
+
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
-    
+
     timestamp -= 5;
     boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(true, ret);
   }
-  
+
   public void testDelete_DeleteColumn() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.Delete.getCode();
-    
+
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
-    
+
     timestamp -= 5;
     deleteType = KeyValue.Type.DeleteColumn.getCode();
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
-    
+
     timestamp -= 5;
     boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(true, ret);
   }
-  
-  
+
+
   public void testDeleteColumn_Delete() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.DeleteColumn.getCode();
-    
+
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
-    
+
     qualifier = Bytes.toBytes("qualifier1");
     deleteType = KeyValue.Type.Delete.getCode();
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
-    
+
     boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(true, ret);
   }
-  
+
   //Testing new way where we save the Delete in case of a Delete for specific
   //ts, could have just added the last line to the first test, but rather keep
   //them separated
   public void testDelete_KeepDelete(){
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.Delete.getCode();
-    
+
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
     sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(false ,sdt.isEmpty());
   }
-  
-  
+
+
 }

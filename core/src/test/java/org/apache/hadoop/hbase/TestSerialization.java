@@ -89,7 +89,7 @@ public class TestSerialization extends HBaseTestCase {
     assertTrue(hmw.size() == 1);
     assertTrue(Bytes.equals("value".getBytes(), hmw.get("key".getBytes())));
   }
-  
+
   public void testHMsg() throws Exception {
     HMsg  m = new HMsg(HMsg.Type.MSG_REGIONSERVER_QUIESCE);
     byte [] mb = Writables.getBytes(m);
@@ -103,7 +103,7 @@ public class TestSerialization extends HBaseTestCase {
     deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
     assertTrue(m.equals(deserializedHMsg));
   }
-  
+
   public void testTableDescriptor() throws Exception {
     HTableDescriptor htd = createTableDescriptor(getName());
     byte [] mb = Writables.getBytes(htd);
@@ -131,7 +131,7 @@ public class TestSerialization extends HBaseTestCase {
     assertEquals(hri.getTableDesc().getFamilies().size(),
       deserializedHri.getTableDesc().getFamilies().size());
   }
-  
+
   /**
    * Test ServerInfo serialization
    * @throws Exception
@@ -144,7 +144,7 @@ public class TestSerialization extends HBaseTestCase {
       (HServerInfo)Writables.getWritable(b, new HServerInfo());
     assertTrue(hsi.equals(deserializedHsi));
   }
-    
+
   public void testPut() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();
@@ -156,10 +156,10 @@ public class TestSerialization extends HBaseTestCase {
     byte[] qf6 = "qf6".getBytes();
     byte[] qf7 = "qf7".getBytes();
     byte[] qf8 = "qf8".getBytes();
-    
+
     long ts = System.currentTimeMillis();
     byte[] val = "val".getBytes();
-    
+
     Put put = new Put(row);
     put.add(fam, qf1, ts, val);
     put.add(fam, qf2, ts, val);
@@ -169,7 +169,7 @@ public class TestSerialization extends HBaseTestCase {
     put.add(fam, qf6, ts, val);
     put.add(fam, qf7, ts, val);
     put.add(fam, qf8, ts, val);
-    
+
     byte[] sb = Writables.getBytes(put);
     Put desPut = (Put)Writables.getWritable(sb, new Put());
 
@@ -178,7 +178,7 @@ public class TestSerialization extends HBaseTestCase {
 //    desPut = (Put)Writables.getWritable(sb, new Put());
 //    long stop = System.nanoTime();
 //    System.out.println("timer " +(stop-start));
-    
+
     assertTrue(Bytes.equals(put.getRow(), desPut.getRow()));
     List<KeyValue> list = null;
     List<KeyValue> desList = null;
@@ -192,18 +192,18 @@ public class TestSerialization extends HBaseTestCase {
     }
   }
 
-  
+
   public void testPut2() throws Exception{
     byte[] row = "testAbort,,1243116656250".getBytes();
     byte[] fam = "historian".getBytes();
     byte[] qf1 = "creation".getBytes();
-    
+
     long ts = 9223372036854775807L;
     byte[] val = "dont-care".getBytes();
-    
+
     Put put = new Put(row);
     put.add(fam, qf1, ts, val);
-    
+
     byte[] sb = Writables.getBytes(put);
     Put desPut = (Put)Writables.getWritable(sb, new Put());
 
@@ -219,18 +219,18 @@ public class TestSerialization extends HBaseTestCase {
       }
     }
   }
-  
-  
+
+
   public void testDelete() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf1 = "qf1".getBytes();
-    
+
     long ts = System.currentTimeMillis();
-    
+
     Delete delete = new Delete(row);
     delete.deleteColumn(fam, qf1, ts);
-    
+
     byte[] sb = Writables.getBytes(delete);
     Delete desDelete = (Delete)Writables.getWritable(sb, new Delete());
 
@@ -247,29 +247,29 @@ public class TestSerialization extends HBaseTestCase {
       }
     }
   }
- 
+
   public void testGet() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf1 = "qf1".getBytes();
-    
+
     long ts = System.currentTimeMillis();
     int maxVersions = 2;
     long lockid = 5;
     RowLock rowLock = new RowLock(lockid);
-    
+
     Get get = new Get(row, rowLock);
     get.addColumn(fam, qf1);
     get.setTimeRange(ts, ts+1);
     get.setMaxVersions(maxVersions);
-    
+
     byte[] sb = Writables.getBytes(get);
     Get desGet = (Get)Writables.getWritable(sb, new Get());
 
     assertTrue(Bytes.equals(get.getRow(), desGet.getRow()));
     Set<byte[]> set = null;
     Set<byte[]> desSet = null;
-    
+
     for(Map.Entry<byte[], NavigableSet<byte[]>> entry :
         get.getFamilyMap().entrySet()){
       assertTrue(desGet.getFamilyMap().containsKey(entry.getKey()));
@@ -279,7 +279,7 @@ public class TestSerialization extends HBaseTestCase {
         assertTrue(desSet.contains(qualifier));
       }
     }
-    
+
     assertEquals(get.getLockId(), desGet.getLockId());
     assertEquals(get.getMaxVersions(), desGet.getMaxVersions());
     TimeRange tr = get.getTimeRange();
@@ -287,22 +287,22 @@ public class TestSerialization extends HBaseTestCase {
     assertEquals(tr.getMax(), desTr.getMax());
     assertEquals(tr.getMin(), desTr.getMin());
   }
-  
+
 
   public void testScan() throws Exception{
     byte[] startRow = "startRow".getBytes();
     byte[] stopRow  = "stopRow".getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf1 = "qf1".getBytes();
-    
+
     long ts = System.currentTimeMillis();
     int maxVersions = 2;
-    
+
     Scan scan = new Scan(startRow, stopRow);
     scan.addColumn(fam, qf1);
     scan.setTimeRange(ts, ts+1);
     scan.setMaxVersions(maxVersions);
-    
+
     byte[] sb = Writables.getBytes(scan);
     Scan desScan = (Scan)Writables.getWritable(sb, new Scan());
 
@@ -311,7 +311,7 @@ public class TestSerialization extends HBaseTestCase {
     assertEquals(scan.getCacheBlocks(), desScan.getCacheBlocks());
     Set<byte[]> set = null;
     Set<byte[]> desSet = null;
-    
+
     for(Map.Entry<byte[], NavigableSet<byte[]>> entry :
         scan.getFamilyMap().entrySet()){
       assertTrue(desScan.getFamilyMap().containsKey(entry.getKey()));
@@ -320,7 +320,7 @@ public class TestSerialization extends HBaseTestCase {
       for(byte[] column : set){
         assertTrue(desSet.contains(column));
       }
-      
+
       // Test filters are serialized properly.
       scan = new Scan(startRow);
       byte [] prefix = Bytes.toBytes(getName());
@@ -330,14 +330,14 @@ public class TestSerialization extends HBaseTestCase {
       Filter f = desScan.getFilter();
       assertTrue(f instanceof PrefixFilter);
     }
-    
+
     assertEquals(scan.getMaxVersions(), desScan.getMaxVersions());
     TimeRange tr = scan.getTimeRange();
     TimeRange desTr = desScan.getTimeRange();
     assertEquals(tr.getMax(), desTr.getMax());
     assertEquals(tr.getMin(), desTr.getMin());
   }
-  
+
   public void testResultEmpty() throws Exception {
     List<KeyValue> keys = new ArrayList<KeyValue>();
     Result r = new Result(keys);
@@ -346,33 +346,33 @@ public class TestSerialization extends HBaseTestCase {
     Result deserializedR = (Result)Writables.getWritable(rb, new Result());
     assertTrue(deserializedR.isEmpty());
   }
-  
-  
+
+
   public void testResult() throws Exception {
     byte [] rowA = Bytes.toBytes("rowA");
     byte [] famA = Bytes.toBytes("famA");
     byte [] qfA = Bytes.toBytes("qfA");
     byte [] valueA = Bytes.toBytes("valueA");
-    
+
     byte [] rowB = Bytes.toBytes("rowB");
     byte [] famB = Bytes.toBytes("famB");
     byte [] qfB = Bytes.toBytes("qfB");
     byte [] valueB = Bytes.toBytes("valueB");
-    
+
     KeyValue kvA = new KeyValue(rowA, famA, qfA, valueA);
     KeyValue kvB = new KeyValue(rowB, famB, qfB, valueB);
-    
+
     Result result = new Result(new KeyValue[]{kvA, kvB});
-    
+
     byte [] rb = Writables.getBytes(result);
     Result deResult = (Result)Writables.getWritable(rb, new Result());
-    
+
     assertTrue("results are not equivalent, first key mismatch",
         result.sorted()[0].equals(deResult.sorted()[0]));
-    
+
     assertTrue("results are not equivalent, second key mismatch",
         result.sorted()[1].equals(deResult.sorted()[1]));
-    
+
     // Test empty Result
     Result r = new Result();
     byte [] b = Writables.getBytes(r);
@@ -385,25 +385,25 @@ public class TestSerialization extends HBaseTestCase {
     byte [] famA = Bytes.toBytes("famA");
     byte [] qfA = Bytes.toBytes("qfA");
     byte [] valueA = Bytes.toBytes("valueA");
-    
+
     byte [] rowB = Bytes.toBytes("rowB");
     byte [] famB = Bytes.toBytes("famB");
     byte [] qfB = Bytes.toBytes("qfB");
     byte [] valueB = Bytes.toBytes("valueB");
-    
+
     KeyValue kvA = new KeyValue(rowA, famA, qfA, valueA);
     KeyValue kvB = new KeyValue(rowB, famB, qfB, valueB);
-    
+
     Result result = new Result(new KeyValue[]{kvA, kvB});
-    
+
     byte [] rb = Writables.getBytes(result);
-    
-    
+
+
     // Call getRow() first
     Result deResult = (Result)Writables.getWritable(rb, new Result());
     byte [] row = deResult.getRow();
     assertTrue(Bytes.equals(row, rowA));
-    
+
     // Call sorted() first
     deResult = (Result)Writables.getWritable(rb, new Result());
     assertTrue("results are not equivalent, first key mismatch",
@@ -417,44 +417,44 @@ public class TestSerialization extends HBaseTestCase {
         result.raw()[0].equals(deResult.raw()[0]));
     assertTrue("results are not equivalent, second key mismatch",
         result.raw()[1].equals(deResult.raw()[1]));
-    
-    
+
+
   }
-  
+
   public void testResultArray() throws Exception {
     byte [] rowA = Bytes.toBytes("rowA");
     byte [] famA = Bytes.toBytes("famA");
     byte [] qfA = Bytes.toBytes("qfA");
     byte [] valueA = Bytes.toBytes("valueA");
-    
+
     byte [] rowB = Bytes.toBytes("rowB");
     byte [] famB = Bytes.toBytes("famB");
     byte [] qfB = Bytes.toBytes("qfB");
     byte [] valueB = Bytes.toBytes("valueB");
-    
+
     KeyValue kvA = new KeyValue(rowA, famA, qfA, valueA);
     KeyValue kvB = new KeyValue(rowB, famB, qfB, valueB);
 
-    
+
     Result result1 = new Result(new KeyValue[]{kvA, kvB});
     Result result2 = new Result(new KeyValue[]{kvB});
     Result result3 = new Result(new KeyValue[]{kvB});
-    
+
     Result [] results = new Result [] {result1, result2, result3};
-    
+
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(byteStream);
     Result.writeArray(out, results);
-    
+
     byte [] rb = byteStream.toByteArray();
-    
+
     DataInputBuffer in = new DataInputBuffer();
     in.reset(rb, 0, rb.length);
-    
+
     Result [] deResults = Result.readArray(in);
-    
+
     assertTrue(results.length == deResults.length);
-    
+
     for(int i=0;i<results.length;i++) {
       KeyValue [] keysA = results[i].sorted();
       KeyValue [] keysB = deResults[i].sorted();
@@ -462,14 +462,14 @@ public class TestSerialization extends HBaseTestCase {
       for(int j=0;j<keysA.length;j++) {
         assertTrue("Expected equivalent keys but found:\n" +
             "KeyA : " + keysA[j].toString() + "\n" +
-            "KeyB : " + keysB[j].toString() + "\n" + 
+            "KeyB : " + keysB[j].toString() + "\n" +
             keysA.length + " total keys, " + i + "th so far"
             ,keysA[j].equals(keysB[j]));
       }
     }
-    
+
   }
-  
+
   public void testResultArrayEmpty() throws Exception {
     List<KeyValue> keys = new ArrayList<KeyValue>();
     Result r = new Result(keys);
@@ -477,61 +477,61 @@ public class TestSerialization extends HBaseTestCase {
 
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(byteStream);
-    
+
     Result.writeArray(out, results);
-    
+
     results = null;
-    
+
     byteStream = new ByteArrayOutputStream();
     out = new DataOutputStream(byteStream);
     Result.writeArray(out, results);
-    
+
     byte [] rb = byteStream.toByteArray();
-    
+
     DataInputBuffer in = new DataInputBuffer();
     in.reset(rb, 0, rb.length);
-    
+
     Result [] deResults = Result.readArray(in);
-    
+
     assertTrue(deResults.length == 0);
-    
+
     results = new Result[0];
 
     byteStream = new ByteArrayOutputStream();
     out = new DataOutputStream(byteStream);
     Result.writeArray(out, results);
-    
+
     rb = byteStream.toByteArray();
-    
+
     in = new DataInputBuffer();
     in.reset(rb, 0, rb.length);
-    
+
     deResults = Result.readArray(in);
-    
+
     assertTrue(deResults.length == 0);
-    
+
   }
-  
+
   public void testTimeRange(String[] args) throws Exception{
     TimeRange tr = new TimeRange(0,5);
     byte [] mb = Writables.getBytes(tr);
     TimeRange deserializedTr =
       (TimeRange)Writables.getWritable(mb, new TimeRange());
-    
+
     assertEquals(tr.getMax(), deserializedTr.getMax());
     assertEquals(tr.getMin(), deserializedTr.getMin());
-    
+
   }
-  
+
   public void testKeyValue2() throws Exception {
     byte[] row = getName().getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf = "qf".getBytes();
     long ts = System.currentTimeMillis();
     byte[] val = "val".getBytes();
-    
+
     KeyValue kv = new KeyValue(row, fam, qf, ts, val);
-    
+
     byte [] mb = Writables.getBytes(kv);
     KeyValue deserializedKv =
       (KeyValue)Writables.getWritable(mb, new KeyValue());

@@ -41,12 +41,12 @@ public interface CodeToClassAndBack {
    */
   public static final Map<Class<?>, Byte> CLASS_TO_CODE =
     new HashMap<Class<?>, Byte>();
-  
+
   /**
    * Class list for supported classes
    */
   public Class<?>[] classList = {byte[].class};
-  
+
   /**
    * The static loader that is used instead of the static constructor in
    * HbaseMapWritable.
@@ -55,7 +55,7 @@ public interface CodeToClassAndBack {
     new InternalStaticLoader(classList, CODE_TO_CLASS, CLASS_TO_CODE);
 
   /**
-   * Class that loads the static maps with their values. 
+   * Class that loads the static maps with their values.
    */
   public class InternalStaticLoader{
     InternalStaticLoader(Class<?>[] classList,

@@ -32,9 +32,9 @@ import org.apache.hadoop.mapreduce.InputSplit;
  * A table split corresponds to a key range (low, high). All references to row
  * below refer to the key of the row.
  */
-public class TableSplit extends InputSplit 
+public class TableSplit extends InputSplit
 implements Writable, Comparable<TableSplit> {
-  
+
   private byte [] tableName;
   private byte [] startRow;
   private byte [] endRow;
@@ -48,7 +48,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Creates a new instance while assigning all variables.
-   * 
+   *
    * @param tableName  The name of the current table.
    * @param startRow  The start row of the split.
    * @param endRow  The end row of the split.
@@ -64,8 +64,8 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Returns the table name.
-   * 
-   * @return The table name. 
+   *
+   * @return The table name.
    */
   public byte [] getTableName() {
     return tableName;
@@ -73,26 +73,26 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Returns the start row.
-   *  
+   *
    * @return The start row.
-   */ 
+   */
   public byte [] getStartRow() {
     return startRow;
   }
 
   /**
    * Returns the end row.
-   * 
-   * @return The end row. 
+   *
+   * @return The end row.
    */
   public byte [] getEndRow() {
     return endRow;
   }
 
-  /** 
+  /**
    * Returns the region location.
-   * 
-   * @return The region's location. 
+   *
+   * @return The region's location.
    */
   public String getRegionLocation() {
     return regionLocation;
@@ -100,7 +100,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Returns the region's location as an array.
-   * 
+   *
    * @return The array containing the region location.
    * @see org.apache.hadoop.mapreduce.InputSplit#getLocations()
    */
@@ -111,7 +111,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Returns the length of the split.
-   * 
+   *
    * @return The length of the split.
    * @see org.apache.hadoop.mapreduce.InputSplit#getLength()
    */
@@ -123,7 +123,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Reads the values of each field.
-   * 
+   *
    * @param in  The input to read from.
    * @throws IOException When reading the input fails.
    */
@@ -137,7 +137,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Writes the field values to the output.
-   * 
+   *
    * @param out  The output to write to.
    * @throws IOException When writing the values to the output fails.
    */
@@ -151,7 +151,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Returns the details about this instance as a string.
-   * 
+   *
    * @return The values of this instance as a string.
    * @see java.lang.Object#toString()
    */
@@ -163,7 +163,7 @@ implements Writable, Comparable<TableSplit> {
 
   /**
    * Compares this split against the given one.
-   * 
+   *
    * @param split  The split to compare to.
    * @return The result of the comparison.
    * @see java.lang.Comparable#compareTo(java.lang.Object)
@@ -172,7 +172,7 @@ implements Writable, Comparable<TableSplit> {
   public int compareTo(TableSplit split) {
     return Bytes.compareTo(getStartRow(), split.getStartRow());
   }
-  
+
   @Override
   public boolean equals(Object o) {
     if (o == null || !(o instanceof TableSplit)) {

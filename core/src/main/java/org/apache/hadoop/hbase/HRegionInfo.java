@@ -79,7 +79,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     result ^= this.tableDesc.hashCode();
     this.hashCode = result;
   }
-  
+
   /**
    * Private constructor used constructing HRegionInfo for the catalog root and
    * first meta regions
@@ -98,10 +98,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     super();
     this.tableDesc = new HTableDescriptor();
   }
-  
+
   /**
    * Construct HRegionInfo with explicit parameters
-   * 
+   *
    * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
@@ -115,7 +115,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   /**
    * Construct HRegionInfo with explicit parameters
-   * 
+   *
    * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
@@ -131,7 +131,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   /**
    * Construct HRegionInfo with explicit parameters
-   * 
+   *
    * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
@@ -158,10 +158,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.tableDesc = tableDesc;
     setHashCode();
   }
-  
+
   /**
    * Costruct a copy of another HRegionInfo
-   * 
+   *
    * @param other
    */
   public HRegionInfo(HRegionInfo other) {
@@ -177,7 +177,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.hashCode = other.hashCode();
     this.encodedName = other.getEncodedName();
   }
-  
+
   private static byte [] createRegionName(final byte [] tableName,
       final byte [] startKey, final long regionid) {
     return createRegionName(tableName, startKey, Long.toString(regionid));
@@ -216,7 +216,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     System.arraycopy(id, 0, b, offset, id.length);
     return b;
   }
-  
+
   /**
    * Separate elements of a regionName.
    * @param regionName
@@ -246,11 +246,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
     if(offset != tableName.length + 1) {
       startKey = new byte[offset - tableName.length - 1];
-      System.arraycopy(regionName, tableName.length + 1, startKey, 0, 
+      System.arraycopy(regionName, tableName.length + 1, startKey, 0,
           offset - tableName.length - 1);
     }
     byte [] id = new byte[regionName.length - offset - 1];
-    System.arraycopy(regionName, offset + 1, id, 0, 
+    System.arraycopy(regionName, offset + 1, id, 0,
         regionName.length - offset - 1);
     byte [][] elements = new byte[3][];
     elements[0] = tableName;
@@ -258,7 +258,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     elements[2] = id;
     return elements;
   }
-  
+
   /** @return the endKey */
   public byte [] getEndKey(){
     return endKey;
@@ -283,7 +283,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public String getRegionNameAsString() {
     return this.regionNameStr;
   }
-  
+
   /** @return the encoded region name */
   public synchronized int getEncodedName() {
     if (this.encodedName == NO_HASH) {
@@ -313,7 +313,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public boolean isRootRegion() {
     return this.tableDesc.isRootRegion();
   }
-  
+
   /** @return true if this is the meta table */
   public boolean isMetaTable() {
     return this.tableDesc.isMetaTable();
@@ -323,14 +323,14 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public boolean isMetaRegion() {
     return this.tableDesc.isMetaRegion();
   }
-  
+
   /**
    * @return True if has been split and has daughters.
    */
   public boolean isSplit() {
     return this.split;
   }
-  
+
   /**
    * @param split set split status
    */
@@ -363,7 +363,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
       Bytes.toStringBinary(this.endKey) +
       "', ENCODED => " + getEncodedName() + "," +
-      (isOffline()? " OFFLINE => true,": "") + 
+      (isOffline()? " OFFLINE => true,": "") +
       (isSplit()? " SPLIT => true,": "") +
       " TABLE => {" + this.tableDesc.toString() + "}";
   }
@@ -415,7 +415,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     tableDesc.write(out);
     out.writeInt(hashCode);
   }
-  
+
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
@@ -429,16 +429,16 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.tableDesc.readFields(in);
     this.hashCode = in.readInt();
   }
-  
+
   //
   // Comparable
   //
-  
+
   public int compareTo(HRegionInfo o) {
     if (o == null) {
       return 1;
     }
-    
+
     // Are regions of same table?
     int result = this.tableDesc.compareTo(o.tableDesc);
     if (result != 0) {
@@ -450,7 +450,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     if (result != 0) {
       return result;
     }
-    
+
     // Compare end keys.
     return Bytes.compareTo(this.endKey, o.endKey);
   }

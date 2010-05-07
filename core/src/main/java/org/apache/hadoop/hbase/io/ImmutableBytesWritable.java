@@ -29,7 +29,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 
-/** 
+/**
  * A byte sequence that is usable as a key or value.  Based on
  * {@link org.apache.hadoop.io.BytesWritable} only this class is NOT resizable
  * and DOES NOT distinguish between the size of the seqeunce and the current
@@ -43,14 +43,14 @@ implements WritableComparable<ImmutableBytesWritable> {
   private byte[] bytes;
   private int offset;
   private int length;
-  
+
   /**
    * Create a zero-size sequence.
    */
   public ImmutableBytesWritable() {
     super();
   }
-  
+
   /**
    * Create a ImmutableBytesWritable using the byte array as the initial value.
    * @param bytes This array becomes the backing storage for the object.
@@ -58,7 +58,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   public ImmutableBytesWritable(byte[] bytes) {
     this(bytes, 0, bytes.length);
   }
-  
+
   /**
    * Set the new ImmutableBytesWritable to the contents of the passed
    * <code>ibw</code>.
@@ -67,7 +67,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   public ImmutableBytesWritable(final ImmutableBytesWritable ibw) {
     this(ibw.get(), 0, ibw.getSize());
   }
-  
+
   /**
    * Set the value to a given byte range
    * @param bytes the new byte range to set to
@@ -80,7 +80,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     this.offset = offset;
     this.length = length;
   }
-  
+
   /**
    * Get the data from the BytesWritable.
    * @return The data is only valid between 0 and getSize() - 1.
@@ -92,7 +92,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     }
     return this.bytes;
   }
-  
+
   /**
    * @param b Use passed bytes as backing array for this instance.
    */
@@ -110,7 +110,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     this.offset = offset;
     this.length = length;
   }
-  
+
   /**
    * @return the current size of the buffer.
    */
@@ -121,7 +121,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     }
     return this.length;
   }
- 
+
   /**
    * @return the current length of the buffer. same as getSize()
    */
@@ -134,7 +134,7 @@ implements WritableComparable<ImmutableBytesWritable> {
     }
     return this.length;
   }
-  
+
   /**
    * @return offset
    */
@@ -148,19 +148,19 @@ implements WritableComparable<ImmutableBytesWritable> {
     in.readFully(this.bytes, 0, this.length);
     this.offset = 0;
   }
-  
+
   public void write(final DataOutput out) throws IOException {
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);
   }
-  
+
   // Below methods copied from BytesWritable
 
   @Override
   public int hashCode() {
     return WritableComparator.hashBytes(bytes, this.length);
   }
-  
+
   /**
    * Define the sort order of the BytesWritable.
    * @param right_obj The other bytes writable
@@ -170,7 +170,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   public int compareTo(ImmutableBytesWritable right_obj) {
     return compareTo(right_obj.get());
   }
-  
+
   /**
    * Compares the bytes in this object to the specified byte array
    * @param that
@@ -200,7 +200,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    * @see java.lang.Object#toString()
    */
   @Override
-  public String toString() { 
+  public String toString() {
     StringBuilder sb = new StringBuilder(3*this.bytes.length);
     for (int idx = 0; idx < this.bytes.length; idx++) {
       // if not the first, put a blank separator in
@@ -218,7 +218,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   }
 
   /** A Comparator optimized for ImmutableBytesWritable.
-   */ 
+   */
   public static class Comparator extends WritableComparator {
     private BytesWritable.Comparator comparator =
       new BytesWritable.Comparator();
@@ -236,11 +236,11 @@ implements WritableComparable<ImmutableBytesWritable> {
       return comparator.compare(b1, s1, l1, b2, s2, l2);
     }
   }
-  
+
   static { // register this comparator
     WritableComparator.define(ImmutableBytesWritable.class, new Comparator());
   }
-  
+
   /**
    * @param array List of byte [].
    * @return Array of byte [].

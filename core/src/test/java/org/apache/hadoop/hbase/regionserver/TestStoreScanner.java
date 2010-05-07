@@ -50,7 +50,7 @@ public class TestStoreScanner extends TestCase {
     }
     return cols;
   }
-  
+
   public void testScanTimeRange() throws IOException {
     String r1 = "R1";
     // returns only 1 of these 2 even though same timestamp
@@ -102,7 +102,7 @@ public class TestStoreScanner extends TestCase {
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(3, results.size());
-    
+
   }
 
   public void testScanSameTimestamp() throws IOException {
@@ -336,7 +336,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "g", 11, KeyValue.Type.Delete, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "h", 11, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
-        KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"), 
+        KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
     KeyValueScanner [] scanners = new KeyValueScanner[] {
         new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
@@ -407,9 +407,9 @@ public class TestStoreScanner extends TestCase {
     results.clear();
     assertEquals(false, scan.next(results));
   }
-  
+
   /**
-   * Test expiration of KeyValues in combination with a configured TTL for 
+   * Test expiration of KeyValues in combination with a configured TTL for
    * a column family (as should be triggered in a major compaction).
    */
   public void testWildCardTtlScan() throws IOException {
@@ -439,14 +439,14 @@ public class TestStoreScanner extends TestCase {
     assertEquals(kvs[1], results.get(0));
     assertEquals(kvs[2], results.get(1));
     results.clear();
-    
+
     assertEquals(true, scanner.next(results));
     assertEquals(3, results.size());
     assertEquals(kvs[4], results.get(0));
     assertEquals(kvs[5], results.get(1));
     assertEquals(kvs[6], results.get(2));
     results.clear();
-    
+
     assertEquals(false, scanner.next(results));
   }
 }

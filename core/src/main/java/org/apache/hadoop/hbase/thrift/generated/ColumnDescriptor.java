@@ -137,23 +137,23 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
   private BitSet __isset_bit_vector = new BitSet(6);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT, 
+    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.MAX_VERSIONS, new FieldMetaData("maxVersions", TFieldRequirementType.DEFAULT, 
+    put(_Fields.MAX_VERSIONS, new FieldMetaData("maxVersions", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
-    put(_Fields.COMPRESSION, new FieldMetaData("compression", TFieldRequirementType.DEFAULT, 
+    put(_Fields.COMPRESSION, new FieldMetaData("compression", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.IN_MEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT, 
+    put(_Fields.IN_MEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.BLOOM_FILTER_TYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT, 
+    put(_Fields.BLOOM_FILTER_TYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.BLOOM_FILTER_VECTOR_SIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT, 
+    put(_Fields.BLOOM_FILTER_VECTOR_SIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
-    put(_Fields.BLOOM_FILTER_NB_HASHES, new FieldMetaData("bloomFilterNbHashes", TFieldRequirementType.DEFAULT, 
+    put(_Fields.BLOOM_FILTER_NB_HASHES, new FieldMetaData("bloomFilterNbHashes", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
-    put(_Fields.BLOCK_CACHE_ENABLED, new FieldMetaData("blockCacheEnabled", TFieldRequirementType.DEFAULT, 
+    put(_Fields.BLOCK_CACHE_ENABLED, new FieldMetaData("blockCacheEnabled", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.TIME_TO_LIVE, new FieldMetaData("timeToLive", TFieldRequirementType.DEFAULT, 
+    put(_Fields.TIME_TO_LIVE, new FieldMetaData("timeToLive", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.I32)));
   }});
 
@@ -836,7 +836,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -847,7 +847,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
           case NAME:
             if (field.type == TType.STRING) {
               this.name = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -855,14 +855,14 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
             if (field.type == TType.I32) {
               this.maxVersions = iprot.readI32();
               setMaxVersionsIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
           case COMPRESSION:
             if (field.type == TType.STRING) {
               this.compression = iprot.readString();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -870,14 +870,14 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
             if (field.type == TType.BOOL) {
               this.inMemory = iprot.readBool();
               setInMemoryIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
           case BLOOM_FILTER_TYPE:
             if (field.type == TType.STRING) {
               this.bloomFilterType = iprot.readString();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -885,7 +885,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
             if (field.type == TType.I32) {
               this.bloomFilterVectorSize = iprot.readI32();
               setBloomFilterVectorSizeIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -893,7 +893,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
             if (field.type == TType.I32) {
               this.bloomFilterNbHashes = iprot.readI32();
               setBloomFilterNbHashesIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -901,7 +901,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
             if (field.type == TType.BOOL) {
               this.blockCacheEnabled = iprot.readBool();
               setBlockCacheEnabledIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
@@ -909,7 +909,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
             if (field.type == TType.I32) {
               this.timeToLive = iprot.readI32();
               setTimeToLiveIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

@@ -50,7 +50,7 @@ import org.mortbay.log.Log;
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(TaskAttemptContext context)
   throws IOException, InterruptedException {
-    // Get the path of the temporary output file 
+    // Get the path of the temporary output file
     final Path outputPath = FileOutputFormat.getOutputPath(context);
     final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
     Configuration conf = context.getConfiguration();
@@ -127,7 +127,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   }
 
   /*
-   * Data structure to hold a Writer and amount of data written on it. 
+   * Data structure to hold a Writer and amount of data written on it.
    */
   static class WriterLength {
     long written = 0;

@@ -50,9 +50,9 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
   @Override
   protected void preHBaseClusterSetup() throws Exception {
     testDir = new Path(conf.get(HConstants.HBASE_DIR));
-    
+
     // Create table description
-    
+
     this.desc = new HTableDescriptor(TABLE_NAME);
     this.desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
@@ -72,7 +72,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
       // Insert data
       for (int j = 0; j < TIMESTAMPS.length; j++) {
         Put put = new Put(ROWS[i], TIMESTAMPS[j], null);
-        put.add(HConstants.CATALOG_FAMILY, null, TIMESTAMPS[j], 
+        put.add(HConstants.CATALOG_FAMILY, null, TIMESTAMPS[j],
             Bytes.toBytes(TIMESTAMPS[j]));
         REGIONS[i].put(put);
       }
@@ -85,7 +85,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     // Close root and meta regions
     closeRootAndMeta();
   }
-  
+
   /**
    * @throws Exception
    */
@@ -106,7 +106,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
         assertTrue(cellCount == 1);
       }
     }
-    
+
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows
     int count = 0;
     Scan scan = new Scan();
@@ -124,7 +124,7 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
 
     // Case 2: Scan with a timestamp greater than most recent timestamp
     // (in this case > 1000 and < LATEST_TIMESTAMP. Should get 2 rows.
-    
+
     count = 0;
     scan = new Scan();
     scan.setTimeRange(1000L, Long.MAX_VALUE);
@@ -139,10 +139,10 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     } finally {
       s.close();
     }
-    
+
     // Case 3: scan with timestamp equal to most recent timestamp
     // (in this case == 1000. Should get 2 rows.
-    
+
     count = 0;
     scan = new Scan();
     scan.setTimeStamp(1000L);
@@ -157,10 +157,10 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     } finally {
       s.close();
     }
-    
+
     // Case 4: scan with timestamp greater than first timestamp but less than
     // second timestamp (100 < timestamp < 1000). Should get 2 rows.
-    
+
     count = 0;
     scan = new Scan();
     scan.setTimeRange(100L, 1000L);
@@ -175,10 +175,10 @@ public class TestScanMultipleVersions extends HBaseClusterTestCase {
     } finally {
       s.close();
     }
-    
+
     // Case 5: scan with timestamp equal to first timestamp (100)
     // Should get 2 rows.
-    
+
     count = 0;
     scan = new Scan();
     scan.setTimeStamp(100L);

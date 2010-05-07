@@ -23,7 +23,7 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
- * Thrown when a scanner has timed out. 
+ * Thrown when a scanner has timed out.
  */
 public class ScannerTimeoutException extends DoNotRetryIOException {
 

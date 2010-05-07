@@ -36,13 +36,13 @@ import org.apache.hadoop.hbase.HServerInfo;
  */
 public class OOMEHMaster extends HMaster {
   private List<byte []> retainer = new ArrayList<byte[]>();
-  
+
   public OOMEHMaster(HBaseConfiguration conf) throws IOException {
     super(conf);
   }
-  
+
   @Override
-  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg[] msgs, 
+  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg[] msgs,
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
     // Retain 1M.

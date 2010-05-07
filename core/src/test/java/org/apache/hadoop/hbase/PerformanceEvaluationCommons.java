@@ -33,13 +33,13 @@ import org.apache.commons.logging.LogFactory;
 public class PerformanceEvaluationCommons {
   static final Log LOG =
     LogFactory.getLog(PerformanceEvaluationCommons.class.getName());
-  
+
   public static void assertValueSize(final int expectedSize, final int got) {
     if (got != expectedSize) {
       throw new AssertionError("Expected " + expectedSize + " but got " + got);
     }
   }
-  
+
   public static void assertKey(final byte [] expected, final ByteBuffer got) {
     byte [] b = new byte[got.limit()];
     got.get(b, 0, got.limit());
@@ -53,7 +53,7 @@ public class PerformanceEvaluationCommons {
         " but got " + org.apache.hadoop.hbase.util.Bytes.toString(got));
     }
   }
-  
+
   public static void concurrentReads(final Runnable r) {
     final int count = 1;
     long now = System.currentTimeMillis();

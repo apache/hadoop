@@ -112,11 +112,11 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
   private BitSet __isset_bit_vector = new BitSet(1);
 
   public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.IS_DELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT, 
+    put(_Fields.IS_DELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT, 
+    put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
-    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT, 
+    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
         new FieldValueMetaData(TType.STRING)));
   }});
 
@@ -411,7 +411,7 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     while (true)
     {
       field = iprot.readFieldBegin();
-      if (field.type == TType.STOP) { 
+      if (field.type == TType.STOP) {
         break;
       }
       _Fields fieldId = _Fields.findByThriftId(field.id);
@@ -423,21 +423,21 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
             if (field.type == TType.BOOL) {
               this.isDelete = iprot.readBool();
               setIsDeleteIsSet(true);
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
           case COLUMN:
             if (field.type == TType.STRING) {
               this.column = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
           case VALUE:
             if (field.type == TType.STRING) {
               this.value = iprot.readBinary();
-            } else { 
+            } else {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;

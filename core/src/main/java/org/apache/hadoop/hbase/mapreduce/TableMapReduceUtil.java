@@ -41,11 +41,11 @@ import org.apache.hadoop.conf.Configuration;
  */
 @SuppressWarnings("unchecked")
 public class TableMapReduceUtil {
-  
+
   /**
-   * Use this before submitting a TableMap job. It will appropriately set up 
+   * Use this before submitting a TableMap job. It will appropriately set up
    * the job.
-   * 
+   *
    * @param table  The table name to read from.
    * @param scan  The scan instance with the columns, time range etc.
    * @param mapper  The mapper class to use.
@@ -55,8 +55,8 @@ public class TableMapReduceUtil {
    * @throws IOException When setting up the details fails.
    */
   public static void initTableMapperJob(String table, Scan scan,
-      Class<? extends TableMapper> mapper, 
-      Class<? extends WritableComparable> outputKeyClass, 
+      Class<? extends TableMapper> mapper,
+      Class<? extends WritableComparable> outputKeyClass,
       Class<? extends Writable> outputValueClass, Job job) throws IOException {
     job.setInputFormatClass(TableInputFormat.class);
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
@@ -69,13 +69,13 @@ public class TableMapReduceUtil {
 
   /**
    * Writes the given scan into a Base64 encoded string.
-   * 
+   *
    * @param scan  The scan to write out.
    * @return The scan saved in a Base64 encoded string.
    * @throws IOException When writing the scan fails.
    */
   static String convertScanToString(Scan scan) throws IOException {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();  
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(out);
     scan.write(dos);
     return Base64.encodeBytes(out.toByteArray());
@@ -83,7 +83,7 @@ public class TableMapReduceUtil {
 
   /**
    * Converts the given Base64 string back into a Scan instance.
-   * 
+   *
    * @param base64  The scan details.
    * @return The newly created Scan instance.
    * @throws IOException When reading the scan instance fails.
@@ -95,15 +95,15 @@ public class TableMapReduceUtil {
     scan.readFields(dis);
     return scan;
   }
-  
+
   /**
    * Use this before submitting a TableReduce job. It will
    * appropriately set up the JobConf.
-   * 
+   *
    * @param table  The output table.
    * @param reducer  The reducer class to use.
    * @param job  The current job to adjust.
-   * @throws IOException When determining the region count fails. 
+   * @throws IOException When determining the region count fails.
    */
   public static void initTableReducerJob(String table,
     Class<? extends TableReducer> reducer, Job job)
@@ -131,16 +131,16 @@ public class TableMapReduceUtil {
   /**
    * Use this before submitting a TableReduce job. It will
    * appropriately set up the JobConf.
-   * 
+   *
    * @param table  The output table.
    * @param reducer  The reducer class to use.
    * @param job  The current job to adjust.
-   * @param partitioner  Partitioner to use. Pass <code>null</code> to use 
+   * @param partitioner  Partitioner to use. Pass <code>null</code> to use
    * default partitioner.
    * @param quorumAddress Distant cluster to write to
    * @param serverClass redefined hbase.regionserver.class
    * @param serverImpl redefined hbase.regionserver.impl
-   * @throws IOException When determining the region count fails. 
+   * @throws IOException When determining the region count fails.
    */
   public static void initTableReducerJob(String table,
     Class<? extends TableReducer> reducer, Job job,
@@ -177,17 +177,17 @@ public class TableMapReduceUtil {
       job.setPartitionerClass(partitioner);
     }
   }
-  
+
   /**
-   * Ensures that the given number of reduce tasks for the given job 
-   * configuration does not exceed the number of regions for the given table. 
-   * 
+   * Ensures that the given number of reduce tasks for the given job
+   * configuration does not exceed the number of regions for the given table.
+   *
    * @param table  The table to get the region count for.
    * @param job  The current job to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void limitNumReduceTasks(String table, Job job) 
-  throws IOException { 
+  public static void limitNumReduceTasks(String table, Job job)
+  throws IOException {
     HTable outputTable = new HTable(job.getConfiguration(), table);
     int regions = outputTable.getRegionsInfo().size();
     if (job.getNumReduceTasks() > regions)
@@ -195,25 +195,25 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets the number of reduce tasks for the given job configuration to the 
-   * number of regions the given table has. 
-   * 
+   * Sets the number of reduce tasks for the given job configuration to the
+   * number of regions the given table has.
+   *
    * @param table  The table to get the region count for.
    * @param job  The current job to adjust.
    * @throws IOException When retrieving the table details fails.
    */
-  public static void setNumReduceTasks(String table, Job job) 
-  throws IOException { 
+  public static void setNumReduceTasks(String table, Job job)
+  throws IOException {
     HTable outputTable = new HTable(job.getConfiguration(), table);
     int regions = outputTable.getRegionsInfo().size();
     job.setNumReduceTasks(regions);
   }
-  
+
   /**
    * Sets the number of rows to return and cache with each scanner iteration.
    * Higher caching values will enable faster mapreduce jobs at the expense of
    * requiring more heap to contain the cached rows.
-   * 
+   *
    * @param job The current job to adjust.
    * @param batchSize The number of rows to return in batch with each scanner
    * iteration.
@@ -221,5 +221,5 @@ public class TableMapReduceUtil {
   public static void setScannerCaching(Job job, int batchSize) {
     job.getConfiguration().setInt("hbase.client.scanner.caching", batchSize);
   }
-  
+
 }

@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Keeps track of the columns for a scan if they are not explicitly specified
  */
 public class ScanWildcardColumnTracker implements ColumnTracker {
-  private static final Log LOG = 
+  private static final Log LOG =
     LogFactory.getLog(ScanWildcardColumnTracker.class);
   private byte [] columnBuffer = null;
   private int columnOffset = 0;
@@ -103,7 +103,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     currentCount = 0;
     if (++currentCount > maxVersions)
       return MatchCode.SKIP;
-    return MatchCode.INCLUDE;    
+    return MatchCode.INCLUDE;
   }
 
   @Override
@@ -122,7 +122,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * Used by matcher and scan/get to get a hint of the next column
    * to seek to after checkColumn() returns SKIP.  Returns the next interesting
    * column we want, or NULL there is none (wildcard scanner).
-   * 
+   *
    * @return The column count.
    */
   public ColumnCount getColumnHint() {
@@ -131,7 +131,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
 
 
   /**
-   * We can never know a-priori if we are done, so always return false. 
+   * We can never know a-priori if we are done, so always return false.
    * @return false
    */
   @Override

@@ -67,7 +67,7 @@ public class TestMemStore extends TestCase {
       found.getValue()));
   }
 
-  /** 
+  /**
    * Test memstore snapshot happening while scanning.
    * @throws IOException
    */
@@ -150,7 +150,7 @@ public class TestMemStore extends TestCase {
     assertEquals(rowCount, count);
   }
 
-  /** 
+  /**
    * Test memstore snapshots
    * @throws IOException
    */
@@ -176,12 +176,12 @@ public class TestMemStore extends TestCase {
     KeyValue key0 = new KeyValue(row, family, qf, stamps[0], values[0]);
     KeyValue key1 = new KeyValue(row, family, qf, stamps[1], values[1]);
     KeyValue key2 = new KeyValue(row, family, qf, stamps[2], values[2]);
-    
+
     m.add(key0);
     m.add(key1);
     m.add(key2);
-    
-    assertTrue("Expected memstore to hold 3 values, actually has " + 
+
+    assertTrue("Expected memstore to hold 3 values, actually has " +
         m.kvset.size(), m.kvset.size() == 3);
   }
 
@@ -222,7 +222,7 @@ public class TestMemStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
 
   /** Test getNextRow from memstore
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void testGetNextRow() throws Exception {
     addRows(this.memstore);
@@ -265,7 +265,7 @@ public class TestMemStore extends TestCase {
       }
     }
   }
-  
+
   public void testGet_Basic_Found() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -273,7 +273,7 @@ public class TestMemStore extends TestCase {
     byte [] qf2 = Bytes.toBytes("testqualifier2");
     byte [] qf3 = Bytes.toBytes("testqualifier3");
     byte [] val = Bytes.toBytes("testval");
-    
+
     //Setting up memstore
     KeyValue add1 = new KeyValue(row, fam ,qf1, val);
     KeyValue add2 = new KeyValue(row, fam ,qf2, val);
@@ -281,7 +281,7 @@ public class TestMemStore extends TestCase {
     memstore.add(add1);
     memstore.add(add2);
     memstore.add(add3);
-    
+
     //test
     Get get = new Get(row);
     NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
@@ -290,12 +290,12 @@ public class TestMemStore extends TestCase {
 
     QueryMatcher matcher =
       new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-    
+
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memstore.get(matcher, result);
     assertEquals(true, res);
   }
-  
+
   public void testGet_Basic_NotFound() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -303,13 +303,13 @@ public class TestMemStore extends TestCase {
     byte [] qf2 = Bytes.toBytes("testqualifier2");
     byte [] qf3 = Bytes.toBytes("testqualifier3");
     byte [] val = Bytes.toBytes("testval");
-    
+
     //Setting up memstore
     KeyValue add1 = new KeyValue(row, fam ,qf1, val);
     KeyValue add3 = new KeyValue(row, fam ,qf3, val);
     memstore.add(add1);
     memstore.add(add3);
-    
+
     //test
     Get get = new Get(row);
     NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
@@ -318,7 +318,7 @@ public class TestMemStore extends TestCase {
 
     QueryMatcher matcher =
       new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-    
+
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memstore.get(matcher, result);
     assertEquals(false, res);
@@ -333,7 +333,7 @@ public class TestMemStore extends TestCase {
     byte [] qf4 = Bytes.toBytes("testqualifier4");
     byte [] qf5 = Bytes.toBytes("testqualifier5");
     byte [] val = Bytes.toBytes("testval");
-    
+
     //Creating get
     Get get = new Get(row);
     NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
@@ -343,7 +343,7 @@ public class TestMemStore extends TestCase {
 
     QueryMatcher matcher =
       new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-    
+
     //Setting up memstore
     memstore.add(new KeyValue(row, fam ,qf1, val));
     memstore.add(new KeyValue(row, fam ,qf2, val));
@@ -356,12 +356,12 @@ public class TestMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam ,qf4, val));
     memstore.add(new KeyValue(row, fam ,qf5, val));
     assertEquals(2, memstore.kvset.size());
-    
+
     List<KeyValue> result = new ArrayList<KeyValue>();
     boolean res = memstore.get(matcher, result);
     assertEquals(true, res);
   }
-  
+
   public void testGet_SpecificTimeStamp() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -369,11 +369,11 @@ public class TestMemStore extends TestCase {
     byte [] qf2 = Bytes.toBytes("testqualifier2");
     byte [] qf3 = Bytes.toBytes("testqualifier3");
     byte [] val = Bytes.toBytes("testval");
-    
+
     long ts1 = System.currentTimeMillis();
     long ts2 = ts1++;
     long ts3 = ts2++;
-    
+
     //Creating get
     Get get = new Get(row);
     get.setTimeStamp(ts2);
@@ -385,7 +385,7 @@ public class TestMemStore extends TestCase {
 
     QueryMatcher matcher = new QueryMatcher(get, fam, columns, ttl,
       KeyValue.KEY_COMPARATOR, 1);
-    
+
     //Setting up expected
     List<KeyValue> expected = new ArrayList<KeyValue>();
     KeyValue kv1 = new KeyValue(row, fam ,qf1, ts2, val);
@@ -394,7 +394,7 @@ public class TestMemStore extends TestCase {
     expected.add(kv1);
     expected.add(kv2);
     expected.add(kv3);
-    
+
     //Setting up memstore
     memstore.add(new KeyValue(row, fam ,qf1, ts1, val));
     memstore.add(new KeyValue(row, fam ,qf2, ts1, val));
@@ -405,11 +405,11 @@ public class TestMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam ,qf1, ts3, val));
     memstore.add(new KeyValue(row, fam ,qf2, ts3, val));
     memstore.add(new KeyValue(row, fam ,qf3, ts3, val));
-    
+
     //Get
     List<KeyValue> result = new ArrayList<KeyValue>();
     memstore.get(matcher, result);
-    
+
     assertEquals(expected.size(), result.size());
     for(int i=0; i<expected.size(); i++){
       assertEquals(expected.get(i), result.get(i));
@@ -424,7 +424,7 @@ public class TestMemStore extends TestCase {
     byte [] fam = Bytes.toBytes("testfamily");
     byte [] qf1 = Bytes.toBytes("testqualifier");
     byte [] val = Bytes.toBytes("testval");
-    
+
     long ts1 = System.nanoTime();
     KeyValue put1 = new KeyValue(row, fam, qf1, ts1, val);
     long ts2 = ts1 + 1;
@@ -434,9 +434,9 @@ public class TestMemStore extends TestCase {
     memstore.add(put1);
     memstore.add(put2);
     memstore.add(put3);
-    
+
     assertEquals(3, memstore.kvset.size());
-    
+
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
     memstore.delete(del2);
 
@@ -444,20 +444,20 @@ public class TestMemStore extends TestCase {
     expected.add(put3);
     expected.add(del2);
     expected.add(put1);
-    
+
     assertEquals(3, memstore.kvset.size());
     int i = 0;
     for(KeyValue kv : memstore.kvset) {
       assertEquals(expected.get(i++), kv);
     }
   }
-  
+
   public void testGetWithDeleteColumn() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
     byte [] qf1 = Bytes.toBytes("testqualifier");
     byte [] val = Bytes.toBytes("testval");
-    
+
     long ts1 = System.nanoTime();
     KeyValue put1 = new KeyValue(row, fam, qf1, ts1, val);
     long ts2 = ts1 + 1;
@@ -467,25 +467,25 @@ public class TestMemStore extends TestCase {
     memstore.add(put1);
     memstore.add(put2);
     memstore.add(put3);
-    
+
     assertEquals(3, memstore.kvset.size());
-    
-    KeyValue del2 = 
+
+    KeyValue del2 =
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
     memstore.delete(del2);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(put3);
     expected.add(del2);
-    
+
     assertEquals(2, memstore.kvset.size());
     int i = 0;
     for (KeyValue kv: memstore.kvset) {
       assertEquals(expected.get(i++), kv);
     }
   }
-  
-  
+
+
   public void testGetWithDeleteFamily() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -494,7 +494,7 @@ public class TestMemStore extends TestCase {
     byte [] qf3 = Bytes.toBytes("testqualifier3");
     byte [] val = Bytes.toBytes("testval");
     long ts = System.nanoTime();
-    
+
     KeyValue put1 = new KeyValue(row, fam, qf1, ts, val);
     KeyValue put2 = new KeyValue(row, fam, qf2, ts, val);
     KeyValue put3 = new KeyValue(row, fam, qf3, ts, val);
@@ -504,22 +504,22 @@ public class TestMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
     memstore.add(put4);
-    
-    KeyValue del = 
+
+    KeyValue del =
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
     memstore.delete(del);
 
     List<KeyValue> expected = new ArrayList<KeyValue>();
     expected.add(del);
     expected.add(put4);
-    
+
     assertEquals(2, memstore.kvset.size());
     int i = 0;
     for (KeyValue kv: memstore.kvset) {
       assertEquals(expected.get(i++), kv);
     }
   }
-  
+
   public void testKeepDeleteInmemstore() {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -570,30 +570,30 @@ public class TestMemStore extends TestCase {
     assertEquals(delete, memstore.kvset.first());
   }
 
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
-  //////////////////////////////////////////////////////////////////////////////  
+  //////////////////////////////////////////////////////////////////////////////
   private byte [] makeQualifier(final int i1, final int i2){
     return Bytes.toBytes(Integer.toString(i1) + ";" +
         Integer.toString(i2));
   }
-  
+
   /**
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
    * @return How many rows we added.
-   * @throws IOException 
+   * @throws IOException
    */
   private int addRows(final MemStore hmc) {
     return addRows(hmc, HConstants.LATEST_TIMESTAMP);
   }
-  
+
   /**
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
    * @return How many rows we added.
-   * @throws IOException 
+   * @throws IOException
    */
   private int addRows(final MemStore hmc, final long ts) {
     for (int i = 0; i < ROW_COUNT; i++) {

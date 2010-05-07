@@ -40,7 +40,7 @@ implements HConstants {
   private final byte [] col4 = Bytes.toBytes("col4");
   private final byte [] col5 = Bytes.toBytes("col5");
 
-  
+
   public void testGet_SingleVersion(){
     if(PRINT){
       System.out.println("SingleVersion");
@@ -58,9 +58,9 @@ implements HConstants {
     expected.add(MatchCode.INCLUDE);
     expected.add(MatchCode.DONE);
     int maxVersions = 1;
-    
+
     ColumnTracker exp = new ExplicitColumnTracker(columns, maxVersions);
-        
+
     //Create "Scanner"
     List<byte[]> scanner = new ArrayList<byte[]>();
     scanner.add(col1);
@@ -68,15 +68,15 @@ implements HConstants {
     scanner.add(col3);
     scanner.add(col4);
     scanner.add(col5);
-    
+
     //Initialize result
-    List<MatchCode> result = new ArrayList<MatchCode>(); 
-    
+    List<MatchCode> result = new ArrayList<MatchCode>();
+
     //"Match"
     for(byte [] col : scanner){
       result.add(exp.checkColumn(col, 0, col.length));
     }
-    
+
     assertEquals(expected.size(), result.size());
     for(int i=0; i< expected.size(); i++){
       assertEquals(expected.get(i), result.get(i));
@@ -86,18 +86,18 @@ implements HConstants {
       }
     }
   }
-  
+
   public void testGet_MultiVersion(){
     if(PRINT){
       System.out.println("\nMultiVersion");
     }
-    
+
     //Create tracker
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     //Looking for every other
     columns.add(col2);
     columns.add(col4);
-    
+
     List<MatchCode> expected = new ArrayList<MatchCode>();
     expected.add(MatchCode.SKIP);
     expected.add(MatchCode.SKIP);
@@ -119,9 +119,9 @@ implements HConstants {
     expected.add(MatchCode.DONE);
     expected.add(MatchCode.DONE);
     int maxVersions = 2;
-    
+
     ColumnTracker exp = new ExplicitColumnTracker(columns, maxVersions);
-        
+
     //Create "Scanner"
     List<byte[]> scanner = new ArrayList<byte[]>();
     scanner.add(col1);
@@ -139,15 +139,15 @@ implements HConstants {
     scanner.add(col5);
     scanner.add(col5);
     scanner.add(col5);
-    
+
     //Initialize result
-    List<MatchCode> result = new ArrayList<MatchCode>(); 
-    
+    List<MatchCode> result = new ArrayList<MatchCode>();
+
     //"Match"
     for(byte [] col : scanner){
       result.add(exp.checkColumn(col, 0, col.length));
     }
-    
+
     assertEquals(expected.size(), result.size());
     for(int i=0; i< expected.size(); i++){
       assertEquals(expected.get(i), result.get(i));
@@ -182,5 +182,5 @@ implements HConstants {
     }
   }
 
-  
+
 }

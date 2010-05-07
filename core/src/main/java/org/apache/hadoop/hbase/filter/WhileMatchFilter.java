@@ -30,7 +30,7 @@ import java.io.IOException;
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
  * as the wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
  * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)},
- * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or 
+ * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or
  * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
  * returns true.
  */

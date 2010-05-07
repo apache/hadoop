@@ -46,7 +46,7 @@ import org.apache.hadoop.io.RawComparator;
  */
 public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
-  
+
   private static String ROOT_DIR =
     System.getProperty("test.build.data", "/tmp/TestHFile");
   private final int minBlockSize = 512;
@@ -55,7 +55,7 @@ public class TestHFile extends HBaseTestCase {
   /**
    * Test empty HFile.
    * Test all features work reasonably when hfile is empty of entries.
-   * @throws IOException 
+   * @throws IOException
    */
   public void testEmptyHFile() throws IOException {
     Path f = new Path(ROOT_DIR, getName());
@@ -216,7 +216,7 @@ public class TestHFile extends HBaseTestCase {
     metablocks("none");
     metablocks("gz");
   }
-  
+
   public void testNullMetaBlocks() throws Exception {
     Path mFile = new Path(ROOT_DIR, "nometa.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
@@ -238,8 +238,8 @@ public class TestHFile extends HBaseTestCase {
     assertTrue(Compression.Algorithm.GZ.ordinal() == 1);
     assertTrue(Compression.Algorithm.NONE.ordinal() == 2);
   }
-  
-  
+
+
   public void testComparator() throws IOException {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
@@ -249,7 +249,7 @@ public class TestHFile extends HBaseTestCase {
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
             int l2) {
           return -Bytes.compareTo(b1, s1, l1, b2, s2, l2);
-          
+
         }
         @Override
         public int compare(byte[] o1, byte[] o2) {
@@ -261,7 +261,7 @@ public class TestHFile extends HBaseTestCase {
     writer.append("1".getBytes(), "0".getBytes());
     writer.close();
   }
-  
+
   /**
    * Checks if the HeapSize calculator is within reason
    */
@@ -270,7 +270,7 @@ public class TestHFile extends HBaseTestCase {
     Class cl = null;
     long expected = 0L;
     long actual = 0L;
-    
+
     cl = BlockIndex.class;
     expected = ClassSize.estimateBase(cl, false);
     BlockIndex bi = new BlockIndex(Bytes.BYTES_RAWCOMPARATOR);
@@ -284,5 +284,5 @@ public class TestHFile extends HBaseTestCase {
       assertEquals(expected, actual);
     }
   }
-  
+
 }

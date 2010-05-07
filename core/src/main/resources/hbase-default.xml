@@ -66,7 +66,7 @@
     <value>2097152</value>
     <description>Size of the write buffer in bytes. A bigger buffer takes more
     memory -- on both the client and server side since server instantiates
-    the passed write buffer to process it -- but reduces the number of RPC.  
+    the passed write buffer to process it -- but reduces the number of RPC.
     For an estimate of server-side memory-used, evaluate
     hbase.client.write.buffer * hbase.regionserver.handler.count
     </description>
@@ -143,7 +143,7 @@
     instance. This is to set an upper boundary for a single entry saved in a
     storage file. Since they cannot be split it helps avoiding that a region
     cannot be split any further because the data is too large. It seems wise
-    to set this to a fraction of the maximum region size. Setting it to zero 
+    to set this to a fraction of the maximum region size. Setting it to zero
     or less disables the check.
     </description>
   </property>
@@ -231,7 +231,7 @@
   <property>
     <name>hbase.regionserver.dns.interface</name>
     <value>default</value>
-    <description>The name of the Network Interface from which a region server 
+    <description>The name of the Network Interface from which a region server
       should report its IP address.
     </description>
   </property>
@@ -246,7 +246,7 @@
   <property>
     <name>hbase.master.dns.interface</name>
     <value>default</value>
-    <description>The name of the Network Interface from which a master 
+    <description>The name of the Network Interface from which a master
       should report its IP address.
     </description>
   </property>
@@ -254,14 +254,14 @@
     <name>hbase.master.dns.nameserver</name>
     <value>default</value>
     <description>The host name or IP address of the name server (DNS)
-      which a master should use to determine the host name used 
+      which a master should use to determine the host name used
       for communication and display purposes.
     </description>
   </property>
   <property>
     <name>hbase.regionserver.global.memstore.upperLimit</name>
     <value>0.4</value>
-    <description>Maximum size of all memstores in a region server before new 
+    <description>Maximum size of all memstores in a region server before new
       updates are blocked and flushes are forced. Defaults to 40% of heap
     </description>
   </property>
@@ -269,12 +269,12 @@
     <name>hbase.regionserver.global.memstore.lowerLimit</name>
     <value>0.35</value>
     <description>When memstores are being forced to flush to make room in
-      memory, keep flushing until we hit this mark. Defaults to 30% of heap. 
+      memory, keep flushing until we hit this mark. Defaults to 30% of heap.
       This value equal to hbase.regionserver.global.memstore.upperLimit causes
-      the minimum possible flushing to occur when updates are blocked due to 
+      the minimum possible flushing to occur when updates are blocked due to
       memstore limiting.
     </description>
-  </property>  
+  </property>
   <property>
     <name>hbase.hbasemaster.maxregionopen</name>
     <value>120000</value>
@@ -359,7 +359,7 @@
     During a compaction, updates cannot be flushed to disk.  Long
     compactions require memory sufficient to carry the logging of
     all updates across the duration of the compaction.
-    
+
     If too large, clients timeout during compaction.
     </description>
   </property>

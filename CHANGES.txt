@@ -549,6 +549,8 @@ Release 0.21.0 - Unreleased
                (Bogdan DRAGU via Stack)
    HBASE-2496  Less ArrayList churn on the scan path
    HBASE-2414  Enhance test suite to be able to specify distributed scenarios
+   HBASE-2518  Kill all the trailing whitespaces in the code base
+               (Benoit Sigoure via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

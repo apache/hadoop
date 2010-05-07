@@ -36,15 +36,15 @@ import java.io.IOException;
  *
  * There are several server classes in HBase that need to track external
  * clients that occasionally send heartbeats.
- * 
+ *
  * <p>These external clients hold resources in the server class.
  * Those resources need to be released if the external client fails to send a
  * heartbeat after some interval of time passes.
  *
  * <p>The Leases class is a general reusable class for this kind of pattern.
- * An instance of the Leases class will create a thread to do its dirty work.  
+ * An instance of the Leases class will create a thread to do its dirty work.
  * You should close() the instance if you want to clean up the thread properly.
- * 
+ *
  * <p>
  * NOTE: This class extends Thread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
@@ -60,7 +60,7 @@ public class Leases extends Thread {
 
   /**
    * Creates a lease monitor
-   * 
+   *
    * @param leasePeriod - length of time (milliseconds) that the lease is valid
    * @param leaseCheckFrequency - how often the lease should be checked
    * (milliseconds)
@@ -114,9 +114,9 @@ public class Leases extends Thread {
   public void closeAfterLeasesExpire() {
     this.stopRequested = true;
   }
-  
+
   /**
-   * Shut down this Leases instance.  All pending leases will be destroyed, 
+   * Shut down this Leases instance.  All pending leases will be destroyed,
    * without any cancellation calls.
    */
   public void close() {
@@ -132,10 +132,10 @@ public class Leases extends Thread {
 
   /**
    * Obtain a lease
-   * 
+   *
    * @param leaseName name of the lease
    * @param listener listener that will process lease expirations
-   * @throws LeaseStillHeldException 
+   * @throws LeaseStillHeldException
    */
   public void createLease(String leaseName, final LeaseListener listener)
   throws LeaseStillHeldException {
@@ -160,25 +160,25 @@ public class Leases extends Thread {
   @SuppressWarnings("serial")
   public static class LeaseStillHeldException extends IOException {
     private final String leaseName;
-    
+
     /**
      * @param name
      */
     public LeaseStillHeldException(final String name) {
       this.leaseName = name;
     }
-    
+
     /** @return name of lease */
     public String getName() {
       return this.leaseName;
     }
   }
-  
+
   /**
    * Renew a lease
-   * 
+   *
    * @param leaseName name of lease
-   * @throws LeaseException 
+   * @throws LeaseException
    */
   public void renewLease(final String leaseName) throws LeaseException {
     synchronized (leaseQueue) {
@@ -197,9 +197,9 @@ public class Leases extends Thread {
 
   /**
    * Client explicitly cancels a lease.
-   * 
+   *
    * @param leaseName name of lease
-   * @throws LeaseException 
+   * @throws LeaseException
    */
   public void cancelLease(final String leaseName) throws LeaseException {
     synchronized (leaseQueue) {
@@ -227,7 +227,7 @@ public class Leases extends Thread {
     public String getLeaseName() {
       return leaseName;
     }
-    
+
     /** @return listener */
     public LeaseListener getListener() {
       return this.listener;
@@ -246,7 +246,7 @@ public class Leases extends Thread {
       }
       return this.hashCode() == ((Lease) obj).hashCode();
     }
-    
+
     @Override
     public int hashCode() {
       return this.leaseName.hashCode();

@@ -40,7 +40,7 @@ import java.util.TreeSet;
  * Used to perform Get operations on a single row.
  * <p>
  * To get everything for a row, instantiate a Get object with the row to get.
- * To further define the scope of what to get, perform additional methods as 
+ * To further define the scope of what to get, perform additional methods as
  * outlined below.
  * <p>
  * To get all columns from specific families, execute {@link #addFamily(byte[]) addFamily}
@@ -68,7 +68,7 @@ public class Get implements Writable {
   private int maxVersions = 1;
   private Filter filter = null;
   private TimeRange tr = new TimeRange();
-  private Map<byte [], NavigableSet<byte []>> familyMap = 
+  private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
 
   /** Constructor for Writable.  DO NOT USE */
@@ -205,7 +205,7 @@ public class Get implements Writable {
 
   /**
    * Method for retrieving the get's row
-   * @return row 
+   * @return row
    */
   public byte [] getRow() {
     return this.row;
@@ -233,7 +233,7 @@ public class Get implements Writable {
    */
   public int getMaxVersions() {
     return this.maxVersions;
-  } 
+  }
 
   /**
    * Method for retrieving the get's TimeRange
@@ -294,7 +294,7 @@ public class Get implements Writable {
       return sb.toString();
     }
     boolean moreThanOne = false;
-    for(Map.Entry<byte [], NavigableSet<byte[]>> entry : 
+    for(Map.Entry<byte [], NavigableSet<byte[]>> entry :
       this.familyMap.entrySet()) {
       if(moreThanOne) {
         sb.append("), ");
@@ -343,7 +343,7 @@ public class Get implements Writable {
     this.tr = new TimeRange();
     tr.readFields(in);
     int numFamilies = in.readInt();
-    this.familyMap = 
+    this.familyMap =
       new TreeMap<byte [],NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
     for(int i=0; i<numFamilies; i++) {
       byte [] family = Bytes.readByteArray(in);
@@ -376,7 +376,7 @@ public class Get implements Writable {
     }
     tr.write(out);
     out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], NavigableSet<byte []>> entry : 
+    for(Map.Entry<byte [], NavigableSet<byte []>> entry :
       familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
       NavigableSet<byte []> columnSet = entry.getValue();
@@ -400,7 +400,7 @@ public class Get implements Writable {
       return WritableFactories.newInstance(clazz, new Configuration());
     } catch (ClassNotFoundException e) {
       throw new RuntimeException("Can't find class " + className);
-    }    
+    }
   }
 
   /**

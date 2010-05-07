@@ -74,7 +74,7 @@ public class HTable implements HTableInterface {
   private int maxKeyValueSize;
 
   private long maxScannerResultSize;
-  
+
   /**
    * Creates an object to access a HBase table.
    *
@@ -134,9 +134,9 @@ public class HTable implements HTableInterface {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = conf.getInt("hbase.client.scanner.caching", 1);
-    
+
     this.maxScannerResultSize = conf.getLong(
-      HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 
+      HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
 
@@ -454,7 +454,7 @@ public class HTable implements HTableInterface {
       flushCommits();
     }
   }
-  
+
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {
@@ -653,7 +653,7 @@ public class HTable implements HTableInterface {
   public ArrayList<Put> getWriteBuffer() {
     return writeBuffer;
   }
-  
+
   /**
    * Implements the scanner interface for the HBase client.
    * If there are multiple regions in a table, this scanner will iterate

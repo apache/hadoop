@@ -39,7 +39,7 @@ public class OOMERegionServer extends HRegionServer {
   public OOMERegionServer(HBaseConfiguration conf) throws IOException {
     super(conf);
   }
-  
+
   public void put(byte [] regionName, Put put)
   throws IOException {
     super.put(regionName, put);
@@ -48,7 +48,7 @@ public class OOMERegionServer extends HRegionServer {
       this.retainer.add(put);
     }
   }
-  
+
   public static void main(String[] args) {
     HRegionServer.doMain(args, OOMERegionServer.class);
   }

@@ -27,13 +27,13 @@ import org.apache.hadoop.io.MapWritable;
 import java.io.IOException;
 
 /**
- * HRegionServers interact with the HMasterRegionInterface to report on local 
+ * HRegionServers interact with the HMasterRegionInterface to report on local
  * goings-on and to obtain data-handling instructions from the HMaster.
  * <p>Changes here need to be reflected in HbaseObjectWritable HbaseRPC#Invoker.
- * 
+ *
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
- * 
+ *
  */
 public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
 
@@ -49,16 +49,16 @@ public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
   /**
    * Called to renew lease, tell master what the region server is doing and to
    * receive new instructions from the master
-   * 
+   *
    * @param info server's address and start code
    * @param msgs things the region server wants to tell the master
-   * @param mostLoadedRegions Array of HRegionInfos that should contain the 
+   * @param mostLoadedRegions Array of HRegionInfos that should contain the
    * reporting server's most loaded regions. These are candidates for being
    * rebalanced.
    * @return instructions from the master to the region server
    * @throws IOException e
    */
-  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[], 
+  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[],
     HRegionInfo mostLoadedRegions[])
   throws IOException;
 }

@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 
-/** 
+/**
  * Instantiated to delete a table. Table must be offline.
  */
 class TableDelete extends TableOperation {
@@ -63,13 +63,13 @@ class TableDelete extends TableOperation {
         HRegion.removeRegionFromMETA(server, m.getRegionName(), i.getRegionName());
         HRegion.deleteRegion(this.master.getFileSystem(),
           this.master.getRootDir(), i);
-      
+
       } catch (IOException e) {
         LOG.error("failed to delete region " + Bytes.toString(i.getRegionName()),
           RemoteExceptionHandler.checkIOException(e));
       }
     }
-    
+
     // delete the table's folder from fs.
     this.master.getFileSystem().delete(new Path(this.master.getRootDir(),
       Bytes.toString(this.tableName)), true);

@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private MiniDFSCluster cluster;
-  
+
   @Override
   public void setUp() throws Exception {
     try {
@@ -53,7 +53,7 @@ public class TestStoreFile extends HBaseTestCase {
     }
     super.setUp();
   }
-  
+
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
@@ -75,7 +75,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
     checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf, false));
   }
-  
+
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
    * then closes it.
@@ -98,7 +98,7 @@ public class TestStoreFile extends HBaseTestCase {
       writer.close();
     }
   }
-  
+
   /**
    * Test that our mechanism of writing store files in one region to reference
    * store files in other regions works.
@@ -175,7 +175,7 @@ public class TestStoreFile extends HBaseTestCase {
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           (topScanner.isSeeked() && topScanner.next())) {
         key = topScanner.getKey();
-        
+
         assertTrue(topScanner.getReader().getComparator().compare(key.array(),
           key.arrayOffset(), key.limit(), midkey, 0, midkey.length) >= 0);
         if (first) {
@@ -184,7 +184,7 @@ public class TestStoreFile extends HBaseTestCase {
         }
       }
       LOG.info("Last in top: " + Bytes.toString(Bytes.toBytes(key)));
-      
+
       first = true;
       HFileScanner bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||

@@ -59,15 +59,15 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
 
   /**
    * Contructor where another SortedMap can be used
-   * 
-   * @param map the SortedMap to be used 
+   *
+   * @param map the SortedMap to be used
    */
   public HbaseMapWritable(SortedMap<byte[], V> map){
     conf = new AtomicReference<Configuration>();
     instance = map;
   }
-  
-  
+
+
   /** @return the conf */
   public Configuration getConf() {
     return conf.get();
@@ -97,7 +97,7 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
   public V get(Object key) {
     return instance.get(key);
   }
-  
+
   public boolean isEmpty() {
     return instance.isEmpty();
   }
@@ -149,7 +149,7 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
   public SortedMap<byte[], V> tailMap(byte[] fromKey) {
     return this.instance.tailMap(fromKey);
   }
-  
+
   // Writable
 
   /** @return the Class class for the specified id */
@@ -167,7 +167,7 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
     }
     return b;
   }
-  
+
   /**
    * @see java.lang.Object#toString()
    */

@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
 
-/** 
+/**
  * This is a customized version of the polymorphic hadoop
  * {@link ObjectWritable}.  It removes UTF8 (HADOOP-414).
  * Using {@link Text} intead of UTF-8 saves ~2% CPU between reading and writing
@@ -79,7 +79,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class HbaseObjectWritable implements Writable, Configurable {
   protected final static Log LOG = LogFactory.getLog(HbaseObjectWritable.class);
-  
+
   // Here we maintain two static maps of classes to code and vice versa.
   // Add new classes+codes as wanted or figure way to auto-generate these
   // maps from the HMasterInterface.
@@ -102,12 +102,12 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(Float.TYPE, code++);
     addToMap(Double.TYPE, code++);
     addToMap(Void.TYPE, code++);
-    
+
     // Other java types
     addToMap(String.class, code++);
     addToMap(byte [].class, code++);
     addToMap(byte [][].class, code++);
-    
+
     // Hadoop types
     addToMap(Text.class, code++);
     addToMap(Writable.class, code++);
@@ -128,7 +128,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(HServerInfo.class, code++);
     addToMap(HTableDescriptor.class, code++);
     addToMap(MapWritable.class, code++);
-    
+
     //
     // HBASE-880
     //
@@ -167,11 +167,11 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(HLog.Entry.class, code++);
     addToMap(HLog.Entry[].class, code++);
     addToMap(HLogKey.class, code++);
-    
-    // List 
+
+    // List
     addToMap(List.class, code++);
   }
-  
+
   private Class<?> declaredClass;
   private Object instance;
   private Configuration conf;
@@ -180,7 +180,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
   public HbaseObjectWritable() {
     super();
   }
-  
+
   /**
    * @param instance
    */
@@ -199,10 +199,10 @@ public class HbaseObjectWritable implements Writable, Configurable {
 
   /** @return the instance, or null if none. */
   public Object get() { return instance; }
-  
+
   /** @return the class this is meant to be. */
   public Class<?> getDeclaredClass() { return declaredClass; }
-  
+
   /**
    * Reset the instance.
    * @param instance
@@ -220,11 +220,11 @@ public class HbaseObjectWritable implements Writable, Configurable {
     return "OW[class=" + declaredClass + ",value=" + instance + "]";
   }
 
-  
+
   public void readFields(DataInput in) throws IOException {
     readObject(in, this, this.conf);
   }
-  
+
   public void write(DataOutput out) throws IOException {
     writeObject(out, instance, declaredClass, conf);
   }
@@ -234,7 +234,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     /** default constructor for writable */
     @SuppressWarnings("unused")
     public NullInstance() { super(null); }
-    
+
     /**
      * @param declaredClass
      * @param conf
@@ -243,16 +243,16 @@ public class HbaseObjectWritable implements Writable, Configurable {
       super(conf);
       this.declaredClass = declaredClass;
     }
-    
+
     public void readFields(DataInput in) throws IOException {
       this.declaredClass = CODE_TO_CLASS.get(in.readByte());
     }
-    
+
     public void write(DataOutput out) throws IOException {
       writeClassCode(out, this.declaredClass);
     }
   }
-  
+
   /**
    * Write out the code byte for passed Class.
    * @param out
@@ -291,13 +291,13 @@ public class HbaseObjectWritable implements Writable, Configurable {
    */
   @SuppressWarnings("unchecked")
   public static void writeObject(DataOutput out, Object instance,
-                                 Class declaredClass, 
+                                 Class declaredClass,
                                  Configuration conf)
   throws IOException {
 
     Object instanceObj = instance;
     Class declClass = declaredClass;
-    
+
     if (instanceObj == null) {                       // null
       instanceObj = new NullInstance(declClass, conf);
       declClass = Writable.class;
@@ -365,8 +365,8 @@ public class HbaseObjectWritable implements Writable, Configurable {
       throw new IOException("Can't write: "+instanceObj+" as "+declClass);
     }
   }
-  
-  
+
+
   /**
    * Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding.
@@ -379,7 +379,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     throws IOException {
     return readObject(in, null, conf);
   }
-    
+
   /**
    * Read a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding.
@@ -469,7 +469,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
   }
 
   @SuppressWarnings("unchecked")
-  private static Class getClassByName(Configuration conf, String className) 
+  private static Class getClassByName(Configuration conf, String className)
   throws ClassNotFoundException {
     if(conf != null) {
       return conf.getClassByName(className);
@@ -480,7 +480,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     }
     return Class.forName(className, true, cl);
   }
-  
+
   private static void addToMap(final Class<?> clazz, final byte code) {
     CLASS_TO_CODE.put(clazz, code);
     CODE_TO_CLASS.put(code, clazz);

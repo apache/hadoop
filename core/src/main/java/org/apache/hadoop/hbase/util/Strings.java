@@ -25,7 +25,7 @@ package org.apache.hadoop.hbase.util;
 public class Strings {
   public final static String DEFAULT_SEPARATOR = "=";
   public final static String DEFAULT_KEYVALUE_SEPARATOR = ", ";
-  
+
   /**
    * Append to a StringBuilder a key/value.
    * Uses default separators.

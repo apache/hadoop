@@ -35,23 +35,23 @@ import org.apache.hadoop.mapreduce.Partitioner;
  * This is used to partition the output keys into groups of keys.
  * Keys are grouped according to the regions that currently exist
  * so that each reducer fills a single region so load is distributed.
- * 
+ *
  * @param <KEY>  The type of the key.
  * @param <VALUE>  The type of the value.
  */
-public class HRegionPartitioner<KEY, VALUE> 
+public class HRegionPartitioner<KEY, VALUE>
 extends Partitioner<ImmutableBytesWritable, VALUE>
 implements Configurable {
-  
+
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
   private Configuration conf = null;
   private HTable table;
-  private byte[][] startKeys; 
-  
+  private byte[][] startKeys;
+
   /**
-   * Gets the partition number for a given key (hence record) given the total 
+   * Gets the partition number for a given key (hence record) given the total
    * number of partitions i.e. number of reduce-tasks for the job.
-   *   
+   *
    * <p>Typically a hash function on a all or a subset of the key.</p>
    *
    * @param key  The key to be partitioned.
@@ -80,7 +80,7 @@ implements Configurable {
       if (Bytes.compareTo(region, this.startKeys[i]) == 0 ){
         if (i >= numPartitions-1){
           // cover if we have less reduces then regions.
-          return (Integer.toString(i).hashCode() 
+          return (Integer.toString(i).hashCode()
               & Integer.MAX_VALUE) % numPartitions;
         }
         return i;
@@ -92,7 +92,7 @@ implements Configurable {
 
   /**
    * Returns the current configuration.
-   *  
+   *
    * @return The current configuration.
    * @see org.apache.hadoop.conf.Configurable#getConf()
    */
@@ -104,7 +104,7 @@ implements Configurable {
   /**
    * Sets the configuration. This is used to determine the start keys for the
    * given table.
-   * 
+   *
    * @param configuration  The configuration to set.
    * @see org.apache.hadoop.conf.Configurable#setConf(
    *   org.apache.hadoop.conf.Configuration)
@@ -114,7 +114,7 @@ implements Configurable {
     this.conf = configuration;
     try {
       HBaseConfiguration.addHbaseResources(conf);
-      this.table = new HTable(this.conf, 
+      this.table = new HTable(this.conf,
         configuration.get(TableOutputFormat.OUTPUT_TABLE));
     } catch (IOException e) {
       LOG.error(e);

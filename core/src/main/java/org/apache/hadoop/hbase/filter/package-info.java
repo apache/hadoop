@@ -20,7 +20,7 @@
 
 /**
  * Provides row-level filters applied to HRegion scan results during calls to
- * {@link org.apache.hadoop.hbase.client.ResultScanner#next()}. 
+ * {@link org.apache.hadoop.hbase.client.ResultScanner#next()}.
 
 <p>
 Filters run the extent of a table unless you wrap your filter in a

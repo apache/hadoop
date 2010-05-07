@@ -102,7 +102,7 @@ import org.apache.hadoop.io.compress.Decompressor;
  * compression ratio over "lzo" but requires 4x CPU to compress and 2x CPU to
  * decompress, comparing to "lzo".
  * </ul>
- * 
+ *
  * For more on the background behind HFile, see <a
  * href=https://issues.apache.org/jira/browse/HBASE-3315>HBASE-61</a>.
  * <p>
@@ -124,7 +124,7 @@ import org.apache.hadoop.io.compress.Decompressor;
 public class HFile {
   static final Log LOG = LogFactory.getLog(HFile.class);
 
-  /* These values are more or less arbitrary, and they are used as a 
+  /* These values are more or less arbitrary, and they are used as a
    * form of check to make sure the file isn't completely corrupt.
    */
   final static byte [] DATABLOCKMAGIC =
@@ -133,14 +133,14 @@ public class HFile {
     { 'I', 'D', 'X', 'B', 'L', 'K', 41, 43 };
   final static byte [] METABLOCKMAGIC =
     { 'M', 'E', 'T', 'A', 'B', 'L', 'K', 99 };
-  final static byte [] TRAILERBLOCKMAGIC = 
+  final static byte [] TRAILERBLOCKMAGIC =
     { 'T', 'R', 'A', 'B', 'L', 'K', 34, 36 };
 
   /**
    * Maximum length of key in HFile.
    */
   public final static int MAXIMUM_KEY_LENGTH = Integer.MAX_VALUE;
-  
+
   /**
    * Default blocksize for hfile.
    */
@@ -269,7 +269,7 @@ public class HFile {
      * @param blocksize
      * @param compress
      * @param comparator
-     * @throws IOException 
+     * @throws IOException
      * @throws IOException
      */
     public Writer(FileSystem fs, Path path, int blocksize,
@@ -314,7 +314,7 @@ public class HFile {
       this(ostream, blocksize,
         Compression.getCompressionAlgorithmByName(compress), c);
     }
-  
+
     /**
      * Constructor that takes a stream.
      * @param ostream Stream to use.
@@ -399,13 +399,13 @@ public class HFile {
         this.compressor, 0);
       return new DataOutputStream(os);
     }
-    
+
     /*
      * Let go of block compressor and compressing stream gotten in call
      * {@link #getCompressingStream}.
      * @param dos
      * @return How much was written on this stream since it was taken out.
-     * @see #getCompressingStream() 
+     * @see #getCompressingStream()
      * @throws IOException
      */
     private int releaseCompressingStream(final DataOutputStream dos)
@@ -435,7 +435,7 @@ public class HFile {
      * from {@link Reader#loadFileInfo()}.
      * @param k Key
      * @param v Value
-     * @throws IOException 
+     * @throws IOException
      */
     public void appendFileInfo(final byte [] k, final byte [] v)
     throws IOException {
@@ -543,7 +543,7 @@ public class HFile {
     private boolean checkKey(final byte [] key, final int offset, final int length)
     throws IOException {
       boolean dupKey = false;
-      
+
       if (key == null || length <= 0) {
         throw new IOException("Key cannot be null or empty");
       }
@@ -553,7 +553,7 @@ public class HFile {
       }
       if (this.lastKeyBuffer != null) {
         int keyComp = this.comparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
-            this.lastKeyLength, key, offset, length);        
+            this.lastKeyLength, key, offset, length);
         if (keyComp > 0) {
           throw new IOException("Added a key not lexically larger than" +
             " previous key=" + Bytes.toString(key, offset, length) +
@@ -587,7 +587,7 @@ public class HFile {
       finishBlock();
 
       FixedFileTrailer trailer = new FixedFileTrailer();
-      
+
       // Write out the metadata blocks if any.
       ArrayList<Long> metaOffsets = null;
       ArrayList<Integer> metaDataSizes = null;
@@ -618,10 +618,10 @@ public class HFile {
       // Now finish off the trailer.
       trailer.dataIndexCount = blockKeys.size();
       trailer.metaIndexCount = metaNames.size();
-      
+
       trailer.totalUncompressedBytes = totalBytes;
       trailer.entryCount = entryCount;
-      
+
       trailer.compressionCodec = this.compressAlgo.ordinal();
 
       trailer.serialize(outputStream);
@@ -690,7 +690,7 @@ public class HFile {
     private BlockIndex metaIndex;
     FixedFileTrailer trailer;
     private volatile boolean fileInfoLoaded = false;
-    
+
     // Filled when we read in the trailer.
     private Compression.Algorithm compressAlgo;
 
@@ -699,7 +699,7 @@ public class HFile {
     // Stats read in when we load file info.
     private int avgKeyLen = -1;
     private int avgValueLen = -1;
-    
+
     // Used to ensure we seek correctly.
     RawComparator<byte []> comparator;
 
@@ -710,7 +710,7 @@ public class HFile {
     private final BlockCache cache;
     public int cacheHits = 0;
     public int blockLoads = 0;
-    
+
     // Whether file is from in-memory store
     private boolean inMemory = false;
 
@@ -727,8 +727,8 @@ public class HFile {
       this(null, -1, null, false);
     }
 
-    /** 
-     * Opens a HFile.  You must load the file info before you can 
+    /**
+     * Opens a HFile.  You must load the file info before you can
      * use it by calling {@link #loadFileInfo()}.
      *
      * @param fs filesystem to load from
@@ -743,8 +743,8 @@ public class HFile {
       this.name = path.toString();
     }
 
-    /** 
-     * Opens a HFile.  You must load the index before you can 
+    /**
+     * Opens a HFile.  You must load the index before you can
      * use it by calling {@link #loadFileInfo()}.
      *
      * @param fsdis input stream.  Caller is responsible for closing the passed
@@ -788,7 +788,7 @@ public class HFile {
     public long length() {
       return this.fileSize;
     }
-    
+
     public boolean inMemory() {
       return this.inMemory;
     }
@@ -909,7 +909,7 @@ public class HFile {
       } else {
         blockSize = metaIndex.blockOffsets[block+1] - metaIndex.blockOffsets[block];
       }
-      
+
       ByteBuffer buf = decompress(metaIndex.blockOffsets[block],
         longToInt(blockSize), metaIndex.blockDataSizes[block], true);
       byte [] magic = new byte[METABLOCKMAGIC.length];
@@ -1005,18 +1005,18 @@ public class HFile {
      * @param offset
      * @param compressedSize
      * @param decompressedSize
-     * 
+     *
      * @return
      * @throws IOException
      */
     private ByteBuffer decompress(final long offset, final int compressedSize,
-      final int decompressedSize, final boolean pread) 
+      final int decompressedSize, final boolean pread)
     throws IOException {
       Decompressor decompressor = null;
       ByteBuffer buf = null;
       try {
         decompressor = this.compressAlgo.getDecompressor();
-        // My guess is that the bounded range fis is needed to stop the 
+        // My guess is that the bounded range fis is needed to stop the
         // decompressor reading into next block -- IIRC, it just grabs a
         // bunch of data w/o regard to whether decompressor is coming to end of a
         // decompression.
@@ -1026,15 +1026,15 @@ public class HFile {
           decompressor, 0);
         buf = ByteBuffer.allocate(decompressedSize);
         IOUtils.readFully(is, buf.array(), 0, buf.capacity());
-        is.close();        
+        is.close();
       } finally {
         if (null != decompressor) {
-          this.compressAlgo.returnDecompressor(decompressor);          
+          this.compressAlgo.returnDecompressor(decompressor);
         }
       }
       return buf;
     }
- 
+
     /**
      * @return First key in the file.  May be null if file has no entries.
      */
@@ -1076,7 +1076,7 @@ public class HFile {
       return (this.blockIndex != null? this.blockIndex.heapSize(): 0) +
         ((this.metaIndex != null)? this.metaIndex.heapSize(): 0);
     }
- 
+
     /**
      * @return Midkey for this file.  We work with block boundaries only so
      * returned midkey is an approximation only.
@@ -1103,7 +1103,7 @@ public class HFile {
       private final Reader reader;
       private ByteBuffer block;
       private int currBlock;
-      
+
       private final boolean cacheBlocks;
       private final boolean pread;
 
@@ -1117,7 +1117,7 @@ public class HFile {
         this.cacheBlocks = cacheBlocks;
         this.pread = pread;
       }
-      
+
       public KeyValue getKeyValue() {
         if(this.block == null) {
           return null;
@@ -1179,25 +1179,25 @@ public class HFile {
         currValueLen = block.getInt();
         return true;
       }
-      
+
       public int seekTo(byte [] key) throws IOException {
         return seekTo(key, 0, key.length);
       }
-      
+
 
       public int seekTo(byte[] key, int offset, int length) throws IOException {
         int b = reader.blockContainingKey(key, offset, length);
         if (b < 0) return -1; // falls before the beginning of the file! :-(
         // Avoid re-reading the same block (that'd be dumb).
         loadBlock(b);
-        
+
         return blockSeek(key, offset, length, false);
       }
 
       /**
        * Within a loaded block, seek looking for the first key
        * that is smaller than (or equal to?) the key we are interested in.
-       * 
+       *
        * A note on the seekBefore - if you have seekBefore = true, AND the
        * first key in the block = key, then you'll get thrown exceptions.
        * @param key to find
@@ -1245,7 +1245,7 @@ public class HFile {
       public boolean seekBefore(byte [] key) throws IOException {
         return seekBefore(key, 0, key.length);
       }
-      
+
       public boolean seekBefore(byte[] key, int offset, int length)
       throws IOException {
         int b = reader.blockContainingKey(key, offset, length);
@@ -1304,7 +1304,7 @@ public class HFile {
         blockFetches++;
         return true;
       }
-      
+
       private void loadBlock(int bloc) throws IOException {
         if (block == null) {
           block = reader.readBlock(bloc, this.cacheBlocks, this.pread);
@@ -1327,7 +1327,7 @@ public class HFile {
       return trailer.toString();
     }
   }
-  
+
   /*
    * The RFile has a fixed trailer which contains offsets to other variable
    * parts of the file.  Also includes basic metadata on this file.
@@ -1347,14 +1347,14 @@ public class HFile {
     int entryCount;
     int compressionCodec;
     int version = 1;
-    
+
     FixedFileTrailer() {
       super();
     }
 
     static int trailerSize() {
       // Keep this up to date...
-      return 
+      return
       ( Bytes.SIZEOF_INT * 5 ) +
       ( Bytes.SIZEOF_LONG * 4 ) +
       TRAILERBLOCKMAGIC.length;
@@ -1386,7 +1386,7 @@ public class HFile {
 
       metaIndexOffset        = inputStream.readLong();
       metaIndexCount         = inputStream.readInt();
-      
+
       totalUncompressedBytes = inputStream.readLong();
       entryCount             = inputStream.readInt();
       compressionCodec       = inputStream.readInt();
@@ -1425,7 +1425,7 @@ public class HFile {
     /* Needed doing lookup on blocks.
      */
     final RawComparator<byte []> comparator;
-  
+
     /*
      * Shutdown default constructor
      */
@@ -1453,7 +1453,7 @@ public class HFile {
 
     /**
      * Adds a new entry in the block index.
-     * 
+     *
      * @param key Last key in the block
      * @param offset file offset where the block is stored
      * @param dataSize the uncompressed data size
@@ -1484,13 +1484,13 @@ public class HFile {
         // the block with a firstKey < key.  This means the value we want is potentially
         // in the next block.
         pos --; // in previous block.
-        
+
         return pos;
       }
       // wow, a perfect hit, how unlikely?
       return pos;
     }
-  
+
     /*
      * @return File midkey.  Inexact.  Operates on block boundaries.  Does
      * not go into blocks.
@@ -1581,12 +1581,12 @@ public class HFile {
     }
 
     public long heapSize() {
-      long heapsize = ClassSize.align(ClassSize.OBJECT + 
+      long heapsize = ClassSize.align(ClassSize.OBJECT +
           2 * Bytes.SIZEOF_INT + (3 + 1) * ClassSize.REFERENCE);
-      //Calculating the size of blockKeys 
+      //Calculating the size of blockKeys
       if(blockKeys != null) {
         //Adding array + references overhead
-        heapsize += ClassSize.align(ClassSize.ARRAY + 
+        heapsize += ClassSize.align(ClassSize.ARRAY +
             blockKeys.length * ClassSize.REFERENCE);
         //Adding bytes
         for(byte [] bs : blockKeys) {
@@ -1594,17 +1594,17 @@ public class HFile {
         }
       }
       if(blockOffsets != null) {
-        heapsize += ClassSize.align(ClassSize.ARRAY + 
+        heapsize += ClassSize.align(ClassSize.ARRAY +
             blockOffsets.length * Bytes.SIZEOF_LONG);
       }
       if(blockDataSizes != null) {
-        heapsize += ClassSize.align(ClassSize.ARRAY + 
+        heapsize += ClassSize.align(ClassSize.ARRAY +
             blockDataSizes.length * Bytes.SIZEOF_INT);
       }
-      
+
       return ClassSize.align(heapsize);
     }
-    
+
   }
 
   /*
@@ -1631,7 +1631,7 @@ public class HFile {
   /**
    * Get names of supported compression algorithms. The names are acceptable by
    * HFile.Writer.
-   * 
+   *
    * @return Array of strings, each represents a supported compression
    *         algorithm. Currently, the following compression algorithms are
    *         supported.
@@ -1658,13 +1658,13 @@ public class HFile {
   /**
    * Returns all files belonging to the given region directory. Could return an
    * empty list.
-   * 
+   *
    * @param fs  The file system reference.
    * @param regionDir  The region directory to scan.
    * @return The list of files found.
    * @throws IOException When scanning the files fails.
    */
-  static List<Path> getStoreFiles(FileSystem fs, Path regionDir) 
+  static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
   throws IOException {
     List<Path> res = new ArrayList<Path>();
     PathFilter dirFilter = new FSUtils.DirFilter(fs);
@@ -1679,7 +1679,7 @@ public class HFile {
     }
     return res;
   }
-  
+
   public static void main(String []args) throws IOException {
     try {
       // create options
@@ -1725,7 +1725,7 @@ public class HFile {
         Path regionDir = new Path(tableDir, Integer.toString(enc));
         if (verbose) System.out.println("region dir -> " + regionDir);
         List<Path> regionFiles = getStoreFiles(fs, regionDir);
-        if (verbose) System.out.println("Number of region files found -> " + 
+        if (verbose) System.out.println("Number of region files found -> " +
           regionFiles.size());
         if (verbose) {
           int i = 1;
@@ -1742,7 +1742,7 @@ public class HFile {
           System.err.println("ERROR, file doesnt exist: " + file);
           continue;
         }
-        // create reader and load file info   
+        // create reader and load file info
         HFile.Reader reader = new HFile.Reader(fs, file, null, false);
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
         // scan over file and read key/value's and check if requested
@@ -1760,9 +1760,9 @@ public class HFile {
           // check if rows are in order
           if (checkRow && pkv != null) {
             if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
-              System.err.println("WARNING, previous row is greater then" + 
-                " current row\n\tfilename -> " + file + 
-                "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) + 
+              System.err.println("WARNING, previous row is greater then" +
+                " current row\n\tfilename -> " + file +
+                "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) +
                 "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
             }
           }
@@ -1770,14 +1770,14 @@ public class HFile {
           if (checkFamily) {
             String fam = Bytes.toString(kv.getFamily());
             if (!file.toString().contains(fam)) {
-              System.err.println("WARNING, filename does not match kv family," + 
-                "\n\tfilename -> " + file + 
+              System.err.println("WARNING, filename does not match kv family," +
+                "\n\tfilename -> " + file +
                 "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
             }
             if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
               System.err.println("WARNING, previous kv has different family" +
-                " compared to current key\n\tfilename -> " + file + 
-                "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) + 
+                " compared to current key\n\tfilename -> " + file +
+                "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) +
                 "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
             }
           }
@@ -1787,7 +1787,7 @@ public class HFile {
         if (verbose || printKeyValue) {
           System.out.println("Scanned kv count -> " + count);
         }
-        // print meta data  
+        // print meta data
         if (printMeta) {
           System.out.println("Block index size as per heapsize: " + reader.indexSize());
           System.out.println(reader.toString());

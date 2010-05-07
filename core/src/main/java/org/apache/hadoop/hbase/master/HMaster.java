@@ -103,7 +103,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @see HMasterRegionInterface
  * @see Watcher
  */
-public class HMaster extends Thread implements HConstants, HMasterInterface, 
+public class HMaster extends Thread implements HConstants, HMasterInterface,
     HMasterRegionInterface, Watcher {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
@@ -121,9 +121,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private final Configuration conf;
   private final Path rootdir;
   private InfoServer infoServer;
-  private final int threadWakeFrequency; 
+  private final int threadWakeFrequency;
   private final int numRetries;
-  
+
   // Metrics is set when we call run.
   private final MasterMetrics metrics;
 
@@ -152,8 +152,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private long lastFragmentationQuery = -1L;
   private Map<String, Integer> fragmentation = null;
   private final RegionServerOperationQueue regionServerOperationQueue;
-  
-  /** 
+
+  /**
    * Constructor
    * @param conf configuration
    * @throws IOException
@@ -199,10 +199,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
-    
+
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
-    
+
     setName(MASTER);
     this.metrics = new MasterMetrics(MASTER);
     // We're almost open for business
@@ -327,7 +327,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /**
    * @return HBase root dir.
-   * @throws IOException 
+   * @throws IOException
    */
   public Path getRootDir() {
     return this.rootdir;
@@ -463,7 +463,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.fatal("Unhandled exception. Starting shutdown.", t);
       this.closed.set(true);
     }
-    
+
     // Wait for all the remaining region servers to report in.
     this.serverManager.letRegionServersShutdown();
 
@@ -536,7 +536,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           assignedRegions.put(r.getRegionName(), r);
         }
       }
-      LOG.info("Inspection found " + assignedRegions.size() + " regions, " + 
+      LOG.info("Inspection found " + assignedRegions.size() + " regions, " +
         (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
       splitLogAfterStartup();
   }
@@ -667,7 +667,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return mw;
   }
 
-  public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
+  public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[],
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
     return adornRegionServerAnswer(serverInfo,
@@ -677,7 +677,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /**
    * Override if you'd add messages to return to regionserver <code>hsi</code>
    * @param messages Messages to add to
-   * @return Messages to return to 
+   * @return Messages to return to
    */
   protected HMsg [] adornRegionServerAnswer(final HServerInfo hsi,
       final HMsg [] msgs) {
@@ -695,7 +695,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {    
+  throws IOException {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
@@ -737,7 +737,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  private synchronized void createTable(final HRegionInfo [] newRegions) 
+  private synchronized void createTable(final HRegionInfo [] newRegions)
   throws IOException {
     String tableName = newRegions[0].getTableDesc().getNameAsString();
     // 1. Check to see if table already exists. Get meta region where
@@ -778,11 +778,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
-  throws IOException {    
+  throws IOException {
     new AddColumn(this, tableName, column).process();
   }
 
-  public void modifyColumn(byte [] tableName, byte [] columnName, 
+  public void modifyColumn(byte [] tableName, byte [] columnName,
     HColumnDescriptor descriptor)
   throws IOException {
     new ModifyColumn(this, tableName, columnName, descriptor).process();
@@ -914,7 +914,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     return null;
   }
-  
+
   /**
    * Get row from meta table.
    * @param row
@@ -930,7 +930,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     get.addFamily(family);
     return srvr.get(meta.getRegionName(), get);
   }
-  
+
   /*
    * @param meta
    * @return Server connection to <code>meta</code> .META. region.
@@ -941,12 +941,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return this.connection.getHRegionConnection(meta.getServer());
   }
 
-  public void modifyTable(final byte[] tableName, HConstants.Modify op, 
+  public void modifyTable(final byte[] tableName, HConstants.Modify op,
       Writable[] args)
   throws IOException {
     switch (op) {
     case TABLE_SET_HTD:
-      if (args == null || args.length < 1 || 
+      if (args == null || args.length < 1 ||
           !(args[0] instanceof HTableDescriptor))
         throw new IOException("SET_HTD request requires an HTableDescriptor");
       HTableDescriptor htd = (HTableDescriptor) args[0];
@@ -993,12 +993,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if (args.length == 2) {
         servername = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
       }
-      // Need hri 
+      // Need hri
       Result rr = getFromMETA(regionname, HConstants.CATALOG_FAMILY);
       HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
       if (servername == null) {
         // Get server from the .META. if it wasn't passed as argument
-        servername = 
+        servername =
           Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
       }
       // Take region out of the intransistions in case it got stuck there doing
@@ -1071,12 +1071,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * When we find rows in a meta region that has an empty HRegionInfo, we
    * clean them up here.
-   * 
+   *
    * @param s connection to server serving meta region
    * @param metaRegionName name of the meta region we scanned
    * @param emptyRows the row keys that had empty HRegionInfos
    */
-  protected void deleteEmptyMetaRows(HRegionInterface s, 
+  protected void deleteEmptyMetaRows(HRegionInterface s,
       byte [] metaRegionName,
       List<byte []> emptyRows) {
     for (byte [] regionName: emptyRows) {
@@ -1098,10 +1098,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   @Override
   public void process(WatchedEvent event) {
     LOG.debug(("Event " + event.getType() +  " with path " + event.getPath()));
-    // Master should kill itself if its session expired or if its 
+    // Master should kill itself if its session expired or if its
     // znode was deleted manually (usually for testing purposes)
-    if(event.getState() == KeeperState.Expired || 
-      (event.getType().equals(EventType.NodeDeleted) && 
+    if(event.getState() == KeeperState.Expired ||
+      (event.getType().equals(EventType.NodeDeleted) &&
         event.getPath().equals(this.zooKeeperWrapper.getMasterElectionZNode())) &&
         !shutdownRequested.get()) {
 

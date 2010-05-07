@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter 
+ * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter
  * extends {@link SingleColumnValueFilter}, only the added functionality is
  * tested. That is, method filterKeyValue(KeyValue).
- * 
+ *
  * @author ferdy
  *
  */
@@ -48,7 +48,7 @@ public class TestSingleColumnValueExcludeFilter extends TestCase {
   public void testFilterKeyValue() throws Exception {
     Filter filter = new SingleColumnValueExcludeFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
         CompareOp.EQUAL, VAL_1);
-    
+
     // A 'match' situation
     KeyValue kv;
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
@@ -61,7 +61,7 @@ public class TestSingleColumnValueExcludeFilter extends TestCase {
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
     assertTrue("otherColumn", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
     assertFalse("allRemainingWhenMatch", filter.filterAllRemaining());
-    
+
     // A 'mismatch' situation
     filter.reset();
     // INCLUDE expected because test column has not yet passed
@@ -73,6 +73,6 @@ public class TestSingleColumnValueExcludeFilter extends TestCase {
     // After a mismatch (at least with LatestVersionOnly), subsequent columns are EXCLUDE
     kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
     assertTrue("otherColumn", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
-  } 
-              
+  }
+
 }

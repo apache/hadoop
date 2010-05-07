@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * A non-instantiable class that manages connections to multiple tables in
  * multiple HBase instances.
- * 
+ *
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
@@ -90,13 +90,13 @@ public class HConnectionManager implements HConstants {
   protected HConnectionManager() {
     super();
   }
-  
+
   private static final int MAX_CACHED_HBASE_INSTANCES=31;
-  // A LRU Map of master HBaseConfiguration -> connection information for that 
+  // A LRU Map of master HBaseConfiguration -> connection information for that
   // instance. The objects it contains are mutable and hence require
   // synchronized access to them.  We set instances to 31.  The zk default max
   // connections is 30 so should run into zk issues before hit this value of 31.
-  private static 
+  private static
   final Map<Integer, TableServers> HBASE_INSTANCES =
     new LinkedHashMap<Integer, TableServers>
       ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
@@ -105,10 +105,10 @@ public class HConnectionManager implements HConstants {
         return size() > MAX_CACHED_HBASE_INSTANCES;
       }
   };
-  
-  private static final Map<String, ClientZKWatcher> ZK_WRAPPERS = 
+
+  private static final Map<String, ClientZKWatcher> ZK_WRAPPERS =
     new HashMap<String, ClientZKWatcher>();
-  
+
   /**
    * Get the connection object for the instance specified by the configuration
    * If no current connection exists, create a new connection for that instance
@@ -127,7 +127,7 @@ public class HConnectionManager implements HConstants {
     }
     return connection;
   }
-  
+
   /**
    * Delete connection information for the instance specified by configuration
    * @param conf configuration
@@ -180,7 +180,7 @@ public class HConnectionManager implements HConstants {
     }
     return ZK_WRAPPERS.get(ZooKeeperWrapper.getZookeeperClusterKey(conf));
   }
-  
+
   /**
    * This class is responsible to handle connection and reconnection
    * to a zookeeper quorum.
@@ -220,7 +220,7 @@ public class HConnectionManager implements HConstants {
         resetZooKeeper();
       }
     }
-    
+
     /**
      * Get this watcher's ZKW, instanciate it if necessary.
      * @return ZKW
@@ -229,10 +229,10 @@ public class HConnectionManager implements HConstants {
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
       if(zooKeeperWrapper == null) {
         zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
-      } 
+      }
       return zooKeeperWrapper;
     }
-    
+
     /**
      * Clear this connection to zookeeper.
      */
@@ -257,25 +257,25 @@ public class HConnectionManager implements HConstants {
     private volatile boolean closed;
     private volatile HMasterInterface master;
     private volatile boolean masterChecked;
-    
+
     private final Object rootRegionLock = new Object();
     private final Object metaRegionLock = new Object();
     private final Object userRegionLock = new Object();
-        
+
     private volatile Configuration conf;
 
-    // Known region HServerAddress.toString() -> HRegionInterface 
+    // Known region HServerAddress.toString() -> HRegionInterface
     private final Map<String, HRegionInterface> servers =
       new ConcurrentHashMap<String, HRegionInterface>();
 
     // Used by master and region servers during safe mode only
-    private volatile HRegionLocation rootRegionLocation; 
-    
-    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> 
+    private volatile HRegionLocation rootRegionLocation;
+
+    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
       cachedRegionLocations =
         new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
 
-    /** 
+    /**
      * constructor
      * @param conf Configuration object
      */
@@ -287,11 +287,11 @@ public class HConnectionManager implements HConstants {
         conf.get(REGION_SERVER_CLASS, DEFAULT_REGION_SERVER_CLASS);
 
       this.closed = false;
-      
+
       try {
         this.serverInterfaceClass =
           (Class<? extends HRegionInterface>) Class.forName(serverClassName);
-        
+
       } catch (ClassNotFoundException e) {
         throw new UnsupportedOperationException(
             "Unable to find region server interface " + serverClassName, e);
@@ -301,7 +301,7 @@ public class HConnectionManager implements HConstants {
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
-      
+
       this.master = null;
       this.masterChecked = false;
     }
@@ -317,7 +317,7 @@ public class HConnectionManager implements HConstants {
     public void unsetRootRegionLocation() {
       this.rootRegionLocation = null;
     }
-    
+
     // Used by master and region servers during safe mode only
     public void setRootRegionLocation(HRegionLocation rootRegion) {
       if (rootRegion == null) {
@@ -326,7 +326,7 @@ public class HConnectionManager implements HConstants {
       }
       this.rootRegionLocation = rootRegion;
     }
-    
+
     public HMasterInterface getMaster() throws MasterNotRunningException {
       ZooKeeperWrapper zk;
       try {
@@ -347,15 +347,15 @@ public class HConnectionManager implements HConstants {
             masterLocation = zk.readMasterAddressOrThrow();
 
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
-                HMasterInterface.class, HBaseRPCProtocolVersion.versionID, 
+                HMasterInterface.class, HBaseRPCProtocolVersion.versionID,
                 masterLocation.getInetSocketAddress(), this.conf);
-            
+
             if (tryMaster.isMasterRunning()) {
               this.master = tryMaster;
               this.masterLock.notifyAll();
               break;
             }
-            
+
           } catch (IOException e) {
             if (tries == numRetries - 1) {
               // This was our last chance - don't bother sleeping
@@ -390,7 +390,7 @@ public class HConnectionManager implements HConstants {
       if (this.master == null) {
         try {
           getMaster();
-          
+
         } catch (MasterNotRunningException e) {
           return false;
         }
@@ -420,7 +420,7 @@ public class HConnectionManager implements HConstants {
       }
       return exists;
     }
-    
+
     /*
      * @param n
      * @return Truen if passed tablename <code>n</code> is equal to the name
@@ -463,11 +463,11 @@ public class HConnectionManager implements HConstants {
 
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
-    
+
     public boolean isTableEnabled(byte[] tableName) throws IOException {
       return testTableOnlineState(tableName, true);
     }
-    
+
     public boolean isTableDisabled(byte[] tableName) throws IOException {
       return testTableOnlineState(tableName, false);
     }
@@ -489,7 +489,7 @@ public class HConnectionManager implements HConstants {
             }
           }
           return true;
-        }        
+        }
       };
       MetaScanner.metaScan(conf, visitor);
       return available.get();
@@ -522,7 +522,7 @@ public class HConnectionManager implements HConstants {
       scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
       int rows = this.conf.getInt("hbase.meta.scanner.caching", 100);
       scan.setCaching(rows);
-      ScannerCallable s = new ScannerCallable(this, 
+      ScannerCallable s = new ScannerCallable(this,
           (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
               HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME), scan);
       try {
@@ -560,7 +560,7 @@ public class HConnectionManager implements HConstants {
       return rowsScanned > 0 && onOffLine;
     }
 
-    private static class HTableDescriptorFinder 
+    private static class HTableDescriptorFinder
     implements MetaScanner.MetaScannerVisitor {
         byte[] tableName;
         HTableDescriptor result;
@@ -618,18 +618,18 @@ public class HConnectionManager implements HConstants {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
       }
-            
+
       if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
         synchronized (rootRegionLock) {
           // This block guards against two threads trying to find the root
-          // region at the same time. One will go do the find while the 
+          // region at the same time. One will go do the find while the
           // second waits. The second thread will not do find.
-          
+
           if (!useCache || rootRegionLocation == null) {
             this.rootRegionLocation = locateRootRegion();
           }
           return this.rootRegionLocation;
-        }        
+        }
       } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
         return locateRegionInMeta(ROOT_TABLE_NAME, tableName, row, useCache,
                                   metaRegionLock);
@@ -658,7 +658,7 @@ public class HConnectionManager implements HConstants {
           return location;
         }
       }
-      
+
       // build the key of the meta region we should be looking for.
       // the extra 9's on the end are necessary to allow "exact" matches
       // without knowing the precise region names.
@@ -666,7 +666,7 @@ public class HConnectionManager implements HConstants {
         HConstants.NINES);
       for (int tries = 0; true; tries++) {
         if (tries >= numRetries) {
-          throw new NoServerForRegionException("Unable to find region for " 
+          throw new NoServerForRegionException("Unable to find region for "
             + Bytes.toStringBinary(row) + " after " + numRetries + " tries.");
         }
 
@@ -702,10 +702,10 @@ public class HConnectionManager implements HConstants {
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
-          byte [] value = regionInfoRow.getValue(CATALOG_FAMILY, 
+          byte [] value = regionInfoRow.getValue(CATALOG_FAMILY,
               REGIONINFO_QUALIFIER);
           if (value == null || value.length == 0) {
-            throw new IOException("HRegionInfo was null or empty in " + 
+            throw new IOException("HRegionInfo was null or empty in " +
               Bytes.toString(parentTable) + ", row=" + regionInfoRow);
           }
           // convert the row result into the HRegionLocation we need!
@@ -717,21 +717,21 @@ public class HConnectionManager implements HConstants {
               "Table '" + Bytes.toString(tableName) + "' was not found.");
           }
           if (regionInfo.isOffline()) {
-            throw new RegionOfflineException("region offline: " + 
+            throw new RegionOfflineException("region offline: " +
               regionInfo.getRegionNameAsString());
           }
-          
+
           value = regionInfoRow.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
           String serverAddress = "";
           if(value != null) {
             serverAddress = Bytes.toString(value);
           }
-          if (serverAddress.equals("")) { 
+          if (serverAddress.equals("")) {
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
               regionInfo.getRegionNameAsString());
           }
-        
+
           // instantiate the location
           location = new HRegionLocation(regionInfo,
             new HServerAddress(serverAddress));
@@ -773,10 +773,10 @@ public class HConnectionManager implements HConstants {
     /*
      * Search the cache for a location that fits our table and row key.
      * Return null if no suitable region is located. TODO: synchronization note
-     * 
+     *
      * <p>TODO: This method during writing consumes 15% of CPU doing lookup
      * into the Soft Reference SortedMap.  Improve.
-     * 
+     *
      * @param tableName
      * @param row
      * @return Null or region location found in cache.
@@ -883,7 +883,7 @@ public class HConnectionManager implements HConstants {
         }
       }
     }
-    
+
     /*
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
@@ -909,9 +909,9 @@ public class HConnectionManager implements HConstants {
      * Allows flushing the region cache.
      */
     public void clearRegionCache() {
-     cachedRegionLocations.clear();  
+     cachedRegionLocations.clear();
     }
-    
+
     /*
      * Put a newly discovered HRegionLocation into the cache.
      */
@@ -928,7 +928,7 @@ public class HConnectionManager implements HConstants {
     }
 
     public HRegionInterface getHRegionConnection(
-        HServerAddress regionServer, boolean getMaster) 
+        HServerAddress regionServer, boolean getMaster)
     throws IOException {
       if (getMaster) {
         getMaster();
@@ -941,7 +941,7 @@ public class HConnectionManager implements HConstants {
           try {
             server = (HRegionInterface)HBaseRPC.waitForProxy(
                 serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
-                regionServer.getInetSocketAddress(), this.conf, 
+                regionServer.getInetSocketAddress(), this.conf,
                 this.maxRPCAttempts, this.rpcTimeout);
           } catch (RemoteException e) {
             throw RemoteExceptionHandler.decodeRemoteException(e);
@@ -951,9 +951,9 @@ public class HConnectionManager implements HConstants {
       }
       return server;
     }
-    
+
     public HRegionInterface getHRegionConnection(
-        HServerAddress regionServer) 
+        HServerAddress regionServer)
     throws IOException {
       return getHRegionConnection(regionServer, false);
     }
@@ -969,7 +969,7 @@ public class HConnectionManager implements HConstants {
      * @return HRegionLocation for root region if found
      * @throws NoServerForRegionException - if the root region can not be
      * located after retrying
-     * @throws IOException 
+     * @throws IOException
      */
     private HRegionLocation locateRootRegion()
     throws IOException {
@@ -1022,7 +1022,7 @@ public class HConnectionManager implements HConstants {
             throw new NoServerForRegionException("Timed out trying to locate "+
                 "root region because: " + t.getMessage());
           }
-          
+
           // Sleep and retry finding root region.
           try {
             if (LOG.isDebugEnabled()) {
@@ -1036,17 +1036,17 @@ public class HConnectionManager implements HConstants {
             // continue
           }
         }
-        
+
         rootRegionAddress = null;
       }
-      
+
       // if the address is null by this point, then the retries have failed,
       // and we're sort of sunk
       if (rootRegionAddress == null) {
         throw new NoServerForRegionException(
           "unable to locate root region server");
       }
-      
+
       // return the region location
       return new HRegionLocation(
         HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
@@ -1074,9 +1074,9 @@ public class HConnectionManager implements HConstants {
           // continue
         }
       }
-      return null;    
+      return null;
     }
-    
+
     public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable)
         throws IOException, RuntimeException {
       try {

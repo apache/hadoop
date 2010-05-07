@@ -67,7 +67,7 @@ public class TestFilterList extends TestCase {
     */
     filterMPONE.reset();
     assertFalse(filterMPONE.filterAllRemaining());
-    
+
     /* Will pass both */
     byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
     for (int i = 0; i < MAX_PAGES - 1; i++) {
@@ -85,7 +85,7 @@ public class TestFilterList extends TestCase {
     KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
         Bytes.toBytes(0));
     assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
-    
+
     /* PageFilter will fail now, but should pass because we match yyy */
     rowkey = Bytes.toBytes("yyy");
     assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
@@ -93,7 +93,7 @@ public class TestFilterList extends TestCase {
     kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
         Bytes.toBytes(0));
     assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
-    
+
     /* We should filter any row */
     rowkey = Bytes.toBytes("z");
     assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
@@ -168,7 +168,7 @@ public class TestFilterList extends TestCase {
     */
     filterMPONE.reset();
     assertFalse(filterMPONE.filterAllRemaining());
-    
+
     /* We should be able to fill MAX_PAGES without incrementing page counter */
     byte [] rowkey = Bytes.toBytes("yyyyyyyy");
     for (int i = 0; i < MAX_PAGES; i++) {
@@ -178,7 +178,7 @@ public class TestFilterList extends TestCase {
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
       assertFalse(filterMPONE.filterRow());
     }
-    
+
     /* Now let's fill the page filter */
     rowkey = Bytes.toBytes("xxxxxxx");
     for (int i = 0; i < MAX_PAGES; i++) {
@@ -188,7 +188,7 @@ public class TestFilterList extends TestCase {
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
       assertFalse(filterMPONE.filterRow());
     }
-    
+
     /* We should still be able to include even though page filter is at max */
     rowkey = Bytes.toBytes("yyy");
     for (int i = 0; i < MAX_PAGES; i++) {

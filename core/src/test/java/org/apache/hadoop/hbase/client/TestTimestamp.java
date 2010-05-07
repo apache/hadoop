@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.TimestampTestBase;
  */
 public class TestTimestamp extends HBaseClusterTestCase {
   public static String COLUMN_NAME = "colfamily1";
-  
+
   /** constructor */
   public TestTimestamp() {
     super();
@@ -51,7 +51,7 @@ public class TestTimestamp extends HBaseClusterTestCase {
         cluster.flushcache();
       }
      });
-    
+
     // Perhaps drop and readd the table between tests so the former does
     // not pollute this latter?  Or put into separate tests.
     TimestampTestBase.doTestTimestampScanning(incommon, new FlushCache() {
@@ -60,8 +60,8 @@ public class TestTimestamp extends HBaseClusterTestCase {
       }
     });
   }
-  
-  /* 
+
+  /*
    * Create a table named TABLE_NAME.
    * @return An instance of an HTable connected to the created table.
    * @throws IOException

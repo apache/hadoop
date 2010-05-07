@@ -42,14 +42,14 @@ public class HTableFactory implements HTableInterfaceFactory {
 
   @Override
   public void releaseHTableInterface(HTableInterface table) {
-    try { 
+    try {
       table.close();
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
-    
+
   }
-  
-  
-  
+
+
+
 }

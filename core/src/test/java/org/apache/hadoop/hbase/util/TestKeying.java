@@ -52,7 +52,7 @@ public class TestKeying extends TestCase {
 
     checkTransform("filename");
   }
-  
+
   private void checkTransform(final String u) {
     String k = Keying.createKey(u);
     String uri = Keying.keyToUri(k);

@@ -92,7 +92,7 @@ public class TableRecordReaderImpl {
     restart(startRow);
   }
 
-  byte[] getStartRow() { 
+  byte[] getStartRow() {
     return this.startRow;
   }
   /**

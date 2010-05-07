@@ -35,8 +35,8 @@ public class RegionServerStatistics extends MetricsMBeanBase {
 
   public RegionServerStatistics(MetricsRegistry registry, String rsName) {
     super(registry, "RegionServerStatistics");
-    mbeanName = MBeanUtil.registerMBean("RegionServer", 
-        "RegionServerStatistics", this); 
+    mbeanName = MBeanUtil.registerMBean("RegionServer",
+        "RegionServerStatistics", this);
   }
 
   public void shutdown() {

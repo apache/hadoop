@@ -25,14 +25,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 class UnmodifyableHRegionInfo extends HRegionInfo {
   /*
    * Creates an unmodifyable copy of an HRegionInfo
-   * 
+   *
    * @param info
    */
   UnmodifyableHRegionInfo(HRegionInfo info) {
     super(info);
     this.tableDesc = new UnmodifyableHTableDescriptor(info.getTableDesc());
   }
-  
+
   /**
    * @param split set split status
    */

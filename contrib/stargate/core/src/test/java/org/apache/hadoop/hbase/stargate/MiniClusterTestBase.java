@@ -123,7 +123,7 @@ public class MiniClusterTestBase extends TestCase {
       LOG.warn(StringUtils.stringifyException(e));
     }
   }
-  
+
   private static void startHBase() throws Exception {
     if (hbaseCluster != null) {
       LOG.error("MiniHBaseCluster already running");
@@ -134,7 +134,7 @@ public class MiniClusterTestBase extends TestCase {
     new HTable(conf, HConstants.META_TABLE_NAME);
     LOG.info("started MiniHBaseCluster");
   }
-  
+
   private static void stopHBase() {
     if (hbaseCluster != null) try {
       HConnectionManager.deleteConnectionInfo(conf, true);

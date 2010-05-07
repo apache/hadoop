@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestFilter extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private HRegion region;
-  
+
   //
   // Rows, Qualifiers, and Values are in two groups, One and Two.
   //
@@ -64,7 +64,7 @@ public class TestFilter extends HBaseTestCase {
       Bytes.toBytes("testRowTwo-0"), Bytes.toBytes("testRowTwo-1"),
       Bytes.toBytes("testRowTwo-2"), Bytes.toBytes("testRowTwo-3")
   };
-  
+
   private static final byte [][] FAMILIES = {
     Bytes.toBytes("testFamilyOne"), Bytes.toBytes("testFamilyTwo")
   };
@@ -73,20 +73,20 @@ public class TestFilter extends HBaseTestCase {
     Bytes.toBytes("testQualifierOne-0"), Bytes.toBytes("testQualifierOne-1"),
     Bytes.toBytes("testQualifierOne-2"), Bytes.toBytes("testQualifierOne-3")
   };
-  
+
   private static final byte [][] QUALIFIERS_TWO = {
     Bytes.toBytes("testQualifierTwo-0"), Bytes.toBytes("testQualifierTwo-1"),
     Bytes.toBytes("testQualifierTwo-2"), Bytes.toBytes("testQualifierTwo-3")
   };
-  
+
   private static final byte [][] VALUES = {
     Bytes.toBytes("testValueOne"), Bytes.toBytes("testValueTwo")
   };
-  
+
   private long numRows = ROWS_ONE.length + ROWS_TWO.length;
   private long colsPerRow = FAMILIES.length * QUALIFIERS_ONE.length;
-    
-  
+
+
   protected void setUp() throws Exception {
     super.setUp();
     HTableDescriptor htd = new HTableDescriptor(getName());
@@ -94,7 +94,7 @@ public class TestFilter extends HBaseTestCase {
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     this.region = HRegion.createHRegion(info, this.testDir, this.conf);
-    
+
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
       Put p = new Put(ROW);
@@ -110,10 +110,10 @@ public class TestFilter extends HBaseTestCase {
       }
       this.region.put(p);
     }
-    
+
     // Flush
     this.region.flushcache();
-    
+
     // Insert second half (reverse families)
     for(byte [] ROW : ROWS_ONE) {
       Put p = new Put(ROW);
@@ -129,14 +129,14 @@ public class TestFilter extends HBaseTestCase {
       }
       this.region.put(p);
     }
-    
+
     // Delete the second qualifier from all rows and families
     for(byte [] ROW : ROWS_ONE) {
       Delete d = new Delete(ROW);
       d.deleteColumns(FAMILIES[0], QUALIFIERS_ONE[1]);
       d.deleteColumns(FAMILIES[1], QUALIFIERS_ONE[1]);
       this.region.delete(d, null, false);
-    }    
+    }
     for(byte [] ROW : ROWS_TWO) {
       Delete d = new Delete(ROW);
       d.deleteColumns(FAMILIES[0], QUALIFIERS_TWO[1]);
@@ -144,7 +144,7 @@ public class TestFilter extends HBaseTestCase {
       this.region.delete(d, null, false);
     }
     colsPerRow -= 2;
-    
+
     // Delete the second rows from both groups, one column at a time
     for(byte [] QUALIFIER : QUALIFIERS_ONE) {
       Delete d = new Delete(ROWS_ONE[1]);
@@ -170,7 +170,7 @@ public class TestFilter extends HBaseTestCase {
     // No filter
     long expectedRows = this.numRows;
     long expectedKeys = this.colsPerRow;
-    
+
     // Both families
     Scan s = new Scan();
     verifyScan(s, expectedRows, expectedKeys);
@@ -180,7 +180,7 @@ public class TestFilter extends HBaseTestCase {
     s.addFamily(FAMILIES[0]);
     verifyScan(s, expectedRows, expectedKeys/2);
   }
-  
+
   public void testPrefixFilter() throws Exception {
     // Grab rows from group one (half of total)
     long expectedRows = this.numRows / 2;
@@ -189,9 +189,9 @@ public class TestFilter extends HBaseTestCase {
     s.setFilter(new PrefixFilter(Bytes.toBytes("testRowOne")));
     verifyScan(s, expectedRows, expectedKeys);
   }
-  
+
   public void testPageFilter() throws Exception {
-    
+
     // KVs in first 6 rows
     KeyValue [] expectedKVs = {
       // testRowOne-0
@@ -237,7 +237,7 @@ public class TestFilter extends HBaseTestCase {
       new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
       new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1])
     };
-    
+
     // Grab all 6 rows
     long expectedRows = 6;
     long expectedKeys = this.colsPerRow;
@@ -246,7 +246,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys);
     s.setFilter(new PageFilter(expectedRows));
     verifyScanFull(s, expectedKVs);
-    
+
     // Grab first 4 rows (6 cols per row)
     expectedRows = 4;
     expectedKeys = this.colsPerRow;
@@ -255,7 +255,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys);
     s.setFilter(new PageFilter(expectedRows));
     verifyScanFull(s, Arrays.copyOf(expectedKVs, 24));
-    
+
     // Grab first 2 rows
     expectedRows = 2;
     expectedKeys = this.colsPerRow;
@@ -273,7 +273,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys);
     s.setFilter(new PageFilter(expectedRows));
     verifyScanFull(s, Arrays.copyOf(expectedKVs, 6));
-    
+
   }
 
   /**
@@ -362,18 +362,18 @@ public class TestFilter extends HBaseTestCase {
       }
     }
   }
-  
+
   public void testInclusiveStopFilter() throws IOException {
 
     // Grab rows from group one
-    
+
     // If we just use start/stop row, we get total/2 - 1 rows
     long expectedRows = (this.numRows / 2) - 1;
     long expectedKeys = this.colsPerRow;
-    Scan s = new Scan(Bytes.toBytes("testRowOne-0"), 
+    Scan s = new Scan(Bytes.toBytes("testRowOne-0"),
         Bytes.toBytes("testRowOne-3"));
     verifyScan(s, expectedRows, expectedKeys);
-    
+
     // Now use start row with inclusive stop filter
     expectedRows = this.numRows / 2;
     s = new Scan(Bytes.toBytes("testRowOne-0"));
@@ -381,14 +381,14 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys);
 
     // Grab rows from group two
-    
+
     // If we just use start/stop row, we get total/2 - 1 rows
     expectedRows = (this.numRows / 2) - 1;
     expectedKeys = this.colsPerRow;
-    s = new Scan(Bytes.toBytes("testRowTwo-0"), 
+    s = new Scan(Bytes.toBytes("testRowTwo-0"),
         Bytes.toBytes("testRowTwo-3"));
     verifyScan(s, expectedRows, expectedKeys);
-    
+
     // Now use start row with inclusive stop filter
     expectedRows = this.numRows / 2;
     s = new Scan(Bytes.toBytes("testRowTwo-0"));
@@ -396,9 +396,9 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys);
 
   }
-  
+
   public void testQualifierFilter() throws IOException {
-    
+
     // Match two keys (one from each family) in half the rows
     long expectedRows = this.numRows / 2;
     long expectedKeys = 2;
@@ -407,7 +407,7 @@ public class TestFilter extends HBaseTestCase {
     Scan s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys less than same qualifier
     // Expect only two keys (one from each family) in half the rows
     expectedRows = this.numRows / 2;
@@ -417,7 +417,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys less than or equal
     // Expect four keys (two from each family) in half the rows
     expectedRows = this.numRows / 2;
@@ -427,7 +427,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys not equal
     // Expect four keys (two from each family)
     // Only look in first group of rows
@@ -438,7 +438,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys greater or equal
     // Expect four keys (two from each family)
     // Only look in first group of rows
@@ -449,7 +449,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys greater
     // Expect two keys (one from each family)
     // Only look in first group of rows
@@ -460,7 +460,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan(HConstants.EMPTY_START_ROW, Bytes.toBytes("testRowTwo"));
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys not equal to
     // Look across rows and fully validate the keys and ordering
     // Expect varied numbers of keys, 4 per row in group one, 6 per row in group two
@@ -468,7 +468,7 @@ public class TestFilter extends HBaseTestCase {
         new BinaryComparator(QUALIFIERS_ONE[2]));
     s = new Scan();
     s.setFilter(f);
-    
+
     KeyValue [] kvs = {
         // testRowOne-0
         new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
@@ -508,8 +508,8 @@ public class TestFilter extends HBaseTestCase {
         new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
     };
     verifyScanFull(s, kvs);
-     
-    
+
+
     // Test across rows and groups with a regex
     // Filter out "test*-2"
     // Expect 4 keys per row across both groups
@@ -517,7 +517,7 @@ public class TestFilter extends HBaseTestCase {
         new RegexStringComparator("test.+-2"));
     s = new Scan();
     s.setFilter(f);
-    
+
     kvs = new KeyValue [] {
         // testRowOne-0
         new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
@@ -551,9 +551,9 @@ public class TestFilter extends HBaseTestCase {
         new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
     };
     verifyScanFull(s, kvs);
-     
+
   }
-  
+
   public void testRowFilter() throws IOException {
 
     // Match a single row, all keys
@@ -564,7 +564,7 @@ public class TestFilter extends HBaseTestCase {
     Scan s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match a two rows, one from each group, using regex
     expectedRows = 2;
     expectedKeys = this.colsPerRow;
@@ -573,7 +573,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match rows less than
     // Expect all keys in one row
     expectedRows = 1;
@@ -583,7 +583,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match rows less than or equal
     // Expect all keys in two rows
     expectedRows = 2;
@@ -593,7 +593,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match rows not equal
     // Expect all keys in all but one row
     expectedRows = this.numRows - 1;
@@ -603,7 +603,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys greater or equal
     // Expect all keys in all but one row
     expectedRows = this.numRows - 1;
@@ -613,7 +613,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match keys greater
     // Expect all keys in all but two rows
     expectedRows = this.numRows - 2;
@@ -623,7 +623,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match rows not equal to testRowTwo-2
     // Look across rows and fully validate the keys and ordering
     // Should see all keys in all rows but testRowTwo-2
@@ -631,7 +631,7 @@ public class TestFilter extends HBaseTestCase {
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     s = new Scan();
     s.setFilter(f);
-    
+
     KeyValue [] kvs = {
         // testRowOne-0
         new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
@@ -670,8 +670,8 @@ public class TestFilter extends HBaseTestCase {
         new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
     };
     verifyScanFull(s, kvs);
-     
-    
+
+
     // Test across rows and groups with a regex
     // Filter out everything that doesn't match "*-2"
     // Expect all keys in two rows
@@ -679,7 +679,7 @@ public class TestFilter extends HBaseTestCase {
         new RegexStringComparator(".+-2"));
     s = new Scan();
     s.setFilter(f);
-    
+
     kvs = new KeyValue [] {
         // testRowOne-2
         new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
@@ -697,11 +697,11 @@ public class TestFilter extends HBaseTestCase {
         new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1])
     };
     verifyScanFull(s, kvs);
-     
+
   }
-  
+
   public void testValueFilter() throws IOException {
-    
+
     // Match group one rows
     long expectedRows = this.numRows / 2;
     long expectedKeys = this.colsPerRow;
@@ -719,7 +719,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match all values using regex
     expectedRows = this.numRows;
     expectedKeys = this.colsPerRow;
@@ -728,7 +728,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values less than
     // Expect group one rows
     expectedRows = this.numRows / 2;
@@ -738,7 +738,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values less than or equal
     // Expect all rows
     expectedRows = this.numRows;
@@ -758,7 +758,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values not equal
     // Expect half the rows
     expectedRows = this.numRows / 2;
@@ -768,7 +768,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values greater or equal
     // Expect all rows
     expectedRows = this.numRows;
@@ -778,7 +778,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values greater
     // Expect half rows
     expectedRows = this.numRows / 2;
@@ -788,7 +788,7 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values not equal to testValueOne
     // Look across rows and fully validate the keys and ordering
     // Should see all keys in all group two rows
@@ -796,7 +796,7 @@ public class TestFilter extends HBaseTestCase {
         new BinaryComparator(Bytes.toBytes("testValueOne")));
     s = new Scan();
     s.setFilter(f);
-    
+
     KeyValue [] kvs = {
         // testRowTwo-0
         new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
@@ -822,16 +822,16 @@ public class TestFilter extends HBaseTestCase {
     };
     verifyScanFull(s, kvs);
   }
-  
+
   public void testSkipFilter() throws IOException {
-    
+
     // Test for qualifier regex: "testQualifierOne-2"
     // Should only get rows from second group, and all keys
     Filter f = new SkipFilter(new QualifierFilter(CompareOp.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2"))));
     Scan s = new Scan();
     s.setFilter(f);
-    
+
     KeyValue [] kvs = {
         // testRowTwo-0
         new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
@@ -857,12 +857,12 @@ public class TestFilter extends HBaseTestCase {
     };
     verifyScanFull(s, kvs);
   }
-    
+
   // TODO: This is important... need many more tests for ordering, etc
   // There are limited tests elsewhere but we need HRegion level ones here
   public void testFilterList() throws IOException {
-    
-    // Test getting a single row, single key using Row, Qualifier, and Value 
+
+    // Test getting a single row, single key using Row, Qualifier, and Value
     // regular expression and substring filters
     // Use must pass all
     List<Filter> filters = new ArrayList<Filter>();
@@ -888,10 +888,10 @@ public class TestFilter extends HBaseTestCase {
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, this.numRows, this.colsPerRow);
-    
-    
+
+
   }
-  
+
   public void testFirstKeyOnlyFilter() throws IOException {
     Scan s = new Scan();
     s.setFilter(new FirstKeyOnlyFilter());
@@ -906,18 +906,18 @@ public class TestFilter extends HBaseTestCase {
     };
     verifyScanFull(s, kvs);
   }
-  
+
   public void testSingleColumnValueFilter() throws IOException {
-    
+
     // From HBASE-1821
     // Desired action is to combine two SCVF in a FilterList
     // Want to return only rows that match both conditions
-    
+
     // Need to change one of the group one columns to use group two value
     Put p = new Put(ROWS_ONE[2]);
     p.add(FAMILIES[0], QUALIFIERS_ONE[2], VALUES[1]);
     this.region.put(p);
-    
+
     // Now let's grab rows that have Q_ONE[0](VALUES[0]) and Q_ONE[2](VALUES[1])
     // Since group two rows don't have these qualifiers, they will pass
     // so limiting scan to group one
@@ -938,7 +938,7 @@ public class TestFilter extends HBaseTestCase {
     };
     verifyScanNoEarlyOut(s, 1, 3);
     verifyScanFull(s, kvs);
-    
+
     // In order to get expected behavior without limiting to group one
     // need to wrap SCVFs in SkipFilters
     filters = new ArrayList<Filter>();
@@ -955,7 +955,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScanFull(s, kvs);
 
     // More tests from HBASE-1821 for Clint and filterIfMissing flag
-    
+
     byte [][] ROWS_THREE = {
         Bytes.toBytes("rowThree-0"), Bytes.toBytes("rowThree-1"),
         Bytes.toBytes("rowThree-2"), Bytes.toBytes("rowThree-3")
@@ -963,28 +963,28 @@ public class TestFilter extends HBaseTestCase {
 
     // Give row 0 and 2 QUALIFIERS_ONE[0] (VALUE[0] VALUE[1])
     // Give row 1 and 3 QUALIFIERS_ONE[1] (VALUE[0] VALUE[1])
-    
+
     KeyValue [] srcKVs = new KeyValue [] {
         new KeyValue(ROWS_THREE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
         new KeyValue(ROWS_THREE[1], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[1]),
         new KeyValue(ROWS_THREE[2], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[0]),
         new KeyValue(ROWS_THREE[3], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[1])
     };
-    
+
     for(KeyValue kv : srcKVs) {
       this.region.put(new Put(kv.getRow()).add(kv));
     }
-    
+
     // Match VALUES[0] against QUALIFIERS_ONE[0] with filterIfMissing = false
     // Expect 3 rows (0, 2, 3)
-    SingleColumnValueFilter scvf = new SingleColumnValueFilter(FAMILIES[0], 
+    SingleColumnValueFilter scvf = new SingleColumnValueFilter(FAMILIES[0],
         QUALIFIERS_ONE[0], CompareOp.EQUAL, VALUES[0]);
     s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
     s.addFamily(FAMILIES[0]);
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[0], srcKVs[2], srcKVs[3] };
     verifyScanFull(s, kvs);
-    
+
     // Match VALUES[0] against QUALIFIERS_ONE[0] with filterIfMissing = true
     // Expect 1 row (0)
     scvf = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
@@ -995,10 +995,10 @@ public class TestFilter extends HBaseTestCase {
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[0] };
     verifyScanFull(s, kvs);
-    
+
     // Match VALUES[1] against QUALIFIERS_ONE[1] with filterIfMissing = true
     // Expect 1 row (3)
-    scvf = new SingleColumnValueFilter(FAMILIES[0], 
+    scvf = new SingleColumnValueFilter(FAMILIES[0],
         QUALIFIERS_ONE[1], CompareOp.EQUAL, VALUES[1]);
     scvf.setFilterIfMissing(true);
     s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
@@ -1006,14 +1006,14 @@ public class TestFilter extends HBaseTestCase {
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[3] };
     verifyScanFull(s, kvs);
-    
+
     // Add QUALIFIERS_ONE[1] to ROWS_THREE[0] with VALUES[0]
     KeyValue kvA = new KeyValue(ROWS_THREE[0], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[0]);
     this.region.put(new Put(kvA.getRow()).add(kvA));
-    
+
     // Match VALUES[1] against QUALIFIERS_ONE[1] with filterIfMissing = true
     // Expect 1 row (3)
-    scvf = new SingleColumnValueFilter(FAMILIES[0], 
+    scvf = new SingleColumnValueFilter(FAMILIES[0],
         QUALIFIERS_ONE[1], CompareOp.EQUAL, VALUES[1]);
     scvf.setFilterIfMissing(true);
     s = new Scan(ROWS_THREE[0], Bytes.toBytes("rowThree-4"));
@@ -1021,10 +1021,10 @@ public class TestFilter extends HBaseTestCase {
     s.setFilter(scvf);
     kvs = new KeyValue [] { srcKVs[3] };
     verifyScanFull(s, kvs);
-    
+
   }
-  
-  private void verifyScan(Scan s, long expectedRows, long expectedKeys) 
+
+  private void verifyScan(Scan s, long expectedRows, long expectedKeys)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -1035,7 +1035,7 @@ public class TestFilter extends HBaseTestCase {
           KeyValue.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
-      assertTrue("Scanned too many rows! Only expected " + expectedRows + 
+      assertTrue("Scanned too many rows! Only expected " + expectedRows +
           " total but already scanned " + (i+1), expectedRows > i);
       assertEquals("Expected " + expectedKeys + " keys per row but " +
           "returned " + results.size(), expectedKeys, results.size());
@@ -1046,9 +1046,9 @@ public class TestFilter extends HBaseTestCase {
   }
 
 
-  
-  private void verifyScanNoEarlyOut(Scan s, long expectedRows, 
-      long expectedKeys) 
+
+  private void verifyScanNoEarlyOut(Scan s, long expectedRows,
+      long expectedKeys)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
     List<KeyValue> results = new ArrayList<KeyValue>();
@@ -1059,7 +1059,7 @@ public class TestFilter extends HBaseTestCase {
           KeyValue.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if(results.isEmpty()) break;
-      assertTrue("Scanned too many rows! Only expected " + expectedRows + 
+      assertTrue("Scanned too many rows! Only expected " + expectedRows +
           " total but already scanned " + (i+1), expectedRows > i);
       assertEquals("Expected " + expectedKeys + " keys per row but " +
           "returned " + results.size(), expectedKeys, results.size());
@@ -1080,20 +1080,20 @@ public class TestFilter extends HBaseTestCase {
       Arrays.sort(results.toArray(new KeyValue[results.size()]),
           KeyValue.COMPARATOR);
       if(results.isEmpty()) break;
-      assertTrue("Scanned too many keys! Only expected " + kvs.length + 
-          " total but already scanned " + (results.size() + idx) + 
-          (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"), 
+      assertTrue("Scanned too many keys! Only expected " + kvs.length +
+          " total but already scanned " + (results.size() + idx) +
+          (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
           kvs.length >= idx + results.size());
       for(KeyValue kv : results) {
-        LOG.info("row=" + row + ", result=" + kv.toString() + 
+        LOG.info("row=" + row + ", result=" + kv.toString() +
             ", match=" + kvs[idx].toString());
-        assertTrue("Row mismatch", 
+        assertTrue("Row mismatch",
             Bytes.equals(kv.getRow(), kvs[idx].getRow()));
-        assertTrue("Family mismatch", 
+        assertTrue("Family mismatch",
             Bytes.equals(kv.getFamily(), kvs[idx].getFamily()));
-        assertTrue("Qualifier mismatch", 
+        assertTrue("Qualifier mismatch",
             Bytes.equals(kv.getQualifier(), kvs[idx].getQualifier()));
-        assertTrue("Value mismatch", 
+        assertTrue("Value mismatch",
             Bytes.equals(kv.getValue(), kvs[idx].getValue()));
         idx++;
       }
@@ -1103,10 +1103,10 @@ public class TestFilter extends HBaseTestCase {
     assertEquals("Expected " + kvs.length + " total keys but scanned " + idx,
         kvs.length, idx);
   }
-  
-  
+
+
   public void testColumnPaginationFilter() throws Exception {
-      
+
      // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
       KeyValue [] expectedKVs = {
         // testRowOne-0
@@ -1122,7 +1122,7 @@ public class TestFilter extends HBaseTestCase {
         // testRowTwo-3
         new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1])
       };
-      
+
 
       // Set of KVs (page: 3; pageSize: 1)  - the third set of 1 column per row
       KeyValue [] expectedKVs2 = {
@@ -1139,7 +1139,7 @@ public class TestFilter extends HBaseTestCase {
         // testRowTwo-3
         new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
       };
-      
+
       // Set of KVs (page: 2; pageSize 2)  - the 2nd set of 2 columns per row
       KeyValue [] expectedKVs3 = {
         // testRowOne-0
@@ -1161,8 +1161,8 @@ public class TestFilter extends HBaseTestCase {
         new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
         new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
       };
-      
-      
+
+
       // Set of KVs (page: 2; pageSize 2)  - the 2nd set of 2 columns per row
       KeyValue [] expectedKVs4 = {
 
@@ -1171,8 +1171,8 @@ public class TestFilter extends HBaseTestCase {
       long expectedRows = this.numRows;
       long expectedKeys = 1;
       Scan s = new Scan();
-      
-      
+
+
       // Page 1; 1 Column per page  (Limit 1, Offset 0)
       s.setFilter(new ColumnPaginationFilter(1,0));
       verifyScan(s, expectedRows, expectedKeys);
@@ -1182,7 +1182,7 @@ public class TestFilter extends HBaseTestCase {
       s.setFilter(new ColumnPaginationFilter(1,2));
       verifyScan(s, expectedRows, expectedKeys);
       this.verifyScanFull(s, expectedKVs2);
-      
+
       // Page 2; 2 Results per page (Limit 2, Offset 2)
       s.setFilter(new ColumnPaginationFilter(2,2));
       expectedKeys = 2;
@@ -1194,6 +1194,6 @@ public class TestFilter extends HBaseTestCase {
       expectedKeys = 0;
       expectedRows = 0;
       verifyScan(s, expectedRows, 0);
-      this.verifyScanFull(s, expectedKVs4);     
+      this.verifyScanFull(s, expectedKVs4);
     }
 }

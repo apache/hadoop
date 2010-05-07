@@ -29,8 +29,8 @@ import java.io.IOException;
 class AddColumn extends ColumnOperation {
   private final HColumnDescriptor newColumn;
 
-  AddColumn(final HMaster master, final byte [] tableName, 
-    final HColumnDescriptor newColumn) 
+  AddColumn(final HMaster master, final byte [] tableName,
+    final HColumnDescriptor newColumn)
   throws IOException {
     super(master, tableName);
     this.newColumn = newColumn;

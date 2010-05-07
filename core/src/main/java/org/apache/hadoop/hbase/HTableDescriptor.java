@@ -91,11 +91,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final boolean DEFAULT_READONLY = false;
 
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64L;
-  
+
   public static final long DEFAULT_MAX_FILESIZE = 1024*1024*256L;
 
   public static final boolean DEFAULT_DEFERRED_LOG_FLUSH = true;
-    
+
   private volatile Boolean meta = null;
   private volatile Boolean root = null;
   private Boolean isDeferredLog = null;
@@ -103,9 +103,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // Key is hash of the family name.
   public final Map<byte [], HColumnDescriptor> families =
     new TreeMap<byte [], HColumnDescriptor>(Bytes.BYTES_RAWCOMPARATOR);
-   
+
   /**
-   * Private constructor used internally creating table descriptors for 
+   * Private constructor used internally creating table descriptors for
    * catalog tables: e.g. .META. and -ROOT-.
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
@@ -118,7 +118,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Private constructor used internally creating table descriptors for 
+   * Private constructor used internally creating table descriptors for
    * catalog tables: e.g. .META. and -ROOT-.
    */
   protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
@@ -134,8 +134,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       this.values.put(entry.getKey(), entry.getValue());
     }
   }
-  
-  
+
+
   /**
    * Constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
@@ -175,7 +175,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * Constructor.
    * <p>
-   * Makes a deep copy of the supplied descriptor. 
+   * Makes a deep copy of the supplied descriptor.
    * Can make a modifiable descriptor from an UnmodifyableHTableDescriptor.
    * @param desc The descriptor.
    */
@@ -290,7 +290,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public byte[] getValue(byte[] key) {
     return getValue(new ImmutableBytesWritable(key));
   }
-  
+
   private byte[] getValue(final ImmutableBytesWritable key) {
     ImmutableBytesWritable ibw = values.get(key);
     if (ibw == null)
@@ -323,7 +323,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public void setValue(byte[] key, byte[] value) {
     setValue(new ImmutableBytesWritable(key), value);
   }
-  
+
   /*
    * @param key The key.
    * @param value The value.
@@ -431,7 +431,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       return Long.valueOf(Bytes.toString(value)).longValue();
     return DEFAULT_MEMSTORE_FLUSH_SIZE;
   }
-  
+
   /**
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
@@ -622,14 +622,14 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public Collection<HColumnDescriptor> getFamilies() {
     return Collections.unmodifiableCollection(this.families.values());
   }
-  
+
   /**
    * @return Immutable sorted set of the keys of the families.
    */
   public Set<byte[]> getFamiliesKeys() {
     return Collections.unmodifiableSet(this.families.keySet());
   }
-  
+
   public HColumnDescriptor[] getColumnFamilies() {
     return getFamilies().toArray(new HColumnDescriptor[0]);
   }
@@ -668,7 +668,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
           Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
           HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL) });
-  
+
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {

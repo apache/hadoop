@@ -52,11 +52,11 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
 public class TestTimeRangeMapRed extends HBaseClusterTestCase {
-  
+
   private final static Log log = LogFactory.getLog(TestTimeRangeMapRed.class);
- 
+
   private static final byte [] KEY = Bytes.toBytes("row1");
-  private static final NavigableMap<Long, Boolean> TIMESTAMP = 
+  private static final NavigableMap<Long, Boolean> TIMESTAMP =
     new TreeMap<Long, Boolean>();
   static {
     TIMESTAMP.put((long)1245620000, false);
@@ -69,22 +69,22 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
   }
   static final long MINSTAMP = 1245620005;
   static final long MAXSTAMP = 1245620100 + 1; // maxStamp itself is excluded. so increment it.
- 
+
   static final byte[] TABLE_NAME = Bytes.toBytes("table123");
   static final byte[] FAMILY_NAME = Bytes.toBytes("text");
   static final byte[] COLUMN_NAME = Bytes.toBytes("input");
- 
+
   protected HTableDescriptor desc;
   protected HTable table;
- 
+
   public TestTimeRangeMapRed() {
     super();
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
     this.setOpenMetaTable(true);
   }
-  
-  @Override 
+
+  @Override
   public void setUp() throws Exception {
     super.setUp();
     desc = new HTableDescriptor(TABLE_NAME);
@@ -95,14 +95,14 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
     admin.createTable(desc);
     table = new HTable(conf, desc.getName());
   }
-  
-  private static class ProcessTimeRangeMapper  
+
+  private static class ProcessTimeRangeMapper
   extends TableMapper<ImmutableBytesWritable, MapWritable>
   implements Configurable {
-    
+
     private Configuration conf = null;
     private HTable table = null;
-    
+
     @Override
     public void map(ImmutableBytesWritable key, Result result,
         Context context)
@@ -111,7 +111,7 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
       for (KeyValue kv : result.sorted()) {
         tsList.add(kv.getTimestamp());
       }
-      
+
       for (Long ts : tsList) {
         Put put = new Put(key.get());
         put.add(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
@@ -134,10 +134,10 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
         e.printStackTrace();
       }
     }
-    
+
   }
-  
-  public void testTimeRangeMapRed() 
+
+  public void testTimeRangeMapRed()
   throws IOException, InterruptedException, ClassNotFoundException {
     prepareTest();
     runTestOnTable();
@@ -149,11 +149,11 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
       Put put = new Put(KEY);
       put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
       table.put(put);
-    } 
+    }
     table.flushCommits();
   }
-  
-  private void runTestOnTable() 
+
+  private void runTestOnTable()
   throws IOException, InterruptedException, ClassNotFoundException {
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
     Job job = null;
@@ -165,7 +165,7 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
       scan.setMaxVersions();
-      TableMapReduceUtil.initTableMapperJob(Bytes.toString(TABLE_NAME), 
+      TableMapReduceUtil.initTableMapperJob(Bytes.toString(TABLE_NAME),
         scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
       job.waitForCompletion(true);
     } catch (IOException e) {
@@ -177,7 +177,7 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
         FileUtil.fullyDelete(
           new File(job.getConfiguration().get("hadoop.tmp.dir")));
       }
-    } 
+    }
   }
 
   private void verify() throws IOException {

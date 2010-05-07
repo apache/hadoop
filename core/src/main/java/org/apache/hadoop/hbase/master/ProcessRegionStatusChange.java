@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
- * Abstract class that performs common operations for 
+ * Abstract class that performs common operations for
  * @see ProcessRegionClose and @see ProcessRegionOpen
  */
 abstract class ProcessRegionStatusChange extends RegionServerOperation {
@@ -41,7 +41,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
   }
-  
+
   protected boolean metaRegionAvailable() {
     boolean available = true;
     if (isMetaTable) {

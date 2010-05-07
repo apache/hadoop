@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Sleeper for current thread.
  * Sleeps for passed period.  Also checks passed boolean and if interrupted,
- * will return if the flag is set (rather than go back to sleep until its 
+ * will return if the flag is set (rather than go back to sleep until its
  * sleep time is up).
  */
 public class Sleeper {
@@ -35,7 +35,7 @@ public class Sleeper {
   private final int period;
   private final AtomicBoolean stop;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
- 
+
   private final Object sleepLock = new Object();
   private boolean triggerWake = false;
 
@@ -47,7 +47,7 @@ public class Sleeper {
     this.period = sleep;
     this.stop = stop;
   }
-  
+
   /**
    * Sleep for period.
    */
@@ -65,7 +65,7 @@ public class Sleeper {
       sleepLock.notify();
     }
   }
-  
+
   /**
    * Sleep for period adjusted by passed <code>startTime<code>
    * @param startTime Time some task started previous to now.  Time to sleep

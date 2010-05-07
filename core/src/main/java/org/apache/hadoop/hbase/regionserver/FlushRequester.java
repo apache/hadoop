@@ -29,7 +29,7 @@ package org.apache.hadoop.hbase.regionserver;
 public interface FlushRequester {
   /**
    * Tell the listener the cache needs to be flushed.
-   * 
+   *
    * @param region the HRegion requesting the cache flush
    */
   void request(HRegion region);

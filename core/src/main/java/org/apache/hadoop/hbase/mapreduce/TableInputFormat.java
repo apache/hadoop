@@ -34,11 +34,11 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
-public class TableInputFormat extends TableInputFormatBase 
+public class TableInputFormat extends TableInputFormatBase
 implements Configurable {
-  
+
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);
-  
+
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
   /** Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified.
@@ -61,13 +61,13 @@ implements Configurable {
   public static final String SCAN_CACHEBLOCKS = "hbase.mapreduce.scan.cacheblocks";
   /** The number of rows for caching that will be passed to scanners. */
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
-  
+
   /** The configuration. */
   private Configuration conf = null;
 
   /**
    * Returns the current configuration.
-   *  
+   *
    * @return The current configuration.
    * @see org.apache.hadoop.conf.Configurable#getConf()
    */
@@ -79,7 +79,7 @@ implements Configurable {
   /**
    * Sets the configuration. This is used to set the details for the table to
    * be scanned.
-   * 
+   *
    * @param configuration  The configuration to set.
    * @see org.apache.hadoop.conf.Configurable#setConf(
    *   org.apache.hadoop.conf.Configuration)
@@ -93,9 +93,9 @@ implements Configurable {
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
-    
+
     Scan scan = null;
-    
+
     if (conf.get(SCAN) != null) {
       try {
         scan = TableMapReduceUtil.convertStringToScan(conf.get(SCAN));
@@ -105,22 +105,22 @@ implements Configurable {
     } else {
       try {
         scan = new Scan();
-        
+
         if (conf.get(SCAN_COLUMNS) != null) {
           scan.addColumns(conf.get(SCAN_COLUMNS));
         }
-        
-        if (conf.get(SCAN_COLUMN_FAMILY) != null) { 
+
+        if (conf.get(SCAN_COLUMN_FAMILY) != null) {
           scan.addFamily(Bytes.toBytes(conf.get(SCAN_COLUMN_FAMILY)));
         }
-        
+
         if (conf.get(SCAN_TIMESTAMP) != null) {
           scan.setTimeStamp(Long.parseLong(conf.get(SCAN_TIMESTAMP)));
         }
-        
+
         if (conf.get(SCAN_TIMERANGE_START) != null && conf.get(SCAN_TIMERANGE_END) != null) {
           scan.setTimeRange(
-              Long.parseLong(conf.get(SCAN_TIMERANGE_START)), 
+              Long.parseLong(conf.get(SCAN_TIMERANGE_START)),
               Long.parseLong(conf.get(SCAN_TIMERANGE_END)));
         }
 
@@ -141,5 +141,5 @@ implements Configurable {
 
     setScan(scan);
   }
-  
+
 }

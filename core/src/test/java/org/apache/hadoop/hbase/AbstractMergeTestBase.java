@@ -39,27 +39,27 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   protected HTableDescriptor desc;
   protected ImmutableBytesWritable value;
   protected boolean startMiniHBase;
-  
+
   public AbstractMergeTestBase() {
     this(true);
   }
-  
-  /** constructor 
+
+  /** constructor
    * @param startMiniHBase
    */
   public AbstractMergeTestBase(boolean startMiniHBase) {
     super();
-    
+
     this.startMiniHBase = startMiniHBase;
-    
+
     // We will use the same value for the rows as that is not really important here
-    
+
     String partialValue = String.valueOf(System.currentTimeMillis());
     StringBuilder val = new StringBuilder();
     while(val.length() < 1024) {
       val.append(partialValue);
     }
- 
+
     try {
       value = new ImmutableBytesWritable(
           val.toString().getBytes(HConstants.UTF8_ENCODING));
@@ -81,10 +81,10 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   public void preHBaseClusterSetup() throws Exception {
     conf.setLong("hbase.hregion.max.filesize", 64L * 1024L * 1024L);
 
-    // We create three data regions: The first is too large to merge since it 
-    // will be > 64 MB in size. The second two will be smaller and will be 
+    // We create three data regions: The first is too large to merge since it
+    // will be > 64 MB in size. The second two will be smaller and will be
     // selected for merging.
-    
+
     // To ensure that the first region is larger than 64MB we need to write at
     // least 65536 rows. We will make certain by writing 70000
 
@@ -103,12 +103,12 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
       createAregion(row_70001, row_80001, 70001, 10000),
       createAregion(row_80001, null, 80001, 11000)
     };
-    
+
     // Now create the root and meta regions and insert the data regions
     // created above into the meta
 
     createRootAndMetaRegions();
-    
+
     for(int i = 0; i < regions.length; i++) {
       HRegion.addRegionToMETA(meta, regions[i]);
     }
@@ -118,9 +118,9 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
 
   private HRegion createAregion(byte [] startKey, byte [] endKey, int firstRow,
       int nrows) throws IOException {
-    
+
     HRegion region = createNewHRegion(desc, startKey, endKey);
-    
+
     System.out.println("created region " +
         Bytes.toString(region.getRegionName()));
 

@@ -47,7 +47,7 @@ public class MultiPutResponse implements Writable {
   public Integer getAnswer(byte[] region) {
     return answers.get(region);
   }
-  
+
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(answers.size());

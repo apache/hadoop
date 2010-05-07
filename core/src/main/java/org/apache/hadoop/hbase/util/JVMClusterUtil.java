@@ -1,6 +1,6 @@
 /**
  * Copyright 2010 The Apache Software Foundation
- * 
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class JVMClusterUtil {
    */
   public static class RegionServerThread extends Thread {
     private final HRegionServer regionServer;
-    
+
     public RegionServerThread(final HRegionServer r, final int index) {
       super(r, "RegionServer:" + index);
       this.regionServer = r;
@@ -49,7 +49,7 @@ public class JVMClusterUtil {
     public HRegionServer getRegionServer() {
       return this.regionServer;
     }
-    
+
     /**
      * Block until the region server has come online, indicating it is ready
      * to be used.
@@ -77,7 +77,7 @@ public class JVMClusterUtil {
   public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
     final Class<? extends HRegionServer> hrsc, final int index)
   throws IOException {
-      HRegionServer server; 
+      HRegionServer server;
       try {
         server = hrsc.getConstructor(Configuration.class).newInstance(c);
       } catch (Exception e) {

@@ -239,7 +239,7 @@ public class TestHFilePerformance extends TestCase {
           fs.getFileStatus(path).getLen(), null, false);
         reader.loadFileInfo();
         switch (method) {
-        
+
           case 0:
           case 1:
           default:

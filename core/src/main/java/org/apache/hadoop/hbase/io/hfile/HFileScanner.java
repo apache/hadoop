@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.KeyValue;
 /**
  * A scanner allows you to position yourself within a HFile and
  * scan through it.  It allows you to reposition yourself as well.
- * 
+ *
  * <p>A scanner doesn't always have a key/value that it is pointing to
  * when it is first created and before
  * {@link #seekTo()}/{@link #seekTo(byte[])} are called.
@@ -40,7 +40,7 @@ public interface HFileScanner {
   /**
    * SeekTo or just before the passed <code>key</code>.  Examine the return
    * code to figure whether we found the key or not.
-   * Consider the key stream of all the keys in the file, 
+   * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
    * @param key Key to find.
    * @return -1, if key < k[0], no position;
@@ -53,7 +53,7 @@ public interface HFileScanner {
   public int seekTo(byte[] key) throws IOException;
   public int seekTo(byte[] key, int offset, int length) throws IOException;
   /**
-   * Consider the key stream of all the keys in the file, 
+   * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
    * @param key Key to find
    * @return false if key <= k[0] or true with scanner in position 'i' such
@@ -87,7 +87,7 @@ public interface HFileScanner {
   /**
    * Gets a buffer view to the current value.  You must call
    * {@link #seekTo(byte[])} before this method.
-   * 
+   *
    * @return byte buffer for the value. The limit is set to the value size, and
    * the position is 0, the start of the buffer view.
    */

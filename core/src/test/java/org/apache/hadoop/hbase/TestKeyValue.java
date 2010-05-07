@@ -40,7 +40,7 @@ public class TestKeyValue extends TestCase {
     byte [] qualifier1 = Bytes.toBytes("def");
     byte [] family2 = Bytes.toBytes("abcd");
     byte [] qualifier2 = Bytes.toBytes("ef");
-    
+
     KeyValue aaa = new KeyValue(a, family1, qualifier1, 0L, Type.Put, a);
     assertFalse(aaa.matchingColumn(family2, qualifier2));
     assertTrue(aaa.matchingColumn(family1, qualifier1));
@@ -62,7 +62,7 @@ public class TestKeyValue extends TestCase {
     check(Bytes.toBytes(getName()), Bytes.toBytes(getName()), null, 1, null);
     check(HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes(getName()), null, 1, null);
   }
-  
+
   private void check(final byte [] row, final byte [] family, byte [] qualifier,
     final long timestamp, final byte [] value) {
     KeyValue kv = new KeyValue(row, family, qualifier, timestamp, value);
@@ -71,7 +71,7 @@ public class TestKeyValue extends TestCase {
     // Call toString to make sure it works.
     LOG.info(kv.toString());
   }
-  
+
   public void testPlainCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
     final byte [] b = Bytes.toBytes("bbb");
@@ -118,11 +118,11 @@ public class TestKeyValue extends TestCase {
     KVComparator c = new KeyValue.RootComparator();
     assertTrue(c.compare(b, a) < 0);
     KeyValue aa = new KeyValue(Bytes.toBytes(".META.,,1"), now);
-    KeyValue bb = new KeyValue(Bytes.toBytes(".META.,,1"), 
+    KeyValue bb = new KeyValue(Bytes.toBytes(".META.,,1"),
         Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1235943454602L,
         (byte[])null);
     assertTrue(c.compare(aa, bb) < 0);
-    
+
     // Meta compares
     KeyValue aaa = new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,row_0500,1236020145502"), now);
@@ -130,12 +130,12 @@ public class TestKeyValue extends TestCase {
         Bytes.toBytes("TestScanMultipleVersions,,99999999999999"), now);
     c = new KeyValue.MetaComparator();
     assertTrue(c.compare(bbb, aaa) < 0);
-    
+
     KeyValue aaaa = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,,1236023996656"),
         Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236024396271L,
         (byte[])null);
     assertTrue(c.compare(aaaa, bbb) < 0);
-    
+
     KeyValue x = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,row_0500,1236034574162"),
         Bytes.toBytes("info"), Bytes.toBytes(""), 9223372036854775807L,
         (byte[])null);
@@ -152,7 +152,7 @@ public class TestKeyValue extends TestCase {
   /**
    * Tests cases where rows keys have characters below the ','.
    * See HBASE-832
-   * @throws IOException 
+   * @throws IOException
    */
   public void testKeyValueBorderCases() throws IOException {
     // % sorts before , so if we don't do special comparator, rowB would
@@ -163,15 +163,15 @@ public class TestKeyValue extends TestCase {
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
 
-    rowA = new KeyValue(Bytes.toBytes("testtable,,1234"), Bytes.toBytes("fam"), 
+    rowA = new KeyValue(Bytes.toBytes("testtable,,1234"), Bytes.toBytes("fam"),
         Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"), 
+    rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
 
-    rowA = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/,1234,4321"), 
+    rowA = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/,1234,4321"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    rowB = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/%20,99999,99999"), 
+    rowB = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/%20,99999,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.ROOT_COMPARATOR.compare(rowA, rowB) < 0);
   }
@@ -275,6 +275,6 @@ public class TestKeyValue extends TestCase {
     // Test multiple KeyValues in a single blob.
 
     // TODO actually write this test!
-    
+
   }
 }

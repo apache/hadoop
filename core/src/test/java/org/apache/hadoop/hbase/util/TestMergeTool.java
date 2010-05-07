@@ -49,13 +49,13 @@ public class TestMergeTool extends HBaseTestCase {
 //  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   static final byte [] FAMILY = Bytes.toBytes("contents");
   static final byte [] QUALIFIER = Bytes.toBytes("dc");
-  
+
   private final HRegionInfo[] sourceRegions = new HRegionInfo[5];
   private final HRegion[] regions = new HRegion[5];
   private HTableDescriptor desc;
   private byte [][][] rows;
   private MiniDFSCluster dfsCluster = null;
-  
+
   @Override
   public void setUp() throws Exception {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
@@ -70,45 +70,45 @@ public class TestMergeTool extends HBaseTestCase {
     // Region 0 will contain the key range [row_0200,row_0300)
     sourceRegions[0] = new HRegionInfo(this.desc, Bytes.toBytes("row_0200"),
       Bytes.toBytes("row_0300"));
-    
+
     // Region 1 will contain the key range [row_0250,row_0400) and overlaps
     // with Region 0
     sourceRegions[1] =
       new HRegionInfo(this.desc, Bytes.toBytes("row_0250"),
           Bytes.toBytes("row_0400"));
-    
+
     // Region 2 will contain the key range [row_0100,row_0200) and is adjacent
     // to Region 0 or the region resulting from the merge of Regions 0 and 1
     sourceRegions[2] =
-      new HRegionInfo(this.desc, Bytes.toBytes("row_0100"), 
+      new HRegionInfo(this.desc, Bytes.toBytes("row_0100"),
           Bytes.toBytes("row_0200"));
-    
+
     // Region 3 will contain the key range [row_0500,row_0600) and is not
     // adjacent to any of Regions 0, 1, 2 or the merged result of any or all
     // of those regions
     sourceRegions[3] =
-      new HRegionInfo(this.desc, Bytes.toBytes("row_0500"), 
+      new HRegionInfo(this.desc, Bytes.toBytes("row_0500"),
           Bytes.toBytes("row_0600"));
-    
+
     // Region 4 will have empty start and end keys and overlaps all regions.
     sourceRegions[4] =
-      new HRegionInfo(this.desc, HConstants.EMPTY_BYTE_ARRAY, 
+      new HRegionInfo(this.desc, HConstants.EMPTY_BYTE_ARRAY,
           HConstants.EMPTY_BYTE_ARRAY);
-    
+
     /*
      * Now create some row keys
      */
     this.rows = new byte [5][][];
     this.rows[0] = Bytes.toByteArrays(new String[] { "row_0210", "row_0280" });
-    this.rows[1] = Bytes.toByteArrays(new String[] { "row_0260", "row_0350", 
+    this.rows[1] = Bytes.toByteArrays(new String[] { "row_0260", "row_0350",
         "row_035" });
-    this.rows[2] = Bytes.toByteArrays(new String[] { "row_0110", "row_0175", 
+    this.rows[2] = Bytes.toByteArrays(new String[] { "row_0110", "row_0175",
         "row_0175", "row_0175"});
-    this.rows[3] = Bytes.toByteArrays(new String[] { "row_0525", "row_0560", 
+    this.rows[3] = Bytes.toByteArrays(new String[] { "row_0525", "row_0560",
         "row_0560", "row_0560", "row_0560"});
-    this.rows[4] = Bytes.toByteArrays(new String[] { "row_0050", "row_1000", 
+    this.rows[4] = Bytes.toByteArrays(new String[] { "row_0050", "row_1000",
         "row_1000", "row_1000", "row_1000", "row_1000" });
-    
+
     // Start up dfs
     this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     this.fs = this.dfsCluster.getFileSystem();
@@ -121,7 +121,7 @@ public class TestMergeTool extends HBaseTestCase {
 
     // Note: we must call super.setUp after starting the mini cluster or
     // we will end up with a local file system
-    
+
     super.setUp();
     try {
       // Create root and meta regions
@@ -145,7 +145,7 @@ public class TestMergeTool extends HBaseTestCase {
       }
       // Close root and meta regions
       closeRootAndMeta();
-      
+
     } catch (Exception e) {
       shutdownDfs(dfsCluster);
       throw e;
@@ -157,7 +157,7 @@ public class TestMergeTool extends HBaseTestCase {
     super.tearDown();
     shutdownDfs(dfsCluster);
   }
-  
+
   /*
    * @param msg Message that describes this merge
    * @param regionName1
@@ -178,7 +178,7 @@ public class TestMergeTool extends HBaseTestCase {
     );
     assertTrue("'" + msg + "' failed", errCode == 0);
     HRegionInfo mergedInfo = merger.getMergedHRegionInfo();
-  
+
     // Now verify that we can read all the rows from regions 0, 1
     // in the new merged region.
     HRegion merged =
@@ -188,7 +188,7 @@ public class TestMergeTool extends HBaseTestCase {
     LOG.info("Verified " + msg);
     return merged;
   }
-  
+
   private void verifyMerge(final HRegion merged, final int upperbound)
   throws IOException {
     //Test
@@ -207,9 +207,9 @@ public class TestMergeTool extends HBaseTestCase {
     } finally {
       scanner.close();
     }
-    
+
     //!Test
-    
+
     for (int i = 0; i < upperbound; i++) {
       for (int j = 0; j < rows[i].length; j++) {
         Get get = new Get(rows[i][j]);
@@ -265,7 +265,7 @@ public class TestMergeTool extends HBaseTestCase {
       merged = mergeAndVerify("merging regions 0+1+2 and 3",
         merged.getRegionInfo().getRegionNameAsString(),
         this.sourceRegions[3].getRegionNameAsString(), log, 4);
-      
+
       // Merge the result of merging regions 0, 1, 2 and 3 with region 4
       merged = mergeAndVerify("merging regions 0+1+2+3 and 4",
         merged.getRegionInfo().getRegionNameAsString(),

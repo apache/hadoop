@@ -61,7 +61,7 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
    */
   static class MapEntryIterator implements Iterator<KeyValue> {
     private final Iterator<Map.Entry<KeyValue, KeyValue>> iterator;
-    
+
     MapEntryIterator(final Iterator<Map.Entry<KeyValue, KeyValue>> i) {
       this.iterator = i;
     }

@@ -27,7 +27,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * A wrapper filter that filters an entire row if any of the KeyValue checks do 
+ * A wrapper filter that filters an entire row if any of the KeyValue checks do
  * not pass.
  * <p>
  * For example, if all columns in a row represent weights of different things,
@@ -41,7 +41,7 @@ import java.io.IOException;
  *     new BinaryComparator(Bytes.toBytes(0))));
  * </code>
  * Any row which contained a column whose value was 0 will be filtered out.
- * Without this filter, the other non-zero valued columns in the row would still 
+ * Without this filter, the other non-zero valued columns in the row would still
  * be emitted.
  */
 public class SkipFilter implements Filter {

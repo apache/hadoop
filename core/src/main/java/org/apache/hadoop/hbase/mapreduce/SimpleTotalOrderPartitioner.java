@@ -52,7 +52,7 @@ implements Configurable {
   private byte [] endkey;
   private byte [][] splits;
   private int lastReduces = -1;
-  
+
   @Override
   public int getPartition(final ImmutableBytesWritable key, final VALUE value,
       final int reduces) {

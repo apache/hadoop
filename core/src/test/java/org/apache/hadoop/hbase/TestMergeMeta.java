@@ -24,7 +24,7 @@ import java.io.IOException;
 /** Tests region merging */
 public class TestMergeMeta extends AbstractMergeTestBase {
 
-  /** constructor 
+  /** constructor
    * @throws Exception
    */
   public TestMergeMeta() throws Exception {
@@ -32,7 +32,7 @@ public class TestMergeMeta extends AbstractMergeTestBase {
     conf.setLong("hbase.client.pause", 1 * 1000);
     conf.setInt("hbase.client.retries.number", 2);
   }
-  
+
   /**
    * test case
    * @throws IOException

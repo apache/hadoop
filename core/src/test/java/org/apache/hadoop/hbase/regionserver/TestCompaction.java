@@ -54,17 +54,17 @@ public class TestCompaction extends HBaseTestCase {
   private static final int COMPACTION_THRESHOLD = MAXVERSIONS;
 
   private MiniDFSCluster cluster;
-  
+
   /** constructor */
   public TestCompaction() {
     super();
-    
+
     // Set cache flush size to 1MB
     conf.setInt("hbase.hregion.memstore.flush.size", 1024*1024);
     conf.setInt("hbase.hregion.memstore.block.multiplier", 10);
     this.cluster = null;
   }
-  
+
   @Override
   public void setUp() throws Exception {
     this.cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
@@ -75,10 +75,10 @@ public class TestCompaction extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName());
     this.r = createNewHRegion(htd, null, null);
     this.compactionDir = HRegion.getCompactionDir(this.r.getBaseDir());
-    this.regionCompactionDir = new Path(this.compactionDir, 
+    this.regionCompactionDir = new Path(this.compactionDir,
         Integer.toString(this.r.getRegionInfo().getEncodedName()));
   }
-  
+
   @Override
   public void tearDown() throws Exception {
     HLog hlog = r.getLog();
@@ -139,7 +139,7 @@ public class TestCompaction extends HBaseTestCase {
     // Assert == 3 when we ask for versions.
     addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
 
-    
+
     // FIX!!
 //    Cell[] cellValues =
 //      Cell.createSingleCellArray(r.get(STARTROW, COLUMN_FAMILY_TEXT, -1, 100 /*Too many*/));
@@ -177,7 +177,7 @@ public class TestCompaction extends HBaseTestCase {
     byte [][] famAndQf = {COLUMN_FAMILY, null};
     delete.deleteFamily(famAndQf[0]);
     r.delete(delete, null, true);
-    
+
     // Assert deleted.
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100), null );
@@ -258,7 +258,7 @@ public class TestCompaction extends HBaseTestCase {
   }
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
-    HRegionIncommon loader = new HRegionIncommon(region); 
+    HRegionIncommon loader = new HRegionIncommon(region);
     addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
     		"bbb").getBytes(), null);
     loader.flushcache();

@@ -51,7 +51,7 @@ public class Export {
      * @param value  The columns.
      * @param context  The current context.
      * @throws IOException When something is broken with the data.
-     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, 
+     * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN,
      *   org.apache.hadoop.mapreduce.Mapper.Context)
      */
     @Override
@@ -68,7 +68,7 @@ public class Export {
 
   /**
    * Sets up the actual job.
-   * 
+   *
    * @param conf  The current configuration.
    * @param args  The command line parameters.
    * @return The newly created job.
@@ -115,7 +115,7 @@ public class Export {
 
   /**
    * Main entry point.
-   * 
+   *
    * @param args  The command line parameters.
    * @throws Exception When running the job fails.
    */

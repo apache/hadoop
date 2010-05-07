@@ -61,7 +61,7 @@ class RootScanner extends BaseScanner {
       // Make sure the file system is still available
       master.checkFileSystem();
     } catch (Exception e) {
-      // If for some reason we get some other kind of exception, 
+      // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.
       LOG.error("Unexpected exception", e);
     }

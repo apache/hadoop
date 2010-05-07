@@ -51,7 +51,7 @@ import org.apache.hadoop.ipc.RemoteException;
 public class RegionServerOperationQueue {
   // TODO: Build up the junit test of this class.
   private final Log LOG = LogFactory.getLog(this.getClass());
-  
+
   /**
    * Enums returned by {@link RegionServerOperationQueue#process()};
    */
@@ -114,7 +114,7 @@ public class RegionServerOperationQueue {
    * @return {@link ProcessingResultCode#PROCESSED},
    * {@link ProcessingResultCode#REQUEUED},
    * {@link ProcessingResultCode#REQUEUED_BUT_PROBLEM}
-   */ 
+   */
   public synchronized ProcessingResultCode process(final HServerAddress rootRegionLocation) {
     RegionServerOperation op = null;
     // Only process the delayed queue if root region is online.  If offline,

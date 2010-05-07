@@ -138,7 +138,7 @@ public class HBaseTestingUtility {
 
   /**
    * Start up a minicluster of hbase, dfs, and zookeeper.
-   * @throws Exception 
+   * @throws Exception
    */
   public void startMiniCluster() throws Exception {
     startMiniCluster(1);
@@ -148,7 +148,7 @@ public class HBaseTestingUtility {
    * Call this if you only want a zk cluster.
    * @see #startMiniZKCluster() if you want zk + dfs + hbase mini cluster.
    * @throws Exception
-   * @see #shutdownMiniZKCluster() 
+   * @see #shutdownMiniZKCluster()
    */
   public void startMiniZKCluster() throws Exception {
     isRunningCluster();
@@ -169,7 +169,7 @@ public class HBaseTestingUtility {
    * @see #startMiniZKCluster()
    */
   public void shutdownMiniZKCluster() throws IOException {
-    if (this.zkCluster != null) this.zkCluster.shutdown(); 
+    if (this.zkCluster != null) this.zkCluster.shutdown();
   }
 
   /**
@@ -203,7 +203,7 @@ public class HBaseTestingUtility {
     // the TEST_DIRECTORY_KEY to make bad blocks, a feature we are not using,
     // but otherwise, just in constructor.
     System.setProperty(TEST_DIRECTORY_KEY, oldBuildTestDir);
- 
+
     // Mangle conf so fs parameter points to minidfs we just started up
     FileSystem fs = this.dfsCluster.getFileSystem();
     this.conf.set("fs.defaultFS", fs.getUri().toString());
@@ -279,7 +279,7 @@ public class HBaseTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(byte[] tableName, byte[] family) 
+  public HTable createTable(byte[] tableName, byte[] family)
   throws IOException{
     return createTable(tableName, new byte[][]{family});
   }
@@ -291,7 +291,7 @@ public class HBaseTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(byte[] tableName, byte[][] families) 
+  public HTable createTable(byte[] tableName, byte[][] families)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for(byte[] family : families) {
@@ -408,16 +408,16 @@ public class HBaseTestingUtility {
     }
     return rowCount;
   }
-  
+
   /**
    * Creates many regions names "aaa" to "zzz".
-   * 
+   *
    * @param table  The table to use for the data.
    * @param columnFamily  The family to insert the data into.
    * @return count of regions created.
    * @throws IOException When creating the regions fails.
    */
-  public int createMultiRegions(HTable table, byte[] columnFamily) 
+  public int createMultiRegions(HTable table, byte[] columnFamily)
   throws IOException {
     return createMultiRegions(getConfiguration(), table, columnFamily);
   }
@@ -431,11 +431,11 @@ public class HBaseTestingUtility {
    * @throws IOException When creating the regions fails.
    */
   public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily) 
+      final byte[] columnFamily)
   throws IOException {
     byte[][] KEYS = {
       HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
-      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"), 
+      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
       Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
       Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
       Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
@@ -452,18 +452,18 @@ public class HBaseTestingUtility {
       htd.addFamily(hcd);
     }
     // remove empty region - this is tricky as the mini cluster during the test
-    // setup already has the "<tablename>,,123456789" row with an empty start 
-    // and end key. Adding the custom regions below adds those blindly, 
-    // including the new start region from empty to "bbb". lg 
+    // setup already has the "<tablename>,,123456789" row with an empty start
+    // and end key. Adding the custom regions below adds those blindly,
+    // including the new start region from empty to "bbb". lg
     List<byte[]> rows = getMetaTableRows();
     // add custom ones
     int count = 0;
     for (int i = 0; i < KEYS.length; i++) {
       int j = (i + 1) % KEYS.length;
-      HRegionInfo hri = new HRegionInfo(table.getTableDescriptor(), 
+      HRegionInfo hri = new HRegionInfo(table.getTableDescriptor(),
         KEYS[i], KEYS[j]);
       Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, 
+      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(hri));
       meta.put(put);
       LOG.info("createMultiRegions: inserted " + hri.toString());
@@ -471,7 +471,7 @@ public class HBaseTestingUtility {
     }
     // see comment above, remove "old" (or previous) single region
     for (byte[] row : rows) {
-      LOG.info("createMultiRegions: deleting meta row -> " + 
+      LOG.info("createMultiRegions: deleting meta row -> " +
         Bytes.toStringBinary(row));
       meta.delete(new Delete(row));
     }
@@ -491,7 +491,7 @@ public class HBaseTestingUtility {
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      LOG.info("getMetaTableRows: row -> " + 
+      LOG.info("getMetaTableRows: row -> " +
         Bytes.toStringBinary(result.getRow()));
       rows.add(result.getRow());
     }
@@ -509,7 +509,7 @@ public class HBaseTestingUtility {
     ArrayList<Delete> deletes = new ArrayList<Delete>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      LOG.info("emptyMetaTable: remove row -> " + 
+      LOG.info("emptyMetaTable: remove row -> " +
         Bytes.toStringBinary(result.getRow()));
       Delete del = new Delete(result.getRow());
       deletes.add(del);
@@ -517,9 +517,9 @@ public class HBaseTestingUtility {
     s.close();
     t.delete(deletes);
   }
-  
+
   /**
-   * Starts a <code>MiniMRCluster</code> with a default number of 
+   * Starts a <code>MiniMRCluster</code> with a default number of
    * <code>TaskTracker</code>'s.
    *
    * @throws IOException When starting the cluster fails.
@@ -527,7 +527,7 @@ public class HBaseTestingUtility {
   public void startMiniMapReduceCluster() throws IOException {
     startMiniMapReduceCluster(2);
   }
-  
+
   /**
    * Starts a <code>MiniMRCluster</code>.
    *
@@ -540,13 +540,13 @@ public class HBaseTestingUtility {
     Configuration c = getConfiguration();
     System.setProperty("hadoop.log.dir", c.get("hadoop.log.dir"));
     c.set("mapred.output.dir", c.get("hadoop.tmp.dir"));
-    mrCluster = new MiniMRCluster(servers, 
+    mrCluster = new MiniMRCluster(servers,
       FileSystem.get(c).getUri().toString(), 1);
     LOG.info("Mini mapreduce cluster started");
   }
-  
+
   /**
-   * Stops the previously started <code>MiniMRCluster</code>. 
+   * Stops the previously started <code>MiniMRCluster</code>.
    */
   public void shutdownMiniMapReduceCluster() {
     LOG.info("Stopping mini mapreduce cluster...");
@@ -608,13 +608,13 @@ public class HBaseTestingUtility {
 
   /**
    * Get the HBase cluster.
-   * 
+   *
    * @return hbase cluster
    */
   public MiniHBaseCluster getHBaseCluster() {
     return hbaseCluster;
   }
-  
+
   /**
    * Returns a HBaseAdmin instance.
    *
@@ -627,9 +627,9 @@ public class HBaseTestingUtility {
     }
     return hbaseAdmin;
   }
-  
+
   /**
-   * Closes the named region. 
+   * Closes the named region.
    *
    * @param regionName  The region to close.
    * @throws IOException
@@ -637,9 +637,9 @@ public class HBaseTestingUtility {
   public void closeRegion(String regionName) throws IOException {
     closeRegion(Bytes.toBytes(regionName));
   }
-  
+
   /**
-   * Closes the named region. 
+   * Closes the named region.
    *
    * @param regionName  The region to close.
    * @throws IOException
@@ -648,9 +648,9 @@ public class HBaseTestingUtility {
     HBaseAdmin admin = getHBaseAdmin();
     admin.closeRegion(regionName, (Object[]) null);
   }
-  
+
   /**
-   * Closes the region containing the given row. 
+   * Closes the region containing the given row.
    *
    * @param row  The row to find the containing region.
    * @param table  The table to find the region.
@@ -661,7 +661,7 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Closes the region containing the given row. 
+   * Closes the region containing the given row.
    *
    * @param row  The row to find the containing region.
    * @param table  The table to find the region.

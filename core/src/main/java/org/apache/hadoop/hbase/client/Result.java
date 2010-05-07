@@ -39,34 +39,34 @@ import java.util.TreeMap;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
- * 
+ *
  * Convenience methods are available that return various {@link Map}
  * structures and values directly.<p>
- * 
- * To get a complete mapping of all cells in the Result, which can include 
+ *
+ * To get a complete mapping of all cells in the Result, which can include
  * multiple families and multiple versions, use {@link #getMap()}.<p>
- * 
- * To get a mapping of each family to its columns (qualifiers and values), 
+ *
+ * To get a mapping of each family to its columns (qualifiers and values),
  * including only the latest version of each, use {@link #getNoVersionMap()}.
- * 
- * To get a mapping of qualifiers to latest values for an individual family use 
+ *
+ * To get a mapping of qualifiers to latest values for an individual family use
  * {@link #getFamilyMap(byte[])}.<p>
- * 
+ *
  * To get the latest value for a specific family and qualifier use {@link #getValue(byte[], byte[])}.
  *
  * A Result is backed by an array of {@link KeyValue} objects, each representing
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
- * 
+ *
  * The underlying {@link KeyValue} objects can be accessed through the methods
  * {@link #sorted()} and {@link #list()}.  Each KeyValue can then be accessed
- * through {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()}, 
+ * through {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.
  */
 public class Result implements Writable {
   private static final byte RESULT_VERSION = (byte)1;
 
   private KeyValue [] kvs = null;
-  private NavigableMap<byte[], 
+  private NavigableMap<byte[],
      NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
@@ -95,7 +95,7 @@ public class Result implements Writable {
   public Result(List<KeyValue> kvs) {
     this(kvs.toArray(new KeyValue[0]));
   }
-  
+
   /**
    * Instantiate a Result from the specified raw binary format.
    * @param bytes raw binary format of Result
@@ -131,7 +131,7 @@ public class Result implements Writable {
 
   /**
    * Create a sorted list of the KeyValue's in this result.
-   * 
+   *
    * @return The sorted list of KeyValue's.
    */
   public List<KeyValue> list() {
@@ -159,10 +159,10 @@ public class Result implements Writable {
   /**
    * Map of families to all versions of its qualifiers and values.
    * <p>
-   * Returns a three level Map of the form: 
+   * Returns a three level Map of the form:
    * <code>Map<family,Map&lt;qualifier,Map&lt;timestamp,value>>></code>
    * <p>
-   * Note: All other map returning methods make use of this map internally. 
+   * Note: All other map returning methods make use of this map internally.
    * @return map from families to qualifiers to versions
    */
   public NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> getMap() {
@@ -178,7 +178,7 @@ public class Result implements Writable {
     for(KeyValue kv : this.kvs) {
       SplitKeyValue splitKV = kv.split();
       byte [] family = splitKV.getFamily();
-      NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap = 
+      NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap =
         familyMap.get(family);
       if(columnMap == null) {
         columnMap = new TreeMap<byte[], NavigableMap<Long, byte[]>>
@@ -217,15 +217,15 @@ public class Result implements Writable {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap = 
+    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap =
       new TreeMap<byte[], NavigableMap<byte[], byte[]>>(Bytes.BYTES_COMPARATOR);
-    for(Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> 
+    for(Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
       familyEntry : familyMap.entrySet()) {
-      NavigableMap<byte[], byte[]> qualifierMap = 
+      NavigableMap<byte[], byte[]> qualifierMap =
         new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
       for(Map.Entry<byte[], NavigableMap<Long, byte[]>> qualifierEntry :
         familyEntry.getValue().entrySet()) {
-        byte [] value = 
+        byte [] value =
           qualifierEntry.getValue().get(qualifierEntry.getValue().firstKey());
         qualifierMap.put(qualifierEntry.getKey(), value);
       }
@@ -248,16 +248,16 @@ public class Result implements Writable {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], byte[]> returnMap = 
+    NavigableMap<byte[], byte[]> returnMap =
       new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
-    NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap = 
+    NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap =
       familyMap.get(family);
     if(qualifierMap == null) {
       return returnMap;
     }
-    for(Map.Entry<byte[], NavigableMap<Long, byte[]>> entry : 
+    for(Map.Entry<byte[], NavigableMap<Long, byte[]>> entry :
       qualifierMap.entrySet()) {
-      byte [] value = 
+      byte [] value =
         entry.getValue().get(entry.getValue().firstKey());
       returnMap.put(entry.getKey(), value);
     }
@@ -294,13 +294,13 @@ public class Result implements Writable {
     }
     return versionMap.firstEntry();
   }
-  
+
   private NavigableMap<Long, byte[]> getVersionMap(
       NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap, byte [] qualifier) {
     return qualifier != null?
       qualifierMap.get(qualifier): qualifierMap.get(new byte[0]);
   }
-  
+
   /**
    * Checks for existence of the specified column.
    * @param family family name
@@ -322,7 +322,7 @@ public class Result implements Writable {
     NavigableMap<Long, byte[]> versionMap = getVersionMap(qualifierMap, qualifier);
     return versionMap != null;
   }
-    
+
   /**
    * Returns the value of the first column in the Result.
    * @return value of the first column
@@ -333,19 +333,19 @@ public class Result implements Writable {
     }
     return kvs[0].getValue();
   }
-  
+
   /**
    * Returns the raw binary encoding of this Result.<p>
-   * 
+   *
    * Please note, there may be an offset into the underlying byte array of the
-   * returned ImmutableBytesWritable.  Be sure to use both 
+   * returned ImmutableBytesWritable.  Be sure to use both
    * {@link ImmutableBytesWritable#get()} and {@link ImmutableBytesWritable#getOffset()}
    * @return pointer to raw binary of Result
    */
   public ImmutableBytesWritable getBytes() {
     return this.bytes;
   }
-  
+
   /**
    * Check if the underlying KeyValue [] is empty or not
    * @return true if empty
@@ -356,7 +356,7 @@ public class Result implements Writable {
     }
     return this.kvs == null || this.kvs.length == 0;
   }
-  
+
   /**
    * @return the size of the underlying KeyValue []
    */
@@ -366,7 +366,7 @@ public class Result implements Writable {
     }
     return this.kvs == null? 0: this.kvs.length;
   }
-  
+
   /**
    * @return String
    */
@@ -391,7 +391,7 @@ public class Result implements Writable {
     sb.append("}");
     return sb.toString();
   }
-  
+
   //Writable
   public void readFields(final DataInput in)
   throws IOException {
@@ -407,7 +407,7 @@ public class Result implements Writable {
     in.readFully(raw, 0, totalBuffer);
     bytes = new ImmutableBytesWritable(raw, 0, totalBuffer);
   }
-  
+
   //Create KeyValue[] when needed
   private void readFields() {
     if (bytes == null) {
@@ -426,7 +426,7 @@ public class Result implements Writable {
     }
     this.kvs = kvs.toArray(new KeyValue[kvs.size()]);
   }
-  
+
   public void write(final DataOutput out)
   throws IOException {
     if(isEmpty()) {
@@ -443,7 +443,7 @@ public class Result implements Writable {
       }
     }
   }
-  
+
   public static void writeArray(final DataOutput out, Result [] results)
   throws IOException {
     // Write version when writing array form.
@@ -479,7 +479,7 @@ public class Result implements Writable {
       }
     }
   }
-  
+
   public static Result [] readArray(final DataInput in)
   throws IOException {
     // Read version for array form.
@@ -514,7 +514,7 @@ public class Result implements Writable {
         offset += keyLen;
       }
       int totalLength = offset - initialOffset;
-      results[i] = new Result(new ImmutableBytesWritable(buf, initialOffset, 
+      results[i] = new Result(new ImmutableBytesWritable(buf, initialOffset,
           totalLength));
     }
     return results;

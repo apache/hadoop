@@ -32,7 +32,7 @@ public abstract class Hash {
   public static final int JENKINS_HASH = 0;
   /** Constant to denote {@link MurmurHash}. */
   public static final int MURMUR_HASH  = 1;
-  
+
   /**
    * This utility method converts String representation of hash function name
    * to a symbolic constant. Currently two function types are supported,
@@ -49,7 +49,7 @@ public abstract class Hash {
       return INVALID_HASH;
     }
   }
-  
+
   /**
    * This utility method converts the name of the configured
    * hash type to a symbolic constant.
@@ -60,7 +60,7 @@ public abstract class Hash {
     String name = conf.get("hbase.hash.type", "murmur");
     return parseHashType(name);
   }
-  
+
   /**
    * Get a singleton instance of hash function of a given type.
    * @param type predefined hash type
@@ -76,7 +76,7 @@ public abstract class Hash {
       return null;
     }
   }
-  
+
   /**
    * Get a singleton instance of hash function of a type
    * defined in the configuration.
@@ -87,7 +87,7 @@ public abstract class Hash {
     int type = getHashType(conf);
     return getInstance(type);
   }
-  
+
   /**
    * Calculate a hash using all bytes from the input argument, and
    * a seed of -1.
@@ -97,7 +97,7 @@ public abstract class Hash {
   public int hash(byte[] bytes) {
     return hash(bytes, bytes.length, -1);
   }
-  
+
   /**
    * Calculate a hash using all bytes from the input argument,
    * and a provided seed value.
@@ -108,7 +108,7 @@ public abstract class Hash {
   public int hash(byte[] bytes, int initval) {
     return hash(bytes, bytes.length, initval);
   }
-  
+
   /**
    * Calculate a hash using bytes from 0 to <code>length</code>, and
    * the provided seed value

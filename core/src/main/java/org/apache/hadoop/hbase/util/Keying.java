@@ -37,7 +37,7 @@ public class Keying {
 
   /**
    * Makes a key out of passed URI for use as row name or column qualifier.
-   * 
+   *
    * This method runs transforms on the passed URI so it sits better
    * as a key (or portion-of-a-key) in hbase.  The <code>host</code> portion of
    * the URI authority is reversed so subdomains sort under their parent
@@ -49,10 +49,10 @@ public class Keying {
    * <code>r:http://org.apache.lucene/index.html?query=something#middle</code>
    * The transforms are reversible.  No transform is done if passed URI is
    * not hierarchical.
-   * 
+   *
    * <p>If authority <code>userinfo</code> is present, will mess up the sort
    * (until we do more work).</p>
-   * 
+   *
    * @param u URL to transform.
    * @return An opaque URI of artificial 'r' scheme with host portion of URI
    * authority reversed (if present).
@@ -70,10 +70,10 @@ public class Keying {
     }
     return SCHEME + m.group(1) + reverseHostname(m.group(2)) + m.group(3);
   }
-  
+
   /**
    * Reverse the {@link #createKey(String)} transform.
-   * 
+   *
    * @param s <code>URI</code> made by {@link #createKey(String)}.
    * @return 'Restored' URI made by reversing the {@link #createKey(String)}
    * transform.
@@ -89,14 +89,14 @@ public class Keying {
     }
     return m.group(1) + reverseHostname(m.group(2)) + m.group(3);
   }
-  
+
   private static Matcher getMatcher(final String u) {
     if (u == null || u.length() <= 0) {
       return null;
     }
     return URI_RE_PARSER.matcher(u);
   }
-  
+
   private static String reverseHostname(final String hostname) {
     if (hostname == null) {
       return "";

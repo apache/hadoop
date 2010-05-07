@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * Iterate over an HBase table data, return (ImmutableBytesWritable, Result) 
+ * Iterate over an HBase table data, return (ImmutableBytesWritable, Result)
  * pairs.
  */
 public class TableRecordReaderImpl {
@@ -61,7 +61,7 @@ public class TableRecordReaderImpl {
   /**
    * Build the scanner. Not done in constructor to allow for extension.
    *
-   * @throws IOException When restarting the scan fails. 
+   * @throws IOException When restarting the scan fails.
    */
   public void init() throws IOException {
     restart(scan.getStartRow());
@@ -69,7 +69,7 @@ public class TableRecordReaderImpl {
 
   /**
    * Sets the HBase table.
-   * 
+   *
    * @param htable  The {@link HTable} to scan.
    */
   public void setHTable(HTable htable) {
@@ -78,7 +78,7 @@ public class TableRecordReaderImpl {
 
   /**
    * Sets the scan defining the actual details like columns etc.
-   *  
+   *
    * @param scan  The scan to set.
    */
   public void setScan(Scan scan) {
@@ -87,8 +87,8 @@ public class TableRecordReaderImpl {
 
   /**
    * Closes the split.
-   * 
-   * 
+   *
+   *
    */
   public void close() {
     this.scanner.close();
@@ -96,7 +96,7 @@ public class TableRecordReaderImpl {
 
   /**
    * Returns the current key.
-   *  
+   *
    * @return The current key.
    * @throws IOException
    * @throws InterruptedException When the job is aborted.
@@ -108,7 +108,7 @@ public class TableRecordReaderImpl {
 
   /**
    * Returns the current value.
-   * 
+   *
    * @return The current value.
    * @throws IOException When the value is faulty.
    * @throws InterruptedException When the job is aborted.
@@ -120,7 +120,7 @@ public class TableRecordReaderImpl {
 
   /**
    * Positions the record reader to the next record.
-   *  
+   *
    * @return <code>true</code> if there was another record.
    * @throws IOException When reading the record failed.
    * @throws InterruptedException When the job was aborted.
@@ -131,7 +131,7 @@ public class TableRecordReaderImpl {
     try {
       value = this.scanner.next();
     } catch (IOException e) {
-      LOG.debug("recovered from " + StringUtils.stringifyException(e));  
+      LOG.debug("recovered from " + StringUtils.stringifyException(e));
       restart(lastRow);
       scanner.next();    // skip presumed already mapped row
       value = scanner.next();
@@ -146,12 +146,12 @@ public class TableRecordReaderImpl {
 
   /**
    * The current progress of the record reader through its data.
-   * 
+   *
    * @return A number between 0.0 and 1.0, the fraction of the data read.
    */
   public float getProgress() {
     // Depends on the total number of tuples
     return 0;
   }
-  
+
 }
