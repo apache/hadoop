@@ -33,6 +33,8 @@ abstract class RegionServerOperation implements Delayed, HConstants {
 
   private long expire;
   protected final HMaster master;
+  /* How long we stay on queue.
+   */
   private int delay;
 
   protected RegionServerOperation(HMaster master) {

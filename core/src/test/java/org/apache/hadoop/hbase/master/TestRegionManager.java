@@ -62,7 +62,7 @@ public class TestRegionManager extends HBaseClusterTestCase {
      HRegionInfo regionInfoX = new HRegionInfo(tableDesc, startKeyX, endKeyX);
 
 
-     master.getRegionManager().offlineMetaRegion(startKey0);
+     master.getRegionManager().offlineMetaRegionWithStartKey(startKey0);
      master.getRegionManager().putMetaRegionOnline(meta0);
      master.getRegionManager().putMetaRegionOnline(meta1);
      master.getRegionManager().putMetaRegionOnline(meta2);

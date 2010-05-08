@@ -786,11 +786,12 @@ public class RegionManager implements HConstants {
 
   /**
    * Set an online MetaRegion offline - remove it from the map.
-   * @param startKey region name
+   * @param startKey Startkey to use finding region to remove.
    * @return the MetaRegion that was taken offline.
    */
-  public MetaRegion offlineMetaRegion(byte [] startKey) {
-    LOG.info("META region removed from onlineMetaRegions");
+  public MetaRegion offlineMetaRegionWithStartKey(byte [] startKey) {
+    LOG.info("META region whose startkey is " + Bytes.toString(startKey) +
+      " removed from onlineMetaRegions");
     return onlineMetaRegions.remove(startKey);
   }
 
@@ -920,7 +921,7 @@ public class RegionManager implements HConstants {
     for ( MetaRegion region : onlineMetaRegions.values() ) {
       if (server.equals(region.getServer())) {
         LOG.info("Offlining META region: " + region);
-        offlineMetaRegion(region.getStartKey());
+        offlineMetaRegionWithStartKey(region.getStartKey());
         // Set for reassignment.
         setUnassigned(region.getRegionInfo(), true);
         hasMeta = true;
@@ -1379,7 +1380,7 @@ public class RegionManager implements HConstants {
       }
 
       // check if current server is overloaded
-      int numRegionsToClose = balanceFromOverloaded(servLoad, avg);
+      int numRegionsToClose = balanceFromOverloaded(info, servLoad, avg);
 
       // check if we can unload server by low loaded servers
       if(numRegionsToClose <= 0) {
@@ -1401,13 +1402,14 @@ public class RegionManager implements HConstants {
      * Check if server load is not overloaded (with load > avgLoadPlusSlop).
      * @return number of regions to unassign.
      */
-    private int balanceFromOverloaded(HServerLoad srvLoad, double avgLoad) {
+    private int balanceFromOverloaded(final HServerInfo info,
+        final HServerLoad srvLoad, final double avgLoad) {
       int avgLoadPlusSlop = (int)Math.ceil(avgLoad * (1 + this.slop));
       int numSrvRegs = srvLoad.getNumberOfRegions();
       if (numSrvRegs > avgLoadPlusSlop) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Server is overloaded: load=" + numSrvRegs +
-              ", avg=" + avgLoad + ", slop=" + this.slop);
+          LOG.debug("Server " + info.getServerName() + " is overloaded: load=" +
+            numSrvRegs + ", avg=" + avgLoad + ", slop=" + this.slop);
         }
         return numSrvRegs - (int)Math.ceil(avgLoad);
       }

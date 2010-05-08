@@ -59,17 +59,7 @@ public class ClusterStatus extends VersionedWritable {
    * Constructor, for Writable
    */
   public ClusterStatus() {
-  }
-
-  /**
-   * @return the names of region servers in the cluster
-   */
-  public Collection<String> getServerNames() {
-    ArrayList<String> names = new ArrayList<String>(liveServerInfo.size());
-    for (HServerInfo server: liveServerInfo) {
-      names.add(server.getName());
-    }
-    return names;
+    super();
   }
 
   /**

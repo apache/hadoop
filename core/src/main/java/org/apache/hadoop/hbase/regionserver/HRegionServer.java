@@ -133,6 +133,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
   // debugging and unit tests.
   protected volatile boolean abortRequested;
 
+  private volatile boolean killed = false;
+
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
 
@@ -612,7 +614,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     hlogRoller.interruptIfNecessary();
     this.majorCompactionChecker.interrupt();
 
-    if (abortRequested) {
+    if (killed) {
+      // Just skip out w/o closing regions.
+    } else if (abortRequested) {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
         try {
@@ -665,9 +669,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
       this.hbaseMaster = null;
     }
 
-    join();
-    this.zooKeeperWrapper.close();
-
+    if (!killed) {
+      join();
+      this.zooKeeperWrapper.close();
+    }
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
@@ -1206,6 +1211,16 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.reservedSpace.clear();
     LOG.info("Dump of metrics: " + this.metrics.toString());
     stop();
+  }
+
+  /*
+   * Simulate a kill -9 of this server.
+   * Exits w/o closing regions or cleaninup logs but it does close socket in
+   * case want to bring up server on old hostname+port immediately.
+   */
+  protected void kill() {
+    this.killed = true;
+    abort();
   }
 
   /**

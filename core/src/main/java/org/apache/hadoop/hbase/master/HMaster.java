@@ -114,7 +114,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   // Use AtomicBoolean rather than plain boolean because we want other threads
   // able to set shutdown flag.  Using AtomicBoolean can pass a reference
   // rather than have them have to know about the hosting Master class.
-  private final AtomicBoolean closed = new AtomicBoolean(true);
+  final AtomicBoolean closed = new AtomicBoolean(true);
   // TODO: Is this separate flag necessary?
   private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
 
@@ -515,7 +515,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           HRegionInterface hri =
             this.connection.getHRegionConnection(address, false);
           HServerInfo info = hri.getHServerInfo();
-          LOG.debug("Inspection found server " + info.getName());
+          LOG.debug("Inspection found server " + info.getServerName());
           this.serverManager.recordNewServer(info, true);
           regions = hri.getRegionsAssignment();
         } catch (IOException e) {

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -127,7 +128,8 @@ public class LocalHBaseCluster implements HConstants {
     return addRegionServer(this.regionThreads.size());
   }
 
-  public JVMClusterUtil.RegionServerThread addRegionServer(final int index) throws IOException {
+  public JVMClusterUtil.RegionServerThread addRegionServer(final int index)
+  throws IOException {
     JVMClusterUtil.RegionServerThread rst = JVMClusterUtil.createRegionServerThread(this.conf,
         this.regionServerClass, index);
     this.regionThreads.add(rst);
@@ -154,6 +156,20 @@ public class LocalHBaseCluster implements HConstants {
    */
   public List<JVMClusterUtil.RegionServerThread> getRegionServers() {
     return Collections.unmodifiableList(this.regionThreads);
+  }
+
+  /**
+   * @return List of running servers (Some servers may have been killed or
+   * aborted during lifetime of cluster; these servers are not included in this
+   * list).
+   */
+  public List<JVMClusterUtil.RegionServerThread> getLiveRegionServers() {
+    List<JVMClusterUtil.RegionServerThread> liveServers =
+      new ArrayList<JVMClusterUtil.RegionServerThread>();
+    for (JVMClusterUtil.RegionServerThread rst: getRegionServers()) {
+      if (rst.isAlive()) liveServers.add(rst);
+    }
+    return liveServers;
   }
 
   /**

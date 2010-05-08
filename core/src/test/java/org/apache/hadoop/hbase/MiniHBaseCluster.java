@@ -28,23 +28,35 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
- * This class creates a single process HBase cluster. One thread is run for
- * each server started.  Pass how many instances of a RegionServer you want
- * running in your cluster-in-a-single-jvm.  Its modeled on MiniDFSCluster.
- * Uses {@link LocalHBaseCluster}.  Will run on top of whatever the currently
- * configured FileSystem.
+ * This class creates a single process HBase cluster.
+ * each server.  The master uses the 'default' FileSystem.  The RegionServers,
+ * if we are running on DistributedFilesystem, create a FileSystem instance
+ * each and will close down their instance on the way out.
  */
 public class MiniHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
+  // Cache this.  For some reason only works first time I get it.  TODO: Figure
+  // out why.
+  private final static UserGroupInformation UGI;
+  static {
+    UGI = UserGroupInformation.getCurrentUGI();
+  }
+
   private Configuration conf;
   public LocalHBaseCluster hbaseCluster;
 
@@ -110,12 +122,74 @@ public class MiniHBaseCluster implements HConstants {
   }
 
   /**
-   * Subclass so can get at protected methods (none at moment).
+   * Subclass so can get at protected methods (none at moment).  Also, creates
+   * a FileSystem instance per instantiation.  Adds a shutdown own FileSystem
+   * on the way out. Shuts down own Filesystem only, not All filesystems as 
+   * the FileSystem system exit hook does.
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
+    private static int index = 0;
+
     public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException {
-      super(conf);
+      super(setDifferentUser(conf));
+    }
+
+    /*
+     * @param c
+     * @param currentfs We return this if we did not make a new one.
+     * @param uniqueName Same name used to help identify the created fs.
+     * @return A new fs instance if we are up on DistributeFileSystem.
+     * @throws IOException
+     */
+    private static Configuration setDifferentUser(final Configuration c)
+    throws IOException {
+      FileSystem currentfs = FileSystem.get(c);
+      if (!(currentfs instanceof DistributedFileSystem)) return c;
+      // Else distributed filesystem.  Make a new instance per daemon.  Below
+      // code is taken from the AppendTestUtil over in hdfs.
+      Configuration c2 = new Configuration(c);
+      String username = UGI.getUserName() + ".hrs." + index++;
+      UnixUserGroupInformation.saveToConf(c2,
+        UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        new UnixUserGroupInformation(username, new String[]{"supergroup"}));
+      return c2;
+    }
+
+    @Override
+    protected void init(MapWritable c) throws IOException {
+      super.init(c);
+      // Change shutdown hook to only shutdown the FileSystem added above by
+      // {@link #getFileSystem(HBaseConfiguration)
+      if (getFileSystem() instanceof DistributedFileSystem) {
+        Thread t = new SingleFileSystemShutdownThread(getFileSystem());
+        Runtime.getRuntime().addShutdownHook(t);
+      }
+    }
+ 
+    public void kill() {
+      super.kill();
+    }
+  }
+
+  /**
+   * Alternate shutdown hook.
+   * Just shuts down the passed fs, not all as default filesystem hook does.
+   */
+  static class SingleFileSystemShutdownThread extends Thread {
+    private final FileSystem fs;
+    SingleFileSystemShutdownThread(final FileSystem fs) {
+      super("Shutdown of " + fs);
+      this.fs = fs;
+    }
+    @Override
+    public void run() {
+      try {
+        LOG.info("Hook closing fs=" + this.fs);
+        this.fs.close();
+      } catch (IOException e) {
+        LOG.warn("Running hook", e);
+      }
     }
   }
 
@@ -178,10 +252,6 @@ public class MiniHBaseCluster implements HConstants {
    */
   public String abortRegionServer(int serverNumber) {
     HRegionServer server = getRegionServer(serverNumber);
-    /*TODO: Prove not needed in TRUNK
-    // // Don't run hdfs shutdown thread.
-    // server.setHDFSShutdownThreadOnExit(null);
-    */
     LOG.info("Aborting " + server.toString());
     server.abort();
     return server.toString();
@@ -212,10 +282,6 @@ public class MiniHBaseCluster implements HConstants {
     JVMClusterUtil.RegionServerThread server =
       hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
-    if (!shutdownFS) {
-      // Stop the running of the hdfs shutdown thread in tests.
-      server.getRegionServer().setShutdownHDFS(false);
-    }
     server.getRegionServer().stop();
     return server;
   }
@@ -266,6 +332,13 @@ public class MiniHBaseCluster implements HConstants {
    */
   public List<JVMClusterUtil.RegionServerThread> getRegionServerThreads() {
     return this.hbaseCluster.getRegionServers();
+  }
+
+  /**
+   * @return List of live region server threads (skips the aborted and the killed)
+   */
+  public List<JVMClusterUtil.RegionServerThread> getLiveRegionServerThreads() {
+    return this.hbaseCluster.getLiveRegionServers();
   }
 
   /**

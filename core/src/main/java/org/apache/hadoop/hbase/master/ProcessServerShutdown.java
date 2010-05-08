@@ -54,7 +54,6 @@ class ProcessServerShutdown extends RegionServerOperation {
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
 
-
   private static class ToDoEntry {
     boolean regionOffline;
     final HRegionInfo info;
@@ -85,24 +84,19 @@ class ProcessServerShutdown extends RegionServerOperation {
   }
 
   private void closeMetaRegions() {
-    isRootServer = master.getRegionManager().isRootServer(deadServerAddress);
-    if (isRootServer) {
-      master.getRegionManager().unsetRootRegion();
+    this.isRootServer =
+      this.master.getRegionManager().isRootServer(this.deadServerAddress) ||
+      this.master.getRegionManager().isRootServerCandidate (deadServer);
+    if (this.isRootServer) {
+      this.master.getRegionManager().unsetRootRegion();
     }
-    else {
-        //HBASE-1928: Check whether this server has been transitioning the ROOT table
-        isRootServer = master.getRegionManager().isRootServerCandidate (deadServer);
-        if (isRootServer) {
-          master.getRegionManager().unsetRootRegion();
-        }
-    }
+    List<byte[]> metaStarts =
+      this.master.getRegionManager().listMetaRegionsForServer(deadServerAddress);
 
-    List<byte[]> metaStarts = master.getRegionManager().listMetaRegionsForServer(deadServerAddress);
-
-    metaRegions = new ArrayList<MetaRegion>();
-    for (byte [] region : metaStarts) {
-      MetaRegion r = master.getRegionManager().offlineMetaRegion(region);
-      metaRegions.add(r);
+    this.metaRegions = new ArrayList<MetaRegion>();
+    for (byte [] startKey: metaStarts) {
+      MetaRegion r = master.getRegionManager().offlineMetaRegionWithStartKey(startKey);
+      this.metaRegions.add(r);
     }
 
     //HBASE-1928: Check whether this server has been transitioning the META table
@@ -194,7 +188,7 @@ class ProcessServerShutdown extends RegionServerOperation {
                   Bytes.toString(info.getRegionName()) +
               " from online meta regions");
             }
-            master.getRegionManager().offlineMetaRegion(info.getStartKey());
+            master.getRegionManager().offlineMetaRegionWithStartKey(info.getStartKey());
           }
 
           ToDoEntry todo = new ToDoEntry(info);

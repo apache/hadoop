@@ -29,44 +29,46 @@ import org.apache.hadoop.io.WritableComparable;
 
 
 /**
- * HServerInfo contains metainfo about an HRegionServer, Currently it only
- * contains the server start code.
- *
- * In the future it will contain information about the source machine and
- * load statistics.
+ * HServerInfo is meta info about an {@link HRegionServer}.
+ * Holds hostname, ports, regionserver startcode, and load.  Each server has
+ * a <code>servername</code> where servername is made up of a concatenation of
+ * hostname, port, and regionserver startcode.
  */
 public class HServerInfo implements WritableComparable<HServerInfo> {
+  /**
+   * This character is used as separator making up the <code>servername</code>.
+   * Servername is made of host, port, and startcode formatted as
+   * <code>&lt;hostname> '{@link #SERVERNAME_SEPARATOR}' &lt;port> '{@ink #SEPARATOR"}' &lt;startcode></code>
+   * where {@link SEPARATOR is usually a ','.
+   */
+  public static final String SERVERNAME_SEPARATOR = ",";
+
   private HServerAddress serverAddress;
   private long startCode;
   private HServerLoad load;
   private int infoPort;
+  // Servername is made of hostname, port and startcode.
   private String serverName = null;
-  private String name;
+  // Hostname of the regionserver.
+  private String hostname;
   private static Map<String,String> dnsCache = new HashMap<String,String>();
 
-  /** default constructor - used by Writable */
   public HServerInfo() {
     this(new HServerAddress(), 0,
         HConstants.DEFAULT_REGIONSERVER_INFOPORT, "default name");
   }
 
-  /**
-   * Constructor
-   * @param serverAddress
-   * @param startCode
-   * @param infoPort Port the info server is listening on.
-   */
   public HServerInfo(HServerAddress serverAddress, long startCode,
-      final int infoPort, String name) {
+      final int infoPort, String hostname) {
     this.serverAddress = serverAddress;
     this.startCode = startCode;
     this.load = new HServerLoad();
     this.infoPort = infoPort;
-    this.name = name;
+    this.hostname = hostname;
   }
 
   /**
-   * Construct a new object using another as input (like a copy constructor)
+   * Copy-constructor
    * @param other
    */
   public HServerInfo(HServerInfo other) {
@@ -74,72 +76,53 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = other.getStartCode();
     this.load = other.getLoad();
     this.infoPort = other.getInfoPort();
-    this.name = other.getName();
+    this.hostname = other.hostname;
   }
 
-  /**
-   * @return the load
-   */
   public HServerLoad getLoad() {
     return load;
   }
 
-  /**
-   * @param load the load to set
-   */
   public void setLoad(HServerLoad load) {
     this.load = load;
   }
 
-  /** @return the server address */
   public synchronized HServerAddress getServerAddress() {
     return new HServerAddress(serverAddress);
   }
 
-  /**
-   * Change the server address.
-   * @param serverAddress New server address
-   */
   public synchronized void setServerAddress(HServerAddress serverAddress) {
     this.serverAddress = serverAddress;
     this.serverName = null;
   }
 
-  /** @return the server start code */
   public synchronized long getStartCode() {
     return startCode;
   }
 
-  /**
-   * @return Port the info server is listening on.
-   */
   public int getInfoPort() {
     return this.infoPort;
   }
 
-  /**
-   * @param infoPort - new port of info server
-   */
   public void setInfoPort(int infoPort) {
     this.infoPort = infoPort;
   }
 
-  /**
-   * @param startCode the startCode to set
-   */
   public synchronized void setStartCode(long startCode) {
     this.startCode = startCode;
     this.serverName = null;
   }
 
   /**
-   * @return the server name in the form hostname_startcode_port
+   * @return Server name made of the concatenation of hostname, port and
+   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
   public synchronized String getServerName() {
     if (this.serverName == null) {
       // if we have the hostname of the RS, use it
-      if(this.name != null) {
-        this.serverName = getServerName(this.name, this.serverAddress.getPort(), this.startCode);
+      if(this.hostname != null) {
+        this.serverName =
+          getServerName(this.hostname, this.serverAddress.getPort(), this.startCode);
       }
       // go to DNS name resolution only if we dont have the name of the RS
       else {
@@ -150,90 +133,10 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   /**
-   * Get the hostname of the server
-   * @return hostname
-   */
-  public String getName() {
-    return name;
-  }
-
-  /**
-   * Set the hostname of the server
-   * @param name hostname
-   */
-  public void setName(String name) {
-    this.name = name;
-  }
-
-  /**
-   * @see java.lang.Object#toString()
-   */
-  @Override
-  public String toString() {
-    return "address: " + this.serverAddress + ", startcode: " + this.startCode
-    + ", load: (" + this.load.toString() + ")";
-  }
-
-  /**
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    return compareTo((HServerInfo)obj) == 0;
-  }
-
-  /**
-   * @see java.lang.Object#hashCode()
-   */
-  @Override
-  public int hashCode() {
-    return this.getServerName().hashCode();
-  }
-
-
-  // Writable
-
-  public void readFields(DataInput in) throws IOException {
-    this.serverAddress.readFields(in);
-    this.startCode = in.readLong();
-    this.load.readFields(in);
-    this.infoPort = in.readInt();
-    this.name = in.readUTF();
-  }
-
-  public void write(DataOutput out) throws IOException {
-    this.serverAddress.write(out);
-    out.writeLong(this.startCode);
-    this.load.write(out);
-    out.writeInt(this.infoPort);
-    out.writeUTF(name);
-  }
-
-  public int compareTo(HServerInfo o) {
-    return this.getServerName().compareTo(o.getServerName());
-  }
-
-  /**
-   * @param info
-   * @return the server name in the form hostname_startcode_port
-   */
-  private static String getServerName(HServerInfo info) {
-    return getServerName(info.getServerAddress(), info.getStartCode());
-  }
-
-  /**
-   * @param serverAddress in the form hostname:port
-   * @param startCode
-   * @return the server name in the form hostname_startcode_port
+   * @param serverAddress In form <code>&lt;hostname> ':' &lt;port></code>
+   * @param startCode Server startcode
+   * @return Server name made of the concatenation of hostname, port and
+   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
   public static String getServerName(String serverAddress, long startCode) {
     String name = null;
@@ -256,20 +159,78 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   /**
-   * @param address
-   * @param startCode
-   * @return the server name in the form hostname_startcode_port
+   * @param address Server address
+   * @param startCode Server startcode
+   * @return Server name made of the concatenation of hostname, port and
+   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
   public static String getServerName(HServerAddress address, long startCode) {
     return getServerName(address.getHostname(), address.getPort(), startCode);
   }
 
+  /*
+   * @param hostName
+   * @param port
+   * @param startCode
+   * @return Server name made of the concatenation of hostname, port and
+   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
+   */
   private static String getServerName(String hostName, int port, long startCode) {
     StringBuilder name = new StringBuilder(hostName);
-    name.append(",");
+    name.append(SERVERNAME_SEPARATOR);
     name.append(port);
-    name.append(",");
+    name.append(SERVERNAME_SEPARATOR);
     name.append(startCode);
     return name.toString();
+  }
+
+  /**
+   * @return ServerName and load concatenated.
+   * @see #getServerName()
+   * @see #getLoad()
+   */
+  @Override
+  public String toString() {
+    return "serverName=" + getServerName() +
+      ", load=(" + this.load.toString() + ")";
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    return compareTo((HServerInfo)obj) == 0;
+  }
+
+  @Override
+  public int hashCode() {
+    return this.getServerName().hashCode();
+  }
+
+  public void readFields(DataInput in) throws IOException {
+    this.serverAddress.readFields(in);
+    this.startCode = in.readLong();
+    this.load.readFields(in);
+    this.infoPort = in.readInt();
+    this.hostname = in.readUTF();
+  }
+
+  public void write(DataOutput out) throws IOException {
+    this.serverAddress.write(out);
+    out.writeLong(this.startCode);
+    this.load.write(out);
+    out.writeInt(this.infoPort);
+    out.writeUTF(hostname);
+  }
+
+  public int compareTo(HServerInfo o) {
+    return this.getServerName().compareTo(o.getServerName());
   }
 }
