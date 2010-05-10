@@ -52,7 +52,7 @@ public class StreamFile extends DfsServlet {
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException, InterruptedException {
     final Configuration conf =
-      (Configuration) getServletContext().getAttribute("name.conf");
+      (Configuration) getServletContext().getAttribute("datanode.conf");
     
     UserGroupInformation ugi = getUGI(request, conf);
     DFSClient client = ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
@@ -67,8 +67,9 @@ public class StreamFile extends DfsServlet {
   
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-    final String filename = JspHelper.validatePath(
-        request.getParameter("filename"));
+    final String path = request.getPathInfo() != null ? 
+                                        request.getPathInfo() : "/";
+    final String filename = JspHelper.validatePath(path);
     if (filename == null) {
       response.setContentType("text/plain");
       PrintWriter out = response.getWriter();

@@ -59,8 +59,8 @@ public class FileDataServlet extends DfsServlet {
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
-            "/streamFile", "filename=" + i.getFullName(parent) + 
-            "&ugi=" + ugi.getShortUserName(), null);
+            "/streamFile" + i.getFullName(parent), 
+            "ugi=" + ugi.getShortUserName(), null);
   }
 
   /** Select a datanode to service this request.
@@ -105,8 +105,9 @@ public class FileDataServlet extends DfsServlet {
                                                     request.getPathInfo() : "/";
       HdfsFileStatus info = nnproxy.getFileInfo(path);
       if ((info != null) && !info.isDir()) {
-        response.sendRedirect(createUri(path, info, ugi, nnproxy,
-              request).toURL().toString());
+        String redirect = createUri(path, info, ugi, nnproxy,
+              request).toURL().toString();
+        response.sendRedirect(redirect);
       } else if (info == null){
         response.sendError(400, "cat: File not found " + path);
       } else {

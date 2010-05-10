@@ -76,8 +76,8 @@ public class TestLdapIpDirFilter extends FilterTestCase {
   }
 
   public void beginDoFilter(WebRequest theRequest) {
-    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
-        "filename=/testdir");
+    theRequest.setURL("proxy-test:0", null, "/streamFile/testdir",
+      null, null);
   }
 
   public void testDoFilter() throws ServletException, IOException,

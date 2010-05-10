@@ -236,7 +236,9 @@ public class DatanodeJspHelper {
     else
       startOffset = Long.parseLong(startOffsetStr);
 
-    final String filename=JspHelper.validatePath(req.getParameter("filename"));
+    final String filename=JspHelper.validatePath(
+                          req.getPathInfo() == null ? 
+                          "/" : req.getPathInfo());
     if (filename == null) {
       out.print("Invalid input");
       return;

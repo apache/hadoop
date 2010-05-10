@@ -63,8 +63,8 @@ public class TestAuthorizationFilter extends FilterTestCase {
   }
 
   public void beginPathRestriction(WebRequest theRequest) {
-    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
-        "filename=/nontestdir");
+    theRequest.setURL("proxy-test:0", null, "/streamFile/nontestdir",
+      null,null);
   }
 
   public void testPathRestriction() throws ServletException, IOException {
@@ -91,8 +91,8 @@ public class TestAuthorizationFilter extends FilterTestCase {
   }
 
   public void beginPathPermit(WebRequest theRequest) {
-    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
-        "filename=/data/file");
+    theRequest.setURL("proxy-test:0", null, "/streamFile/data/file",
+      null, null);
   }
 
   public void testPathPermit() throws ServletException, IOException {
@@ -114,8 +114,8 @@ public class TestAuthorizationFilter extends FilterTestCase {
   }
 
   public void beginPathPermitQualified(WebRequest theRequest) {
-    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
-        "filename=/data/file");
+    theRequest.setURL("proxy-test:0", null, "/streamFile/data/file",
+      null, null);
   }
 
   public void testPathPermitQualified() throws ServletException, IOException {
@@ -137,8 +137,8 @@ public class TestAuthorizationFilter extends FilterTestCase {
   }
   
   public void beginPathQualifiediReject(WebRequest theRequest) {
-    theRequest.setURL("proxy-test:0", null, "/streamFile", null,
-        "filename=/data/file");
+    theRequest.setURL("proxy-test:0", null, "/streamFile/data/file",
+      null, null);
   }
 
   public void testPathQualifiedReject() throws ServletException, IOException {

@@ -40,8 +40,8 @@ public class ProxyFileDataServlet extends FileDataServlet {
       ClientProtocol nnproxy, HttpServletRequest request) throws IOException,
       URISyntaxException {
     return new URI(request.getScheme(), null, request.getServerName(), request
-        .getServerPort(), "/streamFile", "filename=" + i.getFullName(parent)
-        + "&ugi=" + ugi.getShortUserName(), null);
+        .getServerPort(), "/streamFile" + i.getFullName(parent),
+        "&ugi=" + ugi.getShortUserName(), null);
   }
 
   /** {@inheritDoc} */
