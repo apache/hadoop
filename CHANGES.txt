@@ -505,6 +505,9 @@ Release 0.21.0 - Unreleased
     HDFS-1109. HFTP supports filenames that contains the character "+".
     (Dmytro Molkov via dhruba)
 
+    HDFS-853. The HDFS webUI displays the balanced-ness of the cluster.
+    (Dmytro Molkov via dhruba)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

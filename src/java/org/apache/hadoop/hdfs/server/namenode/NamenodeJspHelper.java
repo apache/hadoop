@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -231,6 +232,30 @@ class NamenodeJspHelper {
           / (float) total;
       float percentRemaining = total <= 0 ? 100f : ((float) remaining * 100.0f)
           / (float) total;
+      float median = 0;
+      float max = 0;
+      float min = 0;
+      float dev = 0;
+      
+      if (live.size() > 0) {
+        float totalDfsUsed = 0;
+        float[] usages = new float[live.size()];
+        int i = 0;
+        for (DatanodeDescriptor dn : live) {
+          usages[i++] = dn.getDfsUsedPercent();
+          totalDfsUsed += dn.getDfsUsedPercent();
+        }
+        totalDfsUsed /= live.size();
+        Arrays.sort(usages);
+        median = usages[usages.length/2];
+        max = usages[usages.length - 1];
+        min = usages[0];
+        
+        for (i = 0; i < usages.length; i++) {
+          dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+        }
+        dev = (float) Math.sqrt(dev/usages.length);
+      }
 
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
           + "Configured Capacity" + colTxt() + ":" + colTxt()
@@ -243,8 +268,15 @@ class NamenodeJspHelper {
           + colTxt() + ":" + colTxt()
           + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
           + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
-          + StringUtils.limitDecimalTo2(percentRemaining) + " %" + rowTxt()
-          + colTxt()
+          + StringUtils.limitDecimalTo2(percentRemaining) + " %"
+          + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
+          + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
+          + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
+          + StringUtils.limitDecimalTo2(min) + " %"
+          + colTxt() + StringUtils.limitDecimalTo2(median) + " %"
+          + colTxt() + StringUtils.limitDecimalTo2(max) + " %"
+          + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
+          + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
           + colTxt() + ":" + colTxt() + live.size() + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
