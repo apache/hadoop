@@ -183,6 +183,8 @@ class CompactSplitThread extends Thread implements HConstants {
     Put put = new Put(oldRegionInfo.getRegionName());
     put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER,
       Writables.getBytes(oldRegionInfo));
+    put.add(CATALOG_FAMILY, SERVER_QUALIFIER, EMPTY_BYTE_ARRAY);
+    put.add(CATALOG_FAMILY, STARTCODE_QUALIFIER, EMPTY_BYTE_ARRAY);
     put.add(CATALOG_FAMILY, SPLITA_QUALIFIER,
       Writables.getBytes(newRegions[0].getRegionInfo()));
     put.add(CATALOG_FAMILY, SPLITB_QUALIFIER,

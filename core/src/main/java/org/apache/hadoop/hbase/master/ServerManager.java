@@ -148,13 +148,15 @@ public class ServerManager implements HConstants {
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 0);
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval,
       this.master.getShutdownRequested());
-    this.serverMonitorThread.start();
+    String n = Thread.currentThread().getName();
+    Threads.setDaemonThreadRunning(this.serverMonitorThread,
+      n + ".serverMonitor");
     this.oldLogCleaner = new OldLogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
         this.master.getShutdownRequested(), c,
         master.getFileSystem(), master.getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
-      "ServerManager.oldLogCleaner");
+      n + ".oldLogCleaner");
 
   }
 

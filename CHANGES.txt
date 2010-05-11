@@ -306,6 +306,7 @@ Release 0.21.0 - Unreleased
    HBASE-2503  PriorityQueue isn't thread safe, KeyValueHeap uses it that way
    HBASE-2431  Master does not respect generation stamps, may result in meta
                getting permanently offlined
+   HBASE-2515  ChangeTableState considers split&&offline regions as being served
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -554,6 +555,7 @@ Release 0.21.0 - Unreleased
    HBASE-2414  Enhance test suite to be able to specify distributed scenarios
    HBASE-2518  Kill all the trailing whitespaces in the code base
                (Benoit Sigoure via Stack)
+   HBASE-2528  ServerManager.ServerMonitor isn't daemonized
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
