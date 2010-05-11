@@ -59,7 +59,6 @@ import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.CompleteFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -708,16 +707,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public boolean complete(String src, String clientName, Block last)
       throws IOException {
     stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
-    CompleteFileStatus returnCode =
-      namesystem.completeFile(src, clientName, last);
-    if (returnCode == CompleteFileStatus.STILL_WAITING) {
-      return false;
-    } else if (returnCode == CompleteFileStatus.COMPLETE_SUCCESS) {
-      return true;
-    } else {
-      throw new IOException("Could not complete write to file " + 
-                            src + " by " + clientName);
-    }
+    return namesystem.completeFile(src, clientName, last);
   }
 
   /**

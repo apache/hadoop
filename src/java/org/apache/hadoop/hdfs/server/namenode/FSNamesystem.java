@@ -1528,62 +1528,39 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           + pendingFile.getClientName() + " but is accessed by " + holder);
     }
   }
-
+ 
   /**
-   * The FSNamesystem will already know the blocks that make up the file.
-   * Before we return, we make sure that all the file's blocks have 
-   * been reported by datanodes and are replicated correctly.
+   * Complete in-progress write to the given file.
+   * @return true if successful, false if the client should continue to retry
+   *         (e.g if not all blocks have reached minimum replication yet)
+   * @throws IOException on error (eg lease mismatch, file not open, file deleted)
    */
-  
-  enum CompleteFileStatus {
-    OPERATION_FAILED,
-    STILL_WAITING,
-    COMPLETE_SUCCESS
-  }
-  
-  public CompleteFileStatus completeFile(String src, String holder, Block last) 
+  public boolean completeFile(String src, String holder, Block last) 
     throws IOException, UnresolvedLinkException {
-    CompleteFileStatus status = completeFileInternal(src, holder, last);
+    boolean success = completeFileInternal(src, holder, last);
     getEditLog().logSync();
-    return status;
+    return success ;
   }
 
-  private synchronized CompleteFileStatus completeFileInternal(String src, 
+  private synchronized boolean completeFileInternal(String src, 
     String holder, Block last) throws IOException, UnresolvedLinkException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
-    INode iFile = dir.getFileINode(src);
-    INodeFileUnderConstruction pendingFile = null;
-    Block[] fileBlocks = null;
 
-    if (iFile != null && iFile.isUnderConstruction()) {
-      pendingFile = (INodeFileUnderConstruction) iFile;
-      fileBlocks =  dir.getFileBlocks(src);
-    }
-    if (fileBlocks == null ) {    
-      NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
-                                   + "failed to complete " + src
-                                   + " because dir.getFileBlocks() is null " + 
-                                   " and pendingFile is " + 
-                                   ((pendingFile == null) ? "null" : 
-                                     ("from " + pendingFile.getClientMachine()))
-                                  );                      
-      return CompleteFileStatus.OPERATION_FAILED;
-    } 
-
+    INodeFileUnderConstruction pendingFile = checkLease(src, holder);
     // commit the last block and complete it if it has minimum replicas
     blockManager.commitOrCompleteLastBlock(pendingFile, last);
 
     if (!checkFileProgress(pendingFile, true)) {
-      return CompleteFileStatus.STILL_WAITING;
+      return false;
     }
 
     finalizeINodeFileUnderConstruction(src, pendingFile);
 
     NameNode.stateChangeLog.info("DIR* NameSystem.completeFile: file " + src
                                   + " is closed by " + holder);
-    return CompleteFileStatus.COMPLETE_SUCCESS;
+    return true;
   }
 
   /** 
