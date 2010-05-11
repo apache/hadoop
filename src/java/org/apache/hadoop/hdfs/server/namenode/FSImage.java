@@ -1157,9 +1157,10 @@ public class FSImage extends Storage {
           parentPath = getParent(path);
         }
         // add new inode
+        // without propagating modification time to parent
         parentINode = fsDir.addToParent(path, parentINode, permissions,
                                         blocks, symlink, replication, modificationTime, 
-                                        atime, nsQuota, dsQuota, blockSize);
+                                        atime, nsQuota, dsQuota, blockSize, false);
       }
       
       // load datanode info

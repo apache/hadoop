@@ -239,7 +239,8 @@ class FSDirectory implements Closeable {
                               long atime,
                               long nsQuota,
                               long dsQuota,
-                              long preferredBlockSize) 
+                              long preferredBlockSize,
+                              boolean propagateModTime) 
                               throws UnresolvedLinkException {
     // NOTE: This does not update space counts for parents
     // create new inode
@@ -264,7 +265,8 @@ class FSDirectory implements Closeable {
     INodeDirectory newParent = null;
     synchronized (rootDir) {
       try {
-        newParent = rootDir.addToParent(src, newNode, parentINode, false);
+        newParent = rootDir.addToParent(src, newNode, parentINode,
+                                        false, propagateModTime);
       } catch (FileNotFoundException e) {
         return null;
       }
@@ -1507,7 +1509,7 @@ class FSDirectory implements Closeable {
       throw new NullPointerException("Panic: parent does not exist");
     }
     T addedNode = ((INodeDirectory)pathComponents[pos-1]).addChild(
-        child, inheritPermission);
+        child, inheritPermission, true);
     if (addedNode == null) {
       updateCount(pathComponents, pos, -counts.getNsCount(), 
           -childDiskspace, true);

@@ -878,6 +878,9 @@ Release 0.21.0 - Unreleased
     HDFS-1141. Closing a file is successful only if the client still has a
     valid lease. (Todd Lipcon via dhruba)
 
+    HDFS-1138. Prevent erroneous updation of modification time of a directory
+    when fsimage loads. (Dmytro Molkov via dhruba)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS

@@ -72,6 +72,26 @@ public class TestRestartDFS extends TestCase {
       final FileStatus newdirstatus = fs.getFileStatus(dirpath);
       assertEquals(dirstatus.getOwner(), newdirstatus.getOwner());
       assertEquals(dirstatus.getGroup() + "_XXX", newdirstatus.getGroup());
+      rootmtime = fs.getFileStatus(rootpath).getModificationTime();
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+    try {
+      // This is a second restart to check that after the first restart
+      // the image written in parallel to both places did not get corrupted
+      cluster = new MiniDFSCluster(conf, 4, false, null);
+      FileSystem fs = cluster.getFileSystem();
+      assertTrue("Filesystem corrupted after restart.",
+                 files.checkFiles(fs, dir));
+
+      final FileStatus newrootstatus = fs.getFileStatus(rootpath);
+      assertEquals(rootmtime, newrootstatus.getModificationTime());
+      assertEquals(rootstatus.getOwner() + "_XXX", newrootstatus.getOwner());
+      assertEquals(rootstatus.getGroup(), newrootstatus.getGroup());
+
+      final FileStatus newdirstatus = fs.getFileStatus(dirpath);
+      assertEquals(dirstatus.getOwner(), newdirstatus.getOwner());
+      assertEquals(dirstatus.getGroup() + "_XXX", newdirstatus.getGroup());
 
       files.cleanup(fs, dir);
     } finally {
