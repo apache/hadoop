@@ -870,7 +870,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         throw new IllegalArgumentException("concat: "+ target + " file is empty");
       }
 
-      long blockSize = trgInode.preferredBlockSize;
+      long blockSize = trgInode.getPreferredBlockSize();
 
       // check the end block to be full
       if(blockSize != trgInode.blocks[trgInode.blocks.length-1].getNumBytes()) {
@@ -878,7 +878,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       }
 
       si.add(trgInode);
-      short repl = trgInode.blockReplication;
+      short repl = trgInode.getReplication();
 
       // now check the srcs
       boolean endSrc = false; // final src file doesn't have to have full end block
@@ -898,10 +898,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         }
 
         // check replication and blocks size
-        if(repl != srcInode.blockReplication) {
+        if(repl != srcInode.getReplication()) {
           throw new IllegalArgumentException(src + " and " + target + " " +
               "should have same replication: "
-              + repl + " vs. " + srcInode.blockReplication);
+              + repl + " vs. " + srcInode.getReplication());
         }
 
         //boolean endBlock=false;

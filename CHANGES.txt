@@ -2,6 +2,11 @@ Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
 
+  IMPROVEMENTS
+
+    HDFS-1061. Memory footprint optimization for INodeFile object. 
+    (Bharath Mundlapudi via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
