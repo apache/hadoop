@@ -40,17 +40,17 @@ HBASE_VERSION=`echo $HBASE_HOME | cut -d '-' -f 2`
 export USER="root"
 
 # up file-max
-sysctl -w fs.file-max=32768
+sysctl -w fs.file-max=65535
 
 # up ulimits
-echo "root soft nofile 32768" >> /etc/security/limits.conf
-echo "root hard nofile 32768" >> /etc/security/limits.conf
+echo "root soft nofile 65535" >> /etc/security/limits.conf
+echo "root hard nofile 65535" >> /etc/security/limits.conf
 
 # up epoll limits; ok if this fails, only valid for kernels 2.6.27+
-sysctl -w fs.epoll.max_user_instances=32768 > /dev/null 2>&1
+sysctl -w fs.epoll.max_user_instances=65535 > /dev/null 2>&1
 
 # up conntrack_max
-sysctl -w net.ipv4.netfilter.ip_conntrack_max=65536 > /dev/null 2>&1
+sysctl -w net.ipv4.netfilter.ip_conntrack_max=65535 > /dev/null 2>&1
 
 [ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
 
@@ -253,10 +253,6 @@ cat > $HBASE_HOME/conf/hbase-site.xml <<EOF
   <value>100</value>
 </property>
 <property>
-  <name>dfs.datanode.socket.write.timeout</name>
-  <value>0</value>
-</property>
-<property>
   <name>zookeeper.session.timeout</name>
   <value>60000</value>
 </property>
@@ -270,8 +266,8 @@ EOF
 cp $HADOOP_HOME/conf/mapred-site.xml $HBASE_HOME/conf/mapred-site.xml
 # Override JVM options
 cat >> $HBASE_HOME/conf/hbase-env.sh <<EOF
-export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
-export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=128m -XX:MaxNewSize=128m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
+export HBASE_MASTER_OPTS="-Xmx1000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-master-gc.log"
+export HBASE_REGIONSERVER_OPTS="-Xmx2000m -XX:+UseCompressedOops -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=88 -XX:NewSize=128m -XX:MaxNewSize=128m -XX:+AggressiveOpts -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:/mnt/hbase/logs/hbase-regionserver-gc.log"
 EOF
 # Configure log4j
 sed -i -e 's/hadoop.hbase=DEBUG/hadoop.hbase=INFO/g' $HBASE_HOME/conf/log4j.properties

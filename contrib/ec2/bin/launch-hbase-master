@@ -56,7 +56,7 @@ if [ ! -z "$host" ]; then
 fi
 
 # Finding HBase image
-[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep $S3_BUCKET | grep hbase | grep $HBASE_VERSION-$arch | grep available | awk '{print $2}'`
+[ -z "$AMI_IMAGE" ] && AMI_IMAGE=`ec2-describe-images $TOOL_OPTS -a | grep -e $S3_BUCKET -e $S3_ACCOUNT | grep hbase | grep $HBASE_VERSION | grep $arch | grep available | awk '{print $2}'`
 
 # Start a master
 echo "Starting master with AMI $AMI_IMAGE (arch $arch)"

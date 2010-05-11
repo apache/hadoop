@@ -41,18 +41,20 @@ HBASE_URL=http://hbase.s3.amazonaws.com/hbase/hbase-$HBASE_VERSION.tar.gz
 # The version of Hadoop to use.
 HADOOP_VERSION=0.20.2
 
+# The Amazon S3 bucket where the HBase AMI is stored.
+REGION=us-east-1
+#REGION=us-west-1
+#REGION=eu-west-1
+#REGION=ap-southeast-1
+S3_BUCKET=apache-hbase-images-$REGION
+# Account for bucket
+# We need this because EC2 is returning account identifiers instead of bucket
+# names.
+S3_ACCOUNT=720040977164
+
 HADOOP_URL=http://hbase.s3.amazonaws.com/hadoop/hadoop-$HADOOP_VERSION.tar.gz
 
 LZO_URL=http://hbase.s3.amazonaws.com/hadoop/lzo-linux-$HADOOP_VERSION.tar.gz
-
-# The Amazon S3 bucket where the HBase AMI is stored.
-# Change this value if you are launching instances in regions other than 
-# us-east-1 (the default).
-# Change this value otherwise only if you are creating your own (private) AMI
-# so you can store it in a bucket you own.
-S3_BUCKET=apache-hbase-images            # us-east-1
-#S3_BUCKET=apache-hbase-images-eu         # eu-west-1
-#S3_BUCKET=apache-hbase-images-us-west-1  # us-west-1
 
 # Enable public access web interfaces
 ENABLE_WEB_PORTS=false
@@ -89,6 +91,8 @@ getCredentialSetting 'EC2_PRIVATE_KEY'
 getCredentialSetting 'EC2_CERT'
 getCredentialSetting 'EC2_ROOT_SSH_KEY'
 
+export EC2_URL=https://$REGION.ec2.amazonaws.com
+
 # SSH options used when connecting to EC2 instances.
 SSH_OPTS=`echo -q -i "$EC2_ROOT_SSH_KEY" -o StrictHostKeyChecking=no -o ServerAliveInterval=30`
 
@@ -118,7 +122,7 @@ INSTANCES_PATH=$HOME/.hbase-${CLUSTER}-instances
 USER_DATA_FILE=hbase-ec2-init-remote.sh
 
 # The version number of the installed JDK.
-JAVA_VERSION=1.6.0_17
+JAVA_VERSION=1.6.0_20
 
 JAVA_URL=http://hbase.s3.amazonaws.com/jdk/jdk-${JAVA_VERSION}-linux-@arch@.bin
 
