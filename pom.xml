@@ -156,6 +156,17 @@
 
   <repositories>
     <repository>
+      <id>ibiblio.org</id>
+      <name>ibiblio mirror</name>
+      <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
       <id>java.net</id>
       <name>Java.Net</name>
       <url>http://download.java.net/maven/2/</url>
@@ -192,17 +203,6 @@
       <id>temp-hadoop</id>
       <name>Hadoop 0.20.1/2 packaging, thrift, zk</name>
       <url>http://people.apache.org/~rawson/repo/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>ibiblio.org</id>
-      <name>ibiblio mirror</name>
-      <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
