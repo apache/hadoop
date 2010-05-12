@@ -45,6 +45,7 @@ sysctl -w fs.file-max=65535
 # up ulimits
 echo "root soft nofile 65535" >> /etc/security/limits.conf
 echo "root hard nofile 65535" >> /etc/security/limits.conf
+uname -n 65535
 
 # up epoll limits; ok if this fails, only valid for kernels 2.6.27+
 sysctl -w fs.epoll.max_user_instances=65535 > /dev/null 2>&1
@@ -154,7 +155,7 @@ cat > $HADOOP_HOME/conf/hdfs-site.xml <<EOF
 </property>
 <property>
   <name>dfs.datanode.max.xcievers</name>
-  <value>4096</value>
+  <value>10000</value>
 </property>
 </configuration>
 EOF
