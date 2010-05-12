@@ -45,6 +45,8 @@ import java.util.Set;
  * serving, and the regions need to get reassigned.
  */
 class ProcessServerShutdown extends RegionServerOperation {
+  // Server name made of the concatenation of hostname, port and startcode
+  // formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
   private final String deadServer;
   private boolean isRootServer;
   private List<MetaRegion> metaRegions;
@@ -86,7 +88,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private void closeMetaRegions() {
     this.isRootServer =
       this.master.getRegionManager().isRootServer(this.deadServerAddress) ||
-      this.master.getRegionManager().isRootServerCandidate (deadServer);
+      this.master.getRegionManager().isRootInTransitionOnThisServer(deadServer);
     if (this.isRootServer) {
       this.master.getRegionManager().unsetRootRegion();
     }
@@ -156,7 +158,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         // Check server name.  If null, skip (We used to consider it was on
         // shutdown server but that would mean that we'd reassign regions that
         // were already out being assigned, ones that were product of a split
-        // that happened while the shutdown was being processed.
+        // that happened while the shutdown was being processed).
         String serverAddress = BaseScanner.getServerAddress(values);
         long startCode = BaseScanner.getStartCode(values);
 
@@ -174,7 +176,6 @@ class ProcessServerShutdown extends RegionServerOperation {
             Bytes.toString(row));
         }
 
-//        HRegionInfo info = master.getHRegionInfo(row, values.rowResult());
         HRegionInfo info = master.getHRegionInfo(row, values);
         if (info == null) {
           emptyRows.add(row);
@@ -248,7 +249,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process server shutdown scanning root region on " +
+        LOG.debug("Process server shutdown scanning root region on " +
             master.getRegionManager().getRootRegionLocation().getBindAddress());
       }
       Scan scan = new Scan();
@@ -282,11 +283,9 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   @Override
   protected boolean process() throws IOException {
-    LOG.info("process shutdown of server " + this.deadServer +
-      ": logSplit: " +
-      logSplit + ", rootRescanned: " + rootRescanned +
-      ", numberOfMetaRegions: " +
-      master.getRegionManager().numMetaRegions() +
+    LOG.info("Process shutdown of server " + this.deadServer +
+      ": logSplit: " + logSplit + ", rootRescanned: " + rootRescanned +
+      ", numberOfMetaRegions: " + master.getRegionManager().numMetaRegions() +
       ", onlineMetaRegions.size(): " +
       master.getRegionManager().numOnlineMetaRegions());
     if (!logSplit) {
@@ -305,13 +304,10 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       logSplit = true;
     }
-
     LOG.info("Log split complete, meta reassignment and scanning:");
-
     if (this.isRootServer) {
       LOG.info("ProcessServerShutdown reassigning ROOT region");
       master.getRegionManager().reassignRootRegion();
-
       isRootServer = false;  // prevent double reassignment... heh.
     }
 
@@ -341,12 +337,13 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process server shutdown scanning root region on " +
+        LOG.debug("Process server shutdown scanning root region on " +
           master.getRegionManager().getRootRegionLocation().getBindAddress() +
           " finished " + Thread.currentThread().getName());
       }
       rootRescanned = true;
     }
+
     if (!metaTableAvailable()) {
       // We can't proceed because not all meta regions are online.
       // metaAvailable() has put this request on the delayedToDoQueue
@@ -367,8 +364,6 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
 
     closeRegionsInTransition();
-
-    // Remove this server from dead servers list.  Finished splitting logs.
     this.master.getServerManager().removeDeadServer(deadServer);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removed " + deadServer + " from deadservers Map");

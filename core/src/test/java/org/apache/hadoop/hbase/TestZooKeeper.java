@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,18 +33,19 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 public class TestZooKeeper {
+  private final Log LOG = LogFactory.getLog(this.getClass());
 
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
   private Configuration    conf;
-  private MiniHBaseCluster cluster;
 
   /**
    * @throws java.lang.Exception
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(1);
   }
 
@@ -60,7 +63,6 @@ public class TestZooKeeper {
   @Before
   public void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    cluster = TEST_UTIL.getHBaseCluster();
   }
 
   /**
@@ -98,13 +100,16 @@ public class TestZooKeeper {
   }
   @Test
   public void testRegionServerSessionExpired() throws Exception{
-    this.conf.setBoolean("hbase.regionserver.restart.on.zk.expire", true);
+    LOG.info("Starting testRegionServerSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
+    TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getConfiguration().
+      setBoolean("hbase.regionserver.restart.on.zk.expire", true);
     TEST_UTIL.expireRegionServerSession(0);
     testSanity();
   }
   @Test
   public void testMasterSessionExpired() throws Exception {
+    LOG.info("Starting testRegionServerSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireMasterSession();
     testSanity();
@@ -136,7 +141,7 @@ public class TestZooKeeper {
   public void testMultipleZK() {
     try {
       HTable localMeta = new HTable(conf, HConstants.META_TABLE_NAME);
-      HBaseConfiguration otherConf = new HBaseConfiguration(conf);
+      Configuration otherConf = HBaseConfiguration.create(conf);
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
       HTable ipMeta = new HTable(conf, HConstants.META_TABLE_NAME);
 

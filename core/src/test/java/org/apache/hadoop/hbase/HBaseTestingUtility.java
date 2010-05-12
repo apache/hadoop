@@ -600,8 +600,10 @@ public class HBaseTestingUtility {
     ZooKeeper zk = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
+    final long sleep = sessionTimeout * 5L;
+    LOG.info("ZK Closed; sleeping=" + sleep);
 
-    Thread.sleep(sessionTimeout * 5L);
+    Thread.sleep(sleep);
 
     new HTable(conf, HConstants.META_TABLE_NAME);
   }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.Leases;
+import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -170,6 +171,10 @@ public class ServerManager implements HConstants {
     // Test for case where we get a region startup message from a regionserver
     // that has been quickly restarted but whose znode expiration handler has
     // not yet run, or from a server whose fail we are currently processing.
+    // Test its host+port combo is present in serverAddresstoServerInfo.  If it
+    // is, reject the server and trigger its expiration. The next time it comes
+    // in, it should have been removed from serverAddressToServerInfo and queued
+    // for processing by ProcessServerShutdown.
     HServerInfo info = new HServerInfo(serverInfo);
     String hostAndPort = info.getServerAddress().toString();
     HServerInfo existingServer =
@@ -183,18 +188,23 @@ public class ServerManager implements HConstants {
       }
       throw new Leases.LeaseStillHeldException(hostAndPort);
     }
-    if (isDead(hostAndPort, true)) {
-      LOG.debug("Server start rejected; currently processing " + hostAndPort +
-        " failure");
-      throw new Leases.LeaseStillHeldException(hostAndPort);
-    }
-    if (isDead(hostAndPort, true)) {
-      LOG.debug("Server start rejected; currently processing " + hostAndPort +
-        " failure");
-      throw new Leases.LeaseStillHeldException(hostAndPort);
-    }
+    checkIsDead(info.getServerName(), "STARTUP");
     LOG.info("Received start message from: " + info.getServerName());
     recordNewServer(info);
+  }
+
+  /*
+   * If this server is on the dead list, reject it with a LeaseStillHeldException
+   * @param serverName Server name formatted as host_port_startcode.
+   * @param what START or REPORT
+   * @throws LeaseStillHeldException
+   */
+  private void checkIsDead(final String serverName, final String what)
+  throws LeaseStillHeldException {
+    if (!isDead(serverName)) return;
+    LOG.debug("Server " + what + " rejected; currently processing " +
+      serverName + " as dead server");
+    throw new Leases.LeaseStillHeldException(serverName);
   }
 
   /**
@@ -249,11 +259,7 @@ public class ServerManager implements HConstants {
     final HMsg msgs[], final HRegionInfo[] mostLoadedRegions)
   throws IOException {
     HServerInfo info = new HServerInfo(serverInfo);
-    if (isDead(info.getServerName())) {
-      LOG.info("Received report from region server " + info.getServerName() +
-        " previously marked dead. Rejecting report.");
-      throw new Leases.LeaseStillHeldException(info.getServerName());
-    }
+    checkIsDead(info.getServerName(), "REPORT");
     if (msgs.length > 0) {
       if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
         processRegionServerExit(info, msgs);
@@ -665,7 +671,7 @@ public class ServerManager implements HConstants {
       this.master.getRegionManager().offlineMetaServer(info.getServerAddress());
 
       //HBASE-1928: Check whether this server has been transitioning the ROOT table
-      if (this.master.getRegionManager().isRootServerCandidate (serverName)) {
+      if (this.master.getRegionManager().isRootInTransitionOnThisServer(serverName)) {
          this.master.getRegionManager().unsetRootRegion();
          this.master.getRegionManager().reassignRootRegion();
       }
