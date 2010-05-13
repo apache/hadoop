@@ -28,15 +28,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -129,6 +128,7 @@ public class MiniHBaseCluster implements HConstants {
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
     private static int index = 0;
+    private Thread shutdownThread = null;
 
     public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException {
@@ -159,11 +159,20 @@ public class MiniHBaseCluster implements HConstants {
     @Override
     protected void init(MapWritable c) throws IOException {
       super.init(c);
-      // Change shutdown hook to only shutdown the FileSystem added above by
-      // {@link #getFileSystem(HBaseConfiguration)
-      if (getFileSystem() instanceof DistributedFileSystem) {
-        Thread t = new SingleFileSystemShutdownThread(getFileSystem());
-        Runtime.getRuntime().addShutdownHook(t);
+      // Run this thread to shutdown our filesystem on way out.
+      this.shutdownThread = new SingleFileSystemShutdownThread(getFileSystem());
+    }
+
+    @Override
+    public void run() {
+      try {
+        super.run();
+      } finally {
+        // Run this on the way out.
+        if (this.shutdownThread != null) {
+          this.shutdownThread.start();
+          Threads.shutdown(this.shutdownThread, 30000);
+        }
       }
     }
  

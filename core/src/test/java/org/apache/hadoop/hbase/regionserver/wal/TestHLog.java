@@ -19,6 +19,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -27,14 +32,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -312,6 +312,72 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
           val.getKeyValues().get(0).getValue()));
         System.out.println(key + " " + val);
+      }
+    } finally {
+      if (log != null) {
+        log.closeAndDelete();
+      }
+      if (reader != null) {
+        reader.close();
+      }
+    }
+  }
+
+  /**
+   * @throws IOException
+   */
+  public void testAppend() throws IOException {
+    final int COL_COUNT = 10;
+    final byte [] tableName = Bytes.toBytes("tablename");
+    final byte [] row = Bytes.toBytes("row");
+    this.conf.setBoolean("dfs.support.append", true);
+    Reader reader = null;
+    HLog log = new HLog(this.fs, dir, this.oldLogDir, this.conf, null);
+    try {
+      // Write columns named 1, 2, 3, etc. and then values of single byte
+      // 1, 2, 3...
+      long timestamp = System.currentTimeMillis();
+      WALEdit cols = new WALEdit();
+      for (int i = 0; i < COL_COUNT; i++) {
+        cols.add(new KeyValue(row, Bytes.toBytes("column"),
+          Bytes.toBytes(Integer.toString(i)),
+          timestamp, new byte[] { (byte)(i + '0') }));
+      }
+      HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
+          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      log.append(hri, tableName, cols, System.currentTimeMillis());
+      long logSeqId = log.startCacheFlush();
+      log.completeCacheFlush(hri.getRegionName(), tableName, logSeqId, false);
+      log.close();
+      Path filename = log.computeFilename(log.getFilenum());
+      log = null;
+      // Now open a reader on the log and assert append worked.
+      reader = HLog.getReader(fs, filename, conf);
+      HLog.Entry entry = reader.next();
+      assertEquals(COL_COUNT, entry.getEdit().size());
+      int idx = 0;
+      for (KeyValue val : entry.getEdit().getKeyValues()) {
+        assertTrue(Bytes.equals(hri.getRegionName(),
+          entry.getKey().getRegionName()));
+        assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
+        assertTrue(Bytes.equals(row, val.getRow()));
+        assertEquals((byte)(idx + '0'), val.getValue()[0]);
+        System.out.println(entry.getKey() + " " + val);
+        idx++;
+      }
+
+      // Get next row... the meta flushed row.
+      entry = reader.next();
+      assertEquals(1, entry.getEdit().size());
+      for (KeyValue val : entry.getEdit().getKeyValues()) {
+        assertTrue(Bytes.equals(hri.getRegionName(),
+          entry.getKey().getRegionName()));
+        assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
+        assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
+        assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
+        assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
+          val.getValue()));
+        System.out.println(entry.getKey() + " " + val);
       }
     } finally {
       if (log != null) {

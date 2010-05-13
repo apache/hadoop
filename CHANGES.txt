@@ -308,6 +308,7 @@ Release 0.21.0 - Unreleased
    HBASE-2431  Master does not respect generation stamps, may result in meta
                getting permanently offlined
    HBASE-2515  ChangeTableState considers split&&offline regions as being served
+   HBASE-2544  Forward port branch 0.20 WAL to TRUNK
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
