@@ -45,7 +45,7 @@ public class UserData {
   }
 
   public synchronized Object remove(int sel) {
-    return remove(sel);
+    return data.remove(sel);
   }
 
 }
