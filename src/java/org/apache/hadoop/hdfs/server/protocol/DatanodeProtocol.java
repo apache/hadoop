@@ -37,7 +37,9 @@ import org.apache.avro.reflect.Nullable;
  * returning values from these functions.
  *
  **********************************************************************/
-@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, 
+    clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
    * 24: register() renamed registerDatanode()

@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1003. authorization checks for inter-server protocol 
+    (based on HADOOP-6600) (boryas)
+
     HDFS-1061. Memory footprint optimization for INodeFile object. 
     (Bharath Mundlapudi via jghoman)
 
