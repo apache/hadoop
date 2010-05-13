@@ -9,6 +9,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-6764. Remove verbose logging from the Groups class. (Boris Shkolnik)
+
     HADOOP-6730. Bug in FileContext#copy and provide base class for FileContext 
     tests. (Ravi Phulari via jghoman)
 

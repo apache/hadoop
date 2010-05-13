@@ -57,8 +57,9 @@ public class Groups {
     cacheTimeout = 
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 5*60) * 1000;
     
-    LOG.info("Group mapping impl=" + impl.getClass().getName() + 
-        "; cacheTimeout=" + cacheTimeout);
+    if(LOG.isDebugEnabled())
+      LOG.debug("Group mapping impl=" + impl.getClass().getName() + 
+          "; cacheTimeout=" + cacheTimeout);
   }
   
   /**
