@@ -18,7 +18,6 @@
     St.Ack Fri Mar 19 13:20:15 PDT 2010
  -->
     <module>stargate</module>
-    <module>transactional</module>
   </modules>
 
 </project>
