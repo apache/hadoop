@@ -101,7 +101,8 @@ public class MiniRPCBenchmark {
     }    
   }
   
-  @KerberosInfo(USER_NAME_KEY)
+  @KerberosInfo(
+      serverPrincipal=USER_NAME_KEY)
   @TokenInfo(TestDelegationTokenSelector.class)
   public static interface MiniProtocol extends VersionedProtocol {
     public static final long versionID = 1L;

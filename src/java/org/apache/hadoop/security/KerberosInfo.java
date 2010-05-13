@@ -27,5 +27,6 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 public @interface KerberosInfo {
   /** Key for getting server's Kerberos principal name from Configuration */
-  String value();
+  String serverPrincipal();
+  String clientPrincipal() default "";
 }

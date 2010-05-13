@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-6600. mechanism for authorization check for inter-server 
+    protocols. (boryas)
+
     HADOOP-6623. Add StringUtils.split for non-escaped single-character
     separator. (Todd Lipcon via tomwhite)
 
