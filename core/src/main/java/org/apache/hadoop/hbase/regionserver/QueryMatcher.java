@@ -54,7 +54,7 @@ public class QueryMatcher {
    * Additionally, this contains "early-out" language to tell the scanner to
    * move on to the next File (memstore or Storefile), or to return immediately.
    */
-  static enum MatchCode {
+  public static enum MatchCode {
     /**
      * Include KeyValue in the returned result
      */

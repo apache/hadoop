@@ -558,6 +558,7 @@ Release 0.21.0 - Unreleased
    HBASE-2528  ServerManager.ServerMonitor isn't daemonized
    HBASE-2537  Change ordering of maven repos listed in pom.xml to have
                ibiblio first
+   HBASE-2540  Make QueryMatcher.MatchCode public (Clint Morgan via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
