@@ -152,5 +152,7 @@ public class CommonConfigurationKeys {
    */
   public final static String HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY =
       "hadoop.cluster.administrators";
+  public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY = 
+    "hadoop.security.service.user.name.key";
 }
 

@@ -12,6 +12,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-6612.  Protocols RefreshUserToGroupMappingsProtocol and 
+    RefreshAuthorizationPolicyProtocol will fail with security enabled (boryas)
+
     HADOOP-6764. Remove verbose logging from the Groups class. (Boris Shkolnik)
 
     HADOOP-6730. Bug in FileContext#copy and provide base class for FileContext 
