@@ -165,6 +165,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // default localfs.  Presumption is that rootdir is fully-qualified before
     // we get to here with appropriate fs scheme.
     this.rootdir = FSUtils.getRootDir(this.conf);
+    // Cover both bases, the old way of setting default fs and the new.
+    // We're supposed to run on 0.20 and 0.21 anyways.
+    this.conf.set("fs.default.name", this.rootdir.toString());
     this.conf.set("fs.defaultFS", this.rootdir.toString());
     this.fs = FileSystem.get(this.conf);
     checkRootDir(this.rootdir, this.conf, this.fs);

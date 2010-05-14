@@ -309,6 +309,8 @@ Release 0.21.0 - Unreleased
                getting permanently offlined
    HBASE-2515  ChangeTableState considers split&&offline regions as being served
    HBASE-2544  Forward port branch 0.20 WAL to TRUNK
+   HBASE-2546  Specify default filesystem in both the new and old way (needed
+               if we are to run on 0.20 and 0.21 hadoop)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
