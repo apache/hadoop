@@ -13,6 +13,11 @@ Trunk (unreleased changes)
     HDFS=1079. Throw exceptions as specified by the AbstractFileSystem
     in HDFS implemenation and protocols. (suresh)
 
+  BUG FIXES
+
+    HDFS 1021. specify correct server principal for RefreshAuthorizationPolicyProtocol 
+    and RefreshUserToGroupMappingsProtocol protocols in DFSAdmin (for HADOOP-6612) (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

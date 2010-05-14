@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.FsStatus;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -728,6 +730,12 @@ public class DFSAdmin extends FsShell {
     // Get the current configuration
     Configuration conf = getConf();
     
+    // for security authorization
+    // server principal for this call   
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+
     // Create the client
     RefreshAuthorizationPolicyProtocol refreshProtocol = 
       (RefreshAuthorizationPolicyProtocol) 
@@ -752,6 +760,12 @@ public class DFSAdmin extends FsShell {
     // Get the current configuration
     Configuration conf = getConf();
     
+    // for security authorization
+    // server principal for this call   
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+ 
     // Create the client
     RefreshUserToGroupMappingsProtocol refreshProtocol = 
       (RefreshUserToGroupMappingsProtocol) 
