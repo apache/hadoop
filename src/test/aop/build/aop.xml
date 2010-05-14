@@ -14,12 +14,26 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<project name="aspects">
+<project name="aspects"
+  xmlns:artifact="urn:maven-artifact-ant">
+  <!-- Properties common for all fault injections -->
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
   <property name="hadoop-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
   <property name="compile-inject.output" value="${build-fi.dir}/compile-fi.log"/>
   <property name="aspectversion" value="1.6.5"/>
   <property file="${basedir}/build.properties"/>
+
+  <!-- Properties related to system fault injection and tests -->
+  <property name="system-test-build-dir" value="${build-fi.dir}/system"/>
+
+  <!-- Properties specifically for system fault-injections and system tests -->
+
+  <property name="hadoop-core-system.pom"
+            location="${ivy.dir}/hadoop-core-system.xml" />
+  <property name="hadoop-core-system.jar"
+            location="${system-test-build-dir}/${final.name}-system.jar" />
+  <property name="hadoop-core-system-sources.jar"
+            location="${system-test-build-dir}/${final.name}-system-sources.jar" />
 
   <!--All Fault Injection (FI) related targets are located in this session -->
     
@@ -46,15 +60,19 @@
     <echo message="Start weaving aspects in place"/>
     <iajc
       encoding="${build.encoding}" 
-      srcdir="${java.src.dir};${build.src};${test.src.dir}/aop" 
-      includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
+      srcdir="${java.src.dir};${build.src};${src.dir.path}" 
+      includes="**/org/apache/hadoop/**/*.java, **/org/apache/hadoop/**/*.aj"
       excludes="org/apache/hadoop/classification/tools/**/*, org/apache/hadoop/record/**/*"
-      destDir="${build.classes}"
+      destDir="${dest.dir}"
       debug="${javac.debug}"
       target="${javac.version}"
       source="${javac.version}"
       deprecation="${javac.deprecation}">
-      <classpath refid="test.classpath"/>
+
+      <classpath>
+       <path refid="test.classpath"/>
+     </classpath>
+
     </iajc>
     <loadfile property="injection.failure" srcfile="${compile-inject.output}">
       <filterchain>
@@ -69,15 +87,76 @@
     <echo message="Weaving of aspects is finished"/>
   </target>
 
-  <target name="injectfaults" 
-  	description="Instrument classes with faults and other AOP advices">
+  <!-- Classpath for running system tests -->
+  <path id="test.system.classpath">
+        <pathelement location="${hadoop.conf.dir.deployed}" />
+        <pathelement location="${system-test-build-dir}/test/extraconf" />
+        <pathelement location="${system-test-build-dir}/test/classes" />
+        <pathelement location="${system-test-build-dir}/classes" />
+        <pathelement location="${test.src.dir}" />
+        <pathelement location="${build-fi.dir}" />
+        <pathelement location="${build-fi.dir}/tools" />
+        <pathelement path="${clover.jar}" />
+        <fileset dir="${test.lib.dir}">
+          <include name="**/*.jar" />
+          <exclude name="**/excluded/" />
+        </fileset>
+        <fileset dir="${system-test-build-dir}">
+           <include name="**/*.jar" />
+           <exclude name="**/excluded/" />
+         </fileset>
+        <path refid="classpath" />
+  </path>
+
+  <target name="injectfaults"
+        description="Instrument classes with faults and other AOP advices">
     <!--mkdir to prevent <subant> failure in case the folder has been removed-->
     <mkdir dir="${build-fi.dir}"/>
     <delete file="${compile-inject.output}"/>
-    <subant buildpath="${basedir}" target="compile-fault-inject"
-    	output="${compile-inject.output}">
-      <property name="build.dir" value="${build-fi.dir}"/>
-    </subant>
+    <weave-injectfault-aspects dest.dir="${build-fi.dir}/classes"
+                               src.dir="${test.src.dir}/aop">
+    </weave-injectfault-aspects>
+  </target>
+
+  <!-- =============================================================== -->
+  <!-- Create hadoop-{version}-dev-core.jar required to be deployed on -->
+  <!-- cluster for system tests                                        -->
+  <!-- =============================================================== -->
+  <target name="jar-system"
+          depends="inject-system-faults"
+          description="make hadoop.jar">
+    <macro-jar-fault-inject target.name="jar"
+      build.dir="${system-test-build-dir}"
+      jar.final.name="final.name"
+      jar.final.value="${final.name}-system">
+    </macro-jar-fault-inject>
+    <jar jarfile="${system-test-build-dir}/${final.name}-system-sources.jar"
+      update="yes">
+      <fileset dir="${test.src.dir}/system/java" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${test.src.dir}/system/aop" includes="org/apache/hadoop/**/*.aj"/>
+    </jar>
+  </target>
+
+  <macrodef name="weave-injectfault-aspects">
+    <attribute name="dest.dir" />
+    <attribute name="src.dir" />
+    <sequential>
+      <subant buildpath="build.xml" target="compile-fault-inject"
+        output="${compile-inject.output}">
+        <property name="build.dir" value="${build-fi.dir}" />
+        <property name="src.dir.path" value="@{src.dir}" />
+        <property name="dest.dir" value="@{dest.dir}" />
+      </subant>
+    </sequential>
+  </macrodef>
+
+  <target name="inject-system-faults" description="Inject system faults">
+    <property name="build-fi.dir" value="${system-test-build-dir}" />
+    <mkdir dir="${build-fi.dir}"/>
+    <delete file="${compile-inject.output}"/>
+    <weave-injectfault-aspects dest.dir="${system-test-build-dir}/classes"
+                               src.dir="${test.src.dir}/system">
+    </weave-injectfault-aspects>
   </target>
 
   <macrodef name="macro-run-tests-fault-inject">
@@ -99,11 +178,12 @@
   <!-- ================================================================== -->
   <macrodef name="macro-jar-fault-inject">
     <attribute name="target.name" />
+    <attribute name="build.dir" />
     <attribute name="jar.final.name" />
     <attribute name="jar.final.value" />
     <sequential>
       <subant buildpath="build.xml" target="@{target.name}">
-        <property name="build.dir" value="${build-fi.dir}"/>
+        <property name="build.dir" value="@{build.dir}"/>
         <property name="@{jar.final.name}" value="@{jar.final.value}"/>
         <property name="jar.extra.properties.list" 
         	  value="${test.src.dir}/fi-site.xml" />
@@ -129,4 +209,53 @@
   </macrodef>
 
   <!--End of Fault Injection (FI) related session-->
+
+  <!-- Start of cluster controller binary target -->
+  <property name="runAs.src" 
+    value ="${test.src.dir}/system/c++/runAs"/>
+  <property name="runAs.build.dir" 
+    value="${system-test-build-dir}/c++-build"/>
+  <property name="runAs.configure.script" 
+    value="${runAs.build.dir}/configure"/>
+  <target name="init-runAs-build">
+    <condition property="runAs.parameters.passed">
+      <not>
+        <equals arg1="${run-as.hadoop.home.dir}" 
+          arg2="$${run-as.hadoop.home.dir}"/>
+      </not>
+    </condition>
+    <fail unless="runAs.parameters.passed" 
+          message="Required parameters run-as.hadoop.home.dir not passed to the build"/>
+    <mkdir dir="${runAs.build.dir}"/>
+    <copy todir="${runAs.build.dir}" overwrite="true">
+      <fileset dir="${runAs.src}" includes="**/*"/>
+    </copy>
+    <chmod perm="+x" file="${runAs.configure.script}">
+    </chmod>
+  </target>
+
+  <target name="configure-runAs" 
+    depends="init-runAs-build">
+    <exec executable="${runAs.configure.script}" 
+      dir="${runAs.build.dir}" failonerror="true">
+      <arg value="--with-home=${run-as.hadoop.home.dir}"/>
+    </exec>
+  </target>
+  <target name="run-as" depends="configure-runAs">
+    <exec executable="${make.cmd}" dir="${runAs.build.dir}" 
+        searchpath="yes" failonerror="yes">
+     <arg value="all" />
+    </exec>
+  </target>
+  <!-- End of cluster controller binary target -->
+  <!-- Maven -->
+
+  <target name="-mvn-system-install" depends="mvn-taskdef, jar-system">
+    <artifact:pom file="${hadoop-core-system.pom}" id="hadoop.core.system"/>
+    <artifact:install file="${hadoop-core-system.jar}">
+       <pom refid="hadoop.core.system"/>
+       <attach file="${hadoop-core-system-sources.jar}" classifier="sources" />
+    </artifact:install>
+  </target>
+
 </project>
