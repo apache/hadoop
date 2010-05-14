@@ -565,6 +565,8 @@ Release 0.21.0 - Unreleased
    HBASE-2540  Make QueryMatcher.MatchCode public (Clint Morgan via Stack)
    HBASE-2524  Unresponsive region server, potential deadlock
                (Todd Lipcon via Stack)
+   HBASE-2547  [mvn] assembly:assembly does not include hbase-X.X.X-test.jar
+               (Paul Smith via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

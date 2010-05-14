@@ -23,6 +23,18 @@
         </dependencySets>
       </binaries>
     </moduleSet>
+   <!-- Test jar-->
+   <moduleSet>
+     <includes>
+       <include>org.apache.hbase:hbase-core</include>
+     </includes>
+     <binaries>
+       <attachmentClassifier>tests</attachmentClassifier>
+       <outputFileNameMapping>hbase-${version}${dashClassifier}.jar</outputFileNameMapping>
+       <outputDirectory>/</outputDirectory>
+       <unpack>false</unpack>
+     </binaries>
+   </moduleSet>
     <!-- This ensures that the source jars are added-->
     <moduleSet>
       <includes>
