@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -66,6 +67,8 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Options;
@@ -659,7 +662,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws IOException
    */
   public synchronized void setPermission(String src, FsPermission permission)
-      throws IOException, UnresolvedLinkException {
+      throws AccessControlException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, IOException {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set permission for " + src, safeMode);
     checkOwner(src);
@@ -678,7 +682,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws IOException
    */
   public synchronized void setOwner(String src, String username, String group)
-      throws IOException, UnresolvedLinkException {
+      throws AccessControlException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, IOException {
     if (isInSafeMode())
         throw new SafeModeException("Cannot set owner for " + src, safeMode);
     FSPermissionChecker pc = checkOwner(src);
@@ -706,7 +711,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
-      long offset, long length) throws IOException, UnresolvedLinkException {
+      long offset, long length) throws AccessControlException,
+      FileNotFoundException, UnresolvedLinkException, IOException {
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true);
     if (blocks != null) {
       //sort the blocks
@@ -725,16 +731,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws FileNotFoundException
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length,
-      boolean doAccessTime) throws IOException, UnresolvedLinkException {
+      boolean doAccessTime) throws FileNotFoundException,
+      UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.READ);
     }
 
     if (offset < 0) {
-      throw new IOException("Negative offset is not supported. File: " + src );
+      throw new HadoopIllegalArgumentException(
+          "Negative offset is not supported. File: " + src);
     }
     if (length < 0) {
-      throw new IOException("Negative length is not supported. File: " + src );
+      throw new HadoopIllegalArgumentException(
+          "Negative length is not supported. File: " + src);
     }
     final LocatedBlocks ret = getBlockLocationsInternal(src,
         offset, length, doAccessTime);  
@@ -750,7 +759,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                                        long offset, 
                                                        long length,
                                                        boolean doAccessTime)
-      throws IOException, UnresolvedLinkException {
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
     INodeFile inode = dir.getFileINode(src);
     if (inode == null)
       throw new FileNotFoundException("File does not exist: " + src);
@@ -1005,7 +1014,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throw new SafeModeException("Cannot create symlink " + link, safeMode);
     }
     if (!DFSUtil.isValidName(link)) {
-      throw new IOException("Invalid file name: " + link);
+      throw new InvalidPathException("Invalid file name: " + link);
     }
     if (!dir.isValidToCreate(link)) {
       throw new IOException("failed to create link " + link 
@@ -1046,8 +1055,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return status;
   }
 
-  private synchronized boolean setReplicationInternal(String src, short replication) 
-    throws IOException, UnresolvedLinkException {
+  private synchronized boolean setReplicationInternal(String src,
+      short replication) throws AccessControlException, QuotaExceededException,
+      SafeModeException, UnresolvedLinkException, IOException {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set replication for " + src, safeMode);
     blockManager.verifyReplication(src, replication, null);
@@ -1092,8 +1102,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /*
    * Verify that parent directory of src exists.
    */
-  private void verifyParentDir(String src) throws FileAlreadyExistsException,
-      FileNotFoundException, UnresolvedLinkException {
+  private void verifyParentDir(String src) throws FileNotFoundException,
+      ParentNotDirectoryException, UnresolvedLinkException {
     Path parent = new Path(src).getParent();
     if (parent != null) {
       INode[] pathINodes = dir.getExistingPathINodes(parent.toString());
@@ -1102,7 +1112,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         throw new FileNotFoundException("Parent directory doesn't exist: "
             + parent.toString());
       } else if (!parentNode.isDirectory() && !parentNode.isLink()) {
-        throw new FileAlreadyExistsException("Parent path is not a directory: "
+        throw new ParentNotDirectoryException("Parent path is not a directory: "
             + parent.toString());
       }
     }
@@ -1111,16 +1121,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * Create a new file entry in the namespace.
    * 
-   * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
-   * 
-   * @throws IOException if file name is invalid
-   *         {@link FSDirectory#isValidToCreate(String)}.
+   * For description of parameters and exceptions thrown see 
+   * {@link ClientProtocol#create()}
    */
-  void startFile(String src, PermissionStatus permissions,
-                 String holder, String clientMachine,
-                 EnumSet<CreateFlag> flag, boolean createParent, 
-                 short replication, long blockSize)
-      throws IOException, UnresolvedLinkException {
+  void startFile(String src, PermissionStatus permissions, String holder,
+      String clientMachine, EnumSet<CreateFlag> flag, boolean createParent,
+      short replication, long blockSize) throws AccessControlException,
+      SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
+      FileNotFoundException, ParentNotDirectoryException, IOException {
     startFileInternal(src, permissions, holder, clientMachine, flag,
         createParent, replication, blockSize);
     getEditLog().logSync();
@@ -1132,15 +1140,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
   }
 
+  /**
+   * For description of exceptions @see {@link ClientProtocol#create()}
+   */
   private synchronized void startFileInternal(String src,
-                                              PermissionStatus permissions,
-                                              String holder, 
-                                              String clientMachine, 
-                                              EnumSet<CreateFlag> flag,
-                                              boolean createParent,
-                                              short replication,
-                                              long blockSize)
-      throws IOException, UnresolvedLinkException {
+      PermissionStatus permissions, String holder, String clientMachine,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize) throws SafeModeException, FileAlreadyExistsException,
+      AccessControlException, UnresolvedLinkException, FileNotFoundException,
+      ParentNotDirectoryException, IOException {
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
     boolean append = flag.contains(CreateFlag.APPEND);
     boolean create = flag.contains(CreateFlag.CREATE);
@@ -1158,13 +1166,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (isInSafeMode())
       throw new SafeModeException("Cannot create file" + src, safeMode);
     if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);
+      throw new InvalidPathException(src);
     }
 
     // Verify that the destination does not exist as a directory already.
     boolean pathExists = dir.exists(src);
     if (pathExists && dir.isDir(src)) {
-      throw new IOException("Cannot create file "+ src + "; already exists as a directory.");
+      throw new FileAlreadyExistsException("Cannot create file "+ src + "; already exists as a directory.");
     }
 
     if (isPermissionEnabled) {
@@ -1321,9 +1329,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Append to an existing file in the namespace.
    */
   LocatedBlock appendFile(String src, String holder, String clientMachine)
-    throws IOException, UnresolvedLinkException {
+      throws AccessControlException, SafeModeException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, IOException {
     if (supportAppends == false) {
-      throw new IOException("Append to hdfs not supported." +
+      throw new UnsupportedOperationException("Append to hdfs not supported." +
                             " Please refer to dfs.support.append configuration parameter.");
     }
     startFileInternal(src, null, holder, clientMachine, EnumSet.of(CreateFlag.APPEND), 
@@ -1405,7 +1415,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                          Block previous,
                                          HashMap<Node, Node> excludedNodes
                                          ) 
-      throws IOException, UnresolvedLinkException {
+      throws LeaseExpiredException, NotReplicatedYetException,
+      QuotaExceededException, SafeModeException, UnresolvedLinkException,
+      IOException {
     long fileLength, blockSize;
     int replication;
     DatanodeDescriptor clientNode = null;
@@ -1481,7 +1493,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * The client would like to let go of the given block
    */
   public synchronized boolean abandonBlock(Block b, String src, String holder)
-    throws IOException, UnresolvedLinkException {
+      throws LeaseExpiredException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
     //
     // Remove the block from the pending creates list
     //
@@ -1497,14 +1510,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   
   // make sure that we still have the lease on this file.
   private INodeFileUnderConstruction checkLease(String src, String holder) 
-    throws IOException, UnresolvedLinkException {
+    throws LeaseExpiredException, UnresolvedLinkException {
     INodeFile file = dir.getFileINode(src);
     checkLease(src, holder, file);
     return (INodeFileUnderConstruction)file;
   }
 
-  private void checkLease(String src, String holder, INode file) 
-                                                     throws IOException {
+  private void checkLease(String src, String holder, INode file)
+      throws LeaseExpiredException {
 
     if (file == null || file.isDirectory()) {
       Lease lease = leaseManager.getLease(holder);
@@ -1536,14 +1549,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws IOException on error (eg lease mismatch, file not open, file deleted)
    */
   public boolean completeFile(String src, String holder, Block last) 
-    throws IOException, UnresolvedLinkException {
+    throws SafeModeException, UnresolvedLinkException, IOException {
     boolean success = completeFileInternal(src, holder, last);
     getEditLog().logSync();
     return success ;
   }
 
   private synchronized boolean completeFileInternal(String src, 
-    String holder, Block last) throws IOException, UnresolvedLinkException {
+      String holder, Block last) throws SafeModeException,
+      UnresolvedLinkException, IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
@@ -1584,10 +1598,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param src path to the file
    * @param inodes INode representing each of the components of src. 
    *        <code>inodes[inodes.length-1]</code> is the INode for the file.
+   *        
+   * @throws QuotaExceededException If addition of block exceeds space quota
    */
-  private Block allocateBlock(String src,
-                              INode[] inodes,
-                              DatanodeDescriptor targets[]) throws IOException {
+  private Block allocateBlock(String src, INode[] inodes,
+      DatanodeDescriptor targets[]) throws QuotaExceededException {
     Block b = new Block(FSNamesystem.randBlockId.nextLong(), 0, 0); 
     while(isValidBlock(b)) {
       b.setBlockId(FSNamesystem.randBlockId.nextLong());
@@ -1604,7 +1619,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * replicated.  If not, return false. If checkall is true, then check
    * all blocks, otherwise check only penultimate block.
    */
-  synchronized boolean checkFileProgress(INodeFile v, boolean checkall) throws IOException {
+  synchronized boolean checkFileProgress(INodeFile v, boolean checkall) {
     if (checkall) {
       //
       // check all blocks of the file.
@@ -1719,7 +1734,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   private synchronized void renameToInternal(String src, String dst,
-      Options.Rename... options) throws IOException, UnresolvedLinkException {
+      Options.Rename... options) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options - "
           + src + " to " + dst);
@@ -1728,7 +1743,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throw new SafeModeException("Cannot rename " + src, safeMode);
     }
     if (!DFSUtil.isValidName(dst)) {
-      throw new IOException("Invalid name: " + dst);
+      throw new InvalidPathException("Invalid name: " + dst);
     }
     if (isPermissionEnabled) {
       checkParentAccess(src, FsAction.WRITE);
@@ -1741,11 +1756,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
   
   /**
-   * Remove the indicated filename from namespace. If the filename 
-   * is a directory (non empty) and recursive is set to false then throw exception.
+   * Remove the indicated file from namespace.
+   * 
+   * @see ClientProtocol#delete(String, boolean) for detailed descriptoin and 
+   * description of exceptions
    */
-    public boolean delete(String src, boolean recursive) 
-      throws IOException, UnresolvedLinkException {
+    public boolean delete(String src, boolean recursive)
+      throws AccessControlException, SafeModeException,
+      UnresolvedLinkException, IOException {
       if ((!recursive) && (!dir.isDirEmpty(src))) {
         throw new IOException(src + " is non empty");
       }
@@ -1769,9 +1787,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * the {@link FSNamesystem} lock.
    * <p>
    * For small directory or file the deletion is done in one shot.
+   * 
+   * @see ClientProtocol#delete(String, boolean) for description of exceptions
    */
-  private boolean deleteInternal(String src, boolean enforcePermission) 
-    throws IOException, UnresolvedLinkException {
+  private boolean deleteInternal(String src, boolean enforcePermission)
+      throws AccessControlException, SafeModeException,
+      UnresolvedLinkException, IOException{
     boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
     synchronized(this) {
@@ -1833,15 +1854,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param src The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException 
    *        if src refers to a symlinks
-   * @throws IOException if permission to access file is denied by the system 
+   *
+   * @throws AccessControlException if access is denied
    * @throws UnresolvedLinkException if a symlink is encountered.
+   *
    * @return object containing information regarding the file
    *         or null if file not found
    */
   HdfsFileStatus getFileInfo(String src, boolean resolveLink) 
-    throws IOException, UnresolvedLinkException {
+    throws AccessControlException, UnresolvedLinkException {
     if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);
+      throw new InvalidPathException("Invalid file name: " + src);
     }
     if (isPermissionEnabled) {
       checkTraverse(src);
@@ -1883,7 +1906,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (isInSafeMode())
       throw new SafeModeException("Cannot create directory " + src, safeMode);
     if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid directory name: " + src);
+      throw new InvalidPathException(src);
     }
     if (isPermissionEnabled) {
       checkAncestorAccess(src, FsAction.WRITE);
@@ -1899,13 +1922,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     checkFsObjectLimit();
 
     if (!dir.mkdirs(src, permissions, false, now())) {
-      throw new IOException("Invalid directory name: " + src);
+      throw new IOException("Failed to create directory: " + src);
     }
     return true;
   }
 
-  ContentSummary getContentSummary(String src) 
-      throws IOException, UnresolvedLinkException {
+  ContentSummary getContentSummary(String src) throws AccessControlException,
+      FileNotFoundException, UnresolvedLinkException {
     if (isPermissionEnabled) {
       checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
     }
@@ -2214,9 +2237,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param src the directory name
    * @param startAfter the name to start after
    * @return a partial listing starting after startAfter
+   * 
+   * @throws AccessControlException if access is denied
+   * @throws UnresolvedLinkException if symbolic link is encountered
+   * @throws IOException if other I/O error occurred
    */
   public DirectoryListing getListing(String src, byte[] startAfter) 
-    throws IOException, UnresolvedLinkException {
+    throws AccessControlException, UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
       if (dir.isDir(src)) {
         checkPathAccess(src, FsAction.READ_EXECUTE);
@@ -4273,8 +4300,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   // rename was successful. If any part of the renamed subtree had
   // files that were being written to, update with new filename.
   //
-  void changeLease(String src, String dst, HdfsFileStatus dinfo) 
-                   throws IOException {
+  void changeLease(String src, String dst, HdfsFileStatus dinfo) {
     String overwrite;
     String replaceBy;
 

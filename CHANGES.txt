@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     HDFS-1061. Memory footprint optimization for INodeFile object. 
     (Bharath Mundlapudi via jghoman)
 
+    HDFS=1079. Throw exceptions as specified by the AbstractFileSystem
+    in HDFS implemenation and protocols. (suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

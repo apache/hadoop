@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -726,9 +727,9 @@ public class TestFileCreation extends junit.framework.TestCase {
         expectedException = e;
       }
       assertTrue("Create a file when parent directory exists as a file"
-          + " should throw FileAlreadyExistsException ",
+          + " should throw ParentNotDirectoryException ",
           expectedException != null
-              && expectedException instanceof FileAlreadyExistsException);
+              && expectedException instanceof ParentNotDirectoryException);
       fs.delete(path, true);
       // Create a file in a non-exist directory, should fail
       final Path path2 = new Path(nonExistDir + "/testCreateNonRecursive");
@@ -755,9 +756,9 @@ public class TestFileCreation extends junit.framework.TestCase {
         expectedException = e;
       }
       assertTrue("Overwrite a file when parent directory exists as a file"
-          + " should throw FileAlreadyExistsException ",
+          + " should throw ParentNotDirectoryException ",
           expectedException != null
-              && expectedException instanceof FileAlreadyExistsException);
+              && expectedException instanceof ParentNotDirectoryException);
       fs.delete(path, true);
       // Overwrite a file in a non-exist directory, should fail
       final Path path3 = new Path(nonExistDir + "/testOverwriteNonRecursive");

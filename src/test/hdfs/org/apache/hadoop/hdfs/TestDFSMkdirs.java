@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs;
 import junit.framework.TestCase;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -97,9 +97,9 @@ public class TestDFSMkdirs extends TestCase {
         expectedException = e;
       }
       assertTrue("Create a directory when parent dir exists as file using"
-          + " mkdir() should throw FileAlreadyExistsException ",
+          + " mkdir() should throw ParentNotDirectoryException ",
           expectedException != null
-              && expectedException instanceof FileAlreadyExistsException);
+              && expectedException instanceof ParentNotDirectoryException);
       // Create a dir in a non-exist directory, should fail
       expectedException = null;
       try {

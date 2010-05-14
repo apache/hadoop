@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -153,6 +152,8 @@ class FSDirectory implements Closeable {
 
   /**
    * Add the given filename to the fs.
+   * @throws QuotaExceededException 
+   * @throws FileAlreadyExistsException 
    */
   INodeFileUnderConstruction addFile(String path, 
                 PermissionStatus permissions,
@@ -162,7 +163,8 @@ class FSDirectory implements Closeable {
                 String clientMachine,
                 DatanodeDescriptor clientNode,
                 long generationStamp) 
-                throws IOException, UnresolvedLinkException {
+    throws FileAlreadyExistsException, QuotaExceededException,
+      UnresolvedLinkException {
     waitForReady();
 
     // Always do an implicit mkdirs for parent directory tree.
@@ -293,7 +295,7 @@ class FSDirectory implements Closeable {
                      INode[] inodes,
                      Block block,
                      DatanodeDescriptor targets[]
-  ) throws QuotaExceededException, IOException  {
+  ) throws QuotaExceededException {
     waitForReady();
 
     synchronized (rootDir) {
@@ -403,7 +405,9 @@ class FSDirectory implements Closeable {
    * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
    */
   void renameTo(String src, String dst, Options.Rename... options)
-      throws IOException, UnresolvedLinkException {
+      throws FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, QuotaExceededException,
+      UnresolvedLinkException, IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: " + src
           + " to " + dst);
@@ -534,20 +538,17 @@ class FSDirectory implements Closeable {
   /**
    * Rename src to dst.
    * See {@link DistributedFileSystem#rename(Path, Path, Options.Rename...)}
-   * for details related to rename semantics.
+   * for details related to rename semantics and exceptions.
    * 
    * @param src source path
    * @param dst destination path
    * @param timestamp modification time
    * @param options Rename options
-   * @throws IOException if the operation violates any quota limit
-   * @throws FileAlreadyExistsException if src equals dst or the src is a 
-   *         symlink that points to dst.
-   * @return true if rename overwrites {@code dst}
    */
   boolean unprotectedRenameTo(String src, String dst, long timestamp,
-      Options.Rename... options) throws IOException,
-      UnresolvedLinkException {
+      Options.Rename... options) throws FileAlreadyExistsException,
+      FileNotFoundException, ParentNotDirectoryException,
+      QuotaExceededException, UnresolvedLinkException, IOException {
     boolean overwrite = false;
     if (null != options) {
       for (Rename option : options) {
@@ -715,11 +716,8 @@ class FSDirectory implements Closeable {
    * @return array of file blocks
    * @throws QuotaExceededException
    */
-  Block[] setReplication(String src, 
-                         short replication,
-                         int[] oldReplication
-                         ) throws QuotaExceededException, 
-                         UnresolvedLinkException {
+  Block[] setReplication(String src, short replication, int[] oldReplication)
+      throws QuotaExceededException, UnresolvedLinkException {
     waitForReady();
     Block[] fileBlocks = unprotectedSetReplication(src, replication, oldReplication);
     if (fileBlocks != null)  // log replication change
@@ -765,10 +763,9 @@ class FSDirectory implements Closeable {
    * Get the blocksize of a file
    * @param filename the filename
    * @return the number of bytes 
-   * @throws IOException if it is a directory or does not exist.
    */
-  long getPreferredBlockSize(String filename) 
-      throws IOException, UnresolvedLinkException {
+  long getPreferredBlockSize(String filename) throws UnresolvedLinkException,
+      FileNotFoundException, IOException {
     synchronized (rootDir) {
       INode inode = rootDir.getNode(filename, false);
       if (inode == null) {
@@ -834,13 +831,10 @@ class FSDirectory implements Closeable {
   }
 
   /**
-   * 
-   * @param target
-   * @param srcs
-   * @throws IOException
+   * Concat all the blocks from srcs to trg and delete the srcs files
    */
   public void concatInternal(String target, String [] srcs) 
-      throws IOException, UnresolvedLinkException {
+      throws UnresolvedLinkException {
     synchronized(rootDir) {
       // actual move
       waitForReady();
@@ -854,15 +848,14 @@ class FSDirectory implements Closeable {
 
   
   /**
-   * Concat all the blocks from srcs to trg
-   * and delete the srcs files
+   * Concat all the blocks from srcs to trg and delete the srcs files
    * @param target target file to move the blocks to
    * @param srcs list of file to move the blocks from
    * Must be public because also called from EditLogs
    * NOTE: - it does not update quota (not needed for concat)
    */
   public void unprotectedConcat(String target, String [] srcs) 
-      throws IOException, UnresolvedLinkException {
+      throws UnresolvedLinkException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
     }
@@ -1806,10 +1799,10 @@ class FSDirectory implements Closeable {
   /**
    * Add the given symbolic link to the fs. Record it in the edits log.
    */
-  INodeSymlink addSymlink(String path, String target, 
-                          PermissionStatus dirPerms,
-                          boolean createParent) 
-      throws IOException, UnresolvedLinkException {
+  INodeSymlink addSymlink(String path, String target,
+      PermissionStatus dirPerms, boolean createParent)
+      throws UnresolvedLinkException, FileAlreadyExistsException,
+      QuotaExceededException, IOException {
     waitForReady();
 
     final long modTime = FSNamesystem.now();

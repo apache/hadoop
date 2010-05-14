@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
+import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
@@ -1042,7 +1044,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, Progressable progress,
       int buffersize, int bytesPerChecksum) 
-      throws IOException, UnresolvedLinkException {
+      throws IOException {
     this(dfsClient, src, blockSize, progress, bytesPerChecksum, replication);
 
     computePacketChunkSize(dfsClient.writePacketSize, bytesPerChecksum);
@@ -1052,10 +1054,12 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           src, masked, dfsClient.clientName, new EnumSetWritable<CreateFlag>(flag), createParent, replication, blockSize);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     DSQuotaExceededException.class,
                                      FileAlreadyExistsException.class,
                                      FileNotFoundException.class,
+                                     ParentNotDirectoryException.class,
                                      NSQuotaExceededException.class,
-                                     DSQuotaExceededException.class,
+                                     SafeModeException.class,
                                      UnresolvedPathException.class);
     }
     streamer = new DataStreamer();
