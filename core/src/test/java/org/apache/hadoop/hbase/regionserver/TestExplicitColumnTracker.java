@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +41,31 @@ implements HConstants {
   private final byte [] col4 = Bytes.toBytes("col4");
   private final byte [] col5 = Bytes.toBytes("col5");
 
+  private void runTest(int maxVersions,
+                       TreeSet<byte[]> trackColumns,
+                       List<byte[]> scannerColumns,
+                       List<MatchCode> expected) {
+    ColumnTracker exp = new ExplicitColumnTracker(
+      trackColumns, maxVersions);
+
+
+    //Initialize result
+    List<MatchCode> result = new ArrayList<MatchCode>(); 
+    
+    //"Match"
+    for(byte [] col : scannerColumns){
+      result.add(exp.checkColumn(col, 0, col.length));
+    }
+    
+    assertEquals(expected.size(), result.size());
+    for(int i=0; i< expected.size(); i++){
+      assertEquals(expected.get(i), result.get(i));
+      if(PRINT){
+        System.out.println("Expected " +expected.get(i) + ", actual " +
+            result.get(i));
+      }
+    }
+  }
 
   public void testGet_SingleVersion(){
     if(PRINT){
@@ -59,8 +85,6 @@ implements HConstants {
     expected.add(MatchCode.DONE);
     int maxVersions = 1;
 
-    ColumnTracker exp = new ExplicitColumnTracker(columns, maxVersions);
-
     //Create "Scanner"
     List<byte[]> scanner = new ArrayList<byte[]>();
     scanner.add(col1);
@@ -69,22 +93,7 @@ implements HConstants {
     scanner.add(col4);
     scanner.add(col5);
 
-    //Initialize result
-    List<MatchCode> result = new ArrayList<MatchCode>();
-
-    //"Match"
-    for(byte [] col : scanner){
-      result.add(exp.checkColumn(col, 0, col.length));
-    }
-
-    assertEquals(expected.size(), result.size());
-    for(int i=0; i< expected.size(); i++){
-      assertEquals(expected.get(i), result.get(i));
-      if(PRINT){
-        System.out.println("Expected " +expected.get(i) + ", actual " +
-            result.get(i));
-      }
-    }
+    runTest(maxVersions, columns, scanner, expected);
   }
 
   public void testGet_MultiVersion(){
@@ -120,8 +129,6 @@ implements HConstants {
     expected.add(MatchCode.DONE);
     int maxVersions = 2;
 
-    ColumnTracker exp = new ExplicitColumnTracker(columns, maxVersions);
-
     //Create "Scanner"
     List<byte[]> scanner = new ArrayList<byte[]>();
     scanner.add(col1);
@@ -141,21 +148,7 @@ implements HConstants {
     scanner.add(col5);
 
     //Initialize result
-    List<MatchCode> result = new ArrayList<MatchCode>();
-
-    //"Match"
-    for(byte [] col : scanner){
-      result.add(exp.checkColumn(col, 0, col.length));
-    }
-
-    assertEquals(expected.size(), result.size());
-    for(int i=0; i< expected.size(); i++){
-      assertEquals(expected.get(i), result.get(i));
-      if(PRINT){
-        System.out.println("Expected " +expected.get(i) + ", actual " +
-            result.get(i));
-      }
-    }
+    runTest(maxVersions, columns, scanner, expected);
   }
 
 
@@ -182,5 +175,19 @@ implements HConstants {
     }
   }
 
-
+  /**
+   * Regression test for HBASE-2545
+   */
+  public void testInfiniteLoop() {
+    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    columns.addAll(Arrays.asList(new byte[][] {
+      col2, col3, col5 }));
+    List<byte[]> scanner = Arrays.<byte[]>asList(
+      new byte[][] { col1, col4 });
+    List<MatchCode> expected = Arrays.<MatchCode>asList(
+      new MatchCode[] {
+        MatchCode.SKIP,
+        MatchCode.SKIP });
+    runTest(1, columns, scanner, expected);
+  }
 }
