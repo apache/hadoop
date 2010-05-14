@@ -19,59 +19,56 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
- import org.apache.commons.logging.Log;
- import org.apache.commons.logging.LogFactory;
- import org.apache.hadoop.conf.Configuration;
- import org.apache.hadoop.fs.FSDataOutputStream;
- import org.apache.hadoop.fs.FileStatus;
- import org.apache.hadoop.fs.FileSystem;
- import org.apache.hadoop.fs.Path;
- import org.apache.hadoop.hbase.DroppedSnapshotException;
- import org.apache.hadoop.hbase.HBaseConfiguration;
- import org.apache.hadoop.hbase.HColumnDescriptor;
- import org.apache.hadoop.hbase.HConstants;
- import org.apache.hadoop.hbase.HRegionInfo;
- import org.apache.hadoop.hbase.HTableDescriptor;
- import org.apache.hadoop.hbase.KeyValue;
- import org.apache.hadoop.hbase.NotServingRegionException;
- import org.apache.hadoop.hbase.UnknownScannerException;
- import org.apache.hadoop.hbase.client.Delete;
- import org.apache.hadoop.hbase.client.Get;
- import org.apache.hadoop.hbase.client.Put;
- import org.apache.hadoop.hbase.client.Result;
- import org.apache.hadoop.hbase.client.Scan;
- import org.apache.hadoop.hbase.filter.Filter;
- import org.apache.hadoop.hbase.io.HeapSize;
- import org.apache.hadoop.hbase.io.Reference.Range;
- import org.apache.hadoop.hbase.io.hfile.BlockCache;
- import org.apache.hadoop.hbase.ipc.HRegionInterface;
- import org.apache.hadoop.hbase.regionserver.wal.HLog;
- import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
- import org.apache.hadoop.hbase.util.Bytes;
- import org.apache.hadoop.hbase.util.ClassSize;
- import org.apache.hadoop.hbase.util.FSUtils;
- import org.apache.hadoop.hbase.util.Writables;
- import org.apache.hadoop.util.Progressable;
- import org.apache.hadoop.util.StringUtils;
-
  import java.io.IOException;
- import java.io.UnsupportedEncodingException;
- import java.util.ArrayList;
- import java.util.Iterator;
- import java.util.List;
- import java.util.Map;
- import java.util.HashMap;
- import java.util.Set;
- import java.util.NavigableSet;
- import java.util.TreeMap;
- import java.util.TreeSet;
- import java.util.HashMap;
- import java.util.HashSet;
- import java.util.Random;
- import java.util.concurrent.ConcurrentSkipListMap;
- import java.util.concurrent.atomic.AtomicBoolean;
- import java.util.concurrent.atomic.AtomicLong;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -110,7 +107,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * defines the keyspace for this HRegion.
  */
 public class HRegion implements HConstants, HeapSize { // , Writable{
-  static final Log LOG = LogFactory.getLog(HRegion.class);
+  public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
   final AtomicBoolean closed = new AtomicBoolean(false);

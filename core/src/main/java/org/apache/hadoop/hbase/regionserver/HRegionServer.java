@@ -115,7 +115,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class HRegionServer implements HConstants, HRegionInterface,
     HBaseRPCErrorHandler, Runnable, Watcher {
-  static final Log LOG = LogFactory.getLog(HRegionServer.class);
+  public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};

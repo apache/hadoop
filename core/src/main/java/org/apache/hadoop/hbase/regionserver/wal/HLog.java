@@ -348,6 +348,11 @@ public class HLog implements HConstants, Syncable {
     return logSeqNum.get();
   }
 
+  // usage: see TestLogRolling.java
+  OutputStream getOutputStream() {
+    return this.hdfs_out;
+  }
+
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *

@@ -311,6 +311,13 @@ Release 0.21.0 - Unreleased
    HBASE-2544  Forward port branch 0.20 WAL to TRUNK
    HBASE-2546  Specify default filesystem in both the new and old way (needed
                if we are to run on 0.20 and 0.21 hadoop)
+   HBASE-1895  HConstants.MAX_ROW_LENGTH is incorrectly 64k, should be 32k      
+   HBASE-1968  Give clients access to the write buffer      
+   HBASE-2028  Add HTable.incrementColumnValue support to shell
+               (Lars George via Andrew Purtell)  
+   HBASE-2138  unknown metrics type
+   HBASE-2551  Forward port fixes that are in branch but not in trunk (part of
+               the merge of old 0.20 into TRUNK task) -- part 1.
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
