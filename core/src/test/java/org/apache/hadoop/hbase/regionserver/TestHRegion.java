@@ -1025,19 +1025,21 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     Scan scan = null;
-    InternalScanner is = null;
-
-    //Testing to see how many scanners that is produced by getScanner, starting
+    HRegion.RegionScanner is = null;
+    
+    //Testing to see how many scanners that is produced by getScanner, starting 
     //with known number, 2 - current = 1
     scan = new Scan();
     scan.addFamily(fam2);
     scan.addFamily(fam4);
-    is = region.getScanner(scan);
+    is = (RegionScanner) region.getScanner(scan);
+    is.initHeap(); // i dont like this test
     assertEquals(1, ((RegionScanner)is).getStoreHeap().getHeap().size());
 
     scan = new Scan();
-    is = region.getScanner(scan);
-    assertEquals(families.length -1,
+    is = (RegionScanner) region.getScanner(scan);
+    is.initHeap();
+    assertEquals(families.length -1, 
         ((RegionScanner)is).getStoreHeap().getHeap().size());
   }
 
@@ -2185,6 +2187,15 @@ public class TestHRegion extends HBaseTestCase {
         }
         Assert.assertTrue(timestamp >= prevTimestamp);
         prevTimestamp = timestamp;
+
+        byte [] gotValue = null;
+        for (KeyValue kv : result.raw()) {
+          byte [] thisValue = kv.getValue();
+          if (gotValue != null) {
+            assertEquals(gotValue, thisValue);
+          }
+          gotValue = thisValue;
+        }
       }
     }
 

@@ -672,4 +672,14 @@ public abstract class HBaseTestCase extends TestCase {
       Bytes.toString(actual) + ">");
     }
   }
+
+  public static void assertEquals(byte[] expected,
+                               byte[] actual) {
+    if (Bytes.compareTo(expected, actual) != 0) {
+      throw new AssertionFailedError("expected:<" +
+      Bytes.toStringBinary(expected) + "> but was:<" +
+      Bytes.toStringBinary(actual) + ">");
+    }
+  }
+
 }

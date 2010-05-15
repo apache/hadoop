@@ -1921,7 +1921,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * It is used to combine scanners from multiple Stores (aka column families).
    */
   class RegionScanner implements InternalScanner {
-    private final KeyValueHeap storeHeap;
+    private KeyValueHeap storeHeap = null;
     private final byte [] stopRow;
     private Filter filter;
     private List<KeyValue> results = new ArrayList<KeyValue>();
@@ -1929,11 +1929,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private int batch;
     // Doesn't need to be volatile, always accessed under a sync'ed method
     private boolean filterClosed = false;
+    private Scan theScan = null;
+    private List<KeyValueScanner> extraScanners = null;
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
-      ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-
-      //DebugPrint.println("HRegionScanner.<init>, threadpoint = " + ReadWriteConsistencyControl.getThreadReadPoint());
+      //DebugPrint.println("HRegionScanner.<init>");
       this.filter = scan.getFilter();
       this.batch = scan.getBatch();
 
@@ -1945,23 +1945,29 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // If we are doing a get, we want to be [startRow,endRow] normally
       // it is [startRow,endRow) and if startRow=endRow we get nothing.
       this.isScan = scan.isGetScan() ? -1 : 0;
-      
-      List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-      if (additionalScanners != null) {
-        scanners.addAll(additionalScanners);
-      }
-      for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
-          scan.getFamilyMap().entrySet()) {
-        Store store = stores.get(entry.getKey());
-        scanners.add(store.getScanner(scan, entry.getValue()));
-      }
-      this.storeHeap =
-        new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
+      this.theScan = scan;
+      this.extraScanners = additionalScanners;
     }
 
     RegionScanner(Scan scan) {
       this(scan, null);
     }
+
+    void initHeap() {
+      List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
+      if (extraScanners != null) {
+        scanners.addAll(extraScanners);
+      }
+
+      for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
+          theScan.getFamilyMap().entrySet()) {
+        Store store = stores.get(entry.getKey());
+        scanners.add(store.getScanner(theScan, entry.getValue()));
+      }
+      this.storeHeap =
+        new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
+    }
+
 
     private void resetFilters() {
       if (filter != null) {
@@ -1987,6 +1993,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
       // This could be a new thread from the last time we called next().
       ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+      // lazy init the store heap.
+      if (storeHeap == null) {
+        initHeap();
+      }
+
       results.clear();
       boolean returnResult = nextInternal(limit);
       if (!returnResult && filter != null && filter.filterRow()) {
