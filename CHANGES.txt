@@ -577,8 +577,11 @@ Release 0.21.0 - Unreleased
    HBASE-2547  [mvn] assembly:assembly does not include hbase-X.X.X-test.jar
                (Paul Smith via Stack)
    HBASE-2037  The core elements of HBASE-2037: refactoring flushing, and adding 
-   	       configurability in which HRegion subclass is instantiated
+   	           configurability in which HRegion subclass is instantiated
    HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get and scan
+   HBASE-2523  Add check for licenses before rolling an RC, add to
+               how-to-release doc. and check for inlining a tool that does
+               this for us
 
 
   NEW FEATURES
