@@ -102,6 +102,9 @@ Release 0.21.0 - Unreleased
 
   NEW FEATURES
 
+    HADOOP-6332. Large-scale Automated Test Framework. (sharad, Sreekanth
+    Ramakrishnan, at all via cos)
+
     HADOOP-4268. Change fsck to use ClientProtocol methods so that the
     corresponding permission requirement for running the ClientProtocol
     methods will be enforced.  (szetszwo)
