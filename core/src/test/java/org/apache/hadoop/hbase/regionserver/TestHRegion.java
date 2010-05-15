@@ -2131,7 +2131,7 @@ public class TestHRegion extends HBaseTestCase {
   public void testWritesWhileGetting()
     throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
-    int testCount = 200;
+    int testCount = 100;
     int numRows = 1;
     int numFamilies = 10;
     int numQualifiers = 100;

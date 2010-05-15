@@ -251,7 +251,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   /**
    * HRegion constructor.  his constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
-   * {@link org.apache.hadoop.hbase.regionserver.HRegion#newHRegion( org.apache.hadoop.fs.Path, HLog, org.apache.hadoop.fs.FileSystem, org.apache.hadoop.hbase.HBaseConfiguration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)} method.
+   * {@link HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)} method.
    *
    *
    * @param basedir qualified path of directory where region should be located,
@@ -271,7 +271,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
    *
-   * @see org.apache.hadoop.hbase.regionserver.HRegion#newHRegion(org.apache.hadoop.fs.Path, HLog, org.apache.hadoop.fs.FileSystem, org.apache.hadoop.hbase.HBaseConfiguration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
+   * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
 
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, Configuration conf,
@@ -1231,7 +1231,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     checkResources();
     Integer lid = null;
     splitsAndClosesLock.readLock().lock();
-    Integer lid = null;
     try {
       byte [] row = delete.getRow();
       // If we did not pass an existing row lock, obtain a new one
@@ -1943,6 +1942,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       } else {
         this.stopRow = scan.getStopRow();
       }
+      // If we are doing a get, we want to be [startRow,endRow] normally
+      // it is [startRow,endRow) and if startRow=endRow we get nothing.
       this.isScan = scan.isGetScan() ? -1 : 0;
       
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
@@ -2035,8 +2036,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           filterCurrentRow = false;
           // See if we passed stopRow
           if (this.stopRow != null &&
-              comparator.compareRows(this.stopRow, 0, this.stopRow.length,
-                currentRow, 0, currentRow.length) <= 0) {
+              comparator.compareRows(this.stopRow, 0, this.stopRow.length, 
+                currentRow, 0, currentRow.length) <= this.isScan) {
             return false;
           }
           if (hasResults()) return true;
