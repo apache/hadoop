@@ -195,6 +195,7 @@ class TransferFsImage implements FSConstants {
       if (output != null) {
         for (int i = 0; i < output.length; i++) {
           if (output[i] != null) {
+            output[i].getChannel().force(true);
             output[i].close();
           }
         }

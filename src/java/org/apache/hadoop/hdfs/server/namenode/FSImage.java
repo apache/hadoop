@@ -728,10 +728,12 @@ public class FSImage extends Storage {
         LOG.error("Cannot delete chekpoint time file: "
                   + timeFile.getCanonicalPath());
     }
-    DataOutputStream out = new DataOutputStream(
-                                                new FileOutputStream(timeFile));
+    FileOutputStream fos = new FileOutputStream(timeFile);
+    DataOutputStream out = new DataOutputStream(fos);
     try {
       out.writeLong(checkpointTime);
+      out.flush();
+      fos.getChannel().force(true);
     } finally {
       out.close();
     }
@@ -1229,9 +1231,9 @@ public class FSImage extends Storage {
     //
     // Write out data
     //
+    FileOutputStream fos = new FileOutputStream(newFile);
     DataOutputStream out = new DataOutputStream(
-                                                new BufferedOutputStream(
-                                                                         new FileOutputStream(newFile)));
+      new BufferedOutputStream(fos));
     try {
       out.writeInt(FSConstants.LAYOUT_VERSION);
       out.writeInt(namespaceID);
@@ -1246,6 +1248,9 @@ public class FSImage extends Storage {
       fsNamesys.saveFilesUnderConstruction(out);
       fsNamesys.saveSecretManagerState(out);
       strbuf = null;
+
+      out.flush();
+      fos.getChannel().force(true);
     } finally {
       out.close();
     }

@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     HDFS 1021. specify correct server principal for RefreshAuthorizationPolicyProtocol 
     and RefreshUserToGroupMappingsProtocol protocols in DFSAdmin (for HADOOP-6612) (boryas)
 
+    HDFS-970. fsync fsimage to disk before closing fsimage file.
+    (Todd Lipcon via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
