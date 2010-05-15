@@ -240,7 +240,7 @@ public class TestStore extends TestCase {
 
   private void flush(int storeFilessize) throws IOException{
     this.store.snapshot();
-    this.store.flushCache(id++);
+    flushStore(store, id++);
     assertEquals(storeFilessize, this.store.getStorefiles().size());
     assertEquals(0, this.store.memstore.kvset.size());
   }
@@ -283,7 +283,7 @@ public class TestStore extends TestCase {
     assertTrue(ret > 0);
 
     // then flush.
-    this.store.flushCache(id++);
+    flushStore(store, id++);
     assertEquals(1, this.store.getStorefiles().size());
     // from the one we inserted up there, and a new one
     assertEquals(2, this.store.memstore.kvset.size());
@@ -308,5 +308,12 @@ public class TestStore extends TestCase {
     assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
     assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
 
+  }
+
+  private static void flushStore(Store store, long id) throws IOException {
+    StoreFlusher storeFlusher = store.getStoreFlusher(id);
+    storeFlusher.prepare();
+    storeFlusher.flushCache();
+    storeFlusher.commit();
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -41,13 +34,26 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -64,13 +70,13 @@ public class TestHRegion extends HBaseTestCase {
   private final int MAX_VERSIONS = 2;
 
   // Test names
-  private final byte[] tableName = Bytes.toBytes("testtable");;
-  private final byte[] qual1 = Bytes.toBytes("qual1");
-  private final byte[] qual2 = Bytes.toBytes("qual2");
-  private final byte[] qual3 = Bytes.toBytes("qual3");
-  private final byte[] value1 = Bytes.toBytes("value1");
-  private final byte[] value2 = Bytes.toBytes("value2");
-  private final byte [] row = Bytes.toBytes("rowA");
+  protected final byte[] tableName = Bytes.toBytes("testtable");;
+  protected final byte[] qual1 = Bytes.toBytes("qual1");
+  protected final byte[] qual2 = Bytes.toBytes("qual2");
+  protected final byte[] qual3 = Bytes.toBytes("qual3");
+  protected final byte[] value1 = Bytes.toBytes("value1");
+  protected final byte[] value2 = Bytes.toBytes("value2");
+  protected final byte [] row = Bytes.toBytes("rowA");
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
@@ -1799,6 +1805,378 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
+
+  /**
+   * Flushes the cache in a thread while scanning. The tests verify that the
+   * scan is coherent - e.g. the returned results are always of the same or
+   * later update as the previous results.
+   * @throws IOException scan / compact
+   * @throws InterruptedException thread join
+   */
+  public void testFlushCacheWhileScanning() throws IOException, InterruptedException {
+    byte[] tableName = Bytes.toBytes("testFlushCacheWhileScanning");
+    byte[] family = Bytes.toBytes("family");
+    int numRows = 1000;
+    int flushAndScanInterval = 10;
+    int compactInterval = 10 * flushAndScanInterval;
+
+    String method = "testFlushCacheWhileScanning";
+    initHRegion(tableName,method, family);
+    FlushThread flushThread = new FlushThread();
+    flushThread.start();
+
+    Scan scan = new Scan();
+    scan.addFamily(family);
+    scan.setFilter(new SingleColumnValueFilter(family, qual1,
+      CompareFilter.CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(5L))));
+
+    int expectedCount = 0;
+    List<KeyValue> res = new ArrayList<KeyValue>();
+
+    boolean toggle=true;
+    for (long i = 0; i < numRows; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.add(family, qual1, Bytes.toBytes(i % 10));
+      region.put(put);
+
+      if (i != 0 && i % compactInterval == 0) {
+        //System.out.println("iteration = " + i);
+        region.compactStores(true);
+      }
+
+      if (i % 10 == 5L) {
+        expectedCount++;
+      }
+
+      if (i != 0 && i % flushAndScanInterval == 0) {
+        res.clear();
+        InternalScanner scanner = region.getScanner(scan);
+        if (toggle) {
+          flushThread.flush();
+        }
+        while (scanner.next(res)) ;
+        if (!toggle) {
+          flushThread.flush();
+        }
+        Assert.assertEquals("i=" + i, expectedCount, res.size());
+        toggle = !toggle;
+      }
+    }
+
+    flushThread.done();
+    flushThread.join();
+    flushThread.checkNoError();
+  }
+
+  protected class FlushThread extends Thread {
+    private volatile boolean done;
+    private Throwable error = null;
+
+    public void done() {
+      done = true;
+      synchronized (this) {
+        interrupt();
+      }
+    }
+
+    public void checkNoError() {
+      if (error != null) {
+        Assert.assertNull(error);
+      }
+    }
+
+    @Override
+    public void run() {
+      done = false;
+      while (!done) {
+        synchronized (this) {
+          try {
+            wait();
+          } catch (InterruptedException ignored) {
+            if (done) {
+              break;
+            }
+          }
+        }
+        try {
+          region.flushcache();
+        } catch (IOException e) {
+          if (!done) {
+            LOG.error("Error while flusing cache", e);
+            error = e;
+          }
+          break;
+        }
+      }
+
+    }
+
+    public void flush() {
+      synchronized (this) {
+        notify();
+      }
+
+    }
+  }
+
+  /**
+   * Writes very wide records and scans for the latest every time..
+   * Flushes and compacts the region every now and then to keep things
+   * realistic.
+   *
+   * @throws IOException          by flush / scan / compaction
+   * @throws InterruptedException when joining threads
+   */
+  public void testWritesWhileScanning()
+    throws IOException, InterruptedException {
+    byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
+    int testCount = 100;
+    int numRows = 1;
+    int numFamilies = 10;
+    int numQualifiers = 100;
+    int flushInterval = 7;
+    int compactInterval = 5 * flushInterval;
+    byte[][] families = new byte[numFamilies][];
+    for (int i = 0; i < numFamilies; i++) {
+      families[i] = Bytes.toBytes("family" + i);
+    }
+    byte[][] qualifiers = new byte[numQualifiers][];
+    for (int i = 0; i < numQualifiers; i++) {
+      qualifiers[i] = Bytes.toBytes("qual" + i);
+    }
+
+    String method = "testWritesWhileScanning";
+    initHRegion(tableName, method, families);
+    PutThread putThread = new PutThread(numRows, families, qualifiers);
+    putThread.start();
+    FlushThread flushThread = new FlushThread();
+    flushThread.start();
+
+    Scan scan = new Scan();
+    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+      new BinaryComparator(Bytes.toBytes("row0"))));
+
+    int expectedCount = numFamilies * numQualifiers;
+    List<KeyValue> res = new ArrayList<KeyValue>();
+
+    long prevTimestamp = 0L;
+    for (int i = 0; i < testCount; i++) {
+
+      if (i != 0 && i % compactInterval == 0) {
+        region.compactStores(true);
+      }
+
+      if (i != 0 && i % flushInterval == 0) {
+        //System.out.println("scan iteration = " + i);
+        flushThread.flush();
+      }
+
+      boolean previousEmpty = res.isEmpty();
+      res.clear();
+      InternalScanner scanner = region.getScanner(scan);
+      while (scanner.next(res)) ;
+      if (!res.isEmpty() || !previousEmpty || i > compactInterval) {
+        Assert.assertEquals("i=" + i, expectedCount, res.size());
+        long timestamp = res.get(0).getTimestamp();
+        Assert.assertTrue(timestamp >= prevTimestamp);
+        prevTimestamp = timestamp;
+      }
+    }
+
+    putThread.done();
+    putThread.join();
+    putThread.checkNoError();
+
+    flushThread.done();
+    flushThread.join();
+    flushThread.checkNoError();
+  }
+
+  protected class PutThread extends Thread {
+    private volatile boolean done;
+    private Throwable error = null;
+    private int numRows;
+    private byte[][] families;
+    private byte[][] qualifiers;
+
+    private PutThread(int numRows, byte[][] families,
+      byte[][] qualifiers) {
+      this.numRows = numRows;
+      this.families = families;
+      this.qualifiers = qualifiers;
+    }
+
+    public void done() {
+      done = true;
+      synchronized (this) {
+        interrupt();
+      }
+    }
+
+    public void checkNoError() {
+      if (error != null) {
+        Assert.assertNull(error);
+      }
+    }
+
+    @Override
+    public void run() {
+      done = false;
+      int val = 0;
+      while (!done) {
+        try {
+          for (int r = 0; r < numRows; r++) {
+            byte[] row = Bytes.toBytes("row" + r);
+            Put put = new Put(row);
+            for (int f = 0; f < families.length; f++) {
+              for (int q = 0; q < qualifiers.length; q++) {
+                put.add(families[f], qualifiers[q], (long) val,
+                  Bytes.toBytes(val));
+              }
+            }
+            region.put(put);
+            if (val > 0 && val % 47 == 0){
+              //System.out.println("put iteration = " + val);
+              Delete delete = new Delete(row, (long)val-30, null);
+              region.delete(delete, null, true);
+            }
+            val++;
+          }
+        } catch (IOException e) {
+          LOG.error("error while putting records", e);
+          error = e;
+          break;
+        }
+      }
+
+    }
+
+  }
+
+
+  /**
+   * Writes very wide records and gets the latest row every time..
+   * Flushes and compacts the region every now and then to keep things
+   * realistic.
+   *
+   * @throws IOException          by flush / scan / compaction
+   * @throws InterruptedException when joining threads
+   */
+  public void testWritesWhileGetting()
+    throws IOException, InterruptedException {
+    byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
+    int testCount = 200;
+    int numRows = 1;
+    int numFamilies = 10;
+    int numQualifiers = 100;
+    int flushInterval = 10;
+    int compactInterval = 10 * flushInterval;
+    byte[][] families = new byte[numFamilies][];
+    for (int i = 0; i < numFamilies; i++) {
+      families[i] = Bytes.toBytes("family" + i);
+    }
+    byte[][] qualifiers = new byte[numQualifiers][];
+    for (int i = 0; i < numQualifiers; i++) {
+      qualifiers[i] = Bytes.toBytes("qual" + i);
+    }
+
+    String method = "testWritesWhileScanning";
+    initHRegion(tableName, method, families);
+    PutThread putThread = new PutThread(numRows, families, qualifiers);
+    putThread.start();
+    FlushThread flushThread = new FlushThread();
+    flushThread.start();
+
+    Get get = new Get(Bytes.toBytes("row0"));
+    Result result = null;
+
+    int expectedCount = numFamilies * numQualifiers;
+
+    long prevTimestamp = 0L;
+    for (int i = 0; i < testCount; i++) {
+
+      if (i != 0 && i % compactInterval == 0) {
+        region.compactStores(true);
+      }
+
+      if (i != 0 && i % flushInterval == 0) {
+        //System.out.println("iteration = " + i);
+        flushThread.flush();
+      }
+
+      boolean previousEmpty = result == null || result.isEmpty();
+      result = region.get(get, null);
+      if (!result.isEmpty() || !previousEmpty || i > compactInterval) {
+        Assert.assertEquals("i=" + i, expectedCount, result.size());
+        // TODO this was removed, now what dangit?!
+        // search looking for the qualifier in question?
+        long timestamp = 0;
+        for (KeyValue kv : result.sorted()) {
+          if (Bytes.equals(kv.getFamily(), families[0])
+            && Bytes.equals(kv.getQualifier(), qualifiers[0])) {
+            timestamp = kv.getTimestamp();
+          }
+        }
+        Assert.assertTrue(timestamp >= prevTimestamp);
+        prevTimestamp = timestamp;
+      }
+    }
+
+    putThread.done();
+    putThread.join();
+    putThread.checkNoError();
+
+    flushThread.done();
+    flushThread.join();
+    flushThread.checkNoError();
+  }
+
+
+  public void testIndexesScanWithOneDeletedRow() throws IOException {
+    byte[] tableName = Bytes.toBytes("testIndexesScanWithOneDeletedRow");
+    byte[] family = Bytes.toBytes("family");
+
+    //Setting up region
+    String method = "testIndexesScanWithOneDeletedRow";
+    initHRegion(tableName, method, new HBaseConfiguration(), family);
+
+    Put put = new Put(Bytes.toBytes(1L));
+    put.add(family, qual1, 1L, Bytes.toBytes(1L));
+    region.put(put);
+
+    region.flushcache();
+
+    Delete delete = new Delete(Bytes.toBytes(1L), 1L, null);
+    //delete.deleteColumn(family, qual1);
+    region.delete(delete, null, true);
+
+    put = new Put(Bytes.toBytes(2L));
+    put.add(family, qual1, 2L, Bytes.toBytes(2L));
+    region.put(put);
+
+    Scan idxScan = new Scan();
+    idxScan.addFamily(family);
+    idxScan.setFilter(new FilterList(FilterList.Operator.MUST_PASS_ALL,
+      Arrays.<Filter>asList(new SingleColumnValueFilter(family, qual1,
+        CompareFilter.CompareOp.GREATER_OR_EQUAL,
+        new BinaryComparator(Bytes.toBytes(0L))),
+        new SingleColumnValueFilter(family, qual1,
+          CompareFilter.CompareOp.LESS_OR_EQUAL,
+          new BinaryComparator(Bytes.toBytes(3L)))
+      )));
+    InternalScanner scanner = region.getScanner(idxScan);
+    List<KeyValue> res = new ArrayList<KeyValue>();
+
+    //long start = System.nanoTime();
+    while (scanner.next(res)) ;
+    //long end = System.nanoTime();
+    //System.out.println("memStoreEmpty=" + memStoreEmpty + ", time=" + (end - start)/1000000D);
+    assertEquals(1L, res.size());
+
+  }
+
+
+  
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {

@@ -116,7 +116,7 @@ public class MemStore implements HeapSize {
 
   /**
    * Creates a snapshot of the current memstore.
-   * Snapshot must be cleared by call to {@link #clearSnapshot(java.util.Map)}
+   * Snapshot must be cleared by call to {@link #clearSnapshot(SortedSet<KeyValue>)}
    * To get the snapshot made by this method, use {@link #getSnapshot()}
    */
   void snapshot() {
@@ -156,7 +156,7 @@ public class MemStore implements HeapSize {
    * call to {@link #snapshot()}
    * @return Return snapshot.
    * @see {@link #snapshot()}
-   * @see {@link #clearSnapshot(java.util.Map)}
+   * @see {@link #clearSnapshot(SortedSet<KeyValue>)}
    */
   KeyValueSkipListSet getSnapshot() {
     return this.snapshot;
@@ -168,7 +168,7 @@ public class MemStore implements HeapSize {
    * @throws UnexpectedException
    * @see {@link #snapshot()}
    */
-  void clearSnapshot(final KeyValueSkipListSet ss)
+  void clearSnapshot(final SortedSet<KeyValue> ss)
   throws UnexpectedException {
     this.lock.writeLock().lock();
     try {

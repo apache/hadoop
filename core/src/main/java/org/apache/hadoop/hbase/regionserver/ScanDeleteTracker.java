@@ -104,7 +104,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   @Override
   public boolean isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp) {
-    if (timestamp < familyStamp) {
+    if (timestamp <= familyStamp) {
       return true;
     }
 

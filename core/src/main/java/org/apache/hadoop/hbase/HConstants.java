@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -285,6 +285,8 @@ public interface HConstants {
    * backoff table, a bit more aggressive than simple exponential backoff.
    */
   public static int RETRY_BACKOFF[] = { 1, 1, 1, 2, 2, 4, 4, 8, 16, 32 };
+
+  public static final String REGION_IMPL = "hbase.hregion.impl";
 
   /** modifyTable op for replacing the table descriptor */
   public static enum Modify {

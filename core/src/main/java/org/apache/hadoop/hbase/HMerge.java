@@ -19,12 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +37,12 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
 
 /**
  * A non-instantiable class that has a static method capable of compacting
@@ -152,12 +152,12 @@ class HMerge implements HConstants {
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
           currentRegion =
-            new HRegion(tabledir, hlog, fs, conf, info[i], null);
+            HRegion.newHRegion(tabledir, hlog, fs, conf, info[i], null);
           currentRegion.initialize(null, null);
           currentSize = currentRegion.getLargestHStoreSize();
         }
         nextRegion =
-          new HRegion(tabledir, hlog, fs, conf, info[i + 1], null);
+          HRegion.newHRegion(tabledir, hlog, fs, conf, info[i + 1], null);
         nextRegion.initialize(null, null);
         nextSize = nextRegion.getLargestHStoreSize();
 
@@ -326,7 +326,7 @@ class HMerge implements HConstants {
 
       // Scan root region to find all the meta regions
 
-      root = new HRegion(rootTableDir, hlog, fs, conf,
+      root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
           HRegionInfo.ROOT_REGIONINFO, null);
       root.initialize(null, null);
 
