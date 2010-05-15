@@ -318,6 +318,8 @@ Release 0.21.0 - Unreleased
    HBASE-2138  unknown metrics type
    HBASE-2551  Forward port fixes that are in branch but not in trunk (part of
                the merge of old 0.20 into TRUNK task) -- part 1.
+   HBASE-2474  Bug in HBASE-2248 - mixed version reads (not allowed by spec)
+   HBASE-2509  NPEs in various places, HRegion.get, HRS.close
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
@@ -574,6 +576,10 @@ Release 0.21.0 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2547  [mvn] assembly:assembly does not include hbase-X.X.X-test.jar
                (Paul Smith via Stack)
+   HBASE-2037  The core elements of HBASE-2037: refactoring flushing, and adding 
+   	       configurability in which HRegion subclass is instantiated
+   HBASE-2248  Provide new non-copy mechanism to assure atomic reads in get and scan
+
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
