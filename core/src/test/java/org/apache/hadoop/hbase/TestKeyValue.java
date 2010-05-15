@@ -277,4 +277,49 @@ public class TestKeyValue extends TestCase {
     // TODO actually write this test!
 
   }
+
+  private final byte[] rowA = Bytes.toBytes("rowA");
+  private final byte[] rowB = Bytes.toBytes("rowB");
+
+  private final byte[] family = Bytes.toBytes("family");
+  private final byte[] qualA = Bytes.toBytes("qfA");
+
+  private void assertKVLess(KeyValue.KVComparator c,
+                            KeyValue less,
+                            KeyValue greater) {
+    int cmp = c.compare(less,greater);
+    assertTrue(cmp < 0);
+    cmp = c.compare(greater,less);
+    assertTrue(cmp > 0);
+  }
+
+  public void testFirstLastOnRow() {
+    final KVComparator c = KeyValue.COMPARATOR;
+    long ts = 1;
+
+    // These are listed in sort order (ie: every one should be less
+    // than the one on the next line).
+    final KeyValue firstOnRowA = KeyValue.createFirstOnRow(rowA);
+    final KeyValue kvA_1 = new KeyValue(rowA, null, null, ts, Type.Put);
+    final KeyValue kvA_2 = new KeyValue(rowA, family, qualA, ts, Type.Put);
+        
+    final KeyValue lastOnRowA = KeyValue.createLastOnRow(rowA);
+    final KeyValue firstOnRowB = KeyValue.createFirstOnRow(rowB);
+    final KeyValue kvB = new KeyValue(rowB, family, qualA, ts, Type.Put);
+
+    assertKVLess(c, firstOnRowA, firstOnRowB);
+    assertKVLess(c, firstOnRowA, kvA_1);
+    assertKVLess(c, firstOnRowA, kvA_2);
+    assertKVLess(c, kvA_1, kvA_2);
+    assertKVLess(c, kvA_2, firstOnRowB);
+    assertKVLess(c, kvA_1, firstOnRowB);
+
+    assertKVLess(c, lastOnRowA, firstOnRowB);
+    assertKVLess(c, firstOnRowB, kvB);
+    assertKVLess(c, lastOnRowA, kvB);
+
+    assertKVLess(c, kvA_2, lastOnRowA);
+    assertKVLess(c, kvA_1, lastOnRowA);
+    assertKVLess(c, firstOnRowA, lastOnRowA);
+  }
 }

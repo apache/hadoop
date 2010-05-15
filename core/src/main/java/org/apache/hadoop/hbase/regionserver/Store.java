@@ -609,9 +609,12 @@ public class Store implements HConstants, HeapSize {
     this.lock.writeLock().lock();
     try {
       this.storefiles.put(Long.valueOf(logCacheFlushId), sf);
+
+      this.memstore.clearSnapshot(set);
+
       // Tell listeners of the change in readers.
       notifyChangedReadersObservers();
-      this.memstore.clearSnapshot(set);
+
       return this.storefiles.size() >= this.compactionThreshold;
     } finally {
       this.lock.writeLock().unlock();
@@ -639,10 +642,8 @@ public class Store implements HConstants, HeapSize {
    * @param o Observer no longer interested in changes in set of Readers.
    */
   void deleteChangedReaderObserver(ChangedReadersObserver o) {
-    if(this.changedReaderObservers.size() > 0) {
-      if (!this.changedReaderObservers.remove(o)) {
-        LOG.warn("Not in set" + o);
-      }
+    if (!this.changedReaderObservers.remove(o)) {
+      LOG.warn("Not in set" + o);
     }
   }
 
@@ -993,6 +994,10 @@ public class Store implements HConstants, HeapSize {
           Long orderVal = Long.valueOf(result.getMaxSequenceId());
           this.storefiles.put(orderVal, result);
         }
+
+        // WARN ugly hack here, but necessary sadly.
+        ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
+        
         // Tell observers that list of StoreFiles has changed.
         notifyChangedReadersObservers();
         // Finally, delete old store files.
@@ -1449,7 +1454,12 @@ public class Store implements HConstants, HeapSize {
   }
 
   /**
-   * Increments the value for the given row/family/qualifier
+   * Increments the value for the given row/family/qualifier.
+   *
+   * This function will always be seen as atomic by other readers
+   * because it only puts a single KV to memstore. Thus no
+   * read/write control necessary.
+   * 
    * @param row
    * @param f
    * @param qualifier

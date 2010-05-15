@@ -201,6 +201,23 @@ public class KeyValue implements Writable, HeapSize {
   private int offset = 0;
   private int length = 0;
 
+  /** Here be dragons **/
+
+  // used to achieve atomic operations in the memstore.
+  public long getMemstoreTS() {
+    return memstoreTS;
+  }
+
+  public void setMemstoreTS(long memstoreTS) {
+    this.memstoreTS = memstoreTS;
+  }
+
+  // default value is 0, aka DNC
+  private long memstoreTS = 0;
+
+  /** Dragon time over, return to normal business */
+
+  
   /** Writable Constructor -- DO NOT USE */
   public KeyValue() {}
 
@@ -1468,6 +1485,21 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Creates a KeyValue that is last on the specified row id. That is,
+   * every other possible KeyValue for the given row would compareTo()
+   * less than the result of this call.
+   * @param row row key
+   * @return Last possible KeyValue on passed <code>row</code>
+   */
+  public static KeyValue createLastOnRow(final byte[] row) {
+    return new KeyValue(row, null, null, HConstants.LATEST_TIMESTAMP, Type.Minimum);
+  }
+
+  /**
+   * Create a KeyValue that is smaller than all other possible KeyValues
+   * for the given row. That is any (valid) KeyValue on 'row' would sort
+   * _after_ the result.
+   * 
    * @param row - row key (arbitrary byte array)
    * @return First possible KeyValue on passed <code>row</code>
    */
@@ -1476,6 +1508,8 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Creates a KeyValue that is smaller than all other KeyValues that
+   * are older than the passed timestamp.
    * @param row - row key (arbitrary byte array)
    * @param ts - timestamp
    * @return First possible key on passed <code>row</code> and timestamp.
@@ -1487,8 +1521,11 @@ public class KeyValue implements Writable, HeapSize {
 
   /**
    * @param row - row key (arbitrary byte array)
+   * @param c column - {@link #parseColumn(byte[])} is called to split
+   * the column.
    * @param ts - timestamp
    * @return First possible key on passed <code>row</code>, column and timestamp
+   * @deprecated
    */
   public static KeyValue createFirstOnRow(final byte [] row, final byte [] c,
       final long ts) {
@@ -1497,14 +1534,17 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,family,qualifier.
+   * Used for seeking.
    * @param row - row key (arbitrary byte array)
-   * @param f - family name
-   * @param q - column qualifier
+   * @param family - family name
+   * @param qualifier - column qualifier
    * @return First possible key on passed <code>row</code>, and column.
    */
-  public static KeyValue createFirstOnRow(final byte [] row, final byte [] f,
-      final byte [] q) {
-    return new KeyValue(row, f, q, HConstants.LATEST_TIMESTAMP, Type.Maximum);
+  public static KeyValue createFirstOnRow(final byte [] row, final byte [] family,
+      final byte [] qualifier) {
+    return new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
   }
 
   /**
@@ -1689,9 +1729,6 @@ public class KeyValue implements Writable, HeapSize {
         return compare;
       }
 
-      // if row matches, and no column in the 'left' AND put type is 'minimum',
-      // then return that left is larger than right.
-
       // Compare column family.  Start compare past row and family length.
       int lcolumnoffset = Bytes.SIZEOF_SHORT + lrowlength + 1 + loffset;
       int rcolumnoffset = Bytes.SIZEOF_SHORT + rrowlength + 1 + roffset;
@@ -1700,17 +1737,25 @@ public class KeyValue implements Writable, HeapSize {
       int rcolumnlength = rlength - TIMESTAMP_TYPE_SIZE -
         (rcolumnoffset - roffset);
 
+      // if row matches, and no column in the 'left' AND put type is 'minimum',
+      // then return that left is larger than right.
+      
       // This supports 'last key on a row' - the magic is if there is no column in the
       // left operand, and the left operand has a type of '0' - magical value,
       // then we say the left is bigger.  This will let us seek to the last key in
       // a row.
 
       byte ltype = left[loffset + (llength - 1)];
+      byte rtype = right[roffset + (rlength - 1)];
 
       if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
         return 1; // left is bigger.
       }
+      if (rcolumnlength == 0 && rtype == Type.Minimum.getCode()) {
+        return -1;
+      }
 
+      // TODO the family and qualifier should be compared separately
       compare = Bytes.compareTo(left, lcolumnoffset, lcolumnlength, right,
           rcolumnoffset, rcolumnlength);
       if (compare != 0) {
@@ -1732,9 +1777,6 @@ public class KeyValue implements Writable, HeapSize {
       if (!this.ignoreType) {
         // Compare types. Let the delete types sort ahead of puts; i.e. types
         // of higher numbers sort before those of lesser numbers
-
-        // ltype is defined above
-        byte rtype = right[roffset + (rlength - 1)];
         return (0xff & rtype) - (0xff & ltype);
       }
       return 0;
@@ -1772,9 +1814,10 @@ public class KeyValue implements Writable, HeapSize {
 
   // HeapSize
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE +
-        ClassSize.align(ClassSize.ARRAY + length) +
-        (2 * Bytes.SIZEOF_INT));
+    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE + 
+        ClassSize.align(ClassSize.ARRAY + length) + 
+        (2 * Bytes.SIZEOF_INT) +
+        Bytes.SIZEOF_LONG);
   }
 
   // this overload assumes that the length bytes have already been read,

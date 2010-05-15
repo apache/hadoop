@@ -255,8 +255,8 @@ public class TestGetDeleteTracker extends HBaseTestCase implements HConstants {
     }
     //update()
     dt.update();
-    assertEquals(false, dt.isDeleted(col2, 0, col2Len, ts3));
-    assertEquals(false, dt.isDeleted(col2, 0, col2Len, ts1));
+    assertFalse(dt.isDeleted(col2, 0, col2Len, ts3));
+    assertFalse(dt.isDeleted(col2, 0, col2Len, ts1));
   }
   public void testIsDeleted_Delete(){
     //Building lists

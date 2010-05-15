@@ -167,6 +167,7 @@ class KeyValueSkipListSet implements NavigableSet<KeyValue> {
   }
 
   public boolean contains(Object o) {
+    //noinspection SuspiciousMethodCalls
     return this.delegatee.containsKey(o);
   }
 

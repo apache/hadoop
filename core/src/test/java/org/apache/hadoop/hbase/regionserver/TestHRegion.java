@@ -93,7 +93,7 @@ public class TestHRegion extends HBaseTestCase {
   //////////////////////////////////////////////////////////////////////////////
 
 
-  /**
+  /*
    * An involved filter test.  Has multiple column families and deletes in mix.
    */
   public void testWeirdCacheBehaviour() throws Exception {
@@ -361,6 +361,34 @@ public class TestHRegion extends HBaseTestCase {
   //////////////////////////////////////////////////////////////////////////////
   // Delete tests
   //////////////////////////////////////////////////////////////////////////////
+  public void testDelete_multiDeleteColumn() throws IOException {
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] row1 = Bytes.toBytes("row1");
+    byte [] fam1 = Bytes.toBytes("fam1");
+    byte [] qual = Bytes.toBytes("qualifier");
+    byte [] value = Bytes.toBytes("value");
+
+    Put put = new Put(row1);
+    put.add(fam1, qual, 1, value);
+    put.add(fam1, qual, 2, value);
+
+    String method = this.getName();
+    initHRegion(tableName, method, fam1);
+
+    region.put(put);
+
+    // We do support deleting more than 1 'latest' version
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qual);
+    delete.deleteColumn(fam1, qual);
+    region.delete(delete, null, false);
+
+    Get get = new Get(row1);
+    get.addFamily(fam1);
+    Result r = region.get(get, null);
+    assertEquals(0, r.size());
+  }
+
   public void testDelete_CheckFamily() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
@@ -369,11 +397,9 @@ public class TestHRegion extends HBaseTestCase {
     byte [] fam3 = Bytes.toBytes("fam3");
     byte [] fam4 = Bytes.toBytes("fam4");
 
-    byte[][] families  = {fam1, fam2, fam3};
-
     //Setting up region
     String method = this.getName();
-    initHRegion(tableName, method, families);
+    initHRegion(tableName, method, fam1, fam2, fam3);
 
     List<KeyValue> kvs  = new ArrayList<KeyValue>();
     kvs.add(new KeyValue(row1, fam4, null, null));
@@ -1455,6 +1481,41 @@ public class TestHRegion extends HBaseTestCase {
     assertICV(row, fam1, qual1, value+amount);
   }
 
+  public void testIncrementColumnValue_BumpSnapshot() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 42L;
+    long incr = 44L;
+
+    // first put something in kvset, then snapshot it.
+    Put put = new Put(row);
+    put.add(fam1, qual1, Bytes.toBytes(value));
+    region.put(put);
+
+    // get the store in question:
+    Store s = region.getStore(fam1);
+    s.snapshot(); //bam
+
+    // now increment:
+    long newVal = region.incrementColumnValue(row, fam1, qual1,
+        incr, false);
+
+    assertEquals(value+incr, newVal);
+
+    // get both versions:
+    Get get = new Get(row);
+    get.setMaxVersions();
+    get.addColumn(fam1,qual1);
+
+    Result r = region.get(get, null);
+    assertEquals(2, r.size());
+    KeyValue first = r.raw()[0];
+    KeyValue second = r.raw()[1];
+
+    assertTrue("ICV failed to upgrade timestamp",
+        first.getTimestamp() != second.getTimestamp());
+  }
+  
   public void testIncrementColumnValue_ConcurrentFlush() throws IOException {
     initHRegion(tableName, getName(), fam1);
 
@@ -1952,9 +2013,9 @@ public class TestHRegion extends HBaseTestCase {
     FlushThread flushThread = new FlushThread();
     flushThread.start();
 
-    Scan scan = new Scan();
-    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
-      new BinaryComparator(Bytes.toBytes("row0"))));
+    Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
+//    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
+//      new BinaryComparator(Bytes.toBytes("row0"))));
 
     int expectedCount = numFamilies * numQualifiers;
     List<KeyValue> res = new ArrayList<KeyValue>();
@@ -1967,7 +2028,7 @@ public class TestHRegion extends HBaseTestCase {
       }
 
       if (i != 0 && i % flushInterval == 0) {
-        //System.out.println("scan iteration = " + i);
+        //System.out.println("flush scan iteration = " + i);
         flushThread.flush();
       }
 
@@ -1976,14 +2037,18 @@ public class TestHRegion extends HBaseTestCase {
       InternalScanner scanner = region.getScanner(scan);
       while (scanner.next(res)) ;
       if (!res.isEmpty() || !previousEmpty || i > compactInterval) {
-        Assert.assertEquals("i=" + i, expectedCount, res.size());
+        assertEquals("i=" + i, expectedCount, res.size());
         long timestamp = res.get(0).getTimestamp();
-        Assert.assertTrue(timestamp >= prevTimestamp);
+        assertTrue("Timestamps were broke: " + timestamp + " prev: " + prevTimestamp,
+            timestamp >= prevTimestamp);
         prevTimestamp = timestamp;
       }
     }
 
     putThread.done();
+
+    region.flushcache();
+
     putThread.join();
     putThread.checkNoError();
 
@@ -2028,15 +2093,16 @@ public class TestHRegion extends HBaseTestCase {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
             Put put = new Put(row);
-            for (int f = 0; f < families.length; f++) {
-              for (int q = 0; q < qualifiers.length; q++) {
-                put.add(families[f], qualifiers[q], (long) val,
-                  Bytes.toBytes(val));
+            for (byte[] family : families) {
+              for (byte[] qualifier : qualifiers) {
+                put.add(family, qualifier, (long) val,
+                    Bytes.toBytes(val));
               }
             }
+//            System.out.println("Putting of kvsetsize=" + put.size());
             region.put(put);
-            if (val > 0 && val % 47 == 0){
-              //System.out.println("put iteration = " + val);
+            if (val > 0 && val % 47 == 0) {
+              System.out.println("put iteration = " + val);
               Delete delete = new Delete(row, (long)val-30, null);
               region.delete(delete, null, true);
             }
@@ -2123,6 +2189,9 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     putThread.done();
+    
+    region.flushcache();
+
     putThread.join();
     putThread.checkNoError();
 

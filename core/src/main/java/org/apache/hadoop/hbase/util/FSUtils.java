@@ -365,6 +365,7 @@ public class FSUtils {
     return true;
   }
 
+  // TODO move this method OUT of FSUtils. No dependencies to HMaster
   /**
    * Returns the total overall fragmentation percentage. Includes .META. and
    * -ROOT- as well.

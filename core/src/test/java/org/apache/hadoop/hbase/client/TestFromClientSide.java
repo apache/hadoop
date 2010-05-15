@@ -308,6 +308,32 @@ public class TestFromClientSide {
       CompareFilter.CompareOp.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
   }
+  
+  /*
+   * Load table with rows from 'aaa' to 'zzz'.
+   * @param t
+   * @return Count of rows loaded.
+   * @throws IOException
+   */
+  private int loadTable(final HTable t) throws IOException {
+    // Add data to table.
+    byte[] k = new byte[3];
+    int rowCount = 0;
+    for (byte b1 = 'a'; b1 < 'z'; b1++) {
+      for (byte b2 = 'a'; b2 < 'z'; b2++) {
+        for (byte b3 = 'a'; b3 < 'z'; b3++) {
+          k[0] = b1;
+          k[1] = b2;
+          k[2] = b3;
+          Put put = new Put(k);
+          put.add(FAMILY, new byte[0], k);
+          t.put(put);
+          rowCount++;
+        }
+      }
+    }
+    return rowCount;
+  }
 
   /*
    * @param key
@@ -1452,7 +1478,7 @@ public class TestFromClientSide {
     ht.put(put);
 
     delete = new Delete(ROW);
-    delete.deleteColumn(FAMILIES[0], QUALIFIER);
+    delete.deleteColumn(FAMILIES[0], QUALIFIER); // ts[4]
     ht.delete(delete);
 
     get = new Get(ROW);
@@ -1487,23 +1513,24 @@ public class TestFromClientSide {
     // But alas, this is not to be.  We can't put them back in either case.
 
     put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
+    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
     ht.put(put);
 
-    // The Get returns the latest value but then does not return the
-    // oldest, which was never deleted, ts[1].
 
+    // It used to be due to the internal implementation of Get, that
+    // the Get() call would return ts[4] UNLIKE the Scan below. With
+    // the switch to using Scan for Get this is no longer the case.
     get = new Get(ROW);
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
-        new long [] {ts[2], ts[3], ts[4]},
-        new byte[][] {VALUES[2], VALUES[3], VALUES[4]},
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+        new long [] {ts[1], ts[2], ts[3]},
+        new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
 
-    // The Scanner returns the previous values, the expected-unexpected behavior
+    // The Scanner returns the previous values, the expected-naive-unexpected behavior
 
     scan = new Scan(ROW);
     scan.addFamily(FAMILIES[0]);
@@ -1536,6 +1563,15 @@ public class TestFromClientSide {
     put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
     put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
+
+    // Assert that above went in.
+    get = new Get(ROWS[2]);
+    get.addFamily(FAMILIES[1]);
+    get.addFamily(FAMILIES[2]);
+    get.setMaxVersions(Integer.MAX_VALUE);
+    result = ht.get(get);
+    assertTrue("Expected 4 key but received " + result.size() + ": " + result,
+        result.size() == 4);
 
     delete = new Delete(ROWS[0]);
     delete.deleteFamily(FAMILIES[2]);
@@ -1596,8 +1632,7 @@ public class TestFromClientSide {
     get.addFamily(FAMILIES[2]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
+    assertEquals(1, result.size());
     assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
         new byte[][] {VALUES[2]},
@@ -1608,8 +1643,7 @@ public class TestFromClientSide {
     scan.addFamily(FAMILIES[2]);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
-    assertTrue("Expected 1 key but received " + result.size(),
-        result.size() == 1);
+    assertEquals(1, result.size());
     assertNResult(result, ROWS[2], FAMILIES[2], QUALIFIER,
         new long [] {ts[2]},
         new byte[][] {VALUES[2]},
@@ -1696,7 +1730,7 @@ public class TestFromClientSide {
     }
   }
 
-  /**
+  /*
    * Baseline "scalability" test.
    *
    * Tests one hundred families, one million columns, one million versions
@@ -2661,12 +2695,11 @@ public class TestFromClientSide {
         "Got row [" + Bytes.toString(result.getRow()) +"]",
         equals(row, result.getRow()));
     int expectedResults = end - start + 1;
-    assertTrue("Expected " + expectedResults + " keys but result contains "
-        + result.size(), result.size() == expectedResults);
+    assertEquals(expectedResults, result.size());
 
     KeyValue [] keys = result.sorted();
 
-    for(int i=0;i<keys.length;i++) {
+    for (int i=0; i<keys.length; i++) {
       byte [] value = values[end-i];
       long ts = stamps[end-i];
       KeyValue key = keys[i];
@@ -2824,9 +2857,9 @@ public class TestFromClientSide {
   }
 
   private boolean equals(byte [] left, byte [] right) {
-    if(left == null && right == null) return true;
-    if(left == null && right.length == 0) return true;
-    if(right == null && left.length == 0) return true;
+    if (left == null && right == null) return true;
+    if (left == null && right.length == 0) return true;
+    if (right == null && left.length == 0) return true;
     return Bytes.equals(left, right);
   }
 

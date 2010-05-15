@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,24 +20,23 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import junit.framework.TestCase;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 
-import junit.framework.TestCase;
-
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.util.Bytes;
-
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
 
-  /**
+  /*
    * Test utility for building a NavigableSet for scanners.
    * @param strCols
    * @return
@@ -128,7 +127,7 @@ public class TestStoreScanner extends TestCase {
     assertEquals(kvs[0], results.get(0));
   }
 
-  /**
+  /*
    * Test test shows exactly how the matcher's return codes confuses the StoreScanner
    * and prevent it from doing the right thing.  Seeking once, then nexting twice
    * should return R1, then R2, but in this case it doesnt.
@@ -189,7 +188,7 @@ public class TestStoreScanner extends TestCase {
     assertEquals(0, results.size());
   }
 
-  /**
+  /*
    * Test the case where there is a delete row 'in front of' the next row, the scanner
    * will move to the next row.
    */
@@ -407,9 +406,9 @@ public class TestStoreScanner extends TestCase {
     results.clear();
     assertEquals(false, scan.next(results));
   }
-
-  /**
-   * Test expiration of KeyValues in combination with a configured TTL for
+  
+  /*
+   * Test expiration of KeyValues in combination with a configured TTL for 
    * a column family (as should be triggered in a major compaction).
    */
   public void testWildCardTtlScan() throws IOException {
