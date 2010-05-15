@@ -1921,7 +1921,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * It is used to combine scanners from multiple Stores (aka column families).
    */
   class RegionScanner implements InternalScanner {
-    private KeyValueHeap storeHeap = null;
+    // Package local for testability
+    KeyValueHeap storeHeap = null;
     private final byte [] stopRow;
     private Filter filter;
     private List<KeyValue> results = new ArrayList<KeyValue>();
@@ -2091,8 +2092,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     }
 
     public synchronized void close() {
-      storeHeap.close();
-      this.filterClosed = true;
+      if (storeHeap != null) {
+        storeHeap.close();
+        storeHeap = null;
+      }
+	  this.filterClosed = true;
     }
 
     /**
