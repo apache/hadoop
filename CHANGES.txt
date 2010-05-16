@@ -582,6 +582,9 @@ Release 0.21.0 - Unreleased
    HBASE-2523  Add check for licenses before rolling an RC, add to
                how-to-release doc. and check for inlining a tool that does
                this for us
+   HBASE-2234  HBASE-2234  Roll Hlog if any datanode in the write pipeline dies
+               (Nicolas Spiegelberg via Stack)
+   HBASE-2340  Add end-to-end test of sync/flush (Forward-port from branch)
 
 
   NEW FEATURES

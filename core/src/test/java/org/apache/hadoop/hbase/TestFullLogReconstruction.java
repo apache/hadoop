@@ -39,15 +39,22 @@ public class TestFullLogReconstruction {
   private final static byte[] TABLE_NAME = Bytes.toBytes("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
 
-  private Configuration conf;
-
-    /**
+  /**
    * @throws java.lang.Exception
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().
-        setInt("hbase.regionserver.flushlogentries", 1);
+    Configuration c = TEST_UTIL.getConfiguration();
+    c.setInt("hbase.regionserver.flushlogentries", 1);
+    c.setBoolean("dfs.support.append", true);
+    // quicker heartbeat interval for faster DN death notification
+    c.setInt("heartbeat.recheck.interval", 5000);
+    c.setInt("dfs.heartbeat.interval", 1);
+    c.setInt("dfs.socket.timeout", 5000);
+    // faster failover with cluster.shutdown();fs.close() idiom
+    c.setInt("ipc.client.connect.max.retries", 1);
+    c.setInt("dfs.client.block.recovery.retries", 1);
+    c.setInt("hbase.regionserver.flushlogentries", 1);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -64,8 +71,6 @@ public class TestFullLogReconstruction {
    */
   @Before
   public void setUp() throws Exception {
-
-    conf = TEST_UTIL.getConfiguration();
   }
 
   /**
@@ -105,24 +110,15 @@ public class TestFullLogReconstruction {
 
     for(int i = 0; i < 4; i++) {
       TEST_UTIL.loadTable(table, FAMILY);
-      if(i == 2) {
-        TEST_UTIL.flush();
-      }
     }
 
     TEST_UTIL.expireRegionServerSession(0);
-
     scan = new Scan();
-
     results = table.getScanner(scan);
-
     int newCount = 0;
     for (Result res : results) {
       newCount++;
     }
-
     assertEquals(count, newCount);
-
   }
-
 }
