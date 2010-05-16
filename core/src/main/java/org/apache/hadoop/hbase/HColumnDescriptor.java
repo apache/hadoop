@@ -75,8 +75,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String TTL = "TTL";
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String FOREVER = "FOREVER";
-  public static final String MAPFILE_INDEX_INTERVAL =
-      "MAPFILE_INDEX_INTERVAL";
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
 
   /**
@@ -480,14 +478,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public void setBloomfilter(final boolean onOff) {
     setValue(BLOOMFILTER, Boolean.toString(onOff));
-  }
-
-  /**
-   * @param interval The number of entries that are added to the store MapFile before
-   * an index entry is added.
-   */
-  public void setMapFileIndexInterval(int interval) {
-    setValue(MAPFILE_INDEX_INTERVAL, Integer.toString(interval));
   }
 
    /**

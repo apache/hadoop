@@ -90,12 +90,4 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
   public void setCompressionType(Compression.Algorithm type) {
     throw new UnsupportedOperationException("HColumnDescriptor is read-only");
   }
-
-  /**
-   * @see org.apache.hadoop.hbase.HColumnDescriptor#setMapFileIndexInterval(int)
-   */
-  @Override
-  public void setMapFileIndexInterval(int interval) {
-    throw new UnsupportedOperationException("HTableDescriptor is read-only");
-  }
 }

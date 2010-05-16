@@ -585,6 +585,7 @@ Release 0.21.0 - Unreleased
    HBASE-2234  HBASE-2234  Roll Hlog if any datanode in the write pipeline dies
                (Nicolas Spiegelberg via Stack)
    HBASE-2340  Add end-to-end test of sync/flush (Forward-port from branch)
+   HBASE-2555  Get rid of HColumnDescriptor.MAPFILE_INDEX_INTERVAL
 
 
   NEW FEATURES
