@@ -20,15 +20,23 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * A KeyValue scanner that iterates over a single HFile
  */
 class StoreFileScanner implements KeyValueScanner {
+  static final Log LOG = LogFactory.getLog(Store.class);
 
   private HFileScanner hfs;
   private KeyValue cur = null;
@@ -37,10 +45,33 @@ class StoreFileScanner implements KeyValueScanner {
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(HFileScanner hfs) {
+  private StoreFileScanner(HFileScanner hfs) {
     this.hfs = hfs;
   }
 
+  /**
+   * Return an array of scanners corresponding to the given
+   * set of store files.
+   */
+  public static List<KeyValueScanner> getScannersForStoreFiles(
+      Collection<StoreFile> filesToCompact,
+      boolean cacheBlocks,
+      boolean usePread) {
+    List<KeyValueScanner> scanners =
+      new ArrayList<KeyValueScanner>(filesToCompact.size());
+    for (StoreFile file : filesToCompact) {
+      Reader r = file.getReader();
+      if (r == null) {
+        // TODO why can this happen? this seems like something worth
+        // throwing an exception over!
+        LOG.error("StoreFile " + file + " has a null Reader");
+        continue;
+      }
+      scanners.add(new StoreFileScanner(r.getScanner(cacheBlocks, usePread)));
+    }
+    return scanners;
+  }
+  
   public String toString() {
     return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
   }

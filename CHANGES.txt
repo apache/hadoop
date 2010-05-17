@@ -595,6 +595,7 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-2340  Add end-to-end test of sync/flush (Forward-port from branch)
    HBASE-2555  Get rid of HColumnDescriptor.MAPFILE_INDEX_INTERVAL
+   HBASE-2520  Cleanup arrays vs Lists of scanners (Todd Lipcon via Stack)
 
 
   NEW FEATURES

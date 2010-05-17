@@ -76,7 +76,7 @@ public class TestMemStore extends TestCase {
    */
   public void testScanAcrossSnapshot() throws IOException {
     int rowCount = addRows(this.memstore);
-    KeyValueScanner [] memstorescanners = this.memstore.getScanners();
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
     Scan scan = new Scan();
     List<KeyValue> result = new ArrayList<KeyValue>();
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
@@ -95,8 +95,8 @@ public class TestMemStore extends TestCase {
       s.close();
     }
     assertEquals(rowCount, count);
-    for (int i = 0; i < memstorescanners.length; i++) {
-      memstorescanners[0].close();
+    for (KeyValueScanner scanner : memstorescanners) {
+      scanner.close();
     }
 
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
@@ -123,8 +123,8 @@ public class TestMemStore extends TestCase {
       s.close();
     }
     assertEquals(rowCount, count);
-    for (int i = 0; i < memstorescanners.length; i++) {
-      memstorescanners[0].close();
+    for (KeyValueScanner scanner : memstorescanners) {
+      scanner.close();
     }
     memstorescanners = this.memstore.getScanners();
     // Assert that new values are seen in kvset as we scan.
@@ -190,9 +190,9 @@ public class TestMemStore extends TestCase {
 
   private void verifyScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2) {
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-    KeyValueScanner[] memstorescanners = this.memstore.getScanners();
-    assertEquals(1, memstorescanners.length);
-    final KeyValueScanner scanner = memstorescanners[0];
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
+    assertEquals(1, memstorescanners.size());
+    final KeyValueScanner scanner = memstorescanners.get(0);
     scanner.seek(KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW));
     assertEquals(kv1, scanner.next());
     assertEquals(kv2, scanner.next());
@@ -224,14 +224,14 @@ public class TestMemStore extends TestCase {
     memstore.add(kv1);
 
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-    KeyValueScanner[] s = this.memstore.getScanners();
-    assertScannerResults(s[0], new KeyValue[]{});
+    KeyValueScanner s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{});
 
     rwcc.completeMemstoreInsert(w);
 
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-    s = this.memstore.getScanners();
-    assertScannerResults(s[0], new KeyValue[]{kv1});
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv1});
 
     w = rwcc.beginMemstoreInsert();
     KeyValue kv2 = new KeyValue(row, f, q2, v);
@@ -239,14 +239,14 @@ public class TestMemStore extends TestCase {
     memstore.add(kv2);
 
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-    s = this.memstore.getScanners();
-    assertScannerResults(s[0], new KeyValue[]{kv1});
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv1});
 
     rwcc.completeMemstoreInsert(w);
 
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-    s = this.memstore.getScanners();
-    assertScannerResults(s[0], new KeyValue[]{kv1, kv2});
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv1, kv2});
   }
 
   private static class ReadOwnWritesTester extends Thread {
@@ -300,7 +300,7 @@ public class TestMemStore extends TestCase {
         // Assert that we can read back
         ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
 
-        KeyValueScanner s = this.memstore.getScanners()[0];
+        KeyValueScanner s = this.memstore.getScanners().get(0);
         s.seek(kv);
 
         KeyValue ret = s.next();
@@ -429,7 +429,7 @@ public class TestMemStore extends TestCase {
       InternalScanner scanner =
           new StoreScanner(new Scan(Bytes.toBytes(startRowId)), FAMILY,
               Integer.MAX_VALUE, this.memstore.comparator, null,
-              new KeyValueScanner[]{memstore.getScanners()[0]});
+              memstore.getScanners());
       List<KeyValue> results = new ArrayList<KeyValue>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;
@@ -857,8 +857,7 @@ public class TestMemStore extends TestCase {
 
   static void doScan(MemStore ms, int iteration) {
     long nanos = System.nanoTime();
-    KeyValueScanner [] ss = ms.getScanners();
-    KeyValueScanner s = ss[0];
+    KeyValueScanner s = ms.getScanners().get(0);
     s.seek(KeyValue.createFirstOnRow(new byte[]{}));
 
     System.out.println(iteration + " create/seek took: " + (System.nanoTime() - nanos)/1000);

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * A fixture that implements and presents a KeyValueScanner.
@@ -49,6 +50,15 @@ public class KeyValueScanFixture implements KeyValueScanner {
     }
     Collections.sort(data, this.comparator);
   }
+
+  public static List<KeyValueScanner> scanFixture(KeyValue[] ... kvArrays) {
+    ArrayList<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
+    for (KeyValue [] kvs : kvArrays) {
+      scanners.add(new KeyValueScanFixture(KeyValue.COMPARATOR, kvs));
+    }
+    return scanners;
+  }
+
 
   @Override
   public KeyValue peek() {

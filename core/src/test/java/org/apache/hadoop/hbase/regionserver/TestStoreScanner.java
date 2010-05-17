@@ -28,9 +28,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
+import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
@@ -60,9 +63,10 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create(r1, CF_STR, "a", 4, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create(r1, CF_STR, "a", 5, KeyValue.Type.Put, "dont-care"),
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-      new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(
+        new KeyValueScanner[] {
+            new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
+    });
     Scan scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 6);
     scanSpec.setMaxVersions();
@@ -110,9 +114,10 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-      new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = Arrays.asList(
+        new KeyValueScanner[] {
+            new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
+        });
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
@@ -140,10 +145,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "a", 1, KeyValue.Type.Put, "dont-care")
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR,
-            kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     // this only uses maxVersions (default=1) and TimeRange (default=all)
@@ -175,9 +177,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"),
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
@@ -198,9 +198,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "a", 20, KeyValue.Type.Put, "dont-care")
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
@@ -228,10 +226,8 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", now-100, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "a", now, KeyValue.Type.Put, "dont-care")
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs1),
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs2)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
+
     StoreScanner scan =
       new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           getCols("a"), scanners);
@@ -255,10 +251,8 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", now, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "z", now, KeyValue.Type.Put, "dont-care")
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs1),
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs2)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
+    
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
@@ -276,9 +270,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "b", 1, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.DeleteColumn, "dont-care"),
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           null, scanners);
@@ -307,9 +299,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "d", 8, KeyValue.Type.Put, "dont-care"),  // no
 
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan().setMaxVersions(2), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           null, scanners);
@@ -337,9 +327,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan().setMaxVersions(Integer.MAX_VALUE), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           null, scanners);
@@ -360,9 +348,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "a", 8, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R1", "cf", "b", 5, KeyValue.Type.Put, "dont-care")
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs),
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           null, scanners);
@@ -385,9 +371,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"),
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           getCols("a", "d"), scanners);
@@ -423,9 +407,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R2", "cf", "c", now-200, KeyValue.Type.Put, "dont-care"),
         KeyValueTestUtil.create("R2", "cf", "c", now-1000, KeyValue.Type.Put, "dont-care")
     };
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
     scan.setMaxVersions(1);
     StoreScanner scanner =

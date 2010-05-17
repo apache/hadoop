@@ -1962,8 +1962,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         Store store = stores.get(entry.getKey());
         scanners.add(store.getScanner(theScan, entry.getValue()));
       }
-      this.storeHeap =
-        new KeyValueHeap(scanners.toArray(new KeyValueScanner[0]), comparator);
+      this.storeHeap = new KeyValueHeap(scanners, comparator);
     }
 
     private void resetFilters() {

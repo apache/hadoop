@@ -25,6 +25,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -379,12 +380,11 @@ public class MemStore implements HeapSize {
   /**
    * @return scanner on memstore and snapshot in this order.
    */
-  KeyValueScanner [] getScanners() {
+  List<KeyValueScanner> getScanners() {
     this.lock.readLock().lock();
     try {
-      KeyValueScanner [] scanners = new KeyValueScanner[1];
-      scanners[0] = new MemStoreScanner();
-      return scanners;
+      return Collections.<KeyValueScanner>singletonList(
+          new MemStoreScanner());
     } finally {
       this.lock.readLock().unlock();
     }

@@ -880,16 +880,8 @@ public class Store implements HConstants, HeapSize {
       final boolean majorCompaction, final long maxId)
   throws IOException {
     // For each file, obtain a scanner:
-    KeyValueScanner [] scanners = new KeyValueScanner[filesToCompact.size()];
-    for (int i = 0; i < filesToCompact.size(); ++i) {
-      Reader r = filesToCompact.get(i).getReader();
-      if (r == null) {
-        LOG.warn("StoreFile " + filesToCompact.get(i) + " has a null Reader");
-        continue;
-      }
-      // Instantiate HFile.Reader.Scanner to not cache blocks and not use pread
-      scanners[i] = new StoreFileScanner(r.getScanner(false, false));
-    }
+    List<KeyValueScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
+        filesToCompact, false, false);
 
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
@@ -904,9 +896,7 @@ public class Store implements HConstants, HeapSize {
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
-        boolean more = true;
-        while (more) {
-          more = scanner.next(kvs);
+        while (scanner.next(kvs)) {
           // output to writer:
           for (KeyValue kv : kvs) {
             if (writer == null) {
@@ -1003,6 +993,7 @@ public class Store implements HConstants, HeapSize {
         }
 
         // WARN ugly hack here, but necessary sadly.
+        // TODO why is this necessary? need a comment here if it's unintuitive!
         ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
         
         // Tell observers that list of StoreFiles has changed.
@@ -1359,7 +1350,7 @@ public class Store implements HConstants, HeapSize {
     return size;
   }
 
-  /*
+  /**
    * Datastructure that holds size and row to split a file around.
    * TODO: Take a KeyValue rather than row.
    */
