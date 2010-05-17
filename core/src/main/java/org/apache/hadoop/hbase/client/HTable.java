@@ -542,8 +542,8 @@ public class HTable implements HTableInterface {
     } finally {
       // the write buffer was adjusted by processBatchOfPuts
       currentWriteBufferSize = 0;
-      for (Put aWriteBuffer : writeBuffer) {
-        currentWriteBufferSize += aWriteBuffer.heapSize();
+      for (Put aPut : writeBuffer) {
+        currentWriteBufferSize += aPut.heapSize();
       }
     }
   }

@@ -20,15 +20,15 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 public class TestMultiParallelPut extends MultiRegionTable {
   private static final byte[] VALUE = Bytes.toBytes("value");
@@ -58,7 +58,14 @@ public class TestMultiParallelPut extends MultiRegionTable {
 
   List<byte[]> keys = new ArrayList<byte[]>();
 
-  public void testMultiPut() throws Exception {
+  public void testParallelPut() throws Exception {
+    doATest(false);
+  }
+  public void testParallelPutWithRSAbort() throws Exception {
+    doATest(true);
+  }
+
+  public void doATest(boolean doAbort) throws Exception {
 
     HTable table = new HTable(TEST_TABLE);
     table.setAutoFlush(false);
@@ -72,6 +79,19 @@ public class TestMultiParallelPut extends MultiRegionTable {
     }
 
     table.flushCommits();
+
+    if (doAbort) {
+      cluster.abortRegionServer(0);
+
+      // try putting more keys after the abort.
+      for ( byte [] k : keys ) {
+        Put put = new Put(k);
+        put.add(BYTES_FAMILY, QUALIFIER, VALUE);
+
+        table.put(put);
+      }
+      table.flushCommits();
+    }
 
     for (byte [] k : keys ) {
       Get get = new Get(k);
@@ -88,10 +108,15 @@ public class TestMultiParallelPut extends MultiRegionTable {
     HBaseAdmin admin = new HBaseAdmin(conf);
     ClusterStatus cs = admin.getClusterStatus();
 
-    assertEquals(2, cs.getServers());
+    int expectedServerCount = 2;
+    if (doAbort)
+      expectedServerCount = 1;
+
+    assertEquals(expectedServerCount, cs.getServers());
     for ( HServerInfo info : cs.getServerInfo()) {
       System.out.println(info);
       assertTrue( info.getLoad().getNumberOfRegions() > 10);
     }
   }
+
 }

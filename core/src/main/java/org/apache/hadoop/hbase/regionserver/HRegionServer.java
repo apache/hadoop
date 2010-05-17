@@ -233,7 +233,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // Run HDFS shutdown on exit if this is set. We clear this out when
   // doing a restart() to prevent closing of HDFS.
-  private final AtomicBoolean shutdownHDFS = new AtomicBoolean(true);
+  public final AtomicBoolean shutdownHDFS = new AtomicBoolean(true);
 
   private final String machineName;
 

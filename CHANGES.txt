@@ -325,6 +325,7 @@ Release 0.21.0 - Unreleased
    HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
                (Nicolas Spiegelberg via Stack)  
    HBASE-2415  Disable META splitting in 0.20 (Todd Lipcon via Stack)
+   HBASE-2421  Put hangs for 10 retries on failed region servers
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

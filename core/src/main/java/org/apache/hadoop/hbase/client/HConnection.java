@@ -192,7 +192,7 @@ public interface HConnection {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  public <T> T getRegionServerForWithoutRetries(ServerCallable<T> callable)
+  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable) 
   throws IOException, RuntimeException;
 
 
