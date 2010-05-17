@@ -320,6 +320,10 @@ Release 0.21.0 - Unreleased
                the merge of old 0.20 into TRUNK task) -- part 1.
    HBASE-2474  Bug in HBASE-2248 - mixed version reads (not allowed by spec)
    HBASE-2509  NPEs in various places, HRegion.get, HRS.close
+   HBASE-2344  InfoServer and hence HBase Master doesn't fully start if you
+               have HADOOP-6151 patch (Kannan Muthukkaruppan via Stack)
+   HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
+               (Nicolas Spiegelberg via Stack)  
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

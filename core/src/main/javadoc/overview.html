@@ -150,14 +150,23 @@ requirements and instructions</a> for how to set up a DFS.</p>
 
 <h4><a name="pseudo-distrib">Pseudo-distributed mode</a></h4>
 <p>A pseudo-distributed mode is simply a distributed mode run on a single host.
-Once you have confirmed your DFS setup, configuring HBase for use on one host requires modification of
+Use this configuration testing and prototyping on hbase.  Do not use this configuration
+for production nor for evaluating HBase performance.
+</p>
+<p>Once you have confirmed your DFS setup, configuring HBase for use on one host requires modification of
 <code>${HBASE_HOME}/conf/hbase-site.xml</code>, which needs to be pointed at the running Hadoop DFS instance.
 Use <code>hbase-site.xml</code> to override the properties defined in
 <code>${HBASE_HOME}/conf/hbase-default.xml</code> (<code>hbase-default.xml</code> itself
-should never be modified). At a minimum the <code>hbase.rootdir</code> property should be redefined
-in <code>hbase-site.xml</code> to point HBase at the Hadoop filesystem to use. For example, adding the property
-below to your <code>hbase-site.xml</code> says that HBase should use the <code>/hbase</code> directory in the
-HDFS whose namenode is at port 9000 on your local machine:</p>
+should never be modified) and for HDFS client configurations.
+At a minimum, the <code>hbase.rootdir</code>,
+which points HBase at the Hadoop filesystem to use,
+and the <code>dfs.replication</code>, an hdfs client-side
+configuration stipulating how many replicas to keep up,
+should be redefined in <code>hbase-site.xml</code>. For example,
+adding the properties below to your <code>hbase-site.xml</code> says that HBase
+should use the <code>/hbase</code> 
+directory in the HDFS whose namenode is at port 9000 on your local machine, and that
+it should run with one replica only (recommended for pseudo-distributed mode):</p>
 <blockquote>
 <pre>
 &lt;configuration&gt;
@@ -166,6 +175,12 @@ HDFS whose namenode is at port 9000 on your local machine:</p>
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
     &lt;value&gt;hdfs://localhost:9000/hbase&lt;/value&gt;
     &lt;description&gt;The directory shared by region servers.
+    &lt;/description&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.replication&lt;/name&gt;
+    &lt;value&gt;1&lt;/value&gt;
+    &lt;description&gt;The replication count for HLog & HFile storage. Should not be greater than HDFS datanode count.
     &lt;/description&gt;
   &lt;/property&gt;
   ...
@@ -203,7 +218,11 @@ configurations must be made <em>in addition</em> to those described in the
 </blockquote>
 
 <p>In fully-distributed mode, you probably want to change your <code>hbase.rootdir</code>
-from localhost to the name of the node running the HDFS NameNode. In addition
+from localhost to the name of the node running the HDFS NameNode and you should set
+the dfs.replication to be the number of datanodes you have in your cluster or 3, which
+ever is the smaller.
+</p>
+<p>In addition
 to <code>hbase-site.xml</code> changes, a fully-distributed mode requires that you
 modify <code>${HBASE_HOME}/conf/regionservers</code>.
 The <code>regionserver</code> file lists all hosts running <code>HRegionServer</code>s, one host per line
