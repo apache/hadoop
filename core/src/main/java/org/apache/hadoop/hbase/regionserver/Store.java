@@ -1214,6 +1214,14 @@ public class Store implements HConstants, HeapSize {
       if (!force && (storeSize < this.desiredMaxFileSize)) {
         return null;
       }
+
+      if (this.region.getRegionInfo().isMetaRegion()) {
+        if (force) {
+          LOG.warn("Cannot split meta regions in HBase 0.20");
+        }
+        return null;
+      }
+
       // Not splitable if we find a reference store file present in the store.
       boolean splitable = true;
       long maxSize = 0L;

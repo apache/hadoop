@@ -324,6 +324,7 @@ Release 0.21.0 - Unreleased
                have HADOOP-6151 patch (Kannan Muthukkaruppan via Stack)
    HBASE-2382  Don't rely on fs.getDefaultReplication() to roll HLogs
                (Nicolas Spiegelberg via Stack)  
+   HBASE-2415  Disable META splitting in 0.20 (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
