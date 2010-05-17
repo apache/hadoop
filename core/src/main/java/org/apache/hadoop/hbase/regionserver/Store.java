@@ -722,7 +722,7 @@ public class Store implements HConstants, HeapSize {
         Reader r = file.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + file + " has a null Reader");
-          continue;
+          return null;
         }
         long len = file.getReader().length();
         fileSizes[i] = len;
@@ -734,9 +734,16 @@ public class Store implements HConstants, HeapSize {
         // The rule is: if the largest(oldest) one is more than twice the
         // size of the second, skip the largest, and continue to next...,
         // until we meet the compactionThreshold limit.
-        for (point = 0; point < countOfFiles - 1; point++) {
-          if ((fileSizes[point] < fileSizes[point + 1] * 2) &&
-               (countOfFiles - point) <= maxFilesToCompact) {
+
+        // A problem with the above heuristic is that we could go through all of
+        // filesToCompact and the above condition could hold for all files and
+        // we'd end up with nothing to compact.  To protect against this, we'll
+        // compact the tail -- up to the last 4 files -- of filesToCompact
+        // regardless.
+        int tail = Math.min(countOfFiles, 4);
+        for (point = 0; point < (countOfFiles - tail); point++) {
+          if (((fileSizes[point] < fileSizes[point + 1] * 2) &&
+               (countOfFiles - point) <= maxFilesToCompact)) {
             break;
           }
           skipped += fileSizes[point];
