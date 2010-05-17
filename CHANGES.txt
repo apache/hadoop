@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     HADOOP-6623. Add StringUtils.split for non-escaped single-character
     separator. (Todd Lipcon via tomwhite)
 
+    HADOOP-6761. The Trash Emptier has the ability to run more frequently.
+    (Dmytro Molkov via dhruba)
+
   BUG FIXES
 
     HADOOP-6612.  Protocols RefreshUserToGroupMappingsProtocol and 

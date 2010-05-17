@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringUtils;
@@ -47,18 +48,19 @@ public class Trash extends Configured {
 
   private static final Path CURRENT = new Path("Current");
   private static final Path TRASH = new Path(".Trash/");
-  private static final Path HOMES = new Path("/user/");
+  
 
   private static final FsPermission PERMISSION =
     new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE);
 
-  private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmm");
+  private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmmss");
   private static final int MSECS_PER_MINUTE = 60*1000;
 
   private final FileSystem fs;
   private final Path trash;
   private final Path current;
-  private final long interval;
+  private final long deletionInterval;
+  private final Path homesParent;
 
   /** Construct a trash can accessor.
    * @param conf a Configuration
@@ -74,16 +76,22 @@ public class Trash extends Configured {
     super(conf);
     this.fs = fs;
     this.trash = new Path(fs.getHomeDirectory(), TRASH);
+    this.homesParent = fs.getHomeDirectory().getParent();
     this.current = new Path(trash, CURRENT);
-    this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
+    this.deletionInterval = (long) (conf.getFloat(FS_TRASH_INTERVAL_KEY,
+                                         FS_TRASH_INTERVAL_DEFAULT) *
+                                MSECS_PER_MINUTE);
   }
 
   private Trash(Path home, Configuration conf) throws IOException {
     super(conf);
     this.fs = home.getFileSystem(conf);
     this.trash = new Path(home, TRASH);
+    this.homesParent = home.getParent();
     this.current = new Path(trash, CURRENT);
-    this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
+    this.deletionInterval = (long) (conf.getFloat(FS_TRASH_INTERVAL_KEY,
+                                         FS_TRASH_INTERVAL_DEFAULT) *
+                                MSECS_PER_MINUTE);
   }
   
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
@@ -94,7 +102,7 @@ public class Trash extends Configured {
    * @return false if the item is already in the trash or trash is disabled
    */ 
   public boolean moveToTrash(Path path) throws IOException {
-    if (interval == 0)
+    if (deletionInterval == 0)
       return false;
 
     if (!path.isAbsolute())                       // make path absolute
@@ -197,7 +205,7 @@ public class Trash extends Configured {
         continue;
       }
 
-      if ((now - interval) > time) {
+      if ((now - deletionInterval) > time) {
         if (fs.delete(path, true)) {
           LOG.info("Deleted trash checkpoint: "+dir);
         } else {
@@ -225,34 +233,43 @@ public class Trash extends Configured {
   private class Emptier implements Runnable {
 
     private Configuration conf;
-    private long interval;
+    private long emptierInterval;
 
     Emptier(Configuration conf) throws IOException {
       this.conf = conf;
-      this.interval = conf.getLong("fs.trash.interval", 0) * MSECS_PER_MINUTE;
+      this.emptierInterval = (long) (conf.getFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY,
+                                     FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT) *
+                                     MSECS_PER_MINUTE);
+      if (this.emptierInterval > deletionInterval ||
+          this.emptierInterval == 0) {
+        LOG.warn("The configured interval for checkpoint is " +
+                 this.emptierInterval + " minutes." +
+                 " Using interval of " + deletionInterval +
+                 " minutes that is used for deletion instead");
+        this.emptierInterval = deletionInterval;
+      }
     }
 
     public void run() {
-      if (interval == 0)
+      if (emptierInterval == 0)
         return;                                   // trash disabled
-
       long now = System.currentTimeMillis();
       long end;
       while (true) {
-        end = ceiling(now, interval);
+        end = ceiling(now, emptierInterval);
         try {                                     // sleep for interval
           Thread.sleep(end - now);
         } catch (InterruptedException e) {
           break;                                  // exit on interrupt
         }
-          
+
         try {
           now = System.currentTimeMillis();
           if (now >= end) {
 
             FileStatus[] homes = null;
             try {
-              homes = fs.listStatus(HOMES);         // list all home dirs
+              homes = fs.listStatus(homesParent);         // list all home dirs
             } catch (IOException e) {
               LOG.warn("Trash can't list homes: "+e+" Sleeping.");
               continue;

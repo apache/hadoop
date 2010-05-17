@@ -55,6 +55,8 @@ public class CommonConfigurationKeys {
 
   public static final String  FS_CLIENT_BUFFER_DIR_KEY =
                                          "fs.client.buffer.dir";
+  public static final String  FS_TRASH_CHECKPOINT_INTERVAL_KEY = "fs.trash.checkpoint.interval";
+  public static final long    FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT = 0;
 
   //TBD: Code is not updated to use following keys.
   //These keys will be used in later versions

@@ -18,11 +18,15 @@
 package org.apache.hadoop.fs;
 
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
+
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -89,7 +93,7 @@ public class TestTrash extends TestCase {
   protected static void trashShell(final FileSystem fs, final Path base)
       throws IOException {
     Configuration conf = new Configuration();
-    conf.set("fs.trash.interval", "10"); // 10 minute
+    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
     conf.set("fs.default.name", fs.getUri().toString());
     FsShell shell = new FsShell();
     shell.setConf(conf);
@@ -376,7 +380,7 @@ public class TestTrash extends TestCase {
   }
 
   public static void trashNonDefaultFS(Configuration conf) throws IOException {
-    conf.set("fs.trash.interval", "10"); // 10 minute
+    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
     // attempt non-default FileSystem trash
     {
       final FileSystem lfs = FileSystem.getLocal(conf);
@@ -414,6 +418,67 @@ public class TestTrash extends TestCase {
     trashNonDefaultFS(conf);
   }
   
+  public void testTrashEmptier() throws Exception {
+    Configuration conf = new Configuration();
+    // Trash with 12 second deletes and 6 seconds checkpoints
+    conf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
+    Trash trash = new Trash(conf);
+
+    // Start Emptier in background
+    Runnable emptier = trash.getEmptier();
+    Thread emptierThread = new Thread(emptier);
+    emptierThread.start();
+
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.set("fs.default.name", fs.getUri().toString());
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    shell.init();
+    // First create a new directory with mkdirs
+    Path myPath = new Path(TEST_DIR, "test/mkdirs");
+    mkdir(fs, myPath);
+    int fileIndex = 0;
+    Set<String> checkpoints = new HashSet<String>();
+    while (true)  {
+      // Create a file with a new name
+      Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);
+      writeFile(fs, myFile);
+
+      // Delete the file to trash
+      String[] args = new String[2];
+      args[0] = "-rm";
+      args[1] = myFile.toString();
+      int val = -1;
+      try {
+        val = shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from Trash.run " +
+                           e.getLocalizedMessage());
+      }
+      assertTrue(val == 0);
+
+      Path trashDir = shell.getCurrentTrashDir();
+      FileStatus files[] = fs.listStatus(trashDir.getParent());
+      // Scan files in .Trash and add them to set of checkpoints
+      for (FileStatus file : files) {
+        String fileName = file.getPath().getName();
+        checkpoints.add(fileName);
+      }
+      // If checkpoints has 4 objects it is Current + 3 checkpoint directories
+      if (checkpoints.size() == 4) {
+        // The actual contents should be smaller since the last checkpoint
+        // should've been deleted and Current might not have been recreated yet
+        assertTrue(checkpoints.size() > files.length);
+        break;
+      }
+      Thread.sleep(5000);
+    }
+    emptierThread.interrupt();
+    emptierThread.join();
+  }
+  
   /**
    * @see TestCase#tearDown()
    */
@@ -428,7 +493,7 @@ public class TestTrash extends TestCase {
   static class TestLFS extends LocalFileSystem {
     Path home;
     TestLFS() {
-      this(TEST_DIR);
+      this(new Path(TEST_DIR, "user/test"));
     }
     TestLFS(Path home) {
       super();
@@ -451,7 +516,7 @@ public class TestTrash extends TestCase {
     FileSystem fs = FileSystem.getLocal(conf);
     
     conf.set("fs.default.name", fs.getUri().toString());
-    conf.set("fs.trash.interval", "10"); //minutes..
+    conf.set(FS_TRASH_INTERVAL_KEY, "10"); //minutes..
     FsShell shell = new FsShell();
     shell.setConf(conf);
     //Path trashRoot = null;
