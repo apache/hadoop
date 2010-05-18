@@ -32,6 +32,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
@@ -60,7 +61,7 @@ import java.util.Arrays;
  * <p>
  * To filter based on the value of all scanned columns, use {@link ValueFilter}.
  */
-public class SingleColumnValueFilter implements Filter {
+public class SingleColumnValueFilter extends FilterBase {
   static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
 
   protected byte [] columnFamily;
@@ -144,12 +145,6 @@ public class SingleColumnValueFilter implements Filter {
     return columnQualifier;
   }
 
-  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
-    // We don't filter on the row key... we filter later on column value so
-    // always return false.
-    return false;
-  }
-
   public ReturnCode filterKeyValue(KeyValue keyValue) {
     // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" + Bytes.toString(keyValue.getValue()));
     if (this.matchedColumn) {
@@ -193,10 +188,6 @@ public class SingleColumnValueFilter implements Filter {
     default:
       throw new RuntimeException("Unknown Compare op " + compareOp.name());
     }
-  }
-
-  public boolean filterAllRemaining() {
-    return false;
   }
 
   public boolean filterRow() {

@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * A wrapper filter that filters an entire row if any of the KeyValue checks do
@@ -44,7 +45,7 @@ import java.io.IOException;
  * Without this filter, the other non-zero valued columns in the row would still
  * be emitted.
  */
-public class SkipFilter implements Filter {
+public class SkipFilter extends FilterBase {
   private boolean filterRow = false;
   private Filter filter;
 
@@ -67,14 +68,6 @@ public class SkipFilter implements Filter {
 
   private void changeFR(boolean value) {
     filterRow = filterRow || value;
-  }
-
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    return false;
-  }
-
-  public boolean filterAllRemaining() {
-    return false;
   }
 
   public ReturnCode filterKeyValue(KeyValue v) {

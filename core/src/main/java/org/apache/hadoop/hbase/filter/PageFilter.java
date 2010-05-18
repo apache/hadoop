@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Implementation of Filter interface that limits results to a specific page
@@ -36,7 +37,7 @@ import java.io.IOException;
  * individual HRegions by making sure that the page size is never exceeded
  * locally.
  */
-public class PageFilter implements Filter {
+public class PageFilter extends FilterBase {
   private long pageSize = Long.MAX_VALUE;
   private int rowsAccepted = 0;
 
@@ -61,16 +62,13 @@ public class PageFilter implements Filter {
     return pageSize;
   }
 
-  public void reset() {
-    // noop
-  }
-
   public boolean filterAllRemaining() {
     return this.rowsAccepted >= this.pageSize;
   }
 
-  public boolean filterRowKey(byte[] rowKey, int offset, int length) {
-    return false;
+  public boolean filterRow() {
+    this.rowsAccepted++;
+    return this.rowsAccepted > this.pageSize;
   }
 
   public void readFields(final DataInput in) throws IOException {
@@ -79,14 +77,5 @@ public class PageFilter implements Filter {
 
   public void write(final DataOutput out) throws IOException {
     out.writeLong(pageSize);
-  }
-
-  public ReturnCode filterKeyValue(KeyValue v) {
-    return ReturnCode.INCLUDE;
-  }
-
-  public boolean filterRow() {
-    this.rowsAccepted++;
-    return this.rowsAccepted > this.pageSize;
   }
 }

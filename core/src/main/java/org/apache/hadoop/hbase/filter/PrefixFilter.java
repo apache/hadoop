@@ -26,11 +26,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
+import java.util.List;
 
 /**
  * Pass results that have same row prefix.
  */
-public class PrefixFilter implements Filter {
+public class PrefixFilter extends FilterBase {
   protected byte [] prefix = null;
   protected boolean passedPrefix = false;
 
@@ -44,10 +45,6 @@ public class PrefixFilter implements Filter {
 
   public byte[] getPrefix() {
     return prefix;
-  }
-
-  public void reset() {
-    // Noop
   }
 
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
@@ -68,14 +65,6 @@ public class PrefixFilter implements Filter {
 
   public boolean filterAllRemaining() {
     return passedPrefix;
-  }
-
-  public ReturnCode filterKeyValue(KeyValue v) {
-    return ReturnCode.INCLUDE;
-  }
-
-  public boolean filterRow() {
-    return false;
   }
 
   public void write(DataOutput out) throws IOException {

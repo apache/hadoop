@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -32,7 +32,7 @@ import java.io.IOException;
  * its quota of columns, {@link #filterAllRemaining()} returns true.  This
  * makes this filter unsuitable as a Scan filter.
  */
-public class ColumnCountGetFilter implements Filter {
+public class ColumnCountGetFilter extends FilterBase {
   private int limit = 0;
   private int count = 0;
 
@@ -52,31 +52,28 @@ public class ColumnCountGetFilter implements Filter {
     return limit;
   }
 
+  @Override
   public boolean filterAllRemaining() {
     return this.count > this.limit;
   }
 
+  @Override
   public ReturnCode filterKeyValue(KeyValue v) {
     this.count++;
-    return filterAllRemaining()? ReturnCode.SKIP: ReturnCode.INCLUDE;
+    return filterAllRemaining() ? ReturnCode.SKIP: ReturnCode.INCLUDE;
   }
 
-  public boolean filterRow() {
-    return false;
-  }
-
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    return false;
-  }
-
+  @Override
   public void reset() {
     this.count = 0;
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     this.limit = in.readInt();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.limit);
   }

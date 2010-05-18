@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * A Filter that stops after the given row.  There is no "RowStopFilter" because
@@ -33,7 +34,7 @@ import java.io.IOException;
  *
  * Use this filter to include the stop row, eg: [A,Z].
  */
-public class InclusiveStopFilter implements Filter {
+public class InclusiveStopFilter extends FilterBase {
   private byte [] stopRowKey;
   private boolean done = false;
 
@@ -47,10 +48,6 @@ public class InclusiveStopFilter implements Filter {
 
   public byte[] getStopRowKey() {
     return this.stopRowKey;
-  }
-
-  public void reset() {
-    // noop, no state
   }
 
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
@@ -73,15 +70,6 @@ public class InclusiveStopFilter implements Filter {
 
   public boolean filterAllRemaining() {
     return done;
-  }
-
-  public ReturnCode filterKeyValue(KeyValue v) {
-    // include everything.
-    return ReturnCode.INCLUDE;
-  }
-
-  public boolean filterRow() {
-    return false;
   }
 
   public void write(DataOutput out) throws IOException {

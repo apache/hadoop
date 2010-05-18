@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -304,7 +305,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   /**
    * Initialize this region and get it ready to roll.
    * Called after construction.
-   * 
+   *
    * @param initialFiles path
    * @param reporter progressable
    * @throws IOException e
@@ -448,7 +449,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    public ReadWriteConsistencyControl getRWCC() {
      return rwcc;
    }
-   
+
   /**
    * Close down this HRegion.  Flush the cache, shut down each HStore, don't
    * service any more calls.
@@ -459,7 +460,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return Vector of all the storage files that the HRegion's component
    * HStores make use of.  It's a list of all HStoreFile objects. Returns empty
    * vector if already closed and null if judged that it should not close.
-   * 
+   *
    * @throws IOException e
    */
   public List<StoreFile> close() throws IOException {
@@ -477,7 +478,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return Vector of all the storage files that the HRegion's component
    * HStores make use of.  It's a list of HStoreFile objects.  Can be null if
    * we are not to close at this time or we are already closed.
-   * 
+   *
    * @throws IOException e
    */
   public List<StoreFile> close(final boolean abort) throws IOException {
@@ -875,7 +876,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * time-sensitive thread.
    *
    * @return true if cache was flushed
-   * 
+   *
    * @throws IOException general io exceptions
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
@@ -941,7 +942,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * <p> This method may block for some time.
    *
    * @return true if the region needs compacting
-   * 
+   *
    * @throws IOException general io exceptions
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
@@ -1051,7 +1052,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
 
       storeFlushers.clear();
-      
+
       // Set down the memstore size by amount of flush.
       this.memstoreSize.addAndGet(-currentMemStoreSize);
     } catch (Throwable t) {
@@ -1660,7 +1661,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
            walEdit, now);
       }
-      
+
       long size = 0;
 
       w = rwcc.beginMemstoreInsert();
@@ -1996,9 +1997,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
       results.clear();
       boolean returnResult = nextInternal(limit);
-      if (!returnResult && filter != null && filter.filterRow()) {
-        results.clear();
-      }
+
       outResults.addAll(results);
       resetFilters();
       if (isFilterDone()) {
@@ -2024,6 +2023,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       while (true) {
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
+          if (filter != null && filter.hasFilterRow()) {
+            filter.filterRow(results);
+          }
+          if (filter != null && filter.filterRow()) {
+            results.clear();
+          }
+
           return false;
         } else if (filterRowKey(currentRow)) {
           nextRow(currentRow);
@@ -2032,19 +2038,33 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           do {
             this.storeHeap.next(results, limit);
             if (limit > 0 && results.size() == limit) {
-              return true;
+              if (this.filter != null && filter.hasFilterRow()) throw new IncompatibleFilterException(
+                  "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
+              return true; // we are expecting more yes, but also limited to how many we can return.
             }
           } while (Bytes.equals(currentRow, nextRow = peekRow()));
 
           final boolean stopRow = isStopRow(nextRow);
-          if (!stopRow && (results.isEmpty() || filterRow())) {
+
+          // now that we have an entire row, lets process with a filters:
+
+          // first filter with the filterRow(List)
+          if (filter != null && filter.hasFilterRow()) {
+            filter.filterRow(results);
+          }
+
+          if (results.isEmpty() || filterRow()) {
             // this seems like a redundant step - we already consumed the row
             // there're no left overs.
             // the reasons for calling this method are:
             // 1. reset the filters.
             // 2. provide a hook to fast forward the row (used by subclasses)
             nextRow(currentRow);
-            continue;
+
+            // This row was totally filtered out, if this is NOT the last row,
+            // we should continue on.
+
+            if (!stopRow) continue;
           }
           return !stopRow;
         }
@@ -2694,7 +2714,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (5 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
       (21 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
-  
+
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
       ClassSize.ATOMIC_LONG + ClassSize.ATOMIC_INTEGER +

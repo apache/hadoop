@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 
+import java.util.List;
+
 /**
  * This filter is used to filter based on the key. It takes an operator
  * (equal, greater, not equal, etc) and a byte [] comparator for the row,

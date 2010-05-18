@@ -602,6 +602,8 @@ Release 0.21.0 - Unreleased
    HBASE-2520  Cleanup arrays vs Lists of scanners (Todd Lipcon via Stack)
    HBASE-2551  Forward port fixes that are in branch but not in trunk (part
                of the merge of old 0.20 into TRUNK task)
+   HBASE-2466  Improving filter API to allow for modification of keyvalue list 
+   	       by filter (Juhani Connolly via Ryan)
 
 
   NEW FEATURES

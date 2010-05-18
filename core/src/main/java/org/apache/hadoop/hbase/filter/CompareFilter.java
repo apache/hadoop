@@ -43,7 +43,7 @@ import java.util.Arrays;
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  */
-public abstract class CompareFilter implements Filter {
+public abstract class CompareFilter extends FilterBase {
 
   /** Comparison operators. */
   public enum CompareOp {
@@ -59,6 +59,8 @@ public abstract class CompareFilter implements Filter {
     GREATER_OR_EQUAL,
     /** greater than */
     GREATER,
+    /** no operation */
+    NO_OP,
   }
 
   protected CompareOp compareOp;
@@ -95,28 +97,12 @@ public abstract class CompareFilter implements Filter {
     return comparator;
   }
 
-  public void reset() {
-  }
-
-  public ReturnCode filterKeyValue(KeyValue v) {
-    return ReturnCode.INCLUDE;
-  }
-
-  public boolean filterRowKey(byte[] data, int offset, int length) {
-    return false;
-  }
-
-  public boolean filterRow() {
-    return false;
-  }
-
-  public boolean filterAllRemaining() {
-    return false;
-  }
-
   protected boolean doCompare(final CompareOp compareOp,
       final WritableByteArrayComparable comparator, final byte [] data,
       final int offset, final int length) {
+      if (compareOp == CompareOp.NO_OP) {
+	  return true;
+      }
     int compareResult =
       comparator.compareTo(Arrays.copyOfRange(data, offset,
         offset + length));

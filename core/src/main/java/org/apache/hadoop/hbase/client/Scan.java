@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -280,6 +281,11 @@ public class Scan implements Writable {
    * @param batch the maximum number of values
    */
   public void setBatch(int batch) {
+	if(this.hasFilter() && this.filter.hasFilterRow()) {
+	  throw new IncompatibleFilterException(
+        "Cannot set batch on a scan using a filter" +
+        " that returns true for filter.hasFilterRow");
+	}
     this.batch = batch;
   }
 

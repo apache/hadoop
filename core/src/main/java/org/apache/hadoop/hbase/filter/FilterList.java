@@ -118,12 +118,14 @@ public class FilterList implements Filter {
     this.filters.add(filter);
   }
 
+  @Override
   public void reset() {
     for (Filter filter : filters) {
       filter.reset();
     }
   }
 
+  @Override
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     for (Filter filter : filters) {
       if (this.operator == Operator.MUST_PASS_ALL) {
@@ -141,6 +143,7 @@ public class FilterList implements Filter {
     return this.operator == Operator.MUST_PASS_ONE;
   }
 
+  @Override
   public boolean filterAllRemaining() {
     for (Filter filter : filters) {
       if (filter.filterAllRemaining()) {
@@ -156,6 +159,7 @@ public class FilterList implements Filter {
     return operator == Operator.MUST_PASS_ONE;
   }
 
+  @Override
   public ReturnCode filterKeyValue(KeyValue v) {
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
@@ -187,6 +191,24 @@ public class FilterList implements Filter {
       ReturnCode.SKIP: ReturnCode.INCLUDE;
   }
 
+  @Override
+  public void filterRow(List<KeyValue> kvs) {
+    for (Filter filter : filters) {
+      filter.filterRow(kvs);
+    }
+  }
+
+  @Override
+  public boolean hasFilterRow() {
+    for (Filter filter : filters) {
+      if(filter.hasFilterRow()) {
+    	return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
   public boolean filterRow() {
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {

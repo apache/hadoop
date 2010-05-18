@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
@@ -34,7 +35,7 @@ import java.io.IOException;
  * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
  * returns true.
  */
-public class WhileMatchFilter implements Filter {
+public class WhileMatchFilter extends FilterBase {
   private boolean filterAllRemaining = false;
   private Filter filter;
 

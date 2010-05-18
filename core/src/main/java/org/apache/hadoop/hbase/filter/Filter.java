@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.Writable;
 
+import java.util.List;
+
 /**
  * Interface for row and column filters directly applied within the regionserver.
  * A filter can expect the following call sequence:
@@ -32,6 +34,7 @@ import org.apache.hadoop.io.Writable;
  * <li>{@link #filterRowKey(byte[],int,int)} -> true to drop this row,
  * if false, we will also call</li>
  * <li>{@link #filterKeyValue(KeyValue)} -> true to drop this key/value</li>
+ * <li>{@link #filterRow(List)} -> allows directmodification of the final list to be submitted
  * <li>{@link #filterRow()} -> last chance to drop entire row based on the sequence of
  * filterValue() calls. Eg: filter a row if it doesn't contain a specified column.
  * </li>
@@ -39,6 +42,11 @@ import org.apache.hadoop.io.Writable;
  *
  * Filter instances are created one per region/scan.  This interface replaces
  * the old RowFilterInterface.
+ *
+ * When implementing your own filters, consider inheriting {@link FilterBase} to help
+ * you reduce boilerplate.
+ * 
+ * @see FilterBase
  */
 public interface Filter extends Writable {
   /**
@@ -101,6 +109,21 @@ public interface Filter extends Writable {
   }
 
   /**
+   * Chance to alter the list of keyvalues to be submitted.
+   * Modifications to the list will carry on
+   * @param kvs the list of keyvalues to be filtered
+   */
+  public void filterRow(List<KeyValue> kvs);
+
+  /**
+   * Return whether or not this filter actively uses filterRow(List)
+   * Primarily used to check for conflicts with scans(such as scans
+   * that do not read a full row at a time)
+   * @return
+   */
+  public boolean hasFilterRow();
+
+  /**
    * Last chance to veto row based on previous {@link #filterKeyValue(KeyValue)}
    * calls. The filter needs to retain state then return a particular value for
    * this call if they wish to exclude a row if a certain column is missing
@@ -108,4 +131,5 @@ public interface Filter extends Writable {
    * @return true to exclude row, false to include row.
    */
   public boolean filterRow();
+
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2007 The Apache Software Foundation
+/*
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 
@@ -30,7 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
  * This filter can be used for row-based indexing, where references to other tables are stored across many columns,
  * in order to efficient lookups and paginated results for end users.
  */
-public class ColumnPaginationFilter implements Filter
+public class ColumnPaginationFilter extends FilterBase
 {
   private int limit = 0;
   private int offset = 0;
@@ -50,11 +51,7 @@ public class ColumnPaginationFilter implements Filter
     this.offset = offset;
   }
 
-  public boolean filterAllRemaining()
-  {
-    return false;
-  }
-
+  @Override
   public ReturnCode filterKeyValue(KeyValue v)
   {
     if(count >= offset + limit)
@@ -67,17 +64,7 @@ public class ColumnPaginationFilter implements Filter
     return code;
   }
 
-  public boolean filterRow()
-  {
-    this.count = 0;
-    return false;
-  }
-
-  public boolean filterRowKey(byte[] buffer, int offset, int length)
-  {
-    return false;
-  }
-
+  @Override
   public void reset()
   {
     this.count = 0;

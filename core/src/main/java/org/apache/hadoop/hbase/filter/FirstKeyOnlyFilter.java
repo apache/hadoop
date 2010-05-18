@@ -24,13 +24,14 @@ import org.apache.hadoop.hbase.KeyValue;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
+import java.util.List;
 
 /**
  * A filter that will only return the first KV from each row.
  * <p>
  * This filter can be used to more efficiently perform row count operations.
  */
-public class FirstKeyOnlyFilter implements Filter {
+public class FirstKeyOnlyFilter extends FilterBase {
   private boolean foundKV = false;
 
   public FirstKeyOnlyFilter() {
@@ -40,22 +41,10 @@ public class FirstKeyOnlyFilter implements Filter {
     foundKV = false;
   }
 
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    return false;
-  }
-
-  public boolean filterAllRemaining() {
-    return false;
-  }
-
   public ReturnCode filterKeyValue(KeyValue v) {
     if(foundKV) return ReturnCode.NEXT_ROW;
     foundKV = true;
     return ReturnCode.INCLUDE;
-  }
-
-  public boolean filterRow() {
-    return false;
   }
 
   public void write(DataOutput out) throws IOException {
