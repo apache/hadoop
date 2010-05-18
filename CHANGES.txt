@@ -21,6 +21,7 @@ Release 0.21.0 - Unreleased
    HBASE-2294  Enumerate ACID properties of HBase in a well defined spec
                (Todd Lipcon via Stack)
    HBASE-2541  Remove transactional contrib (Clint Morgan via Stack)
+   HBASE-2542  Fold stargate contrib into core
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

@@ -151,11 +151,17 @@
   </build>
 
   <properties>
+    <commons-httpclient.version>3.1</commons-httpclient.version>
     <commons-lang.version>2.5</commons-lang.version>
     <commons-math.version>2.1</commons-math.version>
     <jasper.version>5.5.23</jasper.version>
+    <jaxb-api.version>2.1</jaxb-api.version>
+    <jersey.version>1.1.5.1</jersey.version>
     <jruby.version>1.4.0</jruby.version>
+    <jsr311.version>1.1.1</jsr311.version>
+    <protobuf.version>2.3.0</protobuf.version>
     <slf4j.version>1.5.8</slf4j.version>
+    <stax-api>1.0.1</stax-api>
     <thrift.version>0.2.0</thrift.version>
   </properties>
 
@@ -163,6 +169,11 @@
     <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-httpclient</groupId>
+      <artifactId>commons-httpclient</artifactId>
+      <version>${commons-httpclient.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-lang</groupId>
@@ -259,6 +270,43 @@
       <groupId>org.jruby</groupId>
       <artifactId>jruby-complete</artifactId>
       <version>${jruby.version}</version>
+    </dependency>
+
+    <!-- REST dependencies -->
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-core</artifactId>
+      <version>${jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-json</artifactId>
+      <version>${jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
+      <version>${jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>${jaxb-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>jsr311-api</artifactId>
+      <version>${jsr311.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>stax</groupId>
+      <artifactId>stax-api</artifactId>
+      <version>1.0.1</version>
     </dependency>
 
     <!-- Test dependencies -->
