@@ -41,59 +41,59 @@ public class OldLogsCleaner extends Chore {
 
   static final Log LOG = LogFactory.getLog(OldLogsCleaner.class.getName());
 
-  // Configured time a log can be kept after it was closed
-  private final long ttl;
   // Max number we can delete on every chore, this is to make sure we don't
   // issue thousands of delete commands around the same time
   private final int maxDeletedLogs;
   private final FileSystem fs;
   private final Path oldLogDir;
-  // We expect a file looking like ts.hlog.dat.ts
+  private final LogCleanerDelegate logCleaner;
+  private final Configuration conf;
+  // We expect a file looking like hlog.dat.ts
   private final Pattern pattern = Pattern.compile("\\d*\\.hlog\\.dat\\.\\d*");
 
   /**
    *
-   * @param p
-   * @param s
-   * @param conf
-   * @param fs
-   * @param oldLogDir
+   * @param p the period of time to sleep between each run
+   * @param s the stopper boolean
+   * @param conf configuration to use
+   * @param fs handle to the FS
+   * @param oldLogDir the path to the archived logs
    */
   public OldLogsCleaner(final int p, final AtomicBoolean s,
                         Configuration conf, FileSystem fs,
                         Path oldLogDir) {
     super(p, s);
-    this.ttl = conf.getLong("hbase.master.logcleaner.ttl", 600000);
     this.maxDeletedLogs =
         conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
     this.fs = fs;
     this.oldLogDir = oldLogDir;
+    this.conf = conf;
+    this.logCleaner = getLogCleaner();
+  }
+
+  private LogCleanerDelegate getLogCleaner() {
+    try {
+      Class c = Class.forName(conf.get("hbase.master.logcleanerplugin.impl",
+        TimeToLiveLogCleaner.class.getCanonicalName()));
+      LogCleanerDelegate cleaner = (LogCleanerDelegate) c.newInstance();
+      cleaner.setConf(conf);
+      return cleaner;
+    } catch (Exception e) {
+      LOG.warn("Passed log cleaner implementation throws errors, " +
+          "defaulting to TimeToLiveLogCleaner", e);
+      return new TimeToLiveLogCleaner();
+    }
   }
 
   @Override
   protected void chore() {
     try {
       FileStatus[] files = this.fs.listStatus(this.oldLogDir);
-      long currentTime = System.currentTimeMillis();
       int nbDeletedLog = 0;
       for (FileStatus file : files) {
         Path filePath = file.getPath();
-
         if (pattern.matcher(filePath.getName()).matches()) {
-          String[] parts = filePath.getName().split("\\.");
-          long time = 0;
-          try {
-            time = Long.parseLong(parts[3]);
-          } catch (NumberFormatException e) {
-            // won't happen
-          }
-          long life = currentTime - time;
-          if (life < 0) {
-            LOG.warn("Found a log newer than current time, " +
-                "probably a clock skew");
-            continue;
-          }
-          if (life > ttl) {
+          if (logCleaner.isLogDeletable(filePath) ) {
             this.fs.delete(filePath, true);
             nbDeletedLog++;
           }
@@ -106,7 +106,6 @@ public class OldLogsCleaner extends Chore {
         if (nbDeletedLog >= maxDeletedLogs) {
           break;
         }
-
       }
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);

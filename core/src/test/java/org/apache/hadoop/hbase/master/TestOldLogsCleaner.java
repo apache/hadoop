@@ -86,9 +86,10 @@ public class TestOldLogsCleaner {
     fs.createNewFile(new Path(oldLogDir, "1.hlog.dat.a"));
     fs.createNewFile(new Path(oldLogDir, "1.hlog.dat." + now));
     for(int i = 0; i < 30; i++) {
-      fs.createNewFile(new Path(oldLogDir, i + ".hlog.dat." +(now - 6000000)));
+      fs.createNewFile(new Path(oldLogDir, 1 + "hlog.dat." +
+          (now - 6000000 - i)));
     }
-    fs.createNewFile(new Path(oldLogDir, "a.hlog.dat." +(now + 10000)));
+    fs.createNewFile(new Path(oldLogDir, "a.hlog.dat." + (now + 10000)));
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
