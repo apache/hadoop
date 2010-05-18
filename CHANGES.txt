@@ -3,6 +3,9 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   IMPROVEMENTS
+    HADOOP-6752. Remote cluster control functionality needs JavaDocs
+    improvement (Balaji Rajagopalan via cos).
+
     HADOOP-6627. "Bad Connection to FS" message in FSShell should print 
     message from the exception (boryas)
 

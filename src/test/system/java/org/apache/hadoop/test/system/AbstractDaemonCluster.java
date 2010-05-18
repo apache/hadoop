@@ -232,8 +232,7 @@ public abstract class AbstractDaemonCluster {
    * that will be excluded.
    * @param excludeExpList list of exceptions to exclude
    */
-  public void setExcludeExpList(String [] excludeExpList)
-  {
+  public void setExcludeExpList(String [] excludeExpList) {
     this.excludeExpList = excludeExpList;
   }
   
