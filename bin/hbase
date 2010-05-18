@@ -40,6 +40,8 @@
 #
 #   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
 #
+#   MAVEN_HOME       Where mvn is installed.
+#
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
@@ -83,6 +85,11 @@ shift
 JAVA=$JAVA_HOME/bin/java
 JAVA_HEAP_MAX=-Xmx1000m 
 
+MVN="mvn"
+if [ "$MAVEN_HOME" != "" ]; then
+  MVN=${MAVEN_HOME}/bin/mvn
+fi
+
 # check envvars which might override default args
 if [ "$HBASE_HEAPSIZE" != "" ]; then
   #echo "run with heapsize $HBASE_HEAPSIZE"
@@ -97,19 +104,29 @@ IFS=
 CLASSPATH="${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
-# For developers, add hbase classes to CLASSPATH
-if [ -d "$HBASE_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/classes
-fi
-if [ -d "$HBASE_HOME/build/test" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/test
-fi
-if [ -d "$HBASE_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build
-fi
+add_maven_deps_to_classpath() {
+  f="/tmp/hbase-core-tets-classpath.txt"
+  ${MVN} -f core/pom.xml dependency:build-classpath -Dmdep.outputFile="${f}" &> /dev/null
+  # Add tests classes
+  CLASSPATH=${CLASSPATH}:`cat "${f}"`
+}
 
-# Add maven target directory
-if $in_sources_dir; then
+add_maven_main_classes_to_classpath() {
+  if [ -d "$HBASE_HOME/core/target/classes" ]; then
+    CLASSPATH=${CLASSPATH}:$HBASE_HOME/core/target/classes
+  fi
+}
+
+add_maven_test_classes_to_classpath() {
+  # For developers, add hbase classes to CLASSPATH
+  f="$HBASE_HOME/core/target/test-classes"
+  if [ -d "${f}" ]; then
+    CLASSPATH=${CLASSPATH}:${f}
+  fi
+}
+
+add_maven_target_dir_to_classpath() {
+  # I never seem to *have* such a dir. -tlipcon
   HBASE_VER=`grep '<version>' $HBASE_HOME/pom.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>/\1/'`
   MAVEN_TARGET_DIR=$HBASE_HOME/target/hbase-$HBASE_VER-bin/hbase-$HBASE_VER
   if [ -d "$MAVEN_TARGET_DIR" ]; then
@@ -119,6 +136,13 @@ if $in_sources_dir; then
       fi
     done
   fi
+}
+
+# Add maven target directory
+if $in_sources_dir; then
+  add_maven_deps_to_classpath
+  add_maven_main_classes_to_classpath
+  add_maven_test_classes_to_classpath
 fi
 
 # For releases, add hbase & webapps to CLASSPATH
@@ -137,18 +161,10 @@ for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-# Add libs handled by ivy
-if [ -d "$HBASE_HOME/build/ivy/lib/common" ]; then
-for f in $HBASE_HOME/build/ivy/lib/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
-
 # Add user-specified CLASSPATH last
 if [ "$HBASE_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
 fi
-
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then
@@ -195,15 +211,9 @@ if [ "$COMMAND" = "shell" ] ; then
   CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
 elif $in_sources_dir && [ "$COMMAND" = "shell-tests" ] ; then
   # Finx maven build classpath
-  mvn -f core/pom.xml dependency:build-classpath -Dmdep.outputFile=/tmp/hbase-core-tests-classpath.txt &> /dev/null
-  # Add tests classes
-  CLASSPATH=${CLASSPATH}:`cat /tmp/hbase-core-tests-classpath.txt`
-  for f in `find ${HBASE_HOME}/core/target -name '*.jar'`; do
-    if [ -f $f ]; then
-      CLASSPATH=${CLASSPATH}:$f;
-    fi
-  done
-  CLASSPATH=${HBASE_HOME}/core/target/test-classes:${CLASSPATH} # For configs
+  add_maven_deps_to_classpath
+  add_maven_main_classes_to_classpath
+  add_maven_test_classes_to_classpath
   # Start the tests
   CORESRC="${HBASE_HOME}/core/src"
   CLASS="org.jruby.Main -I${CORESRC}/main/ruby -I${CORESRC}/test/ruby ${CORESRC}/test/ruby/tests_runner.rb"

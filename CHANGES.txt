@@ -329,6 +329,8 @@ Release 0.21.0 - Unreleased
    HBASE-2442  Log lease recovery catches IOException too widely
                (Todd Lipcon via Stack)
    HBASE-2457  RS gets stuck compacting region ad infinitum
+   HBASE-2562  bin/hbase doesn't work in-situ in maven
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
