@@ -3,9 +3,6 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   IMPROVEMENTS
-    HADOOP-6752. Remote cluster control functionality needs JavaDocs
-    improvement (Balaji Rajagopalan via cos).
-
     HADOOP-6627. "Bad Connection to FS" message in FSShell should print 
     message from the exception (boryas)
 
@@ -327,6 +324,9 @@ Release 0.21.0 - Unreleased
     (hairong)
 
   IMPROVEMENTS
+
+    HADOOP-6752. Remote cluster control functionality needs JavaDocs
+    improvement (Balaji Rajagopalan via cos).
 
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
     to create splits. (dhruba via zshao)
