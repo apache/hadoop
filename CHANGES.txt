@@ -605,6 +605,8 @@ Release 0.21.0 - Unreleased
                of the merge of old 0.20 into TRUNK task)
    HBASE-2466  Improving filter API to allow for modification of keyvalue list 
    	           by filter (Juhani Connolly via Ryan)
+   HBASE-2566  Remove 'lib' dir; it only has libthrift and that is being
+               pulled from http://people.apache.org/~rawson/repo/....
 
 
   NEW FEATURES
