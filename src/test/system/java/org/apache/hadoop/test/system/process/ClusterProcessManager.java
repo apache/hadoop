@@ -62,16 +62,15 @@ public interface ClusterProcessManager {
   /**
    * Starts the daemon from the user specified conf dir.
    * @param newConfLocation the dir where the new conf files reside.
-   * @throws IOException
+   * @throws IOException if start from new conf fails. 
    */
   void start(String newConfLocation) throws IOException;
 
   /**
    * Stops the daemon running from user specified conf dir.
    * 
-   * @param newConfLocation
-   *          the dir where ther new conf files reside.
-   * @throws IOException
+   * @param newConfLocation the dir where the new conf files reside.
+   * @throws IOException if stop from new conf fails. 
    */
   void stop(String newConfLocation) throws IOException;
 
@@ -86,7 +85,7 @@ public interface ClusterProcessManager {
    * Gets if multi-user support is enabled for this cluster. 
    * <br/>
    * @return true if multi-user support is enabled.
-   * @throws IOException
+   * @throws IOException if RPC returns error. 
    */
   boolean isMultiUserSupported() throws IOException;
 
@@ -94,7 +93,7 @@ public interface ClusterProcessManager {
    * The pushConfig is used to push a new config to the daemons.
    * @param localDir
    * @return is the remoteDir location where config will be pushed
-   * @throws IOException
+   * @throws IOException if pushConfig fails.
    */
   String pushConfig(String localDir) throws IOException;
 }

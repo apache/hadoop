@@ -294,6 +294,9 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-6752. Remote cluster control functionality needs JavaDocs
+    improvement (Balaji Rajagopalan via cos).
+
     HADOOP-4565. Added CombineFileInputFormat to use data locality information
     to create splits. (dhruba via zshao)
 
