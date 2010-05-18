@@ -16,7 +16,6 @@
 
   <modules>
     <module>core</module>
-    <module>contrib</module>
   </modules>
 
   <licenses>

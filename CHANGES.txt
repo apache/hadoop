@@ -22,6 +22,7 @@ Release 0.21.0 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2541  Remove transactional contrib (Clint Morgan via Stack)
    HBASE-2542  Fold stargate contrib into core
+   HBASE-2565  Remove contrib module from hbase
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
@@ -603,7 +604,7 @@ Release 0.21.0 - Unreleased
    HBASE-2551  Forward port fixes that are in branch but not in trunk (part
                of the merge of old 0.20 into TRUNK task)
    HBASE-2466  Improving filter API to allow for modification of keyvalue list 
-   	       by filter (Juhani Connolly via Ryan)
+   	           by filter (Juhani Connolly via Ryan)
 
 
   NEW FEATURES
