@@ -45,6 +45,8 @@ public class TestZooKeeper {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // Test we can first start the ZK cluster by itself
+    TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(1);
   }

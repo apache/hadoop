@@ -151,13 +151,14 @@ public class HBaseTestingUtility {
    * @see #shutdownMiniZKCluster()
    */
   public void startMiniZKCluster() throws Exception {
-    isRunningCluster();
-    this.clusterTestBuildDir = setupClusterTestBuildDir();
-    startMiniZKCluster(this.clusterTestBuildDir);
+    startMiniZKCluster(setupClusterTestBuildDir());
 
   }
 
   private void startMiniZKCluster(final File dir) throws Exception {
+    if (this.zkCluster != null) {
+      throw new IOException("Cluster already running at " + dir);
+    }
     this.zkCluster = new MiniZooKeeperCluster();
     int clientPort = this.zkCluster.startup(dir);
     this.conf.set("hbase.zookeeper.property.clientPort",

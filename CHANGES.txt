@@ -334,6 +334,7 @@ Release 0.21.0 - Unreleased
    HBASE-2562  bin/hbase doesn't work in-situ in maven
                (Todd Lipcon via Stack)
    HBASE-2449  Local HBase does not stop properly
+   HBASE-2539  Cannot start ZK before the rest in tests anymore
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
