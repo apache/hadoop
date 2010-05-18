@@ -625,7 +625,7 @@ public class ZooKeeperWrapper implements HConstants {
   public void close() {
     try {
       zooKeeper.close();
-      LOG.debug("Closed connection with ZooKeeper");
+      LOG.debug("Closed connection with ZooKeeper; " + this.rootRegionZNode);
     } catch (InterruptedException e) {
       LOG.warn("Failed to close connection with ZooKeeper");
     }

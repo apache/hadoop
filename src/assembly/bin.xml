@@ -53,29 +53,6 @@
         <unpack>false</unpack>
       </binaries>
     </moduleSet>
-    <moduleSet>
-      <includes>
-        <include>org.apache.hbase:hbase-contrib-stargate*</include>
-      </includes>
-      <binaries>
-        <outputDirectory>contrib/stargate/</outputDirectory>
-        <unpack>false</unpack>
-        <dependencySets>
-          <dependencySet>
-            <outputDirectory>lib</outputDirectory>
-          </dependencySet>
-        </dependencySets>
-      </binaries>
-    </moduleSet>
-    <moduleSet>
-      <includes>
-        <include>org.apache.hbase:hbase-contrib-transactional</include>
-      </includes>
-      <binaries>
-        <outputDirectory>contrib/transactional/</outputDirectory>
-        <unpack>false</unpack>
-      </binaries>
-    </moduleSet>
   </moduleSets>
   <fileSets>
     <fileSet>

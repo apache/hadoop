@@ -41,12 +41,12 @@ fi
 distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distributed`
 
 
-if [ $distMode == 'false' ] 
+if [ "$distMode" == 'false' ] 
 then
   "$bin"/hbase-daemon.sh start master
 else
-"$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" start zookeeper
-"$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
-"$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-  --hosts "${HBASE_REGIONSERVERS}" start regionserver
+  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" start zookeeper
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
+  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
+    --hosts "${HBASE_REGIONSERVERS}" start regionserver
 fi

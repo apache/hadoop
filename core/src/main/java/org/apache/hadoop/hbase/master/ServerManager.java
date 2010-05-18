@@ -797,7 +797,7 @@ public class ServerManager implements HConstants {
         LOG.info("Waiting on following regionserver(s) to go down " +
           this.serversToServerInfo.values());
         try {
-          this.serversToServerInfo.wait(1);
+          this.serversToServerInfo.wait(500);
         } catch (InterruptedException e) {
           // continue
         }
