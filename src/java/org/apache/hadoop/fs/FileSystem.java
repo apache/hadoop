@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -95,6 +96,31 @@ public abstract class FileSystem extends Configured implements Closeable {
    * or the JVM is exited.
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();
+  
+  /**
+   * Get a filesystem instance based on the uri, the passed
+   * configuration and the user
+   * @param uri
+   * @param conf
+   * @param user
+   * @return the filesystem instance
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static FileSystem get(final URI uri, final Configuration conf,
+        final String user) throws IOException, InterruptedException {
+    UserGroupInformation ugi;
+    if (user == null) {
+      ugi = UserGroupInformation.getCurrentUser();
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(user);
+    }
+    return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return get(uri, conf);
+      }
+    });
+  }
 
   /** Returns the configured filesystem implementation.*/
   public static FileSystem get(Configuration conf) throws IOException {

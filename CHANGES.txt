@@ -3,6 +3,8 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   IMPROVEMENTS
+    HADOOP-6769. Add an API in FileSystem to get FileSystem instances based 
+    on users(ddas via boryas)
 
     HADOOP-6600. mechanism for authorization check for inter-server 
     protocols. (boryas)
