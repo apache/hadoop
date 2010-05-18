@@ -43,7 +43,6 @@ distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distrib
 
 if [ $distMode == 'false' ] 
 then
-  echo "Non distributed mode startup"
   "$bin"/hbase-daemon.sh start master
 else
 "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" start zookeeper
