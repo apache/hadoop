@@ -3,6 +3,9 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   IMPROVEMENTS
+    HADOOP-6627. "Bad Connection to FS" message in FSShell should print 
+    message from the exception (boryas)
+
     HADOOP-6769. Add an API in FileSystem to get FileSystem instances based 
     on users(ddas via boryas)
 

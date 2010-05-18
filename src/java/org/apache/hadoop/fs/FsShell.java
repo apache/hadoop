@@ -1842,7 +1842,8 @@ public class FsShell extends Configured implements Tool {
                          "... command aborted.");
       return exitCode;
     } catch (IOException e) {
-      System.err.println("Bad connection to FS. command aborted.");
+      System.err.println("Bad connection to FS. Command aborted. Exception: " +
+          e.getLocalizedMessage());
       return exitCode;
     }
 
