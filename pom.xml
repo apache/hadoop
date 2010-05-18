@@ -298,7 +298,7 @@
     <jetty.version>6.1.14</jetty.version>
     <junit.version>4.8.1</junit.version>
     <log4j.version>1.2.15</log4j.version>
-    <zookeeper.version>3.3.0</zookeeper.version>
+    <zookeeper.version>3.3.1</zookeeper.version>
   </properties>
 
   <dependencyManagement>
