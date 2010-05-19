@@ -105,7 +105,7 @@ CLASSPATH="${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 add_maven_deps_to_classpath() {
-  f="/tmp/hbase-core-tets-classpath.txt"
+  f="/tmp/hbase-core-test-classpath.txt"
   ${MVN} -f core/pom.xml dependency:build-classpath -Dmdep.outputFile="${f}" &> /dev/null
   # Add tests classes
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
