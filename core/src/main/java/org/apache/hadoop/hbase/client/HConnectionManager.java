@@ -796,7 +796,7 @@ public class HConnectionManager implements HConstants {
       if (rl != null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Cache hit for row <" +
-            Bytes.toString(row) +
+            Bytes.toStringBinary(row) +
             "> in tableName " + Bytes.toString(tableName) +
             ": location server " + rl.getServerAddress() +
             ", location region name " +
