@@ -61,10 +61,10 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         store.versionsToReturn(scan.getMaxVersions()));
 
     this.isGet = scan.isGetScan();
-    List<KeyValueScanner> scanners = getScanners();
+    // pass columns = try to filter out unnecessary ScanFiles
+    List<KeyValueScanner> scanners = getScanners(scan, columns);
 
     // Seek all scanners to the initial key
-    // TODO if scan.isGetScan, use bloomfilters to skip seeking
     for(KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
@@ -83,7 +83,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param scan the spec
    * @param scanners ancilliary scanners
    */
-  StoreScanner(Store store, Scan scan, List<KeyValueScanner> scanners) {
+  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners) {
     this.store = store;
     this.cacheBlocks = false;
     this.isGet = false;
@@ -124,9 +124,37 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private List<KeyValueScanner> getScanners() {
     // First the store file scanners
     Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
+    List<StoreFileScanner> sfScanners = StoreFileScanner
+      .getScannersForStoreFiles(map.values(), cacheBlocks, isGet);
     List<KeyValueScanner> scanners =
-      StoreFileScanner.getScannersForStoreFiles(map.values(),
-      cacheBlocks, isGet);
+      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
+    scanners.addAll(sfScanners);
+    // Then the memstore scanners
+    scanners.addAll(this.store.memstore.getScanners());
+    return scanners;
+  }
+
+  /*
+   * @return List of scanners to seek, possibly filtered by StoreFile.
+   */
+  private List<KeyValueScanner> getScanners(Scan scan, 
+      final NavigableSet<byte[]> columns) {
+    // First the store file scanners
+    Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
+    List<StoreFileScanner> sfScanners = StoreFileScanner
+      .getScannersForStoreFiles(map.values(), cacheBlocks, isGet);
+    List<KeyValueScanner> scanners =
+      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
+
+    // exclude scan files that have failed file filters
+    for(StoreFileScanner sfs : sfScanners) {
+      if (isGet && 
+          !sfs.getHFileScanner().shouldSeek(scan.getStartRow(), columns)) {
+        continue; // exclude this hfs
+      }
+      scanners.add(sfs);
+    }
+
     // Then the memstore scanners
     scanners.addAll(this.store.memstore.getScanners());
     return scanners;

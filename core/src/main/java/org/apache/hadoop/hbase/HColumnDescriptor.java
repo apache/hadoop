@@ -29,6 +29,8 @@ import java.util.Map;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -50,7 +52,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // Version 5 was when bloom filter descriptors were removed.
   // Version 6 adds metadata as a map where keys and values are byte[].
   // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)7;
+  // Version 8 -- reintroduction of bloom filters, changed from boolean to enum
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)8;
 
   /**
    * The type of compression.
@@ -113,7 +116,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Default setting for whether or not to use bloomfilters.
    */
-  public static final boolean DEFAULT_BLOOMFILTER = false;
+  public static final String DEFAULT_BLOOMFILTER = StoreFile.BloomType.NONE.toString();
 
   /**
    * Default time to live of cell contents.
@@ -166,7 +169,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     this (familyName == null || familyName.length <= 0?
       HConstants.EMPTY_BYTE_ARRAY: familyName, DEFAULT_VERSIONS,
       DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY, DEFAULT_BLOCKCACHE,
-      DEFAULT_TTL, false);
+      DEFAULT_TTL, DEFAULT_BLOOMFILTER);
   }
 
   /**
@@ -195,7 +198,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param blockCacheEnabled If true, MapFile blocks should be cached
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
-   * @param bloomFilter Enable the specified bloom filter for this column
+   * @param bloomFilter Bloom filter type for this column
    *
    * @throws IllegalArgumentException if passed a family name that is made of
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
@@ -205,7 +208,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled,
-      final int timeToLive, final boolean bloomFilter) {
+      final int timeToLive, final String bloomFilter) {
     this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
       DEFAULT_BLOCKSIZE, timeToLive, bloomFilter, DEFAULT_REPLICATION_SCOPE);
   }
@@ -222,7 +225,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param blocksize
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
-   * @param bloomFilter Enable the specified bloom filter for this column
+   * @param bloomFilter Bloom filter type for this column
    * @param scope The scope tag for this column
    *
    * @throws IllegalArgumentException if passed a family name that is made of
@@ -233,7 +236,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
       final String compression, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
-      final int timeToLive, final boolean bloomFilter, final int scope) {
+      final int timeToLive, final String bloomFilter, final int scope) {
     isLegalFamilyName(familyName);
     this.name = familyName;
 
@@ -248,7 +251,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     setTimeToLive(timeToLive);
     setCompressionType(Compression.Algorithm.
       valueOf(compression.toUpperCase()));
-    setBloomfilter(bloomFilter);
+    setBloomFilterType(StoreFile.BloomType.
+      valueOf(bloomFilter.toUpperCase()));
     setBlocksize(blocksize);
     setScope(scope);
   }
@@ -464,20 +468,21 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @return true if a bloom filter is enabled
+   * @return bloom filter type used for new StoreFiles in ColumnFamily
    */
-  public boolean isBloomfilter() {
-    String value = getValue(BLOOMFILTER);
-    if (value != null)
-      return Boolean.valueOf(value).booleanValue();
-    return DEFAULT_BLOOMFILTER;
+  public StoreFile.BloomType getBloomFilterType() {
+    String n = getValue(BLOOMFILTER);
+    if (n == null) {
+      n = DEFAULT_BLOOMFILTER;
+    }
+    return StoreFile.BloomType.valueOf(n.toUpperCase());
   }
 
   /**
-   * @param onOff Enable/Disable bloom filter
+   * @param toggle bloom filter type
    */
-  public void setBloomfilter(final boolean onOff) {
-    setValue(BLOOMFILTER, Boolean.toString(onOff));
+  public void setBloomFilterType(final StoreFile.BloomType bt) {
+    setValue(BLOOMFILTER, bt.toString());
   }
 
    /**
@@ -513,10 +518,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         values.entrySet()) {
       String key = Bytes.toString(e.getKey().get());
       String value = Bytes.toString(e.getValue().get());
-      if (key != null && key.toUpperCase().equals(BLOOMFILTER)) {
-        // Don't emit bloomfilter.  Its not working.
-        continue;
-      }
       s.append(", ");
       s.append(key);
       s.append(" => '");
@@ -576,8 +577,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       int ordinal = in.readInt();
       setCompressionType(Compression.Algorithm.values()[ordinal]);
       setInMemory(in.readBoolean());
-      setBloomfilter(in.readBoolean());
-      if (isBloomfilter() && version < 5) {
+      setBloomFilterType(in.readBoolean() ? BloomType.ROW : BloomType.NONE);
+      if (getBloomFilterType() != BloomType.NONE && version < 5) {
         // If a bloomFilter is enabled and the column descriptor is less than
         // version 5, we need to skip over it to read the rest of the column
         // descriptor. There are no BloomFilterDescriptors written to disk for
@@ -593,7 +594,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
        setTimeToLive(in.readInt());
       }
     } else {
-      // version 7+
+      // version 6+
       this.name = Bytes.readByteArray(in);
       this.values.clear();
       int numValues = in.readInt();
@@ -602,6 +603,15 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         ImmutableBytesWritable value = new ImmutableBytesWritable();
         key.readFields(in);
         value.readFields(in);
+        
+        // in version 8, the BloomFilter setting changed from bool to enum
+        if (version < 8 && Bytes.toString(key.get()).equals(BLOOMFILTER)) {
+          value.set(Bytes.toBytes(
+              Boolean.getBoolean(Bytes.toString(value.get()))
+                ? BloomType.ROW.toString() 
+                : BloomType.NONE.toString()));
+        }
+
         values.put(key, value);
       }
       if (version == 6) {

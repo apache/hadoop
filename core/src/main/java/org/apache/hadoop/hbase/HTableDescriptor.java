@@ -33,6 +33,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -667,7 +668,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
           10,  // Ten is arbitrary number.  Keep versions to help debuggging.
           Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-          HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL) });
+          HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),  
+          HConstants.REPLICATION_SCOPE_LOCAL) });
 
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
@@ -675,9 +677,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY,
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
             Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-            HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL),
+            HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
+            HConstants.REPLICATION_SCOPE_LOCAL),
           new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY,
             HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
             false, false,  8 * 1024,
-            HConstants.WEEK_IN_SECONDS, false, HConstants.REPLICATION_SCOPE_LOCAL)});
+            HConstants.WEEK_IN_SECONDS,StoreFile.BloomType.NONE.toString(),
+            HConstants.REPLICATION_SCOPE_LOCAL)});
 }

@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
@@ -47,10 +49,8 @@ public class ThriftUtilities {
       throws IllegalArgument {
     Compression.Algorithm comp =
       Compression.getCompressionAlgorithmByName(in.compression.toLowerCase());
-    boolean bloom = false;
-    if (in.bloomFilterType.compareTo("NONE") != 0) {
-      bloom = true;
-    }
+    StoreFile.BloomType bt =
+      BloomType.valueOf(in.bloomFilterType);
 
     if (in.name == null || in.name.length <= 0) {
       throw new IllegalArgument("column name is empty");
@@ -58,7 +58,7 @@ public class ThriftUtilities {
     byte [] parsedName = KeyValue.parseColumn(in.name)[0];
     HColumnDescriptor col = new HColumnDescriptor(parsedName,
         in.maxVersions, comp.getName(), in.inMemory, in.blockCacheEnabled,
-        in.timeToLive, bloom);
+        in.timeToLive, bt.toString());
     return col;
   }
 
@@ -77,7 +77,7 @@ public class ThriftUtilities {
     col.compression = in.getCompression().toString();
     col.inMemory = in.isInMemory();
     col.blockCacheEnabled = in.isBlockCacheEnabled();
-    col.bloomFilterType = Boolean.toString(in.isBloomfilter());
+    col.bloomFilterType = in.getBloomFilterType().toString();
     return col;
   }
 

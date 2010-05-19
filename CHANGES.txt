@@ -653,6 +653,7 @@ Release 0.21.0 - Unreleased
    HBASE-2529  Make OldLogsCleaner easier to extend
    HBASE-2527  Add the ability to easily extend some HLog actions
    HBASE-2559  Set hbase.hregion.majorcompaction to 0 to disable
+   HBASE-1200  Add bloomfilters (Nicolas Spiegelberg via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

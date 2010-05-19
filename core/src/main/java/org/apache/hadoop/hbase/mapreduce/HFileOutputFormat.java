@@ -112,7 +112,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
       private void close(final HFile.Writer w) throws IOException {
         if (w != null) {
-          StoreFile.appendMetadata(w, System.currentTimeMillis(), true);
+          w.appendFileInfo(StoreFile.MAX_SEQ_ID_KEY, 
+              Bytes.toBytes(System.currentTimeMillis()));
+          w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY, 
+              Bytes.toBytes(true));
           w.close();
         }
       }

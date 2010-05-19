@@ -106,16 +106,29 @@ public abstract class Hash {
    * @return hash value
    */
   public int hash(byte[] bytes, int initval) {
-    return hash(bytes, bytes.length, initval);
+    return hash(bytes, 0, bytes.length, initval);
   }
 
   /**
    * Calculate a hash using bytes from 0 to <code>length</code>, and
    * the provided seed value
    * @param bytes input bytes
-   * @param length length of the valid bytes to consider
+   * @param length length of the valid bytes after offset to consider
    * @param initval seed value
    * @return hash value
    */
-  public abstract int hash(byte[] bytes, int length, int initval);
+  public int hash(byte[] bytes, int length, int initval) {
+    return hash(bytes, 0, length, initval);
+  }
+
+  /**
+   * Calculate a hash using bytes from 0 to <code>length</code>, and
+   * the provided seed value
+   * @param bytes input bytes
+   * @param offset the offset into the array to start consideration
+   * @param length length of the valid bytes after offset to consider
+   * @param initval seed value
+   * @return hash value
+   */
+  public abstract int hash(byte[] bytes, int offset, int length, int initval);
 }

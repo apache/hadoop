@@ -101,7 +101,7 @@ public class Store implements HConstants, HeapSize {
   private final HRegion region;
   private final HColumnDescriptor family;
   final FileSystem fs;
-  private final Configuration conf;
+  final Configuration conf;
   // ttl in milliseconds.
   protected long ttl;
   private long majorCompactionTime;
@@ -144,7 +144,6 @@ public class Store implements HConstants, HeapSize {
 
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
-  final KeyValue.KVComparator comparatorIgnoringType;
 
   /**
    * Constructor
@@ -179,7 +178,6 @@ public class Store implements HConstants, HeapSize {
     this.blocksize = family.getBlocksize();
     this.compression = family.getCompression();
     this.comparator = info.getComparator();
-    this.comparatorIgnoringType = this.comparator.getComparatorIgnoringType();
     // getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     this.ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
@@ -415,7 +413,9 @@ public class Store implements HConstants, HeapSize {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p, blockcache, this.conf, this.inMemory);
+        curfile = new StoreFile(fs, p, blockcache, this.conf, 
+            this.family.getBloomFilterType(), this.inMemory);
+        curfile.createReader();
       } catch (IOException ioe) {
         LOG.warn("Failed open of " + p + "; presumption is that file was " +
           "corrupted at flush and lost edits picked up by commit log replay. " +
@@ -492,7 +492,7 @@ public class Store implements HConstants, HeapSize {
       // Clear so metrics doesn't find them.
       this.storefiles.clear();
       for (StoreFile f: result) {
-        f.close();
+        f.closeReader();
       }
       LOG.debug("closed " + this.storeNameStr);
       return result;
@@ -534,7 +534,7 @@ public class Store implements HConstants, HeapSize {
   private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
     final long logCacheFlushId)
   throws IOException {
-    HFile.Writer writer = null;
+    StoreFile.Writer writer = null;
     long flushed = 0;
     // Don't flush if there are no entries.
     if (set.size() == 0) {
@@ -546,7 +546,7 @@ public class Store implements HConstants, HeapSize {
     // if we fail.
     synchronized (flushLock) {
       // A. Write the map out to the disk
-      writer = getWriter();
+      writer = createWriter(this.homedir, set.size());
       int entries = 0;
       try {
         for (KeyValue kv: set) {
@@ -559,13 +559,13 @@ public class Store implements HConstants, HeapSize {
       } finally {
         // Write out the log sequence number that corresponds to this output
         // hfile.  The hfile is current up to and including logCacheFlushId.
-        StoreFile.appendMetadata(writer, logCacheFlushId);
+        writer.appendMetadata(logCacheFlushId, false);
         writer.close();
       }
     }
     StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache,
-      this.conf, this.inMemory);
-    Reader r = sf.getReader();
+      this.conf, this.family.getBloomFilterType(), this.inMemory);
+    Reader r = sf.createReader();
     this.storeSize += r.length();
     if(LOG.isDebugEnabled()) {
       LOG.debug("Added " + sf + ", entries=" + r.getEntries() +
@@ -577,22 +577,16 @@ public class Store implements HConstants, HeapSize {
     return sf;
   }
 
-  /**
-   * @return Writer for this store.
-   * @throws IOException
-   */
-  HFile.Writer getWriter() throws IOException {
-    return getWriter(this.homedir);
-  }
-
   /*
    * @return Writer for this store.
    * @param basedir Directory to put writer in.
    * @throws IOException
    */
-  private HFile.Writer getWriter(final Path basedir) throws IOException {
-    return StoreFile.getWriter(this.fs, basedir, this.blocksize,
-        this.compression, this.comparator.getRawComparator());
+  private StoreFile.Writer createWriter(final Path basedir, int maxKeyCount) 
+  throws IOException {
+    return StoreFile.createWriter(this.fs, basedir, this.blocksize,
+        this.compression, this.comparator, this.conf, 
+        this.family.getBloomFilterType(), maxKeyCount);
   }
 
   /*
@@ -880,13 +874,25 @@ public class Store implements HConstants, HeapSize {
   private HFile.Writer compact(final List<StoreFile> filesToCompact,
       final boolean majorCompaction, final long maxId)
   throws IOException {
+    // calculate maximum key count after compaction (for blooms)
+    int maxKeyCount = 0;
+    for (StoreFile file : filesToCompact) {
+      StoreFile.Reader r = file.getReader();
+      if (r != null) {
+        // NOTE: getFilterEntries could cause under-sized blooms if the user 
+        //       switches bloom type (e.g. from ROW to ROWCOL)
+        maxKeyCount += (r.getBloomFilterType() == family.getBloomFilterType()) 
+          ? r.getFilterEntries() : r.getEntries();
+      }
+    }
+
     // For each file, obtain a scanner:
-    List<KeyValueScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        filesToCompact, false, false);
+    List<StoreFileScanner> scanners = StoreFileScanner
+      .getScannersForStoreFiles(filesToCompact, false, false);
 
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
-    HFile.Writer writer = null;
+    StoreFile.Writer writer = null;
     try {
     if (majorCompaction) {
       InternalScanner scanner = null;
@@ -901,7 +907,7 @@ public class Store implements HConstants, HeapSize {
           // output to writer:
           for (KeyValue kv : kvs) {
             if (writer == null) {
-              writer = getWriter(this.regionCompactionDir);
+              writer = createWriter(this.regionCompactionDir, maxKeyCount);
             }
             writer.append(kv);
           }
@@ -916,7 +922,7 @@ public class Store implements HConstants, HeapSize {
       MinorCompactingStoreScanner scanner = null;
       try {
         scanner = new MinorCompactingStoreScanner(this, scanners);
-        writer = getWriter(this.regionCompactionDir);
+        writer = createWriter(this.regionCompactionDir, maxKeyCount);
         while (scanner.next(writer)) {
           // Nothing to do
         }
@@ -927,7 +933,7 @@ public class Store implements HConstants, HeapSize {
     }
     } finally {
       if (writer != null) {
-        StoreFile.appendMetadata(writer, maxId, majorCompaction);
+        writer.appendMetadata(maxId, majorCompaction);
         writer.close();
       }
     }
@@ -971,7 +977,9 @@ public class Store implements HConstants, HeapSize {
         LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
         return null;
       }
-      result = new StoreFile(this.fs, p, blockcache, this.conf, this.inMemory);
+      result = new StoreFile(this.fs, p, blockcache, this.conf, 
+          this.family.getBloomFilterType(), this.inMemory);
+      result.createReader();
     }
     this.lock.writeLock().lock();
     try {
@@ -1001,7 +1009,7 @@ public class Store implements HConstants, HeapSize {
         notifyChangedReadersObservers();
         // Finally, delete old store files.
         for (StoreFile hsf: compactedFiles) {
-          hsf.delete();
+          hsf.deleteReader();
         }
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);
@@ -1570,7 +1578,7 @@ public class Store implements HConstants, HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
+      ClassSize.OBJECT + (16 * ClassSize.REFERENCE) +
       (6 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN +
       ClassSize.align(ClassSize.ARRAY));
 

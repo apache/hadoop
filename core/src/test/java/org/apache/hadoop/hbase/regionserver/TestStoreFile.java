@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -69,11 +72,11 @@ public class TestStoreFile extends HBaseTestCase {
    */
   public void testBasicHalfMapFile() throws Exception {
     // Make up a directory hierarchy that has a regiondir and familyname.
-    HFile.Writer writer = StoreFile.getWriter(this.fs,
-      new Path(new Path(this.testDir, "regionname"), "familyname"),
-      2 * 1024, null, null);
+    HFile.Writer writer = StoreFile.createWriter(this.fs,
+      new Path(new Path(this.testDir, "regionname"), "familyname"), 2 * 1024);
     writeStoreFile(writer);
-    checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf, false));
+    checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf, 
+        StoreFile.BloomType.NONE, false));
   }
 
   /*
@@ -109,11 +112,11 @@ public class TestStoreFile extends HBaseTestCase {
     Path storedir = new Path(new Path(this.testDir, "regionname"), "familyname");
     Path dir = new Path(storedir, "1234567890");
     // Make a store file and write data to it.
-    HFile.Writer writer = StoreFile.getWriter(this.fs, dir, 8 * 1024, null,
-      null);
+    HFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024);
     writeStoreFile(writer);
-    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf, false);
-    HFile.Reader reader = hsf.getReader();
+    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf, 
+        StoreFile.BloomType.NONE, false);
+    HFile.Reader reader = hsf.createReader();
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
@@ -123,10 +126,11 @@ public class TestStoreFile extends HBaseTestCase {
     byte [] finalRow = kv.getRow();
     // Make a reference
     Path refPath = StoreFile.split(fs, dir, hsf, midRow, Range.top);
-    StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf, false);
+    StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf, 
+        StoreFile.BloomType.NONE, false);
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
-    HFileScanner s = refHsf.getReader().getScanner(false, false);
+    HFileScanner s = refHsf.createReader().getScanner(false, false);
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = s.getKey();
       kv = KeyValue.createKeyValueFromKey(bb);
@@ -140,7 +144,7 @@ public class TestStoreFile extends HBaseTestCase {
 
   private void checkHalfHFile(final StoreFile f)
   throws IOException {
-    byte [] midkey = f.getReader().midkey();
+    byte [] midkey = f.createReader().midkey();
     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
     byte [] midRow = midKV.getRow();
     // Create top split.
@@ -159,8 +163,10 @@ public class TestStoreFile extends HBaseTestCase {
     Path bottomPath = StoreFile.split(this.fs, bottomDir,
       f, midRow, Range.bottom);
     // Make readers on top and bottom.
-    HFile.Reader top = new StoreFile(this.fs, topPath, true, conf, false).getReader();
-    HFile.Reader bottom = new StoreFile(this.fs, bottomPath, true, conf, false).getReader();
+    HFile.Reader top = new StoreFile(this.fs, topPath, true, conf, 
+        StoreFile.BloomType.NONE, false).createReader();
+    HFile.Reader bottom = new StoreFile(this.fs, bottomPath, true, conf, 
+        StoreFile.BloomType.NONE, false).createReader();
     ByteBuffer previous = null;
     LOG.info("Midkey: " + midKV.toString());
     ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midkey);
@@ -212,8 +218,10 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, true, conf, false).getReader();
-      bottom = new StoreFile(this.fs, bottomPath, true, conf, false).getReader();
+      top = new StoreFile(this.fs, topPath, true, conf, 
+          StoreFile.BloomType.NONE, false).createReader();
+      bottom = new StoreFile(this.fs, bottomPath, true, conf, 
+          StoreFile.BloomType.NONE, false).createReader();
       bottomScanner = bottom.getScanner(false, false);
       int count = 0;
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
@@ -256,8 +264,10 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, true, conf, false).getReader();
-      bottom = new StoreFile(this.fs, bottomPath, true, conf, false).getReader();
+      top = new StoreFile(this.fs, topPath, true, conf, 
+          StoreFile.BloomType.NONE, false).createReader();
+      bottom = new StoreFile(this.fs, bottomPath, true, conf, 
+          StoreFile.BloomType.NONE, false).createReader();
       first = true;
       bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
@@ -296,4 +306,138 @@ public class TestStoreFile extends HBaseTestCase {
       fs.delete(f.getPath(), true);
     }
   }
+  
+  private static String ROOT_DIR =
+    System.getProperty("test.build.data", "/tmp/TestStoreFile");
+  private static String localFormatter = "%010d";
+  
+  public void testBloomFilter() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.setFloat("io.hfile.bloom.error.rate", (float)0.01);
+    conf.setBoolean("io.hfile.bloom.enabled", true);
+    
+    // write the file
+    Path f = new Path(ROOT_DIR, getName());
+    StoreFile.Writer writer = new StoreFile.Writer(fs, f, 
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM, 
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
+
+    long now = System.currentTimeMillis();
+    for (int i = 0; i < 2000; i += 2) {
+      String row = String.format(localFormatter, Integer.valueOf(i));
+      KeyValue kv = new KeyValue(row.getBytes(), "family".getBytes(),
+        "col".getBytes(), now, "value".getBytes());
+      writer.append(kv);
+    }
+    writer.close();
+    
+    StoreFile.Reader reader = new StoreFile.Reader(fs, f, null, false);
+    reader.loadFileInfo();
+    reader.loadBloomfilter();
+    HFileScanner scanner = reader.getScanner(false, false);
+
+    // check false positives rate
+    int falsePos = 0;
+    int falseNeg = 0;
+    for (int i = 0; i < 2000; i++) {
+      String row = String.format(localFormatter, Integer.valueOf(i));
+      TreeSet<byte[]> columns = new TreeSet<byte[]>();
+      columns.add("family:col".getBytes());
+      
+      boolean exists = scanner.shouldSeek(row.getBytes(), columns);
+      if (i % 2 == 0) {
+        if (!exists) falseNeg++;
+      } else {
+        if (exists) falsePos++;
+      }
+    }
+    reader.close();
+    fs.delete(f, true);
+    System.out.println("False negatives: " + falseNeg);
+    assertEquals(0, falseNeg);
+    System.out.println("False positives: " + falsePos);
+    assertTrue(falsePos < 2);
+  }
+  
+  public void testBloomTypes() throws Exception {
+    float err = (float) 0.01;
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.setFloat("io.hfile.bloom.error.rate", err);
+    conf.setBoolean("io.hfile.bloom.enabled", true);
+    
+    int rowCount = 50;
+    int colCount = 10;
+    int versions = 2;
+    
+    // run once using columns and once using rows
+    StoreFile.BloomType[] bt = 
+      {StoreFile.BloomType.ROWCOL, StoreFile.BloomType.ROW};
+    int[] expKeys    = {rowCount*colCount, rowCount};
+    // below line deserves commentary.  it is expected bloom false positives
+    //  column = rowCount*2*colCount inserts
+    //  row-level = only rowCount*2 inserts, but failures will be magnified by
+    //              2nd for loop for every column (2*colCount)
+    float[] expErr   = {2*rowCount*colCount*err, 2*rowCount*2*colCount*err};
+
+    for (int x : new int[]{0,1}) {
+      // write the file
+      Path f = new Path(ROOT_DIR, getName());
+      StoreFile.Writer writer = new StoreFile.Writer(fs, f, 
+          StoreFile.DEFAULT_BLOCKSIZE_SMALL, 
+          HFile.DEFAULT_COMPRESSION_ALGORITHM,
+          conf, KeyValue.COMPARATOR, bt[x], expKeys[x]);
+  
+      long now = System.currentTimeMillis();
+      for (int i = 0; i < rowCount*2; i += 2) { // rows
+        for (int j = 0; j < colCount*2; j += 2) {   // column qualifiers
+          String row = String.format(localFormatter, Integer.valueOf(i));
+          String col = String.format(localFormatter, Integer.valueOf(j)); 
+          for (int k= 0; k < versions; ++k) { // versions 
+            KeyValue kv = new KeyValue(row.getBytes(), 
+              "family".getBytes(), ("col" + col).getBytes(), 
+                now-k, Bytes.toBytes((long)-1));
+            writer.append(kv);
+          }
+        }
+      }
+      writer.close();
+
+      StoreFile.Reader reader = new StoreFile.Reader(fs, f, null, false);
+      reader.loadFileInfo();
+      reader.loadBloomfilter();
+      HFileScanner scanner = reader.getScanner(false, false);
+      assertEquals(expKeys[x], reader.getBloomFilter().getKeyCount());
+      
+      // check false positives rate
+      int falsePos = 0;
+      int falseNeg = 0;
+      for (int i = 0; i < rowCount*2; ++i) { // rows
+        for (int j = 0; j < colCount*2; ++j) {   // column qualifiers
+          String row = String.format(localFormatter, Integer.valueOf(i));
+          String col = String.format(localFormatter, Integer.valueOf(j)); 
+          TreeSet<byte[]> columns = new TreeSet<byte[]>();
+          columns.add(("col" + col).getBytes());
+
+          boolean exists = scanner.shouldSeek(row.getBytes(), columns);
+          boolean shouldRowExist = i % 2 == 0;
+          boolean shouldColExist = j % 2 == 0;
+          shouldColExist = shouldColExist || bt[x] == StoreFile.BloomType.ROW;
+          if (shouldRowExist && shouldColExist) {
+            if (!exists) falseNeg++;
+          } else {
+            if (exists) falsePos++;
+          }
+        }
+      }
+      reader.close();
+      fs.delete(f, true);
+      System.out.println(bt[x].toString());
+      System.out.println("  False negatives: " + falseNeg);
+      System.out.println("  False positives: " + falsePos);
+      assertEquals(0, falseNeg);
+      assertTrue(falsePos < 2*expErr[x]);
+    }
+    
+  }
+  
 }

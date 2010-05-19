@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 
@@ -209,7 +212,7 @@ public class HFile {
     private long valuelength = 0;
 
     // Used to ensure we write in order.
-    private final RawComparator<byte []> comparator;
+    private final RawComparator<byte []> rawComparator;
 
     // A stream made per block written.
     private DataOutputStream out;
@@ -239,7 +242,7 @@ public class HFile {
 
     // Meta block system.
     private ArrayList<byte []> metaNames = new ArrayList<byte []>();
-    private ArrayList<byte []> metaData = new ArrayList<byte[]>();
+    private ArrayList<Writable> metaData = new ArrayList<Writable>();
 
     // Used compression.  Used even if no compression -- 'none'.
     private final Compression.Algorithm compressAlgo;
@@ -273,7 +276,7 @@ public class HFile {
      * @throws IOException
      */
     public Writer(FileSystem fs, Path path, int blocksize,
-      String compress, final RawComparator<byte []> comparator)
+      String compress, final KeyComparator comparator)
     throws IOException {
       this(fs, path, blocksize,
         compress == null? DEFAULT_COMPRESSION_ALGORITHM:
@@ -292,7 +295,7 @@ public class HFile {
      */
     public Writer(FileSystem fs, Path path, int blocksize,
       Compression.Algorithm compress,
-      final RawComparator<byte []> comparator)
+      final KeyComparator comparator)
     throws IOException {
       this(fs.create(path), blocksize, compress, comparator);
       this.closeOutputStream = true;
@@ -309,7 +312,7 @@ public class HFile {
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-      final String  compress, final RawComparator<byte []> c)
+      final String  compress, final KeyComparator c)
     throws IOException {
       this(ostream, blocksize,
         Compression.getCompressionAlgorithmByName(compress), c);
@@ -324,12 +327,12 @@ public class HFile {
      * @throws IOException
      */
     public Writer(final FSDataOutputStream ostream, final int blocksize,
-      final Compression.Algorithm  compress, final RawComparator<byte []> c)
+      final Compression.Algorithm  compress, final KeyComparator c)
     throws IOException {
       this.outputStream = ostream;
       this.closeOutputStream = false;
       this.blocksize = blocksize;
-      this.comparator = c == null? Bytes.BYTES_RAWCOMPARATOR: c;
+      this.rawComparator = c == null? Bytes.BYTES_RAWCOMPARATOR: c;
       this.name = this.outputStream.toString();
       this.compressAlgo = compress == null?
         DEFAULT_COMPRESSION_ALGORITHM: compress;
@@ -423,11 +426,21 @@ public class HFile {
      * small, consider adding to file info using
      * {@link #appendFileInfo(byte[], byte[])}
      * @param metaBlockName name of the block
-     * @param bytes uninterpreted bytes of the block.
+     * @param content will call readFields to get data later (DO NOT REUSE)
      */
-    public void appendMetaBlock(String metaBlockName, byte [] bytes) {
-      metaNames.add(Bytes.toBytes(metaBlockName));
-      metaData.add(bytes);
+    public void appendMetaBlock(String metaBlockName, Writable content) {
+      byte[] key = Bytes.toBytes(metaBlockName);
+      int i;
+      for (i = 0; i < metaNames.size(); ++i) {
+        // stop when the current key is greater than our own
+        byte[] cur = metaNames.get(i);
+        if (this.rawComparator.compare(cur, 0, cur.length, key, 0, key.length)
+            > 0) {
+          break;
+        }
+      }
+      metaNames.add(i, key);
+      metaData.add(i, content);
     }
 
     /**
@@ -508,7 +521,7 @@ public class HFile {
      * @param vlength
      * @throws IOException
      */
-    public void append(final byte [] key, final int koffset, final int klength,
+    private void append(final byte [] key, final int koffset, final int klength,
         final byte [] value, final int voffset, final int vlength)
     throws IOException {
       boolean dupKey = checkKey(key, koffset, klength);
@@ -552,7 +565,7 @@ public class HFile {
           MAXIMUM_KEY_LENGTH);
       }
       if (this.lastKeyBuffer != null) {
-        int keyComp = this.comparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
+        int keyComp = this.rawComparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
             this.lastKeyLength, key, offset, length);
         if (keyComp > 0) {
           throw new IOException("Added a key not lexically larger than" +
@@ -595,10 +608,16 @@ public class HFile {
         metaOffsets = new ArrayList<Long>(metaNames.size());
         metaDataSizes = new ArrayList<Integer>(metaNames.size());
         for (int i = 0 ; i < metaNames.size() ; ++ i ) {
-          metaOffsets.add(Long.valueOf(outputStream.getPos()));
-          metaDataSizes.
-            add(Integer.valueOf(METABLOCKMAGIC.length + metaData.get(i).length));
-          writeMetaBlock(metaData.get(i));
+          // store the beginning offset
+          long curPos = outputStream.getPos();
+          metaOffsets.add(curPos);
+          // write the metadata content
+          DataOutputStream dos = getCompressingStream();
+          dos.write(METABLOCKMAGIC);
+          metaData.get(i).write(dos);
+          int size = releaseCompressingStream(dos);
+          // store the metadata size
+          metaDataSizes.add(size);
         }
       }
 
@@ -632,17 +651,6 @@ public class HFile {
       }
     }
 
-    /* Write a metadata block.
-     * @param metadata
-     * @throws IOException
-     */
-    private void writeMetaBlock(final byte [] b) throws IOException {
-      DataOutputStream dos = getCompressingStream();
-      dos.write(METABLOCKMAGIC);
-      dos.write(b);
-      releaseCompressingStream(dos);
-    }
-
     /*
      * Add last bits of metadata to fileinfo and then write it out.
      * Reader will be expecting to find all below.
@@ -668,7 +676,7 @@ public class HFile {
       appendFileInfo(this.fileinfo, FileInfo.AVG_VALUE_LEN,
         Bytes.toBytes(avgValueLen), false);
       appendFileInfo(this.fileinfo, FileInfo.COMPARATOR,
-        Bytes.toBytes(this.comparator.getClass().getName()), false);
+        Bytes.toBytes(this.rawComparator.getClass().getName()), false);
       long pos = o.getPos();
       this.fileinfo.write(o);
       return pos;
@@ -710,6 +718,7 @@ public class HFile {
     private final BlockCache cache;
     public int cacheHits = 0;
     public int blockLoads = 0;
+    public int metaLoads = 0;
 
     // Whether file is from in-memory store
     private boolean inMemory = false;
@@ -717,15 +726,7 @@ public class HFile {
     // Name for this object used when logging or in toString.  Is either
     // the result of a toString on the stream or else is toString of passed
     // file Path plus metadata key/value pairs.
-    private String name;
-
-    /*
-     * Do not expose the default constructor.
-     */
-    @SuppressWarnings("unused")
-    private Reader() throws IOException {
-      this(null, -1, null, false);
-    }
+    protected String name;
 
     /**
      * Opens a HFile.  You must load the file info before you can
@@ -799,7 +800,8 @@ public class HFile {
      * See {@link Writer#appendFileInfo(byte[], byte[])}.
      * @throws IOException
      */
-    public Map<byte [], byte []> loadFileInfo() throws IOException {
+    public Map<byte [], byte []> loadFileInfo() 
+    throws IOException {
       this.trailer = readTrailer();
 
       // Read in the fileinfo and get what we need from it.
@@ -889,16 +891,19 @@ public class HFile {
     }
     /**
      * @param metaBlockName
+     * @param cacheBlock Add block to cache, if found
      * @return Block wrapped in a ByteBuffer
      * @throws IOException
      */
-    public ByteBuffer getMetaBlock(String metaBlockName) throws IOException {
+    public ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock) 
+    throws IOException {
       if (trailer.metaIndexCount == 0) {
         return null; // there are no meta blocks
       }
       if (metaIndex == null) {
         throw new IOException("Meta index not loaded");
       }
+      
       byte [] mbname = Bytes.toBytes(metaBlockName);
       int block = metaIndex.blockContainingKey(mbname, 0, mbname.length);
       if (block == -1)
@@ -910,19 +915,45 @@ public class HFile {
         blockSize = metaIndex.blockOffsets[block+1] - metaIndex.blockOffsets[block];
       }
 
-      ByteBuffer buf = decompress(metaIndex.blockOffsets[block],
-        longToInt(blockSize), metaIndex.blockDataSizes[block], true);
-      byte [] magic = new byte[METABLOCKMAGIC.length];
-      buf.get(magic, 0, magic.length);
+      long now = System.currentTimeMillis();
 
-      if (! Arrays.equals(magic, METABLOCKMAGIC)) {
-        throw new IOException("Meta magic is bad in block " + block);
+      // Per meta key from any given file, synchronize reads for said block
+      synchronized (metaIndex.blockKeys[block]) {
+        metaLoads++;
+        // Check cache for block.  If found return.
+        if (cache != null) {
+          ByteBuffer cachedBuf = cache.getBlock(name + "meta" + block);
+          if (cachedBuf != null) {
+            // Return a distinct 'shallow copy' of the block, 
+            // so pos doesnt get messed by the scanner
+            cacheHits++;
+            return cachedBuf.duplicate();
+          }
+          // Cache Miss, please load.
+        }
+        
+        ByteBuffer buf = decompress(metaIndex.blockOffsets[block],
+          longToInt(blockSize), metaIndex.blockDataSizes[block], true);
+        byte [] magic = new byte[METABLOCKMAGIC.length];
+        buf.get(magic, 0, magic.length);
+  
+        if (! Arrays.equals(magic, METABLOCKMAGIC)) {
+          throw new IOException("Meta magic is bad in block " + block);
+        }
+        
+        // Create a new ByteBuffer 'shallow copy' to hide the magic header
+        buf = buf.slice();
+  
+        readTime += System.currentTimeMillis() - now;
+        readOps++;
+  
+        // Cache the block
+        if(cacheBlock && cache != null) {
+          cache.cacheBlock(name + "meta" + block, buf.duplicate(), inMemory);
+        }
+  
+        return buf;
       }
-      // Toss the header. May have to remove later due to performance.
-      buf.compact();
-      buf.limit(buf.limit() - METABLOCKMAGIC.length);
-      buf.rewind();
-      return buf;
     }
 
     /**
@@ -952,8 +983,8 @@ public class HFile {
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + block);
           if (cachedBuf != null) {
-            // Return a distinct 'copy' of the block, so pos doesnt get messed by
-            // the scanner
+            // Return a distinct 'shallow copy' of the block, 
+            // so pos doesnt get messed by the scanner
             cacheHits++;
             return cachedBuf.duplicate();
           }
@@ -982,11 +1013,12 @@ public class HFile {
         if (!Arrays.equals(magic, DATABLOCKMAGIC)) {
           throw new IOException("Data magic is bad in block " + block);
         }
-        // Toss the header. May have to remove later due to performance.
-        buf.compact();
-        buf.limit(buf.limit() - DATABLOCKMAGIC.length);
-        buf.rewind();
 
+        // 'shallow copy' to hide the header
+        // NOTE: you WILL GET BIT if you call buf.array() but don't start 
+        //       reading at buf.arrayOffset()
+        buf = buf.slice();
+        
         readTime += System.currentTimeMillis() - now;
         readOps++;
 
@@ -1045,6 +1077,9 @@ public class HFile {
       return this.blockIndex.isEmpty()? null: this.blockIndex.blockKeys[0];
     }
 
+    /**
+     * @return number of KV entries in this HFile
+     */
     public int getEntries() {
       if (!this.isFileInfoLoaded()) {
         throw new RuntimeException("File info not loaded");
@@ -1060,6 +1095,13 @@ public class HFile {
         throw new RuntimeException("Load file info first");
       }
       return this.blockIndex.isEmpty()? null: this.lastkey;
+    }
+    
+    /**
+     * @return number of K entries in this HFile's filter.  Returns KV count if no filter.
+     */
+    public int getFilterEntries() {
+      return getEntries();
     }
 
     /**
@@ -1099,7 +1141,7 @@ public class HFile {
     /*
      * Implementation of {@link HFileScanner} interface.
      */
-    private static class Scanner implements HFileScanner {
+    protected static class Scanner implements HFileScanner {
       private final Reader reader;
       private ByteBuffer block;
       private int currBlock;
@@ -1177,6 +1219,11 @@ public class HFile {
 
         currKeyLen = block.getInt();
         currValueLen = block.getInt();
+        return true;
+      }
+
+      public boolean shouldSeek(final byte[] row, 
+          final SortedSet<byte[]> columns) {
         return true;
       }
 
@@ -1333,10 +1380,10 @@ public class HFile {
    * parts of the file.  Also includes basic metadata on this file.
    */
   private static class FixedFileTrailer {
-    // Offset to the data block index.
-    long dataIndexOffset;
     // Offset to the fileinfo data, a small block of vitals..
     long fileinfoOffset;
+    // Offset to the data block index.
+    long dataIndexOffset;
     // How many index counts are there (aka: block count)
     int dataIndexCount;
     // Offset to the meta block index.

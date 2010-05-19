@@ -80,11 +80,11 @@ public class JenkinsHash extends Hash {
   */
   @Override
   @SuppressWarnings("fallthrough")
-  public int hash(byte[] key, int nbytes, int initval) {
+  public int hash(byte[] key, int off, int nbytes, int initval) {
     int length = nbytes;
     long a, b, c;       // We use longs because we don't have unsigned ints
     a = b = c = (0x00000000deadbeefL + length + initval) & INT_MASK;
-    int offset = 0;
+    int offset = off;
     for (; length > 12; offset += 12, length -= 12) {
       //noinspection PointlessArithmeticExpression
       a = (a + (key[offset + 0]    & BYTE_MASK)) & INT_MASK;

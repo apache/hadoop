@@ -146,16 +146,15 @@ public class ColumnSchemaModel implements Serializable {
   }
 
   /**
-   * @return true if the BLOOMFILTER attribute is present and true
+   * @return the value of the BLOOMFILTER attribute or its default if unset
    */
-  public boolean __getBloomfilter() {
+  public String __getBloomfilter() {
     Object o = attrs.get(BLOOMFILTER);
-    return o != null ? 
-      Boolean.valueOf(o.toString()) : HColumnDescriptor.DEFAULT_BLOOMFILTER;
+    return o != null ? o.toString() : HColumnDescriptor.DEFAULT_BLOOMFILTER;
   }
 
   /**
-   * @return the value of the COMPRESSION attribute or its default if it is unset
+   * @return the value of the COMPRESSION attribute or its default if unset
    */
   public String __getCompression() {
     Object o = attrs.get(COMPRESSION);
@@ -203,8 +202,8 @@ public class ColumnSchemaModel implements Serializable {
     attrs.put(BLOCKCACHE, Boolean.toString(value));
   }
 
-  public void __setBloomfilter(boolean value) {
-    attrs.put(BLOOMFILTER, Boolean.toString(value));
+  public void __setBloomfilter(String value) {
+    attrs.put(BLOOMFILTER, value);
   }
 
   /**

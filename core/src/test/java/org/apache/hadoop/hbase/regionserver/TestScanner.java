@@ -68,7 +68,8 @@ public class TestScanner extends HBaseTestCase {
     TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY,
       10,  // Ten is arbitrary number.  Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
-      HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL));
+      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
+      HConstants.REPLICATION_SCOPE_LOCAL));
   }
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =

@@ -945,7 +945,7 @@ public class KeyValue implements Writable, HeapSize {
     System.arraycopy(this.bytes, o, result, 0, l);
     return result;
   }
-
+  
   //---------------------------------------------------------------------------
   //
   //  KeyValue splitter
@@ -1371,7 +1371,7 @@ public class KeyValue implements Writable, HeapSize {
     }
 
     /**
-     * Compares the row and column of two keyvalues
+     * Compares the row and column of two keyvalues for equality
      * @param left
      * @param right
      * @return True if same row and column.
@@ -1380,10 +1380,10 @@ public class KeyValue implements Writable, HeapSize {
         final KeyValue right) {
       short lrowlength = left.getRowLength();
       short rrowlength = right.getRowLength();
-      if (!matchingRows(left, lrowlength, right, rrowlength)) {
-        return false;
-      }
-      return compareColumns(left, lrowlength, right, rrowlength) == 0;
+      // TsOffset = end of column data. just comparing Row+CF length of each
+      return left.getTimestampOffset() == right.getTimestampOffset() &&
+        matchingRows(left, lrowlength, right, rrowlength) &&
+        compareColumns(left, lrowlength, right, rrowlength) == 0;
     }
 
     /**
@@ -1396,6 +1396,7 @@ public class KeyValue implements Writable, HeapSize {
     }
 
     /**
+     * Compares the row of two keyvalues for equality
      * @param left
      * @param right
      * @return True if rows match.
@@ -1415,11 +1416,8 @@ public class KeyValue implements Writable, HeapSize {
      */
     public boolean matchingRows(final KeyValue left, final short lrowlength,
         final KeyValue right, final short rrowlength) {
-      int compare = compareRows(left, lrowlength, right, rrowlength);
-      if (compare != 0) {
-        return false;
-      }
-      return true;
+      return lrowlength == rrowlength &&
+        compareRows(left, lrowlength, right, rrowlength) == 0;
     }
 
     public boolean matchingRows(final byte [] left, final int loffset,

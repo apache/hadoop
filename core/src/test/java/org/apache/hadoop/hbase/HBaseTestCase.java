@@ -194,14 +194,19 @@ public abstract class HBaseTestCase extends TestCase {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(fam1, versions,
       HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-      Integer.MAX_VALUE, HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL));
+      Integer.MAX_VALUE, HConstants.FOREVER, 
+      HColumnDescriptor.DEFAULT_BLOOMFILTER,
+      HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam2, versions,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-        Integer.MAX_VALUE, HConstants.FOREVER, false, HConstants.REPLICATION_SCOPE_LOCAL));
+        Integer.MAX_VALUE, HConstants.FOREVER,
+        HColumnDescriptor.DEFAULT_BLOOMFILTER,
+        HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam3, versions,
         HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
         Integer.MAX_VALUE,  HConstants.FOREVER,
-        false, HConstants.REPLICATION_SCOPE_LOCAL));
+        HColumnDescriptor.DEFAULT_BLOOMFILTER,
+        HConstants.REPLICATION_SCOPE_LOCAL));
     return htd;
   }
 

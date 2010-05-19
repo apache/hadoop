@@ -33,23 +33,20 @@ import java.util.List;
  * and optionally the memstore-snapshot.
  */
 public class MinorCompactingStoreScanner implements KeyValueScanner, InternalScanner {
-
   private KeyValueHeap heap;
   private KeyValue.KVComparator comparator;
 
-  MinorCompactingStoreScanner(Store store,
-                              List<KeyValueScanner> scanners) {
+  MinorCompactingStoreScanner(Store store, List<? extends KeyValueScanner> scanners) {
     comparator = store.comparator;
     KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
     for (KeyValueScanner scanner : scanners ) {
       scanner.seek(firstKv);
     }
-
     heap = new KeyValueHeap(scanners, store.comparator);
   }
 
   MinorCompactingStoreScanner(String cfName, KeyValue.KVComparator comparator,
-                              List<KeyValueScanner> scanners) {
+                              List<? extends KeyValueScanner> scanners) {
     this.comparator = comparator;
 
     KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);

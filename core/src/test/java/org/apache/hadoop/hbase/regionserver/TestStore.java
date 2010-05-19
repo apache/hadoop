@@ -134,8 +134,9 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     HBaseConfiguration c = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(c);
-    Writer w = StoreFile.getWriter(fs, storedir);
-    StoreFile.appendMetadata(w, seqid + 1);
+    StoreFile.Writer w = StoreFile.createWriter(fs, storedir, 
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+    w.appendMetadata(seqid + 1, false);
     w.close();
     this.store.close();
     // Reopen it... should pick up two files

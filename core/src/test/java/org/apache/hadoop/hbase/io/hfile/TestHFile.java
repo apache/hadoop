@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -29,12 +31,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.BlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.Writable;
 
 /**
  * test hfile features.
@@ -170,7 +174,18 @@ public class TestHFile extends HBaseTestCase {
 
   private void writeNumMetablocks(Writer writer, int n) {
     for (int i = 0; i < n; i++) {
-      writer.appendMetaBlock("HFileMeta" + i, ("something to test" + i).getBytes());
+      writer.appendMetaBlock("HFileMeta" + i, new Writable() {
+        private int val;
+        public Writable setVal(int val) { this.val = val; return this; }
+        
+        @Override
+        public void write(DataOutput out) throws IOException {
+          out.write(("something to test" + val).getBytes());
+        }
+        
+        @Override
+        public void readFields(DataInput in) throws IOException { }
+      }.setVal(i));
     }
   }
 
@@ -180,10 +195,10 @@ public class TestHFile extends HBaseTestCase {
 
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
-      ByteBuffer b = reader.getMetaBlock("HFileMeta" + i);
-      byte [] found = Bytes.toBytes(b);
-      assertTrue("failed to match metadata", Arrays.equals(
-          ("something to test" + i).getBytes(), found));
+      ByteBuffer actual = reader.getMetaBlock("HFileMeta" + i, false);
+      ByteBuffer expected = 
+        ByteBuffer.wrap(("something to test" + i).getBytes());
+      assertTrue("failed to match metadata", actual.compareTo(expected) == 0);
     }
   }
 
@@ -227,7 +242,7 @@ public class TestHFile extends HBaseTestCase {
     fout.close();
     Reader reader = new Reader(fs, mFile, null, false);
     reader.loadFileInfo();
-    assertNull(reader.getMetaBlock("non-existant"));
+    assertNull(reader.getMetaBlock("non-existant", false));
   }
 
   /**
@@ -244,7 +259,7 @@ public class TestHFile extends HBaseTestCase {
     Path mFile = new Path(ROOT_DIR, "meta.tfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     Writer writer = new Writer(fout, minBlockSize, (Compression.Algorithm) null,
-      new RawComparator<byte []>() {
+      new KeyComparator() {
         @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
             int l2) {

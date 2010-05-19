@@ -51,7 +51,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * @param scanners
    * @param comparator
    */
-  public KeyValueHeap(List<KeyValueScanner> scanners, KVComparator comparator) {
+  public KeyValueHeap(List<? extends KeyValueScanner> scanners, KVComparator comparator) {
     this.comparator = new KVScannerComparator(comparator);
     this.heap = new PriorityQueue<KeyValueScanner>(scanners.size(),
         this.comparator);

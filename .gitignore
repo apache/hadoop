@@ -12,3 +12,5 @@
 /core/build/
 /core/test/
 *.iml
+*.orig
+*~

@@ -53,12 +53,12 @@ class StoreFileScanner implements KeyValueScanner {
    * Return an array of scanners corresponding to the given
    * set of store files.
    */
-  public static List<KeyValueScanner> getScannersForStoreFiles(
+  public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> filesToCompact,
       boolean cacheBlocks,
       boolean usePread) {
-    List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(filesToCompact.size());
+    List<StoreFileScanner> scanners =
+      new ArrayList<StoreFileScanner>(filesToCompact.size());
     for (StoreFile file : filesToCompact) {
       Reader r = file.getReader();
       if (r == null) {
@@ -70,6 +70,10 @@ class StoreFileScanner implements KeyValueScanner {
       scanners.add(new StoreFileScanner(r.getScanner(cacheBlocks, usePread)));
     }
     return scanners;
+  }
+  
+  public HFileScanner getHFileScanner() {
+    return this.hfs;
   }
   
   public String toString() {
