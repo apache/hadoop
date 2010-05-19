@@ -17,25 +17,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 /**
- * Interface for the log cleaning function inside the master. Only 1 is called
- * so if the desired effect is the mix of many cleaners, do call them yourself
- * in order to control the flow.
- * HBase ships with OldLogsCleaner as the default implementation
+ * Interface that defines all actions that can be listened to coming
+ * from the HLog. The calls are done in sync with what happens over in the
+ * HLog so make sure your implementation is fast.
  */
-public interface LogCleanerDelegate extends Configurable {
+public interface LogActionsListener {
 
   /**
-   * Should the master delete the log or keep it?
-   * @param filePath full path to log.
-   * @return true if the log is deletable, false if not
+   * Notify the listener that a new file is available
+   * @param newFile the path to the new hlog
    */
-  public boolean isLogDeletable(Path filePath);
-}
+  public void logRolled(Path newFile);
 
+  /**
+   * Notify that the following log moved
+   * @param oldPath the old path
+   * @param newPath the new path
+   */
+  public void logArchived(Path oldPath, Path newPath);
+}

@@ -22,15 +22,28 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
-import org.junit.*;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 public class TestZooKeeper {
   private final Log LOG = LogFactory.getLog(this.getClass());
@@ -162,5 +175,26 @@ public class TestZooKeeper {
       e.printStackTrace();
       fail();
     }
+  }
+
+  /**
+   * Create a bunch of znodes in a hierarchy, try deleting one that has childs
+   * (it will fail), then delete it recursively, then delete the last znode
+   * @throws Exception
+   */
+  @Test
+  public void testZNodeDeletes() throws Exception {
+    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    zkw.ensureExists("/l1/l2/l3/l4");
+    try {
+      zkw.deleteZNode("/l1/l2");
+      fail("We should not be able to delete if znode has childs");
+    } catch (KeeperException ex) {
+      assertNotNull(zkw.getData("/l1/l2/l3", "l4"));
+    }
+    zkw.deleteZNode("/l1/l2", true);
+    assertNull(zkw.getData("/l1/l2/l3", "l4"));
+    zkw.deleteZNode("/l1");
+    assertNull(zkw.getData("/l1", "l2"));
   }
 }

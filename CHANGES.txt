@@ -608,7 +608,7 @@ Release 0.21.0 - Unreleased
    	           by filter (Juhani Connolly via Ryan)
    HBASE-2566  Remove 'lib' dir; it only has libthrift and that is being
                pulled from http://people.apache.org/~rawson/repo/....
-
+   HBASE-2534  Recursive deletes and misc improvements to ZKW
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
@@ -642,6 +642,7 @@ Release 0.21.0 - Unreleased
    HBASE-2473  Add to admin create table start and end key params and
                desired number of regions
    HBASE-2529  Make OldLogsCleaner easier to extend
+   HBASE-2527  Add the ability to easily extend some HLog actions
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

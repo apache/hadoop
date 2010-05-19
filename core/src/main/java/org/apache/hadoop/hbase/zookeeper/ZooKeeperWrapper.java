@@ -397,7 +397,12 @@ public class ZooKeeperWrapper implements HConstants {
     return new HServerAddress(addressString);
   }
 
-  private boolean ensureExists(final String znode) {
+  /**
+   * Make sure this znode exists by creating it if it's missing
+   * @param znode full path to znode
+   * @return true if it works
+   */
+  public boolean ensureExists(final String znode) {
     try {
       Stat stat = zooKeeper.exists(znode, false);
       if (stat != null) {
@@ -439,8 +444,7 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     try {
-      zooKeeper.delete(rootRegionZNode, -1);
-      LOG.debug("Deleted ZNode " + rootRegionZNode);
+      deleteZNode(rootRegionZNode);
       return true;
     } catch (KeeperException.NoNodeException e) {
       return true;    // ok, move on.
@@ -451,6 +455,41 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     return false;
+  }
+
+  /**
+   * Unrecursive deletion of specified znode
+   * @param znode
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  public void deleteZNode(String znode)
+      throws KeeperException, InterruptedException {
+    deleteZNode(znode, false);
+  }
+
+  /**
+   * Optionnally recursive deletion of specified znode
+   * @param znode
+   * @param recursive
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  public void deleteZNode(String znode, boolean recursive)
+    throws KeeperException, InterruptedException {
+    if (recursive) {
+      LOG.info("deleteZNode get children for " + znode);
+      List<String> znodes = this.zooKeeper.getChildren(znode, false);
+      if (znodes.size() > 0) {
+        for (String child : znodes) {
+          String childFullPath = getZNode(znode, child);
+          LOG.info("deleteZNode recursive call " + childFullPath);
+          this.deleteZNode(childFullPath, true);
+        }
+      }
+    }
+    this.zooKeeper.delete(znode, -1);
+    LOG.debug("Deleted ZNode " + znode);
   }
 
   private boolean createRootRegionLocation(String address) {
@@ -589,6 +628,15 @@ public class ZooKeeperWrapper implements HConstants {
   }
 
   /**
+   * Scans the regions servers directory and sets a watch on each znode
+   * @param watcher a watch to use for each znode
+   * @return A list of server addresses
+   */
+  public List<HServerAddress> scanRSDirectory(Watcher watcher) {
+    return scanAddressDirectory(rsZNode, watcher);
+  }
+
+  /**
    * Method used to make sure the region server directory is empty.
    *
    */
@@ -676,11 +724,25 @@ public class ZooKeeperWrapper implements HConstants {
     return list;
   }
 
+  /**
+   * List all znodes in the specified path and set a watcher on each
+   * @param znode path to list
+   * @param watcher watch to set, can be null
+   * @return a list of all the znodes
+   */
   public List<String> listZnodes(String znode, Watcher watcher) {
     List<String> nodes = null;
     try {
       if (checkExistenceOf(znode)) {
-        nodes = zooKeeper.getChildren(znode, watcher);
+        if (watcher == null) {
+          nodes = zooKeeper.getChildren(znode, false);
+        } else {
+          nodes = zooKeeper.getChildren(znode, watcher);
+          for (String node : nodes) {
+            getDataAndWatch(znode, node, watcher);
+          }
+        }
+
       }
     } catch (KeeperException e) {
       LOG.warn("Failed to read " + znode + " znode in ZooKeeper: " + e);
@@ -710,21 +772,46 @@ public class ZooKeeperWrapper implements HConstants {
     return data;
   }
 
+  /**
+   * Write a znode and fail if it already exists
+   * @param parentPath parent path to the new znode
+   * @param child name of the znode
+   * @param strData data to insert
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
   public void writeZNode(String parentPath, String child, String strData)
       throws InterruptedException, KeeperException {
+    writeZNode(parentPath, child, strData, false);
+  }
+
+
+  /**
+   * Write (and optionally over-write) a znode
+   * @param parentPath parent path to the new znode
+   * @param child name of the znode
+   * @param strData data to insert
+   * @param failOnWrite true if an exception should be returned if the znode
+   * already exists, false if it should be overwritten
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  public void writeZNode(String parentPath, String child, String strData,
+      boolean failOnWrite) throws InterruptedException, KeeperException {
     String path = joinPath(parentPath, child);
     if (!ensureExists(parentPath)) {
       LOG.error("unable to ensure parent exists: " + parentPath);
     }
     byte[] data = Bytes.toBytes(strData);
-    try {
+    Stat stat = this.zooKeeper.exists(path, false);
+    if (failOnWrite || stat == null) {
       this.zooKeeper.create(path, data,
           Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       LOG.debug("Created " + path);
-      } catch (KeeperException.NodeExistsException ex) {
-        this.zooKeeper.setData(path, data, -1);
-        LOG.debug("Updated " + path);
-      }
+    } else {
+      this.zooKeeper.setData(path, data, -1);
+      LOG.debug("Updated " + path);
+    }
   }
 
   public static String getZookeeperClusterKey(Configuration conf) {
@@ -732,5 +819,12 @@ public class ZooKeeperWrapper implements HConstants {
           conf.get(ZOOKEEPER_ZNODE_PARENT);
   }
 
+  /**
+   * Get the path of this region server's znode
+   * @return path to znode
+   */
+  public String getRsZNode() {
+    return this.rsZNode;
+  }
 
 }

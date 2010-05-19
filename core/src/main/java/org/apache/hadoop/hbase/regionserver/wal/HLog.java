@@ -125,6 +125,11 @@ public class HLog implements HConstants, Syncable {
   private final int flushlogentries;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
   private final Path oldLogDir;
+  private final List<LogActionsListener> actionListeners =
+      Collections.synchronizedList(new ArrayList<LogActionsListener>());
+
+  private static Class logWriterClass;
+  private static Class logReaderClass;
 
   private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
   private int initialReplication;    // initial replication factor of SequenceFile.writer
@@ -245,20 +250,39 @@ public class HLog implements HConstants, Syncable {
   }
 
   /**
+   * HLog creating with a null actions listener.
+   *
+   * @param fs filesystem handle
+   * @param dir path to where hlogs are stored
+   * @param oldLogDir path to where hlogs are archived
+   * @param conf configuration to use
+   * @param listener listerner used to request log rolls
+   * @throws IOException
+   */
+  public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
+              final Configuration conf, final LogRollListener listener)
+  throws IOException {
+    this(fs, dir, oldLogDir, conf, listener, null);
+  }
+
+  /**
    * Create an edit log at the given <code>dir</code> location.
    *
    * You should never have to load an existing log. If there is a log at
    * startup, it should have already been processed and deleted by the time the
    * HLog object is started up.
    *
-   * @param fs
-   * @param dir
-   * @param conf
-   * @param listener
+   * @param fs filesystem handle
+   * @param dir path to where hlogs are stored
+   * @param oldLogDir path to where hlogs are archived
+   * @param conf configuration to use
+   * @param listener listerner used to request log rolls
+   * @param actionListener optional listener for hlog actions like archiving
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
-              final Configuration conf, final LogRollListener listener)
+              final Configuration conf, final LogRollListener listener,
+              final LogActionsListener actionListener)
   throws IOException {
     super();
     this.fs = fs;
@@ -289,6 +313,9 @@ public class HLog implements HConstants, Syncable {
       ", enabled=" + this.enabled +
       ", flushlogentries=" + this.flushlogentries +
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
+    if (actionListener != null) {
+      addLogActionsListerner(actionListener);
+    }
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
 
@@ -406,6 +433,12 @@ public class HLog implements HConstants, Syncable {
             ", filesize=" +
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
           "New hlog " + FSUtils.getPath(newPath));
+        // Tell our listeners that a new log was created
+        if (!this.actionListeners.isEmpty()) {
+          for (LogActionsListener list : this.actionListeners) {
+            list.logRolled(newPath);
+          }
+        }
         // Can we delete any of the old log files?
         if (this.outputfiles.size() > 0) {
           if (this.lastSeqWritten.size() <= 0) {
@@ -442,9 +475,12 @@ public class HLog implements HConstants, Syncable {
     final Path path, Configuration conf)
   throws IOException {
     try {
-      Class c = Class.forName(conf.get("hbase.regionserver.hlog.reader.impl",
+      if (logReaderClass == null) {
+        logReaderClass = Class.forName(conf.get("hbase.regionserver.hlog.reader.impl",
         SequenceFileLogReader.class.getCanonicalName()));
-      HLog.Reader reader = (HLog.Reader) c.newInstance();
+      }
+
+      HLog.Reader reader = (HLog.Reader) logReaderClass.newInstance();
       reader.init(fs, path, conf);
       return reader;
     } catch (Exception e) {
@@ -466,9 +502,11 @@ public class HLog implements HConstants, Syncable {
       final Path path, Configuration conf)
   throws IOException {
     try {
-      Class c = Class.forName(conf.get("hbase.regionserver.hlog.writer.impl",
+      if (logWriterClass == null) {
+        logWriterClass = Class.forName(conf.get("hbase.regionserver.hlog.writer.impl",
         SequenceFileLogWriter.class.getCanonicalName()));
-      HLog.Writer writer = (HLog.Writer) c.newInstance();
+      }
+      HLog.Writer writer = (HLog.Writer) logWriterClass.newInstance();
       writer.init(fs, path, conf);
       return writer;
     } catch (Exception e) {
@@ -602,6 +640,11 @@ public class HLog implements HConstants, Syncable {
       " whose highest sequence/edit id is " + seqno + " to " +
       FSUtils.getPath(newPath));
     this.fs.rename(p, newPath);
+    if (!this.actionListeners.isEmpty()) {
+      for (LogActionsListener list : this.actionListeners) {
+        list.logArchived(p, newPath);
+      }
+    }
   }
 
   /**
@@ -1621,8 +1664,6 @@ public class HLog implements HConstants, Syncable {
     return dirName.toString();
   }
 
-  // We create a new file name with a ts in front of it to make sure we almost
-  // certainly don't have a file name conflict.
   private static Path getHLogArchivePath(Path oldLogDir, Path p) {
     return new Path(oldLogDir, System.currentTimeMillis() + "." + p.getName());
   }
@@ -1630,6 +1671,23 @@ public class HLog implements HConstants, Syncable {
   private static void usage() {
     System.err.println("Usage: java org.apache.hbase.HLog" +
         " {--dump <logfile>... | --split <logdir>...}");
+  }
+
+  /**
+   *
+   * @param list
+   */
+  public void addLogActionsListerner(LogActionsListener list) {
+    LOG.info("Adding a listener");
+    this.actionListeners.add(list);
+  }
+
+  /**
+   *
+   * @param list
+   */
+  public boolean removeLogActionsListener(LogActionsListener list) {
+    return this.actionListeners.remove(list);
   }
 
   /**
