@@ -316,7 +316,12 @@ module Hbase
           return "timestamp=%d, value=%s" % [kv.getTimestamp, hri.toString]
         end
         if column == 'info:serverstartcode'
-          return "timestamp=%d, value=%s" % [kv.getTimestamp, Bytes.toLong(kv.getValue)]
+          if kv.getValue.length > 0
+            str_val = Bytes.toLong(kv.getValue)
+          else
+            str_val = Bytes.toStringBinary(kv.getValue)
+          end
+          return "timestamp=%d, value=%s" % [kv.getTimestamp, str_val]
         end
       end
 
