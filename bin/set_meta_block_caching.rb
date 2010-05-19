@@ -68,8 +68,7 @@ scan.addColumn(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER);
 scanner = metaTable.getScanner(scan)
 while (result = scanner.next())
   rowid = Bytes.toString(result.getRow())
-  rowidStr = java.lang.String.new(rowid)
-  LOG.info("Setting BLOCKCACHE and IN_MEMORY on: " + rowidStr);
+  LOG.info("Setting BLOCKCACHE and IN_MEMORY on: " + rowid);
   hriValue = result.getValue(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER)
   hri = Writables.getHRegionInfo(hriValue)
   family = hri.getTableDesc().getFamily(HConstants::CATALOG_FAMILY)

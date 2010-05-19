@@ -337,6 +337,9 @@ Release 0.21.0 - Unreleased
    HBASE-2539  Cannot start ZK before the rest in tests anymore
    HBASE-2561  Scanning .META. while split in progress yields
                IllegalArgumentException (Todd Lipcon via Stack)
+   HBASE-2572  hbase/bin/set_meta_block_caching.rb:72: can't convert
+               Java::JavaLang::String into String (TypeError) - little
+               issue with script
 
 
   IMPROVEMENTS
