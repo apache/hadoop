@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -46,8 +48,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
  */
-public class HalfHFileReader extends HFile.Reader {
-  final Log LOG = LogFactory.getLog(HalfHFileReader.class);
+public class HalfStoreFileReader extends StoreFile.Reader {
+  final Log LOG = LogFactory.getLog(HalfStoreFileReader.class);
   final boolean top;
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
@@ -60,7 +62,7 @@ public class HalfHFileReader extends HFile.Reader {
    * @param r
    * @throws IOException
    */
-  public HalfHFileReader(final FileSystem fs, final Path p, final BlockCache c,
+  public HalfStoreFileReader(final FileSystem fs, final Path p, final BlockCache c,
     final Reference r)
   throws IOException {
     super(fs, p, c, false);
@@ -151,6 +153,11 @@ public class HalfHFileReader extends HFile.Reader {
           }
         }
         return this.delegate.seekBefore(key, offset, length);
+      }
+
+      public boolean shouldSeek(byte[] row, 
+          final SortedSet<byte[]> columns) {
+        return this.delegate.shouldSeek(row, columns);
       }
 
       public boolean seekTo() throws IOException {
