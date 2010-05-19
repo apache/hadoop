@@ -68,6 +68,7 @@ public class MiniHBaseCluster implements HConstants {
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
   throws IOException {
     this.conf = conf;
+    conf.set(MASTER_PORT, "0");
     init(numRegionServers);
   }
 
@@ -205,22 +206,10 @@ public class MiniHBaseCluster implements HConstants {
   private void init(final int nRegionNodes) throws IOException {
     try {
       // start up a LocalHBaseCluster
-      while (true) {
-        try {
-          hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes,
-              MiniHBaseCluster.MiniHBaseClusterMaster.class,
-              MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
-          hbaseCluster.startup();
-        } catch (BindException e) {
-          //this port is already in use. try to use another (for multiple testing)
-          int port = conf.getInt(MASTER_PORT, DEFAULT_MASTER_PORT);
-          LOG.info("Failed binding Master to port: " + port, e);
-          port++;
-          conf.setInt(MASTER_PORT, port);
-          continue;
-        }
-        break;
-      }
+      hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes,
+          MiniHBaseCluster.MiniHBaseClusterMaster.class,
+          MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+      hbaseCluster.startup();
     } catch(IOException e) {
       shutdown();
       throw e;

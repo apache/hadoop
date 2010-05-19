@@ -340,6 +340,7 @@ Release 0.21.0 - Unreleased
    HBASE-2572  hbase/bin/set_meta_block_caching.rb:72: can't convert
                Java::JavaLang::String into String (TypeError) - little
                issue with script
+   HBASE-2483  Some tests do not use ephemeral ports
 
 
   IMPROVEMENTS
