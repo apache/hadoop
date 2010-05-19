@@ -838,7 +838,8 @@ public class Store implements HConstants, HeapSize {
   private boolean isMajorCompaction(final List<StoreFile> filesToCompact)
   throws IOException {
     boolean result = false;
-    if (filesToCompact == null || filesToCompact.isEmpty()) {
+    if (filesToCompact == null || filesToCompact.isEmpty() ||
+        majorCompactionTime == 0) {
       return result;
     }
     long lowTimestamp = getLowestTimestamp(fs,

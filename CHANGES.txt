@@ -649,6 +649,7 @@ Release 0.21.0 - Unreleased
                desired number of regions
    HBASE-2529  Make OldLogsCleaner easier to extend
    HBASE-2527  Add the ability to easily extend some HLog actions
+   HBASE-2559  Set hbase.hregion.majorcompaction to 0 to disable
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

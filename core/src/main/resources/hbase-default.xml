@@ -394,6 +394,7 @@
     <value>86400000</value>
     <description>The time (in miliseconds) between 'major' compactions of all
     HStoreFiles in a region.  Default: 1 day.
+    Set to 0 to disable automated major compactions.
     </description>
   </property>
   <property>
