@@ -36,7 +36,7 @@ public class ProxyUsers {
    * @return configuration key for superuser groups
    */
   public static String getProxySuperuserGroupConfKey(String userName) {
-    return "hadoop.proxyuser."+userName+".users";
+    return "hadoop.proxyuser."+userName+".groups";
   }
   
   /*
@@ -46,7 +46,7 @@ public class ProxyUsers {
    * @return configuration key for superuser ip-addresses
    */
   public static String getProxySuperuserIpConfKey(String userName) {
-    return "hadoop.proxyuser."+userName+".ip-addresses";
+    return "hadoop.proxyuser."+userName+".hosts";
   }
   
   /*
