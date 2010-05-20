@@ -148,7 +148,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   protected Path getUnitTestdir(String testName) {
     return new Path(
-        conf.get(TEST_DIRECTORY_KEY, "test/build/data"), testName);
+        conf.get(TEST_DIRECTORY_KEY, "target/test/data"), testName);
   }
 
   protected HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,

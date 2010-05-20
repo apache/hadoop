@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
@@ -69,7 +70,7 @@ public class TestStore extends TestCase {
   long id = System.currentTimeMillis();
   Get get = new Get(row);
 
-  private static final String DIR = "test/build/data/TestStore/";
+  private static final String DIR = HBaseTestingUtility.getTestDir() + "/TestStore/";
 
   /**
    * Setup

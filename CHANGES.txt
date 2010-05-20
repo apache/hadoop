@@ -620,6 +620,7 @@ Release 0.21.0 - Unreleased
    HBASE-2566  Remove 'lib' dir; it only has libthrift and that is being
                pulled from http://people.apache.org/~rawson/repo/....
    HBASE-2534  Recursive deletes and misc improvements to ZKW
+   HBASE-2577  Remove 'core' maven module; move core up a level
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

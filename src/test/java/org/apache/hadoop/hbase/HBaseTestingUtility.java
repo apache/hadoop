@@ -93,8 +93,8 @@ public class HBaseTestingUtility {
   /**
    * @return Where to write test data on local filesystem; usually build/test/data
    */
-  public Path getTestDir() {
-    return new Path(System.getProperty(TEST_DIRECTORY_KEY, "build/test/data"));
+  public static Path getTestDir() {
+    return new Path(System.getProperty(TEST_DIRECTORY_KEY, "target/test/data"));
   }
 
   /**

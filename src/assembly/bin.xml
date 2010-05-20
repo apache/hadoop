@@ -6,36 +6,6 @@
   <formats>
     <format>tar.gz</format>
   </formats>
-  <includeBaseDirectory>true</includeBaseDirectory>
-  <moduleSets>
-    <moduleSet>
-      <includes>
-        <include>org.apache.hbase:hbase-core</include>
-      </includes>
-      <binaries>
-        <outputDirectory>/</outputDirectory>
-        <unpack>false</unpack>
-        <outputFileNameMapping>hbase-${version}.jar</outputFileNameMapping>
-        <dependencySets>
-          <dependencySet>
-            <outputDirectory>lib</outputDirectory>
-          </dependencySet>
-        </dependencySets>
-      </binaries>
-    </moduleSet>
-    <!-- This ensures that the source jars are added-->
-    <moduleSet>
-      <includes>
-        <include>org.apache.hbase:hbase-core</include>
-      </includes>
-      <binaries>
-        <attachmentClassifier>sources</attachmentClassifier>
-        <outputFileNameMapping>hbase-${version}${dashClassifier}.jar</outputFileNameMapping>
-        <outputDirectory>/</outputDirectory>
-        <unpack>false</unpack>
-      </binaries>
-    </moduleSet>
-  </moduleSets>
   <fileSets>
     <fileSet>
       <includes>
@@ -53,23 +23,22 @@
       <fileMode>755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>contrib/ec2</directory>
-      <outputDirectory>contrib/ec2</outputDirectory>
-      <includes>
-        <include>README*</include>
-        <include>bin/**</include>
-      </includes>
-    </fileSet>
-    <fileSet>
-      <directory>core/src/main/ruby</directory>
+      <directory>src/main/ruby</directory>
       <outputDirectory>lib/ruby</outputDirectory>
     </fileSet>
     <fileSet>
-      <directory>contrib/transactional</directory>
-      <outputDirectory>contrib/transactional</outputDirectory>
+      <directory>target</directory>
+      <outputDirectory>/</outputDirectory>
       <includes>
-        <include>README*</include>
+        <include>*.jar</include>
       </includes>
     </fileSet>
   </fileSets>
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+    </dependencySet>
+  </dependencySets>
 </assembly>
