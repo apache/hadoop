@@ -105,21 +105,32 @@ CLASSPATH="${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 add_maven_deps_to_classpath() {
-  f="/tmp/hbase-core-test-classpath.txt"
-  ${MVN} -f core/pom.xml dependency:build-classpath -Dmdep.outputFile="${f}" &> /dev/null
-  # Add tests classes
+  # The maven build dir is called 'target'
+  target="${HBASE_HOME}/target"
+  if [ ! -d "${HBASE_HOME}/target" ]
+  then
+    mkdir "${target}"
+  fi
+  # Need to generate classpath from maven pom. This is costly so generate it
+  # and cache it. Save the file into our target dir so a mvn clean will get
+  # clean it up and force us create a new one.
+  f="${target}/cached_classpath.txt"
+  if [ ! -f "${f}" ]
+  then
+    ${MVN} -f "${HBASE_HOME}/pom.xml" dependency:build-classpath -Dmdep.outputFile="${f}" &> /dev/null
+  fi
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
 }
 
 add_maven_main_classes_to_classpath() {
-  if [ -d "$HBASE_HOME/core/target/classes" ]; then
-    CLASSPATH=${CLASSPATH}:$HBASE_HOME/core/target/classes
+  if [ -d "$HBASE_HOME/target/classes" ]; then
+    CLASSPATH=${CLASSPATH}:$HBASE_HOME/target/classes
   fi
 }
 
 add_maven_test_classes_to_classpath() {
   # For developers, add hbase classes to CLASSPATH
-  f="$HBASE_HOME/core/target/test-classes"
+  f="$HBASE_HOME/target/test-classes"
   if [ -d "${f}" ]; then
     CLASSPATH=${CLASSPATH}:${f}
   fi
@@ -215,7 +226,7 @@ elif $in_sources_dir && [ "$COMMAND" = "shell-tests" ] ; then
   add_maven_main_classes_to_classpath
   add_maven_test_classes_to_classpath
   # Start the tests
-  CORESRC="${HBASE_HOME}/core/src"
+  CORESRC="${HBASE_HOME}/src"
   CLASS="org.jruby.Main -I${CORESRC}/main/ruby -I${CORESRC}/test/ruby ${CORESRC}/test/ruby/tests_runner.rb"
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'

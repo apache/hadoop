@@ -346,6 +346,8 @@ Release 0.21.0 - Unreleased
    HBASE-2576  TestHRegion.testDelete_mixed() failing on hudson
    HBASE-2581  Bloom commit broke some tests... fix
    HBASE-2582  TestTableSchemaModel not passing after commit of blooms
+   HBASE-2583  Make webapps work in distributed mode again and make webapps
+               deploy at / instead of at /webapps/master/master.jsp
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

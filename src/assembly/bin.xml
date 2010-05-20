@@ -33,6 +33,13 @@
         <include>*.jar</include>
       </includes>
     </fileSet>
+    <fileSet>
+      <directory>target/classes/webapps</directory>
+      <outputDirectory>webapps</outputDirectory>
+      <excludes>
+        <exclude>**/*.jsp</exclude>
+      </excludes>
+    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
