@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1163. normalize property names for JT/NN kerberos principal 
+    names in configuration (from HADOOP 6633) (boryas)
+
     HDFS-1003. authorization checks for inter-server protocol 
     (based on HADOOP-6600) (boryas)
 
