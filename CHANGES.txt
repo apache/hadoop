@@ -23,6 +23,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-6781. security audit log shouldn't have exception in it.
+
     HADOOP-6612.  Protocols RefreshUserToGroupMappingsProtocol and 
     RefreshAuthorizationPolicyProtocol will fail with security enabled (boryas)
 

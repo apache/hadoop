@@ -111,7 +111,7 @@ public abstract class Server {
   static int INITIAL_RESP_BUF_SIZE = 10240;
 
   public static final Log LOG = LogFactory.getLog(Server.class);
-  public static final Log auditLOG = 
+  public static final Log AUDITLOG = 
     LogFactory.getLog("SecurityLogger."+Server.class.getName());
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFULL_FOR = "Auth successfull for ";
@@ -995,7 +995,7 @@ public abstract class Server {
           rpcMetrics.authenticationFailures.inc();
           String clientIP = this.toString();
           // attempting user could be null
-          auditLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser, e);
+          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
           throw e;
         }
         if (replyToken != null) {
@@ -1013,7 +1013,7 @@ public abstract class Server {
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.info("SASL server successfully authenticated client: " + user);
           rpcMetrics.authenticationSuccesses.inc();
-          auditLOG.info(AUTH_SUCCESSFULL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFULL_FOR + user);
           saslContextEstablished = true;
         }
       } else {

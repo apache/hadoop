@@ -242,7 +242,7 @@ public class MiniRPCBenchmark {
 
   static void setLoggingLevel(Level level) {
     LogManager.getLogger(Server.class.getName()).setLevel(level);
-    ((Log4JLogger)Server.auditLOG).getLogger().setLevel(level);
+    ((Log4JLogger)Server.AUDITLOG).getLogger().setLevel(level);
     LogManager.getLogger(Client.class.getName()).setLevel(level);
   }
 
