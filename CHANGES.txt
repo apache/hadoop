@@ -343,6 +343,7 @@ Release 0.21.0 - Unreleased
    HBASE-2483  Some tests do not use ephemeral ports
    HBASE-2573  client.HConnectionManager$TableServers logs non-printable
                binary bytes (Benoît Sigoure via Stack)
+   HBASE-2576  TestHRegion.testDelete_mixed() failing on hudson
 
 
   IMPROVEMENTS

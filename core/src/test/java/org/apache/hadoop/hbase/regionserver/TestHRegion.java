@@ -516,7 +516,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals("Family " +new String(family)+ " does exist", true, ok);
   }
 
-  public void testDelete_mixed() throws IOException {
+  public void testDelete_mixed() throws IOException, InterruptedException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] fam = Bytes.toBytes("info");
     byte [][] families = {fam};
@@ -560,6 +560,9 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(1, result.size());
 
+    // Sleep to ensure timestamp of next Put is bigger than previous delete
+    Thread.sleep(10);
+    
     // Assert that after a delete, I can put.
     put = new Put(row);
     put.add(fam, splitA, Bytes.toBytes("reference_A"));
@@ -572,11 +575,10 @@ public class TestHRegion extends HBaseTestCase {
     delete = new Delete(row);
     region.delete(delete, null, false);
     assertEquals(0, region.get(get, null).size());
-    try {
-      Thread.sleep(10);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
+    
+    // Sleep to ensure timestamp of next Put is bigger than previous delete
+    Thread.sleep(10);
+    
     region.put(new Put(row).add(fam, splitA, Bytes.toBytes("reference_A")));
     result = region.get(get, null);
     assertEquals(1, result.size());
