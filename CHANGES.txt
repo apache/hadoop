@@ -3,6 +3,9 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   IMPROVEMENTS
+    HADOOP-6778. add isRunning() method to 
+    AbstractDelegationTokenSecretManager (for HDFS-1044) (boryas)
+
     HADOOP-6633. normalize property names for JT/NN kerberos principal 
     names in configuration (boryas)
 

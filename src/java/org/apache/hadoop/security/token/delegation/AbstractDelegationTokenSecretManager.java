@@ -335,6 +335,14 @@ extends AbstractDelegationTokenIdentifier>
     }
   }
   
+  /**
+   * is secretMgr running
+   * @return true if secret mgr is running
+   */
+  public synchronized boolean isRunning() {
+    return running;
+  }
+  
   private class ExpiredTokenRemover extends Thread {
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
