@@ -349,6 +349,7 @@ Release 0.21.0 - Unreleased
    HBASE-2583  Make webapps work in distributed mode again and make webapps
                deploy at / instead of at /webapps/master/master.jsp
    HBASE-2590  Failed parse of branch element in saveVersion.sh
+   HBASE-2591  HBASE-2587 hardcoded the port that dfscluster runs on
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

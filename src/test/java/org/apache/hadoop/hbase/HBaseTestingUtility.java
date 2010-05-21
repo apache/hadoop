@@ -173,8 +173,8 @@ public class HBaseTestingUtility {
     else this.clusterTestBuildDir = dir;
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.toString());
     System.setProperty("test.cache.data", this.clusterTestBuildDir.toString());
-    this.dfsCluster = new MiniDFSCluster(12345, this.conf, servers, true,
-      true, true, null, null, null, null);
+    this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
+      true, null, null, null, null);
     return this.dfsCluster;
   }
 
