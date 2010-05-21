@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
 
 /**
@@ -71,13 +69,6 @@ public class HBaseTestingUtility {
   // If non-null, then already a cluster running.
   private File clusterTestBuildDir = null;
   private HBaseAdmin hbaseAdmin = null;
-
-  // Cache this.  For some reason only works first time I get it.  TODO: Figure
-  // out why.
-  private final static UserGroupInformation UGI;
-  static {
-    UGI = UserGroupInformation.getCurrentUGI();
-  }
 
   /**
    * System property key to get test directory value.
@@ -735,24 +726,5 @@ public class HBaseTestingUtility {
 
   public MiniDFSCluster getDFSCluster() {
     return dfsCluster;
-  }
-
-  /**
-   * Create a copy of the passed configuration laden with a new user.  Use it
-   * to do things like get a new FileSystem instance.
-   * @param c
-   * @param index Some unique number used to make a unique user.
-   * @return Copy of <code>c</code> with new user stuff loaded into it.
-   * @throws IOException
-   */
-  public static Configuration setDifferentUser(final Configuration c,
-    final int index)
-  throws IOException {
-    Configuration c2 = new Configuration(c);
-    String username = UGI.getUserName() + ".hrs." + index;
-    UnixUserGroupInformation.saveToConf(c2,
-      UnixUserGroupInformation.UGI_PROPERTY_NAME,
-      new UnixUserGroupInformation(username, new String[]{"supergroup"}));
-    return c2;
   }
 }
