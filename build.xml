@@ -1030,8 +1030,8 @@
   </target>
 
   <target name="clean-cache" depends="clean" description="Clean. Delete ivy cache">
-    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-core"/>
-    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-core-test"/>
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs"/>
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-test"/>
   </target>
 
   <!-- ================================================================== -->

@@ -539,6 +539,8 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HDFS-1159. clean-cache target removes wrong ivy cache (cos)
+
     HDFS-76. Better error message to users when commands fail because of 
     lack of quota. Allow quota to be set even if the limit is lower than
     current consumption. (Boris Shkolnik via rangadi)
