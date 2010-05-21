@@ -36,6 +36,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -402,6 +404,14 @@ public class FsShell extends Configured implements Tool {
 
   private InputStream forMagic(Path p, FileSystem srcFs) throws IOException {
     FSDataInputStream i = srcFs.open(p);
+
+    // check codecs
+    CompressionCodecFactory cf = new CompressionCodecFactory(getConf());
+    CompressionCodec codec = cf.getCodec(p);
+    if (codec != null) {
+      return codec.createInputStream(i);
+    }
+
     switch(i.readShort()) {
       case 0x1f8b: // RFC 1952
         i.seek(0);

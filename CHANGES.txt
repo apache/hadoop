@@ -21,6 +21,9 @@ Trunk (unreleased changes)
     HADOOP-6761. The Trash Emptier has the ability to run more frequently.
     (Dmytro Molkov via dhruba)
 
+    HADOOP-6714. Resolve compressed files using CodecFactory in FsShell::text.
+    (Patrick Angeles via cdouglas)
+
   BUG FIXES
 
     HADOOP-6781. security audit log shouldn't have exception in it.
