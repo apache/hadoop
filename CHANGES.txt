@@ -20,7 +20,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-    HDFS 1021. specify correct server principal for RefreshAuthorizationPolicyProtocol 
+    HDFS-1044. Cannot submit mapreduce job from secure client to 
+    unsecure sever (boryas)
+
+    HDFS-1021. specify correct server principal for RefreshAuthorizationPolicyProtocol 
     and RefreshUserToGroupMappingsProtocol protocols in DFSAdmin (for HADOOP-6612) (boryas)
 
     HDFS-970. fsync fsimage to disk before closing fsimage file.
