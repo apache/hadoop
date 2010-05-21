@@ -79,31 +79,25 @@ public class CreateEditsLog {
          blocks[iB].setBlockId(currentBlockId++);
       }
 
-      try {
+      INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
+                    null, replication, 0, blockSize, blocks, p, "", "", null);
+      // Append path to filename with information about blockIDs 
+      String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
+                    "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
+      String filePath = nameGenerator.getNextFileName("");
+      filePath = filePath + path;
+      // Log the new sub directory in edits
+      if ((iF % nameGenerator.getFilesPerDirectory())  == 0) {
+        String currentDir = nameGenerator.getCurrentDir();
+        dirInode = new INodeDirectory(p, 0L);
+        editLog.logMkDir(currentDir, dirInode);
+      }
+      editLog.logOpenFile(filePath, inode);
+      editLog.logCloseFile(filePath, inode);
 
-        INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
-                      null, replication, 0, blockSize, blocks, p, "", "", null);
-        // Append path to filename with information about blockIDs 
-        String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
-                      "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
-        String filePath = nameGenerator.getNextFileName("");
-        filePath = filePath + path;
-        // Log the new sub directory in edits
-        if ((iF % nameGenerator.getFilesPerDirectory())  == 0) {
-          String currentDir = nameGenerator.getCurrentDir();
-          dirInode = new INodeDirectory(p, 0L);
-          editLog.logMkDir(currentDir, dirInode);
-        }
-        editLog.logOpenFile(filePath, inode);
-        editLog.logCloseFile(filePath, inode);
-
-        if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks
-          editLog.logSync();
-          bidAtSync = currentBlockId;
-        }
-      } catch (IOException e) {
-        System.out.println("Creating trascation for file " + iF +
-            " encountered exception " + e);
+      if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks
+        editLog.logSync();
+        bidAtSync = currentBlockId;
       }
     }
     System.out.println("Created edits log in directory " + edits_dir);

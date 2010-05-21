@@ -64,16 +64,11 @@ public class TestEditLog extends TestCase {
       FSEditLog editLog = namesystem.getEditLog();
 
       for (int i = 0; i < numTransactions; i++) {
-        try {
-          INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
-                              p, replication, blockSize, 0, "", "", null);
-          editLog.logOpenFile("/filename" + i, inode);
-          editLog.logCloseFile("/filename" + i, inode);
-          editLog.logSync();
-        } catch (IOException e) {
-          System.out.println("Transaction " + i + " encountered exception " +
-                             e);
-        }
+        INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
+                            p, replication, blockSize, 0, "", "", null);
+        editLog.logOpenFile("/filename" + i, inode);
+        editLog.logCloseFile("/filename" + i, inode);
+        editLog.logSync();
       }
     }
   }
@@ -82,6 +77,18 @@ public class TestEditLog extends TestCase {
    * Tests transaction logging in dfs.
    */
   public void testEditLog() throws IOException {
+    testEditLog(2048);
+    // force edit buffer to automatically sync on each log of edit log entry
+    testEditLog(1);
+  }
+  
+  /**
+   * Test edit log with different initial buffer size
+   * 
+   * @param initialSize initial edit log buffer size
+   * @throws IOException
+   */
+  private void testEditLog(int initialSize) throws IOException {
 
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
@@ -103,7 +110,7 @@ public class TestEditLog extends TestCase {
       FSEditLog editLog = fsimage.getEditLog();
   
       // set small size of flush buffer
-      editLog.setBufferCapacity(2048);
+      editLog.setBufferCapacity(initialSize);
       editLog.close();
       editLog.open();
     

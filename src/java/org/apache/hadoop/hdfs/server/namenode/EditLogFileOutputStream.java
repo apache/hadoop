@@ -41,6 +41,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   private FileChannel fc; // channel of the file stream for sync
   private DataOutputBuffer bufCurrent; // current buffer for writing
   private DataOutputBuffer bufReady; // buffer ready for flushing
+  final private int initBufferSize; // inital buffer size
   static ByteBuffer fill = ByteBuffer.allocateDirect(512); // preallocation
 
   /**
@@ -55,6 +56,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   EditLogFileOutputStream(File name, int size) throws IOException {
     super();
     file = name;
+    initBufferSize = size;
     bufCurrent = new DataOutputBuffer(size);
     bufReady = new DataOutputBuffer(size);
     RandomAccessFile rp = new RandomAccessFile(name, "rw");
@@ -145,6 +147,14 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     fc.position(fc.position() - 1); // skip back the end-of-file marker
   }
 
+  /**
+   * @return true if the number of buffered data exceeds the intial buffer size
+   */
+  @Override
+  public boolean shouldForceSync() {
+    return bufReady.size() >= initBufferSize;
+  }
+  
   /**
    * Return the size of the current edit log including buffered data.
    */

@@ -91,6 +91,17 @@ implements JournalStream {
    */
   abstract long length() throws IOException;
 
+  /**
+   * Implement the policy when to automatically sync the buffered edits log
+   * The buffered edits can be flushed when the buffer becomes full or
+   * a certain period of time is elapsed.
+   * 
+   * @return true if the buffered data should be automatically synced to disk
+   */
+  public boolean shouldForceSync() {
+    return false;
+  }
+  
   boolean isOperationSupported(byte op) {
     return true;
   }
