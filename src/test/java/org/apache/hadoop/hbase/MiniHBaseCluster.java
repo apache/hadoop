@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.net.BindException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,10 +35,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class creates a single process HBase cluster.
@@ -49,13 +45,6 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 public class MiniHBaseCluster implements HConstants {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
-  // Cache this.  For some reason only works first time I get it.  TODO: Figure
-  // out why.
-  private final static UserGroupInformation UGI;
-  static {
-    UGI = UserGroupInformation.getCurrentUGI();
-  }
-
   private Configuration conf;
   public LocalHBaseCluster hbaseCluster;
 
@@ -133,28 +122,7 @@ public class MiniHBaseCluster implements HConstants {
 
     public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException {
-      super(setDifferentUser(conf));
-    }
-
-    /*
-     * @param c
-     * @param currentfs We return this if we did not make a new one.
-     * @param uniqueName Same name used to help identify the created fs.
-     * @return A new fs instance if we are up on DistributeFileSystem.
-     * @throws IOException
-     */
-    private static Configuration setDifferentUser(final Configuration c)
-    throws IOException {
-      FileSystem currentfs = FileSystem.get(c);
-      if (!(currentfs instanceof DistributedFileSystem)) return c;
-      // Else distributed filesystem.  Make a new instance per daemon.  Below
-      // code is taken from the AppendTestUtil over in hdfs.
-      Configuration c2 = new Configuration(c);
-      String username = UGI.getUserName() + ".hrs." + index++;
-      UnixUserGroupInformation.saveToConf(c2,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(username, new String[]{"supergroup"}));
-      return c2;
+      super(HBaseTestingUtility.setDifferentUser(conf, index++));
     }
 
     @Override

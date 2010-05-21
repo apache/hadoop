@@ -227,6 +227,15 @@
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>2.4</version>
+            <configuration>
+              <filesets>
+                <fileset>
+                  <!--dfs tests have build dir hardcoded. Clean it as part of
+                      clean target-->
+                  <directory>build</directory>
+                </fileset>
+              </filesets>
+            </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>

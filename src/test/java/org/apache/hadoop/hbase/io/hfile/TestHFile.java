@@ -31,13 +31,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.BlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -52,7 +52,7 @@ public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
 
   private static String ROOT_DIR =
-    System.getProperty("test.build.data", "/tmp/TestHFile");
+    HBaseTestingUtility.getTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
 

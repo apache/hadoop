@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.io.BytesWritable;
@@ -235,7 +236,7 @@ public class TestHFileSeek extends TestCase {
     int maxWordLen = 20;
 
     String rootDir =
-        System.getProperty("test.build.data", "/tmp/TestTFileSeek");
+      HBaseTestingUtility.getTestDir("TestTFileSeek").toString();
     String file = "TestTFileSeek";
     // String compress = "lzo"; DISABLED
     String compress = "none";

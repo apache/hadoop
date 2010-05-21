@@ -27,8 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.Reference.Range;
@@ -308,7 +308,7 @@ public class TestStoreFile extends HBaseTestCase {
   }
   
   private static String ROOT_DIR =
-    System.getProperty("test.build.data", "/tmp/TestStoreFile");
+    HBaseTestingUtility.getTestDir("TestStoreFile").toString();
   private static String localFormatter = "%010d";
   
   public void testBloomFilter() throws Exception {

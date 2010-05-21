@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -45,7 +46,7 @@ import org.apache.hadoop.io.compress.GzipCodec;
  */
 public class TestHFilePerformance extends TestCase {
   private static String ROOT_DIR =
-      System.getProperty("test.build.data", "/tmp/TestHFilePerformance");
+    HBaseTestingUtility.getTestDir("TestHFilePerformance").toString();
   private FileSystem fs;
   private Configuration conf;
   private long startTimeEpoch;
