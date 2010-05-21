@@ -323,8 +323,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <forkMode>always</forkMode>
+          <includes>
+            <include>**/Test*.java</include>
+          </includes>
           <excludes>
-            <exclude>**/SoftValueSortedMapTest.java</exclude>
             <exclude>**/*$*</exclude>
           </excludes>
         </configuration>

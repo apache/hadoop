@@ -628,6 +628,8 @@ Release 0.21.0 - Unreleased
    HBASE-2587  Coral where tests write data when running and make sure clean
                target removes all written
    HBASE-2580  Make the hlog file names unique
+   HBASE-2594  Narrow pattern used finding unit tests to run -- make it same
+               was we had in 0.20
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
