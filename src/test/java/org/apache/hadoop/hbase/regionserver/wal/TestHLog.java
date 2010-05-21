@@ -150,7 +150,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     // gives you EOFE.
     wal.sync();
     // Open a Reader.
-    Path walPath = wal.computeFilename(wal.getFilenum());
+    Path walPath = wal.computeFilename();
     HLog.Reader reader = HLog.getReader(fs, walPath, conf);
     int count = 0;
     HLog.Entry entry = new HLog.Entry();
@@ -281,7 +281,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId, info.isMetaRegion());
       log.close();
-      Path filename = log.computeFilename(log.getFilenum());
+      Path filename = log.computeFilename();
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);
@@ -349,7 +349,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(hri.getRegionName(), tableName, logSeqId, false);
       log.close();
-      Path filename = log.computeFilename(log.getFilenum());
+      Path filename = log.computeFilename();
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);

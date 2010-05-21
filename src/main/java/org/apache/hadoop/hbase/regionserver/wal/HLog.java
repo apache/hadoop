@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -45,6 +46,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -123,6 +125,7 @@ public class HLog implements HConstants, Syncable {
   private final long optionalFlushInterval;
   private final long blocksize;
   private final int flushlogentries;
+  private final String prefix;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
   private final Path oldLogDir;
   private final List<LogActionsListener> actionListeners =
@@ -209,6 +212,11 @@ public class HLog implements HConstants, Syncable {
    */
   private final LogSyncer logSyncerThread;
 
+  /**
+   * Pattern used to validate a HLog file name
+   */
+  private static final Pattern pattern = Pattern.compile(".*\\.\\d*");
+
   static byte [] COMPLETE_CACHE_FLUSH;
   static {
     try {
@@ -262,7 +270,7 @@ public class HLog implements HConstants, Syncable {
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
               final Configuration conf, final LogRollListener listener)
   throws IOException {
-    this(fs, dir, oldLogDir, conf, listener, null);
+    this(fs, dir, oldLogDir, conf, listener, null, null);
   }
 
   /**
@@ -278,11 +286,14 @@ public class HLog implements HConstants, Syncable {
    * @param conf configuration to use
    * @param listener listerner used to request log rolls
    * @param actionListener optional listener for hlog actions like archiving
+   * @param prefix should always be hostname and port in distributed env and
+   *        it will be URL encoded before being used.
+   *        If prefix is null, "hlog" will be used
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
               final Configuration conf, final LogRollListener listener,
-              final LogActionsListener actionListener)
+              final LogActionsListener actionListener, final String prefix)
   throws IOException {
     super();
     this.fs = fs;
@@ -316,6 +327,9 @@ public class HLog implements HConstants, Syncable {
     if (actionListener != null) {
       addLogActionsListerner(actionListener);
     }
+    // If prefix is null||empty then just name it hlog
+    this.prefix = prefix == null || prefix.isEmpty() ?
+        "hlog" : URLEncoder.encode(prefix, "UTF8");
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
 
@@ -414,7 +428,7 @@ public class HLog implements HConstants, Syncable {
         // Clean up current writer.
         Path oldFile = cleanupCurrentWriter(this.filenum);
         this.filenum = System.currentTimeMillis();
-        Path newPath = computeFilename(this.filenum);
+        Path newPath = computeFilename();
         this.writer = createWriter(fs, newPath, HBaseConfiguration.create(conf));
         this.initialReplication = fs.getFileStatus(newPath).getReplication();
 
@@ -627,7 +641,7 @@ public class HLog implements HConstants, Syncable {
         throw e;
       }
       if (currentfilenum >= 0) {
-        oldFile = computeFilename(currentfilenum);
+        oldFile = computeFilename();
         this.outputfiles.put(Long.valueOf(this.logSeqNum.get() - 1), oldFile);
       }
     }
@@ -650,12 +664,13 @@ public class HLog implements HConstants, Syncable {
   /**
    * This is a convenience method that computes a new filename with a given
    * file-number.
-   * @param fn
    * @return Path
    */
-  public Path computeFilename(final long fn) {
-    if (fn < 0) return null;
-    return new Path(dir, HLOG_DATFILE + fn);
+  protected Path computeFilename() {
+    if (filenum < 0) {
+      throw new RuntimeException("hlog file number can't be < 0");
+    }
+    return new Path(dir, prefix + "." + filenum);
   }
 
   /**
@@ -1664,8 +1679,12 @@ public class HLog implements HConstants, Syncable {
     return dirName.toString();
   }
 
+  public static boolean validateHLogFilename(String filename) {
+    return pattern.matcher(filename).matches();
+  }
+
   private static Path getHLogArchivePath(Path oldLogDir, Path p) {
-    return new Path(oldLogDir, System.currentTimeMillis() + "." + p.getName());
+    return new Path(oldLogDir, p.getName());
   }
 
   private static void usage() {

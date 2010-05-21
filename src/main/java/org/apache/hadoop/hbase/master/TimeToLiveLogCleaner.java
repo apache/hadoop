@@ -40,12 +40,13 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
   public boolean isLogDeletable(Path filePath) {
     long time = 0;
     long currentTime = System.currentTimeMillis();
-    System.out.println(filePath.getName());
     String[] parts = filePath.getName().split("\\.");
     try {
-      time = Long.parseLong(parts[3]);
+      time = Long.parseLong(parts[parts.length-1]);
     } catch (NumberFormatException e) {
-      e.printStackTrace();
+      LOG.error("Unable to parse the timestamp in " + filePath.getName() +
+          ", deleting it since it's invalid and may not be a hlog", e);
+      return true;
     }
     long life = currentTime - time;
     if (life < 0) {

@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,8 +49,6 @@ public class OldLogsCleaner extends Chore {
   private final Path oldLogDir;
   private final LogCleanerDelegate logCleaner;
   private final Configuration conf;
-  // We expect a file looking like hlog.dat.ts
-  private final Pattern pattern = Pattern.compile("\\d*\\.hlog\\.dat\\.\\d*");
 
   /**
    *
@@ -92,7 +91,7 @@ public class OldLogsCleaner extends Chore {
       int nbDeletedLog = 0;
       for (FileStatus file : files) {
         Path filePath = file.getPath();
-        if (pattern.matcher(filePath.getName()).matches()) {
+        if (HLog.validateHLogFilename(filePath.getName())) {
           if (logCleaner.isLogDeletable(filePath) ) {
             this.fs.delete(filePath, true);
             nbDeletedLog++;

@@ -939,7 +939,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
   // instantiate
   protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
-    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller);
+    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller, null,
+        serverInfo.getServerAddress().toString());
     return newlog;
   }
 

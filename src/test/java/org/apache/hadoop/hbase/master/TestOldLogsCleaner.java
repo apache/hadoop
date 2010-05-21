@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 
+import java.net.URLEncoder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TestOldLogsCleaner {
@@ -74,32 +76,41 @@ public class TestOldLogsCleaner {
     Configuration c = TEST_UTIL.getConfiguration();
     Path oldLogDir = new Path(TEST_UTIL.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
+    String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
 
     FileSystem fs = FileSystem.get(c);
     AtomicBoolean stop = new AtomicBoolean(false);
     OldLogsCleaner cleaner = new OldLogsCleaner(1000, stop,c, fs, oldLogDir);
 
+    // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
     long now = System.currentTimeMillis();
     fs.delete(oldLogDir, true);
     fs.mkdirs(oldLogDir);
     fs.createNewFile(new Path(oldLogDir, "a"));
-    fs.createNewFile(new Path(oldLogDir, "1.hlog.dat.a"));
-    fs.createNewFile(new Path(oldLogDir, "1.hlog.dat." + now));
-    for(int i = 0; i < 30; i++) {
-      fs.createNewFile(new Path(oldLogDir, 1 + "hlog.dat." +
-          (now - 6000000 - i)));
+    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + "a"));
+    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
+    System.out.println("Now is: " + now);
+    for (int i = 0; i < 30; i++) {
+      fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now - 6000000 - i) ));
     }
-    fs.createNewFile(new Path(oldLogDir, "a.hlog.dat." + (now + 10000)));
+    for (FileStatus stat : fs.listStatus(oldLogDir)) {
+      System.out.println(stat.getPath().toString());
+    }
+
+    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now + 10000) ));
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
+    // This will take care of 20 old log files (default max we can delete)
     cleaner.chore();
 
     assertEquals(14, fs.listStatus(oldLogDir).length);
 
+    // We will delete all remaining log files and those that are invalid
     cleaner.chore();
 
-    assertEquals(1, fs.listStatus(oldLogDir).length);
+    // We end up with the current log file and a newer one
+    assertEquals(2, fs.listStatus(oldLogDir).length);
   }
 
 }
