@@ -933,6 +933,9 @@ Release 0.21.0 - Unreleased
     (Dmytro Molkov via hairong)
 
   BUG FIXES
+
+    HADOOP-6760. WebServer shouldn't increase port number in case of negative
+    port setting caused by Jetty's race (cos)
     
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
     (Rodrigo Schmidt via zshao)
