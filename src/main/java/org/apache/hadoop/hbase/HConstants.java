@@ -29,12 +29,7 @@ public interface HConstants {
 
   /** long constant for zero */
   static final Long ZERO_L = Long.valueOf(0L);
-
-  //TODO: NINES is only used in HBaseAdmin and HConnectionManager. Move to client
-  //      package and change visibility to default
   static final String NINES = "99999999999999";
-  //TODO: ZEROS is only used in HConnectionManager and MetaScanner. Move to
-  //      client package and change visibility to default
   static final String ZEROES = "00000000000000";
 
   // For migration
