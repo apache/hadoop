@@ -934,9 +934,6 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
-    HADOOP-6760. WebServer shouldn't increase port number in case of negative
-    port setting caused by Jetty's race (cos)
-    
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
     (Rodrigo Schmidt via zshao)
 
@@ -1578,6 +1575,11 @@ Release 0.20.3 - Unreleased
 
     HADOOP-6637. Benchmark for establishing RPC session. (shv)
 
+  BUG FIXES
+
+    HADOOP-6760. WebServer shouldn't increase port number in case of negative
+    port setting caused by Jetty's race (cos)
+    
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES
