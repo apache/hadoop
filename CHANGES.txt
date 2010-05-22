@@ -630,6 +630,8 @@ Release 0.21.0 - Unreleased
    HBASE-2580  Make the hlog file names unique
    HBASE-2594  Narrow pattern used finding unit tests to run -- make it same
                was we had in 0.20
+   HBASE-2538  Work on repository order in pom (adding fbmirror to top,
+               ibiblio on bottom)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
