@@ -11,6 +11,9 @@ Release 0.20.3 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6760. WebServer shouldn't increase port number in case of negative
+    port setting caused by Jetty's race (cos)
+
     MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
     input path. (Tsz Wo (Nicholas), SZE via cdouglas)
 
