@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.KeyValue;
 
 /**
@@ -35,14 +37,14 @@ public interface KeyValueScanner {
    * Return the next KeyValue in this scanner, iterating the scanner
    * @return the next KeyValue
    */
-  public KeyValue next();
+  public KeyValue next() throws IOException;
 
   /**
    * Seek the scanner at or after the specified KeyValue.
    * @param key seek value
    * @return true if scanner has values left, false if end of scanner
    */
-  public boolean seek(KeyValue key);
+  public boolean seek(KeyValue key) throws IOException;
 
   /**
    * Close the KeyValue scanner.

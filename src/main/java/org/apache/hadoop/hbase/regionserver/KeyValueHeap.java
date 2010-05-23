@@ -72,7 +72,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     return this.current.peek();
   }
 
-  public KeyValue next()  {
+  public KeyValue next()  throws IOException {
     if(this.current == null) {
       return null;
     }
@@ -178,8 +178,9 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * automatically closed and removed from the heap.
    * @param seekKey KeyValue to seek at or after
    * @return true if KeyValues exist at or after specified key, false if not
+   * @throws IOException 
    */
-  public boolean seek(KeyValue seekKey) {
+  public boolean seek(KeyValue seekKey) throws IOException {
     if(this.current == null) {
       return false;
     }

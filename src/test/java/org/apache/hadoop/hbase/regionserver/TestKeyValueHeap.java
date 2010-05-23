@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -64,7 +65,7 @@ implements HConstants {
     col5 = Bytes.toBytes("col5");
   }
 
-  public void testSorted(){
+  public void testSorted() throws IOException{
     //Cases that need to be checked are:
     //1. The "smallest" KeyValue is in the same scanners as current
     //2. Current scanner gets empty
@@ -126,7 +127,7 @@ implements HConstants {
 
   }
 
-  public void testSeek(){
+  public void testSeek() throws IOException {
     //Cases:
     //1. Seek KeyValue that is not in scanner
     //2. Check that smallest that is returned from a seek is correct
@@ -174,7 +175,7 @@ implements HConstants {
 
   }
 
-  public void testScannerLeak() {
+  public void testScannerLeak() throws IOException {
     // Test for unclosed scanners (HBASE-1927)
 
     List<KeyValue> l1 = new ArrayList<KeyValue>();

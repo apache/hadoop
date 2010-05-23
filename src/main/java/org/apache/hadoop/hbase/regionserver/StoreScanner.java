@@ -52,8 +52,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param store who we scan
    * @param scan the spec
    * @param columns which columns we are scanning
+   * @throws IOException 
    */
-  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns) {
+  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns) throws IOException {
     this.store = store;
     this.cacheBlocks = scan.getCacheBlocks();
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
@@ -83,7 +84,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param scan the spec
    * @param scanners ancilliary scanners
    */
-  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners) {
+  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners)
+      throws IOException {
     this.store = store;
     this.cacheBlocks = false;
     this.isGet = false;
@@ -104,7 +106,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
       final KeyValue.KVComparator comparator,
       final NavigableSet<byte[]> columns,
-      final List<KeyValueScanner> scanners) {
+      final List<KeyValueScanner> scanners)
+        throws IOException {
     this.store = null;
     this.isGet = false;
     this.cacheBlocks = scan.getCacheBlocks();
@@ -121,7 +124,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   /*
    * @return List of scanners ordered properly.
    */
-  private List<KeyValueScanner> getScanners() {
+  private List<KeyValueScanner> getScanners() throws IOException {
     // First the store file scanners
     Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
     List<StoreFileScanner> sfScanners = StoreFileScanner
@@ -138,7 +141,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @return List of scanners to seek, possibly filtered by StoreFile.
    */
   private List<KeyValueScanner> getScanners(Scan scan, 
-      final NavigableSet<byte[]> columns) {
+      final NavigableSet<byte[]> columns) throws IOException {
     // First the store file scanners
     Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
     List<StoreFileScanner> sfScanners = StoreFileScanner
@@ -178,7 +181,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.heap.close();
   }
 
-  public synchronized boolean seek(KeyValue key) {
+  public synchronized boolean seek(KeyValue key) throws IOException {
     return this.heap.seek(key);
   }
 

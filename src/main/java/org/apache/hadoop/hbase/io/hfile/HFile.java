@@ -1368,6 +1368,11 @@ public class HFile {
           }
         }
       }
+
+      @Override
+      public String toString() {
+        return "HFileScanner for reader " + String.valueOf(reader);
+      }
     }
 
     public String getTrailerInfo() {

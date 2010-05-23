@@ -56,17 +56,11 @@ class StoreFileScanner implements KeyValueScanner {
   public static List<StoreFileScanner> getScannersForStoreFiles(
       Collection<StoreFile> filesToCompact,
       boolean cacheBlocks,
-      boolean usePread) {
+      boolean usePread) throws IOException {
     List<StoreFileScanner> scanners =
       new ArrayList<StoreFileScanner>(filesToCompact.size());
     for (StoreFile file : filesToCompact) {
-      Reader r = file.getReader();
-      if (r == null) {
-        // TODO why can this happen? this seems like something worth
-        // throwing an exception over!
-        LOG.error("StoreFile " + file + " has a null Reader");
-        continue;
-      }
+      Reader r = file.createReader();
       scanners.add(new StoreFileScanner(r.getScanner(cacheBlocks, usePread)));
     }
     return scanners;
@@ -84,7 +78,7 @@ class StoreFileScanner implements KeyValueScanner {
     return cur;
   }
 
-  public KeyValue next() {
+  public KeyValue next() throws IOException {
     KeyValue retKey = cur;
     cur = hfs.getKeyValue();
     try {
@@ -92,13 +86,12 @@ class StoreFileScanner implements KeyValueScanner {
       if (cur != null)
         hfs.next();
     } catch(IOException e) {
-      // Turn checked exception into runtime exception.
-      throw new RuntimeException(e);
+      throw new IOException("Could not iterate " + this, e);
     }
     return retKey;
   }
 
-  public boolean seek(KeyValue key) {
+  public boolean seek(KeyValue key) throws IOException {
     try {
       if(!seekAtOrAfter(hfs, key)) {
         close();
@@ -108,8 +101,7 @@ class StoreFileScanner implements KeyValueScanner {
       hfs.next();
       return true;
     } catch(IOException ioe) {
-      close();
-      return false;
+      throw new IOException("Could not seek " + this, ioe);
     }
   }
 

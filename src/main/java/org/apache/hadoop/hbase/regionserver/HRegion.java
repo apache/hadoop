@@ -1952,7 +1952,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       this(scan, null);
     }
 
-    void initHeap() {
+    void initHeap() throws IOException {
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
       if (extraScanners != null) {
         scanners.addAll(extraScanners);

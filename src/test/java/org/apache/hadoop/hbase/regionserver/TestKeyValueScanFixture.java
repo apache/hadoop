@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
@@ -28,7 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class TestKeyValueScanFixture extends TestCase {
 
 
-  public void testKeyValueScanFixture() {
+  public void testKeyValueScanFixture() throws IOException {
     KeyValue kvs[] = new KeyValue[]{
         KeyValueTestUtil.create("RowA", "family", "qf1",
             1, KeyValue.Type.Put, "value-1"),

@@ -471,6 +471,21 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Return the number of rows in the given table.
+   */
+  public int countRows(final HTable table) throws IOException {
+    Scan scan = new Scan();
+    ResultScanner results = table.getScanner(scan);
+    int count = 0;
+    for (@SuppressWarnings("unused") Result res : results) {
+      count++;
+    }
+    results.close();
+    return count;
+  }
+
+  
+  /**
    * Creates many regions names "aaa" to "zzz".
    *
    * @param table  The table to use for the data.
@@ -726,5 +741,9 @@ public class HBaseTestingUtility {
 
   public MiniDFSCluster getDFSCluster() {
     return dfsCluster;
+  }
+
+  public FileSystem getTestFileSystem() throws IOException {
+    return FileSystem.get(conf);
   }
 }

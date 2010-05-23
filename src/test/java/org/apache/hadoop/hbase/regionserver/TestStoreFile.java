@@ -79,22 +79,23 @@ public class TestStoreFile extends HBaseTestCase {
         StoreFile.BloomType.NONE, false));
   }
 
+  private void writeStoreFile(final HFile.Writer writer) throws IOException {
+    writeStoreFile(writer, Bytes.toBytes(getName()), Bytes.toBytes(getName()));
+  }
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
    * then closes it.
    * @param writer
    * @throws IOException
    */
-  private void writeStoreFile(final HFile.Writer writer)
+  public static void writeStoreFile(final HFile.Writer writer, byte[] fam, byte[] qualifier)
   throws IOException {
     long now = System.currentTimeMillis();
-    byte [] fam = Bytes.toBytes(getName());
-    byte [] qf = Bytes.toBytes(getName());
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
           byte[] b = new byte[] { (byte) d, (byte) e };
-          writer.append(new KeyValue(b, fam, qf, now, b));
+          writer.append(new KeyValue(b, fam, qualifier, now, b));
         }
       }
     } finally {

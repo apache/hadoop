@@ -158,8 +158,9 @@ public class TestMemStore extends TestCase {
 
   /**
    * A simple test which verifies the 3 possible states when scanning across snapshot.
+   * @throws IOException 
    */
-  public void testScanAcrossSnapshot2() {
+  public void testScanAcrossSnapshot2() throws IOException {
     // we are going to the scanning across snapshot with two kvs
     // kv1 should always be returned before kv2
     final byte[] one = Bytes.toBytes(1);
@@ -188,7 +189,8 @@ public class TestMemStore extends TestCase {
     verifyScanAcrossSnapshot2(kv1, kv2);
   }
 
-  private void verifyScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2) {
+  private void verifyScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2)
+      throws IOException {
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
     assertEquals(1, memstorescanners.size());
@@ -199,7 +201,8 @@ public class TestMemStore extends TestCase {
     assertNull(scanner.next());
   }
 
-  private void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected) {
+  private void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)
+      throws IOException {
     scanner.seek(KeyValue.createFirstOnRow(new byte[]{}));
     for (KeyValue kv : expected) {
       assertTrue(0 ==
@@ -209,7 +212,7 @@ public class TestMemStore extends TestCase {
     assertNull(scanner.peek());
   }
 
-  public void testMemstoreConcurrentControl() {
+  public void testMemstoreConcurrentControl() throws IOException {
     final byte[] row = Bytes.toBytes(1);
     final byte[] f = Bytes.toBytes("family");
     final byte[] q1 = Bytes.toBytes("q1");
@@ -250,7 +253,6 @@ public class TestMemStore extends TestCase {
   }
 
   private static class ReadOwnWritesTester extends Thread {
-    final int id;
     static final int NUM_TRIES = 1000;
 
     final byte[] row;
@@ -269,7 +271,6 @@ public class TestMemStore extends TestCase {
                                ReadWriteConsistencyControl rwcc,
                                AtomicReference<Throwable> caughtException)
     {
-      this.id = id;
       this.rwcc = rwcc;
       this.memstore = memstore;
       this.caughtException = caughtException;
@@ -284,7 +285,7 @@ public class TestMemStore extends TestCase {
       }
     }
 
-    private void internalRun() {
+    private void internalRun() throws IOException {
       for (long i = 0; i < NUM_TRIES && caughtException.get() == null; i++) {
         ReadWriteConsistencyControl.WriteEntry w =
           rwcc.beginMemstoreInsert();
@@ -855,7 +856,7 @@ public class TestMemStore extends TestCase {
   }
 
 
-  static void doScan(MemStore ms, int iteration) {
+  static void doScan(MemStore ms, int iteration) throws IOException {
     long nanos = System.nanoTime();
     KeyValueScanner s = ms.getScanners().get(0);
     s.seek(KeyValue.createFirstOnRow(new byte[]{}));
@@ -868,7 +869,7 @@ public class TestMemStore extends TestCase {
 
   }
 
-  public static void main(String [] args) {
+  public static void main(String [] args) throws IOException {
     ReadWriteConsistencyControl rwcc = new ReadWriteConsistencyControl();
     MemStore ms = new MemStore();
 

@@ -36,7 +36,8 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
   private KeyValueHeap heap;
   private KeyValue.KVComparator comparator;
 
-  MinorCompactingStoreScanner(Store store, List<? extends KeyValueScanner> scanners) {
+  MinorCompactingStoreScanner(Store store, List<? extends KeyValueScanner> scanners)
+      throws IOException {
     comparator = store.comparator;
     KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
     for (KeyValueScanner scanner : scanners ) {
@@ -46,7 +47,8 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
   }
 
   MinorCompactingStoreScanner(String cfName, KeyValue.KVComparator comparator,
-                              List<? extends KeyValueScanner> scanners) {
+                              List<? extends KeyValueScanner> scanners)
+      throws IOException {
     this.comparator = comparator;
 
     KeyValue firstKv = KeyValue.createFirstOnRow(HConstants.EMPTY_START_ROW);
@@ -61,7 +63,7 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
     return heap.peek();
   }
 
-  public KeyValue next() {
+  public KeyValue next() throws IOException {
     return heap.next();
   }
 

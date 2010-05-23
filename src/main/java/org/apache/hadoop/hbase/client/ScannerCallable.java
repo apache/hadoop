@@ -80,15 +80,15 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         if (e instanceof RemoteException) {
           ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
         }
-        if (ioe != null) {
-          if (ioe instanceof NotServingRegionException) {
+        if (ioe == null) throw new IOException(e);
+        if (ioe instanceof NotServingRegionException) {
           // Throw a DNRE so that we break out of cycle of calling NSRE
           // when what we need is to open scanner against new location.
           // Attach NSRE to signal client that it needs to resetup scanner.
           throw new DoNotRetryIOException("Reset scanner", ioe);
-          } else if (ioe instanceof DoNotRetryIOException) {
-            throw ioe;
-          }
+        } else {
+          // The outer layers will retry
+          throw ioe;
         }
       }
       return rrs;

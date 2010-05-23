@@ -1304,9 +1304,10 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Return a scanner for both the memstore and the HStore files
+   * @throws IOException 
    */
   protected KeyValueScanner getScanner(Scan scan,
-      final NavigableSet<byte []> targetCols) {
+      final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
       return new StoreScanner(this, scan, targetCols);

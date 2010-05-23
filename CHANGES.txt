@@ -350,6 +350,7 @@ Release 0.21.0 - Unreleased
                deploy at / instead of at /webapps/master/master.jsp
    HBASE-2590  Failed parse of branch element in saveVersion.sh
    HBASE-2591  HBASE-2587 hardcoded the port that dfscluster runs on
+   HBASE-2519  StoreFileScanner.seek swallows IOEs (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
