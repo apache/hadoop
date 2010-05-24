@@ -2134,9 +2134,11 @@ public class TestHRegion extends HBaseTestCase {
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
+    putThread.waitForFirstPut();
+    
     FlushThread flushThread = new FlushThread();
     flushThread.start();
-
+    
     Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
 //    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
 //      new BinaryComparator(Bytes.toBytes("row0"))));
@@ -2183,6 +2185,8 @@ public class TestHRegion extends HBaseTestCase {
 
   protected class PutThread extends Thread {
     private volatile boolean done;
+    private volatile int numPutsFinished = 0;
+    
     private Throwable error = null;
     private int numRows;
     private byte[][] families;
@@ -2193,6 +2197,17 @@ public class TestHRegion extends HBaseTestCase {
       this.numRows = numRows;
       this.families = families;
       this.qualifiers = qualifiers;
+    }
+
+    /**
+     * Block until this thread has put at least one row.
+     */
+    public void waitForFirstPut() throws InterruptedException {
+      // wait until put thread actually puts some data
+      while (numPutsFinished == 0) {
+        checkNoError();
+        Thread.sleep(50);
+      }
     }
 
     public void done() {
@@ -2211,7 +2226,6 @@ public class TestHRegion extends HBaseTestCase {
     @Override
     public void run() {
       done = false;
-      int val = 0;
       while (!done) {
         try {
           for (int r = 0; r < numRows; r++) {
@@ -2219,18 +2233,19 @@ public class TestHRegion extends HBaseTestCase {
             Put put = new Put(row);
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
-                put.add(family, qualifier, (long) val,
-                    Bytes.toBytes(val));
+                put.add(family, qualifier, (long) numPutsFinished,
+                    Bytes.toBytes(numPutsFinished));
               }
             }
 //            System.out.println("Putting of kvsetsize=" + put.size());
             region.put(put);
-            if (val > 0 && val % 47 == 0) {
-              System.out.println("put iteration = " + val);
-              Delete delete = new Delete(row, (long)val-30, null);
+            numPutsFinished++;
+            if (numPutsFinished > 0 && numPutsFinished % 47 == 0) {
+              System.out.println("put iteration = " + numPutsFinished);
+              Delete delete = new Delete(row, (long)numPutsFinished-30, null);
               region.delete(delete, null, true);
             }
-            val++;
+            numPutsFinished++;
           }
         } catch (IOException e) {
           LOG.error("error while putting records", e);
@@ -2274,6 +2289,8 @@ public class TestHRegion extends HBaseTestCase {
     initHRegion(tableName, method, families);
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
+    putThread.waitForFirstPut();
+    
     FlushThread flushThread = new FlushThread();
     flushThread.start();
 

@@ -353,6 +353,8 @@ Release 0.21.0 - Unreleased
    HBASE-2519  StoreFileScanner.seek swallows IOEs (Todd Lipcon via Stack)
    HBASE-2516  Ugly IOE when region is being closed; rather, should NSRE
                (Daniel Ploeg via Stack)
+   HBASE-2589  TestHRegion.testWritesWhileScanning flaky on trunk
+               (Todd Lipcon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
