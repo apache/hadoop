@@ -355,6 +355,8 @@ Release 0.21.0 - Unreleased
                (Daniel Ploeg via Stack)
    HBASE-2589  TestHRegion.testWritesWhileScanning flaky on trunk
                (Todd Lipcon via Stack)
+   HBASE-2590  Failed parse of branch element in saveVersion.sh
+               (Benoît Sigoure via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
