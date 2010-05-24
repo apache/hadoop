@@ -20,6 +20,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only 
+    if security is enabled. (jnp via boryas)
+
     HDFS-1044. Cannot submit mapreduce job from secure client to 
     unsecure sever (boryas)
 

@@ -297,7 +297,7 @@ class NamenodeJspHelper {
 
   static String getDelegationToken(final NameNode nn, final String user
                                    ) throws IOException, InterruptedException {
-    if (user == null) {
+    if (!UserGroupInformation.isSecurityEnabled() ||  user == null) {
       return null;
     }
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
