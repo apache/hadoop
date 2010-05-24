@@ -597,8 +597,16 @@ public class Client {
         LOG.debug(getName() + ": starting, having connections " 
             + connections.size());
 
-      while (waitForWork()) {//wait here for work - read or close connection
-        receiveResponse();
+      try {
+        while (waitForWork()) {//wait here for work - read or close connection
+          receiveResponse();
+        }
+      } catch (Throwable t) {
+        // This truly is unexpected, since we catch IOException in receiveResponse
+        // -- this is only to be really sure that we don't leave a client hanging
+        // forever.
+        LOG.warn("Unexpected error reading responses on connection " + this, t);
+        markClosed(new IOException("Error reading responses", t));
       }
       
       close();
