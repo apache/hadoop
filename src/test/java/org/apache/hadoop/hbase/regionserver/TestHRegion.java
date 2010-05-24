@@ -1135,6 +1135,36 @@ public class TestHRegion extends HBaseTestCase {
         ((RegionScanner)is).storeHeap.getHeap().size());
   }
 
+  /**
+   * This method tests https://issues.apache.org/jira/browse/HBASE-2516.
+   */
+  public void testGetScanner_WithRegionClosed() {
+    byte[] tableName = Bytes.toBytes("testtable");
+    byte[] fam1 = Bytes.toBytes("fam1");
+    byte[] fam2 = Bytes.toBytes("fam2");
+
+    byte[][] families = {fam1, fam2};
+
+    //Setting up region
+    String method = this.getName();
+    try {
+      initHRegion(tableName, method, families);
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Got IOException during initHRegion, " + e.getMessage());
+    }
+    region.closed.set(true);
+    try {
+      region.getScanner(null);
+      fail("Expected to get an exception during getScanner on a region that is closed");
+    } catch (org.apache.hadoop.hbase.NotServingRegionException e) {
+      //this is the correct exception that is expected
+    } catch (IOException e) {
+      fail("Got wrong type of exception - should be a NotServingRegionException, but was an IOException: "
+              + e.getMessage());
+    }
+  }
+
   public void testRegionScanner_Next() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");

@@ -1192,7 +1192,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     newScannerLock.readLock().lock();
     try {
       if (this.closed.get()) {
-        throw new IOException("Region " + this + " closed");
+        throw new NotServingRegionException("Region " + this + " closed");
       }
       // Verify families are all valid
       if(scan.hasFamilies()) {

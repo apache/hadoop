@@ -351,6 +351,8 @@ Release 0.21.0 - Unreleased
    HBASE-2590  Failed parse of branch element in saveVersion.sh
    HBASE-2591  HBASE-2587 hardcoded the port that dfscluster runs on
    HBASE-2519  StoreFileScanner.seek swallows IOEs (Todd Lipcon via Stack)
+   HBASE-2516  Ugly IOE when region is being closed; rather, should NSRE
+               (Daniel Ploeg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
