@@ -336,6 +336,9 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-6777. Implement a functionality for suspend and resume a process.
+    (Vinay Thota via cos)
+
     HADOOP-6772. Utilities for system tests specific. (Vinay Thota via cos)
 
     HADOOP-6771. Herriot's artifact id for Maven deployment should be set to
