@@ -134,15 +134,19 @@ while (result = scanner.next())
   bytes = result.getValue(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER)
   hri = Writables.getHRegionInfo(bytes)
   if oldHRI
-    unless Bytes.equals(oldHRI.getEndKey(), hri.getStartKey())
-      LOG.warn("hole after " + hri.toString())
+    if oldHRI.isOffline() && Bytes.equals(oldHRI.getStartKey(), hri.getStartKey())
+      # Presume offlined parent
+    elsif Bytes.equals(oldHRI.getEndKey(), hri.getStartKey())
+      # Start key of next matches end key of previous
+    else
+      LOG.warn("hole after " + oldHRI.toString())
       if fixup
         bad = 1 unless fixup(oldHRI, hri, metatable, fs, rootdir)
       else
         bad = 1
       end
     end
-  end
+  end 
   oldHRI = hri
 end
 scanner.close()
