@@ -122,6 +122,14 @@
       <organization>StumbleUpon</organization>
       <organizationUrl>http://www.stumbleupon.com/</organizationUrl>
     </developer>
+    <developer>
+      <id>todd</id>
+      <name>Todd Lipcon</name>
+      <email>todd@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
