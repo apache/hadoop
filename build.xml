@@ -1217,7 +1217,8 @@
      </artifact:install>
   </target>
 
-  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version"
+  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version,
+    -mvn-system-deploy"
      description="To deploy hadoop core and test jar's to apache snapshot's repository">
      <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
      <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
@@ -1238,14 +1239,18 @@
   <target name="set-version">
     <delete file="${basedir}/ivy/hadoop-core.xml"/>
     <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-core-${herriot.suffix}.xml"/>
     <copy file="${basedir}/ivy/hadoop-core-template.xml" tofile="${basedir}/ivy/hadoop-core.xml"/>
     <copy file="${basedir}/ivy/hadoop-core-test-template.xml" tofile="${basedir}/ivy/hadoop-core-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-core-${herriot.suffix}-template.xml"
+      tofile="${basedir}/ivy/hadoop-core-${herriot.suffix}.xml"/>
     <replaceregexp byline="true">
       <regexp pattern="@version"/>
       <substitution expression="${version}"/>
       <fileset dir="${basedir}/ivy">
         <include name="hadoop-core.xml"/>
         <include name="hadoop-core-test.xml"/>
+        <include name="hadoop-core-${herriot.suffix}.xml"/>
       </fileset>
     </replaceregexp>
   </target>
@@ -1281,6 +1286,7 @@
     <delete dir="${build.dir}"/>
     <delete file="${basedir}/ivy/hadoop-core.xml"/>
     <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-core-${herriot.suffix}.xml"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
   </target>

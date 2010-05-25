@@ -336,6 +336,9 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-6771. Herriot's artifact id for Maven deployment should be set to
+    hadoop-core-instrumented (cos)
+
     HADOOP-6752. Remote cluster control functionality needs JavaDocs
     improvement (Balaji Rajagopalan via cos).
 
