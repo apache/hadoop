@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1132. Refactor TestFileStatus (Eli Collins via cos)
+
     HDFS-1163. normalize property names for JT/NN kerberos principal 
     names in configuration (from HADOOP 6633) (boryas)
 
