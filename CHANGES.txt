@@ -937,6 +937,8 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6773. Ivy folder contains redundant files (cos)
+
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
     (Rodrigo Schmidt via zshao)
 
