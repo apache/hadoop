@@ -357,6 +357,8 @@ Release 0.21.0 - Unreleased
                (Todd Lipcon via Stack)
    HBASE-2590  Failed parse of branch element in saveVersion.sh
                (Benoît Sigoure via Stack)
+   HBASE-2586  Move hbase webapps to a hbase-webapps dir (Todd Lipcon via
+               Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

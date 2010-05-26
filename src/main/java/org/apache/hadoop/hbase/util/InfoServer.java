@@ -34,13 +34,13 @@ import java.util.Map;
  * is to serve up status information for the server.
  * There are three contexts:
  *   "/stacks/" -> points to stack trace
- *   "/static/" -> points to common static files (src/webapps/static)
- *   "/" -> the jsp server code from (src/webapps/<name>)
+ *   "/static/" -> points to common static files (src/hbase-webapps/static)
+ *   "/" -> the jsp server code from (src/hbase-webapps/<name>)
  */
 public class InfoServer extends HttpServer {
   /**
    * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/<code>name<code>.
+   * The jsp scripts are taken from src/hbase-webapps/<code>name<code>.
    * @param name The name of the server
    * @param bindAddress address to bind to
    * @param port The port to use on the server
@@ -103,7 +103,7 @@ public class InfoServer extends HttpServer {
   throws IOException {
     URL url = InfoServer.class.getClassLoader().getResource(path);
     if (url == null)
-      throw new IOException("webapps not found in CLASSPATH: " + path);
+      throw new IOException("hbase-webapps not found in CLASSPATH: " + path);
     return url.toString();
   }
 
@@ -116,7 +116,7 @@ public class InfoServer extends HttpServer {
   public static String getWebAppDir(final String webappName)
   throws IOException {
     String webappDir;
-    webappDir = getWebAppsPath("webapps/" + webappName);
+    webappDir = getWebAppsPath("hbase-webapps/" + webappName);
     return webappDir;
   }
 }

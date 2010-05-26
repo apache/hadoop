@@ -34,8 +34,8 @@
       </includes>
     </fileSet>
     <fileSet>
-      <directory>target/classes/webapps</directory>
-      <outputDirectory>webapps</outputDirectory>
+      <directory>target/classes/hbase-webapps</directory>
+      <outputDirectory>hbase-webapps</outputDirectory>
       <excludes>
         <exclude>**/*.jsp</exclude>
       </excludes>
