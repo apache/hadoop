@@ -54,8 +54,6 @@ import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
-import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -65,11 +63,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.PureJavaCrc32;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 
 /****************************************************************
  * DFSOutputStream creates files from a stream of bytes.
@@ -272,7 +273,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   class DataStreamer extends Daemon {
     private volatile boolean streamerClosed = false;
     private Block block; // its length is number of bytes acked
-    private BlockAccessToken accessToken;
+    private Token<BlockTokenIdentifier> accessToken;
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
     private ResponseProcessor response = null;
@@ -302,7 +303,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       stage = BlockConstructionStage.PIPELINE_SETUP_APPEND;
       block = lastBlock.getBlock();
       bytesSent = block.getNumBytes();
-      accessToken = lastBlock.getAccessToken();
+      accessToken = lastBlock.getBlockToken();
       long usedInLastBlock = stat.getLen() % blockSize;
       int freeInLastBlock = (int)(blockSize - usedInLastBlock);
 
@@ -773,7 +774,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         // get a new generation stamp and an access token
         LocatedBlock lb = dfsClient.namenode.updateBlockForPipeline(block, dfsClient.clientName);
         newGS = lb.getBlock().getGenerationStamp();
-        accessToken = lb.getAccessToken();
+        accessToken = lb.getBlockToken();
         
         // set up the pipeline again with the remaining nodes
         success = createBlockOutputStream(nodes, newGS, isRecovery);
@@ -813,7 +814,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         lb = locateFollowingBlock(startTime, w.length > 0 ? w : null);
         block = lb.getBlock();
         block.setNumBytes(0);
-        accessToken = lb.getAccessToken();
+        accessToken = lb.getBlockToken();
         nodes = lb.getLocations();
 
         //
@@ -884,7 +885,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         firstBadLink = Text.readString(blockReplyStream);
         if (pipelineStatus != SUCCESS) {
           if (pipelineStatus == ERROR_ACCESS_TOKEN) {
-            throw new InvalidAccessTokenException(
+            throw new InvalidBlockTokenException(
                 "Got access token error for connect ack with firstBadLink as "
                     + firstBadLink);
           } else {
@@ -977,7 +978,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       return nodes;
     }
 
-    BlockAccessToken getAccessToken() {
+    Token<BlockTokenIdentifier> getBlockToken() {
       return accessToken;
     }
 
@@ -1455,8 +1456,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   /**
    * Returns the access token currently used by streamer, for testing only
    */
-  BlockAccessToken getAccessToken() {
-    return streamer.getAccessToken();
+  Token<BlockTokenIdentifier> getBlockToken() {
+    return streamer.getBlockToken();
   }
 
 }

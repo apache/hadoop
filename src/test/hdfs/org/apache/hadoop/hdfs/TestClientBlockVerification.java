@@ -92,7 +92,7 @@ public class TestClientBlockVerification {
 
     return BlockReader.newBlockReader(
       s, targetAddr.toString()+ ":" + block.getBlockId(), block.getBlockId(),
-      testBlock.getAccessToken(), block.getGenerationStamp(),
+      testBlock.getBlockToken(), block.getGenerationStamp(),
       offset, lenToRead,
       conf.getInt("io.file.buffer.size", 4096));
   }

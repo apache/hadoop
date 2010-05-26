@@ -42,9 +42,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for HDFS tests */
@@ -262,8 +263,9 @@ public class DFSTestUtil {
     return ((DFSClient.DFSDataInputStream) in).getAllBlocks();
   }
 
-  public static BlockAccessToken getAccessToken(FSDataOutputStream out) {
-    return ((DFSOutputStream) out.getWrappedStream()).getAccessToken();
+  public static Token<BlockTokenIdentifier> getBlockToken(
+      FSDataOutputStream out) {
+    return ((DFSOutputStream) out.getWrappedStream()).getBlockToken();
   }
 
   static void setLogLevel2All(org.apache.commons.logging.Log log) {

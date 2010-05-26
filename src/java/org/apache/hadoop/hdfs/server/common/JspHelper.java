@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
@@ -107,13 +107,10 @@ public class JspHelper {
     return chosenNode;
   }
 
-  public static void streamBlockInAscii(InetSocketAddress addr, long blockId, 
-                                 BlockAccessToken accessToken, long genStamp, 
-                                 long blockSize, 
-                                 long offsetIntoBlock, long chunkSizeToView, 
-                                 JspWriter out,
-                                 Configuration conf) 
-    throws IOException {
+  public static void streamBlockInAscii(InetSocketAddress addr, long blockId,
+      Token<BlockTokenIdentifier> blockToken, long genStamp, long blockSize,
+      long offsetIntoBlock, long chunkSizeToView, JspWriter out,
+      Configuration conf) throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = new Socket();
     s.connect(addr, HdfsConstants.READ_TIMEOUT);
@@ -124,7 +121,7 @@ public class JspHelper {
       // Use the block name for file name. 
       BlockReader blockReader = 
         BlockReader.newBlockReader(s, addr.toString() + ":" + blockId,
-                                             blockId, accessToken, genStamp ,offsetIntoBlock, 
+                                             blockId, blockToken, genStamp ,offsetIntoBlock, 
                                              amtToRead, 
                                              conf.getInt("io.file.buffer.size",
                                                          4096));

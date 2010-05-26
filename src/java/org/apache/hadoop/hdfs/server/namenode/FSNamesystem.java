@@ -23,8 +23,8 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.security.AccessTokenHandler;
-import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -164,10 +164,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private FSNamesystemMetrics myFSMetrics;
   private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
   private int totalLoad = 0;
-  boolean isAccessTokenEnabled;
-  AccessTokenHandler accessTokenHandler;
-  private long accessKeyUpdateInterval;
-  private long accessTokenLifetime;
+  boolean isBlockTokenEnabled;
+  BlockTokenSecretManager blockTokenSecretManager;
+  private long blockKeyUpdateInterval;
+  private long blockTokenLifetime;
   
   // Scan interval is not configurable.
   private final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL = 3600000; // 1 hour
@@ -301,9 +301,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     this.safeMode = new SafeModeInfo(conf);
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                         conf.get("dfs.hosts.exclude",""));
-    if (isAccessTokenEnabled) {
-      accessTokenHandler = new AccessTokenHandler(true,
-          accessKeyUpdateInterval, accessTokenLifetime);
+    if (isBlockTokenEnabled) {
+      blockTokenSecretManager = new BlockTokenSecretManager(true,
+          blockKeyUpdateInterval, blockTokenLifetime);
     }
   }
 
@@ -455,20 +455,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     this.accessTimePrecision = conf.getLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
     this.supportAppends = conf.getBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
                                       DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
-    this.isAccessTokenEnabled = conf.getBoolean(
+    this.isBlockTokenEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT);
-    if (isAccessTokenEnabled) {
-      this.accessKeyUpdateInterval = conf.getLong(
+    if (isBlockTokenEnabled) {
+      this.blockKeyUpdateInterval = conf.getLong(
           DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY, 
           DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_DEFAULT) * 60 * 1000L; // 10 hrs
-      this.accessTokenLifetime = conf.getLong(
+      this.blockTokenLifetime = conf.getLong(
           DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
           DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT) * 60 * 1000L; // 10 hrs
     }
-    LOG.info("isAccessTokenEnabled=" + isAccessTokenEnabled
-        + " accessKeyUpdateInterval=" + accessKeyUpdateInterval / (60 * 1000)
-        + " min(s), accessTokenLifetime=" + accessTokenLifetime / (60 * 1000)
+    LOG.info("isBlockTokenEnabled=" + isBlockTokenEnabled
+        + " blockKeyUpdateInterval=" + blockKeyUpdateInterval / (60 * 1000)
+        + " min(s), blockTokenLifetime=" + blockTokenLifetime / (60 * 1000)
         + " min(s)");
   }
 
@@ -632,9 +632,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * 
    * @return current access keys
    */
-  ExportedAccessKeys getAccessKeys() {
-    return isAccessTokenEnabled ? accessTokenHandler.exportKeys()
-        : ExportedAccessKeys.DUMMY_KEYS;
+  ExportedBlockKeys getBlockKeys() {
+    return isBlockTokenEnabled ? blockTokenSecretManager.exportKeys()
+        : ExportedBlockKeys.DUMMY_KEYS;
   }
 
   /**
@@ -802,9 +802,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   LocatedBlock createLocatedBlock(final Block b, final DatanodeInfo[] locations,
       final long offset, final boolean corrupt) throws IOException {
     final LocatedBlock lb = new LocatedBlock(b, locations, offset, corrupt);
-    if (isAccessTokenEnabled) {
-      lb.setAccessToken(accessTokenHandler.generateToken(b.getBlockId(),
-          EnumSet.of(AccessTokenHandler.AccessMode.READ)));
+    if (isBlockTokenEnabled) {
+      lb.setBlockToken(blockTokenSecretManager.generateToken(b,
+          EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
     }
     return lb;
   }
@@ -1364,9 +1364,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
           lb = new LocatedBlock(lastBlock, targets, 
                                 fileLength-lastBlock.getNumBytes());
-          if (isAccessTokenEnabled) {
-            lb.setAccessToken(accessTokenHandler.generateToken(lb.getBlock()
-                .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
+          if (isBlockTokenEnabled) {
+            lb.setBlockToken(blockTokenSecretManager.generateToken(lb.getBlock(), 
+                EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
           }
 
           // Remove block from replication queue.
@@ -1482,9 +1482,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         
     // Create next block
     LocatedBlock b = new LocatedBlock(newBlock, targets, fileLength);
-    if (isAccessTokenEnabled) {
-      b.setAccessToken(accessTokenHandler.generateToken(b.getBlock()
-          .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
+    if (isBlockTokenEnabled) {
+      b.setBlockToken(blockTokenSecretManager.generateToken(b.getBlock(), 
+          EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
     }
     return b;
   }
@@ -2310,7 +2310,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                       nodeReg.getInfoPort(),
                                       nodeReg.getIpcPort());
     nodeReg.updateRegInfo(dnReg);
-    nodeReg.exportedKeys = getAccessKeys();
+    nodeReg.exportedKeys = getBlockKeys();
       
     NameNode.stateChangeLog.info(
                                  "BLOCK* NameSystem.registerDatanode: "
@@ -2523,8 +2523,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           cmds.add(cmd);
         }
         // check access key update
-        if (isAccessTokenEnabled && nodeinfo.needKeyUpdate) {
-          cmds.add(new KeyUpdateCommand(accessTokenHandler.exportKeys()));
+        if (isBlockTokenEnabled && nodeinfo.needKeyUpdate) {
+          cmds.add(new KeyUpdateCommand(blockTokenSecretManager.exportKeys()));
           nodeinfo.needKeyUpdate = false;
         }
         if (!cmds.isEmpty()) {
@@ -2562,8 +2562,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * Update access keys.
    */
-  void updateAccessKey() throws IOException {
-    this.accessTokenHandler.updateKeys();
+  void updateBlockKey() throws IOException {
+    this.blockTokenSecretManager.updateKeys();
     synchronized (heartbeats) {
       for (DatanodeDescriptor nodeInfo : heartbeats) {
         nodeInfo.needKeyUpdate = true;
@@ -2572,11 +2572,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   /**
-   * Periodically calls heartbeatCheck() and updateAccessKey()
+   * Periodically calls heartbeatCheck() and updateBlockKey()
    */
   class HeartbeatMonitor implements Runnable {
     private long lastHeartbeatCheck;
-    private long lastAccessKeyUpdate;
+    private long lastBlockKeyUpdate;
     /**
      */
     public void run() {
@@ -2587,9 +2587,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
             heartbeatCheck();
             lastHeartbeatCheck = now;
           }
-          if (isAccessTokenEnabled && (lastAccessKeyUpdate + accessKeyUpdateInterval < now)) {
-            updateAccessKey();
-            lastAccessKeyUpdate = now;
+          if (isBlockTokenEnabled && (lastBlockKeyUpdate + blockKeyUpdateInterval < now)) {
+            updateBlockKey();
+            lastBlockKeyUpdate = now;
           }
         } catch (Exception e) {
           FSNamesystem.LOG.error(StringUtils.stringifyException(e));
@@ -4229,9 +4229,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     // get a new generation stamp and an access token
     block.setGenerationStamp(nextGenerationStamp());
     LocatedBlock locatedBlock = new LocatedBlock(block, new DatanodeInfo[0]);
-    if (isAccessTokenEnabled) {
-      locatedBlock.setAccessToken(accessTokenHandler.generateToken(
-          block.getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.WRITE)));
+    if (isBlockTokenEnabled) {
+      locatedBlock.setBlockToken(blockTokenSecretManager.generateToken(
+          block, EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
     }
     return locatedBlock;
   }

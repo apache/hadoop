@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -183,15 +184,20 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         rpcNamenode, methodNameToPolicyMap);
   }
 
-  static ClientDatanodeProtocol createClientDatanodeProtocolProxy (
-      DatanodeID datanodeid, Configuration conf) throws IOException {
+  static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
+      DatanodeID datanodeid, Configuration conf, LocatedBlock locatedBlock)
+      throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(
       datanodeid.getHost() + ":" + datanodeid.getIpcPort());
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
       ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
     }
+    UserGroupInformation ticket = UserGroupInformation
+        .createRemoteUser(locatedBlock.getBlock().toString());
+    ticket.addToken(locatedBlock.getBlockToken());
     return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
-        ClientDatanodeProtocol.versionID, addr, conf);
+        ClientDatanodeProtocol.versionID, addr, ticket, conf, NetUtils
+        .getDefaultSocketFactory(conf));
   }
         
   /**
@@ -946,7 +952,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           }
           // get block MD5
           DataTransferProtocol.Sender.opBlockChecksum(out, block.getBlockId(),
-              block.getGenerationStamp(), lb.getAccessToken());
+              block.getGenerationStamp(), lb.getBlockToken());
 
           final DataTransferProtocol.Status reply = DataTransferProtocol.Status.read(in);
           if (reply != SUCCESS) {

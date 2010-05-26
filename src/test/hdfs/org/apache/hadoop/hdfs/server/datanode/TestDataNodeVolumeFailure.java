@@ -249,7 +249,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
       BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
           block.getBlockId(), 
           block.getBlockId(), 
-          lblock.getAccessToken(),
+          lblock.getBlockToken(),
           block.getGenerationStamp(), 
           0, -1, 4096);
 

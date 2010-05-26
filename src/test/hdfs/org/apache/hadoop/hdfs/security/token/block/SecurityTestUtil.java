@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security;
+package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.IOException;
+
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.security.token.Token;
 
 /** Utilities for security tests */
 public class SecurityTestUtil {
@@ -27,15 +31,15 @@ public class SecurityTestUtil {
    * check if an access token is expired. return true when token is expired,
    * false otherwise
    */
-  public static boolean isAccessTokenExpired(BlockAccessToken token)
+  public static boolean isBlockTokenExpired(Token<BlockTokenIdentifier> token)
       throws IOException {
-    return AccessTokenHandler.isTokenExpired(token);
+    return BlockTokenSecretManager.isTokenExpired(token);
   }
 
   /**
    * set access token lifetime.
    */
-  public static void setAccessTokenLifetime(AccessTokenHandler handler,
+  public static void setBlockTokenLifetime(BlockTokenSecretManager handler,
       long tokenLifetime) {
     handler.setTokenLifetime(tokenLifetime);
   }

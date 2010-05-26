@@ -15,27 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol;
 
-import java.io.IOException;
+package org.apache.hadoop.hdfs.security.token.block;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSelector;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.security.token.TokenInfo;
+import javax.crypto.SecretKey;
 
-/** An client-datanode protocol for block recovery
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+
+/**
+ * Key used for generating and verifying block tokens
  */
-@TokenInfo(BlockTokenSelector.class)
-public interface ClientDatanodeProtocol extends VersionedProtocol {
-  public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
+public class BlockKey extends DelegationKey {
 
-  /**
-   * 6: recoverBlock() removed.
-   */
-  public static final long versionID = 6L;
+  public BlockKey() {
+    super();
+  }
 
-  /** Return the visible length of a replica. */
-  long getReplicaVisibleLength(Block b) throws IOException;
+  public BlockKey(int keyId, long expiryDate, SecretKey key) {
+    super(keyId, expiryDate, key);
+  }
 }

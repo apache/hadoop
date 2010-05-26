@@ -15,27 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol;
+
+package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSelector;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.security.token.TokenInfo;
-
-/** An client-datanode protocol for block recovery
+/**
+ * Access token verification failed.
  */
-@TokenInfo(BlockTokenSelector.class)
-public interface ClientDatanodeProtocol extends VersionedProtocol {
-  public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
+public class InvalidBlockTokenException extends IOException {
+  private static final long serialVersionUID = 168L;
 
-  /**
-   * 6: recoverBlock() removed.
-   */
-  public static final long versionID = 6L;
+  public InvalidBlockTokenException() {
+    super();
+  }
 
-  /** Return the visible length of a replica. */
-  long getReplicaVisibleLength(Block b) throws IOException;
+  public InvalidBlockTokenException(String msg) {
+    super(msg);
+  }
 }

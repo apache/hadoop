@@ -2,6 +2,11 @@ Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
 
+  NEW FEATURES
+
+    HDFS-992. Re-factor block access token implementation to conform to the 
+    generic Token interface in Common (Kan Zhang and Jitendra Pandey via jghoman)
+
   IMPROVEMENTS
 
     HDFS-1132. Refactor TestFileStatus (Eli Collins via cos)

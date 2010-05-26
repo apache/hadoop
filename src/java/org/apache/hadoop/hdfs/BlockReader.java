@@ -33,11 +33,12 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
-import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
 /** This is a wrapper around connection to datadone
@@ -353,26 +354,27 @@ public class BlockReader extends FSInputChecker {
     checksumSize = this.checksum.getChecksumSize();
   }
 
-  public static BlockReader newBlockReader(Socket sock, String file, long blockId, BlockAccessToken accessToken, 
-      long genStamp, long startOffset, long len, int bufferSize) throws IOException {
-    return newBlockReader(sock, file, blockId, accessToken, genStamp, startOffset, len, bufferSize,
+  public static BlockReader newBlockReader(Socket sock, String file,
+      long blockId, Token<BlockTokenIdentifier> blockToken, long genStamp,
+      long startOffset, long len, int bufferSize) throws IOException {
+    return newBlockReader(sock, file, blockId, blockToken, genStamp, startOffset, len, bufferSize,
         true);
   }
 
   /** Java Doc required */
   public static BlockReader newBlockReader( Socket sock, String file, long blockId, 
-                                     BlockAccessToken accessToken,
+                                     Token<BlockTokenIdentifier> blockToken,
                                      long genStamp,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum)
                                      throws IOException {
-    return newBlockReader(sock, file, blockId, accessToken, genStamp, startOffset,
+    return newBlockReader(sock, file, blockId, blockToken, genStamp, startOffset,
                           len, bufferSize, verifyChecksum, "");
   }
 
   public static BlockReader newBlockReader( Socket sock, String file,
                                      long blockId, 
-                                     BlockAccessToken accessToken,
+                                     Token<BlockTokenIdentifier> blockToken,
                                      long genStamp,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum,
@@ -382,7 +384,7 @@ public class BlockReader extends FSInputChecker {
     DataTransferProtocol.Sender.opReadBlock(
         new DataOutputStream(new BufferedOutputStream(
             NetUtils.getOutputStream(sock,HdfsConstants.WRITE_TIMEOUT))),
-        blockId, genStamp, startOffset, len, clientName, accessToken);
+        blockId, genStamp, startOffset, len, clientName, blockToken);
     
     //
     // Get bytes in block, set streams
@@ -395,7 +397,7 @@ public class BlockReader extends FSInputChecker {
     DataTransferProtocol.Status status = DataTransferProtocol.Status.read(in);
     if (status != SUCCESS) {
       if (status == ERROR_ACCESS_TOKEN) {
-        throw new InvalidAccessTokenException(
+        throw new InvalidBlockTokenException(
             "Got access token error for OP_READ_BLOCK, self="
                 + sock.getLocalSocketAddress() + ", remote="
                 + sock.getRemoteSocketAddress() + ", for file " + file
