@@ -45,8 +45,8 @@ public class ValueFilter extends CompareFilter {
 
   /**
    * Constructor.
-   * @param valueCompareOp the compare op for column qualifier matching
-   * @param valueComparator the comparator for column qualifier matching
+   * @param valueCompareOp the compare op for value matching
+   * @param valueComparator the comparator for value matching
    */
   public ValueFilter(final CompareOp valueCompareOp,
       final WritableByteArrayComparable valueComparator) {
