@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 
 import org.apache.avro.ipc.AvroRemoteException;
-import org.apache.avro.util.Utf8;
 
 /** Unit tests for AvroRpc. */
 public class TestAvroRpc extends TestCase {
@@ -50,7 +49,7 @@ public class TestAvroRpc extends TestCase {
 
     public void ping() {}
     
-    public Utf8 echo(Utf8 value) { return value; }
+    public String echo(String value) { return value; }
 
     public int add(int v1, int v2) { return v1 + v2; }
 
@@ -74,8 +73,8 @@ public class TestAvroRpc extends TestCase {
       
       proxy.ping();
 
-      Utf8 utf8Result = proxy.echo(new Utf8("hello world"));
-      assertEquals(new Utf8("hello world"), utf8Result);
+      String echo = proxy.echo("hello world");
+      assertEquals("hello world", echo);
 
       int intResult = proxy.add(1, 2);
       assertEquals(3, intResult);

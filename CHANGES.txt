@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  NEW FEATURES
+   HADOOP-6581. Add authenticated TokenIdentifiers to UGI so that 
+   they can be used for authorization (Kan Zhang and Jitendra Pandey 
+   via jghoman)
+
   IMPROVEMENTS
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
     - should use common naming convention (boryas)

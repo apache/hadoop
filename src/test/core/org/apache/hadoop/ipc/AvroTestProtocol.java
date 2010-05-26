@@ -19,7 +19,6 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.avro.ipc.AvroRemoteException;
-import org.apache.avro.util.Utf8;
 
 @SuppressWarnings("serial")
 public interface AvroTestProtocol {
@@ -27,7 +26,7 @@ public interface AvroTestProtocol {
     public Problem() {}
   }
   void ping();
-  Utf8 echo(Utf8 value);
+  String echo(String value);
   int add(int v1, int v2);
   int error() throws Problem;
 }
