@@ -359,6 +359,7 @@ Release 0.21.0 - Unreleased
                (Benoît Sigoure via Stack)
    HBASE-2586  Move hbase webapps to a hbase-webapps dir (Todd Lipcon via
                Andrew Purtell)
+   HBASE-2610  ValueFilter copy pasted javadoc from QualifierFilter
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
