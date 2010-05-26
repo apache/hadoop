@@ -144,7 +144,7 @@ public class TestLocalFileSystemPermission extends TestCase {
 
   static List<String> getGroups() throws IOException {
     List<String> a = new ArrayList<String>();
-    String s = Shell.execCommand(Shell.getGROUPS_COMMAND());
+    String s = Shell.execCommand(Shell.getGroupsCommand());
     for(StringTokenizer t = new StringTokenizer(s); t.hasMoreTokens(); ) {
       a.add(t.nextToken());
     }

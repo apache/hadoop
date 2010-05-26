@@ -44,11 +44,11 @@ abstract public class Shell {
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
   /** a Unix command to get the current user's groups list */
-  public static String[] getGROUPS_COMMAND() {
+  public static String[] getGroupsCommand() {
     return new String[]{"bash", "-c", "groups"};
   }
   /** a Unix command to get a given user's groups list */
-  public static String[] getGROUPS_FOR_USER_COMMAND(final String user) {
+  public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
     return new String [] {"bash", "-c", "id -Gn " + user};
   }

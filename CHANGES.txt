@@ -3,6 +3,9 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   IMPROVEMENTS
+    HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
+    - should use common naming convention (boryas)
+
     HADOOP-6778. add isRunning() method to 
     AbstractDelegationTokenSecretManager (for HDFS-1044) (boryas)
 
