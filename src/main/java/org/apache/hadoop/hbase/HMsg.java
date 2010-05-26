@@ -38,8 +38,6 @@ public class HMsg implements Writable {
     new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
   public static final HMsg REGIONSERVER_STOP =
     new HMsg(Type.MSG_REGIONSERVER_STOP);
-  public static final HMsg CALL_SERVER_STARTUP =
-    new HMsg(Type.MSG_CALL_SERVER_STARTUP);
   public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
 
   /**
@@ -61,9 +59,6 @@ public class HMsg implements Writable {
 
     /** Compact the specified region */
     MSG_REGION_COMPACT,
-
-    /** Region server is unknown to master. Restart */
-    MSG_CALL_SERVER_STARTUP,
 
     /** Master tells region server to stop */
     MSG_REGIONSERVER_STOP,

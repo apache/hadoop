@@ -297,10 +297,10 @@ public class ServerManager implements HConstants {
     HServerInfo storedInfo = this.serversToServerInfo.get(info.getServerName());
     if (storedInfo == null) {
       LOG.warn("Received report from unknown server -- telling it " +
-        "to " + HMsg.CALL_SERVER_STARTUP + ": " + info.getServerName());
+        "to " + HMsg.REGIONSERVER_STOP + ": " + info.getServerName());
       // The HBaseMaster may have been restarted.
-      // Tell the RegionServer to start over and call regionServerStartup()
-      return new HMsg[] {HMsg.CALL_SERVER_STARTUP};
+      // Tell the RegionServer to abort!
+      return new HMsg[] {HMsg.REGIONSERVER_STOP};
     } else if (storedInfo.getStartCode() != info.getStartCode()) {
       // This state is reachable if:
       //

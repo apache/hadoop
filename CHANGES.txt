@@ -642,6 +642,7 @@ Release 0.21.0 - Unreleased
                was we had in 0.20
    HBASE-2538  Work on repository order in pom (adding fbmirror to top,
                ibiblio on bottom)
+   HBASE-2613  Remove the code around MSG_CALL_SERVER_STARTUP
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
