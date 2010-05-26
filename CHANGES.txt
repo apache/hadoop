@@ -28,8 +28,10 @@ Trunk (unreleased changes)
     (Patrick Angeles via cdouglas)
 
   BUG FIXES
+    HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
+    only in case the subject is loginUser or proxyUgi.realUser. (boryas)
 
-    HADOOP-6781. security audit log shouldn't have exception in it.
+    HADOOP-6781. security audit log shouldn't have exception in it. (boryas)
 
     HADOOP-6612.  Protocols RefreshUserToGroupMappingsProtocol and 
     RefreshAuthorizationPolicyProtocol will fail with security enabled (boryas)
