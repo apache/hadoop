@@ -29,6 +29,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HDFS-1038. Fix. Added test.
+
     HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only 
     if security is enabled. (jnp via boryas)
 
