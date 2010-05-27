@@ -360,6 +360,8 @@ Release 0.21.0 - Unreleased
    HBASE-2586  Move hbase webapps to a hbase-webapps dir (Todd Lipcon via
                Andrew Purtell)
    HBASE-2610  ValueFilter copy pasted javadoc from QualifierFilter
+   HBASE-2619  HBase shell 'alter' command cannot set table properties to False
+               (Christo Wilson via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
