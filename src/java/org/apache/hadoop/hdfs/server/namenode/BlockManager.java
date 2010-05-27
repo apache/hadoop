@@ -1687,11 +1687,6 @@ public class BlockManager {
     }
   }
   
-  float getLoadFactor() {
-    return blocksMap.getLoadFactor();
-  }
-  
-  
   /**
    * Return a range of corrupt replica block ids. Up to numExpectedBlocks 
    * blocks starting at the next block after startingBlockId are returned

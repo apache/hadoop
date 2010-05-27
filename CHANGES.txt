@@ -25,6 +25,8 @@ Trunk (unreleased changes)
 
     HDFS-1112. Edit log buffer should not grow unfoundedly. (hairong)
 
+    HDFS-1119. Introduce a GSet interface to BlocksMap.  (szetszwo)
+
   BUG FIXES
 
     HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only 
