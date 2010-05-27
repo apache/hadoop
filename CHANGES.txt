@@ -28,6 +28,7 @@ Trunk (unreleased changes)
     HDFS-1119. Introduce a GSet interface to BlocksMap.  (szetszwo)
 
   BUG FIXES
+    HDFS-1038. FIX. A test missed in a previous commit for this JIRA. (boryas)
 
     HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only 
     if security is enabled. (jnp via boryas)
