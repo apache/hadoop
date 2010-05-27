@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop-Core" default="compile" 
+<project name="Hadoop-Common" default="compile" 
    xmlns:ivy="antlib:org.apache.ivy.ant"
    xmlns:artifact="urn:maven-artifact-ant"> 
 
@@ -26,8 +26,8 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Hadoop-core"/>
-  <property name="name" value="hadoop-core"/>
+  <property name="Name" value="Hadoop-common"/>
+  <property name="name" value="hadoop-common"/>
   <property name="version" value="0.21.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
@@ -149,21 +149,21 @@
   <property name="build.ivy.report.dir" location="${build.ivy.dir}/report"/>
   <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven"/>
   <property name="pom.xml" location="${build.ivy.maven.dir}/pom.xml"/>
-  <property name="hadoop-core.pom" location="${ivy.dir}/hadoop-core.xml"/>
-  <property name="build.ivy.maven.core.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar"/>
-  <property name="hadoop-core-test.pom" location="${ivy.dir}/hadoop-core-test.xml" />
-  <property name="build.ivy.maven.core-test.jar" location="${build.ivy.maven.dir}/hadoop-core-test-${version}.jar"/>
+  <property name="hadoop-common.pom" location="${ivy.dir}/hadoop-common.xml"/>
+  <property name="build.ivy.maven.common.jar" location="${build.ivy.maven.dir}/hadoop-common-${version}.jar"/>
+  <property name="hadoop-common-test.pom" location="${ivy.dir}/hadoop-common-test.xml" />
+  <property name="build.ivy.maven.common-test.jar" location="${build.ivy.maven.dir}/hadoop-common-test-${version}.jar"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
-  <property name="ivy.module" location="hadoop-core" />
+  <property name="ivy.module" location="hadoop-common" />
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="[artifact]-[revision].[ext]"/>
-  <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
-  <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
-  <property name="hadoop-core-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
-  <property name="hadoop-core-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
+  <property name="hadoop-common.jar" location="${build.dir}/${final.name}.jar" />
+  <property name="hadoop-common-test.jar" location="${build.dir}/${test.final.name}.jar" />
+  <property name="hadoop-common-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
+  <property name="hadoop-common-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -406,11 +406,11 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Make hadoop-core.jar                                               -->
+  <!-- Make hadoop-common.jar                                               -->
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar" depends="compile-core" description="Make hadoop-core.jar">
+  <target name="jar" depends="compile-core" description="Make hadoop-common.jar">
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
@@ -428,7 +428,7 @@
       <fileset file="${jar.extra.properties.list}" />
     </jar>
 
-    <jar jarfile="${hadoop-core-sources.jar}">
+    <jar jarfile="${hadoop-common-sources.jar}">
       <fileset dir="${java.src.dir}" includes="org/apache/hadoop/**/*.java"/>
       <fileset dir="${build.src}" includes="org/apache/hadoop/**/*.java"/>
     </jar>
@@ -537,7 +537,7 @@
          </manifest>
     </jar>
 
-    <jar jarfile="${hadoop-core-test-sources.jar}">
+    <jar jarfile="${hadoop-common-test-sources.jar}">
       <fileset dir="${test.generated.dir}" includes="org/apache/hadoop/**/*.java"/>
       <fileset dir="${test.src.dir}/core" includes="org/apache/hadoop/**/*.java"/>
     </jar>
@@ -1202,55 +1202,54 @@
          classpathref="mvn-ant-task.classpath"/>
   </target>   
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,
-    -mvn-system-install,set-version"
-     description="To install hadoop core and test jars to local filesystem's m2 cache">
-     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
-     <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
-     <artifact:install file="${hadoop-core.jar}">
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+     description="To install hadoop common and test jars to local filesystem's m2 cache">
+     <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
+     <artifact:install file="${hadoop-common.jar}">
         <pom refid="hadoop.core"/>
-	<attach file="${hadoop-core-sources.jar}" classifier="sources" />
+	<attach file="${hadoop-common-sources.jar}" classifier="sources" />
      </artifact:install>
-     <artifact:install file="${hadoop-core-test.jar}">
+     <artifact:install file="${hadoop-common-test.jar}">
         <pom refid="hadoop.core.test"/>
-	<attach file="${hadoop-core-test-sources.jar}" classifier="sources" />
+	<attach file="${hadoop-common-test-sources.jar}" classifier="sources" />
      </artifact:install>
   </target>
 
   <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version,
     -mvn-system-deploy"
-     description="To deploy hadoop core and test jar's to apache snapshot's repository">
-     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
-     <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
+     description="To deploy hadoop common and test jar's to apache snapshot's repository">
+     <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
 
      <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
-     <artifact:deploy file="${hadoop-core.jar}">
+     <artifact:deploy file="${hadoop-common.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core"/>
-	<attach file="${hadoop-core-sources.jar}" classifier="sources" />
+	<attach file="${hadoop-common-sources.jar}" classifier="sources" />
      </artifact:deploy>
-     <artifact:deploy file="${hadoop-core-test.jar}">
+     <artifact:deploy file="${hadoop-common-test.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core.test"/>
-	<attach file="${hadoop-core-test-sources.jar}" classifier="sources" />
+	<attach file="${hadoop-common-test-sources.jar}" classifier="sources" />
      </artifact:deploy>
   </target>
   
   <target name="set-version">
-    <delete file="${basedir}/ivy/hadoop-core.xml"/>
-    <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
-    <delete file="${basedir}/ivy/hadoop-core-${herriot.suffix}.xml"/>
-    <copy file="${basedir}/ivy/hadoop-core-template.xml" tofile="${basedir}/ivy/hadoop-core.xml"/>
-    <copy file="${basedir}/ivy/hadoop-core-test-template.xml" tofile="${basedir}/ivy/hadoop-core-test.xml"/>
-    <copy file="${basedir}/ivy/hadoop-core-${herriot.suffix}-template.xml"
-      tofile="${basedir}/ivy/hadoop-core-${herriot.suffix}.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
+    <copy file="${basedir}/ivy/hadoop-common-template.xml" tofile="${basedir}/ivy/hadoop-common.xml"/>
+    <copy file="${basedir}/ivy/hadoop-common-test-template.xml" tofile="${basedir}/ivy/hadoop-common-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-common-${herriot.suffix}-template.xml"
+      tofile="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
     <replaceregexp byline="true">
       <regexp pattern="@version"/>
       <substitution expression="${version}"/>
       <fileset dir="${basedir}/ivy">
-        <include name="hadoop-core.xml"/>
-        <include name="hadoop-core-test.xml"/>
-        <include name="hadoop-core-${herriot.suffix}.xml"/>
+        <include name="hadoop-common.xml"/>
+        <include name="hadoop-common-test.xml"/>
+        <include name="hadoop-common-${herriot.suffix}.xml"/>
       </fileset>
     </replaceregexp>
   </target>
@@ -1284,9 +1283,9 @@
   <!-- ================================================================== -->
   <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
-    <delete file="${basedir}/ivy/hadoop-core.xml"/>
-    <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
-    <delete file="${basedir}/ivy/hadoop-core-${herriot.suffix}.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
   </target>
