@@ -1592,6 +1592,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6723.  Unchecked exceptions thrown in IPC Connection should not
     orphan clients.  (Todd Lipcon via tomwhite)
 
+    HADOOP-6404. Rename the generated artifacts to common instead of core.
+    (tomwhite)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

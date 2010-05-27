@@ -99,7 +99,7 @@ which will be used to configure the chosen Forrest skin.
   <trail>
     <link1 name="Apache" href="http://www.apache.org/"/>
     <link2 name="Hadoop" href="http://hadoop.apache.org/"/>
-    <link3 name="Core" href="http://hadoop.apache.org/core/"/>
+    <link3 name="Common" href="http://hadoop.apache.org/common/"/>
   </trail>
 
   <!-- Configure the TOC, i.e. the Table of Contents.

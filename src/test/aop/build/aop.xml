@@ -29,11 +29,11 @@
   <!-- Properties specifically for system fault-injections and system tests -->
 
   <property name="herriot.suffix" value="instrumented"/>
-  <property name="hadoop-core-instrumented.pom"
-            location="${ivy.dir}/hadoop-core-${herriot.suffix}.xml" />
-  <property name="hadoop-core-instrumented.jar"
+  <property name="hadoop-common-instrumented.pom"
+            location="${ivy.dir}/hadoop-common-${herriot.suffix}.xml" />
+  <property name="hadoop-common-instrumented.jar"
             location="${system-test-build-dir}/${final.name}-${herriot.suffix}.jar" />
-  <property name="hadoop-core-instrumented-sources.jar"
+  <property name="hadoop-common-instrumented-sources.jar"
             location="${system-test-build-dir}/${final.name}-${herriot.suffix}-sources.jar" />
 
   <!--All Fault Injection (FI) related targets are located in this session -->
@@ -120,7 +120,7 @@
   </target>
 
   <!-- =============================================================== -->
-  <!-- Create hadoop-{version}-dev-core.jar required to be deployed on -->
+  <!-- Create hadoop-{version}-dev-common.jar required to be deployed on -->
   <!-- cluster for system tests                                        -->
   <!-- =============================================================== -->
   <target name="jar-system"
@@ -252,22 +252,22 @@
 
   <!-- Maven -->
   <target name="-mvn-system-install" depends="mvn-taskdef, jar-system">
-    <artifact:pom file="${hadoop-core-instrumented.pom}" id="hadoop.core.${herriot.suffix}"/>
-    <artifact:install file="${hadoop-core-instrumented.jar}">
+    <artifact:pom file="${hadoop-common-instrumented.pom}" id="hadoop.core.${herriot.suffix}"/>
+    <artifact:install file="${hadoop-common-instrumented.jar}">
        <pom refid="hadoop.core.${herriot.suffix}"/>
-       <attach file="${hadoop-core-instrumented-sources.jar}" classifier="sources" />
+       <attach file="${hadoop-common-instrumented-sources.jar}" classifier="sources" />
     </artifact:install>
   </target>
 
   <target name="-mvn-system-deploy" depends="mvn-taskdef, jar-system">
-     <artifact:pom file="${hadoop-core-instrumented.pom}" 
+     <artifact:pom file="${hadoop-common-instrumented.pom}" 
                    id="hadoop.core.${herriot.suffix}"/>
 
      <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
-     <artifact:deploy file="${hadoop-core-instrumented.jar}">
+     <artifact:deploy file="${hadoop-common-instrumented.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core.${herriot.suffix}"/>
-	       <attach file="${hadoop-core-instrumented-sources.jar}" classifier="sources"/> 
+	       <attach file="${hadoop-common-instrumented-sources.jar}" classifier="sources"/> 
      </artifact:deploy>
   </target>
   <!-- End of Maven -->

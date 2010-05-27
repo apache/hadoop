@@ -20,7 +20,7 @@
     <license name="Apache 2.0"/>
     <ivyauthor name="Apache Hadoop Team" url="http://hadoop.apache.org"/>
     <description>
-        Hadoop Core
+        Hadoop Common
     </description>
   </info>
   <configurations defaultconfmapping="default">
