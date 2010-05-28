@@ -362,6 +362,8 @@ Release 0.21.0 - Unreleased
    HBASE-2610  ValueFilter copy pasted javadoc from QualifierFilter
    HBASE-2619  HBase shell 'alter' command cannot set table properties to False
                (Christo Wilson via Stack)
+   HBASE-2621  Fix bad link to HFile documentation in javadoc
+               (Jeff Hammerbacher via Todd Lipcon)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
