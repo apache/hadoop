@@ -55,7 +55,7 @@
   </publications>
   <dependencies>
     
-    <dependency org="org.apache.hadoop" name="hadoop-core" rev="${hadoop-core.version}" conf="common->default"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common" rev="${hadoop-common.version}" conf="common->default"/>
     <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="common->master"/>
     <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
     <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="common->default"/>
@@ -64,7 +64,7 @@
 
     <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" conf="test->master"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="${slf4j-log4j12.version}" conf="test->master"/>
-    <dependency org="org.apache.hadoop" name="hadoop-core-test" rev="${hadoop-core.version}" conf="test->default"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common-test" rev="${hadoop-common.version}" conf="test->default"/>
 
     <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}" conf="checkstyle->default"/>
 

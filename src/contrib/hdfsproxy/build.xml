@@ -126,7 +126,7 @@
               <include name="slf4j-log4j12-${slf4j-log4j12.version}.jar"/>
               <include name="xmlenc-${xmlenc.version}.jar"/>
               <include name="core-${core.vesion}.jar"/> 
-	      <include name="hadoop-core-${hadoop-version}.jar"/>
+	      <include name="hadoop-common-${hadoop-version}.jar"/>
 	    </lib>
 	    <classes dir="${proxy.conf.dir}">
 	    	<include name="hdfsproxy-default.xml"/>
@@ -153,7 +153,7 @@
         <include name="core-${core.vesion}.jar"/> 
 	    </lib>
 	    <lib dir="${hadoop.root}/lib">
-		<include name="hadoop-core-${hadoop-version}.jar"/>
+		<include name="hadoop-common-${hadoop-version}.jar"/>
 	    </lib>
 	    <classes dir="${proxy.conf.dir}">
 	    	<include name="hdfsproxy-default.xml"/>
@@ -179,7 +179,7 @@
               <include name="slf4j-log4j12-${slf4j-log4j12.version}.jar"/>
               <include name="xmlenc-${xmlenc.version}.jar"/>
               <include name="core-${core.vesion}.jar"/> 
-	      <include name="hadoop-core-${hadoop-version}.jar"/>
+	      <include name="hadoop-common-${hadoop-version}.jar"/>
 	    </lib>
 	    <classes dir="${proxy.conf.test}" excludes="**/*.template **/*.sh"/>
 	    <classes dir="${build.classes}"/>

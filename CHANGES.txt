@@ -548,6 +548,9 @@ Release 0.21.0 - Unreleased
     HDFS-853. The HDFS webUI displays the balanced-ness of the cluster.
     (Dmytro Molkov via dhruba)
 
+    HDFS-1126. Change HDFS to depend on Hadoop 'common' artifacts instead
+    of 'core'. (tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

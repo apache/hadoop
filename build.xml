@@ -200,7 +200,7 @@
     <pathelement path="${clover.jar}"/>
     <path refid="ivy-test.classpath"/>
     <fileset dir="${lib.dir}">
-      <include name="hadoop-core-test-${hadoop-core.version}.jar" />
+      <include name="hadoop-common-test-${hadoop-common.version}.jar" />
       <exclude name="**/excluded/" />
     </fileset>
     <path refid="classpath"/>
@@ -593,7 +593,7 @@
   <target name="test-contrib" depends="compile-hdfs-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
-       <property name="hadoop-version" value="${hadoop-core.version}"/>
+       <property name="hadoop-version" value="${hadoop-common.version}"/>
        <property name="clover.jar" value="${clover.jar}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 

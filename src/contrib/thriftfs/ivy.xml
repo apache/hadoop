@@ -25,8 +25,8 @@
   </publications>
   <dependencies>
     <dependency org="org.apache.hadoop"
-      name="hadoop-core"
-      rev="${hadoop-core.version}"
+      name="hadoop-common"
+      rev="${hadoop-common.version}"
       conf="common->default"/>
     <dependency org="commons-logging"
       name="commons-logging"
