@@ -65,9 +65,9 @@ import org.apache.hadoop.io.compress.Decompressor;
  * File format for hbase.
  * A file of sorted key/value pairs. Both keys and values are byte arrays.
  * <p>
- * The memory footprint of a HFile includes the following (below is taken from
+ * The memory footprint of a HFile includes the following (below is taken from the
  * <a
- * href=https://issues.apache.org/jira/browse/HADOOP-3315>Hadoop-3315 tfile</a>
+ * href=https://issues.apache.org/jira/browse/HADOOP-3315>TFile</a> documentation
  * but applies also to HFile):
  * <ul>
  * <li>Some constant overhead of reading or writing a compressed block.
@@ -107,7 +107,7 @@ import org.apache.hadoop.io.compress.Decompressor;
  * </ul>
  *
  * For more on the background behind HFile, see <a
- * href=https://issues.apache.org/jira/browse/HBASE-3315>HBASE-61</a>.
+ * href=https://issues.apache.org/jira/browse/HBASE-61>HBASE-61</a>.
  * <p>
  * File is made of data blocks followed by meta data blocks (if any), a fileinfo
  * block, data block index, meta data block index, and a fixed size trailer
