@@ -1260,6 +1260,8 @@ Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
    HBASE-1743  [debug tool] Add regionsInTransition list to ClusterStatus
                detailed output
    HBASE-1772  Up the default ZK session timeout from 30seconds to 60seconds
+   HBASE-2625  Make testDynamicBloom()'s "randomness" deterministic
+               (Nicolas Spiegelberg via Stack)
 
   OPTIMIZATIONS
    HBASE-1412  Change values for delete column and column family in KeyValue

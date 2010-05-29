@@ -26,6 +26,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
+import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -150,13 +151,23 @@ public class TestByteBloomFilter extends TestCase {
         Hash.MURMUR_HASH);
     bf1.allocBloom();
     
+    long seed = System.currentTimeMillis();
+    Random r = new Random(seed);
+    System.out.println("seed = " + seed);
+    
     for (int i = 0; i < keyInterval*4; ++i) { // add
-      if (Math.random() > 0.5) {
+      if (r.nextBoolean()) {
         bf1.add(Bytes.toBytes(i));
         valid.set(i);
+        
+        // we assume only 2 blooms in this test, so exit before a 3rd is made
+        if (bf1.getKeyCount() == 2000) {
+          break;
+        }
       }
     }
-    assertTrue(2 <= bf1.bloomCount() && bf1.bloomCount() <= 3);
+    assertTrue(2 <= bf1.bloomCount());
+    System.out.println("keys added = " + bf1.getKeyCount());
 
     // test serialization/deserialization
     ByteArrayOutputStream metaOut = new ByteArrayOutputStream();
@@ -178,8 +189,11 @@ public class TestByteBloomFilter extends TestCase {
       }
     }
     
-    // note that actualErr = err * bloomCount
-    // error rate should be roughly: (keyInterval*2)*(err*2), allow some tolerance
+    // Dynamic Blooms are a little sneaky.  The error rate currently isn't 
+    // 'err', it's err * bloomCount.  bloomCount == 2000/1000 == 2 in this case
+    // So, the actual error rate should be roughly: 
+    //    (keyInterval*2) * err * bloomCount
+    // allow some tolerance
     System.out.println("False positives: " + falsePositives);
     assertTrue(falsePositives <= (keyInterval*5)*err); 
   }
