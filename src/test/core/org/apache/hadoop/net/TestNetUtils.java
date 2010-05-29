@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 
 import java.net.Socket;
 import java.net.ConnectException;
+import java.net.SocketException;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 
@@ -51,6 +52,10 @@ public class TestNetUtils {
     } catch (ConnectException ce) {
       System.err.println("Got exception: " + ce);
       assertTrue(ce.getMessage().contains("resulted in a loopback"));
+    } catch (SocketException se) {
+      // Some TCP stacks will actually throw their own Invalid argument exception
+      // here. This is also OK.
+      assertTrue(se.getMessage().contains("Invalid argument"));
     }
   }
 }
