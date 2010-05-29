@@ -526,32 +526,27 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @param regionServer
    * @param meta
    * @param info
-   * @param serverAddress
+   * @param hostnameAndPort hostname ':' port as it comes out of .META.
    * @param startCode
    * @throws IOException
    */
   protected void checkAssigned(final HRegionInterface regionServer,
     final MetaRegion meta, final HRegionInfo info,
-    final String serverAddress, final long startCode)
+    final String hostnameAndPort, final long startCode)
   throws IOException {
     String serverName = null;
-    String sa = serverAddress;
+    String sa = hostnameAndPort;
     long sc = startCode;
     if (sa == null || sa.length() <= 0) {
-      // Scans are sloppy.  They don't respect row locks and they get and
-      // cache a row internally so may have data that is a little stale.  Make
-      // sure that for sure this serverAddress is null.  We are trying to
-      // avoid double-assignments.  See hbase-1784.  Will have to wait till
-      // 0.21 hbase where we use zk to mediate state transitions to do better.
+      // Scans are sloppy.  They cache a row internally so may have data that
+      // is a little stale.  Make sure that for sure this serverAddress is null.
+      // We are trying to avoid double-assignments.  See hbase-1784.
       Get g = new Get(info.getRegionName());
       g.addFamily(HConstants.CATALOG_FAMILY);
       Result r = regionServer.get(meta.getRegionName(), g);
       if (r != null && !r.isEmpty()) {
         sa = getServerAddress(r);
-        if (sa != null && sa.length() > 0) {
-          // Reget startcode in case its changed in the meantime too.
-          sc = getStartCode(r);
-        }
+        sc = getStartCode(r);
       }
     }
     if (sa != null && sa.length() > 0) {

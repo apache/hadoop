@@ -135,6 +135,10 @@ public class MiniHBaseCluster implements HConstants {
       super(setDifferentUser(conf));
     }
 
+    public void setHServerInfo(final HServerInfo hsi) {
+      this.serverInfo = hsi;
+    }
+
     /*
      * @param c
      * @param currentfs We return this if we did not make a new one.

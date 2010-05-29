@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,26 +22,33 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.InetSocketAddress;
+import java.util.Set;
 
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 
 /**
- * HServerInfo is meta info about an {@link HRegionServer}.
- * Holds hostname, ports, regionserver startcode, and load.  Each server has
+ * HServerInfo is meta info about an {@link HRegionServer}.  It is the token
+ * by which a master distingushes a particular regionserver from the rest.
+ * It holds hostname, ports, regionserver startcode, and load.  Each server has
  * a <code>servername</code> where servername is made up of a concatenation of
- * hostname, port, and regionserver startcode.
+ * hostname, port, and regionserver startcode.  This servername is used in
+ * various places identifying this regionserver.  Its even used as part of
+ * a pathname in the filesystem.  As part of the initialization,
+ * master will pass the regionserver the address that it knows this regionserver
+ * by.  In subsequent communications, the regionserver will pass a HServerInfo
+ * with the master-supplied address.
  */
 public class HServerInfo implements WritableComparable<HServerInfo> {
-  /**
-   * This character is used as separator making up the <code>servername</code>.
-   * Servername is made of host, port, and startcode formatted as
-   * <code>&lt;hostname> '{@link #SERVERNAME_SEPARATOR}' &lt;port> '{@ink #SEPARATOR"}' &lt;startcode></code>
-   * where {@link SEPARATOR is usually a ','.
+  /*
+   * This character is used as separator between server hostname and port and
+   * its startcode. Servername is formatted as
+   * <code>&lt;hostname> '{@ink #SERVERNAME_SEPARATOR"}' &lt;port> '{@ink #SERVERNAME_SEPARATOR"}' &lt;startcode></code>.
    */
-  public static final String SERVERNAME_SEPARATOR = ",";
+  private static final String SERVERNAME_SEPARATOR = ",";
 
   private HServerAddress serverAddress;
   private long startCode;
@@ -51,11 +58,23 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private String serverName = null;
   // Hostname of the regionserver.
   private String hostname;
-  private static Map<String,String> dnsCache = new HashMap<String,String>();
+  private String cachedHostnamePort = null;
 
   public HServerInfo() {
-    this(new HServerAddress(), 0,
-        HConstants.DEFAULT_REGIONSERVER_INFOPORT, "default name");
+    this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT,
+      "default name");
+  }
+
+  /**
+   * Constructor that creates a HServerInfo with a generated startcode and an
+   * empty load.
+   * @param serverAddress An {@link InetSocketAddress} encased in a {@link Writable}
+   * @param infoPort Port the webui runs on.
+   * @param hostname Server hostname.
+   */
+  public HServerInfo(HServerAddress serverAddress, final int infoPort,
+      final String hostname) {
+    this(serverAddress, System.currentTimeMillis(), infoPort, hostname);
   }
 
   public HServerInfo(HServerAddress serverAddress, long startCode,
@@ -104,13 +123,27 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     return this.infoPort;
   }
 
-  public void setInfoPort(int infoPort) {
-    this.infoPort = infoPort;
+  public String getHostname() {
+    return this.hostname;
   }
 
-  public synchronized void setStartCode(long startCode) {
-    this.startCode = startCode;
-    this.serverName = null;
+  /**
+   * @return The hostname and port concatenated with a ':' as separator.
+   */
+  public synchronized String getHostnamePort() {
+    if (this.cachedHostnamePort == null) {
+      this.cachedHostnamePort = getHostnamePort(this.hostname, this.serverAddress.getPort());
+    }
+    return this.cachedHostnamePort;
+  }
+
+  /**
+   * @param hostname
+   * @param port
+   * @return The hostname and port concatenated with a ':' as separator.
+   */
+  public static String getHostnamePort(final String hostname, final int port) {
+    return hostname + ":" + port;
   }
 
   /**
@@ -119,43 +152,18 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    */
   public synchronized String getServerName() {
     if (this.serverName == null) {
-      // if we have the hostname of the RS, use it
-      if(this.hostname != null) {
-        this.serverName =
-          getServerName(this.hostname, this.serverAddress.getPort(), this.startCode);
-      }
-      // go to DNS name resolution only if we dont have the name of the RS
-      else {
-      this.serverName = getServerName(this.serverAddress, this.startCode);
-    }
+      this.serverName = getServerName(this.hostname,
+        this.serverAddress.getPort(), this.startCode);
     }
     return this.serverName;
   }
 
-  /**
-   * @param serverAddress In form <code>&lt;hostname> ':' &lt;port></code>
-   * @param startCode Server startcode
-   * @return Server name made of the concatenation of hostname, port and
-   * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
-   */
-  public static String getServerName(String serverAddress, long startCode) {
-    String name = null;
-    if (serverAddress != null) {
-      int colonIndex = serverAddress.lastIndexOf(':');
-      if(colonIndex < 0) {
-        throw new IllegalArgumentException("Not a host:port pair: " + serverAddress);
-      }
-      String host = serverAddress.substring(0, colonIndex);
-      int port =
-        Integer.valueOf(serverAddress.substring(colonIndex + 1)).intValue();
-      if(!dnsCache.containsKey(host)) {
-        HServerAddress address = new HServerAddress(serverAddress);
-        dnsCache.put(host, address.getHostname());
-      }
-      host = dnsCache.get(host);
-      name = getServerName(host, port, startCode);
-    }
-    return name;
+  public static synchronized String getServerName(final String hostAndPort,
+      final long startcode) {
+    int index = hostAndPort.indexOf(":");
+    if (index <= 0) throw new IllegalArgumentException("Expected <hostname> ':' <port>");
+    return getServerName(hostAndPort.substring(0, index),
+      Integer.parseInt(hostAndPort.substring(index + 1)), startcode);
   }
 
   /**
@@ -175,7 +183,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * @return Server name made of the concatenation of hostname, port and
    * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
-  private static String getServerName(String hostName, int port, long startCode) {
+  public static String getServerName(String hostName, int port, long startCode) {
     StringBuilder name = new StringBuilder(hostName);
     name.append(SERVERNAME_SEPARATOR);
     name.append(port);
@@ -232,5 +240,28 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   public int compareTo(HServerInfo o) {
     return this.getServerName().compareTo(o.getServerName());
+  }
+
+  /**
+   * Utility method that does a find of a servername or a hostandport combination
+   * in the passed Set.
+   * @param servers Set of server names
+   * @param serverName Name to look for
+   * @param hostAndPortOnly If <code>serverName</code> is a
+   * <code>hostname ':' port</code>
+   * or <code>hostname , port , startcode</code>.
+   * @return True if <code>serverName</code> found in <code>servers</code>
+   */
+  public static boolean isServer(final Set<String> servers,
+      final String serverName, final boolean hostAndPortOnly) {
+    if (!hostAndPortOnly) return servers.contains(serverName);
+    String serverNameColonReplaced =
+      serverName.replaceFirst(":", SERVERNAME_SEPARATOR);
+    for (String hostPortStartCode: servers) {
+      int index = hostPortStartCode.lastIndexOf(SERVERNAME_SEPARATOR);
+      String hostPortStrippedOfStartCode = hostPortStartCode.substring(0, index);
+      if (hostPortStrippedOfStartCode.equals(serverNameColonReplaced)) return true;
+    }
+    return false;
   }
 }

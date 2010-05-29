@@ -67,8 +67,6 @@ public class ServerManager implements HConstants {
   // The map of known server names to server info
   private final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
-  private final Map<HServerAddress, HServerInfo> serverAddressToServerInfo =
-      new ConcurrentHashMap<HServerAddress, HServerInfo>();
 
   /*
    * Set of known dead servers.  On znode expiration, servers are added here.
@@ -111,7 +109,7 @@ public class ServerManager implements HConstants {
 
     @Override
     protected void chore() {
-      int numServers = serverAddressToServerInfo.size();
+      int numServers = serversToServerInfo.size();
       int numDeadServers = deadServers.size();
       double averageLoad = getAverageLoad();
       String deadServersList = null;
@@ -177,8 +175,7 @@ public class ServerManager implements HConstants {
     // for processing by ProcessServerShutdown.
     HServerInfo info = new HServerInfo(serverInfo);
     String hostAndPort = info.getServerAddress().toString();
-    HServerInfo existingServer =
-      this.serverAddressToServerInfo.get(info.getServerAddress());
+    HServerInfo existingServer = haveServerWithSameHostAndPortAlready(info.getHostnamePort());
     if (existingServer != null) {
       LOG.info("Server start rejected; we already have " + hostAndPort +
         " registered; existingServer=" + existingServer + ", newServer=" + info);
@@ -191,6 +188,17 @@ public class ServerManager implements HConstants {
     checkIsDead(info.getServerName(), "STARTUP");
     LOG.info("Received start message from: " + info.getServerName());
     recordNewServer(info);
+  }
+
+  private HServerInfo haveServerWithSameHostAndPortAlready(final String hostnamePort) {
+    synchronized (this.serversToServerInfo) {
+      for (Map.Entry<String, HServerInfo> e: this.serversToServerInfo.entrySet()) {
+        if (e.getValue().getHostnamePort().equals(hostnamePort)) {
+          return e.getValue();
+        }
+      }
+    }
+    return null;
   }
 
   /*
@@ -230,7 +238,6 @@ public class ServerManager implements HConstants {
     Watcher watcher = new ServerExpirer(new HServerInfo(info));
     this.master.getZooKeeperWrapper().updateRSLocationGetWatch(info, watcher);
     this.serversToServerInfo.put(serverName, info);
-    this.serverAddressToServerInfo.put(info.getServerAddress(), info);
     this.serversToLoad.put(serverName, load);
     synchronized (this.loadToServers) {
       Set<String> servers = this.loadToServers.get(load);
@@ -317,7 +324,7 @@ public class ServerManager implements HConstants {
       }
 
       synchronized (this.serversToServerInfo) {
-        removeServerInfo(info.getServerName(), info.getServerAddress());
+        removeServerInfo(info.getServerName());
         notifyServers();
       }
 
@@ -339,7 +346,7 @@ public class ServerManager implements HConstants {
     synchronized (this.serversToServerInfo) {
       // This method removes ROOT/META from the list and marks them to be
       // reassigned in addition to other housework.
-      if (removeServerInfo(serverInfo.getServerName(), serverInfo.getServerAddress())) {
+      if (removeServerInfo(serverInfo.getServerName())) {
         // Only process the exit message if the server still has registered info.
         // Otherwise we could end up processing the server exit twice.
         LOG.info("Region server " + serverInfo.getServerName() +
@@ -391,7 +398,6 @@ public class ServerManager implements HConstants {
       final HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
     // Refresh the info object and the load information
-    this.serverAddressToServerInfo.put(serverInfo.getServerAddress(), serverInfo);
     this.serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
     HServerLoad load = this.serversToLoad.get(serverInfo.getServerName());
     if (load != null) {
@@ -659,10 +665,8 @@ public class ServerManager implements HConstants {
   }
 
   /** Update a server load information because it's shutting down*/
-  private boolean removeServerInfo(final String serverName,
-      final HServerAddress serverAddress) {
+  private boolean removeServerInfo(final String serverName) {
     boolean infoUpdated = false;
-    this.serverAddressToServerInfo.remove(serverAddress);
     HServerInfo info = this.serversToServerInfo.remove(serverName);
     // Only update load information once.
     // This method can be called a couple of times during shutdown.
@@ -746,11 +750,19 @@ public class ServerManager implements HConstants {
     }
   }
 
-  public Map<HServerAddress, HServerInfo> getServerAddressToServerInfo() {
-    // we use this one because all the puts to this map are parallel/synced with the other map.
-    synchronized (this.serversToServerInfo) {
-      return Collections.unmodifiableMap(this.serverAddressToServerInfo);
+  /**
+   * @param hsa
+   * @return The HServerInfo whose HServerAddress is <code>hsa</code> or null
+   * if nothing found.
+   */
+  public HServerInfo getHServerInfo(final HServerAddress hsa) {
+    synchronized(this.serversToServerInfo) {
+      // TODO: This is primitive.  Do a better search.
+      for (Map.Entry<String, HServerInfo> e: this.serversToServerInfo.entrySet()) {
+        if (e.getValue().getServerAddress().equals(hsa)) return e.getValue();
+      }
     }
+    return null;
   }
 
   /**
@@ -841,7 +853,6 @@ public class ServerManager implements HConstants {
       return;
     }
     // Remove the server from the known servers lists and update load info
-    this.serverAddressToServerInfo.remove(info.getServerAddress());
     this.serversToServerInfo.remove(serverName);
     HServerLoad load = this.serversToLoad.remove(serverName);
     if (load != null) {
@@ -889,16 +900,8 @@ public class ServerManager implements HConstants {
   }
 
   static boolean isDead(final Set<String> deadServers,
-    final String serverName, final boolean hostAndPortOnly) {
-    if (!hostAndPortOnly) return deadServers.contains(serverName);
-    String serverNameColonReplaced =
-      serverName.replaceFirst(":", HServerInfo.SERVERNAME_SEPARATOR);
-    for (String hostPortStartCode: deadServers) {
-      int index = hostPortStartCode.lastIndexOf(HServerInfo.SERVERNAME_SEPARATOR);
-      String hostPortStrippedOfStartCode = hostPortStartCode.substring(0, index);
-      if (hostPortStrippedOfStartCode.equals(serverNameColonReplaced)) return true;
-    }
-    return false;
+      final String serverName, final boolean hostAndPortOnly) {
+    return HServerInfo.isServer(deadServers, serverName, hostAndPortOnly);
   }
 
   Set<String> getDeadServers() {

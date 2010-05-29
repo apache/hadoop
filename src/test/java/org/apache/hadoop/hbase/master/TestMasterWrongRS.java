@@ -19,24 +19,22 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class TestMasterWrongRS {
-
-  private static final Log LOG = LogFactory.getLog(TestMasterWrongRS.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -58,9 +56,12 @@ public class TestMasterWrongRS {
   @Test
   public void testRsReportsWrongServerName() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HRegionServer firstServer = cluster.getRegionServer(0);
+    MiniHBaseClusterRegionServer firstServer =
+      (MiniHBaseClusterRegionServer)cluster.getRegionServer(0);
     HRegionServer secondServer = cluster.getRegionServer(1);
-    firstServer.getHServerInfo().setStartCode(12345);
+    HServerInfo hsi = firstServer.getServerInfo();
+    firstServer.setHServerInfo(new HServerInfo(hsi.getServerAddress(),
+      hsi.getInfoPort(), hsi.getHostname()));
     // Sleep while the region server pings back
     Thread.sleep(2000);
     assertTrue(firstServer.isOnline());

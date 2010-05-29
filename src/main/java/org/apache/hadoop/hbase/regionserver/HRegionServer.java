@@ -595,8 +595,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         }
         closeAllRegions(); // Don't leave any open file handles
       }
-      LOG.info("aborting server at: " +
-        serverInfo.getServerAddress().toString());
+      LOG.info("aborting server at: " + this.serverInfo.getServerName());
     } else {
       ArrayList<HRegion> closedRegions = closeAllRegions();
       try {
@@ -618,14 +617,13 @@ public class HRegionServer implements HConstants, HRegionInterface,
         }
 
         LOG.info("telling master that region server is shutting down at: " +
-            serverInfo.getServerAddress().toString());
+            serverInfo.getServerName());
         hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
       } catch (Throwable e) {
         LOG.warn("Failed to send exiting message to master: ",
           RemoteExceptionHandler.checkThrowable(e));
       }
-      LOG.info("stopping server at: " +
-        serverInfo.getServerAddress().toString());
+      LOG.info("stopping server at: " + this.serverInfo.getServerName());
     }
 
     // Make sure the proxy is down.
@@ -900,7 +898,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
     if (fs.exists(logdir)) {
       throw new RegionServerRunningException("region server already " +
-        "running at " + this.serverInfo.getServerAddress().toString() +
+        "running at " + this.serverInfo.getServerName() +
         " because logdir " + logdir.toString() + " exists");
     }
     HLog newlog = instantiateHLog(logdir, oldLogDir);
@@ -1035,8 +1033,10 @@ public class HRegionServer implements HConstants, HRegionInterface,
           // auto bind enabled, try to use another port
           LOG.info("Failed binding http info server to port: " + port);
           port++;
-          // update HRS server info
-          this.serverInfo.setInfoPort(port);
+          // update HRS server info port.
+          this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
+            this.serverInfo.getStartCode(),  port,
+            this.serverInfo.getHostname());
         }
       }
     }
@@ -1205,7 +1205,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
         lastMsg = System.currentTimeMillis();
         boolean startCodeOk = false;
         while(!startCodeOk) {
-          serverInfo.setStartCode(System.currentTimeMillis());
+          this.serverInfo = createServerInfoWithNewStartCode(this.serverInfo);
           startCodeOk = zooKeeperWrapper.writeRSLocation(this.serverInfo);
           if(!startCodeOk) {
            LOG.debug("Start code already taken, trying another one");
@@ -1219,6 +1219,11 @@ public class HRegionServer implements HConstants, HRegionInterface,
       sleeper.sleep(lastMsg);
     }
     return result;
+  }
+
+  private HServerInfo createServerInfoWithNewStartCode(final HServerInfo hsi) {
+    return new HServerInfo(hsi.getServerAddress(), hsi.getInfoPort(),
+      hsi.getHostname());
   }
 
   /* Add to the outbound message buffer */

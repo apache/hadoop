@@ -69,18 +69,18 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
     HRegionInterface server =
         master.getServerConnection().getHRegionConnection(getMetaRegion().getServer());
     LOG.info(regionInfo.getRegionNameAsString() + " open on " +
-        serverInfo.getServerAddress().toString());
+      serverInfo.getServerName());
 
     // Register the newly-available Region's location.
     Put p = new Put(regionInfo.getRegionName());
     p.add(CATALOG_FAMILY, SERVER_QUALIFIER,
-      Bytes.toBytes(serverInfo.getServerAddress().toString()));
+      Bytes.toBytes(serverInfo.getHostnamePort()));
     p.add(CATALOG_FAMILY, STARTCODE_QUALIFIER,
       Bytes.toBytes(serverInfo.getStartCode()));
     server.put(metaRegionName, p);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " in region " + Bytes.toString(metaRegionName) + " with startcode=" +
-      serverInfo.getStartCode() + ", server=" + serverInfo.getServerAddress());
+      serverInfo.getStartCode() + ", server=" + serverInfo.getHostnamePort());
     synchronized (master.getRegionManager()) {
       if (isMetaTable) {
         // It's a meta region.
