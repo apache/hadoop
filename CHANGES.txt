@@ -42,6 +42,8 @@ Trunk (unreleased changes)
     HDFS-970. fsync fsimage to disk before closing fsimage file.
     (Todd Lipcon via dhruba)
 
+    HDFS-1027. Update copyright year to 2010. (Ravi Phulari via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
