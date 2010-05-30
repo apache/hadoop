@@ -1026,6 +1026,9 @@ Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
                (Mathias Herberts via Stack)
    HBASE-1804  Puts are permitted (and stored) when including an appended colon
    HBASE-1715  Compaction failure in ScanWildcardColumnTracker.checkColumn
+   HBASE-2352  Small values for hbase.client.retries.number and
+               ipc.client.connect.max.retries breaks long ops in hbase shell
+               (Alexey Kovyrin via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage
