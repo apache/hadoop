@@ -23,14 +23,25 @@ module Shell
     class List < Command
       def help
         return <<-EOF
-          List all tables in hbase
+          List all tables in hbase. Optional regular expression parameter could
+          be used to filter the output. Examples:
+
+            hbase> list
+            hbase> list 'abc.*'
         EOF
       end
 
-      def command
-        format_simple_command do
-          admin.list
+      def command(regex = ".*")
+        now = Time.now
+        formatter.header([ "TABLE" ])
+
+        regex = /#{regex}/ unless regex.is_a?(Regexp)
+        list = admin.list.grep(regex)
+        list.each do |table|
+          formatter.row([ table ])
         end
+
+        formatter.footer(now, list.count)
       end
     end
   end

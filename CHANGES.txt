@@ -364,6 +364,7 @@ Release 0.21.0 - Unreleased
                (Christo Wilson via Stack)
    HBASE-2621  Fix bad link to HFile documentation in javadoc
                (Jeff Hammerbacher via Todd Lipcon)
+   HBASE-2371  Fix 'list' command in shell (Alexey Kovyrin via Todd Lipcon)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
