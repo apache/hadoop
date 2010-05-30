@@ -569,8 +569,8 @@ public class HFile {
             this.lastKeyLength, key, offset, length);
         if (keyComp > 0) {
           throw new IOException("Added a key not lexically larger than" +
-            " previous key=" + Bytes.toString(key, offset, length) +
-            ", lastkey=" + Bytes.toString(this.lastKeyBuffer, this.lastKeyOffset,
+            " previous key=" + Bytes.toStringBinary(key, offset, length) +
+            ", lastkey=" + Bytes.toStringBinary(this.lastKeyBuffer, this.lastKeyOffset,
                 this.lastKeyLength));
         } else if (keyComp == 0) {
           dupKey = true;
@@ -1625,7 +1625,7 @@ public class HFile {
       sb.append("size=" + count);
       for (int i = 0; i < count ; i++) {
         sb.append(", ");
-        sb.append("key=").append(Bytes.toString(blockKeys[i])).
+        sb.append("key=").append(Bytes.toStringBinary(blockKeys[i])).
           append(", offset=").append(blockOffsets[i]).
           append(", dataSize=" + blockDataSizes[i]);
       }
