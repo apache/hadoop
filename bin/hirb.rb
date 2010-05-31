@@ -53,12 +53,10 @@ end
 cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
  format        Formatter for outputting results: console | html. Default: console
- format-width  Width of table outputs. Default: 110 characters.
  -d | --debug  Set DEBUG log levels.
 HERE
 found = []
 format = 'console'
-format_width = 110
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 for arg in ARGV
@@ -71,9 +69,6 @@ for arg in ARGV
     else
       raise ArgumentError.new("Unsupported format " + arg)
     end
-    found.push(arg)
-  elsif arg =~ /^--format-width=(.+)/i
-    format_width = $1.to_i
     found.push(arg)
   elsif arg == '-h' || arg == '--help'
     puts cmdline_help
@@ -110,7 +105,7 @@ require 'shell/formatter'
 
 # Presume console format.
 # Formatter takes an :output_stream parameter, if you don't want STDOUT.
-@formatter = Shell::Formatter::Console.new(:format_width => format_width)
+@formatter = Shell::Formatter::Console.new
 
 # Setup the HBase module.  Create a configuration.
 @hbase = Hbase::Hbase.new

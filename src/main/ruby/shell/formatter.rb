@@ -29,15 +29,18 @@ module Shell
         obj.instance_of?(IO) || obj == Kernel
       end
 
+      def refresh_width()
+        @max_width = Java::jline.Terminal.getTerminal().getTerminalWidth()
+      end
+
       # Takes an output stream and a print width.
       def initialize(opts = {})
         options = {
           :output_stream => Kernel,
-          :format_width => 100
         }.merge(opts)
 
         @out = options[:output_stream]
-        @max_width = options[:format_width]
+        refresh_width
         @row_count = 0
 
         # raise an error if the stream is not valid
@@ -45,6 +48,7 @@ module Shell
       end
 
       def header(args = [], widths = [])
+        refresh_width
         row(args, false, widths) if args.length > 0
         @row_count = 0
       end

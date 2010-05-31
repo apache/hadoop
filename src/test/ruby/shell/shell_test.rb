@@ -24,7 +24,7 @@ require 'shell/formatter'
 
 class ShellTest < Test::Unit::TestCase
   def setup
-    @formatter = ::Shell::Formatter::Console.new(:format_width => 110)
+    @formatter = ::Shell::Formatter::Console.new()
     @hbase = ::Hbase::Hbase.new
     @shell = Shell::Shell.new(@hbase, @formatter)
   end

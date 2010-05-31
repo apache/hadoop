@@ -23,7 +23,7 @@ require 'hbase'
 module Hbase
   class HbaseTest < Test::Unit::TestCase
     def setup
-      @formatter = Shell::Formatter::Console.new(:format_width => 110)
+      @formatter = Shell::Formatter::Console.new()
       @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
     end
 

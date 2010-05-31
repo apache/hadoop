@@ -23,7 +23,7 @@ end
 module Hbase
   module TestHelpers
     def setup_hbase
-      @formatter = Shell::Formatter::Console.new(:format_width => 110)
+      @formatter = Shell::Formatter::Console.new()
       @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
     end
 
