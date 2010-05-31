@@ -220,7 +220,7 @@ public class HftpFileSystem extends FileSystem {
 
     public FileStatus[] listStatus(Path f, boolean recur) throws IOException {
       fetchList(f.toUri().getPath(), recur);
-      if (fslist.size() > 0 && (fslist.size() != 1 || fslist.get(0).isDir())) {
+      if (fslist.size() > 0 && (fslist.size() != 1 || fslist.get(0).isDirectory())) {
         fslist.remove(0);
       }
       return fslist.toArray(new FileStatus[0]);

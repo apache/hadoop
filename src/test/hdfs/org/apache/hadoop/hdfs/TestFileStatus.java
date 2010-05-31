@@ -104,7 +104,7 @@ public class TestFileStatus {
     // Check that / exists
     Path path = new Path("/");
     assertTrue("/ should be a directory", 
-               fs.getFileStatus(path).isDir());
+               fs.getFileStatus(path).isDirectory());
     
     // Make sure getFileInfo returns null for files which do not exist
     HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
@@ -127,7 +127,7 @@ public class TestFileStatus {
     checkFile(fs, file1, 1);
     // test getFileStatus on a file
     FileStatus status = fs.getFileStatus(file1);
-    assertFalse(file1 + " should be a file", status.isDir());
+    assertFalse(file1 + " should be a file", status.isDirectory());
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
@@ -142,7 +142,7 @@ public class TestFileStatus {
     FileStatus[] stats = fs.listStatus(file1);
     assertEquals(1, stats.length);
     FileStatus status = stats[0];
-    assertFalse(file1 + " should be a file", status.isDir());
+    assertFalse(file1 + " should be a file", status.isDirectory());
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
@@ -153,7 +153,7 @@ public class TestFileStatus {
     Iterator<FileStatus> itor = fc.listStatus(file1);
     status = itor.next();
     assertEquals(stats[0], status);
-    assertFalse(file1 + " should be a file", status.isDir()); 
+    assertFalse(file1 + " should be a file", status.isDirectory());
   }
 
   /** Test getting a FileStatus object using a non-existant path */
@@ -192,7 +192,7 @@ public class TestFileStatus {
     
     // test getFileStatus on an empty directory
     FileStatus status = fs.getFileStatus(dir);
-    assertTrue(dir + " should be a directory", status.isDir());
+    assertTrue(dir + " should be a directory", status.isDirectory());
     assertTrue(dir + " should be zero size ", status.getLen() == 0);
     assertEquals(dir.makeQualified(fs.getUri(), 
         fs.getWorkingDirectory()).toString(), 

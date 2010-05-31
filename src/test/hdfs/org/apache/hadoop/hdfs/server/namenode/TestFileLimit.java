@@ -95,7 +95,7 @@ public class TestFileLimit extends TestCase {
       //
       Path path = new Path("/");
       assertTrue("/ should be a directory", 
-                 fs.getFileStatus(path).isDir() == true);
+                 fs.getFileStatus(path).isDirectory());
       currentNodes = 1;          // root inode
 
       // verify that we can create the specified number of files. We leave

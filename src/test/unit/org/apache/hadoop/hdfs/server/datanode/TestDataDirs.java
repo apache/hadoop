@@ -43,7 +43,7 @@ public class TestDataDirs {
     FsPermission badPerm = new FsPermission("000");
     FileStatus stat = make(stub(FileStatus.class)
         .returning(normalPerm, normalPerm, badPerm).from.getPermission());
-    when(stat.isDir()).thenReturn(true);
+    when(stat.isDirectory()).thenReturn(true);
     LocalFileSystem fs = make(stub(LocalFileSystem.class)
         .returning(stat).from.getFileStatus(any(Path.class)));
     when(fs.pathToFile(any(Path.class))).thenReturn(localDir);

@@ -605,9 +605,10 @@ class FSDirectory implements Closeable {
         throw new IOException(error);
       }
       if (dstInode != null) { // Destination exists
+        // It's OK to rename a file to a symlink and vice versa
         if (dstInode.isDirectory() != srcInode.isDirectory()) {
-          error = "Source " + src + " Destination " + dst
-              + " both should be either file or directory";
+          error = "Source " + src + " and destination " + dst
+              + " must both be directories";
           NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
               + error);
           throw new IOException(error);

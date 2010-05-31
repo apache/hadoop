@@ -134,7 +134,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
     TreeMap<Path, Boolean> fileMap = new TreeMap<Path, Boolean>();
     
     for(FileStatus file : fileArr) {
-      fileMap.put(file.getPath(), Boolean.valueOf(file.isDir()));
+      fileMap.put(file.getPath(), Boolean.valueOf(file.isDirectory()));
     }
     
     for(Iterator<Path> it = fileMap.keySet().iterator(); it.hasNext();) {

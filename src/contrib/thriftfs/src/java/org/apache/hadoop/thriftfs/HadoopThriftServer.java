@@ -415,7 +415,7 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
         return new org.apache.hadoop.thriftfs.api.FileStatus(
           stat.getPath().toString(),
           stat.getLen(),
-          stat.isDir(),
+          stat.isDirectory(),
           stat.getReplication(),
           stat.getBlockSize(),
           stat.getModificationTime(),
@@ -448,7 +448,7 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
           tmp = new org.apache.hadoop.thriftfs.api.FileStatus(
                       stat[i].getPath().toString(),
                       stat[i].getLen(),
-                      stat[i].isDir(),
+                      stat[i].isDirectory(),
                       stat[i].getReplication(),
                       stat[i].getBlockSize(),
                       stat[i].getModificationTime(),

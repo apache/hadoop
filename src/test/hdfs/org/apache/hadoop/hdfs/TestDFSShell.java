@@ -73,7 +73,7 @@ public class TestDFSShell extends TestCase {
   static Path mkdir(FileSystem fs, Path p) throws IOException {
     assertTrue(fs.mkdirs(p));
     assertTrue(fs.exists(p));
-    assertTrue(fs.getFileStatus(p).isDir());
+    assertTrue(fs.getFileStatus(p).isDirectory());
     return p;
   }
 

@@ -400,7 +400,7 @@ public class TestDFSClientRetries extends TestCase {
       
       // verify that file exists in FS namespace
       assertTrue(file1 + " should be a file", 
-                  fs.getFileStatus(file1).isDir() == false);
+                  fs.getFileStatus(file1).isFile());
       System.out.println("Path : \"" + file1 + "\"");
       LOG.info("Path : \"" + file1 + "\"");
 

@@ -52,7 +52,7 @@ public class TestPermission extends TestCase {
   static FsPermission checkPermission(FileSystem fs,
       String path, FsPermission expected) throws IOException {
     FileStatus s = fs.getFileStatus(new Path(path));
-    LOG.info(s.getPath() + ": " + s.isDir() + " " + s.getPermission()
+    LOG.info(s.getPath() + ": " + s.isDirectory() + " " + s.getPermission()
         + ":" + s.getOwner() + ":" + s.getGroup());
     if (expected != null) {
       assertEquals(expected, s.getPermission());

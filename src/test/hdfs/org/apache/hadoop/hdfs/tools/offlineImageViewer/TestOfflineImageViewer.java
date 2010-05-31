@@ -259,7 +259,7 @@ public class TestOfflineImageViewer extends TestCase {
   // the output of the ls file from the image processor
   private void compareFiles(FileStatus fs, LsElements elements) {
     assertEquals("directory listed as such",  
-                                        fs.isDir() ? 'd' : '-', elements.dir);
+                 fs.isDirectory() ? 'd' : '-', elements.dir);
     assertEquals("perms string equal", 
                                 fs.getPermission().toString(), elements.perms);
     assertEquals("replication equal", fs.getReplication(), elements.replication);

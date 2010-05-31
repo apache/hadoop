@@ -170,9 +170,9 @@ public class TestFileCreation extends junit.framework.TestCase {
       //
       Path path = new Path("/");
       System.out.println("Path : \"" + path.toString() + "\"");
-      System.out.println(fs.getFileStatus(path).isDir()); 
+      System.out.println(fs.getFileStatus(path).isDirectory()); 
       assertTrue("/ should be a directory", 
-                 fs.getFileStatus(path).isDir() == true);
+                 fs.getFileStatus(path).isDirectory());
 
       //
       // Create a directory inside /, then try to overwrite it
@@ -201,7 +201,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // verify that file exists in FS namespace
       assertTrue(file1 + " should be a file", 
-                  fs.getFileStatus(file1).isDir() == false);
+                 fs.getFileStatus(file1).isFile());
       System.out.println("Path : \"" + file1 + "\"");
 
       // write to file
@@ -321,7 +321,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // verify that file exists in FS namespace
       assertTrue(file1 + " should be a file", 
-                  fs.getFileStatus(file1).isDir() == false);
+                 fs.getFileStatus(file1).isFile());
       System.out.println("Path : \"" + file1 + "\"");
 
       // kill the datanode

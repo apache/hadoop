@@ -114,7 +114,8 @@ public class TestListPathServlet {
     }
     for (FileStatus status : statuslist) {
       System.out.println("status:" + status.getPath().toString() + " type "
-          + (status.isDir() ? "directory" : "file"));
+          + (status.isDirectory() ? "directory" 
+                                  : ( status.isFile() ? "file" : "symlink")));
     }
     for (String file : filelist) {
       boolean found = false;

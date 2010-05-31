@@ -553,6 +553,9 @@ Release 0.21.0 - Unreleased
     HDFS-1126. Change HDFS to depend on Hadoop 'common' artifacts instead
     of 'core'. (tomwhite)
 
+    HDFS-995.  Replace usage of FileStatus#isDir().  (Eli Collins via
+    tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
