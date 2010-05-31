@@ -29,6 +29,9 @@ Release 0.20.3 - Unreleased
     HDFS-909. Wait until edits syncing is finishes before purging edits.
     (Todd Lipcon via shv)
 
+    MAPREDUCE-1372. ConcurrentModificationException in JobInProgress.
+    (Dick King and Amareshwari Sriramadasu via tomwhite)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
