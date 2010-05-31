@@ -147,7 +147,7 @@ public class DiskChecker {
     FileStatus stat = localFS.getFileStatus(dir);
     FsPermission actual = stat.getPermission();
 
-    if (!stat.isDir())
+    if (!stat.isDirectory())
       throw new DiskErrorException("not a directory: "+ dir.toString());
 
     FsAction user = actual.getUserAction();

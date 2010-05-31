@@ -164,7 +164,7 @@ public class FTPFileSystem extends FileSystem {
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
     FileStatus fileStat = getFileStatus(client, absolute);
-    if (fileStat.isDir()) {
+    if (fileStat.isDirectory()) {
       disconnect(client);
       throw new IOException("Path " + file + " is a directory.");
     }
@@ -307,7 +307,7 @@ public class FTPFileSystem extends FileSystem {
     Path absolute = makeAbsolute(workDir, file);
     String pathName = absolute.toUri().getPath();
     FileStatus fileStat = getFileStatus(client, absolute);
-    if (!fileStat.isDir()) {
+    if (fileStat.isFile()) {
       return client.deleteFile(pathName);
     }
     FileStatus[] dirEntries = listStatus(client, absolute);
@@ -370,7 +370,7 @@ public class FTPFileSystem extends FileSystem {
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
     FileStatus fileStat = getFileStatus(client, absolute);
-    if (!fileStat.isDir()) {
+    if (fileStat.isFile()) {
       return new FileStatus[] { fileStat };
     }
     FTPFile[] ftpFiles = client.listFiles(absolute.toUri().getPath());
@@ -500,7 +500,7 @@ public class FTPFileSystem extends FileSystem {
    */
   private boolean isFile(FTPClient client, Path file) {
     try {
-      return !getFileStatus(client, file).isDir();
+      return getFileStatus(client, file).isFile();
     } catch (FileNotFoundException e) {
       return false; // file does not exist
     } catch (IOException ioe) {

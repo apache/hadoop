@@ -456,7 +456,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     } catch(FileNotFoundException e) {
       return false;
     }
-    if(fstatus.isDir()) {
+    if (fstatus.isDirectory()) {
       //this works since the crcs are in the same
       //directories and the files. so we just delete
       //everything in the underlying filesystem

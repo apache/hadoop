@@ -104,8 +104,7 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
     FileStatus fsd = fc.getFileLinkStatus(link);
     assertEquals(fileQual, fsd.getSymlink());
     assertTrue(fsd.isSymlink());
-    // NB: isDir is true since we need !isDir to imply file (HADOOP-6584)
-    //assertTrue(fsd.isDir());
+    assertFalse(fsd.isDirectory());
     assertEquals("", fsd.getOwner());
     assertEquals("", fsd.getGroup());
     assertEquals(link, fsd.getPath());

@@ -238,7 +238,7 @@ public class FsShell extends Configured implements Tool {
      */
     
     Path src = srcStatus.getPath();
-    if (!srcStatus.isDir()) {
+    if (srcStatus.isFile()) {
       if (dst.exists()) {
         // match the error message in FileUtil.checkDest():
         throw new IOException("Target " + dst + " already exists");
@@ -268,6 +268,8 @@ public class FsShell extends Configured implements Tool {
         FileStatus status = csfs.getFileStatus(csfs.getChecksumFile(src));
         copyToLocal(fs, status, dstcs, false);
       } 
+    } else if (srcStatus.isSymlink()) {
+      throw new AssertionError("Symlinks unsupported");
     } else {
       // once FileUtil.copy() supports tmp file, we don't need to mkdirs().
       if (!dst.mkdirs()) {
@@ -541,7 +543,7 @@ public class FsShell extends Configured implements Tool {
                               Path src, boolean recursive,
                               List<Path> waitingList)
     throws IOException {
-    if (!srcFs.getFileStatus(src).isDir()) {
+    if (srcFs.getFileStatus(src).isFile()) {
       setFileReplication(src, srcFs, newRep, waitingList);
       return;
     }
@@ -553,8 +555,10 @@ public class FsShell extends Configured implements Tool {
     }
 
     for (int i = 0; i < items.length; i++) {
-      if (!items[i].isDir()) {
+      if (items[i].isFile()) {
         setFileReplication(items[i].getPath(), srcFs, newRep, waitingList);
+      } else if (items[i].isSymlink()) {
+        throw new AssertionError("Symlinks unsupported");
       } else if (recursive) {
         setReplication(newRep, srcFs, items[i].getPath(), recursive, 
                        waitingList);
@@ -643,10 +647,10 @@ public class FsShell extends Configured implements Tool {
         Path cur = stat.getPath();
         String mdate = dateForm.format(new Date(stat.getModificationTime()));
         
-        System.out.print((stat.isDir() ? "d" : "-") + 
+        System.out.print((stat.isDirectory() ? "d" : "-") + 
           stat.getPermission() + " ");
         System.out.printf("%"+ maxReplication + 
-          "s ", (!stat.isDir() ? stat.getReplication() : "-"));
+          "s ", (stat.isFile() ? stat.getReplication() : "-"));
         if (maxOwner > 0)
           System.out.printf("%-"+ maxOwner + "s ", stat.getOwner());
         if (maxGroup > 0)
@@ -654,7 +658,7 @@ public class FsShell extends Configured implements Tool {
         System.out.printf("%"+ maxLen + "d ", stat.getLen());
         System.out.print(mdate + " ");
         System.out.println(cur.toUri().getPath());
-        if (recursive && stat.isDir()) {
+        if (recursive && stat.isDirectory()) {
           numOfErrors += ls(stat,srcFs, recursive, printHeader);
         }
       }
@@ -739,7 +743,7 @@ public class FsShell extends Configured implements Tool {
 
       for (FileStatus stat : statusToPrint) {
         long length;
-        if (summary || stat.isDir()) {
+        if (summary || stat.isDirectory()) {
           length = srcFs.getContentSummary(stat.getPath()).getLength();
         } else {
           length = stat.getLen();
@@ -794,7 +798,7 @@ public class FsShell extends Configured implements Tool {
     FileStatus fstatus = null;
     try {
       fstatus = srcFs.getFileStatus(f);
-      if (fstatus.isDir()) {
+      if (fstatus.isDirectory()) {
         throw new IOException("cannot create directory " 
             + src + ": File exists");
       }
@@ -820,7 +824,7 @@ public class FsShell extends Configured implements Tool {
     FileStatus st;
     if (srcFs.exists(f)) {
       st = srcFs.getFileStatus(f);
-      if (st.isDir()) {
+      if (st.isDirectory()) {
         // TODO: handle this
         throw new IOException(src + " is a directory");
       } else if (st.getLen() != 0)
@@ -845,7 +849,7 @@ public class FsShell extends Configured implements Tool {
       case 'z':
         return srcFs.getFileStatus(f).getLen() == 0 ? 0 : 1;
       case 'd':
-        return srcFs.getFileStatus(f).isDir() ? 0 : 1;
+        return srcFs.getFileStatus(f).isDirectory() ? 0 : 1;
       default:
         throw new IOException("Unknown flag: " + flag);
     }
@@ -879,7 +883,8 @@ public class FsShell extends Configured implements Tool {
               buf.append(f.getLen());
               break;
             case 'F':
-              buf.append(f.isDir() ? "directory" : "regular file");
+              buf.append(f.isDirectory() ? "directory" 
+                                         : (f.isFile() ? "regular file" : "symlink"));
               break;
             case 'n':
               buf.append(f.getPath().getName());
@@ -946,7 +951,7 @@ public class FsShell extends Configured implements Tool {
         } catch(IOException e) {
         }
         if((srcFstatus!= null) && (dstFstatus!= null)) {
-          if (srcFstatus.isDir()  && !dstFstatus.isDir()) {
+          if (srcFstatus.isDirectory()  && !dstFstatus.isDirectory()) {
             throw new IOException("cannot overwrite non directory "
                 + dst + " with directory " + srcs[i]);
           }
@@ -1138,7 +1143,7 @@ public class FsShell extends Configured implements Tool {
           + src + ": No such file or directory.");
     }
     
-    if (fs.isDir() && !recursive) {
+    if (fs.isDirectory() && !recursive) {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
     }
@@ -1202,7 +1207,7 @@ public class FsShell extends Configured implements Tool {
     path = new Path(src);
     FileSystem srcFs = path.getFileSystem(getConf());
     FileStatus fileStatus = srcFs.getFileStatus(path);
-    if (fileStatus.isDir()) {
+    if (fileStatus.isDirectory()) {
       throw new IOException("Source must be a file.");
     }
 
@@ -1254,9 +1259,9 @@ public class FsShell extends Configured implements Tool {
   
   /** helper returns listStatus() */
   private static FileStatus[] shellListStatus(String cmd, 
-                                                   FileSystem srcFs,
-                                                   FileStatus src) {
-    if (!src.isDir()) {
+                                              FileSystem srcFs,
+                                              FileStatus src) {
+    if (src.isFile()) {
       FileStatus[] files = { src };
       return files;
     }
@@ -1285,7 +1290,7 @@ public class FsShell extends Configured implements Tool {
                                    boolean recursive) throws IOException {
     int errors = 0;
     handler.run(stat, srcFs);
-    if (recursive && stat.isDir() && handler.okToContinue()) {
+    if (recursive && stat.isDirectory() && handler.okToContinue()) {
       FileStatus[] files = shellListStatus(handler.getName(), srcFs, stat);
       if (files == null) {
         return 1;

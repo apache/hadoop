@@ -44,7 +44,7 @@ public class ChmodParser extends PermissionParser {
   public short applyNewPermission(FileStatus file) {
     FsPermission perms = file.getPermission();
     int existing = perms.toShort();
-    boolean exeOk = file.isDir() || (existing & 0111) != 0;
+    boolean exeOk = file.isDirectory() || (existing & 0111) != 0;
     
     return (short)combineModes(existing, exeOk);
   }

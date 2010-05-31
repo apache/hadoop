@@ -180,7 +180,7 @@ public class FileUtil {
                             "doest not exist");
     } else {
       FileStatus sdst = dstFS.getFileStatus(dst);
-      if (!sdst.isDir()) 
+      if (!sdst.isDirectory()) 
         throw new IOException("copying multiple files, but last argument `" +
                               dst + "' is not a directory");
     }
@@ -219,7 +219,7 @@ public class FileUtil {
                               Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
-    if (srcStatus.isDir()) {
+    if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
         return false;
@@ -258,7 +258,7 @@ public class FileUtil {
                                   Configuration conf, String addString) throws IOException {
     dstFile = checkDest(srcDir.getName(), dstFS, dstFile, false);
 
-    if (!srcFS.getFileStatus(srcDir).isDir())
+    if (srcFS.getFileStatus(srcDir).isDirectory())
       return false;
    
     OutputStream out = dstFS.create(dstFile);
@@ -266,7 +266,7 @@ public class FileUtil {
     try {
       FileStatus contents[] = srcFS.listStatus(srcDir);
       for (int i = 0; i < contents.length; i++) {
-        if (!contents[i].isDir()) {
+        if (contents[i].isFile()) {
           InputStream in = srcFS.open(contents[i].getPath());
           try {
             IOUtils.copyBytes(in, out, conf, false);
@@ -342,7 +342,7 @@ public class FileUtil {
                               File dst, boolean deleteSource,
                               Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
-    if (srcStatus.isDir()) {
+    if (srcStatus.isDirectory()) {
       if (!dst.mkdirs()) {
         return false;
       }
@@ -367,7 +367,7 @@ public class FileUtil {
       boolean overwrite) throws IOException {
     if (dstFS.exists(dst)) {
       FileStatus sdst = dstFS.getFileStatus(dst);
-      if (sdst.isDir()) {
+      if (sdst.isDirectory()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");
         }

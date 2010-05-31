@@ -276,7 +276,7 @@ public class Trash extends Configured {
             }
 
             for (FileStatus home : homes) {         // dump each trash
-              if (!home.isDir())
+              if (!home.isDirectory())
                 continue;
               try {
                 Trash trash = new Trash(home.getPath(), conf);

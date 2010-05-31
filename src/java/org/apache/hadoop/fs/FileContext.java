@@ -450,7 +450,7 @@ public final class FileContext {
      */  
     final Path newWorkingDir = resolve(new Path(workingDir, newWDir));
     FileStatus status = getFileStatus(newWorkingDir);
-    if (!status.isDir()) {
+    if (status.isFile()) {
       throw new FileNotFoundException("Cannot setWD to a file");
     }
     workingDir = newWorkingDir;
@@ -1420,16 +1420,14 @@ public final class FileContext {
         throws AccessControlException, FileNotFoundException,
         UnsupportedFileSystemException, IOException {
       FileStatus status = FileContext.this.getFileStatus(f);
-      if (!status.isDir()) {
-        // f is a file
+      if (status.isFile()) {
         return new ContentSummary(status.getLen(), 1, 0);
       }
-      // f is a directory
       long[] summary = {0, 0, 1};
       Iterator<FileStatus> statusIterator = FileContext.this.listStatus(f);
       while(statusIterator.hasNext()) {
         FileStatus s = statusIterator.next();
-        ContentSummary c = s.isDir() ? getContentSummary(s.getPath()) :
+        ContentSummary c = s.isDirectory() ? getContentSummary(s.getPath()) :
                                        new ContentSummary(s.getLen(), 1, 0);
         summary[0] += c.getLength();
         summary[1] += c.getFileCount();
@@ -1847,7 +1845,7 @@ public final class FileContext {
       Path qDst = makeQualified(dst);
       checkDest(qSrc.getName(), qDst, overwrite);
       FileStatus fs = FileContext.this.getFileStatus(qSrc);
-      if (fs.isDir()) {
+      if (fs.isDirectory()) {
         checkDependencies(qSrc, qDst);
         mkdir(qDst, FsPermission.getDefault(), true);
         FileStatus[] contents = listStatus(qSrc);
@@ -2015,7 +2013,7 @@ public final class FileContext {
       throws AccessControlException, IOException {
     try {
       FileStatus dstFs = getFileStatus(dst);
-      if (dstFs.isDir()) {
+      if (dstFs.isDirectory()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");
         }
