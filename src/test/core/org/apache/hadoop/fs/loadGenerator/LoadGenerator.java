@@ -547,7 +547,7 @@ public class LoadGenerator extends Configured implements Tool {
     FileStatus[] stats = fs.listStatus(path);
 
     for (FileStatus stat : stats) {
-      if (stat.isDir()) {
+      if (stat.isDirectory()) {
         dirs.add(stat.getPath().toString());
         initFileDirTables(stat.getPath());
       } else {

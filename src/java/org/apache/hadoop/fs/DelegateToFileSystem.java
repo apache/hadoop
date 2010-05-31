@@ -73,7 +73,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       if (stat == null) {
         throw new FileNotFoundException("Missing parent:" + f);
       }
-      if (!stat.isDir()) {
+      if (!stat.isDirectory()) {
           throw new ParentNotDirectoryException("parent is not a dir:" + f);
       }
       // parent does exist - go ahead with create of file.

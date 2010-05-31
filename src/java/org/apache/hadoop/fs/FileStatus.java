@@ -92,11 +92,40 @@ public class FileStatus implements Writable, Comparable {
   }
 
   /**
+   * Is this a file?
+   * @return true if this is a file
+   */
+  public boolean isFile() {
+    return !isdir && !isSymlink();
+  }
+
+  /**
    * Is this a directory?
    * @return true if this is a directory
    */
+  public boolean isDirectory() {
+    return isdir;
+  }
+  
+  /**
+   * Old interface, instead use the explicit {@link FileStatus#isFile()}, 
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * @return true if this is a directory.
+   * @deprecated Use {@link FileStatus#isFile()},  
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * instead.
+   */
+  @Deprecated
   public boolean isDir() {
     return isdir;
+  }
+  
+  /**
+   * Is this a symbolic link?
+   * @return true if this is a symbolic link
+   */
+  public boolean isSymlink() {
+    return symlink != null;
   }
 
   /**
@@ -196,14 +225,6 @@ public class FileStatus implements Writable, Comparable {
    */  
   protected void setGroup(String group) {
     this.group = (group == null) ? "" :  group;
-  }
-
-  /**
-   * Is this a symbolic link?
-   * @return true if this is a symbolic link
-   */
-  public boolean isSymlink() {
-    return symlink != null;
   }
 
   /**

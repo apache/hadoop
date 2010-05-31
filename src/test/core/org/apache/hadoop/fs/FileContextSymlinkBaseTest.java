@@ -257,8 +257,7 @@ public abstract class FileContextSymlinkBaseTest {
     Path linkToFile = new Path(testBaseDir1()+"/linkToFile");    
     createAndWriteFile(file);
     fc.createSymlink(file, linkToFile, false);
-    // NB: isDir is true since we need !isDir to imply file (HADOOP-6584)
-    //assertTrue(isDir(fc, linkToFile));
+    assertFalse(fc.getFileLinkStatus(linkToFile).isDirectory());
     assertTrue(isSymlink(fc, linkToFile));
     assertTrue(isFile(fc, linkToFile));
     assertFalse(isDir(fc, linkToFile));
@@ -275,8 +274,7 @@ public abstract class FileContextSymlinkBaseTest {
 
     assertFalse(fc.getFileStatus(linkToDir).isSymlink());
     assertTrue(isDir(fc, linkToDir));
-    // NB: isDir is true since we need !isDir to imply file (HADOOP-6584)    
-    //assertTrue(fc.getFileLinkStatus(linkToDir).isDir());
+    assertFalse(fc.getFileLinkStatus(linkToDir).isDirectory());
     assertTrue(fc.getFileLinkStatus(linkToDir).isSymlink());
 
     assertFalse(isFile(fc, linkToDir));
@@ -292,9 +290,7 @@ public abstract class FileContextSymlinkBaseTest {
     Path file = new Path("/noSuchFile");
     Path link = new Path(testBaseDir1()+"/link");    
     fc.createSymlink(file, link, false);
-
-    // NB: isDir is true since we need !isDir to imply file (HADOOP-6584)
-    //assertTrue(fc.getFileLinkStatus(link).isDir());
+    assertFalse(fc.getFileLinkStatus(link).isDirectory());
     assertTrue(fc.getFileLinkStatus(link).isSymlink());
   }
   
@@ -365,15 +361,12 @@ public abstract class FileContextSymlinkBaseTest {
 
     // Check getFileStatus 
     assertFalse(fc.getFileStatus(linkAbs).isSymlink());
-    assertFalse(fc.getFileStatus(linkAbs).isDir());
+    assertFalse(fc.getFileStatus(linkAbs).isDirectory());
     assertEquals(fileSize, fc.getFileStatus(linkAbs).getLen());
-    // NB: These are links to files so ensure !isDir is true
-    assertFalse(fc.getFileStatus(linkAbs).isDir());
 
     // Check getFileLinkStatus
     assertTrue(isSymlink(fc, linkAbs));
-    // NB: isDir is true since we need !isDir to imply file (HADOOP-6584)
-    //assertTrue(fc.getFileLinkStatus(linkAbs).isDir());
+    assertFalse(fc.getFileLinkStatus(linkAbs).isDirectory());
 
     // Check getSymlink always returns a qualified target, except
     // when partially qualified paths are used (see tests below).
@@ -595,7 +588,7 @@ public abstract class FileContextSymlinkBaseTest {
     fc.createSymlink(dir1, linkToDir, false);
     assertFalse(isFile(fc, linkToDir));
     assertTrue(isDir(fc, linkToDir)); 
-    assertTrue(fc.getFileStatus(linkToDir).isDir());
+    assertTrue(fc.getFileStatus(linkToDir).isDirectory());
     assertTrue(fc.getFileLinkStatus(linkToDir).isSymlink());
   }
   
@@ -610,7 +603,7 @@ public abstract class FileContextSymlinkBaseTest {
     assertTrue(isFile(fc, fileViaLink));
     assertFalse(isDir(fc, fileViaLink));
     assertFalse(fc.getFileLinkStatus(fileViaLink).isSymlink());
-    assertFalse(fc.getFileStatus(fileViaLink).isDir());
+    assertFalse(fc.getFileStatus(fileViaLink).isDirectory());
     readFile(fileViaLink);
     fc.delete(fileViaLink, true);
     assertFalse(exists(fc, fileViaLink));
@@ -625,7 +618,7 @@ public abstract class FileContextSymlinkBaseTest {
     Path subDirViaLink = new Path(linkToDir, "subDir");
     fc.createSymlink(dir1, linkToDir, false);
     fc.mkdir(subDirViaLink, FileContext.DEFAULT_PERM, true);
-    assertTrue(fc.getFileStatus(subDirViaLink).isDir());
+    assertTrue(isDir(fc, subDirViaLink));
     fc.delete(subDirViaLink, false);
     assertFalse(exists(fc, subDirViaLink));
     assertFalse(exists(fc, subDir));
@@ -702,7 +695,7 @@ public abstract class FileContextSymlinkBaseTest {
     assertTrue(isFile(fc, fileViaLink));
     assertFalse(isDir(fc, fileViaLink));
     assertFalse(fc.getFileLinkStatus(fileViaLink).isSymlink());
-    assertFalse(fc.getFileStatus(fileViaLink).isDir());
+    assertFalse(fc.getFileStatus(fileViaLink).isDirectory());
     readFile(fileViaLink);
   }
 
@@ -826,7 +819,8 @@ public abstract class FileContextSymlinkBaseTest {
       fc.rename(file, subDir);
       fail("Renamed file to a directory");
     } catch (IOException e) {
-      // Expected. Both should be either a file or directory.
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
     assertTrue(exists(fc, file));
   }
@@ -880,7 +874,8 @@ public abstract class FileContextSymlinkBaseTest {
       fc.rename(dir1, linkToDir, Rename.OVERWRITE);
       fail("Renamed directory to a symlink");
     } catch (IOException e) {
-      // Expected. Both should be either a file or directory.
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
     assertTrue(exists(fc, dir1));
     assertTrue(exists(fc, linkToDir));
@@ -898,7 +893,8 @@ public abstract class FileContextSymlinkBaseTest {
       fc.rename(dir1, linkToFile, Rename.OVERWRITE);
       fail("Renamed directory to a symlink");
     } catch (IOException e) {
-      // Expected. Both should be either a file or directory.
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
     assertTrue(exists(fc, dir1));
     assertTrue(exists(fc, linkToFile));
@@ -914,7 +910,8 @@ public abstract class FileContextSymlinkBaseTest {
       fc.rename(dir, link, Rename.OVERWRITE);
       fail("Renamed directory to a symlink"); 
     } catch (IOException e) {
-      // Expected. Both should be either a file or directory.
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
     assertTrue(exists(fc, dir));
     assertTrue(fc.getFileLinkStatus(link) != null);
@@ -934,6 +931,7 @@ public abstract class FileContextSymlinkBaseTest {
       fail("Renamed file to symlink w/o overwrite"); 
     } catch (IOException e) {
       // Expected
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     fc.rename(file, link, Rename.OVERWRITE);
     assertFalse(exists(fc, file));
@@ -956,6 +954,7 @@ public abstract class FileContextSymlinkBaseTest {
       fail("Renamed file to symlink w/o overwrite"); 
     } catch (IOException e) {
       // Expected
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     fc.rename(file1, link, Rename.OVERWRITE);
     assertFalse(exists(fc, file1));
@@ -1017,6 +1016,7 @@ public abstract class FileContextSymlinkBaseTest {
       fail("Renamed w/o passing overwrite");
     } catch (IOException e) {
       // Expected
+      assertTrue(unwrapException(e) instanceof FileAlreadyExistsException);
     }
     fc.rename(link, file1, Rename.OVERWRITE);
     assertFalse(exists(fc, link));
@@ -1036,13 +1036,15 @@ public abstract class FileContextSymlinkBaseTest {
       fc.rename(link, dir2);
       fail("Renamed link to a directory");
     } catch (IOException e) {
-      // Expected
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
     try {
       fc.rename(link, dir2, Rename.OVERWRITE);
       fail("Renamed link to a directory");
     } catch (IOException e) {
-      // Expected
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
     // Also fails when dir2 has a sub-directory
     fc.mkdir(subDir, FsPermission.getDefault(), false);
@@ -1050,7 +1052,8 @@ public abstract class FileContextSymlinkBaseTest {
       fc.rename(link, dir2, Rename.OVERWRITE);
       fail("Renamed link to a directory");
     } catch (IOException e) {
-      // Expected
+      // Expected. Both must be directories.
+      assertTrue(unwrapException(e) instanceof IOException);
     }
   }
 
@@ -1082,7 +1085,7 @@ public abstract class FileContextSymlinkBaseTest {
     fc.createSymlink(file, link1, false);
     fc.rename(link1, link2);
     assertTrue(fc.getFileLinkStatus(link2).isSymlink());
-    assertFalse(fc.getFileStatus(link2).isDir());
+    assertFalse(fc.getFileStatus(link2).isDirectory());
     readFile(link2);
     readFile(file);
     try {
@@ -1189,6 +1192,44 @@ public abstract class FileContextSymlinkBaseTest {
   }
 
   @Test
+  /** Test rename a file to path with destination that has symlink parent */
+  public void testRenameFileWithDestParentSymlink() throws IOException {
+    Path link  = new Path(testBaseDir1(), "link");
+    Path file1 = new Path(testBaseDir1(), "file1");    
+    Path file2 = new Path(testBaseDir1(), "file2");    
+    Path file3 = new Path(link, "file3");
+    Path dir2  = new Path(testBaseDir2());
+    
+    // Renaming /dir1/file1 to non-existant file /dir1/link/file3 is OK
+    // if link points to a directory...
+    fc.createSymlink(dir2, link, false);
+    createAndWriteFile(file1);
+    fc.rename(file1, file3);
+    assertFalse(exists(fc, file1));
+    assertTrue(exists(fc, file3));
+    fc.rename(file3, file1);
+    
+    // But fails if link is dangling...
+    fc.delete(link, false);
+    fc.createSymlink(file2, link, false);    
+    try {
+      fc.rename(file1, file3);
+    } catch (IOException e) {
+      // Expected
+      assertTrue(unwrapException(e) instanceof FileNotFoundException);
+    }
+
+    // And if link points to a file...
+    createAndWriteFile(file2);
+    try {
+      fc.rename(file1, file3);
+    } catch (IOException e) {
+      // Expected
+      assertTrue(unwrapException(e) instanceof ParentNotDirectoryException);
+    }    
+  }
+  
+  @Test
   /** Operate on a file using a path with an intermediate symlink */  
   public void testAccessFileViaSymlink() throws IOException {
     Path baseDir        = new Path(testBaseDir1());
@@ -1230,7 +1271,7 @@ public abstract class FileContextSymlinkBaseTest {
     Path dirViaLink = new Path(linkToDir, "dir");
     fc.createSymlink(baseDir, linkToDir, false);
     fc.mkdir(dirViaLink, FileContext.DEFAULT_PERM, true);
-    assertTrue(fc.getFileStatus(dirViaLink).isDir());
+    assertTrue(fc.getFileStatus(dirViaLink).isDirectory());
     FileStatus[] stats = fc.util().listStatus(dirViaLink);
     assertEquals(0, stats.length);
     Iterator<FileStatus> statsItor = fc.listStatus(dirViaLink);

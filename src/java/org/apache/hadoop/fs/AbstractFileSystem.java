@@ -592,9 +592,6 @@ public abstract class AbstractFileSystem {
       ParentNotDirectoryException, UnresolvedLinkException, IOException {
     // Default implementation deals with overwrite in a non-atomic way
     final FileStatus srcStatus = getFileLinkStatus(src);
-    if (srcStatus == null) {
-      throw new FileNotFoundException("rename source " + src + " not found.");
-    }
 
     FileStatus dstStatus;
     try {
@@ -611,32 +608,29 @@ public abstract class AbstractFileSystem {
         throw new FileAlreadyExistsException(
             "Cannot rename symlink "+src+" to its target "+dst);
       }
-      if (srcStatus.isDir() != dstStatus.isDir()) {
-        throw new IOException("Source " + src + " Destination " + dst
-            + " both should be either file or directory");
+      // It's OK to rename a file to a symlink and vice versa
+      if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
+        throw new IOException("Source " + src + " and destination " + dst
+            + " must both be directories");
       }
       if (!overwrite) {
-        throw new FileAlreadyExistsException("rename destination " + dst
+        throw new FileAlreadyExistsException("Rename destination " + dst
             + " already exists.");
       }
       // Delete the destination that is a file or an empty directory
-      if (dstStatus.isDir()) {
+      if (dstStatus.isDirectory()) {
         Iterator<FileStatus> list = listStatusIterator(dst);
         if (list != null && list.hasNext()) {
           throw new IOException(
-              "rename cannot overwrite non empty destination directory " + dst);
+              "Rename cannot overwrite non empty destination directory " + dst);
         }
       }
       delete(dst, false);
     } else {
       final Path parent = dst.getParent();
-      final FileStatus parentStatus = getFileLinkStatus(parent);
-      if (parentStatus == null) {
-        throw new FileNotFoundException("rename destination parent " + parent
-            + " not found.");
-      }
-      if (!parentStatus.isDir() && !parentStatus.isSymlink()) {
-        throw new ParentNotDirectoryException("rename destination parent "
+      final FileStatus parentStatus = getFileStatus(parent);
+      if (parentStatus.isFile()) {
+        throw new ParentNotDirectoryException("Rename destination parent "
             + parent + " is a file.");
       }
     }

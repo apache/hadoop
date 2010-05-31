@@ -124,7 +124,7 @@ public final class FileContextTestHelper {
   
   public static boolean isFile(FileContext fc, Path p) throws IOException {
     try {
-      return !fc.getFileStatus(p).isDir();
+      return fc.getFileStatus(p).isFile();
     } catch (FileNotFoundException e) {
       return false;
     }
@@ -132,7 +132,7 @@ public final class FileContextTestHelper {
 
   public static boolean isDir(FileContext fc, Path p) throws IOException {
     try {
-      return fc.getFileStatus(p).isDir();
+      return fc.getFileStatus(p).isDirectory();
     } catch (FileNotFoundException e) {
       return false;
     }

@@ -62,7 +62,7 @@ public abstract class NativeS3FileSystemContractBaseTest
   }
   
   public void testNoTrailingBackslashOnBucket() throws Exception {
-    assertTrue(fs.getFileStatus(new Path(fs.getUri().toString())).isDir());
+    assertTrue(fs.getFileStatus(new Path(fs.getUri().toString())).isDirectory());
   }
 
   private void createTestFiles(String base) throws IOException {
@@ -100,7 +100,7 @@ public abstract class NativeS3FileSystemContractBaseTest
         store.storeEmptyFile(base + "/dir/");
       }
 
-      assertTrue(fs.getFileStatus(path).isDir());
+      assertTrue(fs.getFileStatus(path).isDirectory());
       assertEquals(2, fs.listStatus(path).length);
     }
   }
@@ -114,7 +114,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     fs.delete(path, true);
 
     path = path("/test");
-    assertTrue(fs.getFileStatus(path).isDir());
+    assertTrue(fs.getFileStatus(path).isDirectory());
     assertEquals(0, fs.listStatus(path).length);
   }
 
@@ -127,9 +127,9 @@ public abstract class NativeS3FileSystemContractBaseTest
     fs.rename(path("/" + base), dest);
 
     Path path = path("/test");
-    assertTrue(fs.getFileStatus(path).isDir());
+    assertTrue(fs.getFileStatus(path).isDirectory());
     assertEquals(1, fs.listStatus(path).length);
-    assertTrue(fs.getFileStatus(dest).isDir());
+    assertTrue(fs.getFileStatus(dest).isDirectory());
     assertEquals(2, fs.listStatus(dest).length);
   }
 

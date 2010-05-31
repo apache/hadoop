@@ -107,13 +107,13 @@ public class TestDiskChecker {
         .returning(localDir).from.pathToFile(dir));
     FileStatus stat = make(stub(FileStatus.class)
         .returning(perm).from.getPermission());
-    when(stat.isDir()).thenReturn(isDir);
+    when(stat.isDirectory()).thenReturn(isDir);
     when(fs.getFileStatus(dir)).thenReturn(stat);
 
     try {
       DiskChecker.checkDir(fs, dir, perm);
 
-      verify(stat).isDir();
+      verify(stat).isDirectory();
       verify(fs, times(2)).getFileStatus(dir);
       verify(stat, times(2)).getPermission();
       assertTrue("checkDir success", success);

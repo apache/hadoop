@@ -721,8 +721,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       if (stat == null) {
         throw new FileNotFoundException("Missing parent:" + f);
       }
-      if (!stat.isDir()) {
-          throw new ParentNotDirectoryException("parent is not a dir:" + f);
+      if (!stat.isDirectory()) {
+        throw new ParentNotDirectoryException("parent is not a dir:" + f);
       }
       // parent does exist - go ahead with create of file.
     }
@@ -767,8 +767,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       if (stat == null) {
         throw new FileNotFoundException("Missing parent:" + f);
       }
-      if (!stat.isDir()) {
-          throw new ParentNotDirectoryException("parent is not a dir");
+      if (!stat.isDirectory()) {
+        throw new ParentNotDirectoryException("parent is not a dir");
       }
       // parent does exist - go ahead with mkdir of leaf
     }
@@ -912,7 +912,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       dstStatus = null;
     }
     if (dstStatus != null) {
-      if (srcStatus.isDir() != dstStatus.isDir()) {
+      if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
         throw new IOException("Source " + src + " Destination " + dst
             + " both should be either file or directory");
       }
@@ -921,7 +921,7 @@ public abstract class FileSystem extends Configured implements Closeable {
             + " already exists.");
       }
       // Delete the destination that is a file or an empty directory
-      if (dstStatus.isDir()) {
+      if (dstStatus.isDirectory()) {
         FileStatus[] list = listStatus(dst);
         if (list != null && list.length != 0) {
           throw new IOException(
@@ -936,7 +936,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         throw new FileNotFoundException("rename destination parent " + parent
             + " not found.");
       }
-      if (!parentStatus.isDir()) {
+      if (!parentStatus.isDirectory()) {
         throw new ParentNotDirectoryException("rename destination parent " + parent
             + " is a file.");
       }
@@ -1025,7 +1025,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public boolean isDirectory(Path f) throws IOException {
     try {
-      return getFileStatus(f).isDir();
+      return getFileStatus(f).isDirectory();
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
@@ -1037,7 +1037,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public boolean isFile(Path f) throws IOException {
     try {
-      return !getFileStatus(f).isDir();
+      return getFileStatus(f).isFile();
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
@@ -1053,14 +1053,14 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Return the {@link ContentSummary} of a given {@link Path}. */
   public ContentSummary getContentSummary(Path f) throws IOException {
     FileStatus status = getFileStatus(f);
-    if (!status.isDir()) {
+    if (status.isFile()) {
       // f is a file
       return new ContentSummary(status.getLen(), 1, 0);
     }
     // f is a directory
     long[] summary = {0, 0, 1};
     for(FileStatus s : listStatus(f)) {
-      ContentSummary c = s.isDir() ? getContentSummary(s.getPath()) :
+      ContentSummary c = s.isDirectory() ? getContentSummary(s.getPath()) :
                                      new ContentSummary(s.getLen(), 1, 0);
       summary[0] += c.getLength();
       summary[1] += c.getFileCount();
