@@ -28,6 +28,8 @@ Trunk (unreleased changes)
     HDFS-1119. Introduce a GSet interface to BlocksMap.  (szetszwo)
 
   BUG FIXES
+    HDFS-1039.  Service should be set in the token in JspHelper.getUGI(jnp via boryas)
+
     HDFS-1038. FIX. A test missed in a previous commit for this JIRA. (boryas)
 
     HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only 
