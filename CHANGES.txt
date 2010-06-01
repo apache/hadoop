@@ -653,6 +653,7 @@ Release 0.21.0 - Unreleased
                and over for same region
    HBASE-2630  HFile should use toStringBinary in various places
    HBASE-2632  Shell should autodetect terminal width
+   HBASE-2636  Upgrade Jetty to 6.1.24
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
