@@ -46,10 +46,14 @@ public class JobContext {
     "mapreduce.partitioner.class";
 
   protected final org.apache.hadoop.mapred.JobConf conf;
-  private final JobID jobId;
+  private JobID jobId;
   
   public JobContext(Configuration conf, JobID jobId) {
     this.conf = new org.apache.hadoop.mapred.JobConf(conf);
+    this.jobId = jobId;
+  }
+
+  void setJobID(JobID jobId) {
     this.jobId = jobId;
   }
 

@@ -32,6 +32,8 @@ Release 0.20.3 - Unreleased
     MAPREDUCE-1372. ConcurrentModificationException in JobInProgress.
     (Dick King and Amareshwari Sriramadasu via tomwhite)
 
+    MAPREDUCE-118. Fix Job.getJobID(). (Amareshwari Sriramadasu via sharad)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
