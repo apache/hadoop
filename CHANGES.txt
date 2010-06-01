@@ -656,6 +656,7 @@ Release 0.21.0 - Unreleased
    HBASE-2632  Shell should autodetect terminal width
    HBASE-2636  Upgrade Jetty to 6.1.24
    HBASE-2437  Refactor HLog splitLog (Cosmin Lehene via Stack)
+   HBASE-2638  Speed up REST tests
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

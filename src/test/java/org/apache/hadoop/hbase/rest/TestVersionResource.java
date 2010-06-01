@@ -28,7 +28,6 @@ import javax.xml.bind.JAXBException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -39,17 +38,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 public class TestVersionResource extends HBaseRESTClusterTestBase {
-  private static final Log LOG =
-    LogFactory.getLog(TestVersionResource.class);
+  static final Log LOG = LogFactory.getLog(TestVersionResource.class);
 
-  private Client client;
-  private JAXBContext context;
+  Client client;
+  JAXBContext context;
 
   public TestVersionResource() throws JAXBException {
     super();
     context = JAXBContext.newInstance(
-        VersionModel.class,
-        StorageClusterVersionModel.class);
+      VersionModel.class,
+      StorageClusterVersionModel.class);
   }
 
   @Override
@@ -64,7 +62,7 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     super.tearDown();
   }
 
-  private static void validate(VersionModel model) {
+  void validate(VersionModel model) {
     assertNotNull(model);
     assertNotNull(model.getRESTVersion());
     assertEquals(model.getRESTVersion(), RESTServlet.VERSION_STRING);
@@ -85,7 +83,7 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
       .getImplementationVersion());
   }
 
-  public void testGetStargateVersionText() throws IOException {
+  void doTestGetStargateVersionText() throws IOException {
     Response response = client.get("/version", MIMETYPE_TEXT);
     assertTrue(response.getCode() == 200);
     String body = Bytes.toString(response.getBody());
@@ -101,7 +99,7 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
       .getImplementationVersion()));
   }
 
-  public void testGetStargateVersionXML() throws IOException, JAXBException {
+  void doTestGetStargateVersionXML() throws IOException, JAXBException {
     Response response = client.get("/version", MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
     VersionModel model = (VersionModel)
@@ -111,12 +109,12 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     LOG.info("success retrieving Stargate version as XML");
   }
 
-  public void testGetStargateVersionJSON() throws IOException {
+  void doTestGetStargateVersionJSON() throws IOException {
     Response response = client.get("/version", MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
   }
 
-  public void testGetStargateVersionPB() throws IOException {
+  void doTestGetStargateVersionPB() throws IOException {
     Response response = client.get("/version", MIMETYPE_PROTOBUF);
     assertTrue(response.getCode() == 200);
     VersionModel model = new VersionModel();
@@ -125,12 +123,12 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     LOG.info("success retrieving Stargate version as protobuf");
   }
 
-  public void testGetStorageClusterVersionText() throws IOException {
+  void doTestGetStorageClusterVersionText() throws IOException {
     Response response = client.get("/version/cluster", MIMETYPE_TEXT);
     assertTrue(response.getCode() == 200);
   }
 
-  public void testGetStorageClusterVersionXML() throws IOException,
+  void doTestGetStorageClusterVersionXML() throws IOException,
       JAXBException {
     Response response = client.get("/version/cluster", MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
@@ -143,8 +141,18 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     LOG.info("success retrieving storage cluster version as XML");
   }
 
-  public void testGetStorageClusterVersionJSON() throws IOException {
+  void doTestGetStorageClusterVersionJSON() throws IOException {
     Response response = client.get("/version/cluster", MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
+  }
+
+  public void testVersionResource() throws Exception {
+    doTestGetStargateVersionText();
+    doTestGetStargateVersionXML();
+    doTestGetStargateVersionJSON();
+    doTestGetStargateVersionPB();
+    doTestGetStorageClusterVersionText();
+    doTestGetStorageClusterVersionXML();
+    doTestGetStorageClusterVersionJSON();
   }
 }

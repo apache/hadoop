@@ -37,23 +37,19 @@ import org.apache.hadoop.hbase.rest.model.TestTableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestSchemaResource extends HBaseRESTClusterTestBase {
-  private Client client;
-  private JAXBContext context;
-  private HBaseAdmin admin;
+  static String TABLE1 = "TestSchemaResource1";
+  static String TABLE2 = "TestSchemaResource2";
 
-  private static String TABLE1 = "TestSchemaResource1";
-  private static String TABLE2 = "TestSchemaResource2";
-
-  public TestSchemaResource() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(
-        ColumnSchemaModel.class,
-        TableSchemaModel.class);
-  }
+  Client client;
+  JAXBContext context;
+  HBaseAdmin admin;
 
   @Override
   protected void setUp() throws Exception {
     super.setUp();
+    context = JAXBContext.newInstance(
+        ColumnSchemaModel.class,
+        TableSchemaModel.class);
     admin = new HBaseAdmin(conf);
     client = new Client(new Cluster().add("localhost", testServletPort));
   }
@@ -64,19 +60,18 @@ public class TestSchemaResource extends HBaseRESTClusterTestBase {
     super.tearDown();
   }
 
-  private byte[] toXML(TableSchemaModel model) throws JAXBException {
+  byte[] toXML(TableSchemaModel model) throws JAXBException {
     StringWriter writer = new StringWriter();
     context.createMarshaller().marshal(model, writer);
     return Bytes.toBytes(writer.toString());
   }
 
-  private TableSchemaModel fromXML(byte[] content) throws JAXBException {
+  TableSchemaModel fromXML(byte[] content) throws JAXBException {
     return (TableSchemaModel) context.createUnmarshaller()
       .unmarshal(new ByteArrayInputStream(content));
   }
 
-  public void testTableCreateAndDeleteXML() 
-      throws IOException, JAXBException {
+  void doTestTableCreateAndDeleteXML() throws IOException, JAXBException {
     String schemaPath = "/" + TABLE1 + "/schema";
     TableSchemaModel model;
     Response response;
@@ -105,7 +100,7 @@ public class TestSchemaResource extends HBaseRESTClusterTestBase {
     assertFalse(admin.tableExists(TABLE1));
   }
 
-  public void testTableCreateAndDeletePB() throws IOException, JAXBException {
+  void doTestTableCreateAndDeletePB() throws IOException, JAXBException {
     String schemaPath = "/" + TABLE2 + "/schema";
     TableSchemaModel model;
     Response response;
@@ -134,5 +129,10 @@ public class TestSchemaResource extends HBaseRESTClusterTestBase {
 
     // make sure HBase concurs
     assertFalse(admin.tableExists(TABLE2));
+  }
+
+  public void testSchemaResource() throws Exception {
+    doTestTableCreateAndDeleteXML();
+    doTestTableCreateAndDeletePB();
   }
 }

@@ -48,21 +48,20 @@ import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestScannerResource extends HBaseRESTClusterTestBase {
+  static final String TABLE = "TestScannerResource";
+  static final String COLUMN_1 = "a:";
+  static final String COLUMN_2 = "b:";
 
-  private static final String TABLE = "TestScannerResource";
-  private static final String COLUMN_1 = "a:";
-  private static final String COLUMN_2 = "b:";
+  static int expectedRows1;
+  static int expectedRows2;
 
-  private static int expectedRows1;
-  private static int expectedRows2;
+  Client client;
+  JAXBContext context;
+  Marshaller marshaller;
+  Unmarshaller unmarshaller;
+  HBaseAdmin admin;
 
-  private Client client;
-  private JAXBContext context;
-  private Marshaller marshaller;
-  private Unmarshaller unmarshaller;
-  private HBaseAdmin admin;
-
-  private int insertData(String tableName, String column, double prob)
+  int insertData(String tableName, String column, double prob)
       throws IOException {
     Random rng = new Random();
     int count = 0;
@@ -77,11 +76,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
             k[1] = b2;
             k[2] = b3;
             Put put = new Put(k);
-            if(famAndQf.length == 1) {
-              put.add(famAndQf[0], new byte[0], k);
-            } else {
-              put.add(famAndQf[0], famAndQf[1], k);
-            }
+            put.add(famAndQf[0], famAndQf[1], k);
             table.put(put);
             count++;
           }
@@ -92,8 +87,9 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     return count;
   }
 
-  public TestScannerResource() throws JAXBException {
-    super();
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
     context = JAXBContext.newInstance(
         CellModel.class,
         CellSetModel.class,
@@ -101,21 +97,14 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
         ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
-  }
-
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
     client = new Client(new Cluster().add("localhost", testServletPort));
     admin = new HBaseAdmin(conf);
     if (admin.tableExists(TABLE)) {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
-        Bytes.toBytes(COLUMN_1))[0]));
-    htd.addFamily(new HColumnDescriptor(KeyValue.parseColumn(
-        Bytes.toBytes(COLUMN_2))[0]));
+    htd.addFamily(new HColumnDescriptor(COLUMN_1));
+    htd.addFamily(new HColumnDescriptor(COLUMN_2));
     admin.createTable(htd);
     expectedRows1 = insertData(TABLE, COLUMN_1, 1.0);
     expectedRows2 = insertData(TABLE, COLUMN_2, 0.5);
@@ -127,7 +116,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     super.tearDown();
   }
 
-  private int countCellSet(CellSetModel model) {
+  int countCellSet(CellSetModel model) {
     int count = 0;
     Iterator<RowModel> rows = model.getRows().iterator();
     while (rows.hasNext()) {
@@ -141,7 +130,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     return count;
   }
 
-  public void testSimpleScannerXML() throws IOException, JAXBException {
+  void doTestSimpleScannerXML() throws IOException, JAXBException {
     final int BATCH_SIZE = 5;
     // new scanner
     ScannerModel model = new ScannerModel();
@@ -169,7 +158,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     assertEquals(response.getCode(), 200);
   }
 
-  public void testSimpleScannerPB() throws IOException {
+  void doTestSimpleScannerPB() throws IOException {
     final int BATCH_SIZE = 10;
     // new scanner
     ScannerModel model = new ScannerModel();
@@ -194,7 +183,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     assertEquals(response.getCode(), 200);
   }
 
-  public void testSimpleScannerBinary() throws IOException {
+  void doTestSimpleScannerBinary() throws IOException {
     // new scanner
     ScannerModel model = new ScannerModel();
     model.setBatch(1);
@@ -231,7 +220,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     assertEquals(response.getCode(), 200);
   }
 
-  private int fullTableScan(ScannerModel model) throws IOException {
+  int fullTableScan(ScannerModel model) throws IOException {
     model.setBatch(100);
     Response response = client.put("/" + TABLE + "/scanner",
         MIMETYPE_PROTOBUF, model.createProtobufOutput());
@@ -264,7 +253,7 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     return count;
   }
 
-  public void testFullTableScan() throws IOException {
+  void doTestFullTableScan() throws IOException {
     ScannerModel model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_1));
     assertEquals(fullTableScan(model), expectedRows1);
@@ -272,5 +261,12 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     model = new ScannerModel();
     model.addColumn(Bytes.toBytes(COLUMN_2));
     assertEquals(fullTableScan(model), expectedRows2);
+  }
+
+  public void testScannerResource() throws Exception {
+    doTestSimpleScannerXML();
+    doTestSimpleScannerPB();
+    doTestSimpleScannerBinary();
+    doTestFullTableScan();
   }
 }
