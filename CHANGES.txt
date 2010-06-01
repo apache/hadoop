@@ -348,6 +348,8 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-6798. Align Ivy version for all Hadoop subprojects. (cos)
+
     HADOOP-6777. Implement a functionality for suspend and resume a process.
     (Vinay Thota via cos)
 
