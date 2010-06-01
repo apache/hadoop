@@ -18,7 +18,7 @@
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
-  String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>";
+  String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th></tr>";
   HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   Map<String, Integer> frags = null;
@@ -146,7 +146,7 @@
 <tr>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></td>
   <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + infoPort %></a></td>
-  <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
+  <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
 </tr>
 <% } %>

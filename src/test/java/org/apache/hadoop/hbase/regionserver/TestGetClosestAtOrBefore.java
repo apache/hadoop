@@ -111,7 +111,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase implements HConstant
     findRow(mr, 'C', 43, 42);
     // Now delete 'C' and make sure I don't get entries from 'B'.
     byte [] firstRowInC = HRegionInfo.createRegionName(Bytes.toBytes("" + 'C'),
-      HConstants.EMPTY_BYTE_ARRAY, HConstants.ZEROES);
+      HConstants.EMPTY_BYTE_ARRAY, HConstants.ZEROES, false);
     Scan scan = new Scan(firstRowInC);
     s = mr.getScanner(scan);
     try {
@@ -150,7 +150,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase implements HConstant
     // Find the row.
     byte [] tofindBytes = Bytes.toBytes((short)rowToFind);
     byte [] metaKey = HRegionInfo.createRegionName(tableb, tofindBytes,
-      HConstants.NINES);
+      HConstants.NINES, false);
     LOG.info("find=" + new String(metaKey));
     Result r = mr.getClosestRowBefore(metaKey);
     if (answer == -1) {

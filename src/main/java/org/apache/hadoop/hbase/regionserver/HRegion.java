@@ -225,12 +225,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   public final static String REGIONINFO_FILE = ".regioninfo";
 
   /**
-   * REGIONINFO_FILE as byte array.
-   */
-  public final static byte [] REGIONINFO_FILE_BYTES =
-    Bytes.toBytes(REGIONINFO_FILE);
-
-  /**
    * Should only be used for testing purposes
    */
   public HRegion(){
@@ -283,12 +277,11 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.regionInfo = regionInfo;
     this.flushListener = flushListener;
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
-    String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
+    String encodedNameStr = this.regionInfo.getEncodedName();
     this.regiondir = new Path(basedir, encodedNameStr);
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
-      LOG.debug("Creating region " + this + ", encoded=" +
-        this.regionInfo.getEncodedName());
+      LOG.debug("Creating region " + this);
     }
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), encodedNameStr);
@@ -363,8 +356,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     // HRegion is ready to go!
     this.writestate.compacting = false;
     this.lastFlushTime = System.currentTimeMillis();
-    LOG.info("region " + this + "/" + this.regionInfo.getEncodedName() +
-      " available; sequence id is " + this.minSequenceId);
+    LOG.info("region " + this +
+             " available; sequence id is " + this.minSequenceId);
   }
 
   /*
@@ -728,7 +721,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   private Path getSplitDirForDaughter(final Path splits, final HRegionInfo hri)
   throws IOException {
     Path d =
-      new Path(splits, Integer.toString(hri.getEncodedName()));
+      new Path(splits, hri.getEncodedName());
     if (fs.exists(d)) {
       // This should never happen; the splits dir will be newly made when we
       // come in here.  Even if we crashed midway through a split, the reopen
@@ -2322,8 +2315,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @param name ENCODED region name
    * @return Path of HRegion directory
    */
-  public static Path getRegionDir(final Path tabledir, final int name) {
-    return new Path(tabledir, Integer.toString(name));
+  public static Path getRegionDir(final Path tabledir, final String name) {
+    return new Path(tabledir, name);
   }
 
   /**
@@ -2336,7 +2329,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
     return new Path(
       HTableDescriptor.getTableDir(rootdir, info.getTableDesc().getName()),
-      Integer.toString(info.getEncodedName()));
+                                   info.getEncodedName());
   }
 
   /**
@@ -2464,7 +2457,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
     LOG.info("Creating new region " + newRegionInfo.toString());
-    int encodedName = newRegionInfo.getEncodedName();
+    String encodedName = newRegionInfo.getEncodedName();
     Path newRegionDir = HRegion.getRegionDir(a.getBaseDir(), encodedName);
     if(fs.exists(newRegionDir)) {
       throw new IOException("Cannot merge; target file collision at " +

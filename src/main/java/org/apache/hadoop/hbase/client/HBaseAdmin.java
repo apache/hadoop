@@ -915,7 +915,7 @@ public class HBaseAdmin {
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
   throws IOException {
     return connection.locateRegion(HConstants.META_TABLE_NAME,
-      HRegionInfo.createRegionName(tableName, null, HConstants.NINES));
+      HRegionInfo.createRegionName(tableName, null, HConstants.NINES, false));
   }
 
   /**

@@ -24,9 +24,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
+import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -37,13 +40,74 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class HRegionInfo extends VersionedWritable implements WritableComparable<HRegionInfo>{
   private static final byte VERSION = 0;
+  private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
 
+  /**
+   * The new format for a region name contains its encodedName at the end.
+   * The encoded name also serves as the directory name for the region
+   * in the filesystem.
+   *
+   * New region name format:
+   *    &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>.
+   * where,
+   *    &lt;encodedName> is a hex version of the MD5 hash of
+   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
+   * 
+   * The old region name format:
+   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
+   * For region names in the old format, the encoded name is a 32-bit
+   * JenkinsHash integer value (in its decimal notation, string form). 
+   *<p>
+   * **NOTE**
+   *
+   * ROOT, the first META region, and regions created by an older
+   * version of HBase (0.20 or prior) will continue to use the
+   * old region name format.
+   */
+
+  /** Separator used to demarcate the encodedName in a region name
+   * in the new format. See description on new format above. 
+   */ 
+  private static final int ENC_SEPARATOR = '.';
+  public  static final int MD5_HEX_LENGTH   = 32;
+
+  /**
+   * Does region name contain its encoded name?
+   * @param regionName region name
+   * @return boolean indicating if this a new format region
+   *         name which contains its encoded name.
+   */
+  private static boolean hasEncodedName(final byte[] regionName) {
+    // check if region name ends in ENC_SEPARATOR
+    if ((regionName.length >= 1)
+        && (regionName[regionName.length - 1] == ENC_SEPARATOR)) {
+      // region name is new format. it contains the encoded name.
+      return true; 
+    }
+    return false;
+  }
+  
   /**
    * @param regionName
    * @return the encodedName
    */
-  public static int encodeRegionName(final byte [] regionName) {
-    return Math.abs(JenkinsHash.getInstance().hash(regionName, regionName.length, 0));
+  public static String encodeRegionName(final byte [] regionName) {
+    String encodedName;
+    if (hasEncodedName(regionName)) {
+      // region is in new format:
+      // <tableName>,<startKey>,<regionIdTimeStamp>/encodedName/
+      encodedName = Bytes.toString(regionName,
+          regionName.length - MD5_HEX_LENGTH - 1,
+          MD5_HEX_LENGTH);
+    } else {
+      // old format region name. ROOT and first META region also 
+      // use this format.EncodedName is the JenkinsHash value.
+      int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
+                                                            regionName.length,
+                                                            0));
+      encodedName = String.valueOf(hashVal);
+    }
+    return encodedName;
   }
 
   /** delimiter used between portions of a region name */
@@ -67,8 +131,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   protected HTableDescriptor tableDesc = null;
   private int hashCode = -1;
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
-  public static final int NO_HASH = -1;
-  private volatile int encodedName = NO_HASH;
+  public static final String NO_HASH = null;
+  private volatile String encodedName = NO_HASH;
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -88,7 +152,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     super();
     this.regionId = regionId;
     this.tableDesc = tableDesc;
-    this.regionName = createRegionName(tableDesc.getName(), null, regionId);
+    
+    // Note: Root & First Meta regions names are still in old format   
+    this.regionName = createRegionName(tableDesc.getName(), null,
+                                       regionId, false);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     setHashCode();
   }
@@ -149,7 +216,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     }
     this.offLine = false;
     this.regionId = regionid;
-    this.regionName = createRegionName(tableDesc.getName(), startKey, regionId);
+    this.regionName = createRegionName(tableDesc.getName(), startKey, regionId, true);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
     this.split = split;
     this.endKey = endKey == null? HConstants.EMPTY_END_ROW: endKey.clone();
@@ -179,8 +246,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   private static byte [] createRegionName(final byte [] tableName,
-      final byte [] startKey, final long regionid) {
-    return createRegionName(tableName, startKey, Long.toString(regionid));
+      final byte [] startKey, final long regionid, boolean newFormat) {
+    return createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
   }
 
   /**
@@ -188,23 +255,29 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @param tableName
    * @param startKey Can be null
    * @param id Region id.
+   * @param newFormat should we create the region name in the new format
+   *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
    */
   public static byte [] createRegionName(final byte [] tableName,
-      final byte [] startKey, final String id) {
-    return createRegionName(tableName, startKey, Bytes.toBytes(id));
+      final byte [] startKey, final String id, boolean newFormat) {
+    return createRegionName(tableName, startKey, Bytes.toBytes(id), newFormat);
   }
   /**
    * Make a region name of passed parameters.
    * @param tableName
    * @param startKey Can be null
    * @param id Region id
+   * @param newFormat should we create the region name in the new format
+   *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
    */
   public static byte [] createRegionName(final byte [] tableName,
-      final byte [] startKey, final byte [] id) {
+      final byte [] startKey, final byte [] id, boolean newFormat) {
     byte [] b = new byte [tableName.length + 2 + id.length +
-       (startKey == null? 0: startKey.length)];
+       (startKey == null? 0: startKey.length) +
+       (newFormat ? (MD5_HEX_LENGTH + 2) : 0)];
+
     int offset = tableName.length;
     System.arraycopy(tableName, 0, b, 0, offset);
     b[offset++] = DELIMITER;
@@ -214,6 +287,31 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     }
     b[offset++] = DELIMITER;
     System.arraycopy(id, 0, b, offset, id.length);
+    offset += id.length;
+
+    if (newFormat) {
+      //
+      // Encoded name should be built into the region name.
+      //
+      // Use the region name thus far (namely, <tablename>,<startKey>,<id>)
+      // to compute a MD5 hash to be used as the encoded name, and append
+      // it to the byte buffer.
+      //
+      String md5Hash = MD5Hash.getMD5AsHex(b, 0, offset);
+      byte [] md5HashBytes = Bytes.toBytes(md5Hash);
+
+      if (md5HashBytes.length != MD5_HEX_LENGTH) {
+        LOG.error("MD5-hash length mismatch: Expected=" + MD5_HEX_LENGTH +
+                  "; Got=" + md5HashBytes.length); 
+      }
+
+      // now append the bytes '.<encodedName>.' to the end
+      b[offset++] = ENC_SEPARATOR;
+      System.arraycopy(md5HashBytes, 0, b, offset, MD5_HEX_LENGTH);
+      offset += MD5_HEX_LENGTH;
+      b[offset++] = ENC_SEPARATOR;
+    }
+    
     return b;
   }
 
@@ -281,11 +379,19 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @return Region name as a String for use in logging, etc.
    */
   public String getRegionNameAsString() {
-    return this.regionNameStr;
+    if (hasEncodedName(this.regionName)) {
+      // new format region names already have their encoded name.
+      return this.regionNameStr;
+    }
+
+    // old format. regionNameStr doesn't have the region name.
+    //
+    //
+    return this.regionNameStr + "." + this.getEncodedName();
   }
 
   /** @return the encoded region name */
-  public synchronized int getEncodedName() {
+  public synchronized String getEncodedName() {
     if (this.encodedName == NO_HASH) {
       this.encodedName = encodeRegionName(this.regionName);
     }

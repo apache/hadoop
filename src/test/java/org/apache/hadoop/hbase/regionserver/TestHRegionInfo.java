@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MD5Hash;
 
 public class TestHRegionInfo extends HBaseTestCase {
   public void testCreateHRegionInfoName() throws Exception {
@@ -30,8 +31,20 @@ public class TestHRegionInfo extends HBaseTestCase {
     String startKey = "startkey";
     final byte [] sk = Bytes.toBytes(startKey);
     String id = "id";
-    byte [] name = HRegionInfo.createRegionName(tn, sk, id);
+
+    // old format region name
+    byte [] name = HRegionInfo.createRegionName(tn, sk, id, false);
     String nameStr = Bytes.toString(name);
-    assertEquals(nameStr, tableName + "," + startKey + "," + id);
+    assertEquals(tableName + "," + startKey + "," + id, nameStr);
+
+
+    // new format region name.
+    String md5HashInHex = MD5Hash.getMD5AsHex(name);
+    assertEquals(HRegionInfo.MD5_HEX_LENGTH, md5HashInHex.length());
+    name = HRegionInfo.createRegionName(tn, sk, id, true);
+    nameStr = Bytes.toString(name);
+    assertEquals(tableName + "," + startKey + ","
+                 + id + "." + md5HashInHex + ".",
+                 nameStr);
   }
 }

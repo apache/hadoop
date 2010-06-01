@@ -800,7 +800,7 @@ public class HFile {
      * See {@link Writer#appendFileInfo(byte[], byte[])}.
      * @throws IOException
      */
-    public Map<byte [], byte []> loadFileInfo() 
+    public Map<byte [], byte []> loadFileInfo()
     throws IOException {
       this.trailer = readTrailer();
 
@@ -895,7 +895,7 @@ public class HFile {
      * @return Block wrapped in a ByteBuffer
      * @throws IOException
      */
-    public ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock) 
+    public ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock)
     throws IOException {
       if (trailer.metaIndexCount == 0) {
         return null; // there are no meta blocks
@@ -903,7 +903,7 @@ public class HFile {
       if (metaIndex == null) {
         throw new IOException("Meta index not loaded");
       }
-      
+
       byte [] mbname = Bytes.toBytes(metaBlockName);
       int block = metaIndex.blockContainingKey(mbname, 0, mbname.length);
       if (block == -1)
@@ -924,34 +924,34 @@ public class HFile {
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + "meta" + block);
           if (cachedBuf != null) {
-            // Return a distinct 'shallow copy' of the block, 
+            // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
             cacheHits++;
             return cachedBuf.duplicate();
           }
           // Cache Miss, please load.
         }
-        
+
         ByteBuffer buf = decompress(metaIndex.blockOffsets[block],
           longToInt(blockSize), metaIndex.blockDataSizes[block], true);
         byte [] magic = new byte[METABLOCKMAGIC.length];
         buf.get(magic, 0, magic.length);
-  
+
         if (! Arrays.equals(magic, METABLOCKMAGIC)) {
           throw new IOException("Meta magic is bad in block " + block);
         }
-        
+
         // Create a new ByteBuffer 'shallow copy' to hide the magic header
         buf = buf.slice();
-  
+
         readTime += System.currentTimeMillis() - now;
         readOps++;
-  
+
         // Cache the block
         if(cacheBlock && cache != null) {
           cache.cacheBlock(name + "meta" + block, buf.duplicate(), inMemory);
         }
-  
+
         return buf;
       }
     }
@@ -983,7 +983,7 @@ public class HFile {
         if (cache != null) {
           ByteBuffer cachedBuf = cache.getBlock(name + block);
           if (cachedBuf != null) {
-            // Return a distinct 'shallow copy' of the block, 
+            // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
             cacheHits++;
             return cachedBuf.duplicate();
@@ -1015,10 +1015,10 @@ public class HFile {
         }
 
         // 'shallow copy' to hide the header
-        // NOTE: you WILL GET BIT if you call buf.array() but don't start 
+        // NOTE: you WILL GET BIT if you call buf.array() but don't start
         //       reading at buf.arrayOffset()
         buf = buf.slice();
-        
+
         readTime += System.currentTimeMillis() - now;
         readOps++;
 
@@ -1096,7 +1096,7 @@ public class HFile {
       }
       return this.blockIndex.isEmpty()? null: this.lastkey;
     }
-    
+
     /**
      * @return number of K entries in this HFile's filter.  Returns KV count if no filter.
      */
@@ -1222,7 +1222,7 @@ public class HFile {
         return true;
       }
 
-      public boolean shouldSeek(final byte[] row, 
+      public boolean shouldSeek(final byte[] row,
           final SortedSet<byte[]> columns) {
         return true;
       }
@@ -1773,8 +1773,8 @@ public class HFile {
         byte[][] hri = HRegionInfo.parseRegionName(rn);
         Path rootDir = FSUtils.getRootDir(conf);
         Path tableDir = new Path(rootDir, Bytes.toString(hri[0]));
-        int enc = HRegionInfo.encodeRegionName(rn);
-        Path regionDir = new Path(tableDir, Integer.toString(enc));
+        String enc = HRegionInfo.encodeRegionName(rn);
+        Path regionDir = new Path(tableDir, enc);
         if (verbose) System.out.println("region dir -> " + regionDir);
         List<Path> regionFiles = getStoreFiles(fs, regionDir);
         if (verbose) System.out.println("Number of region files found -> " +

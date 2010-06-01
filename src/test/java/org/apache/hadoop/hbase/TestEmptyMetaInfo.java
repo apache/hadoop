@@ -44,7 +44,7 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
     for (int i = 0; i < COUNT; i++) {
       byte [] regionName = HRegionInfo.createRegionName(tableName,
         Bytes.toBytes(i == 0? "": Integer.toString(i)),
-        Long.toString(System.currentTimeMillis()));
+        Long.toString(System.currentTimeMillis()), true);
       Put put = new Put(regionName);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
           Bytes.toBytes("localhost:1234"));

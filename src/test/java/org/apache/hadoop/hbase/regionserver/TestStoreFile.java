@@ -149,14 +149,14 @@ public class TestStoreFile extends HBaseTestCase {
     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
     byte [] midRow = midKV.getRow();
     // Create top split.
-    Path topDir = Store.getStoreHomedir(this.testDir, 1,
+    Path topDir = Store.getStoreHomedir(this.testDir, "1",
       Bytes.toBytes(f.getPath().getParent().getName()));
     if (this.fs.exists(topDir)) {
       this.fs.delete(topDir, true);
     }
     Path topPath = StoreFile.split(this.fs, topDir, f, midRow, Range.top);
     // Create bottom split.
-    Path bottomDir = Store.getStoreHomedir(this.testDir, 2,
+    Path bottomDir = Store.getStoreHomedir(this.testDir, "2",
       Bytes.toBytes(f.getPath().getParent().getName()));
     if (this.fs.exists(bottomDir)) {
       this.fs.delete(bottomDir, true);

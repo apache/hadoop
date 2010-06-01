@@ -76,7 +76,7 @@ public class TestCompaction extends HBaseTestCase {
     this.r = createNewHRegion(htd, null, null);
     this.compactionDir = HRegion.getCompactionDir(this.r.getBaseDir());
     this.regionCompactionDir = new Path(this.compactionDir,
-        Integer.toString(this.r.getRegionInfo().getEncodedName()));
+                        this.r.getRegionInfo().getEncodedName());
   }
 
   @Override

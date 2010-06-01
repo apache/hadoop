@@ -191,7 +191,7 @@ public class Store implements HConstants, HeapSize {
     }
     this.memstore = new MemStore(this.comparator);
     this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir),
-        Integer.toString(info.getEncodedName()));
+                                        info.getEncodedName());
     this.storeName = this.family.getName();
     this.storeNameStr = Bytes.toString(this.storeName);
 
@@ -252,8 +252,8 @@ public class Store implements HConstants, HeapSize {
    * @return Path to family/Store home directory.
    */
   public static Path getStoreHomedir(final Path tabledir,
-      final int encodedName, final byte [] family) {
-    return new Path(tabledir, new Path(Integer.toString(encodedName),
+      final String encodedName, final byte [] family) {
+    return new Path(tabledir, new Path(encodedName,
       new Path(Bytes.toString(family))));
   }
 
@@ -413,7 +413,7 @@ public class Store implements HConstants, HeapSize {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p, blockcache, this.conf, 
+        curfile = new StoreFile(fs, p, blockcache, this.conf,
             this.family.getBloomFilterType(), this.inMemory);
         curfile.createReader();
       } catch (IOException ioe) {
@@ -582,10 +582,10 @@ public class Store implements HConstants, HeapSize {
    * @param basedir Directory to put writer in.
    * @throws IOException
    */
-  private StoreFile.Writer createWriter(final Path basedir, int maxKeyCount) 
+  private StoreFile.Writer createWriter(final Path basedir, int maxKeyCount)
   throws IOException {
     return StoreFile.createWriter(this.fs, basedir, this.blocksize,
-        this.compression, this.comparator, this.conf, 
+        this.compression, this.comparator, this.conf,
         this.family.getBloomFilterType(), maxKeyCount);
   }
 
@@ -879,9 +879,9 @@ public class Store implements HConstants, HeapSize {
     for (StoreFile file : filesToCompact) {
       StoreFile.Reader r = file.getReader();
       if (r != null) {
-        // NOTE: getFilterEntries could cause under-sized blooms if the user 
+        // NOTE: getFilterEntries could cause under-sized blooms if the user
         //       switches bloom type (e.g. from ROW to ROWCOL)
-        maxKeyCount += (r.getBloomFilterType() == family.getBloomFilterType()) 
+        maxKeyCount += (r.getBloomFilterType() == family.getBloomFilterType())
           ? r.getFilterEntries() : r.getEntries();
       }
     }
@@ -977,7 +977,7 @@ public class Store implements HConstants, HeapSize {
         LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
         return null;
       }
-      result = new StoreFile(this.fs, p, blockcache, this.conf, 
+      result = new StoreFile(this.fs, p, blockcache, this.conf,
           this.family.getBloomFilterType(), this.inMemory);
       result.createReader();
     }
@@ -1004,7 +1004,7 @@ public class Store implements HConstants, HeapSize {
         // WARN ugly hack here, but necessary sadly.
         // TODO why is this necessary? need a comment here if it's unintuitive!
         ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
-        
+
         // Tell observers that list of StoreFiles has changed.
         notifyChangedReadersObservers();
         // Finally, delete old store files.
@@ -1475,7 +1475,7 @@ public class Store implements HConstants, HeapSize {
    * This function will always be seen as atomic by other readers
    * because it only puts a single KV to memstore. Thus no
    * read/write control necessary.
-   * 
+   *
    * @param row
    * @param f
    * @param qualifier
@@ -1563,7 +1563,7 @@ public class Store implements HConstants, HeapSize {
       if (storeFile == null) {
         return false;
       }
-      // Add new file to store files.  Clear snapshot too while we have 
+      // Add new file to store files.  Clear snapshot too while we have
       // the Store write lock.
       return Store.this.updateStorefiles(cacheFlushId, storeFile, snapshot);
     }

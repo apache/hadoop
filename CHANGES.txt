@@ -1032,6 +1032,8 @@ Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009
    HBASE-2352  Small values for hbase.client.retries.number and
                ipc.client.connect.max.retries breaks long ops in hbase shell
                (Alexey Kovyrin via Stack)
+   HBASE-2531  32-bit encoding of regionnames waaaaaaayyyyy too susceptible to
+               hash clashes (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-1089  Add count of regions on filesystem to master UI; add percentage

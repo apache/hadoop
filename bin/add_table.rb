@@ -19,14 +19,15 @@
 #
 # Script adds a table back to a running hbase.
 # Currently only works on if table data is in place.
-# 
-# To see usage for this script, run: 
+#
+# To see usage for this script, run:
 #
 #  ${HBASE_HOME}/bin/hbase org.jruby.Main addtable.rb
 #
 include Java
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.HConstants
+import org.apache.hadoop.hbase.regionserver.HRegion
 import org.apache.hadoop.hbase.HRegionInfo
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.Delete
@@ -84,7 +85,7 @@ elsif
 end
 HTableDescriptor.isLegalTableName(tableName.to_java_bytes)
 
-# Figure locations under hbase.rootdir 
+# Figure locations under hbase.rootdir
 # Move directories into place; be careful not to overwrite.
 rootdir = FSUtils.getRootDir(c)
 tableDir = fs.makeQualified(Path.new(rootdir, tableName))
@@ -129,15 +130,15 @@ statuses = fs.listStatus(srcdir)
 for status in statuses
   next unless status.isDir()
   next if status.getPath().getName() == "compaction.dir"
-  regioninfofile =  Path.new(status.getPath(), ".regioninfo")
+  regioninfofile =  Path.new(status.getPath(), HRegion::REGIONINFO_FILE)
   unless fs.exists(regioninfofile)
     LOG.warn("Missing .regioninfo: " + regioninfofile.toString())
     next
   end
-  is = fs.open(regioninfofile) 
+  is = fs.open(regioninfofile)
   hri = HRegionInfo.new()
   hri.readFields(is)
-  is.close() 
+  is.close()
   # TODO: Need to redo table descriptor with passed table name and then recalculate the region encoded names.
   p = Put.new(hri.getRegionName())
   p.add(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER, Writables.getBytes(hri))

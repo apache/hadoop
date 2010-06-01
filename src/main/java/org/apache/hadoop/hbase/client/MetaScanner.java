@@ -63,7 +63,7 @@ class MetaScanner implements HConstants {
     HConnection connection = HConnectionManager.getConnection(configuration);
     byte [] startRow = tableName == null || tableName.length == 0 ?
         HConstants.EMPTY_START_ROW :
-          HRegionInfo.createRegionName(tableName, null, ZEROES);
+          HRegionInfo.createRegionName(tableName, null, ZEROES, false);
 
     // Scan over each meta region
     ScannerCallable callable;

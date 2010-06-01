@@ -515,7 +515,7 @@ public class HConnectionManager implements HConstants {
       int rowsScanned = 0;
       int rowsOffline = 0;
       byte[] startKey =
-        HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES);
+        HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES, false);
       byte[] endKey;
       HRegionInfo currentRegion;
       Scan scan = new Scan(startKey);
@@ -663,7 +663,7 @@ public class HConnectionManager implements HConstants {
       // the extra 9's on the end are necessary to allow "exact" matches
       // without knowing the precise region names.
       byte [] metaKey = HRegionInfo.createRegionName(tableName, row,
-        HConstants.NINES);
+        HConstants.NINES, false);
       for (int tries = 0; true; tries++) {
         if (tries >= numRetries) {
           throw new NoServerForRegionException("Unable to find region for "

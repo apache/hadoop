@@ -48,11 +48,11 @@
 <h2>Online Regions</h2>
 <% if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <table>
-<tr><th>Region Name</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
+<tr><th>Region Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
 <%   for (HRegionInfo r: onlineRegions) { 
         HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
  %>
-<tr><td><%= r.getRegionNameAsString() %></td><td><%= r.getEncodedName() %></td>
+<tr><td><%= r.getRegionNameAsString() %></td>
     <td><%= Bytes.toStringBinary(r.getStartKey()) %></td><td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
     <td><%= load.toString() %></td>
     </tr>
