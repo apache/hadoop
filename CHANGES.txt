@@ -365,6 +365,7 @@ Release 0.21.0 - Unreleased
    HBASE-2621  Fix bad link to HFile documentation in javadoc
                (Jeff Hammerbacher via Todd Lipcon)
    HBASE-2371  Fix 'list' command in shell (Alexey Kovyrin via Todd Lipcon)
+   HBASE-2620  REST tests don't use ephemeral ports
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -16,9 +16,6 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
   static final Log LOG =
     LogFactory.getLog(HBaseRESTClusterTestBase.class);
 
-  // use a nonstandard port
-  static final int DEFAULT_TEST_PORT = 38080;
-
   protected int testServletPort;
   Server server;
 
@@ -49,8 +46,7 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
     LOG.info("configured " + ServletContainer.class.getName());
     
     // set up Jetty and run the embedded server
-    testServletPort = conf.getInt("hbase.rest.port", DEFAULT_TEST_PORT);
-    server = new Server(testServletPort);
+    server = new Server(0);
     server.setSendServerVersion(false);
     server.setSendDateHeader(false);
       // set up context
@@ -58,7 +54,9 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
     context.addServlet(sh, "/*");
       // start the server
     server.start();
-
+      // get the port
+    testServletPort = server.getConnectors()[0].getLocalPort();
+    
     LOG.info("started " + server.getClass().getName() + " on port " + 
       testServletPort);
   }
