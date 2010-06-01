@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.io.SequenceFile;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -557,4 +559,88 @@ public class FSUtils {
       return isdir;
     }
   }
+
+  /**
+   * Heuristic to determine whether is safe or not to open a file for append
+   * Looks both for dfs.support.append and use reflection to search
+   * for SequenceFile.Writer.syncFs() or FSDataOutputStream.hflush()
+   * @param conf
+   * @return True if append support
+   */
+  public static boolean isAppendSupported(final Configuration conf) {
+    boolean append = conf.getBoolean("dfs.support.append", false);
+    if (append) {
+      try {
+        // TODO: The implementation that comes back when we do a createWriter
+        // may not be using SequenceFile so the below is not a definitive test.
+        // Will do for now (hdfs-200).
+        SequenceFile.Writer.class.getMethod("syncFs", new Class<?> []{});
+        append = true;
+      } catch (SecurityException e) {
+      } catch (NoSuchMethodException e) {
+        append = false;
+      }
+    } else {
+      try {
+        FSDataOutputStream.class.getMethod("hflush", new Class<?> []{});
+      } catch (NoSuchMethodException e) {
+        append = false;
+      }
+    }
+    return append;
+  }
+
+
+  /*
+   * Recover file lease. Used when a file might be suspect to be had been left open by another process. <code>p</code>
+   * @param fs
+   * @param p
+   * @param append True if append supported
+   * @throws IOException
+   */
+  public static void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
+  throws IOException{
+    if (!isAppendSupported(conf)) {
+      return;
+    }
+    // lease recovery not needed for local file system case.
+    // currently, local file system doesn't implement append either.
+    if (!(fs instanceof DistributedFileSystem)) {
+      return;
+    }
+    LOG.info("Recovering file" + p);
+    long startWaiting = System.currentTimeMillis();
+
+    // Trying recovery
+    boolean recovered = false;
+    while (!recovered) {
+      try {
+        FSDataOutputStream out = fs.append(p);
+        out.close();
+        recovered = true;
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        if (e instanceof AlreadyBeingCreatedException) {
+          // We expect that we'll get this message while the lease is still
+          // within its soft limit, but if we get it past that, it means
+          // that the RS is holding onto the file even though it lost its
+          // znode. We could potentially abort after some time here.
+          long waitedFor = System.currentTimeMillis() - startWaiting;
+          if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
+            LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
+              ":" + e.getMessage());
+          }
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ex) {
+            // ignore it and try again
+          }
+        } else {
+          throw new IOException("Failed to open " + p + " for append", e);
+        }
+      }
+    }
+    LOG.info("Finished lease recover attempt for " + p);
+  }
+
 }

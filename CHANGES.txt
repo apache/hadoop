@@ -654,6 +654,7 @@ Release 0.21.0 - Unreleased
    HBASE-2630  HFile should use toStringBinary in various places
    HBASE-2632  Shell should autodetect terminal width
    HBASE-2636  Upgrade Jetty to 6.1.24
+   HBASE-2437  Refactor HLog splitLog (Cosmin Lehene via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

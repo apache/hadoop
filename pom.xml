@@ -448,6 +448,7 @@
     <slf4j.version>1.5.8</slf4j.version>
     <stax-api>1.0.1</stax-api>
     <thrift.version>0.2.0</thrift.version>
+    <guava.version>r03</guava.version>
   </properties>
 
   <dependencyManagement>
@@ -697,9 +698,14 @@
       <version>${commons-math.version}</version>
       <scope>test</scope>
     </dependency>
-        <dependency>
+     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
+    </dependency>
+     <dependency>
+       <groupId>com.google.guava</groupId>
+       <artifactId>guava</artifactId>
+       <version>${guava.version}</version>
     </dependency>
   </dependencies>
 
