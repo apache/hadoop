@@ -28,6 +28,18 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class TestImmutableBytesWritable extends TestCase {
+  public void testHash() throws Exception {
+    assertEquals(
+      new ImmutableBytesWritable(Bytes.toBytes("xxabc"), 2, 3).hashCode(),
+      new ImmutableBytesWritable(Bytes.toBytes("abc")).hashCode());
+    assertEquals(
+      new ImmutableBytesWritable(Bytes.toBytes("xxabcd"), 2, 3).hashCode(),
+      new ImmutableBytesWritable(Bytes.toBytes("abc")).hashCode());
+    assertNotSame(
+      new ImmutableBytesWritable(Bytes.toBytes("xxabc"), 2, 3).hashCode(),
+      new ImmutableBytesWritable(Bytes.toBytes("xxabc"), 2, 2).hashCode());
+  }
+
   public void testComparison() throws Exception {
     runTests("aa", "b", -1);
     runTests("aa", "aa", 0);
@@ -44,6 +56,22 @@ public class TestImmutableBytesWritable extends TestCase {
     ImmutableBytesWritable b = new ImmutableBytesWritable(
       Bytes.toBytes(bStr));
 
+    doComparisonsOnObjects(a, b, signum);
+    doComparisonsOnRaw(a, b, signum);
+
+    // Tests for when the offset is non-zero
+    a = new ImmutableBytesWritable(Bytes.toBytes("xxx" + aStr),
+                                   3, aStr.length());
+    b = new ImmutableBytesWritable(Bytes.toBytes("yy" + bStr),
+                                   2, bStr.length());
+    doComparisonsOnObjects(a, b, signum);
+    doComparisonsOnRaw(a, b, signum);
+
+    // Tests for when offset is nonzero and length doesn't extend to end
+    a = new ImmutableBytesWritable(Bytes.toBytes("xxx" + aStr + "zzz"),
+                                   3, aStr.length());
+    b = new ImmutableBytesWritable(Bytes.toBytes("yy" + bStr + "aaa"),
+                                   2, bStr.length());
     doComparisonsOnObjects(a, b, signum);
     doComparisonsOnRaw(a, b, signum);
   }

@@ -366,6 +366,7 @@ Release 0.21.0 - Unreleased
                (Jeff Hammerbacher via Todd Lipcon)
    HBASE-2371  Fix 'list' command in shell (Alexey Kovyrin via Todd Lipcon)
    HBASE-2620  REST tests don't use ephemeral ports
+   HBASE-2635  ImmutableBytesWritable ignores offset in several cases
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
