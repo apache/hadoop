@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Partitioner;
 
@@ -44,15 +45,55 @@ import org.apache.hadoop.mapreduce.Partitioner;
  */
 public class SimpleTotalOrderPartitioner<VALUE> extends Partitioner<ImmutableBytesWritable, VALUE>
 implements Configurable {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private final static Log LOG = LogFactory.getLog(SimpleTotalOrderPartitioner.class);
+
+  @Deprecated
   public static final String START = "hbase.simpletotalorder.start";
+  @Deprecated
   public static final String END = "hbase.simpletotalorder.end";
+  
+  static final String START_BASE64 = "hbase.simpletotalorder.start.base64";
+  static final String END_BASE64 = "hbase.simpletotalorder.end.base64";
+  
   private Configuration c;
   private byte [] startkey;
   private byte [] endkey;
   private byte [][] splits;
   private int lastReduces = -1;
 
+  public static void setStartKey(Configuration conf, byte[] startKey) {
+    conf.set(START_BASE64, Base64.encodeBytes(startKey));
+  }
+  
+  public static void setEndKey(Configuration conf, byte[] endKey) {
+    conf.set(END_BASE64, Base64.encodeBytes(endKey));
+  }
+  
+  @SuppressWarnings("deprecation")
+  static byte[] getStartKey(Configuration conf) {
+    return getKeyFromConf(conf, START_BASE64, START);
+  }
+  
+  @SuppressWarnings("deprecation")
+  static byte[] getEndKey(Configuration conf) {
+    return getKeyFromConf(conf, END_BASE64, END);
+  }
+  
+  private static byte[] getKeyFromConf(Configuration conf,
+      String base64Key, String deprecatedKey) {
+    String encoded = conf.get(base64Key);
+    if (encoded != null) {
+      return Base64.decode(encoded);
+    }
+    String oldStyleVal = conf.get(deprecatedKey);
+    if (oldStyleVal == null) {
+      return null;
+    }
+    LOG.warn("Using deprecated configuration " + deprecatedKey +
+        " - please use static accessor methods instead.");
+    return Bytes.toBytes(oldStyleVal);
+  }
+  
   @Override
   public int getPartition(final ImmutableBytesWritable key, final VALUE value,
       final int reduces) {
@@ -87,10 +128,12 @@ implements Configurable {
   @Override
   public void setConf(Configuration conf) {
     this.c = conf;
-    String startStr = this.c.get(START);
-    String endStr = this.c.get(END);
-    LOG.info("startkey=" + startStr + ", endkey=" + endStr);
-    this.startkey = Bytes.toBytes(startStr);
-    this.endkey = Bytes.toBytes(endStr);
+    this.startkey = getStartKey(conf);
+    this.endkey = getEndKey(conf);
+    if (startkey == null || endkey == null) {
+      throw new RuntimeException(this.getClass() + " not configured");
+    }
+    LOG.info("startkey=" + Bytes.toStringBinary(startkey) +
+        ", endkey=" + Bytes.toStringBinary(endkey));
   }
 }

@@ -1979,6 +1979,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
     }
   }
 
+  @Override
+  public void bulkLoadHFile(
+      String hfilePath, byte[] regionName, byte[] familyName)
+  throws IOException {
+    HRegion region = getRegion(regionName);
+    region.bulkLoadHFile(hfilePath, familyName);
+  }
+  
   Map<String, Integer> rowlocks =
     new ConcurrentHashMap<String, Integer>();
 
@@ -2428,4 +2436,5 @@ public class HRegionServer implements HConstants, HRegionInterface,
         HRegionServer.class);
     doMain(args, regionServerClass);
   }
+
 }

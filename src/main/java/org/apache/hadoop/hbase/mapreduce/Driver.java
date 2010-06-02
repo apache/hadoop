@@ -36,6 +36,9 @@ public class Driver {
       "Count rows in HBase table");
     pgd.addClass(Export.NAME, Export.class, "Write table data to HDFS.");
     pgd.addClass(Import.NAME, Import.class, "Import data written by Export.");
+    pgd.addClass(ImportTsv.NAME, ImportTsv.class, "Import data in TSV format.");
+    pgd.addClass(LoadIncrementalHFiles.NAME, LoadIncrementalHFiles.class,
+                 "Complete a bulk data load.");
     pgd.addClass(CopyTable.NAME, CopyTable.class,
         "Export a table from local cluster to peer cluster");
     pgd.driver(args);

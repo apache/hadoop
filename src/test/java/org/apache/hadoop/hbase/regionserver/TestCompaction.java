@@ -207,8 +207,7 @@ public class TestCompaction extends HBaseTestCase {
     // they were deleted.
     int count = 0;
     boolean containsStartRow = false;
-    for (StoreFile f: this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles().
-        values()) {
+    for (StoreFile f: this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       scanner.seekTo();
       do {
@@ -239,7 +238,7 @@ public class TestCompaction extends HBaseTestCase {
   private int count() throws IOException {
     int count = 0;
     for (StoreFile f: this.r.stores.
-        get(COLUMN_FAMILY_TEXT).getStorefiles().values()) {
+        get(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;

@@ -357,11 +357,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return elements;
   }
 
-  /** @return the endKey */
-  public byte [] getEndKey(){
-    return endKey;
-  }
-
   /** @return the regionId */
   public long getRegionId(){
     return regionId;
@@ -401,6 +396,32 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   /** @return the startKey */
   public byte [] getStartKey(){
     return startKey;
+  }
+  
+  /** @return the endKey */
+  public byte [] getEndKey(){
+    return endKey;
+  }
+
+  /**
+   * Returns true if the given inclusive range of rows is fully contained
+   * by this region. For example, if the region is foo,a,g and this is
+   * passed ["b","c"] or ["a","c"] it will return true, but if this is passed
+   * ["b","z"] it will return false.
+   * @throws IllegalArgumentException if the range passed is invalid (ie end < start)
+   */
+  public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
+    if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
+      throw new IllegalArgumentException(
+      "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
+      " > " + Bytes.toStringBinary(rangeEndKey));
+    }
+
+    boolean firstKeyInRange = Bytes.compareTo(rangeStartKey, startKey) >= 0;
+    boolean lastKeyInRange =
+      Bytes.compareTo(rangeEndKey, endKey) < 0 ||
+      Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
+    return firstKeyInRange && lastKeyInRange;
   }
 
   /** @return the tableDesc */

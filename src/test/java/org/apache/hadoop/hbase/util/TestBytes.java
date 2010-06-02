@@ -150,6 +150,14 @@ public class TestBytes extends TestCase {
     assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1,
       Bytes.BYTES_RAWCOMPARATOR));
   }
+  
+  public void testStartsWith() {
+    assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("h")));
+    assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("")));
+    assertTrue(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("hello")));
+    assertFalse(Bytes.startsWith(Bytes.toBytes("hello"), Bytes.toBytes("helloworld")));
+    assertFalse(Bytes.startsWith(Bytes.toBytes(""), Bytes.toBytes("hello")));
+  }
 
   public void testIncrementBytes() throws IOException {
 

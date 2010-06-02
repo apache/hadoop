@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -42,14 +41,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.Random;
@@ -99,14 +104,27 @@ public class StoreFile implements HConstants {
   /** Constant for major compaction meta */
   public static final byte [] MAJOR_COMPACTION_KEY =
     Bytes.toBytes("MAJOR_COMPACTION_KEY");
+  
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
 
+  /** Meta key set when store file is a result of a bulk load */
+  public static final byte[] BULKLOAD_TASK_KEY =
+    Bytes.toBytes("BULKLOAD_SOURCE_TASK");
+  public static final byte[] BULKLOAD_TIME_KEY =
+    Bytes.toBytes("BULKLOAD_TIMESTAMP");
+
+  
   static final String BLOOM_FILTER_META_KEY = "BLOOM_FILTER_META";
   static final String BLOOM_FILTER_DATA_KEY = "BLOOM_FILTER_DATA";
   static final byte[] BLOOM_FILTER_TYPE_KEY = 
     Bytes.toBytes("BLOOM_FILTER_TYPE");
+
+  /**
+   * Map of the metadata entries in the corresponding HFile
+   */
+  private Map<byte[], byte[]> metadataMap;
 
   /*
    * Regex that will work for straight filenames and for reference names.
@@ -122,6 +140,7 @@ public class StoreFile implements HConstants {
   private final static Random rand = new Random();
   private final Configuration conf;
   private final BloomType bloomType;
+
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
@@ -183,7 +202,8 @@ public class StoreFile implements HConstants {
    * @return True if the path has format of a HStoreFile reference.
    */
   public static boolean isReference(final Path p) {
-    return isReference(p, REF_NAME_PARSER.matcher(p.getName()));
+    return !p.getName().startsWith("_") &&
+      isReference(p, REF_NAME_PARSER.matcher(p.getName()));
   }
 
   /**
@@ -244,6 +264,38 @@ public class StoreFile implements HConstants {
     }
     return this.sequenceid;
   }
+  
+  /**
+   * Return the highest sequence ID found across all storefiles in
+   * the given list. Store files that were created by a mapreduce
+   * bulk load are ignored, as they do not correspond to any edit
+   * log items.
+   * @return 0 if no non-bulk-load files are provided
+   */
+  public static long getMaxSequenceIdInList(List<StoreFile> sfs) {
+    long max = 0;
+    for (StoreFile sf : sfs) {
+      if (!sf.isBulkLoadResult()) {
+        max = Math.max(max, sf.getMaxSequenceId());
+      }
+    }
+    return max;
+  }
+
+  /**
+   * @return true if this storefile was created by HFileOutputFormat
+   * for a bulk load.
+   */
+  boolean isBulkLoadResult() {
+    return metadataMap.containsKey(BULKLOAD_TIME_KEY);
+  }
+
+  /**
+   * Return the timestamp at which this bulk load file was generated.
+   */
+  public long getBulkLoadTimestamp() {
+    return Bytes.toLong(metadataMap.get(BULKLOAD_TIME_KEY));
+  }
 
   /**
    * Returns the block cache or <code>null</code> in case none should be used.
@@ -297,9 +349,9 @@ public class StoreFile implements HConstants {
           this.inMemory);
     }
     // Load up indices and fileinfo.
-    Map<byte [], byte []> map = this.reader.loadFileInfo();
+    metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
     // Read in our metadata.
-    byte [] b = map.get(MAX_SEQ_ID_KEY);
+    byte [] b = metadataMap.get(MAX_SEQ_ID_KEY);
     if (b != null) {
       // By convention, if halfhfile, top half has a sequence number > bottom
       // half. Thats why we add one in below. Its done for case the two halves
@@ -314,7 +366,7 @@ public class StoreFile implements HConstants {
       }
 
     }
-    b = map.get(MAJOR_COMPACTION_KEY);
+    b = metadataMap.get(MAJOR_COMPACTION_KEY);
     if (b != null) {
       boolean mc = Bytes.toBoolean(b);
       if (this.majorCompaction == null) {
@@ -371,9 +423,27 @@ public class StoreFile implements HConstants {
   }
 
   @Override
-  public String toString() {
+  public String toString() {    
     return this.path.toString() +
       (isReference()? "-" + this.referencePath + "-" + reference.toString(): "");
+  }
+  
+  /**
+   * @return a length description of this StoreFile, suitable for debug output
+   */
+  public String toStringDetailed() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(this.path.toString());
+    sb.append(", isReference=").append(isReference());
+    sb.append(", isBulkLoadResult=").append(isBulkLoadResult());
+    if (isBulkLoadResult()) {
+      sb.append(", bulkLoadTS=").append(getBulkLoadTimestamp());
+    } else {
+      sb.append(", seqid=").append(getMaxSequenceId());
+    }
+    sb.append(", majorCompaction=").append(isMajorCompaction());
+
+    return sb.toString();
   }
 
   /**
@@ -812,5 +882,45 @@ public class StoreFile implements HConstants {
       super.close();
     }
     
+  }
+  
+  /**
+   * Useful comparators for comparing StoreFiles.
+   */
+  abstract static class Comparators {
+    /**
+     * Comparator that compares based on the flush time of
+     * the StoreFiles. All bulk loads are placed before all non-
+     * bulk loads, and then all files are sorted by sequence ID.
+     * If there are ties, the path name is used as a tie-breaker.
+     */
+    static final Comparator<StoreFile> FLUSH_TIME =
+      Ordering.compound(ImmutableList.of(
+          Ordering.natural().onResultOf(new GetBulkTime()),
+          Ordering.natural().onResultOf(new GetSeqId()),
+          Ordering.natural().onResultOf(new GetPathName())
+      ));
+
+    private static class GetBulkTime implements Function<StoreFile, Long> {
+      @Override
+      public Long apply(StoreFile sf) {
+        if (!sf.isBulkLoadResult()) return Long.MAX_VALUE;
+        return sf.getBulkLoadTimestamp();
+      }
+    }
+    private static class GetSeqId implements Function<StoreFile, Long> {
+      @Override
+      public Long apply(StoreFile sf) {
+        if (sf.isBulkLoadResult()) return -1L;
+        return sf.getMaxSequenceId();
+      }
+    }
+    private static class GetPathName implements Function<StoreFile, String> {
+      @Override
+      public String apply(StoreFile sf) {
+        return sf.getPath().getName();
+      }
+    }
+
   }
 }

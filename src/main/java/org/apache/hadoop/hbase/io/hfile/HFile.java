@@ -462,7 +462,7 @@ public class HFile {
         throw new NullPointerException("Key nor value may be null");
       }
       if (checkPrefix &&
-          Bytes.toString(k).toLowerCase().startsWith(FileInfo.RESERVED_PREFIX)) {
+          Bytes.startsWith(k, FileInfo.RESERVED_PREFIX_BYTES)) {
         throw new IOException("Keys with a " + FileInfo.RESERVED_PREFIX +
           " are reserved");
       }
@@ -1069,12 +1069,25 @@ public class HFile {
 
     /**
      * @return First key in the file.  May be null if file has no entries.
+     * Note that this is not the first rowkey, but rather the byte form of
+     * the first KeyValue.
      */
     public byte [] getFirstKey() {
       if (blockIndex == null) {
         throw new RuntimeException("Block index not loaded");
       }
       return this.blockIndex.isEmpty()? null: this.blockIndex.blockKeys[0];
+    }
+    
+    /**
+     * @return the first row key, or null if the file is empty.
+     * TODO move this to StoreFile after Ryan's patch goes in
+     * to eliminate KeyValue here
+     */
+    public byte[] getFirstRowKey() {
+      byte[] firstKey = getFirstKey();
+      if (firstKey == null) return null;
+      return KeyValue.createKeyValueFromKey(firstKey).getRow();
     }
 
     /**
@@ -1089,6 +1102,8 @@ public class HFile {
 
     /**
      * @return Last key in the file.  May be null if file has no entries.
+     * Note that this is not the last rowkey, but rather the byte form of
+     * the last KeyValue.
      */
     public byte [] getLastKey() {
       if (!isFileInfoLoaded()) {
@@ -1097,6 +1112,17 @@ public class HFile {
       return this.blockIndex.isEmpty()? null: this.lastkey;
     }
 
+    /**
+     * @return the last row key, or null if the file is empty.
+     * TODO move this to StoreFile after Ryan's patch goes in
+     * to eliminate KeyValue here
+     */
+    public byte[] getLastRowKey() {
+      byte[] lastKey = getLastKey();
+      if (lastKey == null) return null;
+      return KeyValue.createKeyValueFromKey(lastKey).getRow();
+    }
+    
     /**
      * @return number of K entries in this HFile's filter.  Returns KV count if no filter.
      */
@@ -1664,6 +1690,7 @@ public class HFile {
    */
   static class FileInfo extends HbaseMapWritable<byte [], byte []> {
     static final String RESERVED_PREFIX = "hfile.";
+    static final byte[] RESERVED_PREFIX_BYTES = Bytes.toBytes(RESERVED_PREFIX);
     static final byte [] LASTKEY = Bytes.toBytes(RESERVED_PREFIX + "LASTKEY");
     static final byte [] AVG_KEY_LEN =
       Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
@@ -1679,6 +1706,15 @@ public class HFile {
       super();
     }
   }
+  
+  /**
+   * Return true if the given file info key is reserved for internal
+   * use by HFile.
+   */
+  public static boolean isReservedFileInfoKey(byte[] key) {
+    return Bytes.startsWith(key, FileInfo.RESERVED_PREFIX_BYTES);
+  }
+
 
   /**
    * Get names of supported compression algorithms. The names are acceptable by
@@ -1861,5 +1897,4 @@ public class HFile {
       e.printStackTrace();
     }
   }
-
 }

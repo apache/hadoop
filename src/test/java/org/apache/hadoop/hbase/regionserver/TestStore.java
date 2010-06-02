@@ -130,7 +130,7 @@ public class TestStore extends TestCase {
     flush(1);
     // Now put in place an empty store file.  Its a little tricky.  Have to
     // do manually with hacked in sequence id.
-    StoreFile f = this.store.getStorefiles().firstEntry().getValue();
+    StoreFile f = this.store.getStorefiles().get(0);
     Path storedir = f.getPath().getParent();
     long seqid = f.getMaxSequenceId();
     HBaseConfiguration c = new HBaseConfiguration();

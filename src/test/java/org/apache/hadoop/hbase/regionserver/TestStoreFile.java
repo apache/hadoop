@@ -21,6 +21,10 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +40,12 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.mockito.Mockito;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * Test HStoreFile
@@ -439,6 +449,54 @@ public class TestStoreFile extends HBaseTestCase {
       assertTrue(falsePos < 2*expErr[x]);
     }
     
+  }
+  
+  public void testFlushTimeComparator() {
+    assertOrdering(StoreFile.Comparators.FLUSH_TIME,
+        mockStoreFile(true, 1000, -1, "/foo/123"),
+        mockStoreFile(true, 1000, -1, "/foo/126"),
+        mockStoreFile(true, 2000, -1, "/foo/126"),
+        mockStoreFile(false, -1, 1, "/foo/1"),
+        mockStoreFile(false, -1, 3, "/foo/2"),
+        mockStoreFile(false, -1, 5, "/foo/2"),
+        mockStoreFile(false, -1, 5, "/foo/3"));
+  }
+  
+  /**
+   * Assert that the given comparator orders the given storefiles in the
+   * same way that they're passed.
+   */
+  private void assertOrdering(Comparator<StoreFile> comparator, StoreFile ... sfs) {
+    ArrayList<StoreFile> sorted = Lists.newArrayList(sfs);
+    Collections.shuffle(sorted);
+    Collections.sort(sorted, comparator);
+    LOG.debug("sfs: " + Joiner.on(",").join(sfs));
+    LOG.debug("sorted: " + Joiner.on(",").join(sorted));
+    assertTrue(Iterables.elementsEqual(Arrays.asList(sfs), sorted));
+  }
+
+  /**
+   * Create a mock StoreFile with the given attributes.
+   */
+  private StoreFile mockStoreFile(boolean bulkLoad, long bulkTimestamp,
+      long seqId, String path) {
+    StoreFile mock = Mockito.mock(StoreFile.class);
+    Mockito.doReturn(bulkLoad).when(mock).isBulkLoadResult();
+    Mockito.doReturn(bulkTimestamp).when(mock).getBulkLoadTimestamp();
+    if (bulkLoad) {
+      // Bulk load files will throw if you ask for their sequence ID
+      Mockito.doThrow(new IllegalAccessError("bulk load"))
+        .when(mock).getMaxSequenceId();
+    } else {
+      Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
+    }
+    Mockito.doReturn(new Path(path)).when(mock).getPath();
+    String name = "mock storefile, bulkLoad=" + bulkLoad +
+      " bulkTimestamp=" + bulkTimestamp +
+      " seqId=" + seqId +
+      " path=" + path;
+    Mockito.doReturn(name).when(mock).toString();
+    return mock;
   }
   
 }

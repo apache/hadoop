@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 
 /**
@@ -126,9 +125,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    */
   private List<KeyValueScanner> getScanners() throws IOException {
     // First the store file scanners
-    Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
+    
+    // TODO this used to get the store files in descending order,
+    // but now we get them in ascending order, which I think is
+    // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(map.values(), cacheBlocks, isGet);
+      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -143,9 +145,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   private List<KeyValueScanner> getScanners(Scan scan, 
       final NavigableSet<byte[]> columns) throws IOException {
     // First the store file scanners
-    Map<Long, StoreFile> map = this.store.getStorefiles().descendingMap();
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(map.values(), cacheBlocks, isGet);
+      .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
 

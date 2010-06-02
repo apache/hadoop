@@ -433,6 +433,7 @@
     <jetty.version>6.1.24</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <junit.version>4.8.1</junit.version>
+    <mockito-all.version>1.8.4</mockito-all.version>
     <log4j.version>1.2.15</log4j.version>
     <zookeeper.version>3.3.1</zookeeper.version>
 
@@ -530,6 +531,12 @@
         <version>${junit.version}</version>
         <scope>test</scope>
       </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>${mockito-all.version}</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -591,6 +598,12 @@
       <artifactId>slf4j-log4j12</artifactId>
       <version>${slf4j.version}</version>
       <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>r03</version>
     </dependency>
 
     <dependency>
@@ -691,6 +704,10 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>

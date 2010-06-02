@@ -694,6 +694,7 @@ Release 0.21.0 - Unreleased
    HBASE-2559  Set hbase.hregion.majorcompaction to 0 to disable
    HBASE-1200  Add bloomfilters (Nicolas Spiegelberg via Stack)
    HBASE-2588  Add easier way to ship HBase dependencies to MR cluster within Job
+   HBASE-1923  Bulk incremental load into an existing table
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

@@ -258,5 +258,10 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public MultiPutResponse multiPut(MultiPut puts) throws IOException;
-
+  
+  /**
+   * Bulk load an HFile into an open region
+   */
+  public void bulkLoadHFile(String hfilePath,
+      byte[] regionName, byte[] familyName) throws IOException;
 }

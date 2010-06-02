@@ -35,6 +35,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <overview  label="Overview"           href="index.html" />
     <started   label="Getting Started"    href="ext:api/started" />
     <api       label="API Docs"           href="ext:api/index" />
+    <api       label="Bulk Loads"         href="bulk-load.html" />
     <api       label="HBase Metrics"      href="metrics.html" />
     <api       label="HBase Semantics"      href="acid-semantics.html" />
     <api       label="HBase  Default Configuration" href="hbase-conf.html" />

@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2010 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title> 
+      Bulk Loads in HBase
+    </title>
+  </header>
+  <body>
+    <section>
+      <title>Overview</title>
+      <p>
+        HBase includes several methods of loading data into tables.
+        The most straightforward method is to either use the TableOutputFormat
+        class from a MapReduce job, or use the normal client APIs; however,
+        these are not always the most efficient methods.
+      </p>
+      <p>
+        This document describes HBase's bulk load functionality. The bulk load
+        feature uses a MapReduce job to output table data in HBase's internal
+        data format, and then directly loads the data files into a running
+        cluster.
+      </p>
+    </section>
+    <section>
+      <title>Bulk Load Architecture</title>
+      <p>
+        The HBase bulk load process consists of two main steps.
+      </p>
+      <subsection>
+        <title>Preparing data via a MapReduce job</title>
+        <p>
+          The first step of a bulk load is to generate HBase data files from
+          a MapReduce job using HFileOutputFormat. This output format writes
+          out data in HBase's internal storage format so that they can be
+          later loaded very efficiently into the cluster.
+        </p>
+        <p>
+          In order to function efficiently, HFileOutputFormat must be configured
+          such that each output HFile fits within a single region. In order to
+          do this, jobs use Hadoop's TotalOrderPartitioner class to partition the
+          map output into disjoint ranges of the key space, corresponding to the
+          key ranges of the regions in the table.
+        </p>
+        <p>
+          HFileOutputFormat includes a convenience function, <code>configureIncrementalLoad()</code>,
+          which automatically sets up a TotalOrderPartitioner based on the current
+          region boundaries of a table.
+        </p>
+      </subsection>
+      <subsection>
+        <title>Completing the data load</title>
+        <p>
+          After the data has been prepared using <code>HFileOutputFormat</code>, it
+          is loaded into the cluster using a command line tool. This command line tool
+          iterates through the prepared data files, and for each one determines the
+          region the file belongs to. It then contacts the appropriate Region Server
+          which adopts the HFile, moving it into its storage directory and making
+          the data available to clients.
+        </p>
+        <p>
+          If the region boundaries have changed during the course of bulk load
+          preparation, or between the preparation and completion steps, the bulk
+          load commandline utility will automatically split the data files into
+          pieces corresponding to the new boundaries. This process is not
+          optimally efficient, so users should take care to minimize the delay between
+          preparing a bulk load and importing it into the cluster, especially
+          if other clients are simultaneously loading data through other means.
+        </p>
+      </subsection>
+    </section>
+    <section>
+      <title>Preparing a bulk load using the <code>importtsv</code> tool</title>
+      <p>
+        HBase ships with a command line tool called <code>importtsv</code>. This tool
+        is available by running <code>hadoop jar /path/to/hbase-VERSION.jar importtsv</code>.
+        Running this tool with no arguments prints brief usage information:
+      </p>
+      <code><pre>
+Usage: importtsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;inputdir&gt;
+
+Imports the given input directory of TSV data into the specified table.
+
+The column names of the TSV data must be specified using the -Dimporttsv.columns
+option. This option takes the form of comma-separated column names, where each
+column name is either a simple column family, or a columnfamily:qualifier. The special
+column name HBASE_ROW_KEY is used to designate that this column should be used
+as the row key for each imported record. You must specify exactly one column
+to be the row key.
+
+In order to prepare data for a bulk data load, pass the option:
+  -Dimporttsv.bulk.output=/path/for/output
+
+Other options that may be specified with -D include:
+  -Dimporttsv.skip.bad.lines=false - fail if encountering an invalid line
+</pre></code>
+    </section>
+    <section>
+      <title>Importing the prepared data using the <code>completebulkload</code> tool</title>
+      <p>
+        After a data import has been prepared using the <code>importtsv</code> tool, the
+        <code>completebulkload</code> tool is used to import the data into the running cluster.
+      </p>
+      <p>
+        The <code>completebulkload</code> tool simply takes the same output path where
+        <code>importtsv</code> put its results, and the table name. For example:
+      </p>
+      <code>$ hadoop jar hbase-VERSION.jar completebulkload /user/todd/myoutput mytable</code>
+      <p>
+        This tool will run quickly, after which point the new data will be visible in
+        the cluster.
+      </p>
+    </section>
+    <section>
+      <title>Advanced Usage</title>
+      <p>
+        Although the <code>importtsv</code> tool is useful in many cases, advanced users may
+        want to generate data programatically, or import data from other formats. To get
+        started doing so, dig into <code>ImportTsv.java</code> and check the JavaDoc for
+        HFileOutputFormat.
+      </p>
+      <p>
+        The import step of the bulk load can also be done programatically. See the
+        <code>LoadIncrementalHFiles</code> class for more information.
+      </p>
+    </section>
+  </body>
+</document>

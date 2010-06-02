@@ -34,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.Iterator;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -890,6 +891,16 @@ public class Bytes {
   }
 
   /**
+   * Return true if the byte array on the right is a prefix of the byte
+   * array on the left.
+   */
+  public static boolean startsWith(byte[] bytes, byte[] prefix) {
+    return bytes != null && prefix != null &&
+      bytes.length >= prefix.length &&
+      compareTo(bytes, 0, prefix.length, prefix, 0, prefix.length) == 0;      
+  }
+
+  /**
    * @param b bytes to hash
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
    * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
@@ -1016,6 +1027,22 @@ public class Bytes {
    * @return Array of dividing values
    */
   public static byte [][] split(final byte [] a, final byte [] b, final int num) {
+    byte[][] ret = new byte[num+2][];
+    int i = 0;
+    Iterable<byte[]> iter = iterateOnSplits(a, b, num);
+    if (iter == null) return null;
+    for (byte[] elem : iter) {
+      ret[i++] = elem;
+    }
+    return ret;
+  }
+  
+  /**
+   * Iterate over keys within the passed inclusive range.
+   */
+  public static Iterable<byte[]> iterateOnSplits(
+      final byte[] a, final byte[]b, final int num)
+  {  
     byte [] aPadded;
     byte [] bPadded;
     if (a.length < b.length) {
@@ -1035,14 +1062,14 @@ public class Bytes {
       throw new IllegalArgumentException("num cannot be < 0");
     }
     byte [] prependHeader = {1, 0};
-    BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
-    BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
-    BigInteger diffBI = stopBI.subtract(startBI);
-    BigInteger splitsBI = BigInteger.valueOf(num + 1);
+    final BigInteger startBI = new BigInteger(add(prependHeader, aPadded));
+    final BigInteger stopBI = new BigInteger(add(prependHeader, bPadded));
+    final BigInteger diffBI = stopBI.subtract(startBI);
+    final BigInteger splitsBI = BigInteger.valueOf(num + 1);
     if(diffBI.compareTo(splitsBI) < 0) {
       return null;
     }
-    BigInteger intervalBI;
+    final BigInteger intervalBI;
     try {
       intervalBI = diffBI.divide(splitsBI);
     } catch(Exception e) {
@@ -1050,20 +1077,42 @@ public class Bytes {
       return null;
     }
 
-    byte [][] result = new byte[num+2][];
-    result[0] = a;
+    final Iterator<byte[]> iterator = new Iterator<byte[]>() {
+      private int i = -1;
+      
+      @Override
+      public boolean hasNext() {
+        return i < num+1;
+      }
 
-    for (int i = 1; i <= num; i++) {
-      BigInteger curBI = startBI.add(intervalBI.multiply(BigInteger.valueOf(i)));
-      byte [] padded = curBI.toByteArray();
-      if (padded[1] == 0)
-        padded = tail(padded, padded.length - 2);
-      else
-        padded = tail(padded, padded.length - 1);
-      result[i] = padded;
-    }
-    result[num+1] = b;
-    return result;
+      @Override
+      public byte[] next() {
+        i++;
+        if (i == 0) return a;
+        if (i == num + 1) return b;
+        
+        BigInteger curBI = startBI.add(intervalBI.multiply(BigInteger.valueOf(i)));
+        byte [] padded = curBI.toByteArray();
+        if (padded[1] == 0)
+          padded = tail(padded, padded.length - 2);
+        else
+          padded = tail(padded, padded.length - 1);
+        return padded;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+      
+    };
+    
+    return new Iterable<byte[]>() {
+      @Override
+      public Iterator<byte[]> iterator() {
+        return iterator;
+      }
+    };
   }
 
   /**

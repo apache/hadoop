@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -47,11 +48,15 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +64,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -115,13 +121,11 @@ public class Store implements HConstants, HeapSize {
   private final boolean inMemory;
 
   /*
-   * Sorted Map of readers keyed by maximum edit sequence id (Most recent should
-   * be last in in list).  ConcurrentSkipListMap is lazily consistent so no
-   * need to lock it down when iterating; iterator view is that of when the
-   * iterator was taken out.
+   * List of store files inside this store. This is an immutable list that
+   * is atomically replaced when its contents change.
    */
-  private final NavigableMap<Long, StoreFile> storefiles =
-    new ConcurrentSkipListMap<Long, StoreFile>();
+  private ImmutableList<StoreFile> storefiles = null;
+
 
   // All access must be synchronized.
   private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
@@ -222,7 +226,7 @@ public class Store implements HConstants, HeapSize {
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
 
     // loadStoreFiles calculates this.maxSeqId. as side-effect.
-    this.storefiles.putAll(loadStoreFiles());
+    this.storefiles = ImmutableList.copyOf(loadStoreFiles());
 
     this.maxSeqIdBeforeLogRecovery = this.maxSeqId;
 
@@ -395,9 +399,9 @@ public class Store implements HConstants, HeapSize {
    * Creates a series of StoreFile loaded from the given directory.
    * @throws IOException
    */
-  private Map<Long, StoreFile> loadStoreFiles()
+  private List<StoreFile> loadStoreFiles()
   throws IOException {
-    Map<Long, StoreFile> results = new HashMap<Long, StoreFile>();
+    ArrayList<StoreFile> results = new ArrayList<StoreFile>();
     FileStatus files[] = this.fs.listStatus(this.homedir);
     for (int i = 0; files != null && i < files.length; i++) {
       // Skip directories.
@@ -422,20 +426,15 @@ public class Store implements HConstants, HeapSize {
           "Verify!", ioe);
         continue;
       }
-      long storeSeqId = curfile.getMaxSequenceId();
-      if (storeSeqId > this.maxSeqId) {
-        this.maxSeqId = storeSeqId;
-      }
       long length = curfile.getReader().length();
       this.storeSize += length;
       if (LOG.isDebugEnabled()) {
-        LOG.debug("loaded " + FSUtils.getPath(p) + ", isReference=" +
-          curfile.isReference() + ", sequence id=" + storeSeqId +
-          ", length=" + length + ", majorCompaction=" +
-          curfile.isMajorCompaction());
+        LOG.debug("loaded " + curfile.toStringDetailed());
       }
-      results.put(Long.valueOf(storeSeqId), curfile);
+      results.add(curfile);
     }
+    maxSeqId = StoreFile.getMaxSequenceIdInList(results);
+    Collections.sort(results, StoreFile.Comparators.FLUSH_TIME);
     return results;
   }
 
@@ -472,8 +471,75 @@ public class Store implements HConstants, HeapSize {
   /**
    * @return All store files.
    */
-  NavigableMap<Long, StoreFile> getStorefiles() {
+  List<StoreFile> getStorefiles() {
     return this.storefiles;
+  }
+
+  public void bulkLoadHFile(String srcPathStr) throws IOException {
+    Path srcPath = new Path(srcPathStr);
+    
+    HFile.Reader reader  = null;
+    try {
+      LOG.info("Validating hfile at " + srcPath + " for inclusion in "
+          + "store " + this + " region " + this.region);
+      reader = new HFile.Reader(srcPath.getFileSystem(conf),
+          srcPath, null, false);
+      reader.loadFileInfo();
+      
+      byte[] firstKey = reader.getFirstRowKey();
+      byte[] lastKey = reader.getLastRowKey();
+      
+      LOG.debug("HFile bounds: first=" + Bytes.toStringBinary(firstKey) +
+          " last=" + Bytes.toStringBinary(lastKey));
+      LOG.debug("Region bounds: first=" +
+          Bytes.toStringBinary(region.getStartKey()) +
+          " last=" + Bytes.toStringBinary(region.getEndKey()));
+      
+      HRegionInfo hri = region.getRegionInfo();
+      if (!hri.containsRange(firstKey, lastKey)) {
+        throw new WrongRegionException(
+            "Bulk load file " + srcPathStr + " does not fit inside region " 
+            + this.region);
+      }
+    } finally {
+      if (reader != null) reader.close();
+    }
+
+    // Move the file if it's on another filesystem
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+    if (!srcFs.equals(fs)) {
+      LOG.info("File " + srcPath + " on different filesystem than " +
+          "destination store - moving to this filesystem.");
+      Path tmpDir = new Path(homedir, "_tmp");
+      Path tmpPath = StoreFile.getRandomFilename(fs, tmpDir);
+      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
+      LOG.info("Copied to temporary path on dst filesystem: " + tmpPath);
+      srcPath = tmpPath;
+    }
+    
+    Path dstPath = StoreFile.getRandomFilename(fs, homedir);
+    LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
+    StoreFile.rename(fs, srcPath, dstPath);
+    
+    StoreFile sf = new StoreFile(fs, dstPath, blockcache,
+        this.conf, this.family.getBloomFilterType(), this.inMemory);
+    sf.createReader();
+    
+    LOG.info("Moved hfile " + srcPath + " into store directory " +
+        homedir + " - updating store file list.");
+
+    // Append the new storefile into the list
+    this.lock.writeLock().lock();
+    try {
+      ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
+      newFiles.add(sf);
+      this.storefiles = ImmutableList.copyOf(newFiles);
+      notifyChangedReadersObservers();
+    } finally {
+      this.lock.writeLock().unlock();
+    }
+    LOG.info("Successfully loaded store file " + srcPath
+        + " into store " + this + " (new location: " + dstPath + ")"); 
   }
 
   /**
@@ -484,13 +550,14 @@ public class Store implements HConstants, HeapSize {
    *
    * @throws IOException
    */
-  List<StoreFile> close() throws IOException {
+  ImmutableList<StoreFile> close() throws IOException {
     this.lock.writeLock().lock();
     try {
-      ArrayList<StoreFile> result =
-        new ArrayList<StoreFile>(storefiles.values());
+      ImmutableList<StoreFile> result = storefiles;
+      
       // Clear so metrics doesn't find them.
-      this.storefiles.clear();
+      storefiles = ImmutableList.of();
+      
       for (StoreFile f: result) {
         f.closeReader();
       }
@@ -591,19 +658,19 @@ public class Store implements HConstants, HeapSize {
 
   /*
    * Change storefiles adding into place the Reader produced by this new flush.
-   * @param logCacheFlushId
    * @param sf
    * @param set That was used to make the passed file <code>p</code>.
    * @throws IOException
    * @return Whether compaction is required.
    */
-  private boolean updateStorefiles(final long logCacheFlushId,
-    final StoreFile sf, final SortedSet<KeyValue> set)
+  private boolean updateStorefiles(final StoreFile sf,
+                                   final SortedSet<KeyValue> set)
   throws IOException {
     this.lock.writeLock().lock();
     try {
-      this.storefiles.put(Long.valueOf(logCacheFlushId), sf);
-
+      ArrayList<StoreFile> newList = new ArrayList<StoreFile>(storefiles);
+      newList.add(sf);
+      storefiles = ImmutableList.copyOf(newList);
       this.memstore.clearSnapshot(set);
 
       // Tell listeners of the change in readers.
@@ -670,15 +737,14 @@ public class Store implements HConstants, HeapSize {
     boolean majorcompaction = mc;
     synchronized (compactLock) {
       // filesToCompact are sorted oldest to newest.
-      List<StoreFile> filesToCompact =
-        new ArrayList<StoreFile>(this.storefiles.values());
+      List<StoreFile> filesToCompact = this.storefiles;
       if (filesToCompact.isEmpty()) {
         LOG.debug(this.storeNameStr + ": no store files to compact");
         return null;
       }
 
       // Max-sequenceID is the last key of the storefiles TreeMap
-      long maxId = this.storefiles.lastKey().longValue();
+      long maxId = StoreFile.getMaxSequenceIdInList(storefiles);
 
       // Check to see if we need to do a major compaction on this region.
       // If so, change doMajorCompaction to true to skip the incremental
@@ -819,10 +885,7 @@ public class Store implements HConstants, HeapSize {
    * @return True if we should run a major compaction.
    */
   boolean isMajorCompaction() throws IOException {
-    List<StoreFile> filesToCompact = null;
-    // filesToCompact are sorted oldest to newest.
-    filesToCompact = new ArrayList<StoreFile>(this.storefiles.values());
-    return isMajorCompaction(filesToCompact);
+    return isMajorCompaction(storefiles);
   }
 
   /*
@@ -990,16 +1053,18 @@ public class Store implements HConstants, HeapSize {
         // delete old store files until we have sent out notification of
         // change in case old files are still being accessed by outstanding
         // scanners.
-        for (Map.Entry<Long, StoreFile> e: this.storefiles.entrySet()) {
-          if (compactedFiles.contains(e.getValue())) {
-            this.storefiles.remove(e.getKey());
+        ArrayList<StoreFile> newStoreFiles = new ArrayList<StoreFile>();
+        for (StoreFile sf : storefiles) {
+          if (!compactedFiles.contains(sf)) {
+            newStoreFiles.add(sf);
           }
         }
+        
         // If a StoreFile result, move it into place.  May be null.
         if (result != null) {
-          Long orderVal = Long.valueOf(result.getMaxSequenceId());
-          this.storefiles.put(orderVal, result);
+          newStoreFiles.add(result);
         }
+        this.storefiles = ImmutableList.copyOf(newStoreFiles);
 
         // WARN ugly hack here, but necessary sadly.
         // TODO why is this necessary? need a comment here if it's unintuitive!
@@ -1020,7 +1085,7 @@ public class Store implements HConstants, HeapSize {
       }
       // 4. Compute new store size
       this.storeSize = 0L;
-      for (StoreFile hsf : this.storefiles.values()) {
+      for (StoreFile hsf : this.storefiles) {
         Reader r = hsf.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + hsf + " has a null Reader");
@@ -1094,10 +1159,9 @@ public class Store implements HConstants, HeapSize {
       this.memstore.getRowKeyAtOrBefore(state);
       // Check if match, if we got a candidate on the asked for 'kv' row.
       // Process each store file. Run through from newest to oldest.
-      Map<Long, StoreFile> m = this.storefiles.descendingMap();
-      for (Map.Entry<Long, StoreFile> e : m.entrySet()) {
+      for (StoreFile sf : Iterables.reverse(storefiles)) {
         // Update the candidate keys from the current map file
-        rowAtOrBeforeFromStoreFile(e.getValue(), state);
+        rowAtOrBeforeFromStoreFile(sf, state);
       }
       return state.getCandidate();
     } finally {
@@ -1232,9 +1296,8 @@ public class Store implements HConstants, HeapSize {
       // Not splitable if we find a reference store file present in the store.
       boolean splitable = true;
       long maxSize = 0L;
-      Long mapIndex = Long.valueOf(0L);
-      for (Map.Entry<Long, StoreFile> e: storefiles.entrySet()) {
-        StoreFile sf = e.getValue();
+      StoreFile largestSf = null;
+      for (StoreFile sf : storefiles) {
         if (splitable) {
           splitable = !sf.isReference();
           if (!splitable) {
@@ -1254,13 +1317,12 @@ public class Store implements HConstants, HeapSize {
         if (size > maxSize) {
           // This is the largest one so far
           maxSize = size;
-          mapIndex = e.getKey();
+          largestSf = sf;
         }
       }
-      StoreFile sf = this.storefiles.get(mapIndex);
-      HFile.Reader r = sf.getReader();
+      HFile.Reader r = largestSf.getReader();
       if (r == null) {
-        LOG.warn("Storefile " + sf + " Reader is null");
+        LOG.warn("Storefile " + largestSf + " Reader is null");
         return null;
       }
       // Get first, last, and mid keys.  Midkey is the key that starts block
@@ -1333,7 +1395,7 @@ public class Store implements HConstants, HeapSize {
    */
   long getStorefilesSize() {
     long size = 0;
-    for (StoreFile s: storefiles.values()) {
+    for (StoreFile s: storefiles) {
       Reader r = s.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + s + " has a null Reader");
@@ -1349,7 +1411,7 @@ public class Store implements HConstants, HeapSize {
    */
   long getStorefilesIndexSize() {
     long size = 0;
-    for (StoreFile s: storefiles.values()) {
+    for (StoreFile s: storefiles) {
       Reader r = s.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + s + " has a null Reader");
@@ -1449,7 +1511,7 @@ public class Store implements HConstants, HeapSize {
 
       // Get storefiles for this store
       List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-      for (StoreFile sf : this.storefiles.descendingMap().values()) {
+      for (StoreFile sf : Iterables.reverse(this.storefiles)) {
         HFile.Reader r = sf.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + sf + " has a null Reader");
@@ -1565,7 +1627,7 @@ public class Store implements HConstants, HeapSize {
       }
       // Add new file to store files.  Clear snapshot too while we have
       // the Store write lock.
-      return Store.this.updateStorefiles(cacheFlushId, storeFile, snapshot);
+      return Store.this.updateStorefiles(storeFile, snapshot);
     }
   }
 
