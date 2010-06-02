@@ -91,6 +91,8 @@ Release 0.21.0 - Unreleased
 
   NEW FEATURES
 
+    HDFS-1134. Large-scale Automated Framework. (cos)
+
     HDFS-436. Introduce AspectJ framework for HDFS code and tests.
     (Konstantin Boudnik via szetszwo)
 

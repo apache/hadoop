@@ -28,6 +28,8 @@
  
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
+  <!-- Need to change aop.xml project.version prop. synchronously
+   -->
   <property name="version" value="0.22.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
@@ -369,20 +371,11 @@
   </target>
 
   <target name="compile-hdfs-test" depends="compile-hdfs-classes, ivy-retrieve-test">
-    <mkdir dir="${test.hdfs.build.classes}"/>
-    <javac 
-      encoding="${build.encoding}" 
-      srcdir="${test.src.dir}/hdfs;${test.src.dir}/unit"
-      includes="org/apache/hadoop/**/*.java"
-      destdir="${test.hdfs.build.classes}"
-      debug="${javac.debug}"
-      optimize="${javac.optimize}"
-      target="${javac.version}"
-      source="${javac.version}"
-      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args} ${javac.args.warnings}" />
-      <classpath refid="test.classpath"/>
-    </javac>
+    <macro-compile-hdfs-test
+      target.dir="${test.hdfs.build.classes}"
+      source.dir="${test.src.dir}/hdfs;${test.src.dir}/unit"
+      dest.dir="${test.hdfs.build.classes}"
+      classpath="test.classpath"/>
 
     <delete dir="${test.cache.data}"/>
     <mkdir dir="${test.cache.data}"/>
@@ -398,6 +391,29 @@
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
   </target>
 
+  <macrodef name="macro-compile-hdfs-test">
+    <attribute name="target.dir"/>
+    <attribute name="source.dir"/>
+    <attribute name="dest.dir"/>
+    <attribute name="classpath"/>
+    <sequential>
+      <mkdir dir="@{target.dir}"/>
+      <javac
+        encoding="${build.encoding}"
+        srcdir="@{source.dir}"
+        includes="org/apache/hadoop/**/*.java"
+        destdir="@{dest.dir}"
+        debug="${javac.debug}"
+        optimize="${javac.optimize}"
+        target="${javac.version}"
+        source="${javac.version}"
+        deprecation="${javac.deprecation}">
+        <compilerarg line="${javac.args} ${javac.args.warnings}"/>
+        <classpath refid="@{classpath}"/>
+      </javac>
+    </sequential>
+  </macrodef>
+
   <!-- ================================================================== -->
   <!-- Make hadoop-test.jar                                               -->
   <!-- ================================================================== -->
@@ -409,6 +425,15 @@
     <copy todir="${test.build.classes}">
       <fileset dir="${test.hdfs.build.classes}"/>
     </copy>
+    <subant buildpath="build.xml" target="-do-jar-test">
+    </subant>
+    <jar jarfile="${hadoop-hdfs-test-sources.jar}">
+      <fileset dir="${test.src.dir}/hdfs" includes="org/apache/hadoop/**/*.java" />
+      <fileset dir="${test.src.dir}/unit" includes="org/apache/hadoop/**/*.java" />
+    </jar>
+  </target>
+
+  <target name="-do-jar-test">
     <jar jarfile="${build.dir}/${test.hdfs.final.name}.jar"
          basedir="${test.build.classes}">
          <manifest>
@@ -422,10 +447,6 @@
          </manifest>
     </jar>
 
-    <jar jarfile="${hadoop-hdfs-test-sources.jar}">
-      <fileset dir="${test.src.dir}/hdfs" includes="org/apache/hadoop/**/*.java" />
-      <fileset dir="${test.src.dir}/unit" includes="org/apache/hadoop/**/*.java" />
-    </jar>
   </target>
 
   <!-- ================================================================== -->
@@ -458,6 +479,7 @@
     description="Make hadoop-fi.jar">
     <macro-jar-fault-inject
       target.name="jar"
+      build.dir="${build-fi.dir}"
       jar.final.name="final.name"
       jar.final.value="${final.name}-fi" />
   </target>
@@ -514,15 +536,19 @@
   <macrodef name="macro-test-runner">
     <attribute name="test.file" />
     <attribute name="suite.type" />
+    <attribute name="classpath" />
+    <attribute name="test.dir" />
+    <attribute name="fileset.dir" />
+    <attribute name="hadoop.conf.dir.deployed" default="" />
     <sequential>
-      <delete dir="${test.build.data}"/>
-      <mkdir dir="${test.build.data}"/>
-      <delete dir="${test.log.dir}"/>
-      <mkdir dir="${test.log.dir}"/>
+      <delete dir="@{test.dir}/data"/>
+      <mkdir dir="@{test.dir}/data"/>
+      <delete dir="@{test.dir}/logs"/>
+      <mkdir dir="@{test.dir}/logs"/>
       <copy file="${test.src.dir}/hadoop-policy.xml" 
-        todir="${test.build.extraconf}" />
+        todir="@{test.dir}/extraconf" />
       <copy file="${test.src.dir}/fi-site.xml"
-        todir="${test.build.extraconf}" />
+        todir="@{test.dir}/extraconf" />
       <junit showoutput="${test.output}"
         printsummary="${test.junit.printsummary}"
         haltonfailure="${test.junit.haltonfailure}"
@@ -531,42 +557,47 @@
         maxmemory="${test.junit.maxmemory}"
         dir="${basedir}" timeout="${test.timeout}"
         errorProperty="tests.failed" failureProperty="tests.failed">
-        <sysproperty key="test.build.data" value="${test.build.data}"/>
+        <sysproperty key="test.build.data" value="@{test.dir}/data"/>
         <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
         <sysproperty key="test.debug.data" value="${test.debug.data}"/>
-        <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
-        <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-        <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
+        <sysproperty key="hadoop.log.dir" value="@{test.dir}/logs"/>
+        <sysproperty key="test.src.dir" value="@{fileset.dir}"/>
+        <sysproperty key="test.build.extraconf" value="@{test.dir}/extraconf" />
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
         <sysproperty key="hdfs.rpc.engine" value="${test.hdfs.rpc.engine}"/>
-        <classpath refid="test.classpath"/>
+        <classpath refid="@{classpath}"/>
         <!-- Pass probability specifications to the spawn JVM -->
         <syspropertyset id="FaultProbabilityProperties">
           <propertyref regex="fi.*"/>
         </syspropertyset>
+        <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
+                     value="@{hadoop.conf.dir.deployed}" />
         <formatter type="${test.junit.output.format}" />
-        <batchtest todir="${test.build.dir}" if="tests.notestcase">
-          <fileset dir="${test.src.dir}/@{suite.type}" excludes="**/${test.exclude}.java">
+        <batchtest todir="@{test.dir}" if="tests.notestcase">
+          <fileset dir="@{fileset.dir}/@{suite.type}"
+            excludes="**/${test.exclude}.java **/${test.exclude}.java
+              aop/** system/**">
              <patternset>
                <includesfile name="@{test.file}"/>
              </patternset>
          </fileset>
         </batchtest>
-        <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
-          <fileset dir="${test.src.dir}/aop"
+        <batchtest todir="@{test.dir}" if="tests.notestcase.fi">
+          <fileset dir="@{fileset.dir}/aop"
             includes="**/${test.include}.java"
             excludes="**/${test.exclude}.java" />
         </batchtest>
-        <batchtest todir="${test.build.dir}" if="tests.testcase">
-          <fileset dir="${test.src.dir}/@{suite.type}" includes="**/${testcase}.java"/>
+        <batchtest todir="@{test.dir}" if="tests.testcase">
+          <fileset dir="@{fileset.dir}/@{suite.type}" includes="**/${testcase}.java"
+            excludes="aop/** system/**"/>
         </batchtest>
-        <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
-          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+        <batchtest todir="@{test.dir}" if="tests.testcase.fi">
+          <fileset dir="@{fileset.dir}/aop" includes="**/${testcase}.java"/>
         </batchtest>
         <!--The following batch is for very special occasions only when
         a non-FI tests are needed to be executed against FI-environment -->
-        <batchtest todir="${test.build.dir}" if="tests.testcaseonly.fi">
-          <fileset dir="${test.src.dir}/hdfs" includes="**/${testcase}.java"/>
+        <batchtest todir="@{test.dir}" if="tests.testcaseonly.fi">
+          <fileset dir="@{fileset.dir}/hdfs" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
@@ -574,15 +605,30 @@
   </macrodef>
 
   <target name="run-test-hdfs" depends="compile-hdfs-test" description="Run full set of hdfs unit tests">
-    <macro-test-runner test.file="${test.hdfs.all.tests.file}" suite.type="hdfs"/>
+    <macro-test-runner
+      test.file="${test.hdfs.all.tests.file}"
+      suite.type="hdfs"
+      classpath="${test.classpath.id}"
+      test.dir="${test.build.dir}"
+      fileset.dir="${test.src.dir}"/>
   </target>
 
   <target name="run-commit-test" depends="compile-hdfs-test" description="Run approximate 10-minute set of unit tests prior to commiting">
-     <macro-test-runner test.file="${test.hdfs.commit.tests.file}" suite.type="hdfs"/>
+     <macro-test-runner
+       test.file="${test.hdfs.commit.tests.file}"
+       suite.type="hdfs"
+       classpath="${test.classpath.id}"
+       test.dir="${test.build.dir}"
+       fileset.dir="${test.src.dir}"/>
   </target>
 
   <target name="run-test-unit" depends="compile-hdfs-test" description="Run unit tests">
-    <macro-test-runner test.file="${test.hdfs.all.tests.file}" suite.type="unit"/>
+    <macro-test-runner
+      test.file="${test.hdfs.all.tests.file}"
+      suite.type="unit"
+      classpath="${test.classpath.id}"
+      test.dir="${test.build.dir}"
+      fileset.dir="${test.src.dir}"/>
   </target>
 
   <target name="checkfailure" if="tests.failed">
@@ -597,7 +643,7 @@
        <property name="clover.jar" value="${clover.jar}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
-  </target> 
+  </target>
 
   <target name="test-core" description="Run hdfs unit tests">
     <delete file="${test.build.dir}/testsfailed"/>
@@ -978,6 +1024,42 @@
 
   </target>
 
+  <target name="binary-system" depends="bin-package, jar-system, jar-test-system"
+     description="make system test package for deployment">
+    <copy todir="${system-test-build-dir}/${final.name}">
+      <fileset dir="${dist.dir}">
+      </fileset>
+    </copy>
+    <copy todir="${system-test-build-dir}/${final.name}/conf">
+      <fileset dir="${test.src.dir}/system/conf/"/>
+    </copy>
+    <copy tofile="${system-test-build-dir}/${final.name}/lib/hadoop-common-${version}.jar"
+      file="${build-fi.dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${version}.jar"
+      overwrite="true"/>
+    <copy tofile="${system-test-build-dir}/${final.name}/${final.name}.jar"
+      file="${system-test-build-dir}/${instrumented.final.name}.jar" overwrite="true"/>
+    <copy tofile="${system-test-build-dir}/${final.name}/${final.name}-sources.jar"
+      file="${system-test-build-dir}/${instrumented.final.name}-sources.jar" overwrite="true"/>
+    <copy todir="${system-test-build-dir}/${final.name}"
+      file="${system-test-build-dir}/${name}-${herriot.suffix}-test-${version}.jar"/>
+    <copy todir="${system-test-build-dir}/${final.name}"
+      file="${system-test-build-dir}/${name}-${herriot.suffix}-test-${version}-sources.jar"/>
+    <macro_tar 
+      param.destfile="${system-test-build-dir}/${final.name}-bin.tar.gz">
+        <param.listofitems>
+          <tarfileset dir="${system-test-build-dir}" mode="664">
+            <exclude name="${final.name}/bin/*" />
+            <exclude name="${final.name}/src/**" />
+            <exclude name="${final.name}/docs/**" />
+            <include name="${final.name}/**" />
+          </tarfileset>
+          <tarfileset dir="${build.dir}" mode="755">
+            <include name="${final.name}/bin/*" />
+          </tarfileset>
+        </param.listofitems>
+      </macro_tar>
+  </target>
+  
   <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
     <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
       <param.listofitems>
@@ -1015,12 +1097,13 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${build-fi.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete file="${hadoop-hdfs.pom}"/>
     <delete file="${hadoop-hdfs-test.pom}"/>
+    <delete file="${hadoop-hdfs-instrumented.pom}"/>
   </target>
 
   <target name="veryclean" depends="clean-cache,clean" 
@@ -1032,6 +1115,8 @@
   <target name="clean-cache" depends="clean" description="Clean. Delete ivy cache">
     <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs"/>
     <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-test"/>
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-${herriot.suffix}"/>
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-${herriot.suffix}-test"/>
   </target>
 
   <!-- ================================================================== -->
@@ -1282,7 +1367,8 @@
      </artifact:install>
   </target>
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-hdfs-test,set-version">
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-hdfs-test,set-version,
+    -mvn-system-install">
      <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
      <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
      <artifact:install file="${hadoop-hdfs.jar}">
@@ -1295,7 +1381,8 @@
      </artifact:install>
   </target>
 
-  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-hdfs-test, set-version">
+  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-hdfs-test, set-version,
+    -mvn-system-deploy">
      <property name="repourl" value="https://repository.apache.org/content/repositories/snapshots" />
      <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
      <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
@@ -1316,20 +1403,22 @@
   <target name="set-version">
     <delete file="${basedir}/ivy/hadoop-hdfs.xml"/>
     <delete file="${basedir}/ivy/hadoop-hdfs-test.xml"/>
+    <delete file="${hadoop-hdfs-instrumented.pom}"/>
+    <delete file="${hadoop-hdfs-instrumented-test.pom}"/>
     <copy file="${basedir}/ivy/hadoop-hdfs-template.xml" tofile="${basedir}/ivy/hadoop-hdfs.xml"/>
     <copy file="${basedir}/ivy/hadoop-hdfs-test-template.xml" tofile="${basedir}/ivy/hadoop-hdfs-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-template.xml"
+      tofile="${hadoop-hdfs-instrumented.pom}"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test-template.xml"
+      tofile="${hadoop-hdfs-instrumented-test.pom}"/>
     <replaceregexp byline="true">
       <regexp pattern="@version"/>
       <substitution expression="${version}"/>
       <fileset dir="${basedir}/ivy">
         <include name="hadoop-hdfs.xml"/>
-      </fileset>
-    </replaceregexp>
-    <replaceregexp byline="true">
-      <regexp pattern="@version"/>
-      <substitution expression="${version}"/>
-      <fileset dir="${basedir}/ivy">
         <include name="hadoop-hdfs-test.xml"/>
+        <include name="hadoop-hdfs-${herriot.suffix}.xml"/>
+        <include name="hadoop-hdfs-${herriot.suffix}-test.xml"/>
       </fileset>
     </replaceregexp>
   </target>
@@ -1403,6 +1492,11 @@
       log="${ivyresolvelog}"/>
   </target>
 
+  <target name="ivy-resolve-system" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="system"
+      log="${ivyresolvelog}"/>
+  </target>
+
   <target name="ivy-retrieve" depends="ivy-resolve"
     description="Retrieve Ivy-managed artifacts">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
@@ -1456,6 +1550,14 @@
       pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" 
         log="${ivyretrievelog}"/>
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
+  </target>
+
+  <target name="ivy-retrieve-system" depends="ivy-resolve-system"
+    description="Retrieve Ivy-managed artifacts for the system tests">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="ivy-test.classpath" conf="system"/>
   </target>
 
   <target name="ivy-report" depends="ivy-resolve-releaseaudit"

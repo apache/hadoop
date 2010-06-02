@@ -39,6 +39,7 @@
     <conf name="common" visibility="private" extends="compile,runtime" description="common artifacts"/>
     <conf name="javadoc" visibility="private" description="artiracts required while performing doc generation" extends="common"/>
     <conf name="test" extends="common" visibility="private" description="the classpath needed to run tests"/>
+    <conf name="system" extends="test" visibility="private" description="the classpath needed to run system tests"/>
 
     <conf name="test-hdfswithmr" extends="test, common" visibility="private" description="the classpath needed to run tests"/>
 
@@ -56,6 +57,7 @@
   <dependencies>
     
     <dependency org="org.apache.hadoop" name="hadoop-common" rev="${hadoop-common.version}" conf="common->default"/>
+    <dependency org="org.apache.hadoop" name="hadoop-common-instrumented" rev="${hadoop-common.version}" conf="system->default"/>
     <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="common->master"/>
     <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
     <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="common->default"/>
