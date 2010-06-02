@@ -36,8 +36,9 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
 
-public class TestGlobalFilter extends junit.framework.TestCase {
+public class TestGlobalFilter extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(HttpServer.class);
   static final Set<String> RECORDS = new TreeSet<String>(); 
 
@@ -95,13 +96,14 @@ public class TestGlobalFilter extends junit.framework.TestCase {
     }
   }
 
+  @Test
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
     
     //start a http server with CountingFilter
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
         RecordingFilter.Initializer.class.getName());
-    HttpServer http = new HttpServer("..", "localhost", 0, true, conf);
+    HttpServer http = createTestServer(conf);
     http.start();
 
     final String fsckURL = "/fsck";

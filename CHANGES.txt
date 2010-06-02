@@ -1548,6 +1548,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6404. Rename the generated artifacts to common instead of core.
     (tomwhite)
 
+    HADOOP-6461.  Webapps aren't located correctly post-split.
+    (Todd Lipcon and Steve Loughran via tomwhite)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

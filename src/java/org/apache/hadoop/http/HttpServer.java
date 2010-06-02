@@ -19,6 +19,7 @@ package org.apache.hadoop.http;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.FileNotFoundException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
@@ -129,7 +130,7 @@ public class HttpServer implements FilterContainer {
         new QueuedThreadPool() : new QueuedThreadPool(maxThreads);
     webServer.setThreadPool(threadPool);
 
-    final String appDir = getWebAppsPath();
+    final String appDir = getWebAppsPath(name);
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     webServer.setHandler(contexts);
 
@@ -364,14 +365,17 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Get the pathname to the webapps files.
+   * @param appName eg "secondary" or "datanode"
    * @return the pathname as a URL
-   * @throws IOException if 'webapps' directory cannot be found on CLASSPATH.
+   * @throws FileNotFoundException if 'webapps' directory cannot be found on CLASSPATH.
    */
-  protected String getWebAppsPath() throws IOException {
-    URL url = getClass().getClassLoader().getResource("webapps");
+  private String getWebAppsPath(String appName) throws FileNotFoundException {
+    URL url = getClass().getClassLoader().getResource("webapps/" + appName);
     if (url == null) 
-      throw new IOException("webapps not found in CLASSPATH"); 
-    return url.toString();
+      throw new FileNotFoundException("webapps/" + appName
+          + " not found in CLASSPATH");
+    String urlString = url.toString();
+    return urlString.substring(0, urlString.lastIndexOf('/'));
   }
 
   /**

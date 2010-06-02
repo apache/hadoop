@@ -79,6 +79,7 @@
   <property name="test.build.extraconf" value="${test.build.dir}/extraconf"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
+  <property name="test.build.webapps" value="${build.dir}/webapps"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="no"/>
@@ -630,6 +631,8 @@
       <delete file="${test.build.dir}/testsfailed"/>
       <delete dir="@{test.dir}/data" />
       <mkdir dir="@{test.dir}/data" />
+      <delete dir="${test.build.webapps}"/>
+      <mkdir dir="${test.build.webapps}/test" />
       <delete dir="@{test.dir}/logs" />
       <mkdir dir="@{test.dir}/logs" />
       <copy file="${test.src.dir}/hadoop-policy.xml"
