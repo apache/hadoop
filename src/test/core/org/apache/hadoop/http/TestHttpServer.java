@@ -17,12 +17,7 @@
  */
 package org.apache.hadoop.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -50,17 +45,15 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.http.HttpServer.QuotingInputFilter;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestHttpServer {
+public class TestHttpServer extends HttpServerFunctionalTest {
   private static HttpServer server;
   private static URL baseUrl;
   private static final int MAX_THREADS = 10;
@@ -115,30 +108,12 @@ public class TestHttpServer {
     }    
   }
 
-  private String readOutput(URL url) throws IOException {
-    StringBuilder out = new StringBuilder();
-    InputStream in = url.openConnection().getInputStream();
-    byte[] buffer = new byte[64 * 1024];
-    int len = in.read(buffer);
-    while (len > 0) {
-      out.append(new String(buffer, 0, len));
-      len = in.read(buffer);
-    }
-    return out.toString();
-  }
-  
   @BeforeClass public static void setup() throws Exception {
-    new File(System.getProperty("build.webapps", "build/webapps") + "/test"
-             ).mkdirs();
-    Configuration conf = new Configuration();
-    // Set the maximum threads
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, MAX_THREADS);
-    server = new HttpServer("test", "0.0.0.0", 0, true, conf);
+    server = createTestServer();
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.start();
-    int port = server.getPort();
-    baseUrl = new URL("http://localhost:" + port + "/");
+    baseUrl = getServerURL(server);
   }
   
   @AfterClass public static void cleanup() throws Exception {
