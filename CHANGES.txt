@@ -1,5 +1,15 @@
 Hadoop Change Log
 
+Release 0.20-append - Unreleased
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
