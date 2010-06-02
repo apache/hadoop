@@ -242,4 +242,17 @@ public class TestTableMapReduce extends MultiRegionTable {
       scanner.close();
     }
   }
+
+  /**
+   * Test that we add tmpjars correctly including the ZK jar.
+   */
+  public void testAddDependencyJars() throws Exception {
+    Job job = new Job();
+    TableMapReduceUtil.addDependencyJars(job);
+    String tmpjars = job.getConfiguration().get("tmpjars");
+
+    System.err.println("tmpjars: " + tmpjars);
+    assertTrue(tmpjars.contains("zookeeper"));
+    assertTrue(tmpjars.contains("guava"));
+  }
 }
