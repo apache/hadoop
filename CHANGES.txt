@@ -29,6 +29,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)
+
     HDFS-1019. Incorrect default values for delegation tokens in 
     hdfs-default.xml (jnp via boryas)
 
