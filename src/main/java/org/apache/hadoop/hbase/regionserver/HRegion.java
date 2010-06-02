@@ -1495,10 +1495,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         //If matches put the new put or delete the new delete
         if (matches) {
           // All edits for the given row (across all column families) must happen atomically.
-          if (isPut)
+          if (isPut) {
             put(((Put)w).getFamilyMap(), writeToWAL);
-          else 
-            delete(prepareDelete((Delete)w).getFamilyMap(), writeToWAL);
+          } else {
+            Delete d = (Delete)w;
+            prepareDelete(d);
+            delete(d.getFamilyMap(), writeToWAL);
+          }
           return true;
         }
         return false;
