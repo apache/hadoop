@@ -71,6 +71,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
     // bring up a cluster of 2
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, block_size);
+    // Allow a single volume failure (there are two volumes)
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
     cluster = new MiniDFSCluster(conf, dn_num, true, null);
     cluster.waitActive();
   }

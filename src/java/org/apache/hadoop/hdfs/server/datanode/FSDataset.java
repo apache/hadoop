@@ -836,6 +836,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   ReplicasMap volumeMap = new ReplicasMap();
   static  Random random = new Random();
   FSDatasetAsyncDiskService asyncDiskService;
+  private int validVolsRequired;
 
   // Used for synchronizing access to usage stats
   private Object statsLock = new Object();
@@ -849,6 +850,17 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
     this.supportAppends = conf.getBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
                                       DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
+    // The number of volumes required for operation is the total number 
+    // of volumes minus the number of failed volumes we can tolerate.
+    final int volFailuresTolerated =
+      conf.getInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
+                  DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
+    this.validVolsRequired = storage.getNumStorageDirs() - volFailuresTolerated; 
+    if (validVolsRequired < 1 ||
+        validVolsRequired > storage.getNumStorageDirs()) {
+      DataNode.LOG.error("Invalid value " + volFailuresTolerated + " for " +
+          DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY);
+    }
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
@@ -871,12 +883,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return volumes.getDfsUsed();
     }
   }
+
   /**
-   * Return true - if there are still valid volumes 
-   * on the DataNode
+   * Return true - if there are still valid volumes on the DataNode. 
    */
-  public boolean hasEnoughResource(){
-    return volumes.numberOfVolumes() >= MIN_NUM_OF_VALID_VOLUMES;
+  public boolean hasEnoughResource() {
+    return volumes.numberOfVolumes() >= validVolsRequired; 
   }
 
   /**
