@@ -189,6 +189,19 @@
       </releases>
     </repository>
     <repository>
+      <!-- Guava on standard maven repos has a bad checksum, hosting
+           here temporarily -->
+      <id>temp-todd-for-guava</id>
+      <name>Todd Lipcon's repository on apache.org</name>
+      <url>http://people.apache.org/~todd/repo/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
       <id>ibiblio.org</id>
       <name>ibiblio mirror</name>
       <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>

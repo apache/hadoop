@@ -367,6 +367,7 @@ Release 0.21.0 - Unreleased
    HBASE-2371  Fix 'list' command in shell (Alexey Kovyrin via Todd Lipcon)
    HBASE-2620  REST tests don't use ephemeral ports
    HBASE-2635  ImmutableBytesWritable ignores offset in several cases
+   HBASE-2654  Add additional maven repository temporarily to fetch Guava
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
