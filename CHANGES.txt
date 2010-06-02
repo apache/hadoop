@@ -368,6 +368,8 @@ Release 0.21.0 - Unreleased
    HBASE-2620  REST tests don't use ephemeral ports
    HBASE-2635  ImmutableBytesWritable ignores offset in several cases
    HBASE-2654  Add additional maven repository temporarily to fetch Guava
+   HBASE-2560  Fix IllegalArgumentException when manually splitting table
+               from web UI
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -808,7 +808,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   // TODO: Redo so this method does not duplicate code with subsequent methods.
-  private List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
+  List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
       final byte [] tableName)
   throws IOException {
     List<Pair<HRegionInfo,HServerAddress>> result =
@@ -834,7 +834,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
           if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
             byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-            if (value != null) {
+            if (value != null && value.length > 0) {
               HServerAddress server = new HServerAddress(Bytes.toString(value));
               result.add(new Pair<HRegionInfo,HServerAddress>(info, server));
             }
@@ -849,7 +849,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return result;
   }
 
-  private Pair<HRegionInfo,HServerAddress> getTableRegionClosest(
+  Pair<HRegionInfo,HServerAddress> getTableRegionClosest(
       final byte [] tableName, final byte [] rowKey)
   throws IOException {
     Set<MetaRegion> regions =
@@ -873,7 +873,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             if ((Bytes.compareTo(info.getStartKey(), rowKey) >= 0) &&
                 (Bytes.compareTo(info.getEndKey(), rowKey) < 0)) {
                 byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-                if (value != null) {
+                if (value != null && value.length > 0) {
                   HServerAddress server =
                     new HServerAddress(Bytes.toString(value));
                   return new Pair<HRegionInfo,HServerAddress>(info, server);
@@ -890,7 +890,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return null;
   }
 
-  private Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
+  Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
       final byte [] regionName)
   throws IOException {
     byte [] tableName = HRegionInfo.parseRegionName(regionName)[0];
@@ -906,7 +906,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       HRegionInfo info = Writables.getHRegionInfo(
           data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
       byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-      if(value != null) {
+      if(value != null && value.length > 0) {
         HServerAddress server =
           new HServerAddress(Bytes.toString(value));
         return new Pair<HRegionInfo,HServerAddress>(info, server);
