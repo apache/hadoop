@@ -9,6 +9,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1146. Javadoc for getDelegationTokenSecretManager in FSNamesystem (jnp via boryas)
+
     HDFS-1132. Refactor TestFileStatus (Eli Collins via cos)
 
     HDFS-1163. normalize property names for JT/NN kerberos principal 
