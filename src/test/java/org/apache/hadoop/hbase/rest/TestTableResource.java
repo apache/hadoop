@@ -53,7 +53,8 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
   static final Log LOG = LogFactory.getLog(TestTableResource.class);
 
   static String TABLE = "TestTableResource";
-  static String COLUMN = "test:";
+  static String COLUMN_FAMILY = "test";
+  static String COLUMN = COLUMN_FAMILY + ":qualifier";
   static Map<HRegionInfo,HServerAddress> regionMap;
 
   Client client;
@@ -74,7 +75,7 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN));
+    htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     admin.createTable(htd);
     HTable table = new HTable(conf, TABLE);
     byte[] k = new byte[3];
@@ -167,7 +168,9 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
       boolean found = false;
       for (Map.Entry<HRegionInfo,HServerAddress> e: regionMap.entrySet()) {
         HRegionInfo hri = e.getKey();
-        if (hri.getRegionNameAsString().equals(region.getName())) {
+        String hriRegionName = hri.getRegionNameAsString();
+        String regionName = region.getName();
+        if (hriRegionName.startsWith(regionName)) {
           found = true;
           byte[] startKey = hri.getStartKey();
           byte[] endKey = hri.getEndKey();
