@@ -582,6 +582,12 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("checkAndPut not supported");
   }
 
+  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Delete delete) throws IOException {
+    throw new IOException("checkAndDelete not supported");
+  }
+
+
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException {
     throw new IOException("incrementColumnValue not supported");

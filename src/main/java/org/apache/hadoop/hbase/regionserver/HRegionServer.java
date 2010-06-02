@@ -1676,6 +1676,24 @@ public class HRegionServer implements HConstants, HRegionInterface,
     return -1;
   }
 
+  private boolean checkAndMutate(final byte[] regionName, final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
+      final Writable w, Integer lock) throws IOException {
+    checkOpen();
+    this.requestCount.incrementAndGet();
+    HRegion region = getRegion(regionName);
+    try {
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      return region.checkAndMutate(row, family, qualifier, value, w, lock, 
+          true);
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+  }
+
+
   /**
    *
    * @param regionName
@@ -1690,23 +1708,26 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public boolean checkAndPut(final byte[] regionName, final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put) throws IOException{
-    //Getting actual value
-    Get get = new Get(row);
-    get.addColumn(family, qualifier);
+    return checkAndMutate(regionName, row, family, qualifier, value, put,
+        getLockFromId(put.getLockId()));
+  }
 
-    checkOpen();
-    this.requestCount.incrementAndGet();
-    HRegion region = getRegion(regionName);
-    try {
-      if (!region.getRegionInfo().isMetaTable()) {
-        this.cacheFlusher.reclaimMemStoreMemory();
-      }
-      boolean retval = region.checkAndPut(row, family, qualifier, value, put,
-        getLockFromId(put.getLockId()), true);
-      return retval;
-    } catch (Throwable t) {
-      throw convertThrowableToIOE(cleanup(t));
-    }
+  /**
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param value the expected value
+   * @param delete
+   * @throws IOException
+   * @return true if the new put was execute, false otherwise
+   */
+  public boolean checkAndDelete(final byte[] regionName, final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
+      final Delete delete) throws IOException{
+    return checkAndMutate(regionName, row, family, qualifier, value, delete,
+        getLockFromId(delete.getLockId()));
   }
 
   //

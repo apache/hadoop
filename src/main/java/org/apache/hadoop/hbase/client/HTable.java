@@ -514,6 +514,35 @@ public class HTable implements HTableInterface {
   }
 
   /**
+   * Atomically checks if a row/family/qualifier value match the expectedValue.
+   * If it does, it adds the delete.  If value == null, checks for non-existence
+   * of the value.
+   *
+   * @param row to check
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param value the expected value
+   * @param delete delete to execute if value matches.
+   * @throws IOException
+   * @return true if the new delete was executed, false otherwise
+   */
+  public boolean checkAndDelete(final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
+      final Delete delete)
+  throws IOException {
+    return connection.getRegionServerWithRetries(
+        new ServerCallable<Boolean>(connection, tableName, row) {
+          public Boolean call() throws IOException {
+            return server.checkAndDelete(
+                location.getRegionInfo().getRegionName(),
+                row, family, qualifier, value, delete) 
+            ? Boolean.TRUE : Boolean.FALSE;
+          }
+        }
+    );
+  }
+
+  /**
    * Test for the existence of columns in the table, as specified in the Get.<p>
    *
    * This will return true if the Get matches one or more keys, false if not.<p>

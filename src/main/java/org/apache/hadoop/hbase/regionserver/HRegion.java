@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -1208,6 +1210,26 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     return new RegionScanner(scan, additionalScanners);
   }
 
+  /*
+   * @param delete The passed delete is modified by this method. WARNING!
+   */
+  private void prepareDelete(Delete delete) throws IOException {
+    // Check to see if this is a deleteRow insert
+    if(delete.getFamilyMap().isEmpty()){
+      for(byte [] family : regionInfo.getTableDesc().getFamiliesKeys()){
+        // Don't eat the timestamp
+        delete.deleteFamily(family, delete.getTimeStamp());
+      }
+    } else {
+      for(byte [] family : delete.getFamilyMap().keySet()) {
+        if(family == null) {
+          throw new NoSuchColumnFamilyException("Empty family is invalid");
+        }
+        checkFamily(family);
+      }
+    }
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // set() methods for client use.
   //////////////////////////////////////////////////////////////////////////////
@@ -1228,22 +1250,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // If we did not pass an existing row lock, obtain a new one
       lid = getLock(lockid, row);
 
-      // Check to see if this is a deleteRow insert
-      if(delete.getFamilyMap().isEmpty()){
-        for(byte [] family : regionInfo.getTableDesc().getFamiliesKeys()){
-          // Don't eat the timestamp
-          delete.deleteFamily(family, delete.getTimeStamp());
-        }
-      } else {
-        for(byte [] family : delete.getFamilyMap().keySet()) {
-          if(family == null) {
-            throw new NoSuchColumnFamilyException("Empty family is invalid");
-          }
-          checkFamily(family);
-        }
-      }
-
       // All edits for the given row (across all column families) must happen atomically.
+      prepareDelete(delete);
       delete(delete.getFamilyMap(), writeToWAL);
 
     } finally {
@@ -1436,7 +1444,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
   //TODO, Think that gets/puts and deletes should be refactored a bit so that
   //the getting of the lock happens before, so that you would just pass it into
-  //the methods. So in the case of checkAndPut you could just do lockRow,
+  //the methods. So in the case of checkAndMutate you could just do lockRow,
   //get, put, unlockRow or something
   /**
    *
@@ -1450,16 +1458,21 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
-  public boolean checkAndPut(byte [] row, byte [] family, byte [] qualifier,
-      byte [] expectedValue, Put put, Integer lockId, boolean writeToWAL)
+  public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
+      byte [] expectedValue, Writable w, Integer lockId, boolean writeToWAL)
   throws IOException{
     checkReadOnly();
     //TODO, add check for value length or maybe even better move this to the
     //client if this becomes a global setting
     checkResources();
+    boolean isPut = w instanceof Put;
+    if (!isPut && !(w instanceof Delete))
+      throw new IOException("Action must be Put or Delete");
+
     splitsAndClosesLock.readLock().lock();
     try {
-      Get get = new Get(row, put.getRowLock());
+      RowLock lock = isPut ? ((Put)w).getRowLock() : ((Delete)w).getRowLock();
+      Get get = new Get(row, lock);
       checkFamily(family);
       get.addColumn(family, qualifier);
 
@@ -1479,10 +1492,13 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           byte [] actualValue = result.get(0).getValue();
           matches = Bytes.equals(expectedValue, actualValue);
         }
-        //If matches put the new put
+        //If matches put the new put or delete the new delete
         if (matches) {
           // All edits for the given row (across all column families) must happen atomically.
-          put(put.getFamilyMap(), writeToWAL);
+          if (isPut)
+            put(((Put)w).getFamilyMap(), writeToWAL);
+          else 
+            delete(prepareDelete((Delete)w).getFamilyMap(), writeToWAL);
           return true;
         }
         return false;

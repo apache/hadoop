@@ -190,6 +190,22 @@ public interface HTableInterface {
   void delete(List<Delete> deletes) throws IOException;
 
   /**
+   * Atomically checks if a row/family/qualifier value matches the expected
+   * value. If it does, it adds the delete.  If the passed value is null, the 
+   * check is for the lack of column (ie: non-existance)
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param value the expected value
+   * @param delete data to delete if check succeeds
+   * @throws IOException e
+   * @return true if the new delete was executed, false otherwise
+   */
+  boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Delete delete) throws IOException;
+
+  /**
    * Atomically increments a column value.
    * <p>
    * Equivalent to {@code {@link #incrementColumnValue(byte[], byte[], byte[],

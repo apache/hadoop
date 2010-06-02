@@ -152,6 +152,26 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
       final Put put)
   throws IOException;
 
+
+  /**
+   * Atomically checks if a row/family/qualifier value match the expectedValue.
+   * If it does, it adds the delete. If passed expected value is null, then the
+   * check is for non-existance of the row/column.
+   *
+   * @param regionName region name
+   * @param row row to check
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param value the expected value
+   * @param delete data to delete if check succeeds
+   * @throws IOException e
+   * @return true if the new delete was execute, false otherwise
+   */
+  public boolean checkAndDelete(final byte[] regionName, final byte [] row,
+      final byte [] family, final byte [] qualifier, final byte [] value,
+      final Delete delete)
+  throws IOException;
+
   /**
    * Atomically increments a column value. If the column value isn't long-like,
    * this could throw an exception. If passed expected value is null, then the

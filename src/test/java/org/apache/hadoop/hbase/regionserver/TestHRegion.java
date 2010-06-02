@@ -320,9 +320,9 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  // checkAndPut tests
+  // checkAndMutate tests
   //////////////////////////////////////////////////////////////////////////////
-  public void testCheckAndPut_WithEmptyRowValue() throws IOException {
+  public void testCheckAndMutate_WithEmptyRowValue() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -338,24 +338,42 @@ public class TestHRegion extends HBaseTestCase {
     //Putting data in key
     Put put = new Put(row1);
     put.add(fam1, qf1, val1);
-
+    
     //checkAndPut with correct value
-    boolean res = region.checkAndPut(row1, fam1, qf1, emptyVal, put, lockId,
+    boolean res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId,
         true);
     assertTrue(res);
 
     // not empty anymore
-    res = region.checkAndPut(row1, fam1, qf1, emptyVal, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId, true);
+    assertFalse(res);
+
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId, 
+        true);
     assertFalse(res);
 
     put = new Put(row1);
     put.add(fam1, qf1, val2);
     //checkAndPut with correct value
-    res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    assertTrue(res);
+
+    //checkAndDelete with correct value
+    delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    delete.deleteColumn(fam1, qf1);
+    res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, true);
+    assertTrue(res);
+
+    delete = new Delete(row1);
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId, 
+        true);
     assertTrue(res);
   }
 
-  public void testCheckAndPut_WithWrongValue() throws IOException{
+  public void testCheckAndMutate_WithWrongValue() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -374,11 +392,17 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     //checkAndPut with wrong value
-    boolean res = region.checkAndPut(row1, fam1, qf1, val2, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, put, lockId, true);
+    assertEquals(false, res);
+
+    //checkAndDelete with wrong value
+    Delete delete = new Delete(row1);
+    delete.deleteFamily(fam1);
+    res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, true);
     assertEquals(false, res);
   }
 
-  public void testCheckAndPut_WithCorrectValue() throws IOException{
+  public void testCheckAndMutate_WithCorrectValue() throws IOException{
     byte [] tableName = Bytes.toBytes("testtable");
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
@@ -396,7 +420,13 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    assertEquals(true, res);
+
+    //checkAndDelete with correct value
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
   }
 
@@ -431,7 +461,7 @@ public class TestHRegion extends HBaseTestCase {
     Store store = region.getStore(fam1);
     store.memstore.kvset.size();
 
-    boolean res = region.checkAndPut(row1, fam1, qf1, val1, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
     assertEquals(true, res);
     store.memstore.kvset.size();
 
@@ -446,6 +476,79 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(expected[i], actual[i]);
     }
 
+  }
+
+  public void testCheckAndDelete_ThatDeleteWasWritten() throws IOException{
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] row1 = Bytes.toBytes("row1");
+    byte [] fam1 = Bytes.toBytes("fam1");
+    byte [] fam2 = Bytes.toBytes("fam2");
+    byte [] qf1  = Bytes.toBytes("qualifier1");
+    byte [] qf2  = Bytes.toBytes("qualifier2");
+    byte [] qf3  = Bytes.toBytes("qualifier3");
+    byte [] val1  = Bytes.toBytes("value1");
+    byte [] val2  = Bytes.toBytes("value2");
+    byte [] val3  = Bytes.toBytes("value3");
+    byte[] emptyVal = new byte[] { };
+    Integer lockId = null;
+
+    byte [][] families = {fam1, fam2};
+
+    //Setting up region
+    String method = this.getName();
+    initHRegion(tableName, method, families);
+
+    //Put content
+    Put put = new Put(row1);
+    put.add(fam1, qf1, val1);
+    region.put(put);
+
+    put = new Put(row1);
+    put.add(fam1, qf1, val2);
+    put.add(fam2, qf1, val3);
+    put.add(fam2, qf2, val2);
+    put.add(fam2, qf3, val1);
+    put.add(fam1, qf3, val1);
+    region.put(put);
+
+    //Multi-column delete 
+    Delete delete = new Delete(row1);
+    delete.deleteColumn(fam1, qf1);
+    delete.deleteColumn(fam2, qf1);
+    delete.deleteColumn(fam1, qf3);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, 
+        true);
+    assertEquals(true, res);
+
+    Get get = new Get(row1);
+    get.addColumn(fam1, qf1);
+    get.addColumn(fam1, qf3);
+    get.addColumn(fam2, qf2);
+    Result r = region.get(get, null);
+    assertEquals(2, r.size());
+    assertEquals(val1, r.getValue(fam1, qf1));
+    assertEquals(val2, r.getValue(fam2, qf2));
+
+    //Family delete 
+    delete = new Delete(row1);
+    delete.deleteFamily(fam2);
+    res = region.checkAndMutate(row1, fam2, qf1, emptyVal, delete, lockId, 
+        true);
+    assertEquals(true, res);
+
+    get = new Get(row1);
+    r = region.get(get, null);
+    assertEquals(1, r.size());
+    assertEquals(val1, r.getValue(fam1, qf1));
+
+    //Row delete
+    delete = new Delete(row1);
+    res = region.checkAndMutate(row1, fam1, qf1, val1, delete, lockId, 
+        true);
+    assertEquals(true, res);
+    get = new Get(row1);
+    r = region.get(get, null);
+    assertEquals(0, r.size());
   }
 
   //////////////////////////////////////////////////////////////////////////////

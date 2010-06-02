@@ -661,6 +661,8 @@ Release 0.21.0 - Unreleased
    HBASE-2636  Upgrade Jetty to 6.1.24
    HBASE-2437  Refactor HLog splitLog (Cosmin Lehene via Stack)
    HBASE-2638  Speed up REST tests
+   HBASE-2653  Remove unused DynamicBloomFilter (especially as its tests are
+               failing hudson on occasion)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
@@ -699,8 +701,7 @@ Release 0.21.0 - Unreleased
    HBASE-1200  Add bloomfilters (Nicolas Spiegelberg via Stack)
    HBASE-2588  Add easier way to ship HBase dependencies to MR cluster within Job
    HBASE-1923  Bulk incremental load into an existing table
-   HBASE-2653  Remove unused DynamicBloomFilter (especially as its tests are
-               failing hudson on occasion)
+   HBASE-2579  Add atomic checkAndDelete support (Michael Dalton via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
