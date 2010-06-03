@@ -49,8 +49,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestScannerResource extends HBaseRESTClusterTestBase {
   static final String TABLE = "TestScannerResource";
-  static final String COLUMN_1 = "a:";
-  static final String COLUMN_2 = "b:";
+  static final String CFA = "a";
+  static final String CFB = "b";
+  static final String COLUMN_1 = CFA + ":1";
+  static final String COLUMN_2 = CFB + ":2";
 
   static int expectedRows1;
   static int expectedRows2;
@@ -103,8 +105,8 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_1));
-    htd.addFamily(new HColumnDescriptor(COLUMN_2));
+    htd.addFamily(new HColumnDescriptor(CFA));
+    htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);
     expectedRows1 = insertData(TABLE, COLUMN_1, 1.0);
     expectedRows2 = insertData(TABLE, COLUMN_2, 0.5);

@@ -371,6 +371,7 @@ Release 0.21.0 - Unreleased
    HBASE-2560  Fix IllegalArgumentException when manually splitting table
                from web UI
    HBASE-2657  TestTableResource is broken in trunk
+   HBASE-2662  TestScannerResource.testScannerResource broke in trunk
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
