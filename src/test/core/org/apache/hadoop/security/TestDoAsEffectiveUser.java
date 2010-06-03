@@ -222,6 +222,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 
@@ -339,6 +341,7 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    
     try {
       server.start();
 
@@ -388,7 +391,8 @@ public class TestDoAsEffectiveUser {
     server.start();
 
     final UserGroupInformation current = UserGroupInformation
-        .createRemoteUser(REAL_USER_NAME);
+        .createRemoteUser(REAL_USER_NAME);    
+    
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
         .getUserName()), new Text("SomeSuperUser"));
@@ -400,6 +404,9 @@ public class TestDoAsEffectiveUser {
     UserGroupInformation proxyUserUgi = UserGroupInformation
         .createProxyUserForTesting(PROXY_USER_NAME, current, GROUP_NAMES);
     proxyUserUgi.addToken(token);
+    
+    refreshConf(conf);
+    
     String retVal = proxyUserUgi.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
@@ -441,6 +448,9 @@ public class TestDoAsEffectiveUser {
 
     final UserGroupInformation current = UserGroupInformation
         .createUserForTesting(REAL_USER_NAME, GROUP_NAMES);
+    
+    refreshConf(newConf);
+    
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
         .getUserName()), new Text("SomeSuperUser"));
@@ -469,6 +479,12 @@ public class TestDoAsEffectiveUser {
         }
       }
     });
-    Assert.assertEquals(REAL_USER_NAME + " via SomeSuperUser", retVal);
+    String expected = REAL_USER_NAME + " via SomeSuperUser";
+    Assert.assertEquals(retVal + "!=" + expected, expected, retVal);
+  }
+  
+  //
+  private void refreshConf(Configuration conf) throws IOException {
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
 }

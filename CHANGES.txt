@@ -3,6 +3,9 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   NEW FEATURES
+   HADOOP-6791.  Refresh for proxy superuser config
+    (common part for HDFS-1096) (boryas)
+
    HADOOP-6581. Add authenticated TokenIdentifiers to UGI so that 
    they can be used for authorization (Kan Zhang and Jitendra Pandey 
    via jghoman)
