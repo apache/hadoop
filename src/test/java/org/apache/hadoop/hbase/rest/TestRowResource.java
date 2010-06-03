@@ -45,8 +45,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestRowResource extends HBaseRESTClusterTestBase {
   static final String TABLE = "TestRowResource";
-  static final String COLUMN_1 = "a:";
-  static final String COLUMN_2 = "b:";
+  static final String CFA = "a";
+  static final String CFB = "b";
+  static final String COLUMN_1 = CFA + ":1";
+  static final String COLUMN_2 = CFB + ":2";
   static final String ROW_1 = "testrow1";
   static final String VALUE_1 = "testvalue1";
   static final String ROW_2 = "testrow2";
@@ -77,8 +79,8 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    htd.addFamily(new HColumnDescriptor(COLUMN_1));
-    htd.addFamily(new HColumnDescriptor(COLUMN_2));
+    htd.addFamily(new HColumnDescriptor(CFA));
+    htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);
   }
 
