@@ -85,7 +85,7 @@ public class SecondaryNameNode implements Runnable {
 
   private Collection<URI> checkpointDirs;
   private Collection<URI> checkpointEditsDirs;
-  private long checkpointPeriod;	// in seconds
+  private long checkpointPeriod;    // in seconds
   private long checkpointSize;    // size (in MB) of current Edit Log
 
   /** {@inheritDoc} */

@@ -920,7 +920,7 @@ class FSDirectory implements Closeable {
   
   /** Return if a directory is empty or not **/
   boolean isDirEmpty(String src) throws UnresolvedLinkException {
-	   boolean dirNotEmpty = true;
+    boolean dirNotEmpty = true;
     if (!isDir(src)) {
       return true;
     }

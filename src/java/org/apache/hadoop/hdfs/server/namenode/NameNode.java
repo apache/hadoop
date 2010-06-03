@@ -302,7 +302,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     this.server = RPC.getServer(NamenodeProtocols.class, this,
                                 socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf, 
-				namesystem.getDelegationTokenSecretManager());
+                                namesystem.getDelegationTokenSecretManager());
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     setRpcServerAddress(conf);

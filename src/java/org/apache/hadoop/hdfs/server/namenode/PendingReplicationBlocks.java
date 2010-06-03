@@ -84,7 +84,7 @@ class PendingReplicationBlocks {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
-      	FSNamesystem.LOG.debug("Removing pending replication for block" + block);
+        FSNamesystem.LOG.debug("Removing pending replication for block" + block);
         found.decrementReplicas();
         if (found.getNumReplicas() <= 0) {
           pendingReplications.remove(block);

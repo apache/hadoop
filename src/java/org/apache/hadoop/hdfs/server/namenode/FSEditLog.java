@@ -96,7 +96,7 @@ public class FSEditLog {
                                     NamenodeProtocol.JA_CHECKPOINT_TIME;
 
   static final String NO_JOURNAL_STREAMS_WARNING = "!!! WARNING !!!" +
-  		" File system changes are not persistent. No journal streams.";
+      " File system changes are not persistent. No journal streams.";
 
   private volatile int sizeOutputFlushBuffer = 512*1024;
 
@@ -349,13 +349,13 @@ public class FSEditLog {
    * @return the matching stream
    */
   synchronized EditLogOutputStream getEditsStream(StorageDirectory sd) {
-	for (EditLogOutputStream es : editStreams) {
-	  File parentStorageDir = ((EditLogFileOutputStream)es).getFile()
-	  .getParentFile().getParentFile();
-	  if (parentStorageDir.getName().equals(sd.getRoot().getName()))
-		return es;
-	}
-	return null;
+    for (EditLogOutputStream es : editStreams) {
+      File parentStorageDir = ((EditLogFileOutputStream)es).getFile()
+        .getParentFile().getParentFile();
+      if (parentStorageDir.getName().equals(sd.getRoot().getName()))
+        return es;
+    }
+    return null;
   }
 
   /**

@@ -667,7 +667,7 @@ class DataBlockScanner implements Runnable {
             ((info.lastScanType == ScanType.VERIFICATION_SCAN) ? "local" :
               "none");
         buffer.append(String.format("%-26s : status : %-6s type : %-6s" +
-        		                        " scan time : " +
+                                    " scan time : " +
                                     "%-15d %s\n", info.block, 
                                     (info.lastScanOk ? "ok" : "failed"),
                                     scanType, scanTime,

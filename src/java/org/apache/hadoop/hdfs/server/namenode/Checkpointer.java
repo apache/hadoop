@@ -56,7 +56,7 @@ class Checkpointer extends Daemon {
 
   private BackupNode backupNode;
   volatile boolean shouldRun;
-  private long checkpointPeriod;	// in seconds
+  private long checkpointPeriod;    // in seconds
   private long checkpointSize;    // size (in MB) of current Edit Log
 
   private BackupStorage getFSImage() {
@@ -255,6 +255,6 @@ class Checkpointer extends Daemon {
         getFSImage().getEditLog().close();
     LOG.info("Checkpoint completed in "
         + (FSNamesystem.now() - startTime)/1000 + " seconds."
-        +	" New Image Size: " + bnImage.getFsImageName().length());
+        + " New Image Size: " + bnImage.getFsImageName().length());
   }
 }

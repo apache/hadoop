@@ -127,7 +127,7 @@ class INodeFileUnderConstruction extends INodeFile {
   throws IOException {
     if (blocks == null || blocks.length == 0) {
       throw new IOException("Trying to update non-existant block. " +
-      		"File is empty.");
+          "File is empty.");
     }
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(

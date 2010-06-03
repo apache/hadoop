@@ -67,7 +67,7 @@ public class DataNodeActivityMBean extends MetricsDynamicMBeanBase {
       name = datanodeName.replace(":", "-");
     }
     mbeanName = MBeanUtil.registerMBean("DataNode",
-	"DataNodeActivity-" + name, this);
+        "DataNodeActivity-" + name, this);
   }
   
 

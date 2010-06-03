@@ -34,6 +34,8 @@ Trunk (unreleased changes)
 
     HDFS-1119. Introduce a GSet interface to BlocksMap.  (szetszwo)
 
+    HDFS-1184. Replace tabs in code with spaces. (Jeff via jghoman)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)
