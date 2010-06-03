@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
@@ -41,6 +42,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
@@ -58,13 +60,17 @@ public class ImportTsv {
   final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
   final static String BULK_OUTPUT_CONF_KEY = "importtsv.bulk.output";
   final static String COLUMNS_CONF_KEY = "importtsv.columns";
+  final static String SEPARATOR_CONF_KEY = "importtsv.separator";
+  final static String DEFAULT_SEPARATOR = "\t";
 
   static class TsvParser {
     /**
      * Column families and qualifiers mapped to the TSV columns
      */
-    private byte[][] families;
-    private byte[][] qualifiers;
+    private final byte[][] families;
+    private final byte[][] qualifiers;
+
+    private final byte separatorByte;
 
     private int rowKeyColumnIndex;
     
@@ -74,7 +80,14 @@ public class ImportTsv {
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
      */
-    public TsvParser(String columnsSpecification) {
+    public TsvParser(String columnsSpecification, String separatorStr) {
+      // Configure separator
+      byte[] separator = Bytes.toBytes(separatorStr);
+      Preconditions.checkArgument(separator.length == 1,
+        "TsvParser only supports single-byte separators");
+      separatorByte = separator[0];
+
+      // Configure columns
       ArrayList<String> columnStrings = Lists.newArrayList(
         Splitter.on(',').trimResults().split(columnsSpecification));
       
@@ -113,7 +126,7 @@ public class ImportTsv {
       // Enumerate separator offsets
       ArrayList<Integer> tabOffsets = new ArrayList<Integer>(families.length);
       for (int i = 0; i < length; i++) {
-        if (lineBytes[i] == '\t') {
+        if (lineBytes[i] == separatorByte) {
           tabOffsets.add(i);
         }
       }
@@ -183,8 +196,9 @@ public class ImportTsv {
 
     @Override
     protected void setup(Context context) {
-      parser = new TsvParser(context.getConfiguration().get(
-                               COLUMNS_CONF_KEY));
+      Configuration conf = context.getConfiguration();
+      parser = new TsvParser(conf.get(COLUMNS_CONF_KEY),
+                             conf.get(SEPARATOR_CONF_KEY, DEFAULT_SEPARATOR));
       if (parser.getRowKeyColumnIndex() == -1) {
         throw new RuntimeException("No row key column specified");
       }
@@ -302,7 +316,8 @@ public class ImportTsv {
       "  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output\n" +
       "\n" +
       "Other options that may be specified with -D include:\n" +
-      "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line";
+      "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
+      "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs";
     System.err.println(usage);
   }
 

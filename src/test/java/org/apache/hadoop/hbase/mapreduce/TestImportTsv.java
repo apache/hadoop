@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
 public class TestImportTsv {
   @Test
   public void testTsvParser() throws BadTsvLineException {
-    TsvParser parser = new TsvParser("col_a,col_b:qual,HBASE_ROW_KEY,col_d");
+    TsvParser parser = new TsvParser("col_a,col_b:qual,HBASE_ROW_KEY,col_d", "\t");
     assertBytesEquals(Bytes.toBytes("col_a"), parser.getFamily(0));
     assertBytesEquals(HConstants.EMPTY_BYTE_ARRAY, parser.getQualifier(0));
     assertBytesEquals(Bytes.toBytes("col_b"), parser.getFamily(1));
