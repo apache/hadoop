@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
-import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
@@ -266,7 +266,7 @@ public class MiniDFSCluster {
         setRpcEngine(conf, ClientProtocol.class, rpcEngine);
         setRpcEngine(conf, DatanodeProtocol.class, rpcEngine);
         setRpcEngine(conf, RefreshAuthorizationPolicyProtocol.class, rpcEngine);
-        setRpcEngine(conf, RefreshUserToGroupMappingsProtocol.class, rpcEngine);
+        setRpcEngine(conf, RefreshUserMappingsProtocol.class, rpcEngine);
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e);
       }
