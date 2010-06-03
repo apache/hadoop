@@ -9,6 +9,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group
+     mappings (boryas)
+
     HDFS-1146. Javadoc for getDelegationTokenSecretManager in FSNamesystem (jnp via boryas)
 
     HDFS-1132. Refactor TestFileStatus (Eli Collins via cos)

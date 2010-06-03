@@ -599,7 +599,7 @@ public interface ClientProtocol extends VersionedProtocol {
    *                <li>2 get safe mode state.</li></ul>
    * @return <ul><li>0 if the safe mode is OFF or</li> 
    *         <li>1 if the safe mode is ON.</li></ul>
-   ¥
+   *                   
    * @throws IOException
    */
   public boolean setSafeMode(FSConstants.SafeModeAction action) 
