@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -502,6 +503,7 @@ public class TestHRegion extends HBaseTestCase {
     Put put = new Put(row1);
     put.add(fam1, qf1, val1);
     region.put(put);
+    Threads.sleep(2);
 
     put = new Put(row1);
     put.add(fam1, qf1, val2);
