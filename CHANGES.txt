@@ -905,6 +905,9 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6788. [Herriot] Exception exclusion functionality is not working
+    correctly. (Vinay Thota via cos)
+
     HADOOP-6773. Ivy folder contains redundant files (cos)
 
     HADOOP-5379. CBZip2InputStream to throw IOException on data crc error.
