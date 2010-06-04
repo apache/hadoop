@@ -301,14 +301,9 @@ Release 0.21.0 - Unreleased
     and the init of the class is made to take a Configuration argument.
     (Jakob Homan via ddas)
 
-    HADOOP-6108. Add support for EBS storage on EC2. (tomwhite)
-
     Hadoop-6223. Add new file system interface AbstractFileSystem with
     implementation of some file systems that delegate to old FileSystem.
     (Sanjay Radia via suresh)
-
-    HADOOP-6392. Run namenode and jobtracker on separate EC2 instances.
-    (tomwhite)
 
     HADOOP-6433. Introduce asychronous deletion of files via a pool of
     threads. This can be used to delete files in the Distributed
@@ -317,12 +312,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6415. Adds a common token interface for both job token and 
     delegation token. (Kan Zhang via ddas)
 
-    HADOOP-6466. Add a ZooKeeper service to the cloud scripts. (tomwhite)
-
     HADOOP-6408. Add a /conf servlet to dump running configuration.
     (Todd Lipcon via tomwhite)
-
-    HADOOP-6464. Write a Rackspace cloud provider. (tomwhite)
 
     HADOOP-6520. Adds APIs to read/write Token and secret keys. Also
     adds the automatic loading of tokens into UserGroupInformation
@@ -802,14 +793,7 @@ Release 0.21.0 - Unreleased
     HADOOP-6394. Add a helper class to simplify FileContext related tests and
     improve code reusability. (Jitendra Nath Pandey via suresh)
 
-    HADOOP-6426. Create ant build for running EC2 unit tests. (tomwhite)
-
     HADOOP-4656. Add a user to groups mapping service. (boryas, acmurthy)
-
-    HADOOP-6444. Support additional security group option in hadoop-ec2 script.
-    (Paul Egan via tomwhite)
-
-    HADOOP-6454. Create setup.py for EC2 cloud scripts. (tomwhite)
 
     HADOOP-6435. Make RPC.waitForProxy with timeout public. (Steve Loughran
     via tomwhite)
@@ -1564,9 +1548,6 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6640. FileSystem.get() does RPC retries within a static
     synchronized block. (hairong)
-
-    HADOOP-6680. hadoop-cloud push command invokes proxy creation.
-    (Andrew Klochkov via tomwhite)
 
     HADOOP-6691. TestFileSystemCaching sometimes hangs. (hairong)
 
