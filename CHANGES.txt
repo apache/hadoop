@@ -666,6 +666,7 @@ Release 0.21.0 - Unreleased
    HBASE-2653  Remove unused DynamicBloomFilter (especially as its tests are
                failing hudson on occasion)
    HBASE-2651  Allow alternate column separators to be specified for ImportTsv
+   HBASE-2661  Add test case for row atomicity guarantee
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
