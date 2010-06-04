@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.Util;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
@@ -509,10 +510,10 @@ public class FSImage extends Storage {
 
     // Do upgrade for each directory
     long oldCTime = this.getCTime();
-    this.cTime = FSNamesystem.now();  // generate new cTime for the state
+    this.cTime = now();  // generate new cTime for the state
     int oldLV = this.getLayoutVersion();
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
-    this.checkpointTime = FSNamesystem.now();
+    this.checkpointTime = now();
     for (Iterator<StorageDirectory> it = 
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -998,7 +999,7 @@ public class FSImage extends Storage {
     // Recover from previous interrupted checkpoint, if any
     needToSave |= recoverInterruptedCheckpoint(latestNameSD, latestEditsSD);
 
-    long startTime = FSNamesystem.now();
+    long startTime = now();
     long imageSize = getImageFile(latestNameSD, NameNodeFile.IMAGE).length();
 
     //
@@ -1007,7 +1008,7 @@ public class FSImage extends Storage {
     latestNameSD.read();
     needToSave |= loadFSImage(getImageFile(latestNameSD, NameNodeFile.IMAGE));
     LOG.info("Image file of size " + imageSize + " loaded in " 
-        + (FSNamesystem.now() - startTime)/1000 + " seconds.");
+        + (now() - startTime)/1000 + " seconds.");
     
     // Load latest edits
     if (latestNameCheckpointTime > latestEditsCheckpointTime)
@@ -1227,7 +1228,7 @@ public class FSImage extends Storage {
   void saveFSImage(File newFile) throws IOException {
     FSNamesystem fsNamesys = getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
-    long startTime = FSNamesystem.now();
+    long startTime = now();
     //
     // Write out data
     //
@@ -1256,7 +1257,7 @@ public class FSImage extends Storage {
     }
 
     LOG.info("Image file of size " + newFile.length() + " saved in " 
-        + (FSNamesystem.now() - startTime)/1000 + " seconds.");
+        + (now() - startTime)/1000 + " seconds.");
   }
 
   /**
@@ -1278,7 +1279,7 @@ public class FSImage extends Storage {
     assert editLog != null : "editLog must be initialized";
     editLog.close();
     if(renewCheckpointTime)
-      this.checkpointTime = FSNamesystem.now();
+      this.checkpointTime = now();
     ArrayList<StorageDirectory> errorSDs = new ArrayList<StorageDirectory>();
 
     // mv current -> lastcheckpoint.tmp
@@ -1414,7 +1415,7 @@ public class FSImage extends Storage {
    */
   private int newNamespaceID() {
     Random r = new Random();
-    r.setSeed(FSNamesystem.now());
+    r.setSeed(now());
     int newID = 0;
     while(newID == 0)
       newID = r.nextInt(0x7FFFFFFF);  // use 31 bits only
@@ -1439,7 +1440,7 @@ public class FSImage extends Storage {
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     this.namespaceID = newNamespaceID();
     this.cTime = 0L;
-    this.checkpointTime = FSNamesystem.now();
+    this.checkpointTime = now();
     for (Iterator<StorageDirectory> it = 
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -1710,7 +1711,7 @@ public class FSImage extends Storage {
   void resetVersion(boolean renewCheckpointTime) throws IOException {
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     if(renewCheckpointTime)
-      this.checkpointTime = FSNamesystem.now();
+      this.checkpointTime = now();
     
     ArrayList<StorageDirectory> al = null;
     for (Iterator<StorageDirectory> it = 

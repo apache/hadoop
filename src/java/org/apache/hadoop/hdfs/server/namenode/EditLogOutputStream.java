@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -79,9 +80,9 @@ implements JournalStream {
    */
   public void flush() throws IOException {
     numSync++;
-    long start = FSNamesystem.now();
+    long start = now();
     flushAndSync();
-    long end = FSNamesystem.now();
+    long end = now();
     totalTimeSync += (end - start);
   }
 

@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Util;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
@@ -223,14 +224,6 @@ public class DataNode extends Configured
   
   // For InterDataNodeProtocol
   public Server ipcServer;
-
-  /**
-   * Current system time.
-   * @return current time in msec.
-   */
-  static long now() {
-    return System.currentTimeMillis();
-  }
 
   /**
    * Create the DataNode given a configuration and an array of dataDirs.

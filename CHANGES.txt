@@ -34,7 +34,10 @@ Trunk (unreleased changes)
 
     HDFS-1119. Introduce a GSet interface to BlocksMap.  (szetszwo)
 
-    HDFS-1184. Replace tabs in code with spaces. (Jeff via jghoman)
+    HDFS-1184. Replace tabs in code with spaces. (Jeff Ames via jghoman)
+
+    HDFS-1185. Remove duplicate now() functions in DataNode, FSNamesysetm.
+    (Jeff Ames via jghoman)
 
   BUG FIXES
 

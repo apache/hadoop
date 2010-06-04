@@ -26,6 +26,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -323,7 +324,7 @@ public class BackupStorage extends FSImage {
     StorageDirectory sdEdits = itEdits.next();
     int numEdits = 0;
     File jSpoolFile = getJSpoolFile(sdEdits);
-    long startTime = FSNamesystem.now();
+    long startTime = now();
     if(jSpoolFile.exists()) {
       // load edits.new
       EditLogFileInputStream edits = new EditLogFileInputStream(jSpoolFile);
@@ -339,7 +340,7 @@ public class BackupStorage extends FSImage {
 
     FSImage.LOG.info("Edits file " + jSpoolFile.getCanonicalPath() 
         + " of size " + jSpoolFile.length() + " edits # " + numEdits 
-        + " loaded in " + (FSNamesystem.now()-startTime)/1000 + " seconds.");
+        + " loaded in " + (now()-startTime)/1000 + " seconds.");
 
     // rename spool edits.new to edits making it in sync with the active node
     // subsequent journal records will go directly to edits

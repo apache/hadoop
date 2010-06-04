@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
@@ -125,10 +126,10 @@ class Checkpointer extends Daemon {
 
     long lastCheckpointTime = 0;
     if(!backupNode.shouldCheckpointAtStartup())
-      lastCheckpointTime = FSNamesystem.now();
+      lastCheckpointTime = now();
     while(shouldRun) {
       try {
-        long now = FSNamesystem.now();
+        long now = now();
         boolean shouldCheckpoint = false;
         if(now >= lastCheckpointTime + periodMSec) {
           shouldCheckpoint = true;
@@ -210,7 +211,7 @@ class Checkpointer extends Daemon {
    * Create a new checkpoint
    */
   void doCheckpoint() throws IOException {
-    long startTime = FSNamesystem.now();
+    long startTime = now();
     NamenodeCommand cmd = 
       getNamenode().startCheckpoint(backupNode.getRegistration());
     CheckpointCommand cpCmd = null;
@@ -254,7 +255,7 @@ class Checkpointer extends Daemon {
     if(backupNode.isRole(NamenodeRole.CHECKPOINT))
         getFSImage().getEditLog().close();
     LOG.info("Checkpoint completed in "
-        + (FSNamesystem.now() - startTime)/1000 + " seconds."
+        + (now() - startTime)/1000 + " seconds."
         + " New Image Size: " + bnImage.getFsImageName().length());
   }
 }

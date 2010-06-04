@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 import org.apache.hadoop.security.AccessControlException;
@@ -3753,14 +3754,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       }
       smmthread = null;
     }
-  }
-    
-  /**
-   * Current system time.
-   * @return current time in msec.
-   */
-  static long now() {
-    return System.currentTimeMillis();
   }
     
   boolean setSafeMode(SafeModeAction action) throws IOException {

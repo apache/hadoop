@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionSta
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
@@ -109,7 +110,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
                               + dataXceiverServer.maxXceiverCount);
       }
 
-      opStartTime = DataNode.now();
+      opStartTime = now();
       processOp(op, in);
     } catch (Throwable t) {
       LOG.error(datanode.dnRegistration + ":DataXceiver",t);
@@ -657,7 +658,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
   }
 
   private void updateDuration(MetricsTimeVaryingRate mtvr) {
-    mtvr.inc(DataNode.now() - opStartTime);
+    mtvr.inc(now() - opStartTime);
   }
 
   private void updateCounter(MetricsTimeVaryingInt localCounter,

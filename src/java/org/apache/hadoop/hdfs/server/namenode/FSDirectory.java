@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -168,7 +169,7 @@ class FSDirectory implements Closeable {
     waitForReady();
 
     // Always do an implicit mkdirs for parent directory tree.
-    long modTime = FSNamesystem.now();
+    long modTime = now();
     if (!mkdirs(new Path(path).getParent().toString(), permissions, true,
         modTime)) {
       return null;
@@ -345,7 +346,7 @@ class FSDirectory implements Closeable {
    */
   void closeFile(String path, INodeFile file) {
     waitForReady();
-    long now = FSNamesystem.now();
+    long now = now();
     synchronized (rootDir) {
       // file is closed
       file.setModificationTimeForce(now);
@@ -394,7 +395,7 @@ class FSDirectory implements Closeable {
                                   +src+" to "+dst);
     }
     waitForReady();
-    long now = FSNamesystem.now();
+    long now = now();
     if (!unprotectedRenameTo(src, dst, now))
       return false;
     fsImage.getEditLog().logRename(src, dst, now);
@@ -413,7 +414,7 @@ class FSDirectory implements Closeable {
           + " to " + dst);
     }
     waitForReady();
-    long now = FSNamesystem.now();
+    long now = now();
     if (unprotectedRenameTo(src, dst, now, options)) {
       incrDeletedFileCount(1);
     }
@@ -842,7 +843,7 @@ class FSDirectory implements Closeable {
 
       unprotectedConcat(target, srcs);
       // do the commit
-      fsImage.getEditLog().logConcat(target, srcs, FSNamesystem.now());
+      fsImage.getEditLog().logConcat(target, srcs, now());
     }
   }
   
@@ -886,7 +887,7 @@ class FSDirectory implements Closeable {
       count++;
     }
     
-    long now = FSNamesystem.now();
+    long now = now();
     trgInode.setModificationTime(now);
     trgParent.setModificationTime(now);
     // update quota on the parent directory ('count' files removed, 0 space)
@@ -906,7 +907,7 @@ class FSDirectory implements Closeable {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
     }
     waitForReady();
-    long now = FSNamesystem.now();
+    long now = now();
     int filesRemoved = unprotectedDelete(src, collectedBlocks, now);
     if (filesRemoved <= 0) {
       return false;
@@ -1806,7 +1807,7 @@ class FSDirectory implements Closeable {
       QuotaExceededException, IOException {
     waitForReady();
 
-    final long modTime = FSNamesystem.now();
+    final long modTime = now();
     if (createParent) {
       final String parent = new Path(path).getParent().toString();
       if (!mkdirs(parent, dirPerms, true, modTime)) {

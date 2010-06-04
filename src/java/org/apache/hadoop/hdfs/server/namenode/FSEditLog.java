@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.JournalStream.JournalType;
@@ -143,7 +144,7 @@ public class FSEditLog {
     fsimage = image;
     isSyncRunning = false;
     metrics = NameNode.getNameNodeMetrics();
-    lastPrintTime = FSNamesystem.now();
+    lastPrintTime = now();
   }
   
   private File getEditFile(StorageDirectory sd) {
@@ -372,11 +373,11 @@ public class FSEditLog {
    */
   int loadFSEdits(EditLogInputStream edits) throws IOException {
     DataInputStream in = edits.getDataInputStream();
-    long startTime = FSNamesystem.now();
+    long startTime = now();
     int numEdits = loadFSEdits(in, true);
     FSImage.LOG.info("Edits file " + edits.getName() 
         + " of size " + edits.length() + " edits # " + numEdits 
-        + " loaded in " + (FSNamesystem.now()-startTime)/1000 + " seconds.");
+        + " loaded in " + (now()-startTime)/1000 + " seconds.");
     return numEdits;
   }
 
@@ -860,7 +861,7 @@ public class FSEditLog {
       if(getNumEditStreams() == 0)
         throw new java.lang.IllegalStateException(NO_JOURNAL_STREAMS_WARNING);
       ArrayList<EditLogOutputStream> errorStreams = null;
-      long start = FSNamesystem.now();
+      long start = now();
       for(EditLogOutputStream eStream : editStreams) {
         FSImage.LOG.debug("loggin edits into " + eStream.getName()  + " stream");
         if(!eStream.isOperationSupported(op))
@@ -937,7 +938,7 @@ public class FSEditLog {
     id.txid = txid;
 
     // update statistics
-    long end = FSNamesystem.now();
+    long end = now();
     numTransactions++;
     totalTimeTransactions += (end-start);
     if (metrics != null) // Metrics is non-null only when used inside name node
@@ -1050,7 +1051,7 @@ public class FSEditLog {
       }
   
       // do the sync
-      long start = FSNamesystem.now();
+      long start = now();
       for (EditLogOutputStream eStream : streams) {
         try {
           eStream.flush();
@@ -1065,7 +1066,7 @@ public class FSEditLog {
           errorStreams.add(eStream);
         }
       }
-      long elapsed = FSNamesystem.now() - start;
+      long elapsed = now() - start;
       processIOError(errorStreams, true);
   
       if (metrics != null) // Metrics non-null only when used inside name node
@@ -1086,7 +1087,7 @@ public class FSEditLog {
   // print statistics every 1 minute.
   //
   private void printStatistics(boolean force) {
-    long now = FSNamesystem.now();
+    long now = now();
     if (lastPrintTime + 60000 > now && !force) {
       return;
     }
@@ -1635,7 +1636,7 @@ public class FSEditLog {
     if(getNumEditStreams() == 0)
       throw new java.lang.IllegalStateException(NO_JOURNAL_STREAMS_WARNING);
     ArrayList<EditLogOutputStream> errorStreams = null;
-    long start = FSNamesystem.now();
+    long start = now();
     for(EditLogOutputStream eStream : editStreams) {
       try {
         eStream.write(data, 0, length);

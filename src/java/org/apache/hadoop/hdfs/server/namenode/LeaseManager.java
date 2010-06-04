@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files.   
@@ -204,17 +205,17 @@ public class LeaseManager {
     }
     /** Only LeaseManager object can renew a lease */
     private void renew() {
-      this.lastUpdate = FSNamesystem.now();
+      this.lastUpdate = now();
     }
 
     /** @return true if the Hard Limit Timer has expired */
     public boolean expiredHardLimit() {
-      return FSNamesystem.now() - lastUpdate > hardLimit;
+      return now() - lastUpdate > hardLimit;
     }
 
     /** @return true if the Soft Limit Timer has expired */
     public boolean expiredSoftLimit() {
-      return FSNamesystem.now() - lastUpdate > softLimit;
+      return now() - lastUpdate > softLimit;
     }
 
     /**
