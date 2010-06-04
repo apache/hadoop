@@ -39,6 +39,8 @@ Release 0.20.3 - Unreleased
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
     actual usage. (Benoit Sigoure via cdouglas)
 
+    MAPREDUCE-1832. Allow file sizes less than 1MB in DFSIO benchmark. (shv)
+
 Release 0.20.2 - 2010-2-19
 
   NEW FEATURES
