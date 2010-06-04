@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     HADOOP-6714. Resolve compressed files using CodecFactory in FsShell::text.
     (Patrick Angeles via cdouglas)
 
+    HADOOP-6661. User document for UserGroupInformation.doAs. 
+    (Jitendra Pandey via jghoman)
+
   BUG FIXES
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
     only in case the subject is loginUser or proxyUgi.realUser. (boryas)

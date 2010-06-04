@@ -42,6 +42,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 		<fsshell				        label="File System Shell"               href="file_system_shell.html" />
 		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>
 		<native_lib    				label="Native Libraries" 					href="native_libraries.html" />
+                <superusers                      label="Superusers Acting On Behalf Of Other Users"     href="Superusers.html"/>
    </docs>
 
    <docs label="Miscellaneous"> 
