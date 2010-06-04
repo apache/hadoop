@@ -19,13 +19,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.EOFException;
+import java.io.IOException;
 
-import java.io.*;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * A Key for an entry in the change log.
@@ -46,8 +47,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   private byte clusterId;
   private int scope;
-  private int HEAP_TAX = ClassSize.OBJECT + (2 * ClassSize.ARRAY) +
-    (2 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT;
 
   /** Writable Consructor -- Do not use. */
   public HLogKey() {

@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
+  static final Log LOG = LogFactory.getLog(TestHLog.class);
   private Path dir;
   private Path oldLogDir;
   private MiniDFSCluster cluster;
@@ -56,7 +59,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     if (fs.exists(dir)) {
       fs.delete(dir, true);
     }
-    this.oldLogDir = new Path("/hbase", HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldLogDir = new Path(this.dir, HConstants.HREGION_OLDLOGDIR_NAME);
 
   }
 
@@ -78,7 +81,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
 
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
-    HLog log = new HLog(this.fs, this.dir, this.oldLogDir, this.conf, null);
+    Path logdir = new Path(this.dir, HConstants.HREGION_LOGDIR_NAME);
+    HLog log = new HLog(this.fs, logdir, this.oldLogDir, this.conf, null);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
     for(int i = 0; i < howmany; i++) {
@@ -97,7 +101,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
             byte [] column = Bytes.toBytes("column:" + Integer.toString(j));
             edit.add(new KeyValue(rowName, family, qualifier,
                 System.currentTimeMillis(), column));
-            System.out.println("Region " + i + ": " + edit);
+            LOG.info("Region " + i + ": " + edit);
             log.append(infos[i], tableName, edit,
               System.currentTimeMillis());
           }
@@ -105,8 +109,9 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         log.hflush();
         log.rollWriter();
       }
+      Path splitsdir = new Path(this.dir, "splits");
       List<Path> splits =
-        HLog.splitLog(this.testDir, this.dir, this.oldLogDir, this.fs, this.conf);
+        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, this.conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -228,6 +233,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   throws IOException {
     assertEquals(howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
+      LOG.info("Verifying=" + splits.get(i));
       HLog.Reader reader = HLog.getReader(this.fs, splits.get(i), conf);
       try {
         int count = 0;
@@ -242,6 +248,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
           if (previousRegion != null) {
             assertEquals(previousRegion, region);
           }
+          LOG.info("oldseqno=" + seqno + ", newseqno=" + key.getLogSeqNum());
           assertTrue(seqno < key.getLogSeqNum());
           seqno = key.getLogSeqNum();
           previousRegion = region;

@@ -1552,10 +1552,11 @@ public class HLog implements HConstants, Syncable {
         try {
           int editsCount = 0;
           WriterAndPath wap = logWriters.get(region);
-          for (ListIterator<Entry> iterator = entries.listIterator();
-               iterator.hasNext();) {
-            Entry logEntry =  iterator.next();
-
+          // We put edits onto the Stack ordered oldest sequence id to newest.
+          // Pop them off starting with the oldest.
+          for (ListIterator<Entry> iterator = entries.listIterator(entries.size());
+               iterator.hasPrevious();) {
+            Entry logEntry =  iterator.previous();
             if (wap == null) {
               Path logFile = getRegionLogPath(logEntry, rootDir);
               if (fs.exists(logFile)) {
@@ -1570,7 +1571,6 @@ public class HLog implements HConstants, Syncable {
               LOG.debug("Creating writer path=" + logFile +
                 " region=" + Bytes.toStringBinary(region));
             }
-
             wap.w.append(logEntry);
             editsCount++;
           }
