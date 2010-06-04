@@ -39,6 +39,9 @@ Trunk (unreleased changes)
     HDFS-1185. Remove duplicate now() functions in DataNode, FSNamesysetm.
     (Jeff Ames via jghoman)
 
+    HDFS-1183. Remove some duplicate code in NamenodeJspHelper.java.
+    (Jeff Ames via jghoman)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)

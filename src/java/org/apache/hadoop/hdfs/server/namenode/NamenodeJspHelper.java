@@ -376,8 +376,9 @@ class NamenodeJspHelper {
       return ret;
     }
 
-    void generateDecommissioningNodeData(JspWriter out, DatanodeDescriptor d,
+    private void generateNodeDataHeader(JspWriter out, DatanodeDescriptor d,
         String suffix, boolean alive, int nnHttpPort) throws IOException {
+      // from nn_browsedfscontent.jsp:
       String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
           + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
           + URLEncoder.encode("/", "UTF-8");
@@ -392,6 +393,11 @@ class NamenodeJspHelper {
           + d.getPort() + "\" href=\"" + url + "\">"
           + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
           + ((alive) ? "" : "\n"));
+    }
+
+    void generateDecommissioningNodeData(JspWriter out, DatanodeDescriptor d,
+        String suffix, boolean alive, int nnHttpPort) throws IOException {
+      generateNodeDataHeader(out, d, suffix, alive, nnHttpPort);
       if (!alive) {
         return;
       }
@@ -427,21 +433,7 @@ class NamenodeJspHelper {
        * interact with datanodes.
        */
 
-      // from nn_browsedfscontent.jsp:
-      String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
-          + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
-          + URLEncoder.encode("/", "UTF-8");
-
-      String name = d.getHostName() + ":" + d.getPort();
-      if (!name.matches("\\d+\\.\\d+.\\d+\\.\\d+.*"))
-        name = name.replaceAll("\\.[^.:]*", "");
-      int idx = (suffix != null && name.endsWith(suffix)) ? name
-          .indexOf(suffix) : -1;
-
-      out.print(rowTxt() + "<td class=\"name\"><a title=\"" + d.getHost() + ":"
-          + d.getPort() + "\" href=\"" + url + "\">"
-          + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
-          + ((alive) ? "" : "\n"));
+      generateNodeDataHeader(out, d, suffix, alive, nnHttpPort);
       if (!alive)
         return;
 
