@@ -932,6 +932,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6585.  Add FileStatus#isDirectory and isFile.  (Eli Collins via
     tomwhite)
 
+    HADOOP-6738.  Move cluster_setup.xml from MapReduce to Common.
+    (Tom White via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
