@@ -4,6 +4,8 @@ Release 0.20-append - Unreleased
 
   NEW FEATURES
 
+    HDFS-200. Support append and sync for hadoop 0.20 branch.
+
   IMPROVEMENTS
 
   BUG FIXES
