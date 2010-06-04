@@ -91,21 +91,21 @@ public class TestStoreReconstruction {
    */
   @Test
   public void runReconstructionLog() throws Exception {
-
     byte[] family = Bytes.toBytes("column");
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path oldLogDir = new Path(this.dir, HConstants.HREGION_OLDLOGDIR_NAME);
-    HLog log = new HLog(cluster.getFileSystem(),
-        this.dir, oldLogDir, conf, null);
+    Path logDir = new Path(this.dir, HConstants.HREGION_LOGDIR_NAME);
+    HLog log = new HLog(cluster.getFileSystem(), logDir, oldLogDir, conf, null);
     HRegion region = new HRegion(dir, log,
         cluster.getFileSystem(),conf, info, null);
     List<KeyValue> result = new ArrayList<KeyValue>();
 
     // Empty set to get all columns
-    NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    NavigableSet<byte[]> qualifiers =
+      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
 
     final byte[] tableName = Bytes.toBytes(TABLE);
     final byte[] rowName = tableName;
@@ -136,9 +136,8 @@ public class TestStoreReconstruction {
     // TODO dont close the file here.
     log.close();
 
-    List<Path> splits =
-        HLog.splitLog(new Path(conf.get(HConstants.HBASE_DIR)),
-            this.dir, oldLogDir, cluster.getFileSystem(), conf);
+    List<Path> splits = HLog.splitLog(new Path(conf.get(HConstants.HBASE_DIR)),
+      logDir, oldLogDir, cluster.getFileSystem(), conf);
 
     // Split should generate only 1 file since there's only 1 region
     assertEquals(1, splits.size());
