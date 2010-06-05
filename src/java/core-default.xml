@@ -76,6 +76,17 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.rpc.protection</name>
+  <value>authentication</value>
+  <description>This field sets the quality of protection for secured sasl 
+      connections. Possible values are authentication, integrity and privacy.
+      authentication means authentication only and no integrity or privacy; 
+      integrity implies authentication and integrity are enabled; and privacy 
+      implies all of authentication, integrity and privacy are enabled.
+  </description>
+</property>
+
 <!--- logging properties -->
 
 <property>

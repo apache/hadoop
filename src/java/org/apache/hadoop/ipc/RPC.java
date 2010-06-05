@@ -35,6 +35,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -221,6 +222,9 @@ public class RPC {
                                 UserGroupInformation ticket,
                                 Configuration conf,
                                 SocketFactory factory) throws IOException {    
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SaslRpcServer.init(conf);
+    }
     return getProtocolEngine(protocol,conf)
       .getProxy(protocol, clientVersion, addr, ticket, conf, factory);
   }

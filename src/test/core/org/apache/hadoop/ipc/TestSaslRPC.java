@@ -28,6 +28,8 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
+import javax.security.sasl.Sasl;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.*;
@@ -232,6 +234,8 @@ public class TestSaslRPC {
     try {
       proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
           TestSaslProtocol.versionID, addr, conf);
+      //QOP must be auth
+      Assert.assertEquals(SaslRpcServer.SASL_PROPS.get(Sasl.QOP), "auth");
       proxy.ping();
     } finally {
       server.stop();

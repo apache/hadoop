@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.security;
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
@@ -34,7 +39,7 @@ import javax.security.sasl.SaslServer;
  */
 public class SaslOutputStream extends OutputStream {
 
-  private final DataOutputStream outStream;
+  private final OutputStream outStream;
   // processed data ready to be written out
   private byte[] saslToken;
 
@@ -42,6 +47,7 @@ public class SaslOutputStream extends OutputStream {
   private final SaslServer saslServer;
   // buffer holding one byte of incoming data
   private final byte[] ibuffer = new byte[1];
+  private final boolean useWrap;
 
   /**
    * Constructs a SASLOutputStream from an OutputStream and a SaslServer <br>
@@ -54,9 +60,15 @@ public class SaslOutputStream extends OutputStream {
    *          an initialized SaslServer object
    */
   public SaslOutputStream(OutputStream outStream, SaslServer saslServer) {
-    this.outStream = new DataOutputStream(outStream);
     this.saslServer = saslServer;
     this.saslClient = null;
+    String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+    this.useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+    if (useWrap) {
+      this.outStream = new BufferedOutputStream(outStream, 64*1024);
+    } else {
+      this.outStream = outStream;
+    }
   }
 
   /**
@@ -70,9 +82,15 @@ public class SaslOutputStream extends OutputStream {
    *          an initialized SaslClient object
    */
   public SaslOutputStream(OutputStream outStream, SaslClient saslClient) {
-    this.outStream = new DataOutputStream(outStream);
     this.saslServer = null;
     this.saslClient = saslClient;
+    String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
+    this.useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+    if (useWrap) {
+      this.outStream = new BufferedOutputStream(outStream, 64*1024);
+    } else {
+      this.outStream = outStream;
+    }
   }
 
   /**
@@ -100,6 +118,10 @@ public class SaslOutputStream extends OutputStream {
    *              if an I/O error occurs.
    */
   public void write(int b) throws IOException {
+    if (!useWrap) {
+      outStream.write(b);
+      return;
+    }
     ibuffer[0] = (byte) b;
     write(ibuffer, 0, 1);
   }
@@ -137,6 +159,10 @@ public class SaslOutputStream extends OutputStream {
    *              if an I/O error occurs.
    */
   public void write(byte[] inBuf, int off, int len) throws IOException {
+    if (!useWrap) {
+      outStream.write(inBuf, off, len);
+      return;
+    }
     try {
       if (saslServer != null) { // using saslServer
         saslToken = saslServer.wrap(inBuf, off, len);
@@ -151,7 +177,10 @@ public class SaslOutputStream extends OutputStream {
       throw se;
     }
     if (saslToken != null) {
-      outStream.writeInt(saslToken.length);
+      ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+      DataOutputStream dout = new DataOutputStream(byteOut);
+      dout.writeInt(saslToken.length);
+      outStream.write(byteOut.toByteArray());
       outStream.write(saslToken, 0, saslToken.length);
       saslToken = null;
     }

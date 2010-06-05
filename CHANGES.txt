@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     HADOOP-6661. User document for UserGroupInformation.doAs. 
     (Jitendra Pandey via jghoman)
 
+    HADOOP-6674. Makes use of the SASL authentication options in the
+    SASL RPC. (Jitendra Pandey via ddas)
+
   BUG FIXES
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
     only in case the subject is loginUser or proxyUgi.realUser. (boryas)

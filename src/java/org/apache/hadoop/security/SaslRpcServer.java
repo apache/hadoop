@@ -38,6 +38,7 @@ import javax.security.sasl.Sasl;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -52,14 +53,41 @@ public class SaslRpcServer {
   public static final String SASL_DEFAULT_REALM = "default";
   public static final Map<String, String> SASL_PROPS = 
       new TreeMap<String, String>();
-  static {
-    // Request authentication plus integrity protection
-    SASL_PROPS.put(Sasl.QOP, "auth-int");
-    // Request mutual authentication
-    SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
-  }
+
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
+  public static enum QualityOfProtection {
+    AUTHENTICATION("auth"),
+    INTEGRITY("auth-int"),
+    PRIVACY("auth-conf");
+    
+    public final String saslQop;
+    
+    private QualityOfProtection(String saslQop) {
+      this.saslQop = saslQop;
+    }
+    
+    public String getSaslQop() {
+      return saslQop;
+    }
+  }
+  
+  public static void init(Configuration conf) {
+    QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
+    String rpcProtection = conf.get("hadoop.rpc.protection",
+        QualityOfProtection.AUTHENTICATION.name().toLowerCase());
+    if (QualityOfProtection.INTEGRITY.name().toLowerCase()
+        .equals(rpcProtection)) {
+      saslQOP = QualityOfProtection.INTEGRITY;
+    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(
+        rpcProtection)) {
+      saslQOP = QualityOfProtection.PRIVACY;
+    }
+    
+    SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
+    SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
+  }
+  
   static String encodeIdentifier(byte[] identifier) {
     return new String(Base64.encodeBase64(identifier));
   }
