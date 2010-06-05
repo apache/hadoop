@@ -28,12 +28,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.naming.InsufficientResourcesException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -42,13 +39,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -161,7 +156,23 @@ public class TestHLogSplit {
     }
   }
 
-  //TODO: check the edits order is respected (scenarios)
+
+  @Test
+  public void testSplitPreservesEdits() throws IOException{
+    final String REGION = "region__1";
+    regions.removeAll(regions);
+    regions.add(REGION);
+
+    generateHLogs(1, 10, -1);
+    fs.initialize(fs.getUri(), conf);
+    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+
+    Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
+    Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
+
+    assertEquals("edits differ after split", true, logsAreEqual(originalLog, splitLog));
+  }
+
 
   @Test
   public void testEmptyLogFiles() throws IOException {
@@ -458,7 +469,7 @@ public class TestHLogSplit {
   public void testSplittingLargeNumberOfRegionsConsistency() throws IOException {
 
     regions.removeAll(regions);
-    for (int i=0; i<500; i++) {
+    for (int i=0; i<100; i++) {
       regions.add("region__"+i);
     }
 
@@ -476,23 +487,11 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
     HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
-    FileStatus[] f1 = fs.listStatus(firstSplitPath);
-    FileStatus[] f2 = fs.listStatus(splitPath);
-
-    for (int i=0; i<f1.length; i++) {
-      HLog.Reader in1, in2;
-      in1 = HLog.getReader(fs, new Path(f1[i].getPath(), "oldlogfile.log"), conf);
-      in2 = HLog.getReader(fs, new Path(f2[i].getPath(), "oldlogfile.log"), conf);
-      HLog.Entry entry1;
-      HLog.Entry entry2;
-      while ((entry1 = in1.next()) != null) {
-        entry2 = in2.next();
-        assertEquals(0, entry1.getKey().compareTo(entry2.getKey()));
-        assertEquals(entry1.getEdit().toString(), entry2.getEdit().toString());
-      }
-
-    }
+    assertEquals(0, compareHLogSplitDirs(firstSplitPath, splitPath));
   }
+
+
+
 
   /**
    * This thread will keep writing to the file after the split process has started
@@ -629,7 +628,7 @@ public class TestHLogSplit {
     return new Path(HRegion.getRegionDir(HTableDescriptor
             .getTableDir(rootdir, table),
             HRegionInfo.encodeRegionName(region.getBytes())),
-            "oldlogfile.log");
+            HConstants.HREGION_OLDLOGFILE_NAME);
   }
 
   private void corruptHLog(Path path, Corruptions corruption, boolean close,
@@ -731,5 +730,35 @@ public class TestHLogSplit {
     }
 
   }
+
+  private int compareHLogSplitDirs(Path p1, Path p2) throws IOException {
+    FileStatus[] f1 = fs.listStatus(p1);
+    FileStatus[] f2 = fs.listStatus(p2);
+
+    for (int i=0; i<f1.length; i++) {
+      if (!logsAreEqual(new Path(f1[i].getPath(), HConstants.HREGION_OLDLOGFILE_NAME),
+              new Path(f2[i].getPath(), HConstants.HREGION_OLDLOGFILE_NAME))) {
+        return -1;
+      }
+    }
+    return 0;
+  }
+
+  private boolean logsAreEqual(Path p1, Path p2) throws IOException {
+    HLog.Reader in1, in2;
+    in1 = HLog.getReader(fs, p1, conf);
+    in2 = HLog.getReader(fs, p2, conf);
+    HLog.Entry entry1;
+    HLog.Entry entry2;
+    while ((entry1 = in1.next()) != null) {
+      entry2 = in2.next();
+      if ((entry1.getKey().compareTo(entry2.getKey()) != 0) ||
+              (!entry1.getEdit().toString().equals(entry2.getEdit().toString()))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
 
 }

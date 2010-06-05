@@ -1520,7 +1520,7 @@ public class HLog implements HConstants, Syncable {
           queue = new LinkedList<Entry>();
           splitLogsMap.put(region, queue);
         }
-        queue.addFirst(entry);
+        queue.addLast(entry);
         editsCount++;
       }
       LOG.debug("Pushed=" + editsCount + " entries from " + path);
@@ -1552,11 +1552,7 @@ public class HLog implements HConstants, Syncable {
         try {
           int editsCount = 0;
           WriterAndPath wap = logWriters.get(region);
-          // We put edits onto the Stack ordered oldest sequence id to newest.
-          // Pop them off starting with the oldest.
-          for (ListIterator<Entry> iterator = entries.listIterator(entries.size());
-               iterator.hasPrevious();) {
-            Entry logEntry =  iterator.previous();
+          for (Entry logEntry: entries) {
             if (wap == null) {
               Path logFile = getRegionLogPath(logEntry, rootDir);
               if (fs.exists(logFile)) {
