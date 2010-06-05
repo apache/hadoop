@@ -797,8 +797,13 @@ public class KeyValue implements Writable, HeapSize {
       HConstants.LATEST_TIMESTAMP_BYTES, 0, Bytes.SIZEOF_LONG) == 0;
   }
 
+  /**
+   * @param now Time to set into <code>this</code> IFF timestamp ==
+   * {@link HConstants#LATEST_TIMESTAMP} (else, its a noop).
+   * @return True is we modified this.
+   */
   public boolean updateLatestStamp(final byte [] now) {
-    if(this.isLatestTimestamp()) {
+    if (this.isLatestTimestamp()) {
       int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
       return true;

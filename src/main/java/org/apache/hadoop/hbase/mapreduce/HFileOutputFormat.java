@@ -85,6 +85,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       private final Map<byte [], WriterLength> writers =
         new TreeMap<byte [], WriterLength>(Bytes.BYTES_COMPARATOR);
       private byte [] previousRow = HConstants.EMPTY_BYTE_ARRAY;
+      private final byte [] now = Bytes.toBytes(System.currentTimeMillis());
 
       public void write(ImmutableBytesWritable row, KeyValue kv)
       throws IOException {
@@ -108,6 +109,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
             ((wl.written == 0)? "": ", wrote=" + wl.written));
           wl.written = 0;
         }
+        kv.updateLatestStamp(this.now);
         wl.writer.append(kv);
         wl.written += length;
         // Copy the row so we know when a row transition.

@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -44,6 +46,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Before;
 import org.junit.Test;
@@ -126,6 +131,51 @@ public class TestHFileOutputFormat  {
     job.setMapperClass(RandomKVGeneratingMapper.class);
     job.setMapOutputKeyClass(ImmutableBytesWritable.class);
     job.setMapOutputValueClass(KeyValue.class);
+  }
+
+  /**
+   * Test that {@link HFileOutputFormat} RecordWriter amends timestamps if
+   * passed a keyvalue whose timestamp is {@link HConstants#LATEST_TIMESTAMP}.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2615">HBASE-2615</a>
+   */
+  @Test
+  public void test_LATEST_TIMESTAMP_isReplaced()
+  throws IOException, InterruptedException {
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
+    TaskAttemptContext context = null;
+    Path dir =
+      HBaseTestingUtility.getTestDir("test_LATEST_TIMESTAMP_isReplaced");
+    try {
+      Job job = new Job(conf);
+      FileOutputFormat.setOutputPath(job, dir);
+      context = new TaskAttemptContext(job.getConfiguration(),
+        new TaskAttemptID());
+      HFileOutputFormat hof = new HFileOutputFormat();
+      writer = hof.getRecordWriter(context);
+      final byte [] b = Bytes.toBytes("b");
+
+      // Test 1.  Pass a KV that has a ts of LATEST_TIMESTAMP.  It should be
+      // changed by call to write.  Check all in kv is same but ts.
+      KeyValue kv = new KeyValue(b, b, b);
+      KeyValue original = kv.clone();
+      writer.write(new ImmutableBytesWritable(), kv);
+      assertFalse(original.equals(kv));
+      assertTrue(Bytes.equals(original.getRow(), kv.getRow()));
+      assertTrue(original.matchingColumn(kv.getFamily(), kv.getQualifier()));
+      assertNotSame(original.getTimestamp(), kv.getTimestamp());
+      assertNotSame(HConstants.LATEST_TIMESTAMP, kv.getTimestamp());
+
+      // Test 2. Now test passing a kv that has explicit ts.  It should not be
+      // changed by call to record write.
+      kv = new KeyValue(b, b, b, System.currentTimeMillis(), b);
+      original = kv.clone();
+      writer.write(new ImmutableBytesWritable(), kv);
+      assertTrue(original.equals(kv));
+    } finally {
+      if (writer != null && context != null) writer.close(context);
+      dir.getFileSystem(conf).delete(dir, true);
+    }
   }
 
   /**
