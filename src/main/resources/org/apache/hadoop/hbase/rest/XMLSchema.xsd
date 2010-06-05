@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema targetNamespace="ModelSchema" elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="ModelSchema">
+
+    <element name="Version" type="tns:Version"></element>
+    
+    <complexType name="Version">
+      <attribute name="REST" type="string"></attribute>
+      <attribute name="JVM" type="string"></attribute>
+      <attribute name="OS" type="string"></attribute>
+      <attribute name="Server" type="string"></attribute>
+      <attribute name="Jersey" type="string"></attribute>
+    </complexType>
+
+    <element name="TableList" type="tns:TableList"></element>
+    
+    <complexType name="TableList">
+        <sequence>
+            <element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"></element>
+        </sequence>
+    </complexType>
+
+    <complexType name="Table">
+        <sequence>
+            <element name="name" type="string"></element>
+        </sequence>
+    </complexType>
+
+    <element name="TableInfo" type="tns:TableInfo"></element>
+    
+    <complexType name="TableInfo">
+        <sequence>
+            <element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"></element>
+        </sequence>
+        <attribute name="name" type="string"></attribute>
+    </complexType>
+
+    <complexType name="TableRegion">
+        <attribute name="name" type="string"></attribute>
+        <attribute name="id" type="int"></attribute>
+        <attribute name="startKey" type="base64Binary"></attribute>
+        <attribute name="endKey" type="base64Binary"></attribute>
+        <attribute name="location" type="string"></attribute>
+    </complexType>
+
+    <element name="TableSchema" type="tns:TableSchema"></element>
+    
+    <complexType name="TableSchema">
+        <sequence>
+            <element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"></element>
+        </sequence>
+        <attribute name="name" type="string"></attribute>
+        <anyAttribute></anyAttribute>
+    </complexType>
+
+    <complexType name="ColumnSchema">
+        <attribute name="name" type="string"></attribute>
+        <anyAttribute></anyAttribute>
+    </complexType>
+
+    <element name="CellSet" type="tns:CellSet"></element>
+
+    <complexType name="CellSet">
+        <sequence>
+            <element name="row" type="tns:Row" maxOccurs="unbounded" minOccurs="1"></element>
+        </sequence>
+    </complexType>
+
+    <element name="Row" type="tns:Row"></element>
+
+    <complexType name="Row">
+        <sequence>
+            <element name="key" type="base64Binary"></element>
+            <element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"></element>
+        </sequence>
+    </complexType>
+ 
+    <element name="Cell" type="tns:Cell"></element>
+
+    <complexType name="Cell">
+        <sequence>
+            <element name="value" maxOccurs="1" minOccurs="1">
+                <simpleType><restriction base="base64Binary">
+                </simpleType>
+            </element>
+        </sequence>
+        <attribute name="column" type="base64Binary" />
+        <attribute name="timestamp" type="int" />
+    </complexType>
+
+    <element name="Scanner" type="tns:Scanner"></element>
+    
+    <complexType name="Scanner">
+        <sequence>
+            <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
+        </sequence>
+        <sequence>
+            <element name="filter" type="string" minOccurs="0" maxOccurs="1"></element>
+        </sequence>
+        <attribute name="startRow" type="base64Binary"></attribute>
+        <attribute name="endRow" type="base64Binary"></attribute>
+        <attribute name="batch" type="int"></attribute>
+        <attribute name="startTime" type="int"></attribute>
+        <attribute name="endTime" type="int"></attribute>
+    </complexType>
+
+    <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
+
+    <complexType name="StorageClusterVersion">
+        <attribute name="version" type="string"></attribute>
+    </complexType>
+
+    <element name="StorageClusterStatus"
+        type="tns:StorageClusterStatus">
+    </element>
+    
+    <complexType name="StorageClusterStatus">
+        <sequence>
+            <element name="liveNode" type="tns:Node"
+                maxOccurs="unbounded" minOccurs="0">
+            </element>
+            <element name="deadNode" type="string" maxOccurs="unbounded"
+                minOccurs="0">
+            </element>
+        </sequence>
+        <attribute name="regions" type="int"></attribute>
+        <attribute name="requests" type="int"></attribute>
+        <attribute name="averageLoad" type="float"></attribute>
+    </complexType>
+
+    <complexType name="Node">
+        <sequence>
+            <element name="region" type="tns:Region"
+                maxOccurs="unbounded" minOccurs="0">
+            </element>
+        </sequence>
+        <attribute name="name" type="string"></attribute>
+        <attribute name="startCode" type="int"></attribute>
+        <attribute name="requests" type="int"></attribute>
+        <attribute name="heapSizeMB" type="int"></attribute>
+        <attribute name="maxHeapSizeMB" type="int"></attribute>
+    </complexType>
+
+    <complexType name="Region">
+        <attribute name="name" type="base64Binary"></attribute>
+        <attribute name="stores" type="int"></attribute>
+        <attribute name="storefiles" type="int"></attribute>
+        <attribute name="storefileSizeMB" type="int"></attribute>
+        <attribute name="memstoreSizeMB" type="int"></attribute>
+        <attribute name="storefileIndexSizeMB" type="int"></attribute>
+    </complexType>
+
+</schema>

@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,24 +42,38 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public class TestWideScanner extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
-  static final int BATCH = 1000;
-
-  private MiniDFSCluster cluster = null;
-  private HRegion r;
-
+  static final byte[] A = Bytes.toBytes("A");
+  static final byte[] B = Bytes.toBytes("B");
+  static final byte[] C = Bytes.toBytes("C");
+  static byte[][] COLUMNS = { A, B, C };
+  static final Random rng = new Random();
   static final HTableDescriptor TESTTABLEDESC =
     new HTableDescriptor("testwidescan");
   static {
-    TESTTABLEDESC.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY,
+    TESTTABLEDESC.addFamily(new HColumnDescriptor(A,
+      10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+      Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
+      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
+      HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
+    TESTTABLEDESC.addFamily(new HColumnDescriptor(B,
+      10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+      Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
+      HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
+      HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
+    TESTTABLEDESC.addFamily(new HColumnDescriptor(C,
       10,  // Ten is arbitrary number.  Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
       HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
       HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
   }
+
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =
     new HRegionInfo(TESTTABLEDESC, HConstants.EMPTY_BYTE_ARRAY,
     HConstants.EMPTY_BYTE_ARRAY);
+
+  MiniDFSCluster cluster = null;
+  HRegion r;
 
   @Override
   public void setUp() throws Exception {
@@ -69,30 +84,15 @@ public class TestWideScanner extends HBaseTestCase {
     super.setUp();
   }
 
-  private int addWideContent(HRegion region, byte[] family)
-      throws IOException {
+  private int addWideContent(HRegion region) throws IOException {
     int count = 0;
-    // add a few rows of 2500 columns (we'll use batch of 1000) to make things
-    // interesting
     for (char c = 'a'; c <= 'c'; c++) {
       byte[] row = Bytes.toBytes("ab" + c);
       int i;
       for (i = 0; i < 2500; i++) {
         byte[] b = Bytes.toBytes(String.format("%10d", i));
         Put put = new Put(row);
-        put.add(family, b, b);
-        region.put(put);
-        count++;
-      }
-    }
-    // add one row of 100,000 columns
-    {
-      byte[] row = Bytes.toBytes("abf");
-      int i;
-      for (i = 0; i < 100000; i++) {
-        byte[] b = Bytes.toBytes(String.format("%10d", i));
-        Put put = new Put(row);
-        put.add(family, b, b);
+        put.add(COLUMNS[rng.nextInt(COLUMNS.length)], b, b);
         region.put(put);
         count++;
       }
@@ -103,11 +103,13 @@ public class TestWideScanner extends HBaseTestCase {
   public void testWideScanBatching() throws IOException {
     try {
       this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
-      int inserted = addWideContent(this.r, HConstants.CATALOG_FAMILY);
+      int inserted = addWideContent(this.r);
       List<KeyValue> results = new ArrayList<KeyValue>();
       Scan scan = new Scan();
-      scan.addFamily(HConstants.CATALOG_FAMILY);
-      scan.setBatch(BATCH);
+      scan.addFamily(A);
+      scan.addFamily(B);
+      scan.addFamily(C);
+      scan.setBatch(1000);
       InternalScanner s = r.getScanner(scan);
       int total = 0;
       int i = 0;
@@ -117,8 +119,8 @@ public class TestWideScanner extends HBaseTestCase {
         i++;
         LOG.info("iteration #" + i + ", results.size=" + results.size());
 
-        // assert that the result set is no larger than BATCH
-        assertTrue(results.size() <= BATCH);
+        // assert that the result set is no larger than 1000
+        assertTrue(results.size() <= 1000);
 
         total += results.size();
 

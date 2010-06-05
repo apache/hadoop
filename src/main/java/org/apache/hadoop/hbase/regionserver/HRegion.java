@@ -2065,7 +2065,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         } else {
           byte [] nextRow;
           do {
-            this.storeHeap.next(results, limit);
+            this.storeHeap.next(results, limit - results.size());
             if (limit > 0 && results.size() == limit) {
               if (this.filter != null && filter.hasFilterRow()) throw new IncompatibleFilterException(
                   "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
