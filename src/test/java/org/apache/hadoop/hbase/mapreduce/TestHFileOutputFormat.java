@@ -168,7 +168,7 @@ public class TestHFileOutputFormat  {
 
       // Test 2. Now test passing a kv that has explicit ts.  It should not be
       // changed by call to record write.
-      kv = new KeyValue(b, b, b, System.currentTimeMillis(), b);
+      kv = new KeyValue(b, b, b, kv.getTimestamp() - 1, b);
       original = kv.clone();
       writer.write(new ImmutableBytesWritable(), kv);
       assertTrue(original.equals(kv));
