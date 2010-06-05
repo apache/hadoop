@@ -74,6 +74,10 @@ public class TestMasterTransitions {
    */
   @BeforeClass public static void beforeAllTests() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
+    // Parcel out the regions, don't give them out in big lumps.  We've only
+    // a few in this test.  Let a couple of cycles pass is more realistic and
+    // gives stuff a chance to work.
+    TEST_UTIL.getConfiguration().setInt("hbase.regions.percheckin", 2);
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.

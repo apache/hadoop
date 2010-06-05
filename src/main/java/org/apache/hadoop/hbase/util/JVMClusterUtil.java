@@ -55,7 +55,12 @@ public class JVMClusterUtil {
      * to be used.
      */
     public void waitForServerOnline() {
-      while (!regionServer.isOnline()) {
+      // The server is marked online after the init method completes inside of
+      // the HRS#run method.  HRS#init can fail for whatever region.  In those
+      // cases, we'll jump out of the run without setting online flag.  Check
+      // stopRequested so we don't wait here a flag that will never be flipped.
+      while (!this.regionServer.isOnline() &&
+          !this.regionServer.isStopRequested()) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {

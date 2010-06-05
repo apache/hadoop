@@ -447,6 +447,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (this.serverManager.numServers() == 0) {
             startShutdown();
             break;
+          } else {
+            LOG.debug("Waiting on " +
+              this.serverManager.getServersToServerInfo().keySet().toString());
           }
         }
         final HServerAddress root = this.regionManager.getRootRegionLocation();

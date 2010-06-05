@@ -589,6 +589,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     synchronized(scannerLock){
       if (isAlive()) {
         super.interrupt();
+        LOG.info("Interrupted");
       }
     }
   }

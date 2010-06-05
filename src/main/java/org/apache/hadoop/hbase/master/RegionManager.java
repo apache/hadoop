@@ -592,17 +592,8 @@ public class RegionManager implements HConstants {
    * regions can shut down.
    */
   public void stopScanners() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("telling root scanner to stop");
-    }
-    rootScannerThread.interruptAndStop();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("telling meta scanner to stop");
-    }
-    metaScannerThread.interruptAndStop();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("meta and root scanners notified");
-    }
+    this.rootScannerThread.interruptAndStop();
+    this.metaScannerThread.interruptAndStop();
   }
 
   /** Stop the region assigner */
@@ -1152,7 +1143,8 @@ public class RegionManager implements HConstants {
    */
   public void waitForRootRegionLocation() {
     synchronized (rootRegionLocation) {
-      while (!master.isClosed() && rootRegionLocation.get() == null) {
+      while (!master.getShutdownRequested().get() &&
+          !master.isClosed() && rootRegionLocation.get() == null) {
         // rootRegionLocation will be filled in when we get an 'open region'
         // regionServerReport message from the HRegionServer that has been
         // allocated the ROOT region below.

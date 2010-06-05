@@ -1121,7 +1121,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
   public void abort() {
     this.abortRequested = true;
     this.reservedSpace.clear();
-    LOG.info("Dump of metrics: " + this.metrics.toString());
+    if (this.metrics != null) {
+      LOG.info("Dump of metrics: " + this.metrics.toString());
+    }
     stop();
   }
 

@@ -373,6 +373,7 @@ Release 0.21.0 - Unreleased
    HBASE-2657  TestTableResource is broken in trunk
    HBASE-2662  TestScannerResource.testScannerResource broke in trunk
    HBASE-2667  TestHLog.testSplit failing in trunk
+   HBASE-2614  killing server in TestMasterTransitions causes NPEs and test deadlock
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
