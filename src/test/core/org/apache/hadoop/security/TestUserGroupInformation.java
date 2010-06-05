@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.security.auth.login.LoginContext;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -286,5 +288,18 @@ public class TestUserGroupInformation {
     UserGroupInformation proxyUgi4 = UserGroupInformation.createProxyUser(
         "proxyAnother", realugi);
     Assert.assertEquals(proxyUgi3, proxyUgi4);
+  }
+  
+  @Test
+  public void testLoginObjectInSubject() throws Exception {
+    UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
+    UserGroupInformation anotherUgi = new UserGroupInformation(loginUgi
+        .getSubject());
+    LoginContext login1 = loginUgi.getSubject().getPrincipals(User.class)
+        .iterator().next().getLogin();
+    LoginContext login2 = anotherUgi.getSubject().getPrincipals(User.class)
+    .iterator().next().getLogin();
+    //login1 and login2 must be same instances
+    Assert.assertTrue(login1 == login2);
   }
 }

@@ -19,6 +19,8 @@ package org.apache.hadoop.security;
 
 import java.security.Principal;
 
+import javax.security.auth.login.LoginContext;
+
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 /**
@@ -29,12 +31,13 @@ class User implements Principal {
   private final String fullName;
   private final String shortName;
   private AuthenticationMethod authMethod = null;
+  private LoginContext login = null;
 
   public User(String name) {
-    this(name, null);
+    this(name, null, null);
   }
   
-  public User(String name, AuthenticationMethod authMethod) {
+  public User(String name, AuthenticationMethod authMethod, LoginContext login) {
     fullName = name;
     int atIdx = name.indexOf('@');
     if (atIdx == -1) {
@@ -48,6 +51,7 @@ class User implements Principal {
       }
     }
     this.authMethod = authMethod;
+    this.login = login;
   }
 
   /**
@@ -93,5 +97,21 @@ class User implements Principal {
 
   public AuthenticationMethod getAuthenticationMethod() {
     return authMethod;
+  }
+  
+  /**
+   * Returns login object
+   * @return login
+   */
+  public LoginContext getLogin() {
+    return login;
+  }
+  
+  /**
+   * Set the login object
+   * @param login
+   */
+  public void setLogin(LoginContext login) {
+    this.login = login;
   }
 }

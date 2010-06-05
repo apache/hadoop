@@ -65,6 +65,8 @@ Trunk (unreleased changes)
     glob pattern code less restrictive and more POSIX standard
     compliant. (Luke Lu via eli)
 
+    HADOOP-6649.  login object in UGI should be inside the subject (jnp via boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
