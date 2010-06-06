@@ -23,6 +23,7 @@ Release 0.21.0 - Unreleased
    HBASE-2541  Remove transactional contrib (Clint Morgan via Stack)
    HBASE-2542  Fold stargate contrib into core
    HBASE-2565  Remove contrib module from hbase
+   HBASE-2397  Bytes.toStringBinary escapes printable chars
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

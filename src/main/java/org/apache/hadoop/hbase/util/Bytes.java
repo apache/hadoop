@@ -320,16 +320,7 @@ public class Bytes {
         if ( (ch >= '0' && ch <= '9')
             || (ch >= 'A' && ch <= 'Z')
             || (ch >= 'a' && ch <= 'z')
-            || ch == ','
-            || ch == '_'
-            || ch == '-'
-            || ch == ':'
-            || ch == ' '
-            || ch == '<'
-            || ch == '>'
-            || ch == '='
-            || ch == '/'
-            || ch == '.') {
+            || " `~!@#$%^&*()-_=+[]{}\\|;:'\",.<>/?".indexOf(ch) >= 0 ) {
           result.append(first.charAt(i));
         } else {
           result.append(String.format("\\x%02X", ch));
