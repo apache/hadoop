@@ -302,4 +302,18 @@ public class TestUserGroupInformation {
     //login1 and login2 must be same instances
     Assert.assertTrue(login1 == login2);
   }
+  
+  @Test
+  public void testLoginModuleCommit() throws Exception {
+    UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
+    User user1 = loginUgi.getSubject().getPrincipals(User.class).iterator()
+        .next();
+    LoginContext login = user1.getLogin();
+    login.logout();
+    login.login();
+    User user2 = loginUgi.getSubject().getPrincipals(User.class).iterator()
+        .next();
+    // user1 and user2 must be same instances.
+    Assert.assertTrue(user1 == user2);
+  }
 }

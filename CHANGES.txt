@@ -70,6 +70,9 @@ Trunk (unreleased changes)
 
     HADOOP-6649.  login object in UGI should be inside the subject (jnp via boryas)
 
+    HADOOP-6687.   user object in the subject in UGI should be reused in case 
+    of a relogin. (jnp via boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -88,6 +88,10 @@ public class UserGroupInformation {
 
     @Override
     public boolean commit() throws LoginException {
+      // if we already have a user, we are done.
+      if (!subject.getPrincipals(User.class).isEmpty()) {
+        return true;
+      }
       Principal user = null;
       // if we are using kerberos, try it out
       if (useKerberos) {
