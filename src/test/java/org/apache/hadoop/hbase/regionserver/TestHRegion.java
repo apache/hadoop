@@ -24,12 +24,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
@@ -90,6 +92,12 @@ public class TestHRegion extends HBaseTestCase {
     super.setUp();
   }
 
+  @Override
+  protected void tearDown() throws Exception {
+    super.tearDown();
+    EnvironmentEdgeManagerTestHelper.reset();
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. Putting files locally in
@@ -100,7 +108,7 @@ public class TestHRegion extends HBaseTestCase {
     HBaseConfiguration hc = initSplit();
     int numRows = 100;
     byte [][] families = {fam1, fam2, fam3};
-    
+
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
@@ -339,7 +347,7 @@ public class TestHRegion extends HBaseTestCase {
     //Putting data in key
     Put put = new Put(row1);
     put.add(fam1, qf1, val1);
-    
+
     //checkAndPut with correct value
     boolean res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId,
         true);
@@ -351,7 +359,7 @@ public class TestHRegion extends HBaseTestCase {
 
     Delete delete = new Delete(row1);
     delete.deleteColumn(fam1, qf1);
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId, 
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
         true);
     assertFalse(res);
 
@@ -369,7 +377,7 @@ public class TestHRegion extends HBaseTestCase {
     assertTrue(res);
 
     delete = new Delete(row1);
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId, 
+    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
         true);
     assertTrue(res);
   }
@@ -513,12 +521,12 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam1, qf3, val1);
     region.put(put);
 
-    //Multi-column delete 
+    //Multi-column delete
     Delete delete = new Delete(row1);
     delete.deleteColumn(fam1, qf1);
     delete.deleteColumn(fam2, qf1);
     delete.deleteColumn(fam1, qf3);
-    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, 
+    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId,
         true);
     assertEquals(true, res);
 
@@ -531,10 +539,10 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(val1, r.getValue(fam1, qf1));
     assertEquals(val2, r.getValue(fam2, qf2));
 
-    //Family delete 
+    //Family delete
     delete = new Delete(row1);
     delete.deleteFamily(fam2);
-    res = region.checkAndMutate(row1, fam2, qf1, emptyVal, delete, lockId, 
+    res = region.checkAndMutate(row1, fam2, qf1, emptyVal, delete, lockId,
         true);
     assertEquals(true, res);
 
@@ -545,7 +553,7 @@ public class TestHRegion extends HBaseTestCase {
 
     //Row delete
     delete = new Delete(row1);
-    res = region.checkAndMutate(row1, fam1, qf1, val1, delete, lockId, 
+    res = region.checkAndMutate(row1, fam1, qf1, val1, delete, lockId,
         true);
     assertEquals(true, res);
     get = new Get(row1);
@@ -629,6 +637,7 @@ public class TestHRegion extends HBaseTestCase {
     byte [][] families = {fam};
     String method = this.getName();
     initHRegion(tableName, method, families);
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
     byte [] row = Bytes.toBytes("table_name");
     // column names
@@ -667,9 +676,6 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(1, result.size());
 
-    // Sleep to ensure timestamp of next Put is bigger than previous delete
-    Thread.sleep(10);
-    
     // Assert that after a delete, I can put.
     put = new Put(row);
     put.add(fam, splitA, Bytes.toBytes("reference_A"));
@@ -682,10 +688,7 @@ public class TestHRegion extends HBaseTestCase {
     delete = new Delete(row);
     region.delete(delete, null, false);
     assertEquals(0, region.get(get, null).size());
-    
-    // Sleep to ensure timestamp of next Put is bigger than previous delete
-    Thread.sleep(10);
-    
+
     region.put(new Put(row).add(fam, splitA, Bytes.toBytes("reference_A")));
     result = region.get(get, null);
     assertEquals(1, result.size());
@@ -781,16 +784,14 @@ public class TestHRegion extends HBaseTestCase {
   public void doTestDelete_AndPostInsert(Delete delete)
       throws IOException, InterruptedException {
     initHRegion(tableName, getName(), fam1);
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
     Put put = new Put(row);
     put.add(fam1, qual1, value1);
     region.put(put);
 
-    Thread.sleep(10);
-
     // now delete the value:
     region.delete(delete, null, true);
 
-    Thread.sleep(10);
 
     // ok put data:
     put = new Put(row);
@@ -1223,8 +1224,8 @@ public class TestHRegion extends HBaseTestCase {
 
     Scan scan = null;
     HRegion.RegionScanner is = null;
-    
-    //Testing to see how many scanners that is produced by getScanner, starting 
+
+    //Testing to see how many scanners that is produced by getScanner, starting
     //with known number, 2 - current = 1
     scan = new Scan();
     scan.addFamily(fam2);
@@ -1232,11 +1233,11 @@ public class TestHRegion extends HBaseTestCase {
     is = (RegionScanner) region.getScanner(scan);
     is.initHeap(); // i dont like this test
     assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
-    
+
     scan = new Scan();
     is = (RegionScanner) region.getScanner(scan);
     is.initHeap();
-    assertEquals(families.length -1, 
+    assertEquals(families.length -1,
         ((RegionScanner)is).storeHeap.getHeap().size());
   }
 
@@ -1744,7 +1745,7 @@ public class TestHRegion extends HBaseTestCase {
     assertTrue("ICV failed to upgrade timestamp",
         first.getTimestamp() != second.getTimestamp());
   }
-  
+
   public void testIncrementColumnValue_ConcurrentFlush() throws IOException {
     initHRegion(tableName, getName(), fam1);
 
@@ -2240,10 +2241,10 @@ public class TestHRegion extends HBaseTestCase {
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
     putThread.waitForFirstPut();
-    
+
     FlushThread flushThread = new FlushThread();
     flushThread.start();
-    
+
     Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
 //    scan.setFilter(new RowFilter(CompareFilter.CompareOp.EQUAL,
 //      new BinaryComparator(Bytes.toBytes("row0"))));
@@ -2291,7 +2292,7 @@ public class TestHRegion extends HBaseTestCase {
   protected class PutThread extends Thread {
     private volatile boolean done;
     private volatile int numPutsFinished = 0;
-    
+
     private Throwable error = null;
     private int numRows;
     private byte[][] families;
@@ -2395,7 +2396,7 @@ public class TestHRegion extends HBaseTestCase {
     PutThread putThread = new PutThread(numRows, families, qualifiers);
     putThread.start();
     putThread.waitForFirstPut();
-    
+
     FlushThread flushThread = new FlushThread();
     flushThread.start();
 
@@ -2444,7 +2445,7 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     putThread.done();
-    
+
     region.flushcache();
 
     putThread.join();
@@ -2500,7 +2501,7 @@ public class TestHRegion extends HBaseTestCase {
   }
 
 
-  
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {

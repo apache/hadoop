@@ -761,7 +761,7 @@
 
   $ mvn deploy
 (or)
-  $ mvn -s /my/path/settings.xml deploy 
+  $ mvn -s /my/path/settings.xml deploy
 
   -->
   <distributionManagement>

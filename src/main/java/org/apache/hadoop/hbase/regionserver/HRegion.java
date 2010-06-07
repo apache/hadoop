@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
@@ -358,7 +359,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
     // HRegion is ready to go!
     this.writestate.compacting = false;
-    this.lastFlushTime = System.currentTimeMillis();
+    this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
     LOG.info("region " + this +
              " available; sequence id is " + this.minSequenceId);
   }
@@ -665,7 +666,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       // Calculate regionid to use.  Can't be less than that of parent else
       // it'll insert into wrong location over in .META. table: HBASE-710.
-      long rid = System.currentTimeMillis();
+      long rid = EnvironmentEdgeManager.currentTimeMillis();
       if (rid < this.regionInfo.getRegionId()) {
         LOG.warn("Clock skew; parent regions id is " +
           this.regionInfo.getRegionId() + " but current time here is " + rid);
@@ -830,7 +831,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         }
         LOG.info("Starting" + (majorCompaction? " major " : " ") +
             "compaction on region " + this);
-        long startTime = System.currentTimeMillis();
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
         doRegionCompactionPrep();
         long maxSize = -1;
         for (Store store: stores.values()) {
@@ -841,7 +842,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
           }
         }
         doRegionCompactionCleanup();
-        String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(),
+        String timeTaken = StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(),
             startTime);
         LOG.info("compaction completed on region " + this + " in " + timeTaken);
       } finally {
@@ -943,7 +944,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * because a Snapshot was not properly persisted.
    */
   protected boolean internalFlushcache() throws IOException {
-    final long startTime = System.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
     // Record latest flush time
     this.lastFlushTime = startTime;
@@ -1082,7 +1083,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     }
 
     if (LOG.isDebugEnabled()) {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       LOG.debug("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
@@ -1268,7 +1269,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   public void delete(Map<byte[], List<KeyValue>> familyMap, boolean writeToWAL)
   throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     byte [] byteNow = Bytes.toBytes(now);
     boolean flush = false;
 
@@ -1429,7 +1430,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // If we did not pass an existing row lock, obtain a new one
       Integer lid = getLock(lockid, row);
 
-      byte [] now = Bytes.toBytes(System.currentTimeMillis());
       try {
         // All edits for the given row (across all column families) must happen atomically.
         put(put.getFamilyMap(), writeToWAL);
@@ -1475,8 +1475,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       Get get = new Get(row, lock);
       checkFamily(family);
       get.addColumn(family, qualifier);
-
-      byte [] now = Bytes.toBytes(System.currentTimeMillis());
 
       // Lock row
       Integer lid = getLock(lockId, get.getRow());
@@ -1627,7 +1625,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   private void put(final Map<byte [], List<KeyValue>> familyMap,
       boolean writeToWAL) throws IOException {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     byte[] byteNow = Bytes.toBytes(now);
     boolean flush = false;
     this.updatesLock.readLock().lock();
@@ -1899,7 +1897,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
     }
   }
-  
+
   public void bulkLoadHFile(String hfilePath, byte[] familyName)
   throws IOException {
     splitsAndClosesLock.readLock().lock();
@@ -1913,7 +1911,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
-    
+
   }
 
 
@@ -2256,7 +2254,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     try {
       List<KeyValue> edits = new ArrayList<KeyValue>();
       edits.add(new KeyValue(row, CATALOG_FAMILY, REGIONINFO_QUALIFIER,
-          System.currentTimeMillis(), Writables.getBytes(r.getRegionInfo())));
+          EnvironmentEdgeManager.currentTimeMillis(), Writables.getBytes(r.getRegionInfo())));
       meta.put(HConstants.CATALOG_FAMILY, edits);
     } finally {
       meta.releaseRowLock(lid);
@@ -2692,12 +2690,12 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
 
       // bulid the KeyValue now:
       KeyValue newKv = new KeyValue(row, family,
-          qualifier, System.currentTimeMillis(),
+          qualifier, EnvironmentEdgeManager.currentTimeMillis(),
           Bytes.toBytes(result));
 
       // now log it:
       if (writeToWAL) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTimeMillis();
         WALEdit walEdit = new WALEdit();
         walEdit.add(newKv);
         this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
@@ -2908,7 +2906,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     Path logdir = new Path(c.get("hbase.tmp.dir"),
-      "hlog" + tableDir.getName() + System.currentTimeMillis());
+      "hlog" + tableDir.getName() + EnvironmentEdgeManager.currentTimeMillis());
     Path oldLogDir = new Path(c.get("hbase.tmp.dir"), HREGION_OLDLOGDIR_NAME);
     HLog log = new HLog(fs, logdir, oldLogDir, c, null);
     try {

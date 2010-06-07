@@ -671,6 +671,8 @@ Release 0.21.0 - Unreleased
                failing hudson on occasion)
    HBASE-2651  Allow alternate column separators to be specified for ImportTsv
    HBASE-2661  Add test case for row atomicity guarantee
+   HBASE-2578  Add ability for tests to override server-side timestamp 
+   	       setting (currentTimeMillis) (Daniel Ploeg via Ryan Rawson)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
