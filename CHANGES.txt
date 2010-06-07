@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     HADOOP-6674. Makes use of the SASL authentication options in the
     SASL RPC. (Jitendra Pandey via ddas)
 
+    HADOOP-6813. Add a new newInstance method in FileSystem that takes 
+    a "user" as argument (ddas via boryas)
+
   BUG FIXES
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
     only in case the subject is loginUser or proxyUgi.realUser. (boryas)

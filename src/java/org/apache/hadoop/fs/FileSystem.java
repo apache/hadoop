@@ -230,6 +230,30 @@ public abstract class FileSystem extends Configured implements Closeable {
     return CACHE.get(uri, conf);
   }
 
+  /**
+   * Returns the FileSystem for this URI's scheme and authority and the 
+   * passed user. Internally invokes {@link #newInstance(URI, Configuration)}
+   * @param uri
+   * @param conf
+   * @param user
+   * @return filesystem instance
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static FileSystem newInstance(final URI uri, final Configuration conf,
+      final String user) throws IOException, InterruptedException {
+    UserGroupInformation ugi;
+    if (user == null) {
+      ugi = UserGroupInformation.getCurrentUser();
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(user);
+    }
+    return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return newInstance(uri,conf); 
+      }
+    });
+  }
   /** Returns the FileSystem for this URI's scheme and authority.  The scheme
    * of the URI determines a configuration property name,
    * <tt>fs.<i>scheme</i>.class</tt> whose value names the FileSystem class.
