@@ -7,11 +7,13 @@
   <packaging>jar</packaging>
   <version>0.21.0-SNAPSHOT</version>
   <name>HBase</name>
+  <!-- START SNIPPET: description -->
   <description>
   HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
   </description>
+  <!-- END SNIPPET: description -->
   <url>http://hbase.apache.org</url>
 
   <licenses>
