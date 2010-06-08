@@ -1064,11 +1064,8 @@ public class Store implements HConstants, HeapSize {
         if (result != null) {
           newStoreFiles.add(result);
         }
-        this.storefiles = ImmutableList.copyOf(newStoreFiles);
 
-        // WARN ugly hack here, but necessary sadly.
-        // TODO why is this necessary? need a comment here if it's unintuitive!
-        ReadWriteConsistencyControl.resetThreadReadPoint(region.getRWCC());
+	this.storefiles = ImmutableList.copyOf(newStoreFiles);
 
         // Tell observers that list of StoreFiles has changed.
         notifyChangedReadersObservers();

@@ -1231,12 +1231,10 @@ public class TestHRegion extends HBaseTestCase {
     scan.addFamily(fam2);
     scan.addFamily(fam4);
     is = (RegionScanner) region.getScanner(scan);
-    is.initHeap(); // i dont like this test
     assertEquals(1, ((RegionScanner)is).storeHeap.getHeap().size());
 
     scan = new Scan();
     is = (RegionScanner) region.getScanner(scan);
-    is.initHeap();
     assertEquals(families.length -1,
         ((RegionScanner)is).storeHeap.getHeap().size());
   }

@@ -22,7 +22,11 @@ public class ReadWriteConsistencyControl {
   public static long getThreadReadPoint() {
     return perThreadReadPoint.get();
   }
-  
+
+  public static void setThreadReadPoint(long readPoint) {
+    perThreadReadPoint.set(readPoint);
+  }
+
   public static long resetThreadReadPoint(ReadWriteConsistencyControl rwcc) {
     perThreadReadPoint.set(rwcc.memstoreReadPoint());
     return getThreadReadPoint();

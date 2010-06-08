@@ -982,13 +982,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
 
-      // This thread is going to cause a whole bunch of scanners to reseek.
-      // They are depending
-      // on a thread-local to know where to read from.
-      // The reason why we set it up high is so that each HRegionScanner only
-      // has a single read point for all its sub-StoreScanners.
-      ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-
       // prepare flush (take a snapshot)
       for (StoreFlusher flusher : storeFlushers) {
         flusher.prepare();
@@ -1026,12 +1019,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
 
       try {
-        // update this again to make sure we are 'fresh'
-        ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-
-        if (atomicWork != null) {
-          atomicWork.call();
-        }
+	if (atomicWork != null) {
+	  atomicWork.call();
+	}
 
         // Switch snapshot (in memstore) -> new hfile (thus causing
         // all the store scanners to reset/reseek).
@@ -1452,7 +1442,6 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @param family
    * @param qualifier
    * @param expectedValue
-   * @param put
    * @param lockId
    * @param writeToWAL
    * @throws IOException
@@ -1949,14 +1938,12 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     private final byte [] stopRow;
     private Filter filter;
     private List<KeyValue> results = new ArrayList<KeyValue>();
-    private int isScan;
     private int batch;
-    // Doesn't need to be volatile, always accessed under a sync'ed method
+    private int isScan;
     private boolean filterClosed = false;
-    private Scan theScan = null;
-    private List<KeyValueScanner> extraScanners = null;
+    private long readPt;
 
-    RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) {
+    RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
       //DebugPrint.println("HRegionScanner.<init>");
       this.filter = scan.getFilter();
       this.batch = scan.getBatch();
@@ -1968,35 +1955,33 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       // If we are doing a get, we want to be [startRow,endRow] normally
       // it is [startRow,endRow) and if startRow=endRow we get nothing.
       this.isScan = scan.isGetScan() ? -1 : 0;
-      this.theScan = scan;
-      this.extraScanners = additionalScanners;
-    }
 
-    RegionScanner(Scan scan) {
-      this(scan, null);
-    }
+      this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
 
-    void initHeap() throws IOException {
       List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-      if (extraScanners != null) {
-        scanners.addAll(extraScanners);
+      if (additionalScanners != null) {
+        scanners.addAll(additionalScanners);
       }
 
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
-          theScan.getFamilyMap().entrySet()) {
+          scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
-        scanners.add(store.getScanner(theScan, entry.getValue()));
+        scanners.add(store.getScanner(scan, entry.getValue()));
       }
       this.storeHeap = new KeyValueHeap(scanners, comparator);
     }
 
-    private void resetFilters() {
+    RegionScanner(Scan scan) throws IOException {
+      this(scan, null);
+    }
+
+    /**
+     * Reset both the filter and the old filter.
+     */
+    protected void resetFilters() {
       if (filter != null) {
         filter.reset();
       }
-
-      // Start the next row read and reset the thread point
-      ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     }
 
     public synchronized boolean next(List<KeyValue> outResults, int limit)
@@ -2013,11 +1998,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
 
       // This could be a new thread from the last time we called next().
-      ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
-      // lazy init the store heap.
-      if (storeHeap == null) {
-        initHeap();
-      }
+      ReadWriteConsistencyControl.setThreadReadPoint(this.readPt);
 
       results.clear();
       boolean returnResult = nextInternal(limit);
