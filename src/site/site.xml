@@ -28,9 +28,9 @@
       <item name="Team" href="team-list.html" />
     </menu>
     <menu name="Documentation">
-      <item name="Getting Started" href="apidocs/index.html#started" />
-      <item name="API" href="apidocs/" />
-      <item name="X-Ref" href="xref/" />
+        <item name="Getting Started" href="apidocs/overview-summary.html#overview_description" />
+      <item name="API" href="apidocs/index.html" />
+      <item name="X-Ref" href="xref/index.html" />
       <item name="ACID Semantics" href="acid-semantics.html" />
       <item name="Bulk Loads" href="bulk-loads.html" />
       <item name="Metrics"      href="metrics.html" />
