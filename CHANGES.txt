@@ -591,6 +591,10 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HDFS-1193. -mvn-system-deploy target is broken which inturn fails the
+    mvn-deploy task leading to unstable mapreduce build (Giridharan
+    Kesavan via cos)
+
     HDFS-1159. clean-cache target removes wrong ivy cache (cos)
 
     HDFS-76. Better error message to users when commands fail because of 

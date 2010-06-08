@@ -330,9 +330,8 @@
     <property name="repourl" value="https://repository.apache.org/content/repositories/snapshots" />
     <artifact:pom file="${hadoop-hdfs-instrumented.pom}"
                   id="hadoop.hdfs.${herriot.suffix}"/>
-     <!--<artifact:pom file="${hadoop-hdfs-instrumented-test.pom}"-->
-                   <!--id="hadoop.hdfs.system.test.test"/>-->
-
+    <artifact:pom file="${hadoop-hdfs-instrumented-test.pom}"
+                   id="hadoop.hdfs.${herriot.suffix}.test"/>
     <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
     <artifact:deploy file="${hadoop-hdfs-instrumented.jar}">
       <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
