@@ -53,7 +53,7 @@ public class TestMasterWrongRS {
    * See HBASE-2613
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testRsReportsWrongServerName() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MiniHBaseClusterRegionServer firstServer =
@@ -62,14 +62,12 @@ public class TestMasterWrongRS {
     HServerInfo hsi = firstServer.getServerInfo();
     firstServer.setHServerInfo(new HServerInfo(hsi.getServerAddress(),
       hsi.getInfoPort(), hsi.getHostname()));
-    // Sleep while the region server pings back
-    Thread.sleep(2000);
-    assertTrue(firstServer.isOnline());
+
+    cluster.waitOnRegionServer(0);
     assertEquals(2, cluster.getLiveRegionServerThreads().size());
 
     secondServer.getHServerInfo().setServerAddress(new HServerAddress("0.0.0.0", 60010));
-    Thread.sleep(2000);
-    assertTrue(secondServer.isOnline());
+    cluster.waitOnRegionServer(0);
     assertEquals(1, cluster.getLiveRegionServerThreads().size());
   }
 }
