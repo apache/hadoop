@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<project xmlns="http://maven.apache.org/DECORATION/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
+  <bannerLeft>
+    <name>HBase</name>
+    <src>http://hbase.apache.org/images/hbase_logo_med.gif</src>
+    <href>http://hbase.apache.org/</href>
+  </bannerLeft>
+  <bannerRight>
+    <src>http://hbase.apache.org/images/asf_logo_wide.png</src>
+    <href>http://www.apache.org/</href>
+  </bannerRight>
+  <publishDate position="navigation-bottom" />
+  <body>
+    <links>
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
+      <item name="Hadoop" href="http://hadoop.apache.org/" />
+    </links>
+
+    <menu name="HBase">
+      <item name="Overview" href="index.html"/>
+      <item name="License" href="license.html" />
+      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hadoop/hbase/" />
+      <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel" />
+      <item name="Getting Started" href="apidocs/index.html#started" />
+      <item name="API" href="apidocs/" />
+      <item name="X-Ref" href="xref/" />
+      <item name="Issue Tracking" href="issue-tracking.html" />
+      <item name="Mailing Lists" href="mail-lists.html" />
+      <item name="Source Repository" href="source-repository.html" />
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
+      <item name="ACID Semantics" href="acid-semantics.html" />
+      <item name="Bulk Loads" href="bulk-loads.html" />
+      <item name="Metrics"      href="metrics.html" />
+      <item name="HBase on Windows"      href="cygwin.html" />
+      <item name="Team" href="team-list.html" />
+    </menu>
+  </body>
+    <skin>
+        <groupId>org.apache.maven.skins</groupId>
+      <artifactId>maven-stylus-skin</artifactId>
+    </skin>
+</project>
+

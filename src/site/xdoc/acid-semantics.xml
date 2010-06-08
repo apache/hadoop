@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2002-2008 The Apache Software Foundation
+  Copyright 2010 The Apache Software Foundation
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -18,24 +18,22 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
           "http://forrest.apache.org/dtd/document-v20.dtd">
 
-
-<document>
-
-  <header>
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
     <title> 
       HBase ACID Properties
     </title>
-  </header>
+  </properties>
 
   <body>
-    <section>
-      <title>About this Document</title>
+    <section name="About this Document">
       <p>HBase is not an ACID compliant database. However, it does guarantee certain specific
       properties.</p>
       <p>This specification enumerates the ACID properties of HBase.</p>
     </section>
-    <section>
-      <title>Definitions</title>
+    <section name="Definitions">
       <p>For the sake of common vocabulary, we define the following terms:</p>
       <dl>
         <dt>Atomicity</dt>
@@ -65,8 +63,7 @@
         is provided in a current release, users should not rely on it.
       </p>
     </section>
-    <section>
-      <title>APIs to consider</title>
+    <section name="APIs to consider">
       <ul>
         <li>Read APIs
         <ul>
@@ -88,11 +85,9 @@
       </ul>
     </section>
 
-    <section>
-      <title>Guarantees Provided</title>
+    <section name="Guarantees Provided">
 
-      <section>
-        <title>Atomicity</title>
+      <section name="Atomicity">
 
         <ol>
           <li>All mutations are atomic within a row. Any put will either wholely succeed or wholely fail.</li>
@@ -119,8 +114,7 @@
           </ol>
         </ol>
       </section>
-      <section>
-        <title>Consistency and Isolation</title>
+      <section name="Consistency and Isolation">
         <ol>
           <li>All rows returned via any access API will consist of a complete row that existed at
           some point in the table's history.</li>
@@ -130,7 +124,7 @@
           <li>The state of a row will only move forward through the history of edits to it.</li>
         </ol>
 
-        <section><title>Consistency of Scans</title>
+        <section name="Consistency of Scans">
         <p>
           A scan is <strong>not</strong> a consistent view of a table. Scans do
           <strong>not</strong> exhibit <em>snapshot isolation</em>.
@@ -172,8 +166,7 @@
         </p>
         </section>
       </section>
-      <section>
-        <title>Visibility</title>
+      <section name="Visibility">
         <ol>
           <li> When a client receives a &quot;success&quot; response for any mutation, that
           mutation is immediately visible to both that client and any client with whom it
@@ -191,8 +184,7 @@
         </ol>
 
       </section>
-      <section>
-        <title>Durability</title>
+      <section name="Durability">
         <ol>
           <li> All visible data is also durable data. That is to say, a read will never return
           data that has not been made durable on disk[1]</li>
@@ -204,8 +196,7 @@
 
         </ol>
       </section>
-      <section>
-        <title>Tunability</title>
+      <section name="Tunability">
         <p>All of the above guarantees must be possible within HBase. For users who would like to trade
         off some guarantees for performance, HBase may offer several tuning options. For example:</p>
         <ul>
@@ -214,8 +205,7 @@
         </ul>
       </section>
     </section>
-    <section>
-      <title>Footnotes</title>
+    <section name="Footnotes">
 
       <p>[1] In the context of HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction
       log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been

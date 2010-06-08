@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   Copyright 2010 The Apache Software Foundation
 
@@ -14,21 +14,16 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
-          "http://forrest.apache.org/dtd/document-v20.dtd">
-
-
-<document>
-
-  <header>
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
     <title> 
       Bulk Loads in HBase
     </title>
-  </header>
+  </properties>
   <body>
-    <section>
-      <title>Overview</title>
+    <section name="Overview">
       <p>
         HBase includes several methods of loading data into tables.
         The most straightforward method is to either use the TableOutputFormat
@@ -42,13 +37,11 @@
         cluster.
       </p>
     </section>
-    <section>
-      <title>Bulk Load Architecture</title>
+    <section name="Bulk Load Architecture">
       <p>
         The HBase bulk load process consists of two main steps.
       </p>
-      <subsection>
-        <title>Preparing data via a MapReduce job</title>
+      <section name="Preparing data via a MapReduce job">
         <p>
           The first step of a bulk load is to generate HBase data files from
           a MapReduce job using HFileOutputFormat. This output format writes
@@ -67,9 +60,8 @@
           which automatically sets up a TotalOrderPartitioner based on the current
           region boundaries of a table.
         </p>
-      </subsection>
-      <subsection>
-        <title>Completing the data load</title>
+      </section>
+      <section name="Completing the data load">
         <p>
           After the data has been prepared using <code>HFileOutputFormat</code>, it
           is loaded into the cluster using a command line tool. This command line tool
@@ -87,10 +79,9 @@
           preparing a bulk load and importing it into the cluster, especially
           if other clients are simultaneously loading data through other means.
         </p>
-      </subsection>
+      </section>
     </section>
-    <section>
-      <title>Preparing a bulk load using the <code>importtsv</code> tool</title>
+    <section name="Preparing a bulk load using the importtsv tool">
       <p>
         HBase ships with a command line tool called <code>importtsv</code>. This tool
         is available by running <code>hadoop jar /path/to/hbase-VERSION.jar importtsv</code>.
@@ -115,8 +106,7 @@ Other options that may be specified with -D include:
   -Dimporttsv.skip.bad.lines=false - fail if encountering an invalid line
 </pre></code>
     </section>
-    <section>
-      <title>Importing the prepared data using the <code>completebulkload</code> tool</title>
+    <section name="Importing the prepared data using the completebulkload tool">
       <p>
         After a data import has been prepared using the <code>importtsv</code> tool, the
         <code>completebulkload</code> tool is used to import the data into the running cluster.
@@ -131,8 +121,7 @@ Other options that may be specified with -D include:
         the cluster.
       </p>
     </section>
-    <section>
-      <title>Advanced Usage</title>
+    <section name="Advanced Usage">
       <p>
         Although the <code>importtsv</code> tool is useful in many cases, advanced users may
         want to generate data programatically, or import data from other formats. To get

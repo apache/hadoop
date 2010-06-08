@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2002-2008 The Apache Software Foundation
+  Copyright 2010 The Apache Software Foundation
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,36 +14,29 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
-          "http://forrest.apache.org/dtd/document-v20.dtd">
-
-
-<document>
-  <header>
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
     <title>Installing HBase on Windows using Cygwin</title>
-  </header>
+  </properties>
 
 <body>
-<section>
-<title>Introduction</title>
+<section name="Introduction">
 <p><a title="HBase project" href="http://hadoop.apache.org/hbase" target="_blank">HBase</a> is a distributed, column-oriented store, modeled after Google's <a title="Google's BigTable" href="http://labs.google.com/papers/bigtable.html" target="_blank">BigTable</a>. HBase is built on top of <a title="Hadoop project" href="http://hadoop.apache.org">Hadoop</a> for its <a title="Hadoop MapReduce project" href="http://hadoop.apache.org/mapreduce" target="_blank">MapReduce </a>and <a title="Hadoop DFS project" href="http://hadoop.apache.org/hdfs">distributed file system</a> implementation. All these projects are open-source and part of the <a title="The Apache Software Foundation" href="http://www.apache.org/" target="_blank">Apache Software Foundation</a>.</p>
 
 <p style="text-align: justify; ">As being distributed, large scale platforms, the Hadoop and HBase projects mainly focus on <em><strong>*nix</strong></em><strong> environments</strong> for production installations. However, being developed in <strong>Java</strong>, both projects are fully <strong>portable</strong> across platforms and, hence, also to the <strong>Windows operating system</strong>. For ease of development the projects rely on <a title="Cygwin site" href="http://www.cygwin.com/" target="_blank">Cygwin</a> to have a *nix-like environment on Windows to run the shell scripts.</p>
 </section>
-<section>
-<title>Purpose</title>
+<section name="Purpose">
 <p style="text-align: justify; ">This document explains the <strong>intricacies of running HBase on Windows using Cygwin</strong> as an all-in-one single-node installation for testing and development. The HBase <a title="HBase Overview" href="http://hadoop.apache.org/hbase/docs/current/api/overview-summary.html#overview_description" target="_blank">Overview</a> and <a title="HBase QuickStart" href="http://hadoop.apache.org/common/docs/current/quickstart.html" target="_blank">QuickStart</a> guides on the other hand go a long way in explaning how to setup <a title="HBase project" href="http://hadoop.apache.org/hbase" target="_blank">HBase</a> in more complex deployment scenario's.</p>
 </section>
 
-<section>
-<title >Installation</title>
+<section name="Installation">
 <p style="text-align: justify; ">For running HBase on Windows, 3 technologies are required: <strong>Java, Cygwin and SSH</strong>. The following paragraphs detail the installation of each of the aforementioned technologies.</p>
-<section>
-<title>Java</title>
+<section name="Java">
 <p style="text-align: justify; ">HBase depends on the <a title="Java Platform, Standard Edition, 6 Release" href="http://java.sun.com/javase/6/" target="_blank">Java Platform, Standard Edition, 6 Release</a>. So the target system has to be provided with at least the Java Runtime Environment (JRE); however if the system will also be used for development, the Jave Development Kit (JDK) is preferred. You can download the latest versions for both from <a title="Java SE Downloads" href="http://java.sun.com/javase/downloads/index.jsp" target="_blank">Sun's download page</a>. Installation is a simple GUI wizard that guides you through the process.</p>
 </section>
-<section>
-<title>Cygwin</title>
+<section name="Cygwin">
 <p style="text-align: justify; ">Cygwin is probably the oddest technology in this solution stack. It provides a dynamic link library that emulates most of a *nix environment on Windows. On top of that a whole bunch of the most common *nix tools are supplied. Combined, the DLL with the tools form a very *nix-alike environment on Windows.</p>
 
 <p style="text-align: justify; ">For installation, Cygwin provides the <a title="Cygwin Setup Utility" href="http://cygwin.com/setup.exe" target="_blank"><strong><code>setup.exe</code> utility</strong></a> that tracks the versions of all installed components on the target system and provides the mechanism for <strong>installing</strong> or <strong>updating </strong>everything from the mirror sites of Cygwin.</p>
@@ -80,7 +73,7 @@
 	<li>When needed, to <strong>uninstall</strong> Cygwin you can simply delete the <strong>Root</strong> and <strong>Local Package</strong> directory, and the <strong>shortcuts</strong> that were created during installation.</li>
 </ol>
 </section>
-<section><title>SSH</title>
+<section name="SSH">
 <p style="text-align: justify; ">HBase (and Hadoop) rely on <a title="Secure Shell" href="http://nl.wikipedia.org/wiki/Secure_Shell" target="_blank"><strong>SSH</strong></a> for interprocess/-node <strong>communication</strong> and launching<strong> remote commands</strong>. SSH will be provisioned on the target system via Cygwin, which supports running Cygwin programs as <strong>Windows services</strong>!</p>
 
 <ol style="text-align: justify; ">
@@ -98,18 +91,15 @@
 	<li>Wait for the install to complete and finish the installation.</li>
 </ol>
 </section>
-<section>
-<title>HBase</title>
+<section name="HBase">
 <p style="text-align: justify; ">Download the <strong>latest release </strong>of HBase from the <a title="HBase Releases" href="http://hadoop.apache.org/hbase/releases.html" target="_blank">website</a>. As the HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final <strong>installation</strong> directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use <code>/usr/local/</code> (or [<code><strong>Root</strong> directory]\usr\local</code> in Windows slang). You should end up with a <code>/usr/local/hbase-<em>&lt;version&gt;</em></code> installation in Cygwin.</p>
 
 This finishes installation. We go on with the configuration.
 </section>
 </section>
-<section>
-<title>Configuration</title>
+<section name="Configuration">
 <p style="text-align: justify; ">There are 3 parts left to configure: <strong>Java, SSH and HBase</strong> itself. Following paragraphs explain eacht topic in detail.</p>
-<section>
-<title>Java</title>
+<section name="Java">
 <p style="text-align: justify; ">One important thing to remember in shell scripting in general (i.e. *nix and Windows) is that managing, manipulating and assembling path names that contains spaces can be very hard, due to the need to escape and quote those characters and strings. So we try to stay away from spaces in path names. *nix environments can help us out here very easily by using <strong>symbolic links</strong>.</p>
 
 <ol style="text-align: justify; ">
@@ -180,8 +170,7 @@ This finishes installation. We go on with the configuration.
 </li>
 </ol>
 </section>
-<section>
-<title>HBase</title>
+<section name="HBase">
 If all previous configurations are working properly, we just need some tinkering at the <strong>HBase config</strong> files to properly resolve on Windows/Cygwin. All files and paths referenced here start from the HBase <code>[<strong>installation</strong> directory]</code> as working directory.
 <ol>
 	<li>HBase uses the <code>./conf/<strong>hbase-env.sh</strong></code> to configure its dependencies on the runtime environment. Copy and uncomment following lines just underneath their original, change them to fit your environemnt. They should read something like:
@@ -244,8 +233,7 @@ put 'test', 'row3', 'data:3', 'value3'</pre>
 </p>
 </section>
 
-<section>
-<title>Conclusion</title>
+<section name="Conclusion">
 <p>
 Now your <strong>HBase </strong>server is running, <strong>start coding</strong> and build that next killer app on this particular, but scalable datastore!
 </p>

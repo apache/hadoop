@@ -1,0 +1,109 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+a.externalLink, a.externalLink:link, a.externalLink:visited, a.externalLink:active, a.externalLink:hover {
+  background: none;
+  padding-right: 0;
+}
+
+/*
+body ul {
+  list-style-type: square;
+}
+*/
+
+#downloadbox {
+  float: right;
+  margin: 0 10px 20px 20px;
+  padding: 5px;
+  border: 1px solid #999;
+  background-color: #eee;
+}
+
+#downloadbox h5 {
+  color: #000;
+  margin: 0;
+  border-bottom: 1px solid #aaaaaa;
+  font-size: smaller;
+  padding: 0;
+}
+
+#downloadbox p {
+  margin-top: 1em;
+  margin-bottom: 0;
+}
+
+#downloadbox ul {
+  margin-top: 0;
+  margin-bottom: 1em;
+  list-style-type: disc;
+}
+
+#downloadbox li {
+  font-size: smaller;
+}
+
+/*
+h4 {
+  padding: 0;
+  border: none;
+  color: #000;
+  margin: 0;
+  font-size: larger;
+  font-weight: bold;
+}
+*/
+
+#banner {
+  background: none;
+}
+
+#banner img {
+  margin: 10px;
+}
+
+.frontpagebox {
+  float: left;
+  text-align: center;
+  width: 15em;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+  margin-top: 2em;
+}
+
+.headline {
+  font-size: 120%;
+  font-weight: bold;
+  padding-top: 1px;
+  padding-bottom: 5px;
+  background-image: url(../images/breadcrumbs.jpg);
+  background-repeat: repeat-x;
+}
+
+/*
+#leftColumn {
+  display: none !important
+}
+
+#bodyColumn {
+  margin-left: 1.5em;
+}
+*/
+
+

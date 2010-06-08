@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2010 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>HBase Home</title>
+  </properties>
+  
+  <body>
+    <section name="This is Apache HBase">
+    <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database. Use it when you need random, realtime read/write access to your Big Data.
+    This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
+    of commodity hardware.
+    <img src="http://hbase.apache.org/images/hadoop-logo.jpg" align="right" style="border-style;none" />
+    </p>
+    </section>
+    <section name="News">
+      <p>June 30th, <a href="http://www.meetup.com/hbaseusergroup/calendar/13562846/">HBase Contributor Workshop</a> (Day after Hadoop Summit)</p>
+      <p>May 10th, 2010: HBase graduates from Hadoop sub-project to Apache Top Level Project </p>
+      <p>Signup for <a href="http://www.meetup.com/hbaseusergroup/calendar/12689490/">HBase User Group Meeting, HUG10</a> hosted by Trend Micro, April 19th, 2010</p>
+
+      <p><a href="http://www.meetup.com/hbaseusergroup/calendar/12689351/">HBase User Group Meeting, HUG9</a> hosted by Mozilla, March 10th, 2010</p>
+      <p>Sign up for the <a href="http://www.meetup.com/hbaseusergroup/calendar/12241393/">HBase User Group Meeting, HUG8</a>, January 27th, 2010 at StumbleUpon in SF</p>
+      <p>September 8th, 2010: HBase 0.20.0 is faster, stronger, slimmer, and sweeter tasting than any previous HBase release.  Get it off the <a href="releases.html">Releases</a> page.</p>
+      <p><a href="http://dev.us.apachecon.com/c/acus2009/">ApacheCon</a> in Oakland: November 2-6th, 2009: 
+      The Apache Foundation will be celebrating its 10th anniversary in beautiful Oakland by the Bay. Lots of good talks and meetups including an HBase presentation by a couple of the lads.</p>
+      <p>HBase at Hadoop World in NYC: October 2nd, 2009: A few of us will be talking on Practical HBase out east at <a href="http://www.cloudera.com/hadoop-world-nyc">Hadoop World: NYC</a>.</p>
+      <p>HUG7 and HBase Hackathon: August 7th-9th, 2009 at StumbleUpon in SF: Sign up for the <a href="http://www.meetup.com/hbaseusergroup/calendar/10950511/">HBase User Group Meeting, HUG7</a> or for the <a href="http://www.meetup.com/hackathon/calendar/10951718/">Hackathon</a> or for both (all are welcome!).</p>
+      <p>June, 2009 -- HBase at HadoopSummit2009 and at NOSQL: See the <a href="http://wiki.apache.org/hadoop/HBase/HBasePresentations">presentations</a></p>
+      <p>March 3rd, 2009 -- HUG6: <a href="http://www.meetup.com/hbaseusergroup/calendar/9764004/">HBase User Group 6</a></p>
+      <p>January 30th, 2009 -- LA Hbackathon:<a href="http://www.meetup.com/hbasela/calendar/9450876/">HBase January Hackathon Los Angeles</a> at <a href="http://streamy.com" >Streamy</a> in Manhattan Beach</p>
+    </section>
+  </body>
+  
+</document>

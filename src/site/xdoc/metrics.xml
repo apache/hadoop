@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2002-2008 The Apache Software Foundation
+  Copyright 2010 The Apache Software Foundation
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,22 +14,17 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
-          "http://forrest.apache.org/dtd/document-v20.dtd">
-
-
-<document>
-
-  <header>
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
     <title> 
       HBase Metrics
     </title>
-  </header>
+  </properties>
 
   <body>
-    <section>
-      <title> Introduction </title>
+    <section name="Introduction">
       <p>
       HBase emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
       </p>
@@ -64,16 +59,14 @@
       </p>
     </section>
 
-    <section>
-      <title> Using with JMX </title>
+    <section name="Using with JMX">
       <p>
       In addition to the standard output contexts supported by the Hadoop 
       metrics package, you can also export HBase metrics via Java Management 
       Extensions (JMX).  This will allow viewing HBase stats in JConsole or 
       any other JMX client.
       </p>
-      <section>
-      <title>Enable HBase stats collection</title>
+      <section name="Enable HBase stats collection">
       <p>
       To enable JMX support in HBase, first edit 
       <code>$HBASE_HOME/conf/hadoop-metrics.properties</code> to support 
@@ -95,8 +88,7 @@ rpc.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
 rpc.period=60
       </source>
       </section>
-      <section>
-      <title>Setup JMX remote access</title>
+      <section name="Setup JMX remote access">
       <p>
       For remote access, you will need to configure JMX remote passwords 
       and access profiles.  Create the files:
@@ -120,8 +112,7 @@ controlRole readwrite
         </dd>
       </dl>
       </section>
-      <section>
-      <title>Configure JMX in HBase startup</title>
+      <section name="Configure JMX in HBase startup">
       <p>
       Finally, edit the <code>$HBASE_HOME/conf/hbase-env.sh</code>
       script to add JMX support: 
