@@ -92,6 +92,15 @@ public interface DataTransferProtocol {
     }
 
     /**
+     * Get the number of replies
+     * @return the number of replies
+     */
+    public short getNumOfReplies() {
+      return (short)replies.length;
+    }
+
+
+    /**
      * get the ith reply
      * @return the the ith reply
      */

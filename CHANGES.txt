@@ -6,6 +6,9 @@ Release 0.20-append - Unreleased
 
     HDFS-200. Support append and sync for hadoop 0.20 branch.
 
+    HDFS-101. DFSClient correctly detects second datanode failure in write
+    pipeline. (Nicolas Spiegelberg via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
