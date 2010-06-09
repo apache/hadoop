@@ -29,19 +29,19 @@ import org.apache.hadoop.io.Writable;
  */
 public class FileStatus implements Writable, Comparable {
 
-  private Path path;
-  private long length;
-  private boolean isdir;
-  private short block_replication;
-  private long blocksize;
-  private long modification_time;
-  private long access_time;
-  private FsPermission permission;
-  private String owner;
-  private String group;
-  private Path symlink;
+  private Path path = null;
+  private long length = 0;
+  private boolean isdir = false;
+  private short block_replication = 0;
+  private long blocksize = 0;
+  private long modification_time = 0;
+  private long access_time = 0;
+  private FsPermission permission = null;
+  private String owner = null;
+  private String group = null;
+  private Path symlink = null;
   
-  public FileStatus() { this(0, false, 0, 0, 0, 0, null, null, null, null); }
+  public FileStatus() {}
   
   //We should deprecate this soon?
   public FileStatus(long length, boolean isdir, int block_replication,
@@ -63,6 +63,12 @@ public class FileStatus implements Writable, Comparable {
          access_time, permission, owner, group, null, path);
   }
 
+  private void stateSanityCheck() {
+    if (path == null) {
+      throw new IllegalArgumentException("path cannot be null");
+    }
+  }
+
   public FileStatus(long length, boolean isdir,
                     int block_replication,
                     long blocksize, long modification_time, long access_time,
@@ -81,6 +87,7 @@ public class FileStatus implements Writable, Comparable {
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
     this.path = path;
+    stateSanityCheck();
   }
 
   /**
