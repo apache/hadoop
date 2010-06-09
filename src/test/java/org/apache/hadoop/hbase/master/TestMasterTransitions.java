@@ -93,12 +93,7 @@ public class TestMasterTransitions {
   }
 
   @Before public void setup() throws IOException {
-    if (TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size() < 2) {
-      // Need at least two servers.
-      LOG.info("Started new server=" +
-        TEST_UTIL.getHBaseCluster().startRegionServer());
-      
-    }
+    TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
 
   /**

@@ -29,17 +29,21 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestMasterWrongRS {
+public class TestKillingServersFromMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static MiniHBaseCluster cluster;
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(2);
+    cluster = TEST_UTIL.getHBaseCluster();
   }
 
   @AfterClass
@@ -47,26 +51,53 @@ public class TestMasterWrongRS {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Before
+  public void setup() throws IOException {
+    TEST_UTIL.ensureSomeRegionServersAvailable(2);
+  }
+
   /**
-   * Test when region servers start reporting with the wrong address
-   * or start code. Currently the decision is to shut them down.
+   * Test that a region server that reports with the wrong start code
+   * gets shut down
    * See HBASE-2613
    * @throws Exception
    */
   @Test (timeout=180000)
-  public void testRsReportsWrongServerName() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+  public void testRsReportsWrongStartCode() throws Exception {
     MiniHBaseClusterRegionServer firstServer =
       (MiniHBaseClusterRegionServer)cluster.getRegionServer(0);
-    HRegionServer secondServer = cluster.getRegionServer(1);
     HServerInfo hsi = firstServer.getServerInfo();
+    // This constructor creates a new startcode
     firstServer.setHServerInfo(new HServerInfo(hsi.getServerAddress(),
       hsi.getInfoPort(), hsi.getHostname()));
-
     cluster.waitOnRegionServer(0);
-    assertEquals(2, cluster.getLiveRegionServerThreads().size());
+    assertEquals(1, cluster.getLiveRegionServerThreads().size());
+  }
 
-    secondServer.getHServerInfo().setServerAddress(new HServerAddress("0.0.0.0", 60010));
+  /**
+   * Test that a region server that reports with the wrong address
+   * gets shut down
+   * See HBASE-2613
+   * @throws Exception
+   */
+  @Test (timeout=180000)
+  public void testRsReportsWrongAddress() throws Exception {
+    MiniHBaseClusterRegionServer firstServer =
+      (MiniHBaseClusterRegionServer)cluster.getRegionServer(0);
+    firstServer.getHServerInfo().setServerAddress(
+      new HServerAddress("0.0.0.0", 60010));
+    cluster.waitOnRegionServer(0);
+    assertEquals(1, cluster.getLiveRegionServerThreads().size());
+  }
+
+  /**
+   * Send a YouAreDeadException to the region server and expect it to shut down
+   * See HBASE-2691
+   * @throws Exception
+   */
+  @Test (timeout=180000)
+  public void testSendYouAreDead() throws Exception {
+    cluster.addExceptionToSendRegionServer(0, new YouAreDeadException("bam!"));
     cluster.waitOnRegionServer(0);
     assertEquals(1, cluster.getLiveRegionServerThreads().size());
   }

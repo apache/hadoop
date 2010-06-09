@@ -78,6 +78,9 @@ public class MiniHBaseCluster implements HConstants {
     private final Map<HServerInfo, List<HMsg>> messages =
       new ConcurrentHashMap<HServerInfo, List<HMsg>>();
 
+    private final Map<HServerInfo, IOException> exceptions =
+      new ConcurrentHashMap<HServerInfo, IOException>();
+
     public MiniHBaseClusterMaster(final Configuration conf)
     throws IOException {
       super(conf);
@@ -99,9 +102,26 @@ public class MiniHBaseCluster implements HConstants {
       }
     }
 
+    void addException(final HServerInfo hsi, final IOException ex) {
+      this.exceptions.put(hsi, ex);
+    }
+
+    /**
+     * This implementation is special, exceptions will be treated first and
+     * message won't be sent back to the region servers even if some are
+     * specified.
+     * @param hsi the rs
+     * @param msgs Messages to add to
+     * @return
+     * @throws IOException will be throw if any added for this region server
+     */
     @Override
     protected HMsg[] adornRegionServerAnswer(final HServerInfo hsi,
-        final HMsg[] msgs) {
+        final HMsg[] msgs) throws IOException {
+      IOException ex = this.exceptions.remove(hsi);
+      if (ex != null) {
+        throw ex;
+      }
       HMsg [] answerMsgs = msgs;
       synchronized (this.messages) {
         List<HMsg> hmsgs = this.messages.get(hsi);
@@ -382,6 +402,31 @@ public class MiniHBaseCluster implements HConstants {
       count++;
     }
     return index;
+  }
+
+  /**
+   * Add an exception to send when a region server checks back in
+   * @param serverNumber Which server to send it to
+   * @param ex The exception that will be sent
+   * @throws IOException
+   */
+  public void addExceptionToSendRegionServer(final int serverNumber,
+      IOException ex) throws IOException {
+    MiniHBaseClusterRegionServer hrs =
+      (MiniHBaseClusterRegionServer)getRegionServer(serverNumber);
+    addExceptionToSendRegionServer(hrs, ex);
+  }
+
+  /**
+   * Add an exception to send when a region server checks back in
+   * @param hrs Which server to send it to
+   * @param ex The exception that will be sent
+   * @throws IOException
+   */
+  public void addExceptionToSendRegionServer(
+      final MiniHBaseClusterRegionServer hrs, IOException ex)
+      throws IOException {
+    ((MiniHBaseClusterMaster)getMaster()).addException(hrs.getHServerInfo(),ex);
   }
 
   /**

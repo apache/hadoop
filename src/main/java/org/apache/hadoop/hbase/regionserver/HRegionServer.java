@@ -41,9 +41,11 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -524,8 +526,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
               continue;
             }
           } catch (Exception e) { // FindBugs REC_CATCH_EXCEPTION
+            // Two special exceptions could be printed out here,
+            // PleaseHoldException and YouAreDeadException
             if (e instanceof IOException) {
               e = RemoteExceptionHandler.checkIOException((IOException) e);
+            }
+            if (e instanceof YouAreDeadException) {
+              // This will be caught and handled as a fatal error below
+              throw e;
             }
             tries++;
             if (tries > 0 && (tries % this.numRetries) == 0) {

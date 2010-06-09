@@ -811,4 +811,20 @@ public class HBaseTestingUtility {
       Thread.sleep(500);
     }
   }
+
+  /**
+   * Make sure that at least the specified number of region servers
+   * are running
+   * @param num minimum number of region servers that should be running
+   * @throws IOException
+   */
+  public void ensureSomeRegionServersAvailable(final int num)
+      throws IOException {
+    if (this.getHBaseCluster().getLiveRegionServerThreads().size() < num) {
+      // Need at least "num" servers.
+      LOG.info("Started new server=" +
+        this.getHBaseCluster().startRegionServer());
+
+    }
+  }
 }

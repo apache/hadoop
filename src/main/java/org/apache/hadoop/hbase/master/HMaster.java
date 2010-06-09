@@ -679,11 +679,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /**
    * Override if you'd add messages to return to regionserver <code>hsi</code>
-   * @param messages Messages to add to
+   * or to send an exception.
+   * @param msgs Messages to add to
    * @return Messages to return to
+   * @throws IOException exceptions that were injected for the region servers
    */
   protected HMsg [] adornRegionServerAnswer(final HServerInfo hsi,
-      final HMsg [] msgs) {
+      final HMsg [] msgs) throws IOException {
     return msgs;
   }
 
