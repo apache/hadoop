@@ -9,6 +9,9 @@ Release 0.20-append - Unreleased
     HDFS-101. DFSClient correctly detects second datanode failure in write
     pipeline. (Nicolas Spiegelberg via dhruba)
 
+    HDFS-988. Fix bug where savenameSpace can corrupt edits log.
+    (Nicolas Spiegelberg via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
