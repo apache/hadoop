@@ -41,6 +41,9 @@ Trunk (unreleased changes)
 
     HDFS-1183. Remove some duplicate code in NamenodeJspHelper.java.
     (Jeff Ames via jghoman)
+    
+    HDFS-1190.  Remove unused getNamenode() method from DataNode.
+    (Jeff Ames via jghoman)
 
   BUG FIXES
 

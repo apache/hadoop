@@ -533,14 +533,6 @@ public class DataNode extends Configured
     return dnRegistration;
   }
 
-  /**
-   * Return the namenode's identifier
-   */
-  public String getNamenode() {
-    //return namenode.toString();
-    return "<namenode>";
-  }
-
   public static void setNewStorageID(DatanodeRegistration dnReg) {
     /* Return 
      * "DS-randInt-ipaddr-currentTimeMillis"
