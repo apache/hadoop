@@ -20,6 +20,8 @@ set -o errexit
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
+echo "DEPRECATED. See http://incubator.apache.org/whirr." >&2
+
 # if no args specified, show usage
 if [ $# = 0 ]; then
   echo "Usage: hadoop-ec2 COMMAND"

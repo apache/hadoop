@@ -1,5 +1,7 @@
 Hadoop EC2
 
+NOTE: these scripts have been deprecated. See http://incubator.apache.org/whirr.
+
 This collection of scripts allows you to run Hadoop clusters on Amazon.com's Elastic Compute Cloud (EC2) service described at:
 
   http://aws.amazon.com/ec2
