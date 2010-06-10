@@ -31,17 +31,17 @@ while [ -h "$this" ]; do
 done
 
 # convert relative path to absolute path
-bin=`dirname "$this"`
+common_bin=`dirname "$this"`
 script=`basename "$this"`
-bin=`cd "$bin"; pwd`
-this="$bin/$script"
+common_bin=`cd "$common_bin"; pwd`
+this="$common_bin/$script"
 
 # the root of the Hadoop installation
 #TODO: change the env variable when dir structure is changed
 export HADOOP_HOME=`dirname "$this"`/..
-export HADOOP_CORE_HOME="${HADOOP_HOME}"
+export HADOOP_COMMON_HOME="${HADOOP_HOME}"
 #export HADOOP_HOME=`dirname "$this"`/../..
-#export HADOOP_CORE_HOME="${HADOOP_CORE_HOME:-`dirname "$this"`/..}"
+#export HADOOP_COMMON_HOME="${HADOOP_COMMON_HOME:-`dirname "$this"`/..}"
 
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]
@@ -106,54 +106,54 @@ CLASSPATH="${HADOOP_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH
-if [ -d "$HADOOP_CORE_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/classes
+if [ -d "$HADOOP_COMMON_HOME/build/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build/classes
 fi
-if [ -d "$HADOOP_CORE_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build
+if [ -d "$HADOOP_COMMON_HOME/build/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build
 fi
-if [ -d "$HADOOP_CORE_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/test/classes
+if [ -d "$HADOOP_COMMON_HOME/build/test/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build/test/classes
 fi
-if [ -d "$HADOOP_CORE_HOME/build/test/core/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME/build/test/core/classes
+if [ -d "$HADOOP_COMMON_HOME/build/test/core/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/build/test/core/classes
 fi
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
 # for releases, add core hadoop jar & webapps to CLASSPATH
-if [ -d "$HADOOP_CORE_HOME/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_CORE_HOME
+if [ -d "$HADOOP_COMMON_HOME/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME
 fi
-for f in $HADOOP_CORE_HOME/hadoop-core-*.jar; do
+for f in $HADOOP_COMMON_HOME/hadoop-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
 # add libs to CLASSPATH
-for f in $HADOOP_CORE_HOME/lib/*.jar; do
+for f in $HADOOP_COMMON_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-if [ -d "$HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Core/common" ]; then
-for f in $HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Core/common/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-fi
-
-if [ -d "$HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Hdfs/common" ]; then
-for f in $HADOOP_CORE_HOME/build/ivy/lib/Hadoop-Hdfs/common/*.jar; do
+if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Common/common" ]; then
+for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Common/common/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 fi
 
-if [ -d "$HADOOP_CORE_HOME/build/ivy/lib/Hadoop/common" ]; then
-for f in $HADOOP_CORE_HOME/build/ivy/lib/Hadoop/common/*.jar; do
+if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Hdfs/common" ]; then
+for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop-Hdfs/common/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 fi
 
-for f in $HADOOP_CORE_HOME/lib/jsp-2.1/*.jar; do
+if [ -d "$HADOOP_COMMON_HOME/build/ivy/lib/Hadoop/common" ]; then
+for f in $HADOOP_COMMON_HOME/build/ivy/lib/Hadoop/common/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+fi
+
+for f in $HADOOP_COMMON_HOME/lib/jsp-2.1/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
@@ -180,23 +180,23 @@ unset IFS
 
 # cygwin path translation
 if $cygwin; then
-  HADOOP_CORE_HOME=`cygpath -w "$HADOOP_CORE_HOME"`
+  HADOOP_COMMON_HOME=`cygpath -w "$HADOOP_COMMON_HOME"`
   HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
 fi
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
-if [ -d "${HADOOP_CORE_HOME}/build/native" -o -d "${HADOOP_CORE_HOME}/lib/native" ]; then
+if [ -d "${HADOOP_COMMON_HOME}/build/native" -o -d "${HADOOP_COMMON_HOME}/lib/native" ]; then
   JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
   
-  if [ -d "$HADOOP_CORE_HOME/build/native" ]; then
-    JAVA_LIBRARY_PATH=${HADOOP_CORE_HOME}/build/native/${JAVA_PLATFORM}/lib
+  if [ -d "$HADOOP_COMMON_HOME/build/native" ]; then
+    JAVA_LIBRARY_PATH=${HADOOP_COMMON_HOME}/build/native/${JAVA_PLATFORM}/lib
   fi
   
-  if [ -d "${HADOOP_CORE_HOME}/lib/native" ]; then
+  if [ -d "${HADOOP_COMMON_HOME}/lib/native" ]; then
     if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_CORE_HOME}/lib/native/${JAVA_PLATFORM}
+      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_COMMON_HOME}/lib/native/${JAVA_PLATFORM}
     else
-      JAVA_LIBRARY_PATH=${HADOOP_CORE_HOME}/lib/native/${JAVA_PLATFORM}
+      JAVA_LIBRARY_PATH=${HADOOP_COMMON_HOME}/lib/native/${JAVA_PLATFORM}
     fi
   fi
 fi
@@ -208,7 +208,7 @@ fi
 
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
-HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_CORE_HOME"
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_COMMON_HOME"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
@@ -225,6 +225,15 @@ if [ "$HADOOP_HDFS_HOME" = "" ]; then
 fi
 
 if [ -d "${HADOOP_HDFS_HOME}" ]; then
+
+  if [ -d "$HADOOP_HDFS_HOME/webapps" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME
+  fi
+  
+  if [ -d "${HADOOP_HDFS_HOME}/conf" ]; then
+    CLASSPATH=${CLASSPATH}:${HADOOP_HDFS_HOME}/conf
+  fi
+  
   for f in $HADOOP_HDFS_HOME/hadoop-hdfs-*.jar; do
     CLASSPATH=${CLASSPATH}:$f;
   done
@@ -253,6 +262,15 @@ if [ "$HADOOP_MAPRED_HOME" = "" ]; then
 fi
 
 if [ -d "${HADOOP_MAPRED_HOME}" ]; then
+
+  if [ -d "$HADOOP_MAPRED_HOME/webapps" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME
+  fi
+
+  if [ -d "${HADOOP_MAPRED_HOME}/conf" ]; then
+    CLASSPATH=${CLASSPATH}:${HADOOP_MAPRED_HOME}/conf
+  fi
+  
   for f in $HADOOP_MAPRED_HOME/hadoop-mapred-*.jar; do
     CLASSPATH=${CLASSPATH}:$f
   done
@@ -284,6 +302,3 @@ if $cygwin; then
 fi
 
 
-# TODO:remove this when dir structure is changed
-#export HADOOP_HDFS_HOME=$HADOOP_HOME
-#export HADOOP_MAPRED_HOME=$HADOOP_HOME

@@ -53,7 +53,9 @@ case $COMMAND in
     echo ""
     #try to locate hdfs and if present, delegate to it.  
     if [ -f "${HADOOP_HDFS_HOME}"/bin/hdfs ]; then
-      exec "${HADOOP_HDFS_HOME}"/bin/hdfs $*  
+      exec "${HADOOP_HDFS_HOME}"/bin/hdfs $*
+    elif [ -f "${HADOOP_HOME}"/bin/hdfs ]; then
+      exec "${HADOOP_HOME}"/bin/hdfs $*
     else
       echo "HDFS not found."
       exit
@@ -67,7 +69,9 @@ case $COMMAND in
     echo ""
     #try to locate mapred and if present, delegate to it.
     if [ -f "${HADOOP_MAPRED_HOME}"/bin/mapred ]; then
-      exec "${HADOOP_MAPRED_HOME}"/bin/mapred $*  
+      exec "${HADOOP_MAPRED_HOME}"/bin/mapred $*
+    elif [ -f "${HADOOP_HOME}"/bin/mapred ]; then
+      exec "${HADOOP_HOME}"/bin/mapred $* 
     else
       echo "MAPRED not found."
       exit

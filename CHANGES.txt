@@ -854,6 +854,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6738.  Move cluster_setup.xml from MapReduce to Common.
     (Tom White via tomwhite)
 
+    HADOOP-6794. Move configuration and script files post split. (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
