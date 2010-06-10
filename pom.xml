@@ -7,13 +7,11 @@
   <packaging>jar</packaging>
   <version>0.21.0-SNAPSHOT</version>
   <name>HBase</name>
-  <!-- START SNIPPET: description -->
   <description>
   HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
   </description>
-  <!-- END SNIPPET: description -->
   <url>http://hbase.apache.org</url>
 
   <licenses>
@@ -286,15 +284,15 @@
 
     <resources>
       <resource>
-        <directory>src/main/resources</directory>
+        <directory>src/main/resources/</directory>
+        <includes>
+          <include>hbase-default.xml</include>
+        </includes>
       </resource>
       <resource>
-        <directory>src/main/hbase-webapps</directory>
+          <directory>${project.build.directory}</directory>
         <includes>
-          <include>*/.gif</include>
-          <include>*/.css</include>
-          <include>*/.html</include>
-          <include>*/.xml</include>
+            <include>hbase-webapps/**</include>
         </includes>
       </resource>
     </resources>
@@ -375,32 +373,43 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
-            <id>JSPC</id>
+            <id>generate</id>
             <phase>generate-sources</phase>
             <configuration>
               <tasks>
+                <property name="build.webapps"
+                  location="${project.build.directory}/hbase-webapps" />
+                <property name="src.webapps"
+                  location="${basedir}/src/main/resources/hbase-webapps" />
+                <property name="generated.sources"
+                  location="${project.build.directory}/generated-sources" />
+
+                <mkdir dir="${build.webapps}"/>
+                <copy todir="${build.webapps}">
+                  <fileset dir="${src.webapps}">
+                    <exclude name="**/*.jsp" />
+                    <exclude name="**/.*" />
+                    <exclude name="**/*~" />
+                  </fileset>
+                </copy>
+
+                <!--The compile.classpath is passed in by maven-->
                 <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
-                <jspcompiler uriroot="${basedir}/src/main/resources/hbase-webapps/master"
-                             outputdir="${project.build.directory}/jspc"
-                             package="org.apache.hadoop.hbase.generated.master"
-                             webxml="${basedir}/src/main/resources/hbase-webapps/master/WEB-INF/web.xml"/>
-                <jspcompiler uriroot="${basedir}/src/main/resources/hbase-webapps/regionserver"
-                             outputdir="${project.build.directory}/jspc"
-                             package="org.apache.hadoop.hbase.generated.regionserver"
-                             webxml="${basedir}/src/main/resources/hbase-webapps/regionserver/WEB-INF/web.xml"/>
-              </tasks>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>package-info</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <tasks>
+
+                <mkdir dir="${build.webapps}/master/WEB-INF"/>
+                <jspcompiler uriroot="${src.webapps}/master"
+                    outputdir="${generated.sources}"
+                  package="org.apache.hadoop.hbase.generated.master"
+                  webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+
+                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
+                <jspcompiler uriroot="${src.webapps}/regionserver"
+                    outputdir="${generated.sources}"
+                  package="org.apache.hadoop.hbase.generated.regionserver"
+                  webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+
                 <exec executable="sh">
-                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${project.build.directory}/generated-sources"/>
+                    <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
                 </exec>
               </tasks>
             </configuration>

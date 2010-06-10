@@ -380,6 +380,7 @@ Release 0.21.0 - Unreleased
    HBASE-2616  TestHRegion.testWritesWhileGetting flaky on trunk
    HBASE-2684  TestMasterWrongRS flaky in trunk
    HBASE-2691  LeaseStillHeldException totally ignored by RS, wrongly named
+   HBASE-2703  ui not working in distributed context
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

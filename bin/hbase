@@ -136,19 +136,6 @@ add_maven_test_classes_to_classpath() {
   fi
 }
 
-add_maven_target_dir_to_classpath() {
-  # I never seem to *have* such a dir. -tlipcon
-  HBASE_VER=`grep '<version>' $HBASE_HOME/pom.xml | head -1 | sed 's/.*<version>\(.*\)<\/version>/\1/'`
-  MAVEN_TARGET_DIR=$HBASE_HOME/target/hbase-$HBASE_VER-bin/hbase-$HBASE_VER
-  if [ -d "$MAVEN_TARGET_DIR" ]; then
-    for f in $MAVEN_TARGET_DIR/*.jar $MAVEN_TARGET_DIR/lib/*.jar; do
-      if [ -f $f ]; then
-        CLASSPATH=${CLASSPATH}:$f;
-      fi
-    done
-  fi
-}
-
 # Add maven target directory
 if $in_sources_dir; then
   add_maven_deps_to_classpath
@@ -158,11 +145,18 @@ fi
 
 # For releases, add hbase & webapps to CLASSPATH
 # Webapps must come first else it messes up Jetty
-if [ -d "$HBASE_HOME/webapps" ]; then
+if [ -d "$HBASE_HOME/hbase-webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME
 fi
+if [ -d "$HBASE_HOME/target/hbase-webapps" ]; then
+  CLASSPATH="${CLASSPATH}:${HBASE_HOME}/target"
+fi
 for f in $HBASE_HOME/hbase*.jar; do
-  if [ -f $f ]; then
+  if [[ $f = *sources.jar ]]
+  then
+    : # Skip sources.jar
+  elif [ -f $f ]
+  then
     CLASSPATH=${CLASSPATH}:$f;
   fi
 done
