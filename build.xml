@@ -920,6 +920,10 @@
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${name}-*.jar"/>
     </copy>
+  	
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
 
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
@@ -948,6 +952,7 @@
     <copy todir="${dist.dir}/" file="build.xml"/>
 
     <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/src/contrib/">
           <include name="*/bin/*" />
         </fileset>
@@ -962,10 +967,12 @@
     <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
           <exclude name="${final.name}/contrib/*/bin/*" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
           <include name="${final.name}/contrib/*/bin/*" />
         </tarfileset>
       </param.listofitems>
@@ -977,6 +984,7 @@
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
+  	<mkdir dir="${dist.dir}/bin"/>
 
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
       <fileset dir="${common.ivy.lib.dir}"/>
@@ -1003,6 +1011,10 @@
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${name}-*.jar"/>
     </copy>
+  	
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
     
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
@@ -1022,6 +1034,9 @@
   	
     <copy todir="${dist.dir}/" file="build.xml"/>
 
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
+    </chmod>
   </target>
 
   <target name="binary-system" depends="bin-package, jar-system, jar-test-system"

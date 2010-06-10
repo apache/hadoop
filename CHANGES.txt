@@ -590,6 +590,8 @@ Release 0.21.0 - Unreleased
     HDFS-1161.  Make DN minimum valid volumes configurable.
     (Eli Collins via tomwhite)
 
+    HDFS-1181. Move configuration and script files post split. (tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
