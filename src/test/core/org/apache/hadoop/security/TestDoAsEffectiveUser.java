@@ -57,10 +57,21 @@ public class TestDoAsEffectiveUser {
       GROUP2_NAME };
   private static final String ADDRESS = "0.0.0.0";
   private TestProtocol proxy;
+  private static Configuration masterConf = new Configuration();
+  
   
   public static final Log LOG = LogFactory
       .getLog(TestDoAsEffectiveUser.class);
   
+  
+  static {
+    masterConf.set("hadoop.security.auth_to_local",
+        "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
+        "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
+        + "DEFAULT");
+    UserGroupInformation.setConfiguration(masterConf);
+  }
+
   private void configureSuperUserIPAddresses(Configuration conf,
       String superUserShortName) throws IOException {
     ArrayList<String> ipList = new ArrayList<String>();
@@ -380,7 +391,7 @@ public class TestDoAsEffectiveUser {
    */
   @Test
   public void testProxyWithToken() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new Configuration(masterConf);
     TestTokenSecretManager sm = new TestTokenSecretManager();
     conf
         .set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
@@ -437,7 +448,7 @@ public class TestDoAsEffectiveUser {
   @Test
   public void testTokenBySuperUser() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    final Configuration newConf = new Configuration();
+    final Configuration newConf = new Configuration(masterConf);
     newConf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(newConf);

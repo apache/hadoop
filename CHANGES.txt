@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     HADOOP-6813. Add a new newInstance method in FileSystem that takes 
     a "user" as argument (ddas via boryas)
 
+    HADOOP-6526. Need mapping from long principal names to local OS 
+    user names. (boryas)
+
   BUG FIXES
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
     only in case the subject is loginUser or proxyUgi.realUser. (boryas)

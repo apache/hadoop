@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import static org.mockito.Mockito.mock;
 
 import java.io.BufferedReader;
@@ -36,6 +35,7 @@ import javax.security.auth.login.LoginContext;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -48,6 +48,15 @@ public class TestUserGroupInformation {
   final private static String GROUP3_NAME = "group3";
   final private static String[] GROUP_NAMES = 
     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+  
+  static {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.auth_to_local",
+        "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
+        "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
+        + "DEFAULT");
+    UserGroupInformation.setConfiguration(conf);
+  }
 
   /**
    * given user name - get all the groups.

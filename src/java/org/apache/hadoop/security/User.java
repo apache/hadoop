@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import java.security.Principal;
 
 import javax.security.auth.login.LoginContext;
@@ -38,18 +39,13 @@ class User implements Principal {
   }
   
   public User(String name, AuthenticationMethod authMethod, LoginContext login) {
-    fullName = name;
-    int atIdx = name.indexOf('@');
-    if (atIdx == -1) {
-      shortName = name;
-    } else {
-      int slashIdx = name.indexOf('/');
-      if (slashIdx == -1 || atIdx < slashIdx) {
-        shortName = name.substring(0, atIdx);
-      } else {
-        shortName = name.substring(0, slashIdx);
-      }
+    try {
+      shortName = new KerberosName(name).getShortName();
+    } catch (IOException ioe) {
+      throw new IllegalArgumentException("Illegal principal name " + name, ioe);
     }
+    fullName = name;
+
     this.authMethod = authMethod;
     this.login = login;
   }
