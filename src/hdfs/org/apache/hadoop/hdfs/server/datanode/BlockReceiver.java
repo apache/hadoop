@@ -96,7 +96,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       //
       // Open local disk out
       //
-      streams = datanode.data.writeToBlock(block, isRecovery);
+      streams = datanode.data.writeToBlock(block, isRecovery,
+                              clientName == null || clientName.length() == 0);
       this.finalized = false;
       if (streams != null) {
         this.out = streams.dataOut;

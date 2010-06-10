@@ -169,12 +169,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   /**
    * Creates the block and returns output streams to write data and CRC
    * @param b
-   * @param isRecovery True if this is part of erro recovery, otherwise false
+   * @param isRecovery True if this is part of error recovery, otherwise false
+   * @param isReplicationRequest True if this is part of block replication request
    * @return a BlockWriteStreams object to allow writing the block data
    *  and CRC
    * @throws IOException
    */
-  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException;
+  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery, 
+                                        boolean isReplicationRequest) throws IOException;
 
   /**
    * Update the block to the new generation stamp and length.  
@@ -191,6 +193,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public void finalizeBlock(Block b) throws IOException;
 
   /**
+   * Finalizes the block previously opened for writing using writeToBlock 
+   * if not already finalized
+   * @param b
+   * @throws IOException
+   */
+  public void finalizeBlockIfNeeded(Block b) throws IOException;
+
+  /**
    * Unfinalizes the block previously opened for writing using writeToBlock.
    * The temporary file associated with this block is deleted.
    * @param b
@@ -200,6 +210,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
 
   /**
    * Returns the block report - the full list of blocks stored
+   * Returns only finalized blocks
    * @return - the block report - the full list of blocks stored
    */
   public Block[] getBlockReport();
@@ -228,7 +239,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
      * Stringifies the name of the storage
      */
   public String toString();
-  
+ 
   /**
    * Shutdown the FSDataset
    */

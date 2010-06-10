@@ -1425,7 +1425,7 @@ public class DataNode extends Configured
         + "), datanode=" + dnRegistration.getName());
     data.updateBlock(oldblock, newblock);
     if (finalize) {
-      data.finalizeBlock(newblock);
+      data.finalizeBlockIfNeeded(newblock);
       myMetrics.blocksWritten.inc(); 
       notifyNamenodeReceivedBlock(newblock, EMPTY_DEL_HINT);
       LOG.info("Received block " + newblock +

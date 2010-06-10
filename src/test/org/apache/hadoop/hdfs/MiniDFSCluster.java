@@ -31,6 +31,7 @@ import javax.security.auth.login.LoginException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -725,16 +726,55 @@ public class MiniDFSCluster {
                                                    getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
 
-    // make sure all datanodes are alive
-    while(client.datanodeReport(DatanodeReportType.LIVE).length
-        != numDataNodes) {
+    // make sure all datanodes are alive and sent heartbeat
+    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE))) {
       try {
-        Thread.sleep(500);
-      } catch (Exception e) {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
       }
     }
 
     client.close();
+  }
+
+  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
+    if (dnInfo.length != numDataNodes) {
+      return true;
+    }
+    // make sure all datanodes have sent first heartbeat to namenode,
+    // using (capacity == 0) as proxy.
+    for (DatanodeInfo dn : dnInfo) {
+      if (dn.getCapacity() == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Wait for the given datanode to heartbeat once.
+   */
+  public void waitForDNHeartbeat(int dnIndex, long timeoutMillis)
+    throws IOException, InterruptedException {
+    DataNode dn = getDataNodes().get(dnIndex);
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                                   getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+
+    long startTime = System.currentTimeMillis();
+    while (System.currentTimeMillis() < startTime + timeoutMillis) {
+      DatanodeInfo report[] = client.datanodeReport(DatanodeReportType.LIVE);
+
+      for (DatanodeInfo thisReport : report) {
+        if (thisReport.getStorageID().equals(
+              dn.dnRegistration.getStorageID())) {
+          if (thisReport.getLastUpdate() > startTime)
+            return;
+        }
+      }
+
+      Thread.sleep(500);
+    }
   }
   
   public void formatDataNodeDirs() throws IOException {
