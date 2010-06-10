@@ -39,6 +39,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.util.Daemon;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
 
 /**
  * The Checkpointer is responsible for supporting periodic checkpoints 
@@ -59,6 +61,8 @@ class Checkpointer extends Daemon {
   volatile boolean shouldRun;
   private long checkpointPeriod;    // in seconds
   private long checkpointSize;    // size (in MB) of current Edit Log
+
+  private String infoBindAddress;
 
   private BackupStorage getFSImage() {
     return (BackupStorage)backupNode.getFSImage();
@@ -94,6 +98,11 @@ class Checkpointer extends Daemon {
     checkpointSize = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_KEY, 
                                   DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_SIZE_DEFAULT);
 
+    // Pull out exact http address for posting url to avoid ip aliasing issues
+    String fullInfoAddr = conf.get(DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
+                                   DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT);
+    infoBindAddress = fullInfoAddr.substring(0, fullInfoAddr.indexOf(":"));
+    
     HttpServer httpServer = backupNode.httpServer;
     httpServer.setAttribute("name.system.image", getFSImage());
     httpServer.setAttribute("name.conf", conf);
@@ -197,11 +206,11 @@ class Checkpointer extends Daemon {
    * Copy the new image into remote name-node.
    */
   private void uploadCheckpoint(CheckpointSignature sig) throws IOException {
+    // Use the exact http addr as specified in config to deal with ip aliasing
     InetSocketAddress httpSocAddr = backupNode.getHttpAddress();
     int httpPort = httpSocAddr.getPort();
     String fileid = "putimage=1&port=" + httpPort +
-      "&machine=" +
-      InetAddress.getLocalHost().getHostAddress() +
+      "&machine=" + infoBindAddress +
       "&token=" + sig.toString();
     LOG.info("Posted URL " + backupNode.nnHttpAddress + fileid);
     TransferFsImage.getFileClient(backupNode.nnHttpAddress, fileid, (File[])null);

@@ -70,6 +70,9 @@ Trunk (unreleased changes)
 
     HDFS-1027. Update copyright year to 2010. (Ravi Phulari via jghoman)
 
+    HDFS-1080. SecondaryNameNode image transfer should use the defined http 
+    address rather than local ip address. (jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

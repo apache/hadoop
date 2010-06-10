@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -277,8 +276,7 @@ public class SecondaryNameNode implements Runnable {
    */
   private void putFSImage(CheckpointSignature sig) throws IOException {
     String fileid = "putimage=1&port=" + infoPort +
-      "&machine=" +
-      InetAddress.getLocalHost().getHostAddress() +
+      "&machine=" + infoBindAddress + 
       "&token=" + sig.toString();
     LOG.info("Posted URL " + fsName + fileid);
     TransferFsImage.getFileClient(fsName, fileid, (File[])null);
