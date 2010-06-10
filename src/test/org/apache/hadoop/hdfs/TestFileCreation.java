@@ -93,7 +93,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     byte[] buffer = AppendTestUtil.randomBytes(seed, size);
     stm.write(buffer, 0, size);
   }
-
+  
   //
   // verify that the data written to the full blocks are sane
   // 
@@ -478,7 +478,16 @@ public class TestFileCreation extends junit.framework.TestCase {
                          + "Created file " + file1);
 
       // write two full blocks.
-      writeFile(stm, numBlocks * blockSize);
+      int remainingPiece = blockSize/2;
+      int blocksMinusPiece = numBlocks * blockSize - remainingPiece;
+      writeFile(stm, blocksMinusPiece);
+      stm.sync();
+      int actualRepl = ((DFSClient.DFSOutputStream)(stm.getWrappedStream())).
+                        getNumCurrentReplicas();
+      // if we sync on a block boundary, actualRepl will be 0
+      assertTrue(file1 + " should be replicated to 1 datanodes, not " + actualRepl,
+                 actualRepl == 1);
+      writeFile(stm, remainingPiece);
       stm.sync();
 
       // rename file wile keeping it open.
@@ -686,6 +695,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
       out.write("something".getBytes());
       out.sync();
+      int actualRepl = ((DFSClient.DFSOutputStream)(out.getWrappedStream())).
+                        getNumCurrentReplicas();
+      assertTrue(f + " should be replicated to " + DATANODE_NUM + " datanodes.",
+                 actualRepl == DATANODE_NUM);
 
       // set the soft and hard limit to be 1 second so that the
       // namenode triggers lease recovery

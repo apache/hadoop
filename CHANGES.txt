@@ -12,6 +12,9 @@ Release 0.20-append - Unreleased
     HDFS-988. Fix bug where savenameSpace can corrupt edits log.
     (Nicolas Spiegelberg via dhruba)
 
+    HDFS-826. Allow a mechanism for an application to detect that 
+    datanode(s) have died in the write pipeline. (dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
