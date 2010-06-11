@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
-public class TestScanDeleteTracker extends HBaseTestCase implements HConstants {
+public class TestScanDeleteTracker extends HBaseTestCase {
 
   private ScanDeleteTracker sdt;
   private long timestamp = 10L;

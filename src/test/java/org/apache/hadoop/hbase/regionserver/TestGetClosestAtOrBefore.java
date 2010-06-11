@@ -44,19 +44,19 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  * {@link TestGet} is a medley of tests of get all done up as a single test.
  * This class
  */
-public class TestGetClosestAtOrBefore extends HBaseTestCase implements HConstants {
-  static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
+public class TestGetClosestAtOrBefore extends HBaseTestCase {
+  private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
   private MiniDFSCluster miniHdfs;
 
-  private static final byte [] T00 = Bytes.toBytes("000");
-  private static final byte [] T10 = Bytes.toBytes("010");
-  private static final byte [] T11 = Bytes.toBytes("011");
-  private static final byte [] T12 = Bytes.toBytes("012");
-  private static final byte [] T20 = Bytes.toBytes("020");
-  private static final byte [] T30 = Bytes.toBytes("030");
-  private static final byte [] T31 = Bytes.toBytes("031");
-  private static final byte [] T35 = Bytes.toBytes("035");
-  private static final byte [] T40 = Bytes.toBytes("040");
+  private static final byte[] T00 = Bytes.toBytes("000");
+  private static final byte[] T10 = Bytes.toBytes("010");
+  private static final byte[] T11 = Bytes.toBytes("011");
+  private static final byte[] T12 = Bytes.toBytes("012");
+  private static final byte[] T20 = Bytes.toBytes("020");
+  private static final byte[] T30 = Bytes.toBytes("030");
+  private static final byte[] T31 = Bytes.toBytes("031");
+  private static final byte[] T35 = Bytes.toBytes("035");
+  private static final byte[] T40 = Bytes.toBytes("040");
 
   @Override
   protected void setUp() throws Exception {
@@ -86,7 +86,8 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase implements HConstant
           i == 0? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i),
           i == last? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i + interval));
         Put put = new Put(hri.getRegionName());
-        put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(hri));
+        put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+                Writables.getBytes(hri));
         mr.put(put, false);
       }
     }

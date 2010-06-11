@@ -72,7 +72,7 @@ import java.util.regex.Pattern;
  * passing filesystem and path.  To read, call {@link #createReader()}.
  * <p>StoreFiles may also reference store files in another Store.
  */
-public class StoreFile implements HConstants {
+public class StoreFile {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
   private static final String HFILE_CACHE_SIZE_KEY = "hfile.block.cache.size";
@@ -104,7 +104,7 @@ public class StoreFile implements HConstants {
   /** Constant for major compaction meta */
   public static final byte [] MAJOR_COMPACTION_KEY =
     Bytes.toBytes("MAJOR_COMPACTION_KEY");
-  
+
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
   private AtomicBoolean majorCompaction = null;
@@ -115,10 +115,10 @@ public class StoreFile implements HConstants {
   public static final byte[] BULKLOAD_TIME_KEY =
     Bytes.toBytes("BULKLOAD_TIMESTAMP");
 
-  
+
   static final String BLOOM_FILTER_META_KEY = "BLOOM_FILTER_META";
   static final String BLOOM_FILTER_DATA_KEY = "BLOOM_FILTER_DATA";
-  static final byte[] BLOOM_FILTER_TYPE_KEY = 
+  static final byte[] BLOOM_FILTER_TYPE_KEY =
     Bytes.toBytes("BLOOM_FILTER_TYPE");
 
   /**
@@ -154,7 +154,7 @@ public class StoreFile implements HConstants {
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs, final Path p, final boolean blockcache,
-      final Configuration conf, final BloomType bt, final boolean inMemory) 
+      final Configuration conf, final BloomType bt, final boolean inMemory)
   throws IOException {
     this.conf = conf;
     this.fs = fs;
@@ -165,7 +165,7 @@ public class StoreFile implements HConstants {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
     }
-    // ignore if the column family config says "no bloom filter" 
+    // ignore if the column family config says "no bloom filter"
     // even if there is one in the hfile.
     if (conf.getBoolean("io.hfile.bloom.enabled", true)) {
       this.bloomType = bt;
@@ -264,7 +264,7 @@ public class StoreFile implements HConstants {
     }
     return this.sequenceid;
   }
-  
+
   /**
    * Return the highest sequence ID found across all storefiles in
    * the given list. Store files that were created by a mapreduce
@@ -375,14 +375,14 @@ public class StoreFile implements HConstants {
         this.majorCompaction.set(mc);
       }
     }
-    
+
     if (this.bloomType != BloomType.NONE) {
       this.reader.loadBloomfilter();
     }
 
     return this.reader;
   }
-  
+
   /**
    * @return Reader for StoreFile. creates if necessary
    * @throws IOException
@@ -396,7 +396,7 @@ public class StoreFile implements HConstants {
 
   /**
    * @return Current reader.  Must call createReader first else returns null.
-   * @throws IOException 
+   * @throws IOException
    * @see {@link #createReader()}
    */
   public StoreFile.Reader getReader() {
@@ -423,11 +423,11 @@ public class StoreFile implements HConstants {
   }
 
   @Override
-  public String toString() {    
+  public String toString() {
     return this.path.toString() +
       (isReference()? "-" + this.referencePath + "-" + reference.toString(): "");
   }
-  
+
   /**
    * @return a length description of this StoreFile, suitable for debug output
    */
@@ -477,8 +477,8 @@ public class StoreFile implements HConstants {
    * @return HFile.Writer
    * @throws IOException
    */
-  public static StoreFile.Writer createWriter(final FileSystem fs, final Path dir, 
-      final int blocksize) 
+  public static StoreFile.Writer createWriter(final FileSystem fs, final Path dir,
+      final int blocksize)
   throws IOException {
     return createWriter(fs,dir,blocksize,null,null,null,BloomType.NONE,0);
   }
@@ -498,10 +498,10 @@ public class StoreFile implements HConstants {
    * @return HFile.Writer
    * @throws IOException
    */
-  public static StoreFile.Writer createWriter(final FileSystem fs, final Path dir, 
-      final int blocksize, final Compression.Algorithm algorithm, 
-      final KeyValue.KVComparator c, final Configuration conf, 
-      BloomType bloomType, int maxKeySize) 
+  public static StoreFile.Writer createWriter(final FileSystem fs, final Path dir,
+      final int blocksize, final Compression.Algorithm algorithm,
+      final KeyValue.KVComparator c, final Configuration conf,
+      BloomType bloomType, int maxKeySize)
   throws IOException {
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
@@ -614,7 +614,7 @@ public class StoreFile implements HConstants {
     /** Type of bloom filter (e.g. ROW vs ROWCOL) */
     protected BloomType bloomFilterType;
 
-    public Reader(FileSystem fs, Path path, BlockCache cache, 
+    public Reader(FileSystem fs, Path path, BlockCache cache,
         boolean inMemory)
     throws IOException {
       super(fs, path, cache, inMemory);
@@ -627,7 +627,7 @@ public class StoreFile implements HConstants {
     }
 
     @Override
-    public Map<byte [], byte []> loadFileInfo() 
+    public Map<byte [], byte []> loadFileInfo()
     throws IOException {
       Map<byte [], byte []> fi = super.loadFileInfo();
 
@@ -635,19 +635,19 @@ public class StoreFile implements HConstants {
       if (b != null) {
         bloomFilterType = BloomType.valueOf(Bytes.toString(b));
       }
-      
+
       return fi;
     }
-    
+
     /**
-     * Load the bloom filter for this HFile into memory.  
+     * Load the bloom filter for this HFile into memory.
      * Assumes the HFile has already been loaded
      */
     public void loadBloomfilter() {
       if (this.bloomFilter != null) {
         return; // already loaded
       }
-      
+
       // see if bloom filter information is in the metadata
       try {
         ByteBuffer b = getMetaBlock(BLOOM_FILTER_META_KEY, false);
@@ -656,7 +656,7 @@ public class StoreFile implements HConstants {
             throw new IOException("valid bloom filter type not found in FileInfo");
           }
           this.bloomFilter = new ByteBloomFilter(b);
-          LOG.info("Loaded " + (bloomFilterType==BloomType.ROW? "row":"col") 
+          LOG.info("Loaded " + (bloomFilterType==BloomType.ROW? "row":"col")
                  + " bloom filter metadata for " + name);
         }
       } catch (IOException e) {
@@ -667,11 +667,11 @@ public class StoreFile implements HConstants {
         this.bloomFilter = null;
       }
     }
-    
+
     BloomFilter getBloomFilter() {
       return this.bloomFilter;
     }
-    
+
     /**
      * @return bloom type information associated with this store file
      */
@@ -681,7 +681,7 @@ public class StoreFile implements HConstants {
 
     @Override
     public int getFilterEntries() {
-      return (this.bloomFilter != null) ? this.bloomFilter.getKeyCount() 
+      return (this.bloomFilter != null) ? this.bloomFilter.getKeyCount()
           : super.getFilterEntries();
     }
 
@@ -696,12 +696,12 @@ public class StoreFile implements HConstants {
       }
 
       @Override
-      public boolean shouldSeek(final byte[] row, 
+      public boolean shouldSeek(final byte[] row,
           final SortedSet<byte[]> columns) {
         if (bloomFilter == null) {
           return true;
         }
-        
+
         byte[] key;
         switch(bloomFilterType) {
           case ROW:
@@ -717,27 +717,27 @@ public class StoreFile implements HConstants {
           default:
             return true;
         }
-        
+
         try {
           ByteBuffer bloom = getMetaBlock(BLOOM_FILTER_DATA_KEY, true);
           if (bloom != null) {
             return bloomFilter.contains(key, bloom);
           }
         } catch (IOException e) {
-          LOG.error("Error reading bloom filter data -- proceeding without", 
+          LOG.error("Error reading bloom filter data -- proceeding without",
               e);
           bloomFilter = null;
         } catch (IllegalArgumentException e) {
           LOG.error("Bad bloom filter data -- proceeding without", e);
           bloomFilter = null;
         }
-          
+
         return true;
       }
-      
+
     }
   }
-  
+
   /**
    *
    */
@@ -769,10 +769,10 @@ public class StoreFile implements HConstants {
       this.kvComparator = comparator;
 
       if (bloomType != BloomType.NONE && conf != null) {
-        float err = conf.getFloat("io.hfile.bloom.error.rate", (float)0.01);      
+        float err = conf.getFloat("io.hfile.bloom.error.rate", (float)0.01);
         int maxFold = conf.getInt("io.hfile.bloom.max.fold", 7);
-        
-        this.bloomFilter = new ByteBloomFilter(maxKeys, err, 
+
+        this.bloomFilter = new ByteBloomFilter(maxKeys, err,
             Hash.getHashType(conf), maxFold);
         this.bloomFilter.allocBloom();
         this.bloomType = bloomType;
@@ -804,11 +804,11 @@ public class StoreFile implements HConstants {
         boolean newKey = true;
         if (this.lastKv != null) {
           switch(bloomType) {
-          case ROW:   
-            newKey = ! kvComparator.matchingRows(kv, lastKv); 
+          case ROW:
+            newKey = ! kvComparator.matchingRows(kv, lastKv);
             break;
-          case ROWCOL: 
-            newKey = ! kvComparator.matchingRowColumn(kv, lastKv); 
+          case ROWCOL:
+            newKey = ! kvComparator.matchingRowColumn(kv, lastKv);
             break;
           case NONE:
             newKey = false;
@@ -820,12 +820,12 @@ public class StoreFile implements HConstants {
            * Key = RowLen + Row + FamilyLen + Column [Family + Qualifier] + TimeStamp
            *
            * 2 Types of Filtering:
-           *  1. Row = Row 
+           *  1. Row = Row
            *  2. RowCol = Row + Qualifier
            */
           switch (bloomType) {
           case ROW:
-            this.bloomFilter.add(kv.getBuffer(), kv.getRowOffset(), 
+            this.bloomFilter.add(kv.getBuffer(), kv.getRowOffset(),
                 kv.getRowLength());
             break;
           case ROWCOL:
@@ -860,9 +860,9 @@ public class StoreFile implements HConstants {
       }
       super.append(key, value);
     }
-    
+
     @Override
-    public void close() 
+    public void close()
     throws IOException {
       // make sure we wrote something to the bloom before adding it
       if (this.bloomFilter != null && this.bloomFilter.getKeyCount() > 0) {
@@ -871,7 +871,7 @@ public class StoreFile implements HConstants {
           int b = this.bloomFilter.getByteSize();
           int k = this.bloomFilter.getKeyCount();
           int m = this.bloomFilter.getMaxKeys();
-          StoreFile.LOG.info("Bloom added to HFile.  " + b + "B, " + 
+          StoreFile.LOG.info("Bloom added to HFile.  " + b + "B, " +
               k + "/" + m + " (" + NumberFormat.getPercentInstance().format(
                 ((double)k) / ((double)m)) + ")");
         }
@@ -881,9 +881,9 @@ public class StoreFile implements HConstants {
       }
       super.close();
     }
-    
+
   }
-  
+
   /**
    * Useful comparators for comparing StoreFiles.
    */

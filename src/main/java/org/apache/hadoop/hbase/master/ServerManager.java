@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The ServerManager class manages info about region servers - HServerInfo,
  * load numbers, dying servers, etc.
  */
-public class ServerManager implements HConstants {
+public class ServerManager {
   private static final Log LOG =
     LogFactory.getLog(ServerManager.class.getName());
 

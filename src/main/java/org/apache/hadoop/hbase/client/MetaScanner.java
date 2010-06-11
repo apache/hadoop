@@ -32,7 +32,7 @@ import java.io.IOException;
  * and uses a Retryable scanner. Provided visitors will be called
  * for each row.
  */
-class MetaScanner implements HConstants {
+class MetaScanner {
 
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
@@ -45,7 +45,7 @@ class MetaScanner implements HConstants {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
-    metaScan(configuration, visitor, EMPTY_START_ROW);
+    metaScan(configuration, visitor, HConstants.EMPTY_START_ROW);
   }
 
   /**
@@ -63,14 +63,16 @@ class MetaScanner implements HConstants {
     HConnection connection = HConnectionManager.getConnection(configuration);
     byte [] startRow = tableName == null || tableName.length == 0 ?
         HConstants.EMPTY_START_ROW :
-          HRegionInfo.createRegionName(tableName, null, ZEROES, false);
+          HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES,
+              false);
 
     // Scan over each meta region
     ScannerCallable callable;
     int rows = configuration.getInt("hbase.meta.scanner.caching", 100);
     do {
-      Scan scan = new Scan(startRow).addFamily(CATALOG_FAMILY);
-      callable = new ScannerCallable(connection, META_TABLE_NAME, scan);
+      final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
+      callable = new ScannerCallable(connection, HConstants.META_TABLE_NAME,
+          scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
       try {
@@ -94,7 +96,7 @@ class MetaScanner implements HConstants {
         callable.setClose();
         connection.getRegionServerWithRetries(callable);
       }
-    } while (Bytes.compareTo(startRow, LAST_ROW) != 0);
+    } while (Bytes.compareTo(startRow, HConstants.LAST_ROW) != 0);
   }
 
   /**

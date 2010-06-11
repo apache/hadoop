@@ -31,15 +31,14 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
-public class TestExplicitColumnTracker extends HBaseTestCase
-implements HConstants {
+public class TestExplicitColumnTracker extends HBaseTestCase {
   private boolean PRINT = false;
 
-  private final byte [] col1 = Bytes.toBytes("col1");
-  private final byte [] col2 = Bytes.toBytes("col2");
-  private final byte [] col3 = Bytes.toBytes("col3");
-  private final byte [] col4 = Bytes.toBytes("col4");
-  private final byte [] col5 = Bytes.toBytes("col5");
+  private final byte[] col1 = Bytes.toBytes("col1");
+  private final byte[] col2 = Bytes.toBytes("col2");
+  private final byte[] col3 = Bytes.toBytes("col3");
+  private final byte[] col4 = Bytes.toBytes("col4");
+  private final byte[] col5 = Bytes.toBytes("col5");
 
   private void runTest(int maxVersions,
                        TreeSet<byte[]> trackColumns,
@@ -50,13 +49,13 @@ implements HConstants {
 
 
     //Initialize result
-    List<MatchCode> result = new ArrayList<MatchCode>(); 
-    
+    List<MatchCode> result = new ArrayList<MatchCode>();
+
     //"Match"
     for(byte [] col : scannerColumns){
       result.add(exp.checkColumn(col, 0, col.length));
     }
-    
+
     assertEquals(expected.size(), result.size());
     for(int i=0; i< expected.size(); i++){
       assertEquals(expected.get(i), result.get(i));

@@ -115,7 +115,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
-public class HRegionServer implements HConstants, HRegionInterface,
+public class HRegionServer implements HRegionInterface,
     HBaseRPCErrorHandler, Runnable, Watcher {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
@@ -245,7 +245,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
         conf.get("hbase.regionserver.dns.interface","default"),
         conf.get("hbase.regionserver.dns.nameserver","default"));
     String addressStr = machineName + ":" +
-      conf.get(REGIONSERVER_PORT, Integer.toString(DEFAULT_REGIONSERVER_PORT));
+      conf.get(HConstants.REGIONSERVER_PORT,
+          Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));
     // This is not necessarily the address we will run with.  The address we
     // use will be in #serverInfo data member.  For example, we may have been
     // passed a port of 0 which means we should pick some ephemeral port to bind
@@ -262,7 +263,8 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     // Config'ed params
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
-    this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000);
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 1 * 1000);
 
     sleeper = new Sleeper(this.msgInterval, this.stopRequested);
@@ -277,7 +279,9 @@ public class HRegionServer implements HConstants, HRegionInterface,
     this.numRegionsToReport =
       conf.getInt("hbase.regionserver.numregionstoreport", 10);
 
-    this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+    this.rpcTimeout =
+      conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+          HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
 
     reinitialize();
   }
@@ -311,7 +315,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     reinitializeZooKeeper();
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for(int i = 0; i < nbBlocks; i++)  {
-      reservedSpace.add(new byte[DEFAULT_SIZE_RESERVATION_BLOCK]);
+      reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }
   }
 
@@ -334,13 +338,14 @@ public class HRegionServer implements HConstants, HRegionInterface,
 
     // Background thread to check for major compactions; needed if region
     // has not gotten updates in a while.  Make it run at a lesser frequency.
-    int multiplier = this.conf.getInt(THREAD_WAKE_FREQUENCY +
+    int multiplier = this.conf.getInt(HConstants.THREAD_WAKE_FREQUENCY +
         ".multiplier", 1000);
     this.majorCompactionChecker = new MajorCompactionChecker(this,
       this.threadWakeFrequency * multiplier,  this.stopRequested);
 
     this.leases = new Leases(
-        (int) conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
+        (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+            HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
         this.threadWakeFrequency);
   }
 
@@ -899,7 +904,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
   }
 
   private HLog setupHLog() throws IOException {
-    Path oldLogDir = new Path(rootDir, HREGION_OLDLOGDIR_NAME);
+    final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path logdir = new Path(rootDir, HLog.getHLogDirectoryName(this.serverInfo));
     if (LOG.isDebugEnabled()) {
       LOG.debug("Log dir " + logdir);
@@ -1696,7 +1701,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      return region.checkAndMutate(row, family, qualifier, value, w, lock, 
+      return region.checkAndMutate(row, family, qualifier, value, w, lock,
           true);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
@@ -2017,7 +2022,7 @@ public class HRegionServer implements HConstants, HRegionInterface,
     HRegion region = getRegion(regionName);
     region.bulkLoadHFile(hfilePath, familyName);
   }
-  
+
   Map<String, Integer> rowlocks =
     new ConcurrentHashMap<String, Integer>();
 

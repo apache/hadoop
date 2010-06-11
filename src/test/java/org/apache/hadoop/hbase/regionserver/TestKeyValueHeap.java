@@ -32,24 +32,23 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
-public class TestKeyValueHeap extends HBaseTestCase
-implements HConstants {
+public class TestKeyValueHeap extends HBaseTestCase {
   private static final boolean PRINT = false;
 
   List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
 
-  private byte [] row1;
-  private byte [] fam1;
-  private byte [] col1;
-  private byte [] data;
+  private byte[] row1;
+  private byte[] fam1;
+  private byte[] col1;
+  private byte[] data;
 
-  private byte [] row2;
-  private byte [] fam2;
-  private byte [] col2;
+  private byte[] row2;
+  private byte[] fam2;
+  private byte[] col2;
 
-  private byte [] col3;
-  private byte [] col4;
-  private byte [] col5;
+  private byte[] col3;
+  private byte[] col4;
+  private byte[] col5;
 
   public void setUp() throws Exception {
     super.setUp();

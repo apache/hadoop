@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -94,8 +95,8 @@ class ChangeTableState extends TableOperation {
         Put put = updateRegionInfo(i);
         server.put(m.getRegionName(), put);
         Delete delete = new Delete(i.getRegionName());
-        delete.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
-        delete.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
+        delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+        delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
         server.delete(m.getRegionName(), delete);
       }
       if (LOG.isDebugEnabled()) {
@@ -132,7 +133,7 @@ class ChangeTableState extends TableOperation {
         for (HRegionInfo i: e.getValue()) {
           // The scan we did could be totally staled, get the freshest data
           Get get = new Get(i.getRegionName());
-          get.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
+          get.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
           Result values = server.get(m.getRegionName(), get);
           String serverAddress = BaseScanner.getServerAddress(values);
           // If this region is unassigned, skip!
@@ -155,7 +156,7 @@ class ChangeTableState extends TableOperation {
   throws IOException {
     i.setOffline(!online);
     Put put = new Put(i.getRegionName());
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(i));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, Writables.getBytes(i));
     return put;
   }
 }

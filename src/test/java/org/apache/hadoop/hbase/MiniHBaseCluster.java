@@ -47,7 +47,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * if we are running on DistributedFilesystem, create a FileSystem instance
  * each and will close down their instance on the way out.
  */
-public class MiniHBaseCluster implements HConstants {
+public class MiniHBaseCluster {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   private Configuration conf;
   public LocalHBaseCluster hbaseCluster;
@@ -67,7 +67,7 @@ public class MiniHBaseCluster implements HConstants {
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
   throws IOException {
     this.conf = conf;
-    conf.set(MASTER_PORT, "0");
+    conf.set(HConstants.MASTER_PORT, "0");
     init(numRegionServers);
   }
 
@@ -143,7 +143,7 @@ public class MiniHBaseCluster implements HConstants {
   /**
    * Subclass so can get at protected methods (none at moment).  Also, creates
    * a FileSystem instance per instantiation.  Adds a shutdown own FileSystem
-   * on the way out. Shuts down own Filesystem only, not All filesystems as 
+   * on the way out. Shuts down own Filesystem only, not All filesystems as
    * the FileSystem system exit hook does.
    */
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
@@ -179,7 +179,7 @@ public class MiniHBaseCluster implements HConstants {
         new UnixUserGroupInformation(username, new String[]{"supergroup"}));
       return c2;
     }
-    
+
     @Override
     protected void init(MapWritable c) throws IOException {
       super.init(c);
@@ -199,7 +199,7 @@ public class MiniHBaseCluster implements HConstants {
         }
       }
     }
- 
+
     public void kill() {
       super.kill();
     }
@@ -370,7 +370,7 @@ public class MiniHBaseCluster implements HConstants {
   public HRegionServer getRegionServer(int serverNumber) {
     return hbaseCluster.getRegionServer(serverNumber);
   }
-  
+
   public List<HRegion> getRegions(byte[] tableName) {
     List<HRegion> ret = new ArrayList<HRegion>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {

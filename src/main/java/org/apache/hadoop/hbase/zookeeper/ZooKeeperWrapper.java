@@ -54,7 +54,7 @@ import java.util.Properties;
  * - read/write/delete the root region location in ZooKeeper.
  * - set/check out of safe mode flag.
  */
-public class ZooKeeperWrapper implements HConstants {
+public class ZooKeeperWrapper {
   protected static final Log LOG = LogFactory.getLog(ZooKeeperWrapper.class);
 
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
@@ -82,7 +82,7 @@ public class ZooKeeperWrapper implements HConstants {
     setQuorumServers(properties);
     if (quorumServers == null) {
       throw new IOException("Could not read quorum servers from " +
-                            ZOOKEEPER_CONFIG_NAME);
+                            HConstants.ZOOKEEPER_CONFIG_NAME);
     }
 
     int sessionTimeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
@@ -93,8 +93,8 @@ public class ZooKeeperWrapper implements HConstants {
       throw new IOException(e);
     }
 
-    parentZNode = conf.get(ZOOKEEPER_ZNODE_PARENT,
-        DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    parentZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
+        HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
     String rootServerZNodeName = conf.get("zookeeper.znode.rootserver",
                                           "root-region-server");
@@ -137,12 +137,13 @@ public class ZooKeeperWrapper implements HConstants {
     }
 
     if (!anyValid) {
-      LOG.error("no valid quorum servers found in " + ZOOKEEPER_CONFIG_NAME);
+      LOG.error("no valid quorum servers found in "
+                + HConstants.ZOOKEEPER_CONFIG_NAME);
       return;
     }
 
     if (clientPort == null) {
-      LOG.error("no clientPort found in " + ZOOKEEPER_CONFIG_NAME);
+      LOG.error("no clientPort found in " + HConstants.ZOOKEEPER_CONFIG_NAME);
       return;
     }
 
@@ -815,8 +816,8 @@ public class ZooKeeperWrapper implements HConstants {
   }
 
   public static String getZookeeperClusterKey(Configuration conf) {
-    return conf.get(ZOOKEEPER_QUORUM)+":"+
-          conf.get(ZOOKEEPER_ZNODE_PARENT);
+    return (conf.get(HConstants.ZOOKEEPER_QUORUM)
+            + ":" + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
   }
 
   /**

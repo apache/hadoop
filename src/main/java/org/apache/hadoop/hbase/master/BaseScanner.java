@@ -100,17 +100,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>A <code>META</code> region is not 'online' until it has been scanned
  * once.
  */
-abstract class BaseScanner extends Chore implements HConstants {
+abstract class BaseScanner extends Chore {
   static final Log LOG = LogFactory.getLog(BaseScanner.class.getName());
   // These are names of new columns in a meta region offlined parent row.  They
   // are added by the metascanner after we verify that split daughter made it
   // in.  Their value is 'true' if present.
-  private static final byte [] SPLITA_CHECKED =
-    Bytes.toBytes(Bytes.toString(SPLITA_QUALIFIER) + "_checked");
-  private static final byte [] SPLITB_CHECKED =
-    Bytes.toBytes(Bytes.toString(SPLITB_QUALIFIER) + "_checked");
+  private static final byte[] SPLITA_CHECKED =
+    Bytes.toBytes(Bytes.toString(HConstants.SPLITA_QUALIFIER) + "_checked");
+  private static final byte[] SPLITB_CHECKED =
+    Bytes.toBytes(Bytes.toString(HConstants.SPLITB_QUALIFIER) + "_checked");
   // Make the 'true' Writable once only.
-  private static byte [] TRUE_WRITABLE_AS_BYTES;
+  private static byte[] TRUE_WRITABLE_AS_BYTES;
   static {
     try {
       TRUE_WRITABLE_AS_BYTES = Writables.getBytes(new BooleanWritable(true));
@@ -250,8 +250,9 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @return Empty String or server address found in <code>r</code>
    */
   static String getServerAddress(final Result r) {
-    byte [] val = r.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
-    return val == null || val.length <= 0? "": Bytes.toString(val);
+    final byte[] val = r.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.SERVER_QUALIFIER);
+    return val == null || val.length <= 0 ? "" : Bytes.toString(val);
   }
 
   /*
@@ -259,8 +260,9 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @return Return 0L or server startcode found in <code>r</code>
    */
   static long getStartCode(final Result r) {
-    byte [] val = r.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER);
-    return val == null || val.length <= 0? 0L: Bytes.toLong(val);
+    final byte[] val = r.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.STARTCODE_QUALIFIER);
+    return val == null || val.length <= 0 ? 0L : Bytes.toLong(val);
   }
 
   /*
@@ -299,9 +301,9 @@ abstract class BaseScanner extends Chore implements HConstants {
     boolean result = false;
     // Run checks on each daughter split.
     boolean hasReferencesA = checkDaughter(metaRegionName, srvr,
-      parent, rowContent, SPLITA_QUALIFIER);
+      parent, rowContent, HConstants.SPLITA_QUALIFIER);
     boolean hasReferencesB = checkDaughter(metaRegionName, srvr,
-        parent, rowContent, SPLITB_QUALIFIER);
+        parent, rowContent, HConstants.SPLITB_QUALIFIER);
     if (!hasReferencesA && !hasReferencesB) {
       LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " (encoded=" + parent.getEncodedName() +
@@ -402,7 +404,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     final HRegionInfo split, final byte [] daughter)
   throws IOException {
     Put p = new Put(parent);
-    p.add(CATALOG_FAMILY, getNameOfVerifiedDaughterColumn(daughter),
+    p.add(HConstants.CATALOG_FAMILY, getNameOfVerifiedDaughterColumn(daughter),
       TRUE_WRITABLE_AS_BYTES);
     srvr.put(metaRegionName, p);
   }
@@ -415,9 +417,9 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @throws IOException
    */
   private boolean getDaughterRowChecked(final Result rowContent,
-    final byte [] which)
+    final byte[] which)
   throws IOException {
-    byte [] b = rowContent.getValue(CATALOG_FAMILY,
+    final byte[] b = rowContent.getValue(HConstants.CATALOG_FAMILY,
       getNameOfVerifiedDaughterColumn(which));
     BooleanWritable bw = null;
     if (b != null && b.length > 0) {
@@ -432,8 +434,8 @@ abstract class BaseScanner extends Chore implements HConstants {
    * <code>daughter</code> is.
    */
   private static byte [] getNameOfVerifiedDaughterColumn(final byte [] daughter) {
-    return Bytes.equals(SPLITA_QUALIFIER, daughter)?
-      SPLITA_CHECKED: SPLITB_CHECKED;
+    return (Bytes.equals(HConstants.SPLITA_QUALIFIER, daughter)
+            ? SPLITA_CHECKED : SPLITB_CHECKED);
   }
 
   /*
@@ -447,7 +449,8 @@ abstract class BaseScanner extends Chore implements HConstants {
   private HRegionInfo getDaughterRegionInfo(final Result rowContent,
     final byte [] which)
   throws IOException {
-    return Writables.getHRegionInfoOrNull(rowContent.getValue(CATALOG_FAMILY, which));
+    return Writables.getHRegionInfoOrNull(
+        rowContent.getValue(HConstants.CATALOG_FAMILY, which));
   }
 
   /*

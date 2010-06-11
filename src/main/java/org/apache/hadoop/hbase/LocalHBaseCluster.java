@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
  * <code>hbase.master.meta.thread.rescanfrequency</code>, and
  * <code>hbase.server.thread.wakefrequency</code> a second or less.
  */
-public class LocalHBaseCluster implements HConstants {
+public class LocalHBaseCluster {
   static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
   private final HMaster master;
   private final List<JVMClusterUtil.RegionServerThread> regionThreads;
@@ -113,7 +113,7 @@ public class LocalHBaseCluster implements HConstants {
     // Start the HRegionServers.  Always have region servers come up on
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
-    conf.set(REGIONSERVER_PORT, "0");
+    conf.set(HConstants.REGIONSERVER_PORT, "0");
     this.regionThreads =
       new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
     this.regionServerClass =
@@ -239,8 +239,8 @@ public class LocalHBaseCluster implements HConstants {
    * @return True if a 'local' address in hbase.master value.
    */
   public static boolean isLocal(final Configuration c) {
-    String mode = c.get(CLUSTER_DISTRIBUTED);
-    return mode == null || mode.equals(CLUSTER_IS_LOCAL);
+    final String mode = c.get(HConstants.CLUSTER_DISTRIBUTED);
+    return mode == null || mode.equals(HConstants.CLUSTER_IS_LOCAL);
   }
 
   /**

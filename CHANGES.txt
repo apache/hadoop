@@ -681,6 +681,7 @@ Release 0.21.0 - Unreleased
    	           setting (currentTimeMillis) (Daniel Ploeg via Ryan Rawson)
    HBASE-2558  Our javadoc overview -- "Getting Started", requirements, etc. --
                is not carried across by mvn javadoc:javadoc target
+   HBASE-2618  Don't inherit from HConstants (Benoit Sigoure via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

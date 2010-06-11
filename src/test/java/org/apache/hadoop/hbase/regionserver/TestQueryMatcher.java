@@ -34,21 +34,20 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
-public class TestQueryMatcher extends HBaseTestCase
-implements HConstants {
+public class TestQueryMatcher extends HBaseTestCase {
   private static final boolean PRINT = false;
 
-  private byte [] row1;
-  private byte [] row2;
-  private byte [] fam1;
-  private byte [] fam2;
-  private byte [] col1;
-  private byte [] col2;
-  private byte [] col3;
-  private byte [] col4;
-  private byte [] col5;
+  private byte[] row1;
+  private byte[] row2;
+  private byte[] fam1;
+  private byte[] fam2;
+  private byte[] col1;
+  private byte[] col2;
+  private byte[] col3;
+  private byte[] col4;
+  private byte[] col5;
 
-  private byte [] data;
+  private byte[] data;
 
   private Get get;
 

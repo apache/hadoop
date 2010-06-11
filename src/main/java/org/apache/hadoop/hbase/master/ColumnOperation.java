@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.client.Put;
@@ -48,7 +49,7 @@ abstract class ColumnOperation extends TableOperation {
   protected void updateRegionInfo(HRegionInterface server, byte [] regionName,
     HRegionInfo i) throws IOException {
     Put put = new Put(i.getRegionName());
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(i));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER, Writables.getBytes(i));
     server.put(regionName, put);
     if (LOG.isDebugEnabled()) {
       LOG.debug("updated columns in row: " + i.getRegionNameAsString());

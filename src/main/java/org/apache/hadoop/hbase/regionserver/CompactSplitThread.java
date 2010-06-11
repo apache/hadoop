@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Compact region on request and then run split if appropriate
  */
-class CompactSplitThread extends Thread implements HConstants {
+class CompactSplitThread extends Thread {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
   private HTable root = null;
@@ -162,13 +162,13 @@ class CompactSplitThread extends Thread implements HConstants {
     if (region.getRegionInfo().isMetaTable()) {
       // We need to update the root region
       if (this.root == null) {
-        this.root = new HTable(conf, ROOT_TABLE_NAME);
+        this.root = new HTable(conf, HConstants.ROOT_TABLE_NAME);
       }
       t = root;
     } else {
       // For normal regions we need to update the meta region
       if (meta == null) {
-        meta = new HTable(conf, META_TABLE_NAME);
+        meta = new HTable(conf, HConstants.META_TABLE_NAME);
       }
       t = meta;
     }
@@ -181,13 +181,15 @@ class CompactSplitThread extends Thread implements HConstants {
     this.server.removeFromOnlineRegions(oldRegionInfo);
 
     Put put = new Put(oldRegionInfo.getRegionName());
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER,
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
       Writables.getBytes(oldRegionInfo));
-    put.add(CATALOG_FAMILY, SERVER_QUALIFIER, EMPTY_BYTE_ARRAY);
-    put.add(CATALOG_FAMILY, STARTCODE_QUALIFIER, EMPTY_BYTE_ARRAY);
-    put.add(CATALOG_FAMILY, SPLITA_QUALIFIER,
+    put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        HConstants.EMPTY_BYTE_ARRAY);
+    put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+        HConstants.EMPTY_BYTE_ARRAY);
+    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
       Writables.getBytes(newRegions[0].getRegionInfo()));
-    put.add(CATALOG_FAMILY, SPLITB_QUALIFIER,
+    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
       Writables.getBytes(newRegions[1].getRegionInfo()));
     t.put(put);
 
@@ -198,8 +200,8 @@ class CompactSplitThread extends Thread implements HConstants {
     // Add new regions to META
     for (int i = 0; i < newRegions.length; i++) {
       put = new Put(newRegions[i].getRegionName());
-      put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(
-        newRegions[i].getRegionInfo()));
+      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+          Writables.getBytes(newRegions[i].getRegionInfo()));
       t.put(put);
     }
 

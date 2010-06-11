@@ -21,13 +21,12 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
 
 import java.io.IOException;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
-abstract class RegionServerOperation implements Delayed, HConstants {
+abstract class RegionServerOperation implements Delayed {
   protected static final Log LOG =
     LogFactory.getLog(RegionServerOperation.class.getName());
 

@@ -31,15 +31,16 @@ import java.util.Properties;
  * Tool for reading ZooKeeper servers from HBase XML configuation and producing
  * a line-by-line list for use by bash scripts.
  */
-public class ZKServerTool implements HConstants {
+public class ZKServerTool {
   /**
    * Run the tool.
    * @param args Command line arguments. First arg is path to zookeepers file.
    */
   public static void main(String args[]) {
     Configuration conf = HBaseConfiguration.create();
-    // Note that we do not simply grab the property ZOOKEEPER_QUORUM from
-    // the HBaseConfiguration because the user may be using a zoo.cfg file.
+    // Note that we do not simply grab the property
+    // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
+    // user may be using a zoo.cfg file.
     Properties zkProps = HQuorumPeer.makeZKProps(conf);
     for (Entry<Object, Object> entry : zkProps.entrySet()) {
       String key = entry.getKey().toString().trim();

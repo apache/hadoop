@@ -70,9 +70,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
-public class HConnectionManager implements HConstants {
-  private static final Delete [] DELETE_ARRAY_TYPE = new Delete[]{};
-  private static final Put [] PUT_ARRAY_TYPE = new Put[]{};
+public class HConnectionManager {
+  private static final Delete[] DELETE_ARRAY_TYPE = new Delete[] {};
+  private static final Put[] PUT_ARRAY_TYPE = new Put[] {};
 
   // Register a shutdown hook, one that cleans up RPC and closes zk sessions.
   static {
@@ -245,7 +245,7 @@ public class HConnectionManager implements HConstants {
   }
 
   /* Encapsulates finding the servers for an HBase instance */
-  private static class TableServers implements ServerConnection, HConstants {
+  private static class TableServers implements ServerConnection {
     static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
@@ -284,7 +284,8 @@ public class HConnectionManager implements HConstants {
       this.conf = conf;
 
       String serverClassName =
-        conf.get(REGION_SERVER_CLASS, DEFAULT_REGION_SERVER_CLASS);
+        conf.get(HConstants.REGION_SERVER_CLASS,
+            HConstants.DEFAULT_REGION_SERVER_CLASS);
 
       this.closed = false;
 
@@ -300,7 +301,9 @@ public class HConnectionManager implements HConstants {
       this.pause = conf.getLong("hbase.client.pause", 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
-      this.rpcTimeout = conf.getLong(HBASE_REGIONSERVER_LEASE_PERIOD_KEY, DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+      this.rpcTimeout = conf.getLong(
+          HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+          HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
 
       this.master = null;
       this.masterChecked = false;
@@ -443,7 +446,8 @@ public class HConnectionManager implements HConstants {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         public boolean processRow(Result result) throws IOException {
           try {
-            byte[] value = result.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+            byte[] value = result.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER);
             HRegionInfo info = null;
             if (value != null) {
               info = Writables.getHRegionInfo(value);
@@ -477,11 +481,13 @@ public class HConnectionManager implements HConstants {
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result row) throws IOException {
-          byte[] value = row.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+          byte[] value = row.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER);
           HRegionInfo info = Writables.getHRegionInfoOrNull(value);
           if (info != null) {
             if (Bytes.equals(tableName, info.getTableDesc().getName())) {
-              value = row.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+              value = row.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.SERVER_QUALIFIER);
               if (value == null) {
                 available.set(false);
                 return false;
@@ -519,7 +525,8 @@ public class HConnectionManager implements HConstants {
       byte[] endKey;
       HRegionInfo currentRegion;
       Scan scan = new Scan(startKey);
-      scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
       int rows = this.conf.getInt("hbase.meta.scanner.caching", 100);
       scan.setCaching(rows);
       ScannerCallable s = new ScannerCallable(this,
@@ -569,7 +576,8 @@ public class HConnectionManager implements HConstants {
         }
         public boolean processRow(Result rowResult) throws IOException {
           HRegionInfo info = Writables.getHRegionInfo(
-              rowResult.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
+              rowResult.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
           HTableDescriptor desc = info.getTableDesc();
           if (Bytes.compareTo(desc.getName(), tableName) == 0) {
             result = desc;
@@ -619,7 +627,7 @@ public class HConnectionManager implements HConstants {
             "table name cannot be null or zero length");
       }
 
-      if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         synchronized (rootRegionLock) {
           // This block guards against two threads trying to find the root
           // region at the same time. One will go do the find while the
@@ -630,13 +638,13 @@ public class HConnectionManager implements HConstants {
           }
           return this.rootRegionLocation;
         }
-      } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
-        return locateRegionInMeta(ROOT_TABLE_NAME, tableName, row, useCache,
-                                  metaRegionLock);
+      } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+        return locateRegionInMeta(HConstants.ROOT_TABLE_NAME, tableName, row,
+            useCache, metaRegionLock);
       } else {
         // Region not in the cache - have to go to the meta RS
-        return locateRegionInMeta(META_TABLE_NAME, tableName, row, useCache,
-                                  userRegionLock);
+        return locateRegionInMeta(HConstants.META_TABLE_NAME, tableName, row,
+            useCache, userRegionLock);
       }
     }
 
@@ -702,8 +710,8 @@ public class HConnectionManager implements HConstants {
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
-          byte [] value = regionInfoRow.getValue(CATALOG_FAMILY,
-              REGIONINFO_QUALIFIER);
+          byte[] value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER);
           if (value == null || value.length == 0) {
             throw new IOException("HRegionInfo was null or empty in " +
               Bytes.toString(parentTable) + ", row=" + regionInfoRow);
@@ -721,7 +729,8 @@ public class HConnectionManager implements HConstants {
               regionInfo.getRegionNameAsString());
           }
 
-          value = regionInfoRow.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+          value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.SERVER_QUALIFIER);
           String serverAddress = "";
           if(value != null) {
             serverAddress = Bytes.toString(value);
@@ -824,9 +833,9 @@ public class HConnectionManager implements HConstants {
 
           // make sure that the end key is greater than the row we're looking
           // for, otherwise the row actually belongs in the next region, not
-          // this one. the exception case is when the endkey is EMPTY_START_ROW,
-          // signifying that the region we're checking is actually the last
-          // region in the table.
+          // this one. the exception case is when the endkey is
+          // HConstants.EMPTY_START_ROW, signifying that the region we're
+          // checking is actually the last region in the table.
           if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
               KeyValue.getRowComparator(tableName).compareRows(endKey, 0, endKey.length,
                   row, 0, row.length) > 0) {

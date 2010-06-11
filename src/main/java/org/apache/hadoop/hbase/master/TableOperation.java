@@ -41,7 +41,7 @@ import java.util.TreeSet;
  * objects in a table. (For a table, operate on each of its rows
  * in .META.).
  */
-abstract class TableOperation implements HConstants {
+abstract class TableOperation {
   private final Set<MetaRegion> metaRegions;
   protected final byte [] tableName;
   // Do regions in order.
@@ -81,7 +81,8 @@ abstract class TableOperation implements HConstants {
       // Open a scanner on the meta region
       byte [] tableNameMetaStart =
         Bytes.toBytes(Bytes.toString(tableName) + ",,");
-      Scan scan = new Scan(tableNameMetaStart).addFamily(CATALOG_FAMILY);
+      final Scan scan = new Scan(tableNameMetaStart)
+        .addFamily(HConstants.CATALOG_FAMILY);
       long scannerId = this.server.openScanner(m.getRegionName(), scan);
       int rows = this.master.getConfiguration().
         getInt("hbase.meta.scanner.caching", 100);
@@ -96,9 +97,10 @@ abstract class TableOperation implements HConstants {
           HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
-            LOG.error(Bytes.toString(CATALOG_FAMILY) + ":" +
-                Bytes.toString(REGIONINFO_QUALIFIER) + " not found on " +
-                      Bytes.toStringBinary(values.getRow()));
+            LOG.error(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
+                + Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
+                + " not found on "
+                + Bytes.toStringBinary(values.getRow()));
             continue;
           }
           final String serverAddress = BaseScanner.getServerAddress(values);

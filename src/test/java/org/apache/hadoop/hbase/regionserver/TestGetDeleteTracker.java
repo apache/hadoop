@@ -30,17 +30,17 @@ import org.apache.hadoop.hbase.regionserver.GetDeleteTracker.Delete;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
-public class TestGetDeleteTracker extends HBaseTestCase implements HConstants {
+public class TestGetDeleteTracker extends HBaseTestCase {
 
   private static final boolean PRINT = true;
 
-  private byte [] col1 = null;
-  private byte [] col2 = null;
+  private byte[] col1 = null;
+  private byte[] col2 = null;
 
   private int col1Len = 0;
   private int col2Len = 0;
 
-  private byte [] empty = null;
+  private byte[] empty = null;
 
   private long ts1 = 0L;
   private long ts2 = 0L;

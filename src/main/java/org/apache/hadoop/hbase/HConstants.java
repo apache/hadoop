@@ -25,17 +25,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * HConstants holds a bunch of HBase-related constants
  */
-public interface HConstants {
+public final class HConstants {
 
   /** long constant for zero */
-  static final Long ZERO_L = Long.valueOf(0L);
-  static final String NINES = "99999999999999";
-  static final String ZEROES = "00000000000000";
+  public static final Long ZERO_L = Long.valueOf(0L);
+  public static final String NINES = "99999999999999";
+  public static final String ZEROES = "00000000000000";
 
   // For migration
 
   /** name of version file */
-  static final String VERSION_FILE_NAME = "hbase.version";
+  public static final String VERSION_FILE_NAME = "hbase.version";
 
   /**
    * Current version of file system.
@@ -52,98 +52,98 @@ public interface HConstants {
   //TODO: Is having HBase homed on port 60k OK?
 
   /** Cluster is in distributed mode or not */
-  static final String CLUSTER_DISTRIBUTED = "hbase.cluster.distributed";
+  public static final String CLUSTER_DISTRIBUTED = "hbase.cluster.distributed";
 
   /** Cluster is standalone or pseudo-distributed */
-  static final String CLUSTER_IS_LOCAL = "false";
+  public static final String CLUSTER_IS_LOCAL = "false";
 
   /** Cluster is fully-distributed */
-  static final String CLUSTER_IS_DISTRIBUTED = "true";
+  public static final String CLUSTER_IS_DISTRIBUTED = "true";
 
   /** default host address */
-  static final String DEFAULT_HOST = "0.0.0.0";
+  public static final String DEFAULT_HOST = "0.0.0.0";
 
   /** Parameter name for port master listens on. */
-  static final String MASTER_PORT = "hbase.master.port";
+  public static final String MASTER_PORT = "hbase.master.port";
 
   /** default port that the master listens on */
-  static final int DEFAULT_MASTER_PORT = 60000;
+  public static final int DEFAULT_MASTER_PORT = 60000;
 
   /** default port for master web api */
-  static final int DEFAULT_MASTER_INFOPORT = 60010;
+  public static final int DEFAULT_MASTER_INFOPORT = 60010;
 
   /** Name of ZooKeeper quorum configuration parameter. */
-  static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
+  public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 
   /** Name of ZooKeeper config file in conf/ directory. */
-  static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
+  public static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
 
   /** Parameter name for number of times to retry writes to ZooKeeper. */
-  static final String ZOOKEEPER_RETRIES = "zookeeper.retries";
+  public static final String ZOOKEEPER_RETRIES = "zookeeper.retries";
   /** Default number of times to retry writes to ZooKeeper. */
-  static final int DEFAULT_ZOOKEEPER_RETRIES = 5;
+  public static final int DEFAULT_ZOOKEEPER_RETRIES = 5;
 
   /** Parameter name for ZooKeeper pause between retries. In milliseconds. */
-  static final String ZOOKEEPER_PAUSE = "zookeeper.pause";
+  public static final String ZOOKEEPER_PAUSE = "zookeeper.pause";
   /** Default ZooKeeper pause value. In milliseconds. */
-  static final int DEFAULT_ZOOKEEPER_PAUSE = 2 * 1000;
+  public static final int DEFAULT_ZOOKEEPER_PAUSE = 2 * 1000;
 
   /** default client port that the zookeeper listens on */
-  static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
+  public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
 
   /** Parameter name for the root dir in ZK for this cluster */
-  static final String ZOOKEEPER_ZNODE_PARENT = "zookeeper.znode.parent";
+  public static final String ZOOKEEPER_ZNODE_PARENT = "zookeeper.znode.parent";
 
-  static final String DEFAULT_ZOOKEEPER_ZNODE_PARENT = "/hbase";
+  public static final String DEFAULT_ZOOKEEPER_ZNODE_PARENT = "/hbase";
 
   /** Parameter name for port region server listens on. */
-  static final String REGIONSERVER_PORT = "hbase.regionserver.port";
+  public static final String REGIONSERVER_PORT = "hbase.regionserver.port";
 
   /** Default port region server listens on. */
-  static final int DEFAULT_REGIONSERVER_PORT = 60020;
+  public static final int DEFAULT_REGIONSERVER_PORT = 60020;
 
   /** default port for region server web api */
-  static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
+  public static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
 
   /** Parameter name for what region server interface to use. */
-  static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
+  public static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
 
   /** Parameter name for what region server implementation to use. */
-  static final String REGION_SERVER_IMPL= "hbase.regionserver.impl";
+  public static final String REGION_SERVER_IMPL= "hbase.regionserver.impl";
 
   /** Default region server interface class name. */
-  static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
+  public static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 
   /** Parameter name for how often threads should wake up */
-  static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
+  public static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
 
   /** Parameter name for how often a region should should perform a major compaction */
-  static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
+  public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
   /** Parameter name for HBase instance root directory */
-  static final String HBASE_DIR = "hbase.rootdir";
+  public static final String HBASE_DIR = "hbase.rootdir";
 
   /** Used to construct the name of the log directory for a region server
    * Use '.' as a special character to seperate the log files from table data */
-  static final String HREGION_LOGDIR_NAME = ".logs";
+  public static final String HREGION_LOGDIR_NAME = ".logs";
 
   /** Like the previous, but for old logs that are about to be deleted */
-  static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
+  public static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
 
   /** Name of old log file for reconstruction */
-  static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";
+  public static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";
 
   /** Used to construct the name of the compaction directory during compaction */
-  static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
+  public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
   /** Default maximum file size */
-  static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
+  public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 
   /** Default size of a reservation block   */
-  static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
+  public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
 
   /** Maximum value length, enforced on KeyValue construction */
-  static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
+  public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
 
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
@@ -171,91 +171,91 @@ public interface HConstants {
   //
 
   /** The root table's name.*/
-  static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
+  public static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
 
   /** The META table's name. */
-  static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
+  public static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
 
   /** The catalog family as a string*/
-  static final String CATALOG_FAMILY_STR = "info";
+  public static final String CATALOG_FAMILY_STR = "info";
 
   /** The catalog family */
-  static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
+  public static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
 
   /** The catalog historian family */
-  static final byte [] CATALOG_HISTORIAN_FAMILY = Bytes.toBytes("historian");
+  public static final byte [] CATALOG_HISTORIAN_FAMILY = Bytes.toBytes("historian");
 
   /** The regioninfo column qualifier */
-  static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes("regioninfo");
+  public static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes("regioninfo");
 
   /** The server column qualifier */
-  static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
+  public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
 
   /** The startcode column qualifier */
-  static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes("serverstartcode");
+  public static final byte [] STARTCODE_QUALIFIER = Bytes.toBytes("serverstartcode");
 
   /** The lower-half split region column qualifier */
-  static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
+  public static final byte [] SPLITA_QUALIFIER = Bytes.toBytes("splitA");
 
   /** The upper-half split region column qualifier */
-  static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
+  public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
 
   // Other constants
 
   /**
    * An empty instance.
    */
-  static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
+  public static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
 
   /**
    * Used by scanners, etc when they want to start at the beginning of a region
    */
-  static final byte [] EMPTY_START_ROW = EMPTY_BYTE_ARRAY;
+  public static final byte [] EMPTY_START_ROW = EMPTY_BYTE_ARRAY;
 
   /**
    * Last row in a table.
    */
-  static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+  public static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
 
   /**
     * Used by scanners and others when they're trying to detect the end of a
     * table
     */
-  static final byte [] LAST_ROW = EMPTY_BYTE_ARRAY;
+  public static final byte [] LAST_ROW = EMPTY_BYTE_ARRAY;
 
   /**
    * Max length a row can have because of the limitation in TFile.
    */
-  static final int MAX_ROW_LENGTH = Short.MAX_VALUE;
+  public static final int MAX_ROW_LENGTH = Short.MAX_VALUE;
 
   /** When we encode strings, we always specify UTF8 encoding */
-  static final String UTF8_ENCODING = "UTF-8";
+  public static final String UTF8_ENCODING = "UTF-8";
 
   /**
    * Timestamp to use when we want to refer to the latest cell.
    * This is the timestamp sent by clients when no timestamp is specified on
    * commit.
    */
-  static final long LATEST_TIMESTAMP = Long.MAX_VALUE;
+  public static final long LATEST_TIMESTAMP = Long.MAX_VALUE;
 
   /**
    * LATEST_TIMESTAMP in bytes form
    */
-  static final byte [] LATEST_TIMESTAMP_BYTES = Bytes.toBytes(LATEST_TIMESTAMP);
+  public static final byte [] LATEST_TIMESTAMP_BYTES = Bytes.toBytes(LATEST_TIMESTAMP);
 
   /**
    * Define for 'return-all-versions'.
    */
-  static final int ALL_VERSIONS = Integer.MAX_VALUE;
+  public static final int ALL_VERSIONS = Integer.MAX_VALUE;
 
   /**
    * Unlimited time-to-live.
    */
-//  static final int FOREVER = -1;
-  static final int FOREVER = Integer.MAX_VALUE;
+//  public static final int FOREVER = -1;
+  public static final int FOREVER = Integer.MAX_VALUE;
 
   /**
    * Seconds in a week
@@ -271,9 +271,9 @@ public interface HConstants {
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be
   //      public. They could have package visibility
-  static final String NAME = "NAME";
-  static final String VERSIONS = "VERSIONS";
-  static final String IN_MEMORY = "IN_MEMORY";
+  public static final String NAME = "NAME";
+  public static final String VERSIONS = "VERSIONS";
+  public static final String IN_MEMORY = "IN_MEMORY";
 
   /**
    * This is a retry backoff multiplier table similar to the BSD TCP syn
@@ -338,5 +338,9 @@ public interface HConstants {
    * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}.
    */
   public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
+
+  private HConstants() {
+    // Can't be instantiated with this ctor.
+  }
 
 }

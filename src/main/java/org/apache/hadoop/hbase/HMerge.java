@@ -48,7 +48,7 @@ import java.util.Random;
  * A non-instantiable class that has a static method capable of compacting
  * a table by merging adjacent regions.
  */
-class HMerge implements HConstants {
+class HMerge {
   static final Log LOG = LogFactory.getLog(HMerge.class);
   static final Random rand = new Random();
 
@@ -78,7 +78,7 @@ class HMerge implements HConstants {
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean masterIsRunning = connection.isMasterRunning();
     HConnectionManager.deleteConnectionInfo(conf, false);
-    if (Bytes.equals(tableName, META_TABLE_NAME)) {
+    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       if (masterIsRunning) {
         throw new IllegalStateException(
             "Can not compact META table if instance is on-line");
@@ -106,16 +106,16 @@ class HMerge implements HConstants {
     throws IOException {
       this.conf = conf;
       this.fs = fs;
-      this.maxFilesize =
-        conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
+      this.maxFilesize = conf.getLong("hbase.hregion.max.filesize",
+          HConstants.DEFAULT_MAX_FILE_SIZE);
 
       this.tabledir = new Path(
-          fs.makeQualified(new Path(conf.get(HBASE_DIR))),
+          fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR))),
           Bytes.toString(tableName)
       );
       Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
-          HREGION_LOGDIR_NAME);
-      Path oldLogDir = new Path(tabledir, HREGION_OLDLOGDIR_NAME);
+          HConstants.HREGION_LOGDIR_NAME);
+      Path oldLogDir = new Path(tabledir, HConstants.HREGION_OLDLOGDIR_NAME);
       this.hlog =
         new HLog(fs, logdir, oldLogDir, conf, null);
     }
@@ -204,8 +204,9 @@ class HMerge implements HConstants {
     throws IOException {
       super(conf, fs, tableName);
       this.tableName = tableName;
-      this.table = new HTable(conf, META_TABLE_NAME);
-      this.metaScanner = table.getScanner(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+      this.table = new HTable(conf, HConstants.META_TABLE_NAME);
+      this.metaScanner = table.getScanner(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
       this.latestRegion = null;
     }
 
@@ -215,11 +216,12 @@ class HMerge implements HConstants {
         if (results == null) {
           return null;
         }
-        byte [] regionInfoValue = results.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+        byte[] regionInfoValue = results.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
         if (regionInfoValue == null || regionInfoValue.length == 0) {
           throw new NoSuchElementException("meta region entry missing " +
-              Bytes.toString(CATALOG_FAMILY) + ":" +
-              Bytes.toString(REGIONINFO_QUALIFIER));
+              Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
+              Bytes.toString(HConstants.REGIONINFO_QUALIFIER));
         }
         HRegionInfo region = Writables.getHRegionInfo(regionInfoValue);
         if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
@@ -253,7 +255,8 @@ class HMerge implements HConstants {
       boolean foundResult = false;
       while (currentRow != null) {
         LOG.info("Row: <" + Bytes.toString(currentRow.getRow()) + ">");
-        byte [] regionInfoValue = currentRow.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+        byte[] regionInfoValue = currentRow.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
         if (regionInfoValue == null || regionInfoValue.length == 0) {
           currentRow = metaScanner.next();
           continue;
@@ -299,7 +302,7 @@ class HMerge implements HConstants {
       newRegion.getRegionInfo().setOffline(true);
 
       Put put = new Put(newRegion.getRegionName());
-      put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER,
+      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(newRegion.getRegionInfo()));
       table.put(put);
 
@@ -317,12 +320,11 @@ class HMerge implements HConstants {
 
     OfflineMerger(Configuration conf, FileSystem fs)
         throws IOException {
-
-      super(conf, fs, META_TABLE_NAME);
+      super(conf, fs, HConstants.META_TABLE_NAME);
 
       Path rootTableDir = HTableDescriptor.getTableDir(
-          fs.makeQualified(new Path(conf.get(HBASE_DIR))),
-          ROOT_TABLE_NAME);
+          fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR))),
+          HConstants.ROOT_TABLE_NAME);
 
       // Scan root region to find all the meta regions
 
@@ -331,7 +333,8 @@ class HMerge implements HConstants {
       root.initialize(null, null);
 
       Scan scan = new Scan();
-      scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
       InternalScanner rootScanner =
         root.getScanner(scan);
 

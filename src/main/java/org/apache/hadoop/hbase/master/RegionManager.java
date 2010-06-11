@@ -59,7 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
  */
-public class RegionManager implements HConstants {
+public class RegionManager {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
 
   private AtomicReference<HServerAddress> rootRegionLocation =
@@ -137,8 +137,10 @@ public class RegionManager implements HConstants {
     // Scans the meta table
     metaScannerThread = new MetaScanner(master);
 
-    zooKeeperNumRetries = conf.getInt(ZOOKEEPER_RETRIES, DEFAULT_ZOOKEEPER_RETRIES);
-    zooKeeperPause = conf.getInt(ZOOKEEPER_PAUSE, DEFAULT_ZOOKEEPER_PAUSE);
+    zooKeeperNumRetries = conf.getInt(HConstants.ZOOKEEPER_RETRIES,
+        HConstants.DEFAULT_ZOOKEEPER_RETRIES);
+    zooKeeperPause = conf.getInt(HConstants.ZOOKEEPER_PAUSE,
+        HConstants.DEFAULT_ZOOKEEPER_PAUSE);
 
     reassignRootRegion();
   }
@@ -508,13 +510,13 @@ public class RegionManager implements HConstants {
    * PathFilter that accepts hbase tables only.
    */
   static class TableDirFilter implements PathFilter {
-    public boolean accept(Path path) {
+    public boolean accept(final Path path) {
       // skip the region servers' log dirs && version file
       // HBASE-1112 want to separate the log dirs from table's data dirs by a
       // special character.
-      String pathname = path.getName();
-      return !pathname.equals(HLog.HREGION_LOGDIR_NAME) &&
-        !pathname.equals(VERSION_FILE_NAME);
+      final String pathname = path.getName();
+      return (!pathname.equals(HConstants.HREGION_LOGDIR_NAME)
+              && !pathname.equals(HConstants.VERSION_FILE_NAME));
     }
 
   }
@@ -524,7 +526,7 @@ public class RegionManager implements HConstants {
    */
   static class RegionDirFilter implements PathFilter {
     public boolean accept(Path path) {
-      return !path.getName().equals(HREGION_COMPACTIONDIR_NAME);
+      return !path.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME);
     }
   }
 
@@ -727,7 +729,8 @@ public class RegionManager implements HConstants {
     byte [] regionName = region.getRegionName();
 
     Put put = new Put(regionName);
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(info));
     server.put(metaRegionName, put);
 
     // 4. Close the new region to flush it to disk.  Close its log file too.
@@ -1175,10 +1178,10 @@ public class RegionManager implements HConstants {
 
   private long getPauseTime(int tries) {
     int attempt = tries;
-    if (attempt >= RETRY_BACKOFF.length) {
-      attempt = RETRY_BACKOFF.length - 1;
+    if (attempt >= HConstants.RETRY_BACKOFF.length) {
+      attempt = HConstants.RETRY_BACKOFF.length - 1;
     }
-    return this.zooKeeperPause * RETRY_BACKOFF[attempt];
+    return this.zooKeeperPause * HConstants.RETRY_BACKOFF[attempt];
   }
 
   private void sleep(int attempt) {

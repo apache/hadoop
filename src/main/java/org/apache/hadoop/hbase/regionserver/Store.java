@@ -93,7 +93,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-public class Store implements HConstants, HeapSize {
+public class Store implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
   /**
    * Comparator that looks at columns and compares their family portions.
@@ -207,7 +207,7 @@ public class Store implements HConstants, HeapSize {
     // Check if this is in-memory store
     this.inMemory = family.isInMemory();
 
-    // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
+    // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
     long maxFileSize = info.getTableDesc().getMaxFileSize();
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
       maxFileSize = conf.getLong("hbase.hregion.max.filesize",
@@ -477,7 +477,7 @@ public class Store implements HConstants, HeapSize {
 
   public void bulkLoadHFile(String srcPathStr) throws IOException {
     Path srcPath = new Path(srcPathStr);
-    
+
     HFile.Reader reader  = null;
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
@@ -485,20 +485,20 @@ public class Store implements HConstants, HeapSize {
       reader = new HFile.Reader(srcPath.getFileSystem(conf),
           srcPath, null, false);
       reader.loadFileInfo();
-      
+
       byte[] firstKey = reader.getFirstRowKey();
       byte[] lastKey = reader.getLastRowKey();
-      
+
       LOG.debug("HFile bounds: first=" + Bytes.toStringBinary(firstKey) +
           " last=" + Bytes.toStringBinary(lastKey));
       LOG.debug("Region bounds: first=" +
           Bytes.toStringBinary(region.getStartKey()) +
           " last=" + Bytes.toStringBinary(region.getEndKey()));
-      
+
       HRegionInfo hri = region.getRegionInfo();
       if (!hri.containsRange(firstKey, lastKey)) {
         throw new WrongRegionException(
-            "Bulk load file " + srcPathStr + " does not fit inside region " 
+            "Bulk load file " + srcPathStr + " does not fit inside region "
             + this.region);
       }
     } finally {
@@ -516,15 +516,15 @@ public class Store implements HConstants, HeapSize {
       LOG.info("Copied to temporary path on dst filesystem: " + tmpPath);
       srcPath = tmpPath;
     }
-    
+
     Path dstPath = StoreFile.getRandomFilename(fs, homedir);
     LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
     StoreFile.rename(fs, srcPath, dstPath);
-    
+
     StoreFile sf = new StoreFile(fs, dstPath, blockcache,
         this.conf, this.family.getBloomFilterType(), this.inMemory);
     sf.createReader();
-    
+
     LOG.info("Moved hfile " + srcPath + " into store directory " +
         homedir + " - updating store file list.");
 
@@ -539,7 +539,7 @@ public class Store implements HConstants, HeapSize {
       this.lock.writeLock().unlock();
     }
     LOG.info("Successfully loaded store file " + srcPath
-        + " into store " + this + " (new location: " + dstPath + ")"); 
+        + " into store " + this + " (new location: " + dstPath + ")");
   }
 
   /**
@@ -554,10 +554,10 @@ public class Store implements HConstants, HeapSize {
     this.lock.writeLock().lock();
     try {
       ImmutableList<StoreFile> result = storefiles;
-      
+
       // Clear so metrics doesn't find them.
       storefiles = ImmutableList.of();
-      
+
       for (StoreFile f: result) {
         f.closeReader();
       }
@@ -1059,7 +1059,7 @@ public class Store implements HConstants, HeapSize {
             newStoreFiles.add(sf);
           }
         }
-        
+
         // If a StoreFile result, move it into place.  May be null.
         if (result != null) {
           newStoreFiles.add(result);
@@ -1109,7 +1109,7 @@ public class Store implements HConstants, HeapSize {
 
   /*
    * @param wantedVersions How many versions were asked for.
-   * @return wantedVersions or this families' VERSIONS.
+   * @return wantedVersions or this families' {@link HConstants#VERSIONS}.
    */
   int versionsToReturn(final int wantedVersions) {
     if (wantedVersions <= 0) {
@@ -1363,7 +1363,7 @@ public class Store implements HConstants, HeapSize {
 
   /**
    * Return a scanner for both the memstore and the HStore files
-   * @throws IOException 
+   * @throws IOException
    */
   protected KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
@@ -1470,7 +1470,7 @@ public class Store implements HConstants, HeapSize {
       }
     } else if (result > 0) {
       // Less than what was asked for but maybe < because we're asking for
-      // r/c/LATEST_TIMESTAMP -- what was returned was r/c-1/SOME_TS...
+      // r/c/HConstants.LATEST_TIMESTAMP -- what was returned was r/c-1/SOME_TS...
       // A next will get us a r/c/SOME_TS.
       if (!s.next()) {
         return false;

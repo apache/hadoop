@@ -28,19 +28,18 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestWildcardColumnTracker extends HBaseTestCase
-implements HConstants {
+public class TestWildcardColumnTracker extends HBaseTestCase {
   private boolean PRINT = false;
 
   public void testGet_SingleVersion() {
-    if(PRINT) {
+    if (PRINT) {
       System.out.println("SingleVersion");
     }
-    byte [] col1 = Bytes.toBytes("col1");
-    byte [] col2 = Bytes.toBytes("col2");
-    byte [] col3 = Bytes.toBytes("col3");
-    byte [] col4 = Bytes.toBytes("col4");
-    byte [] col5 = Bytes.toBytes("col5");
+    byte[] col1 = Bytes.toBytes("col1");
+    byte[] col2 = Bytes.toBytes("col2");
+    byte[] col3 = Bytes.toBytes("col3");
+    byte[] col4 = Bytes.toBytes("col4");
+    byte[] col5 = Bytes.toBytes("col5");
 
     //Create tracker
     List<MatchCode> expected = new ArrayList<MatchCode>();

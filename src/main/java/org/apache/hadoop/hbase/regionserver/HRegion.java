@@ -115,7 +115,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * regionName is a unique identifier for this HRegion. (startKey, endKey]
  * defines the keyspace for this HRegion.
  */
-public class HRegion implements HConstants, HeapSize { // , Writable{
+public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
@@ -280,7 +280,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     this.conf = conf;
     this.regionInfo = regionInfo;
     this.flushListener = flushListener;
-    this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000);
     String encodedNameStr = this.regionInfo.getEncodedName();
     this.regiondir = new Path(basedir, encodedNameStr);
     if (LOG.isDebugEnabled()) {
@@ -309,7 +310,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    */
   public void initialize(Path initialFiles, final Progressable reporter)
   throws IOException {
-    Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
+    Path oldLogFile = new Path(regiondir, HConstants.HREGION_OLDLOGFILE_NAME);
 
     moveInitialFilesIntoPlace(this.fs, initialFiles, this.regiondir);
 
@@ -743,7 +744,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
    * @return compaction directory for the passed in <code>dir</code>
    */
   static Path getCompactionDir(final Path dir) {
-   return new Path(dir, HREGION_COMPACTIONDIR_NAME);
+   return new Path(dir, HConstants.HREGION_COMPACTIONDIR_NAME);
   }
 
   /*
@@ -1504,12 +1505,12 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   /**
    * Checks if any stamps is Long.MAX_VALUE.  If so, sets them to now.
    * <p>
-   * This acts to replace LATEST_TIMESTAMP with now.
+   * This acts to replace {@link HConstants#LATEST_TIMESTAMP} with {@code now}.
    * @param keys
    * @param now
    * @return <code>true</code> when updating the time stamp completed.
    */
-  private boolean updateKeys(List<KeyValue> keys, byte [] now) {
+  private boolean updateKeys(final List<KeyValue> keys, final byte[] now) {
     if (keys == null || keys.isEmpty()) {
       return false;
     }
@@ -2117,8 +2118,7 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   // Utility methods
   /**
    * A utility method to create new instances of HRegion based on the
-   * {@link org.apache.hadoop.hbase.HConstants#REGION_IMPL} configuration
-   * property.
+   * {@link HConstants#REGION_IMPL} configuration property.
    * @param basedir qualified path of directory where region should be located,
    * usually the table directory.
    * @param log The HLog is the outbound log for any updates to the HRegion
@@ -2177,8 +2177,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     HRegion region = HRegion.newHRegion(tableDir,
-      new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME),
-          new Path(regionDir, HREGION_OLDLOGDIR_NAME), conf, null),
+      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
+          new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf, null),
       fs, conf, info, null);
     region.initialize(null, null);
     return region;
@@ -2230,12 +2230,14 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
   throws IOException {
     meta.checkResources();
     // The row key is the region name
-    byte [] row = r.getRegionName();
+    byte[] row = r.getRegionName();
     Integer lid = meta.obtainRowLock(row);
     try {
-      List<KeyValue> edits = new ArrayList<KeyValue>();
-      edits.add(new KeyValue(row, CATALOG_FAMILY, REGIONINFO_QUALIFIER,
-          EnvironmentEdgeManager.currentTimeMillis(), Writables.getBytes(r.getRegionInfo())));
+      final List<KeyValue> edits = new ArrayList<KeyValue>(1);
+      edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER,
+          EnvironmentEdgeManager.currentTimeMillis(),
+          Writables.getBytes(r.getRegionInfo())));
       meta.put(HConstants.CATALOG_FAMILY, edits);
     } finally {
       meta.releaseRowLock(lid);
@@ -2275,7 +2277,8 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     byte [] row = info.getRegionName();
     Put put = new Put(row);
     info.setOffline(true);
-    put.add(CATALOG_FAMILY, REGIONINFO_QUALIFIER, Writables.getBytes(info));
+    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(info));
     srvr.put(metaRegionName, put);
     cleanRegionInMETA(srvr, metaRegionName, info);
   }
@@ -2292,8 +2295,9 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     final byte [] metaRegionName, final HRegionInfo info)
   throws IOException {
     Delete del = new Delete(info.getRegionName());
-    del.deleteColumns(CATALOG_FAMILY, SERVER_QUALIFIER);
-    del.deleteColumns(CATALOG_FAMILY, STARTCODE_QUALIFIER);
+    del.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+    del.deleteColumns(HConstants.CATALOG_FAMILY,
+        HConstants.STARTCODE_QUALIFIER);
     srvr.delete(metaRegionName, del);
   }
 
@@ -2449,23 +2453,28 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
     Path basedir = a.getBaseDir();
     // Presume both are of same region type -- i.e. both user or catalog
     // table regions.  This way can use comparator.
-    final byte [] startKey = a.comparator.matchingRows(a.getStartKey(), 0,
-          a.getStartKey().length,
-        EMPTY_BYTE_ARRAY, 0, EMPTY_BYTE_ARRAY.length) ||
-      b.comparator.matchingRows(b.getStartKey(), 0, b.getStartKey().length,
-        EMPTY_BYTE_ARRAY, 0, EMPTY_BYTE_ARRAY.length)?
-        EMPTY_BYTE_ARRAY:
-          a.comparator.compareRows(a.getStartKey(), 0, a.getStartKey().length,
-          b.getStartKey(), 0, b.getStartKey().length) <= 0?
-        a.getStartKey(): b.getStartKey();
-    final byte [] endKey = a.comparator.matchingRows(a.getEndKey(), 0,
-        a.getEndKey().length, EMPTY_BYTE_ARRAY, 0, EMPTY_BYTE_ARRAY.length) ||
-      a.comparator.matchingRows(b.getEndKey(), 0, b.getEndKey().length,
-        EMPTY_BYTE_ARRAY, 0, EMPTY_BYTE_ARRAY.length)?
-        EMPTY_BYTE_ARRAY:
-        a.comparator.compareRows(a.getEndKey(), 0, a.getEndKey().length,
-            b.getEndKey(), 0, b.getEndKey().length) <= 0?
-                b.getEndKey(): a.getEndKey();
+    final byte[] startKey =
+      (a.comparator.matchingRows(a.getStartKey(), 0, a.getStartKey().length,
+           HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
+       || b.comparator.matchingRows(b.getStartKey(), 0,
+              b.getStartKey().length, HConstants.EMPTY_BYTE_ARRAY, 0,
+              HConstants.EMPTY_BYTE_ARRAY.length))
+      ? HConstants.EMPTY_BYTE_ARRAY
+      : (a.comparator.compareRows(a.getStartKey(), 0, a.getStartKey().length,
+             b.getStartKey(), 0, b.getStartKey().length) <= 0
+         ? a.getStartKey()
+         : b.getStartKey());
+    final byte[] endKey =
+      (a.comparator.matchingRows(a.getEndKey(), 0, a.getEndKey().length,
+           HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
+       || a.comparator.matchingRows(b.getEndKey(), 0, b.getEndKey().length,
+              HConstants.EMPTY_BYTE_ARRAY, 0,
+              HConstants.EMPTY_BYTE_ARRAY.length))
+      ? HConstants.EMPTY_BYTE_ARRAY
+      : (a.comparator.compareRows(a.getEndKey(), 0, a.getEndKey().length,
+             b.getEndKey(), 0, b.getEndKey().length) <= 0
+         ? b.getEndKey()
+         : a.getEndKey());
 
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
     LOG.info("Creating new region " + newRegionInfo.toString());
@@ -2883,13 +2892,15 @@ public class HRegion implements HConstants, HeapSize { // , Writable{
       }
       majorCompact = true;
     }
-    Path tableDir  = new Path(args[0]);
-    Configuration c = HBaseConfiguration.create();
-    FileSystem fs = FileSystem.get(c);
-    Path logdir = new Path(c.get("hbase.tmp.dir"),
-      "hlog" + tableDir.getName() + EnvironmentEdgeManager.currentTimeMillis());
-    Path oldLogDir = new Path(c.get("hbase.tmp.dir"), HREGION_OLDLOGDIR_NAME);
-    HLog log = new HLog(fs, logdir, oldLogDir, c, null);
+    final Path tableDir = new Path(args[0]);
+    final Configuration c = HBaseConfiguration.create();
+    final FileSystem fs = FileSystem.get(c);
+    final Path logdir = new Path(c.get("hbase.tmp.dir"),
+        "hlog" + tableDir.getName()
+        + EnvironmentEdgeManager.currentTimeMillis());
+    final Path oldLogDir = new Path(c.get("hbase.tmp.dir"),
+        HConstants.HREGION_OLDLOGDIR_NAME);
+    final HLog log = new HLog(fs, logdir, oldLogDir, c, null);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
      } finally {

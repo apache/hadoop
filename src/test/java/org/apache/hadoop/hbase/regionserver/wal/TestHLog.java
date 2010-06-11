@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /** JUnit test case for HLog */
-public class TestHLog extends HBaseTestCase implements HConstants {
-  static final Log LOG = LogFactory.getLog(TestHLog.class);
+public class TestHLog extends HBaseTestCase {
+  private static final Log LOG = LogFactory.getLog(TestHLog.class);
   private Path dir;
   private Path oldLogDir;
   private MiniDFSCluster cluster;

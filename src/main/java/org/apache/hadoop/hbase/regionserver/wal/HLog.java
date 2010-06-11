@@ -116,7 +116,7 @@ import com.google.common.util.concurrent.NamingThreadFactory;
  * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
  *
  */
-public class HLog implements HConstants, Syncable {
+public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
@@ -223,7 +223,8 @@ public class HLog implements HConstants, Syncable {
   static byte [] COMPLETE_CACHE_FLUSH;
   static {
     try {
-      COMPLETE_CACHE_FLUSH = "HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING);
+      COMPLETE_CACHE_FLUSH =
+        "HBASE::CACHEFLUSH".getBytes(HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
       assert(false);
     }
@@ -1599,7 +1600,7 @@ public class HLog implements HConstants, Syncable {
     final List<Path> processedLogs, final Path oldLogDir,
     final FileSystem fs, final Configuration conf)
   throws IOException{
-    final Path corruptDir = new Path(conf.get(HBASE_DIR),
+    final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR),
       conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
 
     fs.mkdirs(corruptDir);
@@ -1623,7 +1624,7 @@ public class HLog implements HConstants, Syncable {
       HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
     Path regionDir =
             HRegion.getRegionDir(tableDir, HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
-    return new Path(regionDir, HREGION_OLDLOGFILE_NAME);
+    return new Path(regionDir, HConstants.HREGION_OLDLOGFILE_NAME);
    }
 
 
@@ -1671,8 +1672,8 @@ public class HLog implements HConstants, Syncable {
     }
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
-    Path baseDir = new Path(conf.get(HBASE_DIR));
-    Path oldLogDir = new Path(baseDir, HREGION_OLDLOGDIR_NAME);
+    final Path baseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     for (int i = 1; i < args.length; i++) {
       Path logPath = new Path(args[i]);
       if (!fs.exists(logPath)) {

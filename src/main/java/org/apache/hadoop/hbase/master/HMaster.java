@@ -104,7 +104,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @see HMasterRegionInterface
  * @see Watcher
  */
-public class HMaster extends Thread implements HConstants, HMasterInterface,
+public class HMaster extends Thread implements HMasterInterface,
     HMasterRegionInterface, Watcher {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
@@ -174,7 +174,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     checkRootDir(this.rootdir, this.conf, this.fs);
 
     // Make sure the region servers can archive their old logs
-    this.oldLogDir = new Path(this.rootdir, HREGION_OLDLOGDIR_NAME);
+    this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
     if(!this.fs.exists(this.oldLogDir)) {
       this.fs.mkdirs(this.oldLogDir);
     }
@@ -188,7 +188,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.address = new HServerAddress(this.rpcServer.getListenerAddress());
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
-    this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000);
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
     this.connection = ServerConnectionManager.getConnection(conf);
@@ -227,7 +228,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     final FileSystem fs)
   throws IOException {
     // If FS is in safe mode wait till out of it.
-    FSUtils.waitOnSafeMode(c, c.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000));
+    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000));
     // Filesystem is good. Go ahead and check for hbase.rootdir.
     if (!fs.exists(rd)) {
       fs.mkdirs(rd);
@@ -293,7 +295,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // Find out our address up in DNS.
     String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
       c.get("hbase.master.dns.nameserver","default"));
-    s += ":" + c.get(MASTER_PORT, Integer.toString(DEFAULT_MASTER_PORT));
+    s += ":" + c.get(HConstants.MASTER_PORT,
+        Integer.toString(HConstants.DEFAULT_MASTER_PORT));
     return s;
   }
 
@@ -749,18 +752,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // table would sit should it exist. Open scanner on it. If a region
     // for the table we want to create already exists, then table already
     // created. Throw already-exists exception.
-    MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);    
+    MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);
     byte [] metaRegionName = m.getRegionName();
     HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
     byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
     Scan scan = new Scan(firstRowInTable);
-    scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     long scannerid = srvr.openScanner(metaRegionName, scan);
     try {
       Result data = srvr.next(scannerid);
       if (data != null && data.size() > 0) {
         HRegionInfo info = Writables.getHRegionInfo(
-          data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
+          data.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER));
         if (info.getTableDesc().getNameAsString().equals(tableName)) {
           // A region for this table already exists. Ergo table exists.
           throw new TableExistsException(tableName);
@@ -775,7 +779,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public void deleteTable(final byte [] tableName) throws IOException {
-    if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       throw new IOException("Can't delete root table");
     }
     new TableDelete(this, tableName).process();
@@ -799,14 +803,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   public void enableTable(final byte [] tableName) throws IOException {
-    if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       throw new IOException("Can't enable root table");
     }
     new ChangeTableState(this, tableName, true).process();
   }
 
   public void disableTable(final byte [] tableName) throws IOException {
-    if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       throw new IOException("Can't disable root table");
     }
     new ChangeTableState(this, tableName, false).process();
@@ -826,8 +830,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       HRegionInterface srvr =
         this.connection.getHRegionConnection(m.getServer());
       Scan scan = new Scan(firstRowInTable);
-      scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
-      scan.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
       // TODO: Use caching.
       long scannerid = srvr.openScanner(metaRegionName, scan);
       try {
@@ -836,9 +841,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (data == null || data.size() <= 0)
             break;
           HRegionInfo info = Writables.getHRegionInfo(
-              data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
+              data.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
           if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-            byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+            final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.SERVER_QUALIFIER);
             if (value != null && value.length > 0) {
               HServerAddress server = new HServerAddress(Bytes.toString(value));
               result.add(new Pair<HRegionInfo,HServerAddress>(info, server));
@@ -864,8 +871,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       byte [] metaRegionName = m.getRegionName();
       HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
       Scan scan = new Scan(firstRowInTable);
-      scan.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
-      scan.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
       long scannerid = srvr.openScanner(metaRegionName, scan);
       try {
         while (true) {
@@ -873,11 +881,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (data == null || data.size() <= 0)
             break;
           HRegionInfo info = Writables.getHRegionInfo(
-              data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
+              data.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
           if (Bytes.compareTo(info.getTableDesc().getName(), tableName) == 0) {
             if ((Bytes.compareTo(info.getStartKey(), rowKey) >= 0) &&
                 (Bytes.compareTo(info.getEndKey(), rowKey) < 0)) {
-                byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+                final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
+                    HConstants.SERVER_QUALIFIER);
                 if (value != null && value.length > 0) {
                   HServerAddress server =
                     new HServerAddress(Bytes.toString(value));
@@ -904,13 +914,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       byte [] metaRegionName = m.getRegionName();
       HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
       Get get = new Get(regionName);
-      get.addColumn(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
-      get.addColumn(CATALOG_FAMILY, SERVER_QUALIFIER);
+      get.addColumn(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+      get.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
       Result data = srvr.get(metaRegionName, get);
       if(data == null || data.size() <= 0) continue;
       HRegionInfo info = Writables.getHRegionInfo(
-          data.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER));
-      byte [] value = data.getValue(CATALOG_FAMILY, SERVER_QUALIFIER);
+          data.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER));
+      final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER);
       if(value != null && value.length > 0) {
         HServerAddress server =
           new HServerAddress(Bytes.toString(value));
@@ -1003,8 +1016,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       HRegionInfo hri = getHRegionInfo(rr.getRow(), rr);
       if (hostnameAndPort == null) {
         // Get server from the .META. if it wasn't passed as argument
-        hostnameAndPort = 
-          Bytes.toString(rr.getValue(CATALOG_FAMILY, SERVER_QUALIFIER));
+        hostnameAndPort =
+          Bytes.toString(rr.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.SERVER_QUALIFIER));
       }
       // Take region out of the intransistions in case it got stuck there doing
       // an open or whatever.
@@ -1012,7 +1026,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // If hostnameAndPort is still null, then none, exit.
       if (hostnameAndPort == null) break;
       long startCode =
-        Bytes.toLong(rr.getValue(CATALOG_FAMILY, STARTCODE_QUALIFIER));
+        Bytes.toLong(rr.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.STARTCODE_QUALIFIER));
       String name = HServerInfo.getServerName(hostnameAndPort, startCode);
       LOG.info("Marking " + hri.getRegionNameAsString() +
         " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
@@ -1052,19 +1067,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   HRegionInfo getHRegionInfo(final byte [] row, final Result res)
   throws IOException {
-    byte [] regioninfo = res.getValue(CATALOG_FAMILY, REGIONINFO_QUALIFIER);
+    byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.REGIONINFO_QUALIFIER);
     if (regioninfo == null) {
       StringBuilder sb =  new StringBuilder();
-      NavigableMap<byte[], byte[]> infoMap = res.getFamilyMap(CATALOG_FAMILY);
+      NavigableMap<byte[], byte[]> infoMap =
+        res.getFamilyMap(HConstants.CATALOG_FAMILY);
       for (byte [] e: infoMap.keySet()) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
-        sb.append(Bytes.toString(CATALOG_FAMILY) + ":" + Bytes.toString(e));
+        sb.append(Bytes.toString(HConstants.CATALOG_FAMILY) + ":"
+            + Bytes.toString(e));
       }
-      LOG.warn(Bytes.toString(CATALOG_FAMILY) + ":" +
-          Bytes.toString(REGIONINFO_QUALIFIER) + " is empty for row: " +
-         Bytes.toString(row) + "; has keys: " + sb.toString());
+      LOG.warn(Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
+          Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
+          + " is empty for row: " + Bytes.toString(row) + "; has keys: "
+          + sb.toString());
       return null;
     }
     return Writables.getHRegionInfo(regioninfo);

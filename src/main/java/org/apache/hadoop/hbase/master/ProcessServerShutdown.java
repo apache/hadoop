@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -253,7 +254,7 @@ class ProcessServerShutdown extends RegionServerOperation {
             master.getRegionManager().getRootRegionLocation().getBindAddress());
       }
       Scan scan = new Scan();
-      scan.addFamily(CATALOG_FAMILY);
+      scan.addFamily(HConstants.CATALOG_FAMILY);
       long scannerId = server.openScanner(
           HRegionInfo.ROOT_REGIONINFO.getRegionName(), scan);
       scanMetaRegion(server, scannerId,
@@ -273,7 +274,7 @@ class ProcessServerShutdown extends RegionServerOperation {
           Bytes.toString(m.getRegionName()) + " on " + m.getServer());
       }
       Scan scan = new Scan();
-      scan.addFamily(CATALOG_FAMILY);
+      scan.addFamily(HConstants.CATALOG_FAMILY);
       long scannerId = server.openScanner(
           m.getRegionName(), scan);
       scanMetaRegion(server, scannerId, m.getRegionName());
