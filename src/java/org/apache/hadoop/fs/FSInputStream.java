@@ -19,11 +19,16 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /****************************************************************
  * FSInputStream is a generic old InputStream with a little bit
  * of RAF-style seek ability.
  *
  *****************************************************************/
+@InterfaceAudience.LimitedPrivate({"HDFS"})
+@InterfaceStability.Unstable
 public abstract class FSInputStream extends InputStream
     implements Seekable, PositionedReadable {
   /**

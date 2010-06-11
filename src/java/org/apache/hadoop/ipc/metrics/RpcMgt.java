@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc.metrics;
 
 import javax.management.ObjectName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 
@@ -28,6 +29,7 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
  * This class implements the RpcMgt MBean
  *
  */
+@InterfaceAudience.Private
 class RpcMgt implements RpcMgtMBean {
   private RpcMetrics myMetrics;
   private Server myServer;

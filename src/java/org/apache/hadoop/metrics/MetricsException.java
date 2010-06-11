@@ -20,9 +20,14 @@
 
 package org.apache.hadoop.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * General-purpose, unchecked metrics exception.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class MetricsException extends RuntimeException {
     
   private static final long serialVersionUID = -1643257498540498497L;

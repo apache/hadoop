@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /**
  * Code generator for "buffer" type.
@@ -25,6 +28,8 @@ package org.apache.hadoop.record.compiler;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class JBuffer extends JCompType {
   
   class JavaBuffer extends JavaCompType {

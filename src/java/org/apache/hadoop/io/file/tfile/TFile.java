@@ -31,6 +31,8 @@ import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -126,6 +128,8 @@ import org.apache.hadoop.io.serializer.JavaSerializationComparator;
  * Some design rationale behind TFile can be found at <a
  * href=https://issues.apache.org/jira/browse/HADOOP-3315>Hadoop-3315</a>.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TFile {
   static final Log LOG = LogFactory.getLog(TFile.class);
 
@@ -198,6 +202,7 @@ public class TFile {
   /**
    * TFile Writer.
    */
+  @InterfaceStability.Evolving
   public static class Writer implements Closeable {
     // minimum compressed size for a block.
     private final int sizeMinBlock;
@@ -674,6 +679,7 @@ public class TFile {
    * {@link Reader#createScannerByKey(byte[], byte[])} or
    * {@link Reader#createScannerByKey(RawComparable, RawComparable)}).
    */
+  @InterfaceStability.Evolving
   public static class Reader implements Closeable {
     // The underlying BCFile reader.
     final BCFile.Reader readerBCF;

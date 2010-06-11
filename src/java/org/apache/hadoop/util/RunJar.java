@@ -35,11 +35,16 @@ import java.util.Enumeration;
 import java.util.jar.JarFile;
 import java.util.jar.JarEntry;
 import java.util.jar.Manifest;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IOUtils;
 
 /** Run a Hadoop job jar. */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class RunJar {
 
   /** Pattern that matches any string */

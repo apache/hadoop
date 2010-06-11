@@ -21,9 +21,14 @@ package org.apache.hadoop.util;
 import java.lang.reflect.Array;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Contains utility methods for dealing with Java Generics. 
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class GenericsUtil {
 
   /**

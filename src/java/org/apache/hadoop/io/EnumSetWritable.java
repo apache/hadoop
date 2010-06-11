@@ -26,10 +26,14 @@ import java.util.Iterator;
 import java.util.Collection;
 import java.util.AbstractCollection;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
 /** A Writable wrapper for EnumSet. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   implements Writable, Configurable  {
 

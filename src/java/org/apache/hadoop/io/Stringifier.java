@@ -20,12 +20,17 @@ package org.apache.hadoop.io;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Stringifier interface offers two methods to convert an object 
  * to a string representation and restore the object given its 
  * string representation.
  * @param <T> the class of the objects to stringify
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Stringifier<T> extends java.io.Closeable {
 
   /**

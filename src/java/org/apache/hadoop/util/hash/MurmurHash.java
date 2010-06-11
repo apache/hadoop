@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.util.hash;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This is a very fast, non-cryptographic hash suitable for general hash-based
  * lookup.  See http://murmurhash.googlepages.com/ for more details.
@@ -25,6 +28,8 @@ package org.apache.hadoop.util.hash;
  * <p>The C version of MurmurHash 2.0 found at that site was ported
  * to Java by Andrzej Bialecki (ab at getopt org).</p>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class MurmurHash extends Hash {
   private static MurmurHash _instance = new MurmurHash();
   

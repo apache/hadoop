@@ -22,10 +22,15 @@ import java.io.*;
 import java.net.URI;
 import java.util.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /****************************************************************
  * Implement the FileSystem API for the checksumed local filesystem.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class LocalFileSystem extends ChecksumFileSystem {
   static final URI NAME = URI.create("file:///");
   static private Random rand = new Random();

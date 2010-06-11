@@ -18,9 +18,14 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.*;
 
 /** Stream that permits positional reading. */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface PositionedReadable {
   /**
    * Read upto the specified number of bytes, from a given

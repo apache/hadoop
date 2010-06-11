@@ -21,6 +21,8 @@ import java.net.URLStreamHandlerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -33,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
  * Before returning our handler, we make sure that FileSystem knows an
  * implementation for the requested scheme/protocol.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class FsUrlStreamHandlerFactory implements
     URLStreamHandlerFactory {
 

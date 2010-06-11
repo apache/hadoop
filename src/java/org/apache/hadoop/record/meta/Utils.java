@@ -20,6 +20,9 @@ package org.apache.hadoop.record.meta;
 
 import java.io.IOException;
 import java.util.Iterator;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.record.RecordInput;
 
 /**
@@ -28,6 +31,8 @@ import org.apache.hadoop.record.RecordInput;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Utils {
   
   /** Cannot create a new instance of Utils */

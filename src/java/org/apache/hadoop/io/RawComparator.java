@@ -20,6 +20,8 @@ package org.apache.hadoop.io;
 
 import java.util.Comparator;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.serializer.DeserializerComparator;
 
 /**
@@ -30,6 +32,8 @@ import org.apache.hadoop.io.serializer.DeserializerComparator;
  * @param <T>
  * @see DeserializerComparator
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface RawComparator<T> extends Comparator<T> {
 
   public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2);

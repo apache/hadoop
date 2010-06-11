@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.fs.permission;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * File system actions, e.g. read, write, etc.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS"})
+@InterfaceStability.Unstable
 public enum FsAction {
   // POSIX style
   NONE("---"),

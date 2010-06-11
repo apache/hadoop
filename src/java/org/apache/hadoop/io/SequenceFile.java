@@ -36,6 +36,8 @@ import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
@@ -183,6 +185,8 @@ import org.apache.hadoop.util.PriorityQueue;
  * 
  * @see CompressionCodec
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SequenceFile {
   private static final Log LOG = LogFactory.getLog(SequenceFile.class);
 

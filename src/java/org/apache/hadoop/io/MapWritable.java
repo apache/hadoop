@@ -25,11 +25,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A Writable Map.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MapWritable extends AbstractMapWritable
   implements Map<Writable, Writable> {
 

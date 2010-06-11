@@ -24,6 +24,8 @@ import java.io.BufferedReader;
 import java.util.EnumSet;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
@@ -31,6 +33,8 @@ import org.apache.hadoop.util.Shell;
 /** Filesystem disk space usage statistics.
  * Uses the unix 'df' program to get mount points, and java.io.File for
  * space utilization. Tested on Linux, FreeBSD, Cygwin. */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class DF extends Shell {
 
   /** Default DF refresh interval. */

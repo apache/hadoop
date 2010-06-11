@@ -17,10 +17,15 @@
  */
 package org.apache.hadoop.net;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A base class that implements interface Node
  * 
  */
 
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class NodeBase implements Node {
   public final static char PATH_SEPARATOR = '/';
   public final static String PATH_SEPARATOR_STR = "/";

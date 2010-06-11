@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.fs.s3native;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * <p>
  * Holds basic metadata for a file stored in a {@link NativeFileSystemStore}.
  * </p>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class FileMetadata {
   private final String key;
   private final long length;

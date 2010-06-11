@@ -24,9 +24,13 @@ import java.util.HashSet;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 // Keeps track of which datanodes/tasktrackers are allowed to connect to the 
 // namenode/jobtracker.
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class HostsFileReader {
   private Set<String> includes;
   private Set<String> excludes;

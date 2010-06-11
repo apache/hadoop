@@ -30,6 +30,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext.MetricMap;
@@ -42,6 +44,8 @@ import org.mortbay.util.ajax.JSON.Output;
  * textual representation (no promises are made for parseability), and
  * users can use "?format=json" for parseable output.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class MetricsServlet extends HttpServlet {
   
   /**

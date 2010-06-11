@@ -22,12 +22,16 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** Utility to assist with generation of progress reports.  Applications build
  * a hierarchy of {@link Progress} instances, each modelling a phase of
  * execution.  The root is constructed with {@link #Progress()}.  Nodes for
  * sub-phases are created by calling {@link #addPhase()}.
  */
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Unstable
 public class Progress {
   private static final Log LOG = LogFactory.getLog(Progress.class);
   private String status = "";

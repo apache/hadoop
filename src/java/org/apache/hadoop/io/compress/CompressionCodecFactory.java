@@ -21,6 +21,8 @@ import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -28,6 +30,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * A factory that will find the correct codec for a given filename.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CompressionCodecFactory {
 
   public static final Log LOG =

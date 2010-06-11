@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -30,6 +32,8 @@ import org.apache.hadoop.conf.Configuration;
  * An abstraction for a key-based {@link File} store.
  * </p>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 interface NativeFileSystemStore {
   
   void initialize(URI uri, Configuration conf) throws IOException;

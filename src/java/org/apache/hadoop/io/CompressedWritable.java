@@ -29,11 +29,16 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A base-class for Writables which store themselves compressed and lazily
  * inflate on field access.  This is useful for large objects whose fields are
  * not be altered during a map or reduce operation: leaving the field data
  * compressed makes copying the instance from one file to another much
  * faster. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class CompressedWritable implements Writable {
   // if non-null, the compressed field data of this instance.
   private byte[] compressed;

@@ -21,6 +21,9 @@ package org.apache.hadoop.io.serializer;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * <p>
  * Provides a facility for serializing objects of type <T> to an
@@ -34,7 +37,8 @@ import java.io.OutputStream;
  * </p>
  * @param <T>
  */
-@Deprecated
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public interface Serializer<T> {
   /**
    * <p>Prepare the serializer for writing.</p>

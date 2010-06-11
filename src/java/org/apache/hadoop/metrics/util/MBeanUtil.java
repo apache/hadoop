@@ -25,6 +25,8 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.InstanceAlreadyExistsException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 
 /**
  * This util class provides a method to register an MBean using
@@ -32,6 +34,7 @@ import javax.management.InstanceAlreadyExistsException;
  *  for {link {@link #registerMBean(String, String, Object)}
  *
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MBeanUtil {
 	
   /**

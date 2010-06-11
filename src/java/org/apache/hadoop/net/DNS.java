@@ -20,6 +20,8 @@ package org.apache.hadoop.net;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -40,6 +42,8 @@ import javax.naming.directory.InitialDirContext;
  * 
  * 
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class DNS {
 
   private static final Log LOG = LogFactory.getLog(DNS.class);

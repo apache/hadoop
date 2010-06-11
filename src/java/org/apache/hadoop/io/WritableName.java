@@ -21,11 +21,15 @@ package org.apache.hadoop.io;
 import java.util.HashMap;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /** Utility to permit renaming of Writable implementation classes without
  * invalidiating files that contain their class name.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class WritableName {
   private static HashMap<String, Class<?>> NAME_TO_CLASS =
     new HashMap<String, Class<?>>();

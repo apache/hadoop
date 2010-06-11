@@ -20,12 +20,17 @@ package org.apache.hadoop.io.compress;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Specification of a stream-based 'de-compressor' which can be  
  * plugged into a {@link CompressionInputStream} to compress data.
  * This is modelled after {@link java.util.zip.Inflater}
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface Decompressor {
   /**
    * Sets input data for decompression. 

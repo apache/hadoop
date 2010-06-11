@@ -19,27 +19,35 @@
 
 package org.apache.hadoop.metrics.spi;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Null metrics context: a metrics context which does nothing.  Used as the
  * default context, so that no performance data is emitted if no configuration
  * data is found.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class NullContext extends AbstractMetricsContext {
     
   /** Creates a new instance of NullContext */
+  @InterfaceAudience.Private
   public NullContext() {
   }
     
   /**
    * Do-nothing version of startMonitoring
    */
+  @InterfaceAudience.Private
   public void startMonitoring() {
   }
     
   /**
    * Do-nothing version of emitRecord
    */
+  @InterfaceAudience.Private
   protected void emitRecord(String contextName, String recordName,
                             OutputRecord outRec) 
   {}
@@ -47,12 +55,14 @@ public class NullContext extends AbstractMetricsContext {
   /**
    * Do-nothing version of update
    */
+  @InterfaceAudience.Private
   protected void update(MetricsRecordImpl record) {
   }
     
   /**
    * Do-nothing version of remove
    */
+  @InterfaceAudience.Private
   protected void remove(MetricsRecordImpl record) {
   }
 }

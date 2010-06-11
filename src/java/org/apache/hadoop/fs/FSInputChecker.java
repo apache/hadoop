@@ -23,6 +23,8 @@ import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.StringUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -31,7 +33,8 @@ import java.nio.IntBuffer;
  * This is a generic input stream for verifying checksums for
  * data before it is read by a user.
  */
-
+@InterfaceAudience.LimitedPrivate({"HDFS"})
+@InterfaceStability.Unstable
 abstract public class FSInputChecker extends FSInputStream {
   public static final Log LOG 
   = LogFactory.getLog(FSInputChecker.class);

@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -42,7 +44,8 @@ import org.apache.hadoop.io.serializer.Serializer;
 /**
  * General reflection utils
  */
-
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ReflectionUtils {
     
   private static final Class<?>[] EMPTY_ARRAY = new Class[]{};

@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -33,6 +34,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  * and publishing them through the metrics interfaces.
  * This also registers the JMX MBean for RPC.
  */
+@InterfaceAudience.Private
 public class RpcDetailedMetrics implements Updater {
   public final MetricsRegistry registry = new MetricsRegistry();
   private final MetricsRecord metricsRecord;

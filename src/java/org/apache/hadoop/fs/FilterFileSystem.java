@@ -22,6 +22,8 @@ import java.io.*;
 import java.net.URI;
 import java.util.EnumSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -41,6 +43,8 @@ import org.apache.hadoop.util.Progressable;
  * and fields.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FilterFileSystem extends FileSystem {
   
   protected FileSystem fs;

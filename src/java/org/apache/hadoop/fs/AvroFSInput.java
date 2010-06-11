@@ -22,8 +22,12 @@ import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.avro.file.SeekableInput;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** Adapts an {@link FSDataInputStream} to Avro's SeekableInput interface. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class AvroFSInput implements Closeable, SeekableInput {
   private final FSDataInputStream stream;
   private final long len;

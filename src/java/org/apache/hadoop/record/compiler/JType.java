@@ -20,6 +20,9 @@ package org.apache.hadoop.record.compiler;
 
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /**
  * Abstract Base class for all types supported by Hadoop Record I/O.
@@ -27,6 +30,8 @@ import java.util.Map;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 abstract public class JType {
   
   static String toCamelCase(String name) {

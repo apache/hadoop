@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** 
  * This class contains constants for configuration keys used
  * in the common code.
  *
  */
-
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class CommonConfigurationKeys {
   
   // The Keys

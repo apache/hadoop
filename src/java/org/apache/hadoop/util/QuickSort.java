@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * An implementation of the core algorithm of QuickSort.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class QuickSort implements IndexedSorter {
 
   private static final IndexedSorter alt = new HeapSort();

@@ -23,11 +23,15 @@ import java.net.Socket;
 
 import org.apache.commons.logging.Log;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * An utility class for I/O related functionality. 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class IOUtils {
 
   /**

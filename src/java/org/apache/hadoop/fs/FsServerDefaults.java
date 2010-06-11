@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -29,6 +31,8 @@ import org.apache.hadoop.io.WritableFactory;
  * Provides server default configuration values to clients.
  * 
  ****************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class FsServerDefaults implements Writable {
 
   static { // register a ctor
@@ -80,6 +84,7 @@ public class FsServerDefaults implements Writable {
   // /////////////////////////////////////////
   // Writable
   // /////////////////////////////////////////
+  @InterfaceAudience.Private
   public void write(DataOutput out) throws IOException {
     out.writeLong(blockSize);
     out.writeInt(bytesPerChecksum);
@@ -88,6 +93,7 @@ public class FsServerDefaults implements Writable {
     out.writeInt(fileBufferSize);
   }
 
+  @InterfaceAudience.Private
   public void readFields(DataInput in) throws IOException {
     blockSize = in.readLong();
     bytesPerChecksum = in.readInt();

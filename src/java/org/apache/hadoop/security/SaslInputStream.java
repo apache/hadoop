@@ -29,6 +29,8 @@ import javax.security.sasl.SaslServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A SaslInputStream is composed of an InputStream and a SaslServer (or
@@ -37,6 +39,8 @@ import org.apache.commons.logging.LogFactory;
  * (or SaslClient) object. The SaslServer (or SaslClient) object must be fully
  * initialized before being used by a SaslInputStream.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SaslInputStream extends InputStream {
   public static final Log LOG = LogFactory.getLog(SaslInputStream.class);
 

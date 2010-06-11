@@ -29,6 +29,9 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This implements an output stream that can have a timeout while writing.
  * This sets non-blocking flag on the socket channel.
@@ -38,6 +41,8 @@ import java.nio.channels.WritableByteChannel;
  * llegalBlockingModeException.
  * Please use {@link SocketInputStream} for reading.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class SocketOutputStream extends OutputStream 
                                 implements WritableByteChannel {                                
   

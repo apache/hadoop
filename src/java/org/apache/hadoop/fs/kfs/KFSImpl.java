@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.kfs;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,6 +32,8 @@ import org.kosmix.kosmosfs.access.KfsAccess;
 import org.kosmix.kosmosfs.access.KfsFileAttr;
 import org.apache.hadoop.util.Progressable;
 
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class KFSImpl implements IFSImpl {
     private KfsAccess kfsAccess = null;
     private FileSystem.Statistics statistics;

@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A named and optionally tagged set of records to be sent to the metrics
  * system. <p/>
@@ -65,6 +68,8 @@ package org.apache.hadoop.metrics;
  * with the same set of tag names and tag values.  Different threads should 
  * <b>not</b> use the same MetricsRecord instance at the same time.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public interface MetricsRecord {
     
   /**

@@ -19,12 +19,17 @@ package org.apache.hadoop.fs.permission;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * An exception class for access control related issues.
  * @deprecated Use {@link org.apache.hadoop.security.AccessControlException} 
  *             instead.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class AccessControlException extends IOException {
   //Required by {@link java.io.Serializable}.
   private static final long serialVersionUID = 1L;

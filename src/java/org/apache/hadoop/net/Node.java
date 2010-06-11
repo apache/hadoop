@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.net;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** The interface defines a node in a network topology.
  * A node may be a leave representing a data node or an inner
  * node representing a datacenter or rack.
@@ -27,6 +30,8 @@ package org.apache.hadoop.net;
  * network location is /dog/orange
  */
 
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public interface Node {
   /** Return the string representation of this node's network location */
   public String getNetworkLocation();

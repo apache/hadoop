@@ -19,9 +19,14 @@ package org.apache.hadoop.fs;
 
 import java.net.URI;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * FileSystem related constants.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface FsConstants {
   // URI for local filesystem
   public static final URI LOCAL_FS_URI = URI.create("file:///");

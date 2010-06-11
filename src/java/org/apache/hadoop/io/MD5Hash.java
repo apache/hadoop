@@ -25,8 +25,13 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.security.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A Writable for MD5 hash values.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MD5Hash implements WritableComparable<MD5Hash> {
   public static final int MD5_LEN = 16;
 

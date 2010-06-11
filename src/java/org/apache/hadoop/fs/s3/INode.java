@@ -25,10 +25,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Holds file metadata including type (regular file, or directory),
  * and the list of blocks that are pointers to the data.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class INode {
 	
   enum FileType {

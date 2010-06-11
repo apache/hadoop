@@ -18,6 +18,8 @@
  */
 
 package org.apache.hadoop.record.compiler.generated;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.record.compiler.*;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -31,6 +33,8 @@ import java.io.IOException;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RccTokenManager implements RccConstants
 {
   public  java.io.PrintStream debugStream = System.out;

@@ -19,6 +19,8 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -26,6 +28,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * Protocol use 
  *
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public interface RefreshUserToGroupMappingsProtocol extends VersionedProtocol {
   
   /**

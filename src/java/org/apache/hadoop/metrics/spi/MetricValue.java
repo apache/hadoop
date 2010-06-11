@@ -20,9 +20,14 @@
 
 package org.apache.hadoop.metrics.spi;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A Number that is either an absolute or an incremental amount.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MetricValue {
     
   public static final boolean ABSOLUTE = false;

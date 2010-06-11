@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -37,6 +39,8 @@ import org.apache.commons.logging.LogFactory;
  * a consistent user-to-groups mapping and protects against vagaries of 
  * different mappings on servers and clients in a Hadoop cluster. 
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class Groups {
   private static final Log LOG = LogFactory.getLog(Groups.class);
   

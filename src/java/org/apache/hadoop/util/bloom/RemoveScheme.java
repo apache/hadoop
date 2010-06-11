@@ -50,12 +50,17 @@
  */
 package org.apache.hadoop.util.bloom;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Defines the different remove scheme for retouched Bloom filters.
  * <p>
  * Originally created by
  * <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface RemoveScheme {
   /**
    * Random selection.

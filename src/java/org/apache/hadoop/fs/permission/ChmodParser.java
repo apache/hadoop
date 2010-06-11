@@ -19,12 +19,16 @@ package org.apache.hadoop.fs.permission;
 
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 
 /**
  * Parse a permission mode passed in from a chmod command and apply that
  * mode against an existing file.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class ChmodParser extends PermissionParser {
   private static Pattern chmodOctalPattern =
     Pattern.compile("^\\s*[+]?([01]?)([0-7]{3})\\s*$");

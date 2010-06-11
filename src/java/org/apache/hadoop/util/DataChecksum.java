@@ -23,11 +23,15 @@ import java.util.zip.CRC32;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This class provides inteface and utilities for processing checksums for
  * DFS data transfers.
  */
-
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class DataChecksum implements Checksum {
   
   // Misc constants

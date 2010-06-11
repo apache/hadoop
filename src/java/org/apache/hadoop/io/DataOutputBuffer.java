@@ -20,6 +20,9 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A reusable {@link DataOutput} implementation that writes to an in-memory
  * buffer.
  *
@@ -39,6 +42,8 @@ import java.io.*;
  * </pre>
  *  
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class DataOutputBuffer extends DataOutputStream {
 
   private static class Buffer extends ByteArrayOutputStream {

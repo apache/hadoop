@@ -20,6 +20,9 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A reusable {@link DataInput} implementation that reads from an in-memory
  * buffer.
  *
@@ -38,6 +41,8 @@ import java.io.*;
  * </pre>
  *  
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class DataInputBuffer extends DataInputStream {
   private static class Buffer extends ByteArrayInputStream {
     public Buffer() {

@@ -38,6 +38,8 @@ import javax.security.sasl.Sasl;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -47,6 +49,8 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 /**
  * A utility class for dealing with SASL on RPC server
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SaslRpcServer {
   public static final Log LOG = LogFactory.getLog(SaslRpcServer.class);
   public static final String SASL_DEFAULT_REALM = "default";
@@ -91,6 +95,7 @@ public class SaslRpcServer {
     return fullName.split("[/@]");
   }
 
+  @InterfaceStability.Evolving
   public enum SaslStatus {
     SUCCESS (0),
     ERROR (1);
@@ -102,6 +107,7 @@ public class SaslRpcServer {
   }
   
   /** Authentication method */
+  @InterfaceStability.Evolving
   public static enum AuthMethod {
     SIMPLE((byte) 80, "", AuthenticationMethod.SIMPLE),
     KERBEROS((byte) 81, "GSSAPI", AuthenticationMethod.KERBEROS),
@@ -144,6 +150,7 @@ public class SaslRpcServer {
   };
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
+  @InterfaceStability.Evolving
   public static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
     private Server.Connection connection; 
@@ -214,6 +221,7 @@ public class SaslRpcServer {
   }
 
   /** CallbackHandler for SASL GSSAPI Kerberos mechanism */
+  @InterfaceStability.Evolving
   public static class SaslGssCallbackHandler implements CallbackHandler {
 
     /** {@inheritDoc} */

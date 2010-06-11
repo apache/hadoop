@@ -22,6 +22,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -73,6 +75,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * 
  * @since Nov 8, 2006
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class GenericWritable implements Writable, Configurable {
 
   private static final byte NOT_SET = -1;

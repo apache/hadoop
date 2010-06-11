@@ -19,12 +19,17 @@ package org.apache.hadoop.record.compiler;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A wrapper around StringBuffer that automatically does indentation
  * 
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class CodeBuffer {
   
   static private ArrayList<Character> startMarkers = new ArrayList<Character>();

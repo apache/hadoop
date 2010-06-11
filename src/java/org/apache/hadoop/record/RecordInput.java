@@ -20,12 +20,17 @@ package org.apache.hadoop.record;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Interface that all the Deserializers have to implement.
  * 
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface RecordInput {
   /**
    * Read a byte from serialized record.

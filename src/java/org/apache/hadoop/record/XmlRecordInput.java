@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.SAXParserFactory;
@@ -33,6 +35,8 @@ import javax.xml.parsers.SAXParser;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class XmlRecordInput implements RecordInput {
     
   static private class Value {

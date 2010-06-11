@@ -19,11 +19,15 @@ package org.apache.hadoop.security.authorize;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * Protocol which is used to refresh the authorization policy in use currently.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public interface RefreshAuthorizationPolicyProtocol extends VersionedProtocol {
   
   /**

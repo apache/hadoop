@@ -31,6 +31,8 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -41,6 +43,8 @@ import org.apache.hadoop.util.StringUtils;
  * Implement the FileSystem API for the raw local filesystem.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;

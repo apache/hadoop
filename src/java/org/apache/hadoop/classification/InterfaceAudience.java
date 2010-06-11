@@ -22,6 +22,8 @@ import java.lang.annotation.Documented;
 /**
  * Annotation to inform users of a package, class or method's intended audience.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class InterfaceAudience {
   /**
    * Intended for use by any project or application.

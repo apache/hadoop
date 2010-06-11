@@ -21,6 +21,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * 
  * This is the registry for metrics.
@@ -28,6 +30,7 @@ import java.util.Map;
  * in a registry for those metrics which is also stored in the the holding class.
  *
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsRegistry {
   private Map<String, MetricsBase> metricsList = new HashMap<String, MetricsBase>();
 

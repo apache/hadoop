@@ -20,11 +20,16 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A WritableComparable for integer values stored in variable-length format.
  * Such values take between one and five bytes.  Smaller values take fewer bytes.
  * 
  * @see org.apache.hadoop.io.WritableUtils#readVInt(DataInput)
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class VIntWritable implements WritableComparable {
   private int value;
 

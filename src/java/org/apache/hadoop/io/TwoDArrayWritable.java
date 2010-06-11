@@ -21,7 +21,12 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.lang.reflect.Array;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A Writable for 2D arrays containing a matrix of instances of a class. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TwoDArrayWritable implements Writable {
   private Class valueClass;
   private Writable[][] values;

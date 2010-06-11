@@ -37,6 +37,8 @@ import org.apache.avro.reflect.Stringable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** This class stores text using standard UTF8 encoding.  It provides methods
  * to serialize, deserialize, and compare texts at byte level.  The type of
@@ -48,6 +50,8 @@ import org.apache.commons.logging.LogFactory;
  * string.
  */
 @Stringable
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Text extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
   private static final Log LOG= LogFactory.getLog(Text.class);

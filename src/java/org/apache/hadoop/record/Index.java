@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.record;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Interface that acts as an iterator for deserializing maps.
  * The deserializer returns an instance that the record uses to
@@ -34,6 +37,8 @@ package org.apache.hadoop.record;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Index {
   boolean done();
   void incr();

@@ -21,11 +21,16 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A byte array backed output stream with a limit. The limit should be smaller
  * than the buffer capacity. The object can be reused through <code>reset</code>
  * API and choose different limits in each round.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class BoundedByteArrayOutputStream extends OutputStream {
   private final byte[] buffer;
   private int limit;

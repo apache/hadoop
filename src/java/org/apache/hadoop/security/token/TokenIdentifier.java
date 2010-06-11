@@ -21,6 +21,8 @@ package org.apache.hadoop.security.token;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -30,6 +32,8 @@ import org.apache.hadoop.security.UserGroupInformation;
  * An identifier that identifies a token, may contain public information 
  * about a token, including its kind (or type).
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public abstract class TokenIdentifier implements Writable {
   /**
    * Get the token kind

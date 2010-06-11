@@ -20,11 +20,16 @@ package org.apache.hadoop.io.compress;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * An InputStream covering a range of compressed data. The start and end
  * offsets requested by a client may be modified by the codec to fit block
  * boundaries or other algorithm-dependent requirements.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class SplitCompressionInputStream
     extends CompressionInputStream {
 

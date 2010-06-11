@@ -25,6 +25,8 @@ import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Base64;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -35,6 +37,8 @@ import org.apache.hadoop.io.WritableUtils;
 /**
  * The client-side form of the token.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class Token<T extends TokenIdentifier> implements Writable {
   private byte[] identifier;
   private byte[] password;

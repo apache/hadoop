@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class UTF8ByteArrayUtils {
   /**
    * Find the first occurrence of the given byte b in a UTF-8 encoded string

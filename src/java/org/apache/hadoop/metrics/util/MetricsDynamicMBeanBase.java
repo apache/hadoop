@@ -33,6 +33,7 @@ import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
 import javax.management.ReflectionException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsUtil;
 
 
@@ -52,6 +53,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
  * 
  *
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public abstract class MetricsDynamicMBeanBase implements DynamicMBean {
   private final static String AVG_TIME = "AvgTime";
   private final static String MIN_TIME = "MinTime";

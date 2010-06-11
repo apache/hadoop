@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.s3native;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * <p>
  * Holds information on a directory listing for a
@@ -31,6 +34,8 @@ package org.apache.hadoop.fs.s3native;
  * </p>
  * @see NativeFileSystemStore#list(String, int, String)
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class PartialListing {
   
   private final String priorLastKey;

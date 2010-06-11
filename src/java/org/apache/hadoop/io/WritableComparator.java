@@ -21,6 +21,8 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.util.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A Comparator for {@link WritableComparable}s.
@@ -32,6 +34,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * {@link #compare(byte[],int,int,byte[],int,int)}.  Static utility methods are
  * provided to assist in optimized implementations of this method.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class WritableComparator implements RawComparator {
 
   private static HashMap<Class, WritableComparator> comparators =

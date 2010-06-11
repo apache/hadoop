@@ -33,12 +33,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 
 /**
  * General string utils
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class StringUtils {
 
   private static final DecimalFormat decimalFormat;

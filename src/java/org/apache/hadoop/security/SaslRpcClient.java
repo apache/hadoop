@@ -39,6 +39,8 @@ import javax.security.sasl.SaslClient;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -49,6 +51,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 /**
  * A utility class that encapsulates SASL logic for RPC client
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SaslRpcClient {
   public static final Log LOG = LogFactory.getLog(SaslRpcClient.class);
 

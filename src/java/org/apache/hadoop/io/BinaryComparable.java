@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.io;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Interface supported by {@link org.apache.hadoop.io.WritableComparable}
  * types supporting ordering/permutation by a representative set of bytes.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class BinaryComparable implements Comparable<BinaryComparable> {
 
   /**

@@ -21,6 +21,8 @@ package org.apache.hadoop.io.serializer;
 import java.io.IOException;
 import java.io.Serializable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.RawComparator;
 
 /**
@@ -32,13 +34,17 @@ import org.apache.hadoop.io.RawComparator;
  * @param <T>
  * @see JavaSerialization
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class JavaSerializationComparator<T extends Serializable&Comparable<T>>
   extends DeserializerComparator<T> {
 
+  @InterfaceAudience.Private
   public JavaSerializationComparator() throws IOException {
     super(new JavaSerialization.JavaSerializationDeserializer<T>());
   }
 
+  @InterfaceAudience.Private
   public int compare(T o1, T o2) {
     return o1.compareTo(o2);
   }

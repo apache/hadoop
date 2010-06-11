@@ -24,6 +24,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.compress.bzip2.BZip2Constants;
 import org.apache.hadoop.io.compress.bzip2.BZip2DummyCompressor;
@@ -38,6 +40,8 @@ import org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream;
  * CompressionCodec which have a Compressor or Decompressor type argument, throw
  * UnsupportedOperationException.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class BZip2Codec implements SplittableCompressionCodec {
 
   private static final String HEADER = "BZ";

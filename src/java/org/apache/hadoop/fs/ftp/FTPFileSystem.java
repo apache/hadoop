@@ -29,6 +29,8 @@ import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -46,6 +48,8 @@ import org.apache.hadoop.util.Progressable;
  * href="http://commons.apache.org/net/">Apache Commons Net</a>.
  * </p>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FTPFileSystem extends FileSystem {
 
   public static final Log LOG = LogFactory

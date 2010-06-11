@@ -19,11 +19,16 @@ package org.apache.hadoop;
 
 import java.lang.annotation.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A package attribute that captures the version of Hadoop that was compiled.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PACKAGE)
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public @interface HadoopVersionAnnotation {
  
   /**

@@ -25,6 +25,8 @@ import java.io.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -48,6 +50,8 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  * a new file.  Sorting large change lists can be done with {@link
  * SequenceFile.Sorter}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MapFile {
   private static final Log LOG = LogFactory.getLog(MapFile.class);
 
