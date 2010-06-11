@@ -23,9 +23,6 @@ Trunk (unreleased changes)
     HADOOP-6627. "Bad Connection to FS" message in FSShell should print 
     message from the exception (boryas)
 
-    HADOOP-6769. Add an API in FileSystem to get FileSystem instances based 
-    on users(ddas via boryas)
-
     HADOOP-6600. mechanism for authorization check for inter-server 
     protocols. (boryas)
 
@@ -43,9 +40,6 @@ Trunk (unreleased changes)
 
     HADOOP-6674. Makes use of the SASL authentication options in the
     SASL RPC. (Jitendra Pandey via ddas)
-
-    HADOOP-6813. Add a new newInstance method in FileSystem that takes 
-    a "user" as argument (ddas via boryas)
 
     HADOOP-6526. Need mapping from long principal names to local OS 
     user names. (boryas)
@@ -944,6 +938,12 @@ Release 0.21.0 - Unreleased
     HADOOP-6794. Move configuration and script files post split. (tomwhite)
 
     HADOOP-6403.  Deprecate EC2 bash scripts.  (tomwhite)
+
+    HADOOP-6769. Add an API in FileSystem to get FileSystem instances based 
+    on users(ddas via boryas)
+
+    HADOOP-6813. Add a new newInstance method in FileSystem that takes 
+    a "user" as argument (ddas via boryas)
 
   OPTIMIZATIONS
 
