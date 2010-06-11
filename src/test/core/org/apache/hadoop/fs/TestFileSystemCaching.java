@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -153,5 +154,14 @@ public class TestFileSystemCaching {
     //We should have the same filesystem for both
     assertSame(fsA, fsA1);
   }
-
+  
+  @Test
+  public void testUserFS() throws Exception {
+    final Configuration conf = new Configuration();
+    
+    FileSystem fsU1 = FileSystem.get(new URI("cachedfile://a"), conf, "bar");
+    FileSystem fsU2 = FileSystem.get(new URI("cachedfile://a"), conf, "foo");
+    
+    assertNotSame(fsU1, fsU2);   
+  }
 }

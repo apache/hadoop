@@ -858,6 +858,9 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6403.  Deprecate EC2 bash scripts.  (tomwhite)
 
+    HADOOP-6769. Add an API in FileSystem to get FileSystem instances based 
+    on users(ddas via boryas)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
