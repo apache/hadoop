@@ -96,11 +96,11 @@ abstract class TextWriterImageVisitor extends ImageVisitor {
     if(printToScreen)
       System.out.print(toWrite);
 
-      try {
-        fw.write(toWrite);
-      } catch (IOException e) {
-        okToWrite = false;
-        throw e;
-      }
+    try {
+      fw.write(toWrite);
+    } catch (IOException e) {
+      okToWrite = false;
+      throw e;
+    }
   }
 }

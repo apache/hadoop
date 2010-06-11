@@ -72,6 +72,9 @@ public class OfflineImageViewer {
     "    -maxSize specifies the range [0, maxSize] of file sizes to be\n" +
     "     analyzed (128GB by default).\n" +
     "    -step defines the granularity of the distribution. (2MB by default)\n" +
+    "  * NameDistribution: This processor analyzes the file names\n" +
+    "    in the image and prints total number of file names and how frequently" +
+    "    file names are reused.\n" +
     "\n" + 
     "Required command line arguments:\n" +
     "-i,--inputFile <arg>   FSImage file to process.\n" +
@@ -233,6 +236,8 @@ public class OfflineImageViewer {
       long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
       int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
       v = new FileDistributionVisitor(outputFile, maxSize, step);
+    } else if (processor.equals("NameDistribution")) {
+      v = new NameDistributionVisitor(outputFile, printToScreen);
     } else {
       v = new LsImageVisitor(outputFile, printToScreen);
       skipBlocks = false;

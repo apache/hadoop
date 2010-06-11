@@ -9,6 +9,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1110. Reuses objects for commonly used file names in namenode to
+    reduce the heap usage. (suresh)
+
     HDFS-1096. fix for prev. commit. (boryas)
 
     HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group
