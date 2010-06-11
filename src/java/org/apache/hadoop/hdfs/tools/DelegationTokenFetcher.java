@@ -30,6 +30,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.DelegationTokenServlet;
@@ -149,6 +150,7 @@ public class DelegationTokenFetcher {
       System.out.println("Retrieving token from: " + 
           nnAddr + DelegationTokenServlet.PATH_SPEC + ugiPostfix);
       URL remoteURL = new URL(nnAddr + DelegationTokenServlet.PATH_SPEC + ugiPostfix);
+      SecurityUtil.fetchServiceTicket(remoteURL);
       URLConnection connection = remoteURL.openConnection();
       
       InputStream in = connection.getInputStream();
