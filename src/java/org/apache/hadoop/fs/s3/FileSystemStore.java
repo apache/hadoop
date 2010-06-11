@@ -23,12 +23,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 /**
  * A facility for storing and retrieving {@link INode}s and {@link Block}s.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public interface FileSystemStore {
   
   void initialize(URI uri, Configuration conf) throws IOException;

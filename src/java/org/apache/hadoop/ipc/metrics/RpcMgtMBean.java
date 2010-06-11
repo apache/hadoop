@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ipc.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 
 /**
  * 
@@ -39,6 +41,7 @@ package org.apache.hadoop.ipc.metrics;
  * The context with the update thread is used to average the data periodically
  *
  */
+@InterfaceAudience.Private
 public interface RpcMgtMBean {
   
   /**

@@ -26,6 +26,8 @@ import java.net.URLEncoder;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Tool;
@@ -47,6 +49,8 @@ import org.jets3t.service.security.AWSCredentials;
  * - no datafiles are touched.
  * </p>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class MigrationTool extends Configured implements Tool {
   
   private S3Service s3Service;

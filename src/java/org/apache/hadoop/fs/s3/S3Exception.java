@@ -20,9 +20,14 @@ package org.apache.hadoop.fs.s3;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Thrown if there is a problem communicating with Amazon S3.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class S3Exception extends IOException {
 
   private static final long serialVersionUID = 1L;

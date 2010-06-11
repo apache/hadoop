@@ -21,6 +21,9 @@ package org.apache.hadoop.io.serializer;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * <p>
  * Provides a facility for deserializing objects of type <T> from an
@@ -34,6 +37,8 @@ import java.io.InputStream;
  * </p>
  * @param <T>
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public interface Deserializer<T> {
   /**
    * <p>Prepare the deserializer for reading.</p>

@@ -27,11 +27,15 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A Writable SortedMap.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SortedMapWritable extends AbstractMapWritable
   implements SortedMap<WritableComparable, Writable> {
   

@@ -17,10 +17,15 @@
  */
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Interface for collections capable of being sorted by {@link IndexedSorter}
  * algorithms.
  */
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Unstable
 public interface IndexedSortable {
 
   /**

@@ -17,10 +17,15 @@
 
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /** A PriorityQueue maintains a partial ordering of its elements such that the
   least element can always be found in constant time.  Put()'s and pop()'s
   require log(size) time. */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public abstract class PriorityQueue<T> {
   private T[] heap;
   private int size;

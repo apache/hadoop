@@ -19,10 +19,15 @@ package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Exception - No such Meta Block with the given name.
  */
 @SuppressWarnings("serial")
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MetaBlockDoesNotExist extends IOException {
   /**
    * Constructor

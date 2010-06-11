@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.kfs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /** 
@@ -25,7 +27,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  * in the kfs file system. 
  *
  */
-
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class KFSConfigKeys extends CommonConfigurationKeys {
   public static final String  KFS_BLOCK_SIZE_KEY = "kfs.blocksize";
   public static final long    KFS_BLOCK_SIZE_DEFAULT = 64*1024*1024;

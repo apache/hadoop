@@ -22,6 +22,9 @@ import java.io.*;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -34,6 +37,8 @@ import org.apache.commons.logging.LogFactory;
 /**
  * A collection of file-processing util methods
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class FileUtil {
 
   private static final Log LOG = LogFactory.getLog(FileUtil.class);

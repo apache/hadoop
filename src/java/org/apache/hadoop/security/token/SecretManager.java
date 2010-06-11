@@ -27,16 +27,22 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /**
  * The server-side secret manager for each token type.
  * @param <T> The type of the token identifier
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public abstract class SecretManager<T extends TokenIdentifier> {
   /**
    * The token was invalid and the message explains why.
    */
   @SuppressWarnings("serial")
+  @InterfaceStability.Evolving
   public static class InvalidToken extends IOException {
     public InvalidToken(String msg) { 
       super(msg);

@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.record.compiler.generated;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This exception is thrown when parse errors are encountered.
  * You can explicitly create objects of this exception type by
@@ -31,6 +34,8 @@ package org.apache.hadoop.record.compiler.generated;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ParseException extends Exception {
 
   /**

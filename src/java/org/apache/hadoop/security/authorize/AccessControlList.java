@@ -21,11 +21,15 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Class representing a configured access control list.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class AccessControlList {
   
   // Indicates an ACL string that represents access to all users

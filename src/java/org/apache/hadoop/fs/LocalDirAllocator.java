@@ -27,6 +27,8 @@ import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration; 
 
 /** An implementation of a round-robin scheme for disk allocation for creating
@@ -60,6 +62,8 @@ import org.apache.hadoop.conf.Configuration;
  * actually points to the configured directory on the Disk which will be the
  * parent for all file write/read allocations.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class LocalDirAllocator {
   
   //A Map from the config item names like "mapred.local.dir", 

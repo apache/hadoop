@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.metrics.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
 
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
  * call.
  *
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsLongValue extends MetricsBase{  
   private long value;
   private boolean changed;

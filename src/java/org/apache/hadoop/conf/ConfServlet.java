@@ -26,11 +26,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer;
 
 /**
  * A servlet to print out the running configuration data.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class ConfServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 

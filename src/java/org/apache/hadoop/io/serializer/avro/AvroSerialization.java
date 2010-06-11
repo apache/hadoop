@@ -28,6 +28,8 @@ import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.DecoderFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
@@ -36,15 +38,20 @@ import org.apache.hadoop.io.serializer.Serializer;
 /**
  * Base class for providing serialization to Avro types.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class AvroSerialization<T> extends Configured 
 	implements Serialization<T>{
   
+  @InterfaceAudience.Private
   public static final String AVRO_SCHEMA_KEY = "Avro-Schema";
 
+  @InterfaceAudience.Private
   public Deserializer<T> getDeserializer(Class<T> c) {
     return new AvroDeserializer(c);
   }
 
+  @InterfaceAudience.Private
   public Serializer<T> getSerializer(Class<T> c) {
     return new AvroSerializer(c);
   }
@@ -52,16 +59,19 @@ public abstract class AvroSerialization<T> extends Configured
   /**
    * Return an Avro Schema instance for the given class.
    */
+  @InterfaceAudience.Private
   public abstract Schema getSchema(T t);
 
   /**
    * Create and return Avro DatumWriter for the given class.
    */
+  @InterfaceAudience.Private
   public abstract DatumWriter<T> getWriter(Class<T> clazz);
 
   /**
    * Create and return Avro DatumReader for the given class.
    */
+  @InterfaceAudience.Private
   public abstract DatumReader<T> getReader(Class<T> clazz);
 
   class AvroSerializer implements Serializer<T> {

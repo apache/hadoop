@@ -24,6 +24,8 @@ import java.io.DataOutput;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** 
  * A byte sequence that is usable as a key or value.
@@ -31,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
  * the current capacity. The hash function is the front of the md5 of the 
  * buffer. The sort order is the same as memcmp.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class BytesWritable extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
   private static final Log LOG = LogFactory.getLog(BytesWritable.class);

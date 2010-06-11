@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 
@@ -26,6 +28,8 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'du' program*/
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class DU extends Shell {
   private String  dirPath;
 

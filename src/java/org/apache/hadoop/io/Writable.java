@@ -22,6 +22,9 @@ import java.io.DataOutput;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A serializable object which implements a simple, efficient, serialization 
  * protocol, based on {@link DataInput} and {@link DataOutput}.
@@ -58,6 +61,8 @@ import java.io.IOException;
  *     }
  * </pre></blockquote></p>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Writable {
   /** 
    * Serialize the fields of this object to <code>out</code>.

@@ -22,6 +22,9 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -38,6 +41,8 @@ import org.apache.commons.logging.LogFactory;
  * Any application can create an instance of this class in order to emit
  * Java VM metrics.  
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class JvmMetrics implements Updater {
     
     private static final float M = 1024*1024;

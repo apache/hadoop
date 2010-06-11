@@ -23,11 +23,15 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * Representation of a URL connection to open InputStreams.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class FsUrlConnection extends URLConnection {
 
   private Configuration conf;

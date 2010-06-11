@@ -19,6 +19,9 @@ package org.apache.hadoop.util;
 
 import java.io.Closeable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Service plug-in interface.
  * 
@@ -30,6 +33,8 @@ import java.io.Closeable;
  * Service plug-ins are started after the service instance is started, and
  * stopped before the service instance is stopped.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public interface ServicePlugin extends Closeable {
 
   /**

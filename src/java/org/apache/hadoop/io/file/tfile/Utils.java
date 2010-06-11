@@ -23,11 +23,15 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 
 /**
  * Supporting Utility classes used by TFile, and shared by users of TFile.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class Utils {
 
   /**

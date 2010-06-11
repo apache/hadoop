@@ -26,12 +26,15 @@ import javax.servlet.http.*;
 
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.util.ServletUtil;
 
 /**
  * Change log level in runtime.
  */
+@InterfaceStability.Evolving
 public class LogLevel {
   public static final String USAGES = "\nUSAGES:\n"
     + "java " + LogLevel.class.getName()
@@ -82,6 +85,8 @@ public class LogLevel {
   /**
    * A servlet implementation
    */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+  @InterfaceStability.Unstable
   public static class Servlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 

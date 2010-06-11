@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.metrics.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
 
 /**
@@ -24,6 +25,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
  * This is base class for all metrics
  *
  */
+@InterfaceAudience.Private
 public abstract class MetricsBase {
   public static final String NO_DESCRIPTION = "NoDescription";
   final private String name;

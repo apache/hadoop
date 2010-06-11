@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3.S3Credentials;
 import org.apache.hadoop.fs.s3.S3Exception;
@@ -40,6 +42,8 @@ import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.security.AWSCredentials;
 
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   
   private S3Service s3Service;

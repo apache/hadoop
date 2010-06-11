@@ -34,6 +34,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -41,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
  * secret keys and Tokens.
  */
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Evolving
 public class TokenStorage implements Writable {
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();

@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
 import org.apache.hadoop.fs.CreateFlag;
@@ -77,6 +79,8 @@ import org.apache.hadoop.util.Progressable;
  * </p>
  * @see org.apache.hadoop.fs.s3.S3FileSystem
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class NativeS3FileSystem extends FileSystem {
   
   public static final Log LOG = 

@@ -22,6 +22,8 @@ import java.io.*;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.zlib.*;
@@ -31,11 +33,14 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 /**
  * This class creates gzip compressors/decompressors. 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class GzipCodec extends DefaultCodec {
   /**
    * A bridge that wraps around a DeflaterOutputStream to make it 
    * a CompressionOutputStream.
    */
+  @InterfaceStability.Evolving
   protected static class GzipOutputStream extends CompressorStream {
 
     private static class ResetableGZIPOutputStream extends GZIPOutputStream {
@@ -87,6 +92,7 @@ public class GzipCodec extends DefaultCodec {
     }
   }
   
+  @InterfaceStability.Evolving
   protected static class GzipInputStream extends DecompressorStream {
     
     private static class ResetableGZIPInputStream extends GZIPInputStream {

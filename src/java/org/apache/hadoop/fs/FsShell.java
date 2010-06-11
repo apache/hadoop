@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -46,6 +47,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.StringUtils;
 
 /** Provide command line access to a FileSystem. */
+@InterfaceAudience.Private
 public class FsShell extends Configured implements Tool {
 
   protected FileSystem fs;

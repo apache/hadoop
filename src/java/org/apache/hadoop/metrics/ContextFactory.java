@@ -28,13 +28,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.spi.NullContext;
 
 /**
  * Factory class for creating MetricsContext objects.  To obtain an instance
  * of this class, use the static <code>getFactory()</code> method.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class ContextFactory {
     
   private static final String PROPERTIES_FILE = 

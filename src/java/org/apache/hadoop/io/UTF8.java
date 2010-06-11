@@ -24,6 +24,8 @@ import java.io.DataOutput;
 
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** A WritableComparable for strings that uses the UTF8 encoding.
  * 
@@ -31,6 +33,9 @@ import org.apache.commons.logging.*;
  *
  * @deprecated replaced by Text
  */
+@Deprecated
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Stable
 public class UTF8 implements WritableComparable {
   private static final Log LOG= LogFactory.getLog(UTF8.class);
   private static final DataInputBuffer IBUF = new DataInputBuffer();

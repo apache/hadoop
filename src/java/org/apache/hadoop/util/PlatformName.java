@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A helper class for getting build-info of the java-vm. 
  * 
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class PlatformName {
   /**
    * The complete platform 'name' to identify the platform as 

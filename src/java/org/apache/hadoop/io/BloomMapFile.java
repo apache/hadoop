@@ -24,6 +24,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,6 +44,8 @@ import org.apache.hadoop.util.hash.Hash;
  * {@link Reader#get(WritableComparable, Writable)} operation, especially in
  * case of sparsely populated MapFile-s.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class BloomMapFile {
   private static final Log LOG = LogFactory.getLog(BloomMapFile.class);
   public static final String BLOOM_FILE_NAME = "bloom";

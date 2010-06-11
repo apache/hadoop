@@ -22,12 +22,16 @@ package org.apache.hadoop.fs.kfs;
 import java.io.*;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSInputStream;
 
 import org.kosmix.kosmosfs.access.KfsAccess;
 import org.kosmix.kosmosfs.access.KfsInputChannel;
 
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class KFSInputStream extends FSInputStream {
 
     private KfsInputChannel kfsChannel;

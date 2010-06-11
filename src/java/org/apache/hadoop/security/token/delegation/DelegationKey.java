@@ -19,6 +19,8 @@
 package org.apache.hadoop.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -33,6 +35,7 @@ import org.apache.avro.reflect.Nullable;
  * Key used for generating and verifying delegation tokens
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class DelegationKey implements Writable {
   private int keyId;
   private long expiryDate;

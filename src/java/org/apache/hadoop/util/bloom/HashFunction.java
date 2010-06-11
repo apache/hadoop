@@ -50,6 +50,8 @@
  */
 package org.apache.hadoop.util.bloom;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.hash.Hash;
 
 /**
@@ -58,6 +60,8 @@ import org.apache.hadoop.util.hash.Hash;
  * @see Key The general behavior of a key being stored in a filter
  * @see Filter The general behavior of a filter
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public final class HashFunction {
   /** The number of hashed values. */
   private int nbHash;

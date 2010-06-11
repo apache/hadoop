@@ -22,12 +22,17 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** Provide an cyclic {@link Iterator} for a {@link NavigableMap}.
  * The {@link Iterator} navigates the entries of the map
  * according to the map's ordering.
  * If the {@link Iterator} hits the last entry of the map,
  * it will then continue from the first entry.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
   private final NavigableMap<K, V> navigablemap;
   private final NavigableMap<K, V> tailmap;

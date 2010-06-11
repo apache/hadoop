@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -43,6 +44,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  *  <p> {@link #rpcQueueTime}.inc(time)
  *
  */
+@InterfaceAudience.Private
 public class RpcMetrics implements Updater {
   private final MetricsRegistry registry = new MetricsRegistry();
   private final MetricsRecord metricsRecord;

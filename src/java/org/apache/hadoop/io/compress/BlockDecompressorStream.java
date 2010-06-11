@@ -22,12 +22,17 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A {@link org.apache.hadoop.io.compress.DecompressorStream} which works
  * with 'block-based' based compression algorithms, as opposed to 
  * 'stream-based' compression algorithms.
  *  
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class BlockDecompressorStream extends DecompressorStream {
   private int originalBlockSize = 0;
   private int noUncompressedBytes = 0;

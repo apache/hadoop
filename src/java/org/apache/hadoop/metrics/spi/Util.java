@@ -26,9 +26,14 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Static utility methods
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class Util {
     
   /**

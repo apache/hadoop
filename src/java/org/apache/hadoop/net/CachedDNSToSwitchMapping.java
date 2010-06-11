@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A cached implementation of DNSToSwitchMapping that takes an
  * raw DNSToSwitchMapping and stores the resolved network location in 
@@ -29,6 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * will get its location from the cache. 
  *
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CachedDNSToSwitchMapping implements DNSToSwitchMapping {
   private Map<String, String> cache = new ConcurrentHashMap<String, String>();
   protected DNSToSwitchMapping rawMapping;

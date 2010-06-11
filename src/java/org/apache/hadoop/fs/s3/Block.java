@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.fs.s3;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Holds metadata about a block of data being stored in a {@link FileSystemStore}.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class Block {
   private long id;
 

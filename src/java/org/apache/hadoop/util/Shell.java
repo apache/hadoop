@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /** 
@@ -37,6 +39,8 @@ import org.apache.hadoop.conf.Configuration;
  * <code>df</code>. It also offers facilities to gate commands by 
  * time-intervals.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 abstract public class Shell {
   
   public static final Log LOG = LogFactory.getLog(Shell.class);

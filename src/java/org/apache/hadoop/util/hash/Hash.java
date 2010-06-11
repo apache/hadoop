@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.util.hash;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * This class represents a common API for hashing functions.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public abstract class Hash {
   /** Constant to denote invalid hash type. */
   public static final int INVALID_HASH = -1;

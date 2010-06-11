@@ -26,9 +26,14 @@ import java.nio.channels.SocketChannel;
 
 import javax.net.SocketFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Specialized SocketFactory to create sockets with a SOCKS proxy
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class StandardSocketFactory extends SocketFactory {
 
   /**

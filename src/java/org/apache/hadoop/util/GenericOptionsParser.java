@@ -37,6 +37,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -104,6 +106,8 @@ import org.apache.hadoop.fs.Path;
  * @see Tool
  * @see ToolRunner
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class GenericOptionsParser {
 
   private static final Log LOG = LogFactory.getLog(GenericOptionsParser.class);

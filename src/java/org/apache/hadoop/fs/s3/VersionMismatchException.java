@@ -17,10 +17,15 @@
  */
 package org.apache.hadoop.fs.s3;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Thrown when Hadoop cannot read the version of the data stored
  * in {@link S3FileSystem}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class VersionMismatchException extends S3FileSystemException {
   private static final long serialVersionUID = 1L;
 

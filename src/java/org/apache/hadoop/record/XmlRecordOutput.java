@@ -26,12 +26,17 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Stack;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * XML Serializer.
  * 
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class XmlRecordOutput implements RecordOutput {
 
   private PrintStream stream;

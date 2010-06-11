@@ -20,7 +20,12 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A WritableComparable for longs. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class LongWritable implements WritableComparable {
   private long value;
 

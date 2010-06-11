@@ -19,6 +19,8 @@ package org.apache.hadoop.metrics.jvm;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
@@ -27,6 +29,8 @@ import org.apache.log4j.spi.LoggingEvent;
  * A log4J Appender that simply counts logging events in three levels:
  * fatal, error and warn.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class EventCounter extends AppenderSkeleton {
         
     private static final int FATAL = 0;

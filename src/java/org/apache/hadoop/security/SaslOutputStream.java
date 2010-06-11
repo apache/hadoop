@@ -31,12 +31,17 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A SaslOutputStream is composed of an OutputStream and a SaslServer (or
  * SaslClient) so that write() methods first process the data before writing
  * them out to the underlying OutputStream. The SaslServer (or SaslClient)
  * object must be fully initialized before being used by a SaslOutputStream.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SaslOutputStream extends OutputStream {
 
   private final OutputStream outStream;

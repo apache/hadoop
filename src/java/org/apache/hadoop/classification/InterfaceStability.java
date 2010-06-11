@@ -23,6 +23,8 @@ import java.lang.annotation.Documented;
  * Annotation to inform users of how much to rely on a particular package,
  * class or method not changing over time.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class InterfaceStability {
   /**
    * Can evolve while retaining compatibility for minor release boundaries.; 

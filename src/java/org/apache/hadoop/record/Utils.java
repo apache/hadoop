@@ -21,6 +21,9 @@ package org.apache.hadoop.record;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -30,6 +33,8 @@ import org.apache.hadoop.io.WritableUtils;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Utils {
   
   /** Cannot create a new instance of Utils */

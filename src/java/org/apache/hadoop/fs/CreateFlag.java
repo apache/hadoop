@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /****************************************************************
  *CreateFlag specifies the file create semantic. Users can combine flags like:<br>
  *<code>
@@ -36,6 +39,8 @@ package org.apache.hadoop.fs;
  * <li> append the file if it already exists.
  * </ol>
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public enum CreateFlag {
 
   /**

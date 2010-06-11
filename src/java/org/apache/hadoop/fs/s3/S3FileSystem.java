@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -49,6 +51,8 @@ import org.apache.hadoop.util.Progressable;
  * </p>
  * @see NativeS3FileSystem
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class S3FileSystem extends FileSystem {
 
   private URI uri;

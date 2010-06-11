@@ -19,9 +19,13 @@ package org.apache.hadoop.fs;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 
 /** An abstract class representing file checksums for files. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class FileChecksum implements Writable {
   /** The checksum algorithm name */ 
   public abstract String getAlgorithmName();

@@ -20,11 +20,16 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A WritableComparable for longs in a variable-length format. Such values take
  *  between one and five bytes.  Smaller values take fewer bytes.
  *  
  *  @see org.apache.hadoop.io.WritableUtils#readVLong(DataInput)
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class VLongWritable implements WritableComparable {
   private long value;
 

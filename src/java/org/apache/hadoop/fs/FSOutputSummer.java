@@ -22,11 +22,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.zip.Checksum;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This is a generic output stream for generating checksums for
  * data before it is written to the underlying stream
  */
-
+@InterfaceAudience.LimitedPrivate({"HDFS"})
+@InterfaceStability.Unstable
 abstract public class FSOutputSummer extends OutputStream {
   // data checksum
   private Checksum sum;

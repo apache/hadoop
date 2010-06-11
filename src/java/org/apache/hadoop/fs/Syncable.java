@@ -20,7 +20,12 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** This interface for flush/sync operation. */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface Syncable {
   /**
    * @deprecated As of HADOOP 0.21.0, replaced by hflush

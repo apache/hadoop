@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 import sun.security.krb5.Config;
@@ -35,6 +37,8 @@ import sun.security.krb5.KrbException;
  * operating system names.
  */
 @SuppressWarnings("all")
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class KerberosName {
   /** The first component of the name */
   private final String serviceName;

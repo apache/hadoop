@@ -28,6 +28,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /*
  * This class is a container of multiple thread pools, each for a volume,
@@ -37,6 +39,8 @@ import org.apache.commons.logging.LogFactory;
  * We can move the files to a "TO_BE_DELETED" folder before asychronously
  * deleting it, to make sure the caller can run it faster.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class AsyncDiskService {
   
   public static final Log LOG = LogFactory.getLog(AsyncDiskService.class);

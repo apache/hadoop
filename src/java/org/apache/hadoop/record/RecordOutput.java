@@ -22,12 +22,17 @@ import java.io.IOException;
 import java.util.TreeMap;
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Interface that alll the serializers have to implement.
  * 
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface RecordOutput {
   /**
    * Write a byte to serialized record.

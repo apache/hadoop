@@ -61,6 +61,8 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -144,6 +146,8 @@ import org.xml.sax.SAXException;
  * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
  * of the System property with that name.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
   private static final Log LOG =

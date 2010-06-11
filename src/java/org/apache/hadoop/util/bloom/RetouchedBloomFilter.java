@@ -57,6 +57,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Implements a <i>retouched Bloom filter</i>, as defined in the CoNEXT 2006 paper.
  * <p>
@@ -74,6 +77,8 @@ import java.util.Random;
  * 
  * @see <a href="http://www-rp.lip6.fr/site_npa/site_rp/_publications/740-rbf_cameraready.pdf">Retouched Bloom Filters: Allowing Networked Applications to Trade Off Selected False Positives Against False Negatives</a>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public final class RetouchedBloomFilter extends BloomFilter
 implements RemoveScheme {
   /**

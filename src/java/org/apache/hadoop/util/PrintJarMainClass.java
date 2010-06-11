@@ -20,9 +20,14 @@ package org.apache.hadoop.util;
 
 import java.util.jar.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A micro-application that prints the main class name out of a jar file.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class PrintJarMainClass {
   
   /**

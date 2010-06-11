@@ -20,7 +20,12 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** Encapsulate a list of {@link IOException} into an {@link IOException} */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MultipleIOException extends IOException {
   /** Require by {@link java.io.Serializable} */
   private static final long serialVersionUID = 1L;

@@ -20,7 +20,12 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** Singleton Writable with no data. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class NullWritable implements WritableComparable {
 
   private static final NullWritable THIS = new NullWritable();

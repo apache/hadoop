@@ -21,6 +21,8 @@ package org.apache.hadoop.util;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +32,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 /**
  * Class that provides utility functions for checking disk problem
  */
-
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class DiskChecker {
 
   public static class DiskErrorException extends IOException {

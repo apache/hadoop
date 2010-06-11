@@ -26,6 +26,8 @@ import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
@@ -42,6 +44,8 @@ import org.apache.hadoop.util.StringUtils;
  * content, without date support in the filesystem, and without clock
  * synchronization.)
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Trash extends Configured {
   private static final Log LOG =
     LogFactory.getLog(Trash.class);

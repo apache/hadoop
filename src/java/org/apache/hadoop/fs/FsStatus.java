@@ -21,11 +21,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 
 /** This class is used to represent the capacity, free and used space on a
   * {@link FileSystem}.
   */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FsStatus implements Writable {
   private long capacity;
   private long used;

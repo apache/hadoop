@@ -19,8 +19,13 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
     implements Seekable, PositionedReadable {
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc.metrics;
 
 import javax.management.ObjectName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -50,6 +51,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * Impl details: We use a dynamic mbean that gets the list of the metrics from
  * the metrics registry passed as an argument to the constructor
  */
+@InterfaceAudience.Private
 public class RpcDetailedActivityMBean extends MetricsDynamicMBeanBase {
   private final ObjectName mbeanName;
 

@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** 
  * This class contains constants for configuration keys used
  * in the local file system, raw local fs and checksum fs.
  *
  */
-
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class LocalFileSystemConfigKeys extends CommonConfigurationKeys {
   public static final String  LOCAL_FS_BLOCK_SIZE_KEY = "file.blocksize";
   public static final long    LOCAL_FS_BLOCK_SIZE_DEFAULT = 64*1024*1024;

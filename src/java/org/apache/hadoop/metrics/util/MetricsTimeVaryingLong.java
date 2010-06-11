@@ -18,6 +18,7 @@ package org.apache.hadoop.metrics.util;
  * limitations under the License.
  */
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.util.StringUtils;
 
@@ -35,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
  * @see org.apache.hadoop.metrics.util.MetricsTimeVaryingRate
  *
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsTimeVaryingLong extends MetricsBase{
 
   private static final Log LOG =

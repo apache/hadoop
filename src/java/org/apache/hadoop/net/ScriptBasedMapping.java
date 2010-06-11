@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
@@ -32,6 +34,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  * This class implements the {@link DNSToSwitchMapping} interface using a 
  * script configured via net.topology.script.file.name .
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class ScriptBasedMapping extends CachedDNSToSwitchMapping 
 implements Configurable
 {

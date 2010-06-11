@@ -19,6 +19,9 @@ package org.apache.hadoop.record.compiler.ant;
 
 import java.io.File;
 import java.util.ArrayList;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.record.compiler.generated.Rcc;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DirectoryScanner;
@@ -50,6 +53,8 @@ import org.apache.tools.ant.types.FileSet;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RccTask extends Task {
   
   private String language = "java";

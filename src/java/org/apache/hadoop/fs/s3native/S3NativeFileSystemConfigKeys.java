@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3native;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /** 
@@ -25,7 +27,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  * in the s3 file system. 
  *
  */
-
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class S3NativeFileSystemConfigKeys extends CommonConfigurationKeys {
   public static final String  S3_NATIVE_BLOCK_SIZE_KEY = "s3native.blocksize";
   public static final long    S3_NATIVE_BLOCK_SIZE_DEFAULT = 64*1024*1024;

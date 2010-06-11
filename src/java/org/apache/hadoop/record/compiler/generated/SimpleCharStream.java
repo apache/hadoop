@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.record.compiler.generated;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * An implementation of interface CharStream, where the stream is assumed to
  * contain only ASCII characters (without unicode processing).
@@ -26,6 +29,8 @@ package org.apache.hadoop.record.compiler.generated;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SimpleCharStream
 {
   public static final boolean staticFlag = false;

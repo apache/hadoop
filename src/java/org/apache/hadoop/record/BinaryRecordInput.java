@@ -23,10 +23,15 @@ import java.io.IOException;
 import java.io.DataInputStream;
 import java.io.InputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class BinaryRecordInput implements RecordInput {
     
   private DataInput in;

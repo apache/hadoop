@@ -25,6 +25,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.Writable;
@@ -35,6 +37,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * {@link Writable#write(java.io.DataOutput)} and
  * {@link Writable#readFields(java.io.DataInput)}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class WritableSerialization extends Configured
 	implements Serialization<Writable> {
   static class WritableDeserializer extends Configured
@@ -103,16 +107,19 @@ public class WritableSerialization extends Configured
 
   }
 
+  @InterfaceAudience.Private
   @Override
   public boolean accept(Class<?> c) {
     return Writable.class.isAssignableFrom(c);
   }
 
+  @InterfaceAudience.Private
   @Override
   public Serializer<Writable> getSerializer(Class<Writable> c) {
     return new WritableSerializer();
   }
   
+  @InterfaceAudience.Private
   @Override
   public Deserializer<Writable> getDeserializer(Class<Writable> c) {
     return new WritableDeserializer(getConf(), c);

@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A thread that has called {@link Thread#setDaemon(boolean) } with true.*/
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class Daemon extends Thread {
 
   {

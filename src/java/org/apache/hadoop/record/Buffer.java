@@ -20,6 +20,9 @@ package org.apache.hadoop.record;
 
 import java.io.UnsupportedEncodingException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A byte sequence that is used as a Java native type for buffer.
  * It is resizable and distinguishes between the count of the seqeunce and
@@ -28,6 +31,8 @@ import java.io.UnsupportedEncodingException;
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Buffer implements Comparable, Cloneable {
   /** Number of valid bytes in this.bytes. */
   private int count;

@@ -23,6 +23,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
@@ -35,6 +37,8 @@ import org.apache.hadoop.util.StringUtils;
  * A factory for {@link Serialization}s.
  * </p>
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SerializationFactory extends Configured {
   
   private static final Log LOG =

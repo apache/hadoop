@@ -25,6 +25,8 @@ import java.util.zip.CRC32;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -38,6 +40,8 @@ import org.apache.hadoop.util.StringUtils;
  * It generates & verifies checksums at the client side.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
   private int bytesPerChecksum = 512;

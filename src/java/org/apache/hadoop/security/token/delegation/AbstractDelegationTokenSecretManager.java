@@ -19,6 +19,7 @@
 package org.apache.hadoop.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 
 import java.io.ByteArrayInputStream;
@@ -40,6 +41,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public abstract 
 class AbstractDelegationTokenSecretManager<TokenIdent 
 extends AbstractDelegationTokenIdentifier> 
@@ -297,6 +299,7 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   /** Class to encapsulate a token's renew date and password. */
+  @InterfaceStability.Evolving
   public static class DelegationTokenInformation {
     long renewDate;
     byte[] password;

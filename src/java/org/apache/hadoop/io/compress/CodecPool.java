@@ -24,6 +24,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -31,6 +33,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A global compressor/decompressor pool used to save and reuse 
  * (possibly native) compression/decompression codecs.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CodecPool {
   private static final Log LOG = LogFactory.getLog(CodecPool.class);
   

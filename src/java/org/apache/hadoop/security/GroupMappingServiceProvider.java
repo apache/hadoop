@@ -20,10 +20,15 @@ package org.apache.hadoop.security;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * An interface for the implementation of a user-to-groups mapping service
  * used by {@link Groups}.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 interface GroupMappingServiceProvider {
   
   /**

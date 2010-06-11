@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3;
 
 import java.net.URI;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -27,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
  * Extracts AWS credentials from the filesystem URI or configuration.
  * </p>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class S3Credentials {
   
   private String accessKey;

@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
 /**
  * This class contains options related to file system operations.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class Options {
   /**
    * Class to support the varargs for create() options.

@@ -26,12 +26,16 @@ import javax.security.auth.kerberos.KerberosTicket;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import sun.security.jgss.krb5.Krb5Util;
 import sun.security.krb5.Credentials;
 import sun.security.krb5.PrincipalName;
 
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SecurityUtil {
   private static final Log LOG = LogFactory.getLog(SecurityUtil.class);
 

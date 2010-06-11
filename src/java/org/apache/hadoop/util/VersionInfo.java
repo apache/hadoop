@@ -19,11 +19,15 @@
 package org.apache.hadoop.util;
 
 import org.apache.hadoop.HadoopVersionAnnotation;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This class finds the package info for Hadoop and the HadoopVersionAnnotation
  * information.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class VersionInfo {
   private static Package myPackage;
   private static HadoopVersionAnnotation version;

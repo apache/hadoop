@@ -17,12 +17,16 @@
 
 package org.apache.hadoop.io.file.tfile;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.BytesWritable;
 
 /**
  * Adaptor class to wrap byte-array backed objects (including java byte array)
  * as RawComparable objects.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class ByteArray implements RawComparable {
   private final byte[] buffer;
   private final int offset;

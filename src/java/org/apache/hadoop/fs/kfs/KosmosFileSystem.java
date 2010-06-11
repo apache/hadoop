@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CreateFlag;
@@ -40,7 +42,8 @@ import org.apache.hadoop.util.Progressable;
  * A FileSystem backed by KFS.
  *
  */
-
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class KosmosFileSystem extends FileSystem {
 
     private FileSystem localFs;
