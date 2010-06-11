@@ -70,10 +70,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
+@SuppressWarnings("serial")
 public class HConnectionManager {
-  private static final Delete[] DELETE_ARRAY_TYPE = new Delete[] {};
-  private static final Put[] PUT_ARRAY_TYPE = new Put[] {};
-
   // Register a shutdown hook, one that cleans up RPC and closes zk sessions.
   static {
     Runtime.getRuntime().addShutdownHook(new Thread("HCM.shutdownHook") {
@@ -652,7 +650,6 @@ public class HConnectionManager {
       * Search one of the meta tables (-ROOT- or .META.) for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
-    @SuppressWarnings({"ConstantConditions"})
     private HRegionLocation locateRegionInMeta(final byte [] parentTable,
       final byte [] tableName, final byte [] row, boolean useCache,
       Object regionLockObject)
@@ -1061,7 +1058,6 @@ public class HConnectionManager {
         HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
     }
 
-    @SuppressWarnings({"ConstantConditions"})
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
     throws IOException, RuntimeException {
       List<Throwable> exceptions = new ArrayList<Throwable>();
@@ -1101,7 +1097,6 @@ public class HConnectionManager {
       }
     }
 
-    @SuppressWarnings({"ConstantConditions"})
     private HRegionLocation
       getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey,
         boolean reload)
@@ -1258,11 +1253,12 @@ public class HConnectionManager {
       if (list.isEmpty()) return 0;
       if (list.size() > 1) Collections.sort(list);
       Batch b = new Batch(this) {
+        @SuppressWarnings("unchecked")
         @Override
         int doCall(final List<? extends Row> currentList, final byte [] row,
           final byte [] tableName)
         throws IOException, RuntimeException {
-          final Put [] puts = currentList.toArray(PUT_ARRAY_TYPE);
+          final List<Put> puts = (List<Put>)currentList;
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
               tableName, row) {
             public Integer call() throws IOException {
@@ -1280,11 +1276,12 @@ public class HConnectionManager {
       if (list.isEmpty()) return 0;
       if (list.size() > 1) Collections.sort(list);
       Batch b = new Batch(this) {
+        @SuppressWarnings("unchecked")
         @Override
         int doCall(final List<? extends Row> currentList, final byte [] row,
           final byte [] tableName)
         throws IOException, RuntimeException {
-          final Delete [] deletes = currentList.toArray(DELETE_ARRAY_TYPE);
+          final List<Delete> deletes = (List<Delete>)currentList;
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
                 tableName, row) {
               public Integer call() throws IOException {

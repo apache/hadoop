@@ -19,6 +19,37 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
+import java.lang.management.RuntimeMXBean;
+import java.lang.reflect.Constructor;
+import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +59,6 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -38,14 +68,14 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
-import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HMsg.Type;
+import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -79,37 +109,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-
-import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
-import java.lang.management.RuntimeMXBean;
-import java.lang.reflect.Constructor;
-import java.net.BindException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -1659,7 +1658,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  public int put(final byte[] regionName, final Put [] puts)
+  public int put(final byte[] regionName, final List<Put> puts)
   throws IOException {
     // Count of Puts processed.
     int i = 0;
@@ -1671,11 +1670,11 @@ public class HRegionServer implements HRegionInterface,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      for (i = 0; i < puts.length; i++) {
+      for (Put put: puts) {
         this.requestCount.incrementAndGet();
-        Integer lock = getLockFromId(puts[i].getLockId());
-        writeToWAL &= puts[i].getWriteToWAL();
-        region.put(puts[i], lock);
+        Integer lock = getLockFromId(put.getLockId());
+        writeToWAL &= put.getWriteToWAL();
+        region.put(put, lock);
       }
 
     } catch (WrongRegionException ex) {
@@ -1898,7 +1897,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  public int delete(final byte[] regionName, final Delete [] deletes)
+  public int delete(final byte[] regionName, final List<Delete> deletes)
   throws IOException {
     // Count of Deletes processed.
     int i = 0;
@@ -1910,11 +1909,13 @@ public class HRegionServer implements HRegionInterface,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      Integer[] locks = new Integer[deletes.length];
-      for (i = 0; i < deletes.length; i++) {
+      int size = deletes.size();
+      Integer[] locks = new Integer[size];
+      for (Delete delete: deletes) {
         this.requestCount.incrementAndGet();
-        locks[i] = getLockFromId(deletes[i].getLockId());
-        region.delete(deletes[i], locks[i], writeToWAL);
+        locks[i] = getLockFromId(delete.getLockId());
+        region.delete(delete, locks[i], writeToWAL);
+        i++;
       }
     } catch (WrongRegionException ex) {
       LOG.debug("Batch deletes: " + i, ex);
@@ -2335,8 +2336,8 @@ public class HRegionServer implements HRegionInterface,
     MultiPutResponse resp = new MultiPutResponse();
 
     // do each region as it's own.
-    for( Map.Entry<byte[],List<Put>> e: puts.puts.entrySet()) {
-      int result = put(e.getKey(), e.getValue().toArray(new Put[]{}));
+    for( Map.Entry<byte[], List<Put>> e: puts.puts.entrySet()) {
+      int result = put(e.getKey(), e.getValue());
       resp.addResult(e.getKey(), result);
 
       e.getValue().clear(); // clear some RAM
