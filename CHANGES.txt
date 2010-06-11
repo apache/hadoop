@@ -81,6 +81,9 @@ Trunk (unreleased changes)
 
     HADOOP-6796. FileStatus allows null srcPath but crashes if that's done. (Rodrigo Schmidt via eli)
 
+    HADOOP-6603. Provide workaround for issue with Kerberos not resolving 
+    cross-realm principal (Kan Zhang and Jitendra Pandey via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
