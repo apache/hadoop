@@ -22,6 +22,9 @@ Release 0.20-append - Unreleased
     HDFS-630. Client can exclude specific nodes in the write pipeline.
     (Nicolas Spiegelberg via dhruba)
 
+    HDFS-457. Better handling of volume failure in DataNode Storage.
+    (Nicolas Spiegelberg via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
