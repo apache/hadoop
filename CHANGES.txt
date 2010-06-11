@@ -383,6 +383,8 @@ Release 0.21.0 - Unreleased
    HBASE-2703  ui not working in distributed context
    HBASE-2710  Shell should use default terminal width when autodetection fails
                (Kannan Muthukkaruppan via Todd Lipcon)
+   HBASE-2712  Cached region location that went stale won't recover if 
+               asking for first row
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
