@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
@@ -1241,6 +1242,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
+   * Stub for old callers pre-HDFS-630
+   */
+  public LocatedBlock getAdditionalBlock(String src, 
+                                         String clientName
+                                         ) throws IOException {
+    return getAdditionalBlock(src, clientName, null);
+  }
+
+  /**
    * The client would like to obtain an additional block for the indicated
    * filename (which is being written-to).  Return an array that consists
    * of the block, plus a set of machines.  The first on this list should
@@ -1252,7 +1262,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * client to "try again later".
    */
   public LocatedBlock getAdditionalBlock(String src, 
-                                         String clientName
+                                         String clientName,
+                                         List<Node> excludedNodes
                                          ) throws IOException {
     long fileLength, blockSize;
     int replication;
@@ -1283,7 +1294,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // choose targets for the new block tobe allocated.
     DatanodeDescriptor targets[] = replicator.chooseTarget(replication,
                                                            clientNode,
-                                                           null,
+                                                           excludedNodes,
                                                            blockSize);
     if (targets.length < this.minReplication) {
       throw new IOException("File " + src + " could only be replicated to " +

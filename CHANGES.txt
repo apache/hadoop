@@ -19,6 +19,9 @@ Release 0.20-append - Unreleased
     blocksBeingWritten directory. 
     (Dhruba Borthakur, Nicolas Spiegelberg, Todd Lipcon via dhruba)
 
+    HDFS-630. Client can exclude specific nodes in the write pipeline.
+    (Nicolas Spiegelberg via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
