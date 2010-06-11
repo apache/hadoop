@@ -381,6 +381,8 @@ Release 0.21.0 - Unreleased
    HBASE-2684  TestMasterWrongRS flaky in trunk
    HBASE-2691  LeaseStillHeldException totally ignored by RS, wrongly named
    HBASE-2703  ui not working in distributed context
+   HBASE-2710  Shell should use default terminal width when autodetection fails
+               (Kannan Muthukkaruppan via Todd Lipcon)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
