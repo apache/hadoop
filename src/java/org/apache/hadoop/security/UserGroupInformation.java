@@ -735,6 +735,22 @@ public class UserGroupInformation {
     }
     return null;
   }
+  
+  /**
+   * Returns the authentication method of a ugi. If the authentication method is
+   * PROXY, returns the authentication method of the real user.
+   * 
+   * @param ugi
+   * @return AuthenticationMethod
+   */
+  public static AuthenticationMethod getRealAuthenticationMethod(
+      UserGroupInformation ugi) {
+    AuthenticationMethod authMethod = ugi.getAuthenticationMethod();
+    if (authMethod == AuthenticationMethod.PROXY) {
+      authMethod = ugi.getRealUser().getAuthenticationMethod();
+    }
+    return authMethod;
+  }
 
   /**
    * Compare the subjects to see if they are equal to each other.

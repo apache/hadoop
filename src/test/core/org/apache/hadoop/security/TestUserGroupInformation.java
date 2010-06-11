@@ -277,6 +277,8 @@ public class TestUserGroupInformation {
     Assert.assertEquals(am, ugi.getAuthenticationMethod());
     Assert.assertEquals(null, proxyUgi.getAuthenticationMethod());
     proxyUgi.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    Assert.assertEquals(am, UserGroupInformation
+        .getRealAuthenticationMethod(proxyUgi));
     proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
