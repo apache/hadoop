@@ -365,4 +365,24 @@ public class TestDelegationToken {
       dtSecretManager.stopThreads();
     }
   }
+  
+  @Test 
+  public void testDelegationTokenNullRenewer() throws Exception {
+    TestDelegationTokenSecretManager dtSecretManager = 
+      new TestDelegationTokenSecretManager(24*60*60*1000,
+        10*1000,1*1000,3600000);
+    dtSecretManager.startThreads();
+    TestDelegationTokenIdentifier dtId = new TestDelegationTokenIdentifier(new Text(
+        "theuser"), null, null);
+    Token<TestDelegationTokenIdentifier> token = new Token<TestDelegationTokenIdentifier>(
+        dtId, dtSecretManager);
+    Assert.assertTrue(token != null);
+    try {
+      dtSecretManager.renewToken(token, "");
+      Assert.fail("Renewal must not succeed");
+    } catch (IOException e) {
+      //PASS
+    }
+  }
+
 }

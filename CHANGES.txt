@@ -81,6 +81,9 @@ Trunk (unreleased changes)
     HADOOP-6603. Provide workaround for issue with Kerberos not resolving 
     cross-realm principal (Kan Zhang and Jitendra Pandey via jghoman)
 
+    HADOOP-6620. NPE if renewer is passed as null in getDelegationToken.
+    (Jitendra Pandey via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
