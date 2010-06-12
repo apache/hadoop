@@ -686,6 +686,7 @@ Release 0.21.0 - Unreleased
    HBASE-2618  Don't inherit from HConstants (Benoit Sigoure via Stack)
    HBASE-2208  TableServers # processBatchOfRows - converts from List to [ ]
                - Expensive copy 
+   HBASE-2694  Move RS to Master region open/close messaging into ZooKeeper
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

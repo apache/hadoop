@@ -220,6 +220,68 @@ public class HQuorumPeer {
 
     return zkProperties;
   }
+  
+  /**
+   * Return the ZK Quorum servers string given zk properties returned by 
+   * makeZKProps
+   * @param properties
+   * @return
+   */
+  public static String getZKQuorumServersString(Properties properties) {
+    String clientPort = null;
+    List<String> servers = new ArrayList<String>();
+
+    // The clientPort option may come after the server.X hosts, so we need to
+    // grab everything and then create the final host:port comma separated list.
+    boolean anyValid = false;
+    for (Entry<Object,Object> property : properties.entrySet()) {
+      String key = property.getKey().toString().trim();
+      String value = property.getValue().toString().trim();
+      if (key.equals("clientPort")) {
+        clientPort = value;
+      }
+      else if (key.startsWith("server.")) {
+        String host = value.substring(0, value.indexOf(':'));
+        servers.add(host);
+        try {
+          //noinspection ResultOfMethodCallIgnored
+          InetAddress.getByName(host);
+          anyValid = true;
+        } catch (UnknownHostException e) {
+          LOG.warn(StringUtils.stringifyException(e));
+        }
+      }
+    }
+
+    if (!anyValid) {
+      LOG.error("no valid quorum servers found in " + HConstants.ZOOKEEPER_CONFIG_NAME);
+      return null;
+    }
+
+    if (clientPort == null) {
+      LOG.error("no clientPort found in " + HConstants.ZOOKEEPER_CONFIG_NAME);
+      return null;
+    }
+
+    if (servers.isEmpty()) {
+      LOG.fatal("No server.X lines found in conf/zoo.cfg. HBase must have a " +
+                "ZooKeeper cluster configured for its operation.");
+      return null;
+    }
+
+    StringBuilder hostPortBuilder = new StringBuilder();
+    for (int i = 0; i < servers.size(); ++i) {
+      String host = servers.get(i);
+      if (i > 0) {
+        hostPortBuilder.append(',');
+      }
+      hostPortBuilder.append(host);
+      hostPortBuilder.append(':');
+      hostPortBuilder.append(clientPort);
+    }
+
+    return hostPortBuilder.toString();
+  }
 
   /**
    * Parse ZooKeeper's zoo.cfg, injecting HBase Configuration variables in.

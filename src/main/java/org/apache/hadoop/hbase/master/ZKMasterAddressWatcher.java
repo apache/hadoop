@@ -74,7 +74,7 @@ class ZKMasterAddressWatcher implements Watcher {
     } else if(type.equals(EventType.NodeCreated) &&
         event.getPath().equals(this.zookeeper.clusterStateZNode)) {
       LOG.debug("Resetting watch on cluster state node.");
-      this.zookeeper.setClusterStateWatch(this);
+      this.zookeeper.setClusterStateWatch();
     }
   }
 
@@ -87,7 +87,7 @@ class ZKMasterAddressWatcher implements Watcher {
       try {
         LOG.debug("Waiting for master address ZNode to be deleted " +
           "(Also watching cluster state node)");
-        this.zookeeper.setClusterStateWatch(this);
+        this.zookeeper.setClusterStateWatch();
         wait();
       } catch (InterruptedException e) {
       }
@@ -110,7 +110,7 @@ class ZKMasterAddressWatcher implements Watcher {
       }
       if(this.zookeeper.writeMasterAddress(address)) {
         this.zookeeper.setClusterState(true);
-        this.zookeeper.setClusterStateWatch(this);
+        this.zookeeper.setClusterStateWatch();
         // Watch our own node
         this.zookeeper.readMasterAddress(this);
         return true;

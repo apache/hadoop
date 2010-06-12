@@ -32,6 +32,9 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -39,6 +42,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.io.WritableUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -94,6 +99,9 @@ public class RegionManager {
    */
    final SortedMap<String, RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(new TreeMap<String, RegionState>());
+   
+   // regions in transition are also recorded in ZK using the zk wrapper
+   final ZooKeeperWrapper zkWrapper;
 
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
@@ -124,10 +132,11 @@ public class RegionManager {
   private final int zooKeeperNumRetries;
   private final int zooKeeperPause;
 
-  RegionManager(HMaster master) {
+  RegionManager(HMaster master) throws IOException {
     Configuration conf = master.getConfiguration();
 
     this.master = master;
+    this.zkWrapper = ZooKeeperWrapper.getInstance(HMaster.class.getName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 
@@ -165,10 +174,17 @@ public class RegionManager {
     unsetRootRegion();
     if (!master.getShutdownRequested().get()) {
       synchronized (regionsInTransition) {
-        RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO,
-            RegionState.State.UNASSIGNED);
-        regionsInTransition.put(
-            HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString(), s);
+        String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
+        byte[] data = null;
+        try {
+          data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+        } catch (IOException e) {
+          LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+        }
+        zkWrapper.createUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
+        LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
+        RegionState s = new RegionState(HRegionInfo.ROOT_REGIONINFO, RegionState.State.UNASSIGNED);
+        regionsInTransition.put(regionName, s);
         LOG.info("ROOT inserted into regionsInTransition");
       }
     }
@@ -330,6 +346,14 @@ public class RegionManager {
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
     rs.setPendingOpen(sinfo.getServerName());
     synchronized (this.regionsInTransition) {
+      byte[] data = null;
+      try {
+        data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+      } catch (IOException e) {
+        LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+      }
+      zkWrapper.createUnassignedRegion(rs.getRegionInfo().getEncodedName(), data);
+      LOG.debug("Created UNASSIGNED zNode " + regionName + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
       this.regionsInTransition.put(regionName, rs);
     }
 
@@ -969,6 +993,16 @@ public class RegionManager {
     synchronized(this.regionsInTransition) {
       s = regionsInTransition.get(info.getRegionNameAsString());
       if (s == null) {
+        byte[] data = null;
+        try {
+          data = Writables.getBytes(new RegionTransitionEventData(HBaseEventType.M2ZK_REGION_OFFLINE, HMaster.MASTER));
+        } catch (IOException e) {
+          // TODO: Review what we should do here.  If Writables work this
+          //       should never happen
+          LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
+        }
+        zkWrapper.createUnassignedRegion(info.getEncodedName(), data);
+        LOG.debug("Created UNASSIGNED zNode " + info.getRegionNameAsString() + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
         s = new RegionState(info, RegionState.State.UNASSIGNED);
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
@@ -1213,8 +1247,9 @@ public class RegionManager {
    */
   public void setRootRegionLocation(HServerAddress address) {
     writeRootRegionLocationToZooKeeper(address);
-
     synchronized (rootRegionLocation) {
+      // the root region has been assigned, remove it from transition in ZK
+      zkWrapper.deleteUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName());
       rootRegionLocation.set(new HServerAddress(address));
       rootRegionLocation.notifyAll();
     }

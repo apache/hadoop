@@ -19,6 +19,23 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.lang.reflect.Constructor;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +65,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler;
+import org.apache.hadoop.hbase.executor.HBaseExecutorService;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
@@ -76,23 +96,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
-import java.lang.reflect.Constructor;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -198,14 +201,31 @@ public class HMaster extends Thread implements HMasterInterface,
     // We'll succeed if we are only  master or if we win the race when many
     // masters.  Otherwise we park here inside in writeAddressToZooKeeper.
     // TODO: Bring up the UI to redirect to active Master.
-    this.zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+    zooKeeperWrapper.registerListener(this);
     this.zkMasterAddressWatcher =
       new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
+    zooKeeperWrapper.registerListener(zkMasterAddressWatcher);
     this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
 
     serverManager = new ServerManager(this);
+
+    
+    // Start the unassigned watcher - which will create the unassgined region 
+    // in ZK. This is needed before RegionManager() constructor tries to assign 
+    // the root region.
+    ZKUnassignedWatcher.start();
+    // init the various event handlers
+    HBaseEventHandler.init(serverManager);
+    // start the "close region" executor service
+    HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(MASTER);
+    // start the "open region" executor service
+    HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(MASTER);
+
+    
+    // start the region manager
     regionManager = new RegionManager(this);
 
     setName(MASTER);
@@ -411,7 +431,7 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.serverManager.getAverageLoad();
   }
 
-  RegionServerOperationQueue getRegionServerOperationQueue () {
+  public RegionServerOperationQueue getRegionServerOperationQueue () {
     return this.regionServerOperationQueue;
   }
 
@@ -491,6 +511,7 @@ public class HMaster extends Thread implements HMasterInterface,
     this.rpcServer.stop();
     this.regionManager.stop();
     this.zooKeeperWrapper.close();
+    HBaseExecutorService.shutdown();
     LOG.info("HMaster main thread exiting");
   }
 
@@ -1118,7 +1139,9 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   @Override
   public void process(WatchedEvent event) {
-    LOG.debug(("Event " + event.getType() +  " with path " + event.getPath()));
+    LOG.debug("Event " + event.getType() + 
+              " with state " + event.getState() +  
+              " with path " + event.getPath());
     // Master should kill itself if its session expired or if its
     // znode was deleted manually (usually for testing purposes)
     if(event.getState() == KeeperState.Expired ||
@@ -1132,7 +1155,8 @@ public class HMaster extends Thread implements HMasterInterface,
 
       zooKeeperWrapper.close();
       try {
-        zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
+        zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+        zooKeeperWrapper.registerListener(this);
         this.zkMasterAddressWatcher.setZookeeper(zooKeeperWrapper);
         if(!this.zkMasterAddressWatcher.
             writeAddressToZooKeeper(this.address,false)) {

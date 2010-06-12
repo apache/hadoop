@@ -96,7 +96,8 @@ public class TestZooKeeper {
       throws IOException, InterruptedException {
     new HTable(conf, HConstants.META_TABLE_NAME);
 
-    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+    zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
     int sessionTimeout = 5 * 1000; // 5 seconds
     HConnection connection = HConnectionManager.getConnection(conf);
@@ -158,7 +159,7 @@ public class TestZooKeeper {
       HTable localMeta = new HTable(conf, HConstants.META_TABLE_NAME);
       Configuration otherConf = HBaseConfiguration.create(conf);
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
-      HTable ipMeta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable ipMeta = new HTable(otherConf, HConstants.META_TABLE_NAME);
 
       // dummy, just to open the connection
       localMeta.exists(new Get(HConstants.LAST_ROW));
@@ -184,7 +185,8 @@ public class TestZooKeeper {
    */
   @Test
   public void testZNodeDeletes() throws Exception {
-    ZooKeeperWrapper zkw = new ZooKeeperWrapper(conf, EmptyWatcher.instance);
+    ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(conf, TestZooKeeper.class.getName());
+    zkw.registerListener(EmptyWatcher.instance);
     zkw.ensureExists("/l1/l2/l3/l4");
     try {
       zkw.deleteZNode("/l1/l2");

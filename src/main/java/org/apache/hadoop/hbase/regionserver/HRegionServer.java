@@ -319,7 +319,8 @@ public class HRegionServer implements HRegionInterface,
   }
 
   private void reinitializeZooKeeper() throws IOException {
-    zooKeeperWrapper = new ZooKeeperWrapper(conf, this);
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, serverInfo.getServerName());
+    zooKeeperWrapper.registerListener(this);
     watchMasterAddress();
   }
 
@@ -1217,14 +1218,7 @@ public class HRegionServer implements HRegionInterface,
         if (LOG.isDebugEnabled())
           LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
-        boolean startCodeOk = false;
-        while(!startCodeOk) {
-          this.serverInfo = createServerInfoWithNewStartCode(this.serverInfo);
-          startCodeOk = zooKeeperWrapper.writeRSLocation(this.serverInfo);
-          if(!startCodeOk) {
-           LOG.debug("Start code already taken, trying another one");
-          }
-        }
+        zooKeeperWrapper.writeRSLocation(this.serverInfo);
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
       } catch (IOException e) {
@@ -1419,8 +1413,11 @@ public class HRegionServer implements HRegionInterface,
   void openRegion(final HRegionInfo regionInfo) {
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
+    RSZookeeperUpdater zkUpdater = 
+      new RSZookeeperUpdater(serverInfo.getServerName(), regionInfo.getEncodedName());
     if (region == null) {
       try {
+        zkUpdater.startRegionOpenEvent(null, true);
         region = instantiateRegion(regionInfo);
         // Startup a compaction early if one is needed, if region has references
         // or if a store has too many store files
@@ -1435,7 +1432,15 @@ public class HRegionServer implements HRegionInterface,
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
-        reportClose(regionInfo, StringUtils.stringifyException(t).getBytes());
+        try {
+          HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_CLOSE, 
+                               regionInfo, 
+                               StringUtils.stringifyException(t).getBytes());
+          zkUpdater.abortOpenRegion(hmsg);
+        } catch (IOException e1) {
+          // TODO: Can we recover? Should be throw RTE?
+          LOG.error("Failed to abort open region " + regionInfo.getRegionNameAsString(), e1);
+        }
         return;
       }
       this.lock.writeLock().lock();
@@ -1446,7 +1451,12 @@ public class HRegionServer implements HRegionInterface,
         this.lock.writeLock().unlock();
       }
     }
-    reportOpen(regionInfo);
+    try {
+      HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_OPEN, regionInfo);
+      zkUpdater.finishRegionOpenEvent(hmsg);
+    } catch (IOException e) {
+      LOG.error("Failed to mark region " + regionInfo.getRegionNameAsString() + " as opened", e);
+    }
   }
 
   protected HRegion instantiateRegion(final HRegionInfo regionInfo)
@@ -1475,11 +1485,19 @@ public class HRegionServer implements HRegionInterface,
 
   protected void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
+    RSZookeeperUpdater zkUpdater = null;
+    if(reportWhenCompleted) {
+      zkUpdater = new RSZookeeperUpdater(serverInfo.getServerName(), hri.getEncodedName());
+      zkUpdater.startRegionCloseEvent(null, false);
+    }
     HRegion region = this.removeFromOnlineRegions(hri);
     if (region != null) {
       region.close();
       if(reportWhenCompleted) {
-        reportClose(hri);
+        if(zkUpdater != null) {
+          HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_CLOSE, hri, null);
+          zkUpdater.finishRegionCloseEvent(hmsg);
+        }
       }
     }
   }
