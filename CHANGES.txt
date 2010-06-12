@@ -687,6 +687,8 @@ Release 0.21.0 - Unreleased
    HBASE-2208  TableServers # processBatchOfRows - converts from List to [ ]
                - Expensive copy 
    HBASE-2694  Move RS to Master region open/close messaging into ZooKeeper
+   HBASE-2716  Make HBase's maven artifacts configurable with -D
+               (Alex Newman via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
