@@ -84,6 +84,9 @@ Trunk (unreleased changes)
     HADOOP-6620. NPE if renewer is passed as null in getDelegationToken.
     (Jitendra Pandey via jghoman)
 
+    HADOOP-6613. Moves the RPC version check ahead of the AuthMethod check.
+    (Kan Zhang via ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
