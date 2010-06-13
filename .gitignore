@@ -3,14 +3,9 @@
 /.project
 /.settings
 /build
+/.idea/
 /logs
 /target
-/contrib/mdc_replication/target/
-/contrib/stargate/target/
-/contrib/transactional/target/
-/core/target/
-/core/build/
-/core/test/
 *.iml
 *.orig
 *~
