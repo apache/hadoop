@@ -728,6 +728,8 @@ Release 0.21.0 - Unreleased
    HBASE-2588  Add easier way to ship HBase dependencies to MR cluster within Job
    HBASE-1923  Bulk incremental load into an existing table
    HBASE-2579  Add atomic checkAndDelete support (Michael Dalton via Stack)
+   HBASE-2400  new connector for Avro RPC access to HBase cluster
+   	       (Jeff Hammerbacher via Ryan Rawson)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

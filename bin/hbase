@@ -70,6 +70,7 @@ if [ $# = 0 ]; then
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
   echo "  thrift           run an HBase Thrift server" 
+  echo "  avro             run an HBase Avro server" 
   echo "  zookeeper        run a Zookeeper server"
   echo "  migrate          upgrade an hbase.rootdir"
   echo " or"
@@ -236,6 +237,11 @@ elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
+  fi
+elif [ "$COMMAND" = "avro" ] ; then
+  CLASS='org.apache.hadoop.hbase.avro.AvroServer'
+  if [ "$1" != "stop" ] ; then
+    HBASE_OPTS="$HBASE_OPTS $HBASE_AVRO_OPTS"
   fi
 elif [ "$COMMAND" = "migrate" ] ; then
   CLASS='org.apache.hadoop.hbase.util.Migrate'
