@@ -76,8 +76,6 @@ Trunk (unreleased changes)
     HADOOP-6687.   user object in the subject in UGI should be reused in case 
     of a relogin. (jnp via boryas)
 
-    HADOOP-6796. FileStatus allows null srcPath but crashes if that's done. (Rodrigo Schmidt via eli)
-
     HADOOP-6603. Provide workaround for issue with Kerberos not resolving 
     cross-realm principal (Kan Zhang and Jitendra Pandey via jghoman)
 
