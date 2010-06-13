@@ -23,7 +23,9 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 import java.io.IOException;
 
@@ -60,32 +62,88 @@ class MetaScanner {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor, byte[] tableName)
   throws IOException {
+    metaScan(configuration, visitor, tableName, null, Integer.MAX_VALUE);
+  }
+
+  /**
+   * Scans the meta table and calls a visitor on each RowResult. Uses a table
+   * name and a row name to locate meta regions. And it only scans at most
+   * <code>rowLimit</code> of rows.
+   *
+   * @param configuration HBase configuration.
+   * @param visitor Visitor object.
+   * @param tableName User table name.
+   * @param row Name of the row at the user table. The scan will start from
+   * the region row where the row resides.
+   * @param rowLimit Max of processed rows. If it is less than 0, it
+   * will be set to default value <code>Integer.MAX_VALUE</code>.
+   * @throws IOException e
+   */
+  public static void metaScan(Configuration configuration,
+      MetaScannerVisitor visitor, byte[] tableName, byte[] row,
+      int rowLimit)
+  throws IOException {
+    int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
+
     HConnection connection = HConnectionManager.getConnection(configuration);
     byte [] startRow = tableName == null || tableName.length == 0 ?
         HConstants.EMPTY_START_ROW :
-          HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES,
+          HRegionInfo.createRegionName(tableName, row, HConstants.ZEROES,
               false);
+
+    // if row is not null, we want to use the startKey of the row's region as
+    // the startRow for the meta scan.
+    if (row != null) {
+      HTable metaTable = new HTable(HConstants.META_TABLE_NAME);
+      Result startRowResult = metaTable.getRowOrBefore(startRow,
+          HConstants.CATALOG_FAMILY);
+      if (startRowResult == null) {
+        throw new TableNotFoundException("Cannot find row in .META. for table: "
+            + Bytes.toString(tableName) + ", row=" + Bytes.toString(startRow));
+      }
+      byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+      if (value == null || value.length == 0) {
+        throw new IOException("HRegionInfo was null or empty in Meta for " +
+          Bytes.toString(tableName) + ", row=" + Bytes.toString(startRow));
+      }
+      HRegionInfo regionInfo = Writables.getHRegionInfo(value);
+
+      byte[] rowBefore = regionInfo.getStartKey();
+      startRow = HRegionInfo.createRegionName(tableName, rowBefore,
+          HConstants.ZEROES, false);
+    }
 
     // Scan over each meta region
     ScannerCallable callable;
-    int rows = configuration.getInt("hbase.meta.scanner.caching", 100);
+    int rows = Math.min(rowLimit,
+        configuration.getInt("hbase.meta.scanner.caching", 100));
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
       callable = new ScannerCallable(connection, HConstants.META_TABLE_NAME,
           scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
+
+      int processedRows = 0;
       try {
         callable.setCaching(rows);
         done: do {
+          if (processedRows >= rowUpperLimit) {
+            break;
+          }
           //we have all the rows here
           Result [] rrs = connection.getRegionServerWithRetries(callable);
           if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
             break; //exit completely
           }
           for (Result rr : rrs) {
+            if (processedRows >= rowUpperLimit) {
+              break done;
+            }
             if (!visitor.processRow(rr))
               break done; //exit completely
+            processedRows++;
           }
           //here, we didn't break anywhere. Check if we have more rows
         } while(true);

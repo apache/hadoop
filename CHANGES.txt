@@ -691,6 +691,8 @@ Release 0.21.0 - Unreleased
                (Alex Newman via Stack)
    HBASE-2718  Update .gitignore for trunk after removal of contribs
                (Lars Francke via Stack)
+   HBASE-2468  Improvements to prewarm META cache on clients
+               (Mingjie Lai via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

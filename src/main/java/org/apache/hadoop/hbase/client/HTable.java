@@ -52,6 +52,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 
 /**
  * Used to communicate with a single HBase table.
@@ -372,6 +374,95 @@ public class HTable implements HTableInterface {
     };
     MetaScanner.metaScan(configuration, visitor, tableName);
     return regionMap;
+  }
+
+  /**
+   * Save the passed region information and the table's regions
+   * cache.
+   * <p>
+   * This is mainly useful for the MapReduce integration. You can call
+   * {@link #deserializeRegionInfo deserializeRegionInfo}
+   * to deserialize regions information from a
+   * {@link DataInput}, then call this method to load them to cache.
+   *
+   * <pre>
+   * {@code
+   * HTable t1 = new HTable("foo");
+   * FileInputStream fis = new FileInputStream("regions.dat");
+   * DataInputStream dis = new DataInputStream(fis);
+   *
+   * Map<HRegionInfo, HServerAddress> hm = t1.deserializeRegionInfo(dis);
+   * t1.prewarmRegionCache(hm);
+   * }
+   * </pre>
+   * @param regionMap This piece of regions information will be loaded
+   * to region cache.
+   */
+  public void prewarmRegionCache(Map<HRegionInfo, HServerAddress> regionMap) {
+    this.connection.prewarmRegionCache(this.getTableName(), regionMap);
+  }
+
+  /**
+   * Serialize the regions information of this table and output
+   * to <code>out</code>.
+   * <p>
+   * This is mainly useful for the MapReduce integration. A client could
+   * perform a large scan for all the regions for the table, serialize the
+   * region info to a file. MR job can ship a copy of the meta for the table in
+   * the DistributedCache.
+   * <pre>
+   * {@code
+   * FileOutputStream fos = new FileOutputStream("regions.dat");
+   * DataOutputStream dos = new DataOutputStream(fos);
+   * table.serializeRegionInfo(dos);
+   * dos.flush();
+   * dos.close();
+   * }
+   * </pre>
+   * @param out {@link DataOutput} to serialize this object into.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void serializeRegionInfo(DataOutput out) throws IOException {
+    Map<HRegionInfo, HServerAddress> allRegions = this.getRegionsInfo();
+    // first, write number of regions
+    out.writeInt(allRegions.size());
+    for (Map.Entry<HRegionInfo, HServerAddress> es : allRegions.entrySet()) {
+      es.getKey().write(out);
+      es.getValue().write(out);
+    }
+  }
+
+  /**
+   * Read from <code>in</code> and deserialize the regions information.
+   *
+   * <p>It behaves similarly as {@link #getRegionsInfo getRegionsInfo}, except
+   * that it loads the region map from a {@link DataInput} object.
+   *
+   * <p>It is supposed to be followed immediately by  {@link
+   * #prewarmRegionCache prewarmRegionCache}.
+   *
+   * <p>
+   * Please refer to {@link #prewarmRegionCache prewarmRegionCache} for usage.
+   *
+   * @param in {@link DataInput} object.
+   * @return A map of HRegionInfo with its server address.
+   * @throws IOException if an I/O exception occurs.
+   */
+  public Map<HRegionInfo, HServerAddress> deserializeRegionInfo(DataInput in)
+  throws IOException {
+    final Map<HRegionInfo, HServerAddress> allRegions =
+      new TreeMap<HRegionInfo, HServerAddress>();
+
+    // the first integer is expected to be the size of records
+    int regionsCount = in.readInt();
+    for (int i = 0; i < regionsCount; ++i) {
+      HRegionInfo hri = new HRegionInfo();
+      hri.readFields(in);
+      HServerAddress hsa = new HServerAddress();
+      hsa.readFields(in);
+      allRegions.put(hri, hsa);
+    }
+    return allRegions;
   }
 
    public Result getRowOrBefore(final byte[] row, final byte[] family)
@@ -1007,5 +1098,58 @@ public class HTable implements HTableInterface {
                 t.setPriority(Thread.NORM_PRIORITY);
             return t;
         }
+  }
+
+  /**
+   * Enable or disable region cache prefetch for the table. It will be
+   * applied for the given table's all HTable instances who share the same
+   * connection. By default, the cache prefetch is enabled.
+   * @param tableName name of table to configure.
+   * @param enable Set to true to enable region cache prefetch. Or set to
+   * false to disable it.
+   */
+  public static void setRegionCachePrefetch(final byte[] tableName,
+      boolean enable) {
+    HConnectionManager.getConnection(HBaseConfiguration.create()).
+    setRegionCachePrefetch(tableName, enable);
+  }
+
+  /**
+   * Enable or disable region cache prefetch for the table. It will be
+   * applied for the given table's all HTable instances who share the same
+   * connection. By default, the cache prefetch is enabled.
+   * @param conf The Configuration object to use.
+   * @param tableName name of table to configure.
+   * @param enable Set to true to enable region cache prefetch. Or set to
+   * false to disable it.
+   */
+  public static void setRegionCachePrefetch(final Configuration conf,
+      final byte[] tableName, boolean enable) {
+    HConnectionManager.getConnection(conf).setRegionCachePrefetch(
+        tableName, enable);
+  }
+
+  /**
+   * Check whether region cache prefetch is enabled or not for the table.
+   * @param conf The Configuration object to use.
+   * @param tableName name of table to check
+   * @return true if table's region cache prefecth is enabled. Otherwise
+   * it is disabled.
+   */
+  public static boolean getRegionCachePrefetch(final Configuration conf,
+      final byte[] tableName) {
+    return HConnectionManager.getConnection(conf).getRegionCachePrefetch(
+        tableName);
+  }
+
+  /**
+   * Check whether region cache prefetch is enabled or not for the table.
+   * @param tableName name of table to check
+   * @return true if table's region cache prefecth is enabled. Otherwise
+   * it is disabled.
+   */
+  public static boolean getRegionCachePrefetch(final byte[] tableName) {
+    return HConnectionManager.getConnection(HBaseConfiguration.create()).
+    getRegionCachePrefetch(tableName);
   }
 }

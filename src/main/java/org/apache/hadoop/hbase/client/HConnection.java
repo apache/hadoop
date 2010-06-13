@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -219,5 +221,29 @@ public interface HConnection {
   public void processBatchOfPuts(List<Put> list,
                                  final byte[] tableName, ExecutorService pool) throws IOException;
 
+  /**
+   * Enable or disable region cache prefetch for the table. It will be
+   * applied for the given table's all HTable instances within this
+   * connection. By default, the cache prefetch is enabled.
+   * @param tableName name of table to configure.
+   * @param enable Set to true to enable region cache prefetch.
+   */
+  public void setRegionCachePrefetch(final byte[] tableName,
+      final boolean enable);
 
+  /**
+   * Check whether region cache prefetch is enabled or not.
+   * @param tableName name of table to check
+   * @return true if table's region cache prefecth is enabled. Otherwise
+   * it is disabled.
+   */
+  public boolean getRegionCachePrefetch(final byte[] tableName);
+
+  /**
+   * Load the region map and warm up the global region cache for the table.
+   * @param tableName name of the table to perform region cache prewarm.
+   * @param regions a region map.
+   */
+  public void prewarmRegionCache(final byte[] tableName,
+      final Map<HRegionInfo, HServerAddress> regions);
 }
