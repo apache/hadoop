@@ -81,18 +81,23 @@ public abstract class MultithreadedTestUtil {
       threadDoneCount++;
     }
 
-    public void stop() throws InterruptedException {
+    public void stop() throws Exception {
       synchronized (this) {
         stopped = true;
       }
       for (TestThread t : testThreads) {
         t.join();
       }
+      checkException();
     }
   }
 
+  /**
+   * A thread that can be added to a test context, and properly
+   * passes exceptions through.
+   */
   public static abstract class TestThread extends Thread {
-    final TestContext ctx;
+    protected final TestContext ctx;
     protected boolean stopped;
 
     public TestThread(TestContext ctx) {
@@ -101,19 +106,34 @@ public abstract class MultithreadedTestUtil {
 
     public void run() {
       try {
-        while (ctx.shouldRun() && !stopped) {
-          doAnAction();
-        }
+        doWork();
       } catch (Throwable t) {
         ctx.threadFailed(t);
       }
       ctx.threadDone();
     }
 
+    public abstract void doWork() throws Exception;
+
     protected void stopTestThread() {
       this.stopped = true;
     }
-
+  }
+  
+  /**
+   * A test thread that performs a repeating operation.
+   */
+  public static abstract class RepeatingTestThread extends TestThread {
+    public RepeatingTestThread(TestContext ctx) {
+      super(ctx);
+    }
+    
+    public final void doWork() throws Exception {
+      while (ctx.shouldRun() && !stopped) {
+        doAnAction();
+      }
+    }
+    
     public abstract void doAnAction() throws Exception;
   }
 }

@@ -26,6 +26,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * HConstants holds a bunch of HBase-related constants
  */
 public final class HConstants {
+  /**
+   * Status codes used for return values of bulk operations.
+   */
+  public enum OperationStatusCode {
+    NOT_RUN,
+    SUCCESS,
+    BAD_FAMILY,
+    FAILURE;
+  }
 
   /** long constant for zero */
   public static final Long ZERO_L = Long.valueOf(0L);
@@ -342,5 +351,4 @@ public final class HConstants {
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
-
 }

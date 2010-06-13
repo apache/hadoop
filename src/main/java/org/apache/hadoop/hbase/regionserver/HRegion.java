@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -54,16 +55,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -1240,7 +1245,7 @@ public class HRegion implements HeapSize { // , Writable{
     try {
       byte [] row = delete.getRow();
       // If we did not pass an existing row lock, obtain a new one
-      lid = getLock(lockid, row);
+      lid = getLock(lockid, row, true);
 
       // All edits for the given row (across all column families) must happen atomically.
       prepareDelete(delete);
@@ -1265,7 +1270,6 @@ public class HRegion implements HeapSize { // , Writable{
     boolean flush = false;
 
     updatesLock.readLock().lock();
-    ReadWriteConsistencyControl.WriteEntry w = null;
 
     try {
 
@@ -1275,7 +1279,6 @@ public class HRegion implements HeapSize { // , Writable{
         List<KeyValue> kvs = e.getValue();
         Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
 
-        Store store = getStore(family);
         for (KeyValue kv: kvs) {
           //  Check if time is LATEST, change to time of most recent addition if so
           //  This is expensive.
@@ -1315,50 +1318,24 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       if (writeToWAL) {
-        //
         // write/sync to WAL should happen before we touch memstore.
         //
         // If order is reversed, i.e. we write to memstore first, and
         // for some reason fail to write/sync to commit log, the memstore
         // will contain uncommitted transactions.
         //
-
         // bunch up all edits across all column families into a
         // single WALEdit.
         WALEdit walEdit = new WALEdit();
-        for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
-          List<KeyValue> kvs = e.getValue();
-          for (KeyValue kv : kvs) {
-            walEdit.add(kv);
-          }
-        }
-        // append the edit to WAL. The append also does the sync.
-        if (!walEdit.isEmpty()) {
-          this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+        addFamilyMapToWALEdit(familyMap, byteNow, walEdit);
+        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
             walEdit, now);
-        }
       }
 
       // Now make changes to the memstore.
-
-      long size = 0;
-      w = rwcc.beginMemstoreInsert();
-
-      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
-
-        byte[] family = e.getKey();
-        List<KeyValue> kvs = e.getValue();
-
-        Store store = getStore(family);
-        for (KeyValue kv: kvs) {
-          kv.setMemstoreTS(w.getWriteNumber());
-          size = this.memstoreSize.addAndGet(store.delete(kv));
-        }
-      }
-      flush = isFlushSize(size);
+      long addedSize = applyFamilyMapToMemstore(familyMap);
+      flush = isFlushSize(memstoreSize.addAndGet(addedSize));
     } finally {
-      if (w != null) rwcc.completeMemstoreInsert(w);
-
       this.updatesLock.readLock().unlock();
     }
 
@@ -1419,7 +1396,7 @@ public class HRegion implements HeapSize { // , Writable{
       // invokes a HRegion#abort.
       byte [] row = put.getRow();
       // If we did not pass an existing row lock, obtain a new one
-      Integer lid = getLock(lockid, row);
+      Integer lid = getLock(lockid, row, true);
 
       try {
         // All edits for the given row (across all column families) must happen atomically.
@@ -1432,6 +1409,162 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  /**
+   * Struct-like class that tracks the progress of a batch operation,
+   * accumulating status codes and tracking the index at which processing
+   * is proceeding.
+   */
+  private static class BatchOperationInProgress<T> {
+    T[] operations;
+    OperationStatusCode[] retCodes;
+    int nextIndexToProcess = 0;
+
+    public BatchOperationInProgress(T[] operations) {
+      this.operations = operations;
+      retCodes = new OperationStatusCode[operations.length];
+      Arrays.fill(retCodes, OperationStatusCode.NOT_RUN);
+    }
+    
+    public boolean isDone() {
+      return nextIndexToProcess == operations.length;
+    }
+  }
+  
+  /**
+   * Perform a batch put with no pre-specified locks
+   * @see HRegion#put(Pair[])
+   */
+  public OperationStatusCode[] put(Put[] puts) throws IOException {
+    @SuppressWarnings("unchecked")
+    Pair<Put, Integer> putsAndLocks[] = new Pair[puts.length];
+
+    for (int i = 0; i < puts.length; i++) {
+      putsAndLocks[i] = new Pair<Put, Integer>(puts[i], null);
+    }
+    return put(putsAndLocks);
+  }
+  
+  /**
+   * Perform a batch of puts.
+   * @param putsAndLocks the list of puts paired with their requested lock IDs.
+   * @throws IOException
+   */
+  public OperationStatusCode[] put(Pair<Put, Integer>[] putsAndLocks) throws IOException {
+    BatchOperationInProgress<Pair<Put, Integer>> batchOp =
+      new BatchOperationInProgress<Pair<Put,Integer>>(putsAndLocks);
+    
+    while (!batchOp.isDone()) {
+      checkReadOnly();
+      checkResources();
+
+      long newSize;
+      splitsAndClosesLock.readLock().lock();
+      try {
+        long addedSize = doMiniBatchPut(batchOp);
+        newSize = memstoreSize.addAndGet(addedSize);
+      } finally {
+        splitsAndClosesLock.readLock().unlock();
+      }
+      if (isFlushSize(newSize)) {
+        requestFlush();
+      }
+    }
+    return batchOp.retCodes;
+  }
+
+  private long doMiniBatchPut(BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    byte[] byteNow = Bytes.toBytes(now);
+
+    /** Keep track of the locks we hold so we can release them in finally clause */
+    List<Integer> acquiredLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
+    // We try to set up a batch in the range [firstIndex,lastIndexExclusive)
+    int firstIndex = batchOp.nextIndexToProcess;
+    int lastIndexExclusive = firstIndex;
+    boolean success = false;
+    try {
+      // ------------------------------------
+      // STEP 1. Try to acquire as many locks as we can, and ensure
+      // we acquire at least one.
+      // ----------------------------------
+      int numReadyToWrite = 0;
+      while (lastIndexExclusive < batchOp.operations.length) {
+        Pair<Put, Integer> nextPair = batchOp.operations[lastIndexExclusive];
+        Put put = nextPair.getFirst();
+        Integer providedLockId = nextPair.getSecond();
+
+        // Check the families in the put. If bad, skip this one.
+        try {
+          checkFamilies(put.getFamilyMap().keySet());
+        } catch (NoSuchColumnFamilyException nscf) {
+          LOG.warn("No such column family in batch put", nscf);
+          batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.BAD_FAMILY;
+          lastIndexExclusive++;
+          continue;
+        }
+
+        // If we haven't got any rows in our batch, we should block to
+        // get the next one.
+        boolean shouldBlock = numReadyToWrite == 0;
+        Integer acquiredLockId = getLock(providedLockId, put.getRow(), shouldBlock);
+        if (acquiredLockId == null) {
+          // We failed to grab another lock
+          assert !shouldBlock : "Should never fail to get lock when blocking";
+          break; // stop acquiring more rows for this batch
+        }
+        if (providedLockId == null) {
+          acquiredLocks.add(acquiredLockId);
+        }
+        lastIndexExclusive++;
+        numReadyToWrite++;
+      }
+      // We've now grabbed as many puts off the list as we can
+      assert numReadyToWrite > 0;
+      
+      // ------------------------------------
+      // STEP 2. Write to WAL
+      // ----------------------------------
+      WALEdit walEdit = new WALEdit();
+      for (int i = firstIndex; i < lastIndexExclusive; i++) {
+        // Skip puts that were determined to be invalid during preprocessing
+        if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
+        
+        Put p = batchOp.operations[i].getFirst();
+        if (!p.getWriteToWAL()) continue;
+        addFamilyMapToWALEdit(p.getFamilyMap(), byteNow, walEdit);
+      }
+      
+      // Append the edit to WAL
+      this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+          walEdit, now);
+
+      // ------------------------------------
+      // STEP 3. Write back to memstore
+      // ----------------------------------
+      long addedSize = 0;
+      for (int i = firstIndex; i < lastIndexExclusive; i++) {
+        if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
+
+        Put p = batchOp.operations[i].getFirst();
+        addedSize += applyFamilyMapToMemstore(p.getFamilyMap());
+        batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
+      }
+      success = true;
+      return addedSize;
+    } finally {
+      for (Integer toRelease : acquiredLocks) {
+        releaseRowLock(toRelease);
+      }
+      if (!success) {
+        for (int i = firstIndex; i < lastIndexExclusive; i++) {
+          if (batchOp.retCodes[i] == OperationStatusCode.NOT_RUN) {
+            batchOp.retCodes[i] = OperationStatusCode.FAILURE;
+          }
+        }
+      }
+      batchOp.nextIndexToProcess = lastIndexExclusive;
+    }
+  }
 
   //TODO, Think that gets/puts and deletes should be refactored a bit so that
   //the getting of the lock happens before, so that you would just pass it into
@@ -1467,7 +1600,7 @@ public class HRegion implements HeapSize { // , Writable{
       get.addColumn(family, qualifier);
 
       // Lock row
-      Integer lid = getLock(lockId, get.getRow());
+      Integer lid = getLock(lockId, get.getRow(), true);
       List<KeyValue> result = new ArrayList<KeyValue>();
       try {
         result = get(get);
@@ -1619,70 +1752,93 @@ public class HRegion implements HeapSize { // , Writable{
     byte[] byteNow = Bytes.toBytes(now);
     boolean flush = false;
     this.updatesLock.readLock().lock();
-    ReadWriteConsistencyControl.WriteEntry w = null;
     try {
-      WALEdit walEdit = new WALEdit();
+      checkFamilies(familyMap.keySet());
 
-      // check if column families are valid;
-      // check if any timestampupdates are needed;
-      // and if writeToWAL is set, then also collapse edits into a single list.
-      for (Map.Entry<byte[], List<KeyValue>> e: familyMap.entrySet()) {
-        List<KeyValue> edits = e.getValue();
-        byte[] family = e.getKey();
-
-        // is this a valid column family?
-        checkFamily(family);
-
-        // update timestamp on keys if required.
-        if (updateKeys(edits, byteNow)) {
-          if (writeToWAL) {
-            // bunch up all edits across all column families into a
-            // single WALEdit.
-            for (KeyValue kv : edits) {
-              walEdit.add(kv);
-            }
-          }
-        }
-      }
-
-      // append to and sync WAL
-      if (!walEdit.isEmpty()) {
-        //
-        // write/sync to WAL should happen before we touch memstore.
-        //
-        // If order is reversed, i.e. we write to memstore first, and
-        // for some reason fail to write/sync to commit log, the memstore
-        // will contain uncommitted transactions.
-        //
-
+      // write/sync to WAL should happen before we touch memstore.
+      //
+      // If order is reversed, i.e. we write to memstore first, and
+      // for some reason fail to write/sync to commit log, the memstore
+      // will contain uncommitted transactions.
+      if (writeToWAL) {
+        WALEdit walEdit = new WALEdit();
+        addFamilyMapToWALEdit(familyMap, byteNow, walEdit);
         this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
            walEdit, now);
       }
 
-      long size = 0;
-
-      w = rwcc.beginMemstoreInsert();
-
-      // now make changes to the memstore
-      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
-        byte[] family = e.getKey();
-        List<KeyValue> edits = e.getValue();
-
-        Store store = getStore(family);
-        for (KeyValue kv: edits) {
-          kv.setMemstoreTS(w.getWriteNumber());
-          size = this.memstoreSize.addAndGet(store.add(kv));
-        }
-      }
-      flush = isFlushSize(size);
+      long addedSize = applyFamilyMapToMemstore(familyMap);
+      flush = isFlushSize(memstoreSize.addAndGet(addedSize));
     } finally {
-      if (w != null) rwcc.completeMemstoreInsert(w);
-
       this.updatesLock.readLock().unlock();
     }
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
+    }
+  }
+
+  /**
+   * Atomically apply the given map of family->edits to the memstore.
+   * This handles the consistency control on its own, but the caller
+   * should already have locked updatesLock.readLock(). This also does
+   * <b>not</b> check the families for validity.
+   *
+   * @return the additional memory usage of the memstore caused by the
+   * new entries.
+   */
+  private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
+    ReadWriteConsistencyControl.WriteEntry w = null;
+    long size = 0;
+    try {
+      w = rwcc.beginMemstoreInsert();
+
+      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+        byte[] family = e.getKey();
+        List<KeyValue> edits = e.getValue();
+  
+        Store store = getStore(family);
+        for (KeyValue kv: edits) {
+          kv.setMemstoreTS(w.getWriteNumber());
+          size += store.add(kv);
+        }
+      }
+    } finally {
+      rwcc.completeMemstoreInsert(w);
+    }
+    return size;
+  }
+
+  /**
+   * Check the collection of families for validity.
+   * @throws NoSuchColumnFamilyException if a family does not exist.
+   */
+  private void checkFamilies(Collection<byte[]> families)
+  throws NoSuchColumnFamilyException {
+    for (byte[] family : families) {
+      checkFamily(family);
+    }
+  }
+
+  /**
+   * Append the given map of family->edits to a WALEdit data structure.
+   * Also updates the timestamps of the edits where they have not
+   * been specified by the user. This does not write to the HLog itself.
+   * @param familyMap map of family->edits
+   * @param byteNow timestamp to use when unspecified
+   * @param walEdit the destination entry to append into
+   */
+  private void addFamilyMapToWALEdit(Map<byte[], List<KeyValue>> familyMap,
+      byte[] byteNow, WALEdit walEdit) {
+    for (List<KeyValue> edits : familyMap.values()) {
+      // update timestamp on keys if required.
+      if (updateKeys(edits, byteNow)) {
+        // bunch up all edits across all column families into a
+        // single WALEdit.
+        for (KeyValue kv : edits) {
+          walEdit.add(kv);
+        }
+      }
     }
   }
 
@@ -1776,6 +1932,27 @@ public class HRegion implements HeapSize { // , Writable{
    * @return The id of the held lock.
    */
   public Integer obtainRowLock(final byte [] row) throws IOException {
+    return internalObtainRowLock(row, true);
+  }
+
+  /**
+   * Tries to obtain a row lock on the given row, but does not block if the
+   * row lock is not available. If the lock is not available, returns false.
+   * Otherwise behaves the same as the above method.
+   * @see HRegion#obtainRowLock(byte[])
+   */
+  public Integer tryObtainRowLock(final byte[] row) throws IOException {
+    return internalObtainRowLock(row, false);
+  }
+  
+  /**
+   * Obtains or tries to obtain the given row lock.
+   * @param waitForLock if true, will block until the lock is available.
+   *        Otherwise, just tries to obtain the lock and returns
+   *        null if unavailable.
+   */
+  private Integer internalObtainRowLock(final byte[] row, boolean waitForLock)
+  throws IOException {
     checkRow(row);
     splitsAndClosesLock.readLock().lock();
     try {
@@ -1784,6 +1961,9 @@ public class HRegion implements HeapSize { // , Writable{
       }
       synchronized (lockedRows) {
         while (lockedRows.contains(row)) {
+          if (!waitForLock) {
+            return null;
+          }
           try {
             lockedRows.wait();
           } catch (InterruptedException ie) {
@@ -1815,7 +1995,7 @@ public class HRegion implements HeapSize { // , Writable{
       splitsAndClosesLock.readLock().unlock();
     }
   }
-
+  
   /**
    * Used by unit tests.
    * @param lockid
@@ -1844,7 +2024,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param lockid
    * @return boolean
    */
-  private boolean isRowLocked(final Integer lockid) {
+  boolean isRowLocked(final Integer lockid) {
     synchronized (lockedRows) {
       if (lockIds.get(lockid) != null) {
         return true;
@@ -1856,14 +2036,17 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Returns existing row lock if found, otherwise
    * obtains a new row lock and returns it.
-   * @param lockid
-   * @return lockid
+   * @param lockid requested by the user, or null if the user didn't already hold lock
+   * @param row the row to lock
+   * @param waitForLock if true, will block until the lock is available, otherwise will
+   * simply return null if it could not acquire the lock.
+   * @return lockid or null if waitForLock is false and the lock was unavailable.
    */
-  private Integer getLock(Integer lockid, byte [] row)
+  private Integer getLock(Integer lockid, byte [] row, boolean waitForLock)
   throws IOException {
     Integer lid = null;
     if (lockid == null) {
-      lid = obtainRowLock(row);
+      lid = internalObtainRowLock(row, waitForLock);
     } else {
       if (!isRowLocked(lockid)) {
         throw new IOException("Invalid row lock");

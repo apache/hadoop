@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -97,6 +98,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -1678,34 +1680,33 @@ public class HRegionServer implements HRegionInterface,
 
   public int put(final byte[] regionName, final List<Put> puts)
   throws IOException {
-    // Count of Puts processed.
-    int i = 0;
     checkOpen();
     HRegion region = null;
-    boolean writeToWAL = true;
     try {
       region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      for (Put put: puts) {
-        this.requestCount.incrementAndGet();
-        Integer lock = getLockFromId(put.getLockId());
-        writeToWAL &= put.getWriteToWAL();
-        region.put(put, lock);
+      
+      @SuppressWarnings("unchecked")
+      Pair<Put, Integer>[] putsWithLocks = new Pair[puts.size()];
+      
+      int i = 0;
+      for (Put p : puts) {
+        Integer lock = getLockFromId(p.getLockId());
+        putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
       }
-
-    } catch (WrongRegionException ex) {
-      LOG.debug("Batch puts: " + i, ex);
-      return i;
-    } catch (NotServingRegionException ex) {
-      LOG.debug("Batch puts interrupted at index=" + i + " because:" +
-        ex.getMessage());
-      return i;
+      
+      this.requestCount.addAndGet(puts.size());
+      OperationStatusCode[] codes = region.put(putsWithLocks);
+      for (i = 0; i < codes.length; i++) {
+        if (codes[i] != OperationStatusCode.SUCCESS)
+          return i;
+      }
+      return -1;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
-    return -1;
   }
 
   private boolean checkAndMutate(final byte[] regionName, final byte [] row,

@@ -27,9 +27,12 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MultithreadedTestUtil;
+import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -44,10 +47,15 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,6 +66,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -328,6 +337,102 @@ public class TestHRegion extends HBaseTestCase {
     assertTrue(exception);
   }
 
+  @SuppressWarnings("unchecked")
+  public void testBatchPut() throws Exception {
+    byte[] b = Bytes.toBytes(getName());
+    byte[] cf = Bytes.toBytes("cf");
+    byte[] qual = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("val");
+    initHRegion(b, getName(), cf);
+
+    assertEquals(0, HLog.getSyncOps());
+
+    LOG.info("First a batch put with all valid puts");
+    final Put[] puts = new Put[10];
+    for (int i = 0; i < 10; i++) {
+      puts[i] = new Put(Bytes.toBytes("row_" + i));
+      puts[i].add(cf, qual, val);
+    }
+
+    OperationStatusCode[] codes = this.region.put(puts);
+    assertEquals(10, codes.length);
+    for (int i = 0; i < 10; i++) {
+      assertEquals(OperationStatusCode.SUCCESS, codes[i]);
+    }
+    assertEquals(1, HLog.getSyncOps());
+    
+    LOG.info("Next a batch put with one invalid family");
+    puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
+    codes = this.region.put(puts);
+    assertEquals(10, codes.length);
+    for (int i = 0; i < 10; i++) {
+      assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
+        OperationStatusCode.SUCCESS, codes[i]);
+    }
+    assertEquals(1, HLog.getSyncOps());
+    
+    LOG.info("Next a batch put that has to break into two batches to avoid a lock");
+    Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
+
+    MultithreadedTestUtil.TestContext ctx =
+      new MultithreadedTestUtil.TestContext(HBaseConfiguration.create());
+    final AtomicReference<OperationStatusCode[]> retFromThread =
+      new AtomicReference<OperationStatusCode[]>();
+    TestThread putter = new TestThread(ctx) {
+      @Override
+      public void doWork() throws IOException {
+        retFromThread.set(region.put(puts));
+      }
+    };
+    LOG.info("...starting put thread while holding lock");
+    ctx.addThread(putter);
+    ctx.startThreads();
+
+    LOG.info("...waiting for put thread to sync first time");
+    long startWait = System.currentTimeMillis();
+    while (HLog.getSyncOps() == 0) {
+      Thread.sleep(100);
+      if (System.currentTimeMillis() - startWait > 10000) {
+        fail("Timed out waiting for thread to sync first minibatch");
+      }
+    }    
+    LOG.info("...releasing row lock, which should let put thread continue");
+    region.releaseRowLock(lockedRow);
+    LOG.info("...joining on thread");
+    ctx.stop();
+    LOG.info("...checking that next batch was synced");
+    assertEquals(1, HLog.getSyncOps());
+    codes = retFromThread.get();
+    for (int i = 0; i < 10; i++) {
+      assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
+        OperationStatusCode.SUCCESS, codes[i]);
+    }
+    
+    LOG.info("Nexta, a batch put which uses an already-held lock");
+    lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
+    LOG.info("...obtained row lock");
+    List<Pair<Put, Integer>> putsAndLocks = Lists.newArrayList();
+    for (int i = 0; i < 10; i++) {
+      Pair<Put, Integer> pair = new Pair<Put, Integer>(puts[i], null);
+      if (i == 2) pair.setSecond(lockedRow);
+      putsAndLocks.add(pair);
+    }
+
+    codes = region.put(putsAndLocks.toArray(new Pair[0]));
+    LOG.info("...performed put");
+    for (int i = 0; i < 10; i++) {
+      assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
+        OperationStatusCode.SUCCESS, codes[i]);
+    }
+    // Make sure we didn't do an extra batch
+    assertEquals(1, HLog.getSyncOps());
+    
+    // Make sure we still hold lock
+    assertTrue(region.isRowLocked(lockedRow));
+    LOG.info("...releasing lock");
+    region.releaseRowLock(lockedRow);
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // checkAndMutate tests
   //////////////////////////////////////////////////////////////////////////////

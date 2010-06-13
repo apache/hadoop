@@ -806,6 +806,8 @@ public class HLog implements Syncable {
   public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
     final long now)
   throws IOException {
+    if (edits.isEmpty()) return;
+    
     byte[] regionName = info.getRegionName();
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");

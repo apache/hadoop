@@ -693,6 +693,7 @@ Release 0.21.0 - Unreleased
                (Lars Francke via Stack)
    HBASE-2468  Improvements to prewarm META cache on clients
                (Mingjie Lai via Stack)
+   HBASE-2353  Batch puts should sync HLog as few times as possible
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -28,7 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -65,7 +65,7 @@ public class TestAcidGuarantees {
     util = new HBaseTestingUtility();
   }
   
-  public static class AtomicityWriter extends TestThread {
+  public static class AtomicityWriter extends RepeatingTestThread {
     Random rand = new Random();
     byte data[] = new byte[10];
     byte targetRow[];
@@ -95,7 +95,7 @@ public class TestAcidGuarantees {
     }
   }
   
-  public static class AtomicityReader extends TestThread {
+  public static class AtomicityReader extends RepeatingTestThread {
     byte targetRow[];
     byte targetFamilies[][];
     HTable table;
