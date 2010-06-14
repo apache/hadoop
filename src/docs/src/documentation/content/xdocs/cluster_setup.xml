@@ -739,146 +739,250 @@
               </li>
             </ul>
           </section>
-                  <section>
-        <title> Memory management</title>
-        <p>Users/admins can also specify the maximum virtual memory 
-        of the launched child-task, and any sub-process it launches 
-        recursively, using <code>mapred.{map|reduce}.child.ulimit</code>. Note 
-        that the value set here is a per process limit.
-        The value for <code>mapred.{map|reduce}.child.ulimit</code> should be 
-        specified in kilo bytes (KB). And also the value must be greater than
-        or equal to the -Xmx passed to JavaVM, else the VM might not start. 
+        <section>
+        <title>Configuring Memory Parameters for MapReduce Jobs</title>
+        <p>
+        As MapReduce jobs could use varying amounts of memory, Hadoop
+        provides various configuration options to users and administrators
+        for managing memory effectively. Some of these options are job 
+        specific and can be used by users. While setting up a cluster, 
+        administrators can configure appropriate default values for these 
+        options so that users jobs run out of the box. Other options are 
+        cluster specific and can be used by administrators to enforce 
+        limits and prevent misconfigured or memory intensive jobs from 
+        causing undesired side effects on the cluster.
         </p>
+        <p> 
+        The values configured should
+        take into account the hardware resources of the cluster, such as the
+        amount of physical and virtual memory available for tasks,
+        the number of slots configured on the slaves and the requirements
+        for other processes running on the slaves. If right values are not
+        set, it is likely that jobs start failing with memory related
+        errors or in the worst case, even affect other tasks or
+        the slaves themselves.
+        </p>
+
+        <section>
+          <title>Monitoring Task Memory Usage</title>
+          <p>
+          Before describing the memory options, it is
+          useful to look at a feature provided by Hadoop to monitor
+          memory usage of MapReduce tasks it runs. The basic objective
+          of this feature is to prevent MapReduce tasks from consuming
+          memory beyond a limit that would result in their affecting
+          other processes running on the slave, including other tasks
+          and daemons like the DataNode or TaskTracker.
+          </p>
         
-        <p>Note: <code>mapred.{map|reduce}.child.java.opts</code> are used only for 
-        configuring the launched child tasks from task tracker. Configuring 
-        the memory options for daemons is documented in 
-        <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
-        cluster_setup.html </a></p>
-        
-        <p>The memory available to some parts of the framework is also
-        configurable. In map and reduce tasks, performance may be influenced
-        by adjusting parameters influencing the concurrency of operations and
-        the frequency with which data will hit disk. Monitoring the filesystem
-        counters for a job- particularly relative to byte counts from the map
-        and into the reduce- is invaluable to the tuning of these
-        parameters.</p>
+          <p>
+          <em>Note:</em> For the time being, this feature is available
+          only for the Linux platform.
+          </p>
+          
+          <p>
+          Hadoop allows monitoring to be done both for virtual
+          and physical memory usage of tasks. This monitoring 
+          can be done independently of each other, and therefore the
+          options can be configured independently of each other. It
+          has been found in some environments, particularly related
+          to streaming, that virtual memory recorded for tasks is high
+          because of libraries loaded by the programs used to run
+          the tasks. However, this memory is largely unused and does
+          not affect the slaves's memory itself. In such cases,
+          monitoring based on physical memory can provide a more
+          accurate picture of memory usage.
+          </p>
+          
+          <p>
+          This feature considers that there is a limit on
+          the amount of virtual or physical memory on the slaves 
+          that can be used by
+          the running MapReduce tasks. The rest of the memory is
+          assumed to be required for the system and other processes.
+          Since some jobs may require higher amount of memory for their
+          tasks than others, Hadoop allows jobs to specify how much
+          memory they expect to use at a maximum. Then by using
+          resource aware scheduling and monitoring, Hadoop tries to
+          ensure that at any time, only enough tasks are running on
+          the slaves as can meet the dual constraints of an individual
+          job's memory requirements and the total amount of memory
+          available for all MapReduce tasks.
+          </p>
+          
+          <p>
+          The TaskTracker monitors tasks in regular intervals. Each time,
+          it operates in two steps:
+          </p> 
+          
+          <ul>
+          
+          <li>
+          In the first step, it
+          checks that a job's task and any child processes it
+          launches are not cumulatively using more virtual or physical 
+          memory than specified. If both virtual and physical memory
+          monitoring is enabled, then virtual memory usage is checked
+          first, followed by physical memory usage. 
+          Any task that is found to
+          use more memory is killed along with any child processes it
+          might have launched, and the task status is marked
+          <em>failed</em>. Repeated failures such as this will terminate
+          the job. 
+          </li>
+          
+          <li>
+          In the next step, it checks that the cumulative virtual and
+          physical memory 
+          used by all running tasks and their child processes
+          does not exceed the total virtual and physical memory limit,
+          respectively. Again, virtual memory limit is checked first, 
+          followed by physical memory limit. In this case, it kills
+          enough number of tasks, along with any child processes they
+          might have launched, until the cumulative memory usage
+          is brought under limit. In the case of virtual memory limit
+          being exceeded, the tasks chosen for killing are
+          the ones that have made the least progress. In the case of
+          physical memory limit being exceeded, the tasks chosen
+          for killing are the ones that have used the maximum amount
+          of physical memory. Also, the status
+          of these tasks is marked as <em>killed</em>, and hence repeated
+          occurrence of this will not result in a job failure. 
+          </li>
+          
+          </ul>
+          
+          <p>
+          In either case, the task's diagnostic message will indicate the
+          reason why the task was terminated.
+          </p>
+          
+          <p>
+          Resource aware scheduling can ensure that tasks are scheduled
+          on a slave only if their memory requirement can be satisfied
+          by the slave. The Capacity Scheduler, for example,
+          takes virtual memory requirements into account while 
+          scheduling tasks, as described in the section on 
+          <a href="ext:capacity-scheduler/MemoryBasedTaskScheduling"> 
+          memory based scheduling</a>.
+          </p>
+ 
+          <p>
+          Memory monitoring is enabled when certain configuration 
+          variables are defined with non-zero values, as described below.
+          </p>
+          
         </section>
 
         <section>
-        <title> Memory monitoring</title>
-        <p>A <code>TaskTracker</code>(TT) can be configured to monitor memory 
-        usage of tasks it spawns, so that badly-behaved jobs do not bring 
-        down a machine due to excess memory consumption. With monitoring 
-        enabled, every task is assigned a task-limit for virtual memory (VMEM). 
-        In addition, every node is assigned a node-limit for VMEM usage. 
-        A TT ensures that a task is killed if it, and 
-        its descendants, use VMEM over the task's per-task limit. It also 
-        ensures that one or more tasks are killed if the sum total of VMEM 
-        usage by all tasks, and their descendents, cross the node-limit.</p>
-        
-        <p>Users can, optionally, specify the VMEM task-limit per job. If no
-        such limit is provided, a default limit is used. A node-limit can be 
-        set per node.</p>   
-        <p>Currently the memory monitoring and management is only supported
-        in Linux platform.</p>
-        <p>To enable monitoring for a TT, the 
-        following parameters all need to be set:</p> 
-
-        <table>
-          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
-          <tr><td>mapred.tasktracker.vmem.reserved</td><td>long</td>
-            <td>A number, in bytes, that represents an offset. The total VMEM on 
-            the machine, minus this offset, is the VMEM node-limit for all 
-            tasks, and their descendants, spawned by the TT. 
-          </td></tr>
-          <tr><td>mapred.task.default.maxvmem</td><td>long</td>
-            <td>A number, in bytes, that represents the default VMEM task-limit 
-            associated with a task. Unless overridden by a job's setting, 
-            this number defines the VMEM task-limit.   
-          </td></tr>
-          <tr><td>mapred.task.limit.maxvmem</td><td>long</td>
-            <td>A number, in bytes, that represents the upper VMEM task-limit 
-            associated with a task. Users, when specifying a VMEM task-limit 
-            for their tasks, should not specify a limit which exceeds this amount. 
-          </td></tr>
-        </table>
-        
-        <p>In addition, the following parameters can also be configured.</p>
-
-    <table>
-          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
-          <tr><td>mapreduce.tasktracker.taskmemorymanager.monitoringinterval</td>
-            <td>long</td>
-            <td>The time interval, in milliseconds, between which the TT 
-            checks for any memory violation. The default value is 5000 msec
-            (5 seconds). 
-          </td></tr>
-        </table>
-        
-        <p>Here's how the memory monitoring works for a TT.</p>
-        <ol>
-          <li>If one or more of the configuration parameters described 
-          above are missing or -1 is specified , memory monitoring is 
-          disabled for the TT.
-          </li>
-          <li>In addition, monitoring is disabled if 
-          <code>mapred.task.default.maxvmem</code> is greater than 
-          <code>mapred.task.limit.maxvmem</code>. 
-          </li>
-          <li>If a TT receives a task whose task-limit is set by the user
-          to a value larger than <code>mapred.task.limit.maxvmem</code>, it 
-          logs a warning but executes the task.
-          </li> 
-          <li>Periodically, the TT checks the following: 
-          <ul>
-            <li>If any task's current VMEM usage is greater than that task's
-            VMEM task-limit, the task is killed and reason for killing 
-            the task is logged in task diagonistics . Such a task is considered 
-            failed, i.e., the killing counts towards the task's failure count.
-            </li> 
-            <li>If the sum total of VMEM used by all tasks and descendants is 
-            greater than the node-limit, the TT kills enough tasks, in the
-            order of least progress made, till the overall VMEM usage falls
-            below the node-limt. Such killed tasks are not considered failed
-            and their killing does not count towards the tasks' failure counts.
-            </li>
-          </ul>
-          </li>
-        </ol>
-        
-        <p>Schedulers can choose to ease the monitoring pressure on the TT by 
-        preventing too many tasks from running on a node and by scheduling 
-        tasks only if the TT has enough VMEM free. In addition, Schedulers may 
-        choose to consider the physical memory (RAM) available on the node
-        as well. To enable Scheduler support, TTs report their memory settings 
-        to the JobTracker in every heartbeat. Before getting into details, 
-        consider the following additional memory-related parameters than can be 
-        configured to enable better scheduling:</p> 
-
-        <table>
-          <tr><th>Name</th><th>Type</th><th>Description</th></tr>
-          <tr><td>mapred.tasktracker.pmem.reserved</td><td>int</td>
-            <td>A number, in bytes, that represents an offset. The total 
-            physical memory (RAM) on the machine, minus this offset, is the 
-            recommended RAM node-limit. The RAM node-limit is a hint to a
-            Scheduler to scheduler only so many tasks such that the sum 
-            total of their RAM requirements does not exceed this limit. 
-            RAM usage is not monitored by a TT.   
-          </td></tr>
-        </table>
-        
-        <p>A TT reports the following memory-related numbers in every 
-        heartbeat:</p>
-        <ul>
-          <li>The total VMEM available on the node.</li>
-          <li>The value of <code>mapred.tasktracker.vmem.reserved</code>,
-           if set.</li>
-          <li>The total RAM available on the node.</li> 
-          <li>The value of <code>mapred.tasktracker.pmem.reserved</code>,
-           if set.</li>
-         </ul>
+          <title>Job Specific Options</title>
+          <p>
+          Memory related options that can be configured individually per 
+          job are described in detail in the section on
+          <a href="ext:mapred-tutorial/ConfiguringMemoryRequirements">
+          Configuring Memory Requirements For A Job</a> in the MapReduce
+          tutorial. While setting up
+          the cluster, the Hadoop defaults for these options can be reviewed
+          and changed to better suit the job profiles expected to be run on
+          the clusters, as also the hardware configuration.
+          </p>
+          <p>
+          As with any other configuration option in Hadoop, if the 
+          administrators desire to prevent users from overriding these 
+          options in jobs they submit, these values can be marked as
+          <em>final</em> in the cluster configuration.
+          </p>
         </section>
+        
+          
+        <section>
+          <title>Cluster Specific Options</title>
+          
+          <p>
+          This section describes the memory related options that are
+          used by the JobTracker and TaskTrackers, and cannot be changed 
+          by jobs. The values set for these options should be the same
+          for all the slave nodes in a cluster.
+          </p>
+          
+          <ul>
+          
+          <li>
+          <code>mapreduce.cluster.{map|reduce}memory.mb</code>: These
+          options define the default amount of virtual memory that should be
+          allocated for MapReduce tasks running in the cluster. They
+          typically match the default values set for the options
+          <code>mapreduce.{map|reduce}.memory.mb</code>. They help in the
+          calculation of the total amount of virtual memory available for 
+          MapReduce tasks on a slave, using the following equation:<br/>
+          <em>Total virtual memory for all MapReduce tasks = 
+          (mapreduce.cluster.mapmemory.mb * 
+           mapreduce.tasktracker.map.tasks.maximum) +
+          (mapreduce.cluster.reducememory.mb * 
+           mapreduce.tasktracker.reduce.tasks.maximum)</em><br/>
+          Typically, reduce tasks require more memory than map tasks.
+          Hence a higher value is recommended for 
+          <em>mapreduce.cluster.reducememory.mb</em>. The value is  
+          specified in MB. To set a value of 2GB for reduce tasks, set
+          <em>mapreduce.cluster.reducememory.mb</em> to 2048.
+          </li>
+
+          <li>
+          <code>mapreduce.jobtracker.max{map|reduce}memory.mb</code>:
+          These options define the maximum amount of virtual memory that 
+          can be requested by jobs using the parameters
+          <code>mapreduce.{map|reduce}.memory.mb</code>. The system
+          will reject any job that is submitted requesting for more
+          memory than these limits. Typically, the values for these
+          options should be set to satisfy the following constraint:<br/>
+          <em>mapreduce.jobtracker.maxmapmemory.mb =
+            mapreduce.cluster.mapmemory.mb * 
+             mapreduce.tasktracker.map.tasks.maximum<br/>
+              mapreduce.jobtracker.maxreducememory.mb =
+            mapreduce.cluster.reducememory.mb * 
+             mapreduce.tasktracker.reduce.tasks.maximum</em><br/>
+          The value is specified in MB. If 
+          <code>mapreduce.cluster.reducememory.mb</code> is set to 2GB and
+          there are 2 reduce slots configured in the slaves, the value
+          for <code>mapreduce.jobtracker.maxreducememory.mb</code> should 
+          be set to 4096.
+          </li>
+          
+          <li>
+          <code>mapreduce.tasktracker.reserved.physicalmemory.mb</code>:
+          This option defines the amount of physical memory that is
+          marked for system and daemon processes. Using this, the amount
+          of physical memory available for MapReduce tasks is calculated
+          using the following equation:<br/>
+          <em>Total physical memory for all MapReduce tasks = 
+                Total physical memory available on the system -
+                mapreduce.tasktracker.reserved.physicalmemory.mb</em><br/>
+          The value is specified in MB. To set this value to 2GB, 
+          specify the value as 2048.
+          </li>
+
+          <li>
+          <code>mapreduce.tasktracker.taskmemorymanager.monitoringinterval</code>:
+          This option defines the time the TaskTracker waits between
+          two cycles of memory monitoring. The value is specified in 
+          milliseconds.
+          </li>
+          
+          </ul>
+          
+          <p>
+          <em>Note:</em> The virtual memory monitoring function is only 
+          enabled if
+          the variables <code>mapreduce.cluster.{map|reduce}memory.mb</code>
+          and <code>mapreduce.jobtracker.max{map|reduce}memory.mb</code>
+          are set to values greater than zero. Likewise, the physical
+          memory monitoring function is only enabled if the variable
+          <code>mapreduce.tasktracker.reserved.physicalmemory.mb</code>
+          is set to a value greater than zero.
+          </p>
+        </section>
+      </section>
+      
         
           <section>
             <title>Task Controllers</title>

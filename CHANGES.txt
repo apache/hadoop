@@ -958,6 +958,9 @@ Release 0.21.0 - Unreleased
     HADOOP-6668.  Apply audience and stability annotations to classes in
     common.  (tomwhite)
 
+    HADOOP-6821.  Document changes to memory monitoring.  (Hemanth Yamijala
+    via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-5595. NameNode does not need to run a replicator to choose a
