@@ -71,9 +71,12 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <mapred-default href="http://hadoop.apache.org/mapreduce/docs/current/mapred-default.html" />
     
     <mapred-queues href="http://hadoop.apache.org/mapreduce/docs/current/mapred_queues.xml" />
-    <capacity-scheduler href="http://hadoop.apache.org/mapreduce/docs/current/capacity_scheduler.html" />
+    <capacity-scheduler href="http://hadoop.apache.org/mapreduce/docs/current/capacity_scheduler.html">
+        <MemoryBasedTaskScheduling href="#Scheduling+Tasks+Considering+Memory+Requirements" />
+    </capacity-scheduler>
     <mapred-tutorial href="http://hadoop.apache.org/mapreduce/docs/current/mapred_tutorial.html" >
         <JobAuthorization href="#Job+Authorization" />
+        <ConfiguringMemoryRequirements href="#Configuring+Memory+Requirements+For+A+Job" />
     </mapred-tutorial>
     <streaming href="http://hadoop.apache.org/mapreduce/docs/current/streaming.html" />
     <distcp href="http://hadoop.apache.org/mapreduce/docs/current/distcp.html" />
