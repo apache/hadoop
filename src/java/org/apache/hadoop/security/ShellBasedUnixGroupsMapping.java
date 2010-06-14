@@ -39,19 +39,12 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider {
-  Map<String, List<String>> userGroups = 
-    new ConcurrentHashMap<String, List<String>>();
   
   private static final Log LOG = LogFactory.getLog(ShellBasedUnixGroupsMapping.class);
   
   @Override
   public List<String> getGroups(String user) throws IOException {
-    List<String> groups = userGroups.get(user);
-    if (groups == null) {
-      groups = getUnixGroups(user);
-      userGroups.put(user, groups);
-    }
-    return groups;
+    return getUnixGroups(user);
   }
 
   /** 

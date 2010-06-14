@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-6682. NetUtils:normalizeHostName does not process hostnames starting
     with [a-f] correctly. (jghoman)
 
+    HADOOP-6652. Removes the unnecessary cache from ShellBasedUnixGroupsMapping.
+    (ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
