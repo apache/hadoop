@@ -388,6 +388,8 @@ Release 0.21.0 - Unreleased
    HBASE-2732  TestZooKeeper was broken, HBASE-2691 showed it
    HBASE-2670  Provide atomicity for readers even when new insert has
                same timestamp as current row.
+   HBASE-2733  Replacement of LATEST_TIMESTAMP with real timestamp was broken
+               by HBASE-2353.
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

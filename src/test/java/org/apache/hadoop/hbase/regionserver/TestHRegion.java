@@ -345,6 +345,7 @@ public class TestHRegion extends HBaseTestCase {
     byte[] val = Bytes.toBytes("val");
     initHRegion(b, getName(), cf);
 
+    HLog.getSyncOps(); // clear counter from prior tests
     assertEquals(0, HLog.getSyncOps());
 
     LOG.info("First a batch put with all valid puts");
@@ -832,6 +833,53 @@ public class TestHRegion extends HBaseTestCase {
     get = new Get(row).addColumn(fam, serverinfo);
     result = region.get(get, null);
     assertEquals(0, result.size());
+  }
+  
+  /**
+   * Tests that the special LATEST_TIMESTAMP option for puts gets
+   * replaced by the actual timestamp
+   */
+  public void testPutWithLatestTS() throws IOException {
+    byte [] tableName = Bytes.toBytes("testtable");
+    byte [] fam = Bytes.toBytes("info");
+    byte [][] families = {fam};
+    String method = this.getName();
+    initHRegion(tableName, method, families);
+
+    byte [] row = Bytes.toBytes("row1");
+    // column names
+    byte [] qual = Bytes.toBytes("qual");
+
+    // add data with LATEST_TIMESTAMP, put without WAL
+    Put put = new Put(row);
+    put.add(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
+    region.put(put, false);
+
+    // Make sure it shows up with an actual timestamp
+    Get get = new Get(row).addColumn(fam, qual);
+    Result result = region.get(get, null);
+    assertEquals(1, result.size());
+    KeyValue kv = result.raw()[0];
+    LOG.info("Got: " + kv);
+    assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
+        kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
+    
+    // Check same with WAL enabled (historically these took different
+    // code paths, so check both)
+    row = Bytes.toBytes("row2");
+    put = new Put(row);
+    put.add(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
+    region.put(put, true);
+
+    // Make sure it shows up with an actual timestamp
+    get = new Get(row).addColumn(fam, qual);
+    result = region.get(get, null);
+    assertEquals(1, result.size());
+    kv = result.raw()[0];
+    LOG.info("Got: " + kv);
+    assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
+        kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
+
   }
 
   public void testScanner_DeleteOneFamilyNotAnother() throws IOException {

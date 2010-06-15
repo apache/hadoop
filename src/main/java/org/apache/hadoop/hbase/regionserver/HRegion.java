@@ -1327,7 +1327,7 @@ public class HRegion implements HeapSize { // , Writable{
         // bunch up all edits across all column families into a
         // single WALEdit.
         WALEdit walEdit = new WALEdit();
-        addFamilyMapToWALEdit(familyMap, byteNow, walEdit);
+        addFamilyMapToWALEdit(familyMap, walEdit);
         this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
             walEdit, now);
       }
@@ -1520,9 +1520,18 @@ public class HRegion implements HeapSize { // , Writable{
       }
       // We've now grabbed as many puts off the list as we can
       assert numReadyToWrite > 0;
+
+      // ------------------------------------
+      // STEP 2. Update any LATEST_TIMESTAMP timestamps
+      // ----------------------------------
+      for (int i = firstIndex; i < lastIndexExclusive; i++) {
+        updateKVTimestamps(
+            batchOp.operations[i].getFirst().getFamilyMap().values(),
+            byteNow);
+      }
       
       // ------------------------------------
-      // STEP 2. Write to WAL
+      // STEP 3. Write to WAL
       // ----------------------------------
       WALEdit walEdit = new WALEdit();
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -1531,7 +1540,7 @@ public class HRegion implements HeapSize { // , Writable{
         
         Put p = batchOp.operations[i].getFirst();
         if (!p.getWriteToWAL()) continue;
-        addFamilyMapToWALEdit(p.getFamilyMap(), byteNow, walEdit);
+        addFamilyMapToWALEdit(p.getFamilyMap(), walEdit);
       }
       
       // Append the edit to WAL
@@ -1539,7 +1548,7 @@ public class HRegion implements HeapSize { // , Writable{
           walEdit, now);
 
       // ------------------------------------
-      // STEP 3. Write back to memstore
+      // STEP 4. Write back to memstore
       // ----------------------------------
       long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -1636,21 +1645,17 @@ public class HRegion implements HeapSize { // , Writable{
 
 
   /**
-   * Checks if any stamps is Long.MAX_VALUE.  If so, sets them to now.
-   * <p>
-   * This acts to replace {@link HConstants#LATEST_TIMESTAMP} with {@code now}.
-   * @param keys
-   * @param now
-   * @return <code>true</code> when updating the time stamp completed.
+   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP}
+   * with the provided current timestamp.
    */
-  private boolean updateKeys(final List<KeyValue> keys, final byte[] now) {
-    if (keys == null || keys.isEmpty()) {
-      return false;
+  private void updateKVTimestamps(
+      final Iterable<List<KeyValue>> keyLists, final byte[] now) {
+    for (List<KeyValue> keys: keyLists) {
+      if (keys == null) continue;
+      for (KeyValue key : keys) {
+        key.updateLatestStamp(now);
+      }
     }
-    for (KeyValue key : keys) {
-      key.updateLatestStamp(now);
-    }
-    return true;
   }
 
 //  /*
@@ -1754,7 +1759,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.updatesLock.readLock().lock();
     try {
       checkFamilies(familyMap.keySet());
-
+      updateKVTimestamps(familyMap.values(), byteNow);
       // write/sync to WAL should happen before we touch memstore.
       //
       // If order is reversed, i.e. we write to memstore first, and
@@ -1762,7 +1767,7 @@ public class HRegion implements HeapSize { // , Writable{
       // will contain uncommitted transactions.
       if (writeToWAL) {
         WALEdit walEdit = new WALEdit();
-        addFamilyMapToWALEdit(familyMap, byteNow, walEdit);
+        addFamilyMapToWALEdit(familyMap, walEdit);
         this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
            walEdit, now);
       }
@@ -1822,22 +1827,15 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Append the given map of family->edits to a WALEdit data structure.
-   * Also updates the timestamps of the edits where they have not
-   * been specified by the user. This does not write to the HLog itself.
+   * This does not write to the HLog itself.
    * @param familyMap map of family->edits
-   * @param byteNow timestamp to use when unspecified
    * @param walEdit the destination entry to append into
    */
   private void addFamilyMapToWALEdit(Map<byte[], List<KeyValue>> familyMap,
-      byte[] byteNow, WALEdit walEdit) {
+      WALEdit walEdit) {
     for (List<KeyValue> edits : familyMap.values()) {
-      // update timestamp on keys if required.
-      if (updateKeys(edits, byteNow)) {
-        // bunch up all edits across all column families into a
-        // single WALEdit.
-        for (KeyValue kv : edits) {
-          walEdit.add(kv);
-        }
+      for (KeyValue kv : edits) {
+        walEdit.add(kv);
       }
     }
   }
