@@ -337,10 +337,10 @@ public class TestMasterTransitions {
       if (!incomingMsg.isType(HMsg.Type.MSG_REPORT_PROCESS_OPEN)) return true;
       // Save the region that is in transition so can test later it came back.
       this.regionToFind = incomingMsg.getRegionInfo();
-      LOG.info("ABORTING " + this.victim + " because got a " +
+      String msg = "ABORTING " + this.victim + " because got a " +
         HMsg.Type.MSG_REPORT_PROCESS_OPEN + " on this server for " +
-        incomingMsg.getRegionInfo().getRegionNameAsString());
-      this.victim.abort();
+        incomingMsg.getRegionInfo().getRegionNameAsString();
+      this.victim.abort(msg);
       this.abortSent = true;
       return true;
     }

@@ -274,7 +274,7 @@ public class MiniHBaseCluster {
   public String abortRegionServer(int serverNumber) {
     HRegionServer server = getRegionServer(serverNumber);
     LOG.info("Aborting " + server.toString());
-    server.abort();
+    server.abort("Aborting for tests", new Exception("Trace info"));
     return server.toString();
   }
 

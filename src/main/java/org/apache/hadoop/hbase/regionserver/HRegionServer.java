@@ -377,7 +377,7 @@ public class HRegionServer implements HRegionInterface,
       if (restart) {
         restart();
       } else {
-        abort();
+        abort("ZooKeeper session expired");
       }
     } else if (type == EventType.NodeDeleted) {
       watchMasterAddress();
@@ -397,8 +397,7 @@ public class HRegionServer implements HRegionInterface,
   }
 
   private void restart() {
-    LOG.info("Restarting Region Server");
-    abort();
+    abort("Restarting region server");
     Threads.shutdown(regionServerThread);
     boolean done = false;
     while (!done) {
@@ -568,8 +567,7 @@ public class HRegionServer implements HRegionInterface,
       } // for
     } catch (Throwable t) {
       if (!checkOOME(t)) {
-        LOG.fatal("Unhandled exception. Aborting...", t);
-        abort();
+        abort("Unhandled exception", t);
       }
     }
     this.leases.closeAfterLeasesExpire();
@@ -836,8 +834,7 @@ public class HRegionServer implements HRegionInterface,
       (e.getCause() != null && e.getCause() instanceof OutOfMemoryError) ||
       (e.getMessage() != null &&
         e.getMessage().contains("java.lang.OutOfMemoryError"))) {
-      LOG.fatal("OutOfMemoryError, aborting.", e);
-      abort();
+      abort("OutOfMemoryError, aborting", e);
       stop = true;
     }
     return stop;
@@ -855,8 +852,7 @@ public class HRegionServer implements HRegionInterface,
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
       } catch (IOException e) {
-        LOG.fatal("Shutting down HRegionServer: file system not available", e);
-        abort();
+        abort("File System not available", e);
         this.fsOk = false;
       }
     }
@@ -1008,8 +1004,7 @@ public class HRegionServer implements HRegionInterface,
     String n = Thread.currentThread().getName();
     UncaughtExceptionHandler handler = new UncaughtExceptionHandler() {
       public void uncaughtException(Thread t, Throwable e) {
-        abort();
-        LOG.fatal("Set stop flag in " + t.getName(), e);
+        abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller",
@@ -1132,14 +1127,28 @@ public class HRegionServer implements HRegionInterface,
    * log it is using and without notifying the master.
    * Used unit testing and on catastrophic events such as HDFS is yanked out
    * from under hbase or we OOME.
+   * @param reason the reason we are aborting
+   * @param cause the exception that caused the abort, or null
    */
-  public void abort() {
+  public void abort(String reason, Throwable cause) {
+    if (cause != null) {
+      LOG.fatal("Aborting region server " + this + ": " + reason, cause);
+    } else {
+      LOG.fatal("Aborting region server " + this + ": " + reason);
+    }
     this.abortRequested = true;
     this.reservedSpace.clear();
     if (this.metrics != null) {
       LOG.info("Dump of metrics: " + this.metrics.toString());
     }
     stop();
+  }
+  
+  /**
+   * @see HRegionServer#abort(String, Throwable)
+   */
+  public void abort(String reason) {
+    abort(reason, null);
   }
 
   /*
@@ -1149,7 +1158,7 @@ public class HRegionServer implements HRegionInterface,
    */
   protected void kill() {
     this.killed = true;
-    abort();
+    abort("Simulated kill");
   }
 
   /**
