@@ -597,6 +597,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-1181. Move configuration and script files post split. (tomwhite)
 
+    HDFS-1170.  Add more assertions to TestLargeDirectoryDelete.
+    (Steve Loughran via tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a

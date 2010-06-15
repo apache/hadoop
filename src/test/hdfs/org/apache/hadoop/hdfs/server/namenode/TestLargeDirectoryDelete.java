@@ -74,20 +74,25 @@ public class TestLargeDirectoryDelete {
   }
   
   private int getBlockCount() {
-    return (int)mc.getNamesystem().getBlocksTotal();
+    Assert.assertNotNull("Null cluster", mc);
+    Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
+    FSNamesystem namesystem = mc.getNamesystem();
+    Assert.assertNotNull("Null Namesystem in cluster", namesystem);
+    Assert.assertNotNull("Null Namesystem.blockmanager", namesystem.blockManager);
+    return (int) namesystem.getBlocksTotal();
   }
 
   /** Run multiple threads doing simultaneous operations on the namenode
    * while a large directory is being deleted.
    */
-  private void runThreads() throws IOException {
-    final Thread threads[] = new Thread[2];
+  private void runThreads() throws Throwable {
+    final TestThread threads[] = new TestThread[2];
     
     // Thread for creating files
-    threads[0] = new Thread() {
+    threads[0] = new TestThread() {
       @Override
-      public void run() {
-        while(true) {
+      protected void execute() throws Throwable {
+        while(live) {
           try {
             int blockcount = getBlockCount();
             if (blockcount < TOTAL_BLOCKS && blockcount > 0) {
@@ -105,10 +110,10 @@ public class TestLargeDirectoryDelete {
     };
     
     // Thread that periodically acquires the FSNamesystem lock
-    threads[1] = new Thread() {
+    threads[1] = new TestThread() {
       @Override
-      public void run() {
-        while(true) {
+      protected void execute() throws Throwable {
+        while(live) {
           try {
             int blockcount = getBlockCount();
             if (blockcount < TOTAL_BLOCKS && blockcount > 0) {
@@ -131,19 +136,79 @@ public class TestLargeDirectoryDelete {
     FSNamesystem.BLOCK_DELETION_INCREMENT = 1;
     mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
     final long end = System.currentTimeMillis();
-    threads[0].interrupt();
-    threads[1].interrupt();
+    threads[0].endThread();
+    threads[1].endThread();
     LOG.info("Deletion took " + (end - start) + "msecs");
     LOG.info("createOperations " + createOps);
     LOG.info("lockOperations " + lockOps);
     Assert.assertTrue(lockOps + createOps > 0);
+    threads[0].rethrow();
+    threads[1].rethrow();
+  }
+
+
+  /**
+   * An abstract class for tests that catches exceptions and can 
+   * rethrow them on a different thread, and has an {@link #endThread()} 
+   * operation that flips a volatile boolean before interrupting the thread.
+   * Also: after running the implementation of {@link #execute()} in the 
+   * implementation class, the thread is notified: other threads can wait
+   * for it to terminate
+   */
+  private abstract class TestThread extends Thread {
+    volatile Throwable thrown;
+    protected volatile boolean live = true;
+
+    @Override
+    public void run() {
+      try {
+        execute();
+      } catch (Throwable throwable) {
+        LOG.warn(throwable);
+        setThrown(throwable);
+      } finally {
+        synchronized (this) {
+          this.notify();
+        }
+      }
+    }
+
+    protected abstract void execute() throws Throwable;
+
+    protected synchronized void setThrown(Throwable thrown) {
+      this.thrown = thrown;
+    }
+
+    /**
+     * Rethrow anything caught
+     * @throws Throwable any non-null throwable raised by the execute method.
+     */
+    public synchronized void rethrow() throws Throwable {
+      if (thrown != null) {
+        throw thrown;
+      }
+    }
+
+    /**
+     * End the thread by setting the live p
+     */
+    public synchronized void endThread() {
+      live = false;
+      interrupt();
+      try {
+        wait();
+      } catch (InterruptedException e) {
+        LOG.debug("Ignoring " + e, e);
+      }
+    }
   }
   
   @Test
-  public void largeDelete() throws IOException, InterruptedException {
+  public void largeDelete() throws Throwable {
     mc = new MiniDFSCluster(CONF, 1, true, null);
     try {
       mc.waitActive();
+      Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
       createFiles();
       Assert.assertEquals(TOTAL_BLOCKS, getBlockCount());
       runThreads();
