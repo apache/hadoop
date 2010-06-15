@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
+import com.google.common.primitives.Longs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -553,7 +554,12 @@ public class KeyValue implements Writable, HeapSize {
   public KeyValue clone() {
     byte [] b = new byte[this.length];
     System.arraycopy(this.bytes, this.offset, b, 0, this.length);
-    return new KeyValue(b, 0, b.length);
+    KeyValue ret = new KeyValue(b, 0, b.length);
+    // Important to clone the memstoreTS as well - otherwise memstore's
+    // update-in-place methods (eg increment) will end up creating
+    // new entries
+    ret.setMemstoreTS(memstoreTS);
+    return ret;
   }
 
   //---------------------------------------------------------------------------
@@ -1294,10 +1300,13 @@ public class KeyValue implements Writable, HeapSize {
     }
 
     public int compare(final KeyValue left, final KeyValue right) {
-      return getRawComparator().compare(left.getBuffer(),
+      int ret = getRawComparator().compare(left.getBuffer(),
           left.getOffset() + ROW_OFFSET, left.getKeyLength(),
-        right.getBuffer(), right.getOffset() + ROW_OFFSET,
+          right.getBuffer(), right.getOffset() + ROW_OFFSET,
           right.getKeyLength());
+      if (ret != 0) return ret;
+      // Negate this comparison so later edits show up first
+      return -Longs.compare(left.getMemstoreTS(), right.getMemstoreTS());
     }
 
     public int compareTimestamps(final KeyValue left, final KeyValue right) {

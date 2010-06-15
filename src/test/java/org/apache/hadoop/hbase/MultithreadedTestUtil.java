@@ -22,9 +22,14 @@ package org.apache.hadoop.hbase;
 import java.util.Set;
 import java.util.HashSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 public abstract class MultithreadedTestUtil {
+
+  public static final Log LOG =
+    LogFactory.getLog(MultithreadedTestUtil.class);
 
   public static class TestContext {
     private final Configuration conf;
@@ -74,6 +79,7 @@ public abstract class MultithreadedTestUtil {
 
     public synchronized void threadFailed(Throwable t) {
       if (err == null) err = t;
+      LOG.error("Failed!", err);
       notify();
     }
 

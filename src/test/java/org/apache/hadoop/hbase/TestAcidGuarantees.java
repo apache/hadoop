@@ -33,11 +33,21 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
+/**
+ * Test case that uses multiple threads to read and write multifamily rows
+ * into a table, verifying that reads never see partially-complete writes.
+ * 
+ * This can run as a junit test, or with a main() function which runs against
+ * a real cluster (eg for testing with failures, region movement, etc)
+ */
 public class TestAcidGuarantees {
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
   public static final byte [] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");
@@ -62,25 +72,33 @@ public class TestAcidGuarantees {
   }
 
   public TestAcidGuarantees() {
-    util = new HBaseTestingUtility();
+    // Set small flush size for minicluster so we exercise reseeking scanners
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.hregion.memstore.flush.size", String.valueOf(128*1024));
+    util = new HBaseTestingUtility(conf);
   }
   
+  /**
+   * Thread that does random full-row writes into a table.
+   */
   public static class AtomicityWriter extends RepeatingTestThread {
     Random rand = new Random();
     byte data[] = new byte[10];
-    byte targetRow[];
+    byte targetRows[][];
     byte targetFamilies[][];
     HTable table;
     AtomicLong numWritten = new AtomicLong();
     
-    public AtomicityWriter(TestContext ctx, byte targetRow[],
+    public AtomicityWriter(TestContext ctx, byte targetRows[][],
                            byte targetFamilies[][]) throws IOException {
       super(ctx);
-      this.targetRow = targetRow;
+      this.targetRows = targetRows;
       this.targetFamilies = targetFamilies;
       table = new HTable(ctx.getConf(), TABLE_NAME);
     }
     public void doAnAction() throws Exception {
+      // Pick a random row to write into
+      byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
       Put p = new Put(targetRow); 
       rand.nextBytes(data);
 
@@ -95,14 +113,18 @@ public class TestAcidGuarantees {
     }
   }
   
-  public static class AtomicityReader extends RepeatingTestThread {
+  /**
+   * Thread that does single-row reads in a table, looking for partially
+   * completed rows.
+   */
+  public static class AtomicGetReader extends RepeatingTestThread {
     byte targetRow[];
     byte targetFamilies[][];
     HTable table;
     int numVerified = 0;
     AtomicLong numRead = new AtomicLong();
 
-    public AtomicityReader(TestContext ctx, byte targetRow[],
+    public AtomicGetReader(TestContext ctx, byte targetRow[],
                            byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetRow = targetRow;
@@ -114,7 +136,13 @@ public class TestAcidGuarantees {
       Get g = new Get(targetRow);
       Result res = table.get(g);
       byte[] gotValue = null;
-
+      if (res.getRow() == null) {
+        // Trying to verify but we didn't find the row - the writing
+        // thread probably just hasn't started writing yet, so we can
+        // ignore this action
+        return;
+      }
+      
       for (byte[] family : targetFamilies) {
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);
@@ -143,25 +171,99 @@ public class TestAcidGuarantees {
       throw new RuntimeException(msg.toString());
     }
   }
+  
+  /**
+   * Thread that does full scans of the table looking for any partially completed
+   * rows.
+   */
+  public static class AtomicScanReader extends RepeatingTestThread {
+    byte targetFamilies[][];
+    HTable table;
+    AtomicLong numScans = new AtomicLong();
+    AtomicLong numRowsScanned = new AtomicLong();
+
+    public AtomicScanReader(TestContext ctx,
+                           byte targetFamilies[][]) throws IOException {
+      super(ctx);
+      this.targetFamilies = targetFamilies;
+      table = new HTable(ctx.getConf(), TABLE_NAME);
+    }
+
+    public void doAnAction() throws Exception {
+      Scan s = new Scan();
+      for (byte[] family : targetFamilies) {
+        s.addFamily(family);
+      }
+      ResultScanner scanner = table.getScanner(s);
+      
+      for (Result res : scanner) {
+        byte[] gotValue = null;
+  
+        for (byte[] family : targetFamilies) {
+          for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
+            byte qualifier[] = Bytes.toBytes("col" + i);
+            byte thisValue[] = res.getValue(family, qualifier);
+            if (gotValue != null && !Bytes.equals(gotValue, thisValue)) {
+              gotFailure(gotValue, res);
+            }
+            gotValue = thisValue;
+          }
+        }
+        numRowsScanned.getAndIncrement();
+      }
+      numScans.getAndIncrement();
+    }
+
+    private void gotFailure(byte[] expected, Result res) {
+      StringBuilder msg = new StringBuilder();
+      msg.append("Failed after ").append(numRowsScanned).append("!");
+      msg.append("Expected=").append(Bytes.toStringBinary(expected));
+      msg.append("Got:\n");
+      for (KeyValue kv : res.list()) {
+        msg.append(kv.toString());
+        msg.append(" val= ");
+        msg.append(Bytes.toStringBinary(kv.getValue()));
+        msg.append("\n");
+      }
+      throw new RuntimeException(msg.toString());
+    }
+  }
 
 
-  public void runTestAtomicity(long millisToRun) throws Exception {
+  public void runTestAtomicity(long millisToRun,
+      int numWriters,
+      int numGetters,
+      int numScanners,
+      int numUniqueRows) throws Exception {
     createTableIfMissing();
     TestContext ctx = new TestContext(util.getConfiguration());
-    byte row[] = Bytes.toBytes("test_row");
-
+    
+    byte rows[][] = new byte[numUniqueRows][];
+    for (int i = 0; i < numUniqueRows; i++) {
+      rows[i] = Bytes.toBytes("test_row_" + i);
+    }
+    
     List<AtomicityWriter> writers = Lists.newArrayList();
-    for (int i = 0; i < 5; i++) {
-      AtomicityWriter writer = new AtomicityWriter(ctx, row, FAMILIES);
+    for (int i = 0; i < numWriters; i++) {
+      AtomicityWriter writer = new AtomicityWriter(
+          ctx, rows, FAMILIES);
       writers.add(writer);
       ctx.addThread(writer);
     }
 
-    List<AtomicityReader> readers = Lists.newArrayList();
-    for (int i = 0; i < 5; i++) {
-      AtomicityReader reader = new AtomicityReader(ctx, row, FAMILIES);
-      readers.add(reader);
-      ctx.addThread(reader);
+    List<AtomicGetReader> getters = Lists.newArrayList();
+    for (int i = 0; i < numGetters; i++) {
+      AtomicGetReader getter = new AtomicGetReader(
+          ctx, rows[i % numUniqueRows], FAMILIES);
+      getters.add(getter);
+      ctx.addThread(getter);
+    }
+    
+    List<AtomicScanReader> scanners = Lists.newArrayList();
+    for (int i = 0; i < numScanners; i++) {
+      AtomicScanReader scanner = new AtomicScanReader(ctx, FAMILIES);
+      scanners.add(scanner);
+      ctx.addThread(scanner);
     }
     
     ctx.startThreads();
@@ -173,26 +275,53 @@ public class TestAcidGuarantees {
       LOG.info("  wrote " + writer.numWritten.get());
     }
     LOG.info("Readers:");
-    for (AtomicityReader reader : readers) {
+    for (AtomicGetReader reader : getters) {
       LOG.info("  read " + reader.numRead.get());
+    }
+    LOG.info("Scanners:");
+    for (AtomicScanReader scanner : scanners) {
+      LOG.info("  scanned " + scanner.numScans.get());
+      LOG.info("  verified " + scanner.numRowsScanned.get() + " rows");
     }
   }
 
   @Test
-  public void testAtomicity() throws Exception {
-    util.startMiniCluster(3);
+  public void testGetAtomicity() throws Exception {
+    util.startMiniCluster(1);
     try {
-      runTestAtomicity(20000);
+      runTestAtomicity(20000, 5, 5, 0, 3);
     } finally {
       util.shutdownMiniCluster();
     }    
   }
-  
+
+  @Test
+  @Ignore("Currently not passing - see HBASE-2670")
+  public void testScanAtomicity() throws Exception {
+    util.startMiniCluster(1);
+    try {
+      runTestAtomicity(20000, 5, 0, 5, 3);
+    } finally {
+      util.shutdownMiniCluster();
+    }    
+  }
+
+  @Test
+  @Ignore("Currently not passing - see HBASE-2670")
+  public void testMixedAtomicity() throws Exception {
+    util.startMiniCluster(1);
+    try {
+      runTestAtomicity(20000, 5, 2, 2, 3);
+    } finally {
+      util.shutdownMiniCluster();
+    }    
+  }
+
   public static void main(String args[]) throws Exception {
     Configuration c = HBaseConfiguration.create();
     TestAcidGuarantees test = new TestAcidGuarantees();
     test.setConf(c);
-    test.runTestAtomicity(5*60*1000);
+    test.runTestAtomicity(5*60*1000, 5, 2, 2, 3);
   }
 
   private void setConf(Configuration c) {

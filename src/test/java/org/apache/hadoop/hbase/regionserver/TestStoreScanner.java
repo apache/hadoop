@@ -25,6 +25,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.mockito.Mockito;
+import org.mockito.stubbing.OngoingStubbing;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -136,6 +140,7 @@ public class TestStoreScanner extends TestCase {
    * Test test shows exactly how the matcher's return codes confuses the StoreScanner
    * and prevent it from doing the right thing.  Seeking once, then nexting twice
    * should return R1, then R2, but in this case it doesnt.
+   * TODO this comment makes no sense above. Appears to do the right thing.
    * @throws IOException
    */
   public void testWontNextToNext() throws IOException {
@@ -429,5 +434,22 @@ public class TestStoreScanner extends TestCase {
     results.clear();
 
     assertEquals(false, scanner.next(results));
+  }
+    
+  
+  /**
+   * TODO this fails, since we don't handle deletions, etc, in peek
+   */
+  public void SKIP_testPeek() throws Exception {
+    KeyValue [] kvs = new KeyValue [] {
+        KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
+        KeyValueTestUtil.create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"),
+    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
+    Scan scanSpec = new Scan(Bytes.toBytes("R1"));
+    StoreScanner scan =
+      new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
+          getCols("a"), scanners);
+    assertNull(scan.peek());    
   }
 }

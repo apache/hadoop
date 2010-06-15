@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -37,6 +38,10 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /** memstore test case */
 public class TestMemStore extends TestCase {
@@ -204,11 +209,18 @@ public class TestMemStore extends TestCase {
   private void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)
       throws IOException {
     scanner.seek(KeyValue.createFirstOnRow(new byte[]{}));
-    for (KeyValue kv : expected) {
-      assertTrue(0 ==
-          KeyValue.COMPARATOR.compare(kv,
-              scanner.next()));
+    List<KeyValue> returned = Lists.newArrayList();
+    
+    while (true) {
+      KeyValue next = scanner.next();
+      if (next == null) break;
+      returned.add(next);
     }
+
+    assertTrue(
+        "Got:\n" + Joiner.on("\n").join(returned) +
+        "\nExpected:\n" + Joiner.on("\n").join(expected),
+        Iterables.elementsEqual(Arrays.asList(expected), returned));
     assertNull(scanner.peek());
   }
 
@@ -251,6 +263,115 @@ public class TestMemStore extends TestCase {
     s = this.memstore.getScanners().get(0);
     assertScannerResults(s, new KeyValue[]{kv1, kv2});
   }
+
+  /**
+   * Regression test for HBASE-2616, HBASE-2670.
+   * When we insert a higher-memstoreTS version of a cell but with
+   * the same timestamp, we still need to provide consistent reads
+   * for the same scanner.
+   */
+  public void testMemstoreEditsVisibilityWithSameKey() throws IOException {
+    final byte[] row = Bytes.toBytes(1);
+    final byte[] f = Bytes.toBytes("family");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] v1 = Bytes.toBytes("value1");
+    final byte[] v2 = Bytes.toBytes("value2");
+
+    // INSERT 1: Write both columns val1
+    ReadWriteConsistencyControl.WriteEntry w =
+        rwcc.beginMemstoreInsert();
+
+    KeyValue kv11 = new KeyValue(row, f, q1, v1);
+    kv11.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kv11);
+
+    KeyValue kv12 = new KeyValue(row, f, q2, v1);
+    kv12.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kv12);
+    rwcc.completeMemstoreInsert(w);
+
+    // BEFORE STARTING INSERT 2, SEE FIRST KVS
+    ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+    KeyValueScanner s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv11, kv12});
+
+    // START INSERT 2: Write both columns val2
+    w = rwcc.beginMemstoreInsert();
+    KeyValue kv21 = new KeyValue(row, f, q1, v2);
+    kv21.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kv21);
+
+    KeyValue kv22 = new KeyValue(row, f, q2, v2);
+    kv22.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kv22);
+
+    // BEFORE COMPLETING INSERT 2, SEE FIRST KVS
+    ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv11, kv12});
+
+    // COMPLETE INSERT 2
+    rwcc.completeMemstoreInsert(w);
+    
+    // NOW SHOULD SEE NEW KVS IN ADDITION TO OLD KVS.
+    // See HBASE-1485 for discussion about what we should do with
+    // the duplicate-TS inserts
+    ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});    
+  }
+  
+  /**
+   * When we insert a higher-memstoreTS deletion of a cell but with
+   * the same timestamp, we still need to provide consistent reads
+   * for the same scanner.
+   */
+  public void testMemstoreDeletesVisibilityWithSameKey() throws IOException {
+    final byte[] row = Bytes.toBytes(1);
+    final byte[] f = Bytes.toBytes("family");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] v1 = Bytes.toBytes("value1");
+    // INSERT 1: Write both columns val1
+    ReadWriteConsistencyControl.WriteEntry w =
+        rwcc.beginMemstoreInsert();
+
+    KeyValue kv11 = new KeyValue(row, f, q1, v1);
+    kv11.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kv11);
+
+    KeyValue kv12 = new KeyValue(row, f, q2, v1);
+    kv12.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kv12);
+    rwcc.completeMemstoreInsert(w);
+
+    // BEFORE STARTING INSERT 2, SEE FIRST KVS
+    ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+    KeyValueScanner s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv11, kv12});
+
+    // START DELETE: Insert delete for one of the columns
+    w = rwcc.beginMemstoreInsert();
+    KeyValue kvDel = new KeyValue(row, f, q2, kv11.getTimestamp(),
+        KeyValue.Type.DeleteColumn);
+    kvDel.setMemstoreTS(w.getWriteNumber());
+    memstore.add(kvDel);
+
+    // BEFORE COMPLETING DELETE, SEE FIRST KVS
+    ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv11, kv12});
+
+    // COMPLETE DELETE
+    rwcc.completeMemstoreInsert(w);
+
+    // NOW WE SHOULD SEE DELETE
+    ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+    s = this.memstore.getScanners().get(0);
+    assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});    
+  }
+  
 
   private static class ReadOwnWritesTester extends Thread {
     static final int NUM_TRIES = 1000;
