@@ -195,19 +195,6 @@
       </releases>
     </repository>
     <repository>
-      <!-- Guava on standard maven repos has a bad checksum, hosting
-           here temporarily -->
-      <id>temp-todd-for-guava</id>
-      <name>Todd Lipcon's repository on apache.org</name>
-      <url>http://people.apache.org/~todd/repo/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
       <id>ibiblio.org</id>
       <name>ibiblio mirror</name>
       <url>http://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
@@ -479,7 +466,7 @@
     <slf4j.version>1.5.8</slf4j.version>
     <stax-api>1.0.1</stax-api>
     <thrift.version>0.2.0</thrift.version>
-    <guava.version>r03</guava.version>
+    <guava.version>r05</guava.version>
   </properties>
 
   <dependencyManagement>
@@ -633,7 +620,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>r03</version>
+      <version>${guava.version}</version>
     </dependency>
 
     <dependency>
