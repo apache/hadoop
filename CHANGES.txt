@@ -390,6 +390,7 @@ Release 0.21.0 - Unreleased
                same timestamp as current row.
    HBASE-2733  Replacement of LATEST_TIMESTAMP with real timestamp was broken
                by HBASE-2353.
+   HBASE-2734  TestFSErrors should catch all types of exceptions, not just RTE
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

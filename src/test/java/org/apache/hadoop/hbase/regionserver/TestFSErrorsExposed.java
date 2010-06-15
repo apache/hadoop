@@ -176,11 +176,9 @@ public class TestFSErrorsExposed {
       try {
         util.countRows(table);
         fail("Did not fail to count after removing data");
-      } catch (RuntimeException rte) {
-        // We get RTE instead of IOE since java Iterable<?> doesn't throw
-        // IOE
-        LOG.info("Got expected error", rte);
-        assertTrue(rte.getMessage().contains("Could not seek"));
+      } catch (Exception e) {
+        LOG.info("Got expected error", e);
+        assertTrue(e.getMessage().contains("Could not seek"));
       }
       
     } finally {
