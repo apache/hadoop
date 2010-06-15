@@ -51,7 +51,7 @@ public class TestZooKeeper {
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
-  private Configuration    conf;
+  private static Configuration conf;
 
   /**
    * @throws java.lang.Exception
@@ -61,7 +61,8 @@ public class TestZooKeeper {
     // Test we can first start the ZK cluster by itself
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
-    TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.startMiniCluster(2);
+    conf = TEST_UTIL.getConfiguration();
   }
 
   /**
@@ -77,14 +78,8 @@ public class TestZooKeeper {
    */
   @Before
   public void setUp() throws Exception {
-    conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {}
 
   /**
    * See HBASE-1232 and http://wiki.apache.org/hadoop/ZooKeeper/FAQ#4.
@@ -118,14 +113,12 @@ public class TestZooKeeper {
   public void testRegionServerSessionExpired() throws Exception{
     LOG.info("Starting testRegionServerSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
-    TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getConfiguration().
-      setBoolean("hbase.regionserver.restart.on.zk.expire", true);
     TEST_UTIL.expireRegionServerSession(0);
     testSanity();
   }
   @Test
   public void testMasterSessionExpired() throws Exception {
-    LOG.info("Starting testRegionServerSessionExpired");
+    LOG.info("Starting testMasterSessionExpired");
     new HTable(conf, HConstants.META_TABLE_NAME);
     TEST_UTIL.expireMasterSession();
     testSanity();

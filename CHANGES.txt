@@ -385,6 +385,7 @@ Release 0.21.0 - Unreleased
                (Kannan Muthukkaruppan via Todd Lipcon)
    HBASE-2712  Cached region location that went stale won't recover if 
                asking for first row
+   HBASE-2732  TestZooKeeper was broken, HBASE-2691 showed it
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
