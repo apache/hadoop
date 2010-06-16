@@ -28,6 +28,9 @@ Release 0.20-append - Unreleased
     HDFS-1054. remove sleep before retry for allocating a block.
     (Todd Lipcon via dhruba)
 
+    HDFS-445. pread should refetch block locations when necessary.
+    (Todd Lipcon via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
