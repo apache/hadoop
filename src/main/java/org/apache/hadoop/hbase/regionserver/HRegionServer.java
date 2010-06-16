@@ -117,7 +117,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface,
-    HBaseRPCErrorHandler, Runnable, Watcher {
+    HBaseRPCErrorHandler, Runnable, Watcher, Stoppable {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
@@ -725,7 +725,7 @@ public class HRegionServer implements HRegionInterface,
       // accessors will be going against wrong filesystem (unless all is set
       // to defaults).
       this.conf.set("fs.defaultFS", this.conf.get("hbase.rootdir"));
-      this.conf.setBoolean("fs.automatic.close", false);
+      // Get fs instance used by this RS
       this.fs = FileSystem.get(this.conf);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.hlog = setupHLog();
@@ -2396,8 +2396,10 @@ public class HRegionServer implements HRegionInterface,
   /**
    * @param hrs
    * @return Thread the RegionServer is running in correctly named.
+   * @throws IOException
    */
-  public static Thread startRegionServer(final HRegionServer hrs) {
+  public static Thread startRegionServer(final HRegionServer hrs)
+  throws IOException {
     return startRegionServer(hrs,
       "regionserver" + hrs.getServerInfo().getServerAddress().getPort());
   }
@@ -2406,12 +2408,18 @@ public class HRegionServer implements HRegionInterface,
    * @param hrs
    * @param name
    * @return Thread the RegionServer is running in correctly named.
+   * @throws IOException
    */
   public static Thread startRegionServer(final HRegionServer hrs,
-      final String name) {
+      final String name)
+  throws IOException {
     Thread t = new Thread(hrs);
     t.setName(name);
     t.start();
+    // Install shutdown hook that will catch signals and run an orderly shutdown
+    // of the hrs.
+    ShutdownHook.install(hrs.getConfiguration(),
+      FileSystem.get(hrs.getConfiguration()), hrs, t);
     return t;
   }
 
@@ -2504,5 +2512,4 @@ public class HRegionServer implements HRegionInterface,
         HRegionServer.class);
     doMain(args, regionServerClass);
   }
-
 }
