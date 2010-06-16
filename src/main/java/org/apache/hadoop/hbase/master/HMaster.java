@@ -201,7 +201,8 @@ public class HMaster extends Thread implements HMasterInterface,
     // We'll succeed if we are only  master or if we win the race when many
     // masters.  Otherwise we park here inside in writeAddressToZooKeeper.
     // TODO: Bring up the UI to redirect to active Master.
-    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+    zooKeeperWrapper =
+        ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
     zooKeeperWrapper.registerListener(this);
     this.zkMasterAddressWatcher =
       new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
@@ -216,7 +217,7 @@ public class HMaster extends Thread implements HMasterInterface,
     // Start the unassigned watcher - which will create the unassgined region 
     // in ZK. This is needed before RegionManager() constructor tries to assign 
     // the root region.
-    ZKUnassignedWatcher.start();
+    ZKUnassignedWatcher.start(this.conf);
     // init the various event handlers
     HBaseEventHandler.init(serverManager);
     // start the "close region" executor service
@@ -1155,7 +1156,8 @@ public class HMaster extends Thread implements HMasterInterface,
 
       zooKeeperWrapper.close();
       try {
-        zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+        zooKeeperWrapper =
+            ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
         zooKeeperWrapper.registerListener(this);
         this.zkMasterAddressWatcher.setZookeeper(zooKeeperWrapper);
         if(!this.zkMasterAddressWatcher.

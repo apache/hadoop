@@ -697,7 +697,9 @@ public class HBaseTestingUtility {
   }
 
   public void expireSession(ZooKeeperWrapper nodeZK) throws Exception{
-    ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(conf, ZooKeeperWrapper.class.getName());
+    ZooKeeperWrapper zkw =
+        ZooKeeperWrapper.createInstance(conf,
+            ZooKeeperWrapper.class.getName());
     zkw.registerListener(EmptyWatcher.instance);
     String quorumServers = zkw.getQuorumServers();
     int sessionTimeout = 5 * 1000; // 5 seconds

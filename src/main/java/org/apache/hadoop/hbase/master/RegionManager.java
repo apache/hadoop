@@ -136,7 +136,8 @@ public class RegionManager {
     Configuration conf = master.getConfiguration();
 
     this.master = master;
-    this.zkWrapper = ZooKeeperWrapper.getInstance(HMaster.class.getName());
+    this.zkWrapper =
+        ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
     this.loadBalancer = new LoadBalancer(conf);
 

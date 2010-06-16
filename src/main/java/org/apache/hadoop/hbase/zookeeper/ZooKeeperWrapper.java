@@ -137,20 +137,22 @@ public class ZooKeeperWrapper implements Watcher {
   private List<Watcher> listeners = Collections.synchronizedList(new ArrayList<Watcher>());
 
   // return the singleton given the name of the instance
-  public static ZooKeeperWrapper getInstance(String name) {
+  public static ZooKeeperWrapper getInstance(Configuration conf, String name) {
+    name = getZookeeperClusterKey(conf, name);
     return INSTANCES.get(name);
   }
   // creates only one instance
   public static ZooKeeperWrapper createInstance(Configuration conf, String name) {
-    if (getInstance(name) != null) {
-      return getInstance(name);
+    if (getInstance(conf, name) != null) {
+      return getInstance(conf, name);
     }
     ZooKeeperWrapper.createLock.lock();
     try {
-      if (getInstance(name) == null) {
+      if (getInstance(conf, name) == null) {
         try {
-          ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, name);
-          INSTANCES.put(name, instance);
+          String fullname = getZookeeperClusterKey(conf, name);
+          ZooKeeperWrapper instance = new ZooKeeperWrapper(conf, fullname);
+          INSTANCES.put(fullname, instance);
         }
         catch (Exception e) {
           LOG.error("<" + name + ">" + "Error creating a ZooKeeperWrapper " + e);
@@ -160,7 +162,7 @@ public class ZooKeeperWrapper implements Watcher {
     finally {
       createLock.unlock();
     }
-    return getInstance(name);
+    return getInstance(conf, name);
   }
 
   /**
@@ -822,13 +824,25 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   /**
+   * List all znodes in the specified path
+   * @param znode path to list
+   * @return a list of all the znodes
+   */
+  public List<String> listZnodes(String znode) {
+    return listZnodes(znode, this);
+  }
+
+  /**
    * List all znodes in the specified path and set a watcher on each
    * @param znode path to list
    * @param watcher watch to set, can be null
    * @return a list of all the znodes
    */
-  public List<String> listZnodes(String znode) {
+  public List<String> listZnodes(String znode, Watcher watcher) {
     List<String> nodes = null;
+    if (watcher == null) {
+      watcher = this;
+    }
     try {
       if (checkExistenceOf(znode)) {
         nodes = zooKeeper.getChildren(znode, this);
@@ -907,9 +921,34 @@ public class ZooKeeperWrapper implements Watcher {
     }
   }
 
+  /**
+   * Get the key to the ZK ensemble for this configuration without
+   * adding a name at the end
+   * @param conf Configuration to use to build the key
+   * @return ensemble key without a name
+   */
   public static String getZookeeperClusterKey(Configuration conf) {
-    return (conf.get(HConstants.ZOOKEEPER_QUORUM)
-            + ":" + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+    return getZookeeperClusterKey(conf, null);
+  }
+
+  /**
+   * Get the key to the ZK ensemble for this configuration and append
+   * a name at the end
+   * @param conf Configuration to use to build the key
+   * @param name Name that should be appended at the end if not empty or null
+   * @return ensemble key with a name (if any)
+   */
+  public static String getZookeeperClusterKey(Configuration conf, String name) {
+    String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM.replaceAll(
+        "[\\t\\n\\x0B\\f\\r]", ""));
+    StringBuilder builder = new StringBuilder(quorum);
+    builder.append(":");
+    builder.append(conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+    if (name != null && !name.isEmpty()) {
+      builder.append(",");
+      builder.append(name);
+    }
+    return builder.toString();
   }
 
   /**

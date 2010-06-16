@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.master.handler.MasterCloseRegionHandler;
 import org.apache.hadoop.hbase.master.handler.MasterOpenRegionHandler;
@@ -39,21 +40,17 @@ import org.apache.zookeeper.Watcher.Event.EventType;
  */
 public class ZKUnassignedWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZKUnassignedWatcher.class);
-  
-  // TODO: Start move this to HConstants
-  static final String ROOT_TABLE_NAME_STR = "-ROOT-";
-  static final String META_TABLE_NAME_STR = ".META.";
-  // TODO: End move this to HConstants
 
   private ZooKeeperWrapper zkWrapper = null;
 
-  public static void start() throws IOException {
-    new ZKUnassignedWatcher();
+  public static void start(Configuration conf) throws IOException {
+    new ZKUnassignedWatcher(conf);
     LOG.debug("Started ZKUnassigned watcher");
   }
 
-  public ZKUnassignedWatcher() throws IOException {
-    zkWrapper = ZooKeeperWrapper.getInstance(HMaster.class.getName());
+  public ZKUnassignedWatcher(Configuration conf) throws IOException {
+    zkWrapper =
+        ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
     // If the UNASSIGNED ZNode does not exist, create it.
     zkWrapper.createZNodeIfNotExists(zkWrapper.getRegionInTransitionZNode());
     // TODO: get the outstanding changes in UNASSIGNED

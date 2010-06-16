@@ -6,6 +6,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
@@ -35,12 +37,14 @@ public class RSZookeeperUpdater {
   private int zkVersion = 0;
   HBaseEventType lastUpdatedState;
 
-  public RSZookeeperUpdater(String regionServerName, String regionName) {
-    this(regionServerName, regionName, 0);
+  public RSZookeeperUpdater(Configuration conf,
+                            String regionServerName, String regionName) {
+    this(conf, regionServerName, regionName, 0);
   }
   
-  public RSZookeeperUpdater(String regionServerName, String regionName, int zkVersion) {
-    this.zkWrapper = ZooKeeperWrapper.getInstance(regionServerName);
+  public RSZookeeperUpdater(Configuration conf, String regionServerName,
+                            String regionName, int zkVersion) {
+    this.zkWrapper = ZooKeeperWrapper.getInstance(conf, regionServerName);
     this.regionServerName = regionServerName;
     this.regionName = regionName;
     // get the region ZNode we have to create
