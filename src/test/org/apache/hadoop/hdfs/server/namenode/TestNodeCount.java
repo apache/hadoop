@@ -2,6 +2,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -12,7 +13,11 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeActivtyMBean;
 
 import junit.framework.TestCase;
 
@@ -23,6 +28,52 @@ import junit.framework.TestCase;
 public class TestNodeCount extends TestCase {
   static final Log LOG = LogFactory.getLog(TestNodeCount.class);
 
+  public void testInvalidateMultipleReplicas() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster =
+      new MiniDFSCluster(conf, 5, true, null);
+    final int FILE_LEN = 123;
+    final String pathStr = "/testInvalidateMultipleReplicas";
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      Path path = new Path(pathStr);
+      cluster.waitActive();
+      // create a small file on 3 nodes
+      DFSTestUtil.createFile(fs, path, 123, (short)3, 0);
+      DFSTestUtil.waitReplication(fs, path, (short)3);
+      NameNode nn = cluster.getNameNode();
+      LocatedBlocks located = nn.getBlockLocations(pathStr, 0, FILE_LEN);
+      
+      // Get the original block locations
+      List<LocatedBlock> blocks = located.getLocatedBlocks();
+      LocatedBlock firstBlock = blocks.get(0);
+      
+      DatanodeInfo[] locations = firstBlock.getLocations();
+      assertEquals("Should have 3 good blocks", 3, locations.length);
+      nn.getNamesystem().stallReplicationWork();
+      
+      DatanodeInfo[] badLocations = new DatanodeInfo[2];
+      badLocations[0] = locations[0];
+      badLocations[1] = locations[1];
+      
+      // Report some blocks corrupt
+      LocatedBlock badLBlock = new LocatedBlock(
+          firstBlock.getBlock(), badLocations);
+      
+      nn.reportBadBlocks(new LocatedBlock[] {badLBlock});
+      
+      nn.getNamesystem().restartReplicationWork();
+      
+      DFSTestUtil.waitReplication(fs, path, (short)3);
+      NumberReplicas num = nn.getNamesystem().countNodes(
+          firstBlock.getBlock());
+      assertEquals(0, num.corruptReplicas());
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
   public void testNodeCount() throws Exception {
     // start a mini dfs cluster of 2 nodes
     final Configuration conf = new Configuration();
