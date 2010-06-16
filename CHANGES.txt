@@ -38,6 +38,8 @@ Release 0.20-append - Unreleased
     HDFS-561. Fix write pipeline READ_TIMEOUT.
     (Todd Lipcon via dhruba)
 
+    HDFS-927. DFSInputStream retries too many times for new block locations.
+    (Todd Lipcon via dhruba)
 
 Release 0.20.3 - Unreleased
 
