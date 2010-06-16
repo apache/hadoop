@@ -31,6 +31,9 @@ Release 0.20-append - Unreleased
     HDFS-445. pread should refetch block locations when necessary.
     (Todd Lipcon via dhruba)
 
+    HDFS-1141. completeFile does not check lease ownership.
+    (Todd Lipcon via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
