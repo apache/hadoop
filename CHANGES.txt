@@ -47,6 +47,9 @@ Release 0.20-append - Unreleased
     HDFS-606. Fix ConcurrentModificationException in invalidateCorruptReplicas.
     (Todd Lipcon via dhruba)
 
+    HDFS-1216. Upgrade to junit 4.5
+    (Todd Lipcon via dhruba)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
