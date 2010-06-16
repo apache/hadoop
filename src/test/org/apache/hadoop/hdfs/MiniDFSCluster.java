@@ -731,6 +731,14 @@ public class MiniDFSCluster {
    * Wait until the cluster is active and running.
    */
   public void waitActive() throws IOException {
+    waitActive(true);
+  }
+
+  /**
+   * Wait until the cluster is active.
+   * @param waitHeartbeats if true, will wait until all DNs have heartbeat
+   */
+  public void waitActive(boolean waitHeartbeats) throws IOException {
     if (nameNode == null) {
       return;
     }
@@ -739,7 +747,8 @@ public class MiniDFSCluster {
     DFSClient client = new DFSClient(addr, conf);
 
     // make sure all datanodes are alive and sent heartbeat
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE))) {
+    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE),
+                      waitHeartbeats)) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
@@ -749,10 +758,17 @@ public class MiniDFSCluster {
     client.close();
   }
 
-  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
+  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo,
+                                          boolean waitHeartbeats) {
     if (dnInfo.length != numDataNodes) {
       return true;
     }
+
+    // If we don't need heartbeats, we're done.
+    if (!waitHeartbeats) {
+      return false;
+    }
+
     // make sure all datanodes have sent first heartbeat to namenode,
     // using (capacity == 0) as proxy.
     for (DatanodeInfo dn : dnInfo) {

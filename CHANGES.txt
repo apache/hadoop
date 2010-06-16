@@ -41,6 +41,9 @@ Release 0.20-append - Unreleased
     HDFS-927. DFSInputStream retries too many times for new block locations.
     (Todd Lipcon via dhruba)
 
+    HDFS-1215. Fix unit test TestNodeCount.
+    (Todd Lipcon via dhruba)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
