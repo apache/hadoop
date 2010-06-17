@@ -56,6 +56,9 @@ Release 0.20-append - Unreleased
     HDFS-1141. completeFile does not check lease ownership.
     (Todd Lipcon via dhruba)
 
+    HDFS-1204. Lease expiration should recover single files, 
+    not entire lease holder (Sam Rash via dhruba)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
