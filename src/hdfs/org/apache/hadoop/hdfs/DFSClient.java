@@ -2635,6 +2635,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           primary = createClientDatanodeProtocolProxy(primaryNode, conf);
           newBlock = primary.recoverBlock(block, isAppend, newnodes);
         } catch (IOException e) {
+          LOG.warn("Failed recovery attempt #" + recoveryErrorCount +
+                   " from primary datanode " + primaryNode, e);
           recoveryErrorCount++;
           if (recoveryErrorCount > maxRecoveryErrorCount) {
             if (nodes.length > 1) {

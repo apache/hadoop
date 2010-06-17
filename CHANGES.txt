@@ -59,6 +59,9 @@ Release 0.20-append - Unreleased
     HDFS-1204. Lease expiration should recover single files, 
     not entire lease holder (Sam Rash via dhruba)
 
+    HDFS-1210. DFSClient should log exception when block recovery fails.
+    (Todd Lipcon via dhruba)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
