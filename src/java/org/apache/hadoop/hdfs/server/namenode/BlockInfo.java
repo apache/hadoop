@@ -19,12 +19,16 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
+import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
  * Internal class for block metadata.
  */
-class BlockInfo extends Block {
+class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   private INodeFile inode;
+
+  /** For implementing {@link LightWeightGSet.LinkedElement} interface */
+  private LightWeightGSet.LinkedElement nextLinkedElement;
 
   /**
    * This array contains triplets of references.
@@ -320,5 +324,15 @@ class BlockInfo extends Block {
   public boolean equals(Object obj) {
     // Sufficient to rely on super's implementation
     return (this == obj) || super.equals(obj);
+  }
+
+  @Override
+  public LightWeightGSet.LinkedElement getNext() {
+    return nextLinkedElement;
+  }
+
+  @Override
+  public void setNext(LightWeightGSet.LinkedElement next) {
+    this.nextLinkedElement = next;
   }
 }

@@ -48,6 +48,9 @@ Trunk (unreleased changes)
     HDFS-1190.  Remove unused getNamenode() method from DataNode.
     (Jeff Ames via jghoman)
 
+    HDFS-1114. Implement LightWeightGSet for BlocksMap in order to reduce
+    NameNode memory footprint.  (szetszwo)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)

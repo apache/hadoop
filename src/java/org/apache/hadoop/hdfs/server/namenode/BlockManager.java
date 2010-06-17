@@ -182,6 +182,7 @@ public class BlockManager {
 
   void close() {
     if (pendingReplications != null) pendingReplications.stop();
+    blocksMap.close();
   }
 
   void metaSave(PrintWriter out) {
