@@ -394,6 +394,7 @@ Release 0.21.0 - Unreleased
    HBASE-2738  TestTimeRangeMapRed updated now that we keep multiple cells with
                same timestamp in MemStore
    HBASE-2725  Shutdown hook management is gone in trunk; restore
+   HBASE-2740  NPE in ReadWriteConsistencyControl
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

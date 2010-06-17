@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.NavigableSet;
 
 /**
- * Scanner scans both the memstore and the HStore. Coaleace KeyValue stream
+ * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
  * into List<KeyValue> for a single row.
  */
 class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
@@ -194,6 +194,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       this.store.deleteChangedReaderObserver(this);
     if (this.heap != null)
       this.heap.close();
+    this.heap = null; // CLOSED!
+    this.lastTop = null; // If both are null, we are closed.
   }
 
   public synchronized boolean seek(KeyValue key) throws IOException {
@@ -297,6 +299,13 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   // Implementation of ChangedReadersObserver
   public synchronized void updateReaders() throws IOException {
     if (this.closing) return;
+
+    // All public synchronized API calls will call 'checkReseek' which will cause
+    // the scanner stack to reseek if this.heap==null && this.lastTop != null.
+    // But if two calls to updateReaders() happen without a 'next' or 'peek' then we
+    // will end up calling this.peek() which would cause a reseek in the middle of a updateReaders
+    // which is NOT what we want, not to mention could cause an NPE. So we early out here.
+    if (this.heap == null) return;
 
     // this could be null.
     this.lastTop = this.peek();
