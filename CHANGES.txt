@@ -999,6 +999,9 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6828. Herrior uses old way of accessing logs directories (Sreekanth
+    Ramakrishnan via cos)
+
     HADOOP-6788. [Herriot] Exception exclusion functionality is not working
     correctly. (Vinay Thota via cos)
 
