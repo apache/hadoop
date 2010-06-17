@@ -245,8 +245,8 @@ public aspect DaemonProtocolAspect {
   public String DaemonProtocol.getFilePattern() {
     //We use the environment variable HADOOP_LOGFILE to get the
     //pattern to use in the search.
-    String logDir = System.getenv("HADOOP_LOG_DIR");
-    String daemonLogPattern = System.getenv("HADOOP_LOGFILE");
+    String logDir = System.getProperty("hadoop.log.dir");
+    String daemonLogPattern = System.getProperty("hadoop.log.file");
     if(daemonLogPattern == null && daemonLogPattern.isEmpty()) {
       return "*";
     }
