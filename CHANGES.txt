@@ -62,6 +62,9 @@ Release 0.20-append - Unreleased
     HDFS-1210. DFSClient should log exception when block recovery fails.
     (Todd Lipcon via dhruba)
 
+    HDFS-1211. Block receiver should not log "rewind" packets at INFO level.
+    (Todd Lipcon via dhruba)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
