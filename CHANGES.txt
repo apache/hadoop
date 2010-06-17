@@ -4,13 +4,7 @@ Release 0.20-append - Unreleased
 
   NEW FEATURES
 
-    HDFS-200. Support append and sync for hadoop 0.20 branch.
-
-    HDFS-101. DFSClient correctly detects second datanode failure in write
-    pipeline. (Nicolas Spiegelberg via dhruba)
-
-    HDFS-988. Fix bug where savenameSpace can corrupt edits log.
-    (Nicolas Spiegelberg via dhruba)
+    HDFS-200. Support append and sync for hadoop 0.20 branch. (dhruba)
 
     HDFS-826. Allow a mechanism for an application to detect that 
     datanode(s) have died in the write pipeline. (dhruba)
@@ -25,21 +19,12 @@ Release 0.20-append - Unreleased
     HDFS-457. Better handling of volume failure in DataNode Storage.
     (Nicolas Spiegelberg via dhruba)
 
-    HDFS-1054. remove sleep before retry for allocating a block.
-    (Todd Lipcon via dhruba)
-
-    HDFS-445. pread should refetch block locations when necessary.
-    (Todd Lipcon via dhruba)
-
-    HDFS-1141. completeFile does not check lease ownership.
-    (Todd Lipcon via dhruba)
-
-    HDFS-1207. FSNamesystem.stallReplicationWork should be volatile.
-    (Todd Lipcon via dhruba)
-
   IMPROVEMENTS
 
   BUG FIXES
+
+    HDFS-101. DFSClient correctly detects second datanode failure in write
+    pipeline. (Nicolas Spiegelberg via dhruba)
 
     HDFS-561. Fix write pipeline READ_TIMEOUT.
     (Todd Lipcon via dhruba)
@@ -54,6 +39,21 @@ Release 0.20-append - Unreleased
     (Todd Lipcon via dhruba)
 
     HDFS-1216. Upgrade to junit 4.5
+    (Todd Lipcon via dhruba)
+
+    HDFS-1207. FSNamesystem.stallReplicationWork should be volatile.
+    (Todd Lipcon via dhruba)
+
+    HDFS-988. Fix bug where savenameSpace can corrupt edits log.
+    (Nicolas Spiegelberg via dhruba)
+
+    HDFS-1054. remove sleep before retry for allocating a block.
+    (Todd Lipcon via dhruba)
+
+    HDFS-445. pread should refetch block locations when necessary.
+    (Todd Lipcon via dhruba)
+
+    HDFS-1141. completeFile does not check lease ownership.
     (Todd Lipcon via dhruba)
 
 Release 0.20.3 - Unreleased
