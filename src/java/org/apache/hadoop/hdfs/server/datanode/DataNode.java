@@ -233,7 +233,7 @@ public class DataNode extends Configured
            final AbstractList<File> dataDirs) throws IOException {
     this(conf, dataDirs, (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
                        DatanodeProtocol.versionID,
-                       NameNode.getAddress(conf), 
+                       NameNode.getServiceAddress(conf, true), 
                        conf));
   }
   
@@ -284,7 +284,7 @@ public class DataNode extends Configured
                                      conf.get("dfs.datanode.dns.interface","default"),
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
-    this.nameNodeAddr = NameNode.getAddress(conf);
+    this.nameNodeAddr = NameNode.getServiceAddress(conf, true);
     
     this.socketTimeout =  conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
                                       HdfsConstants.READ_TIMEOUT);
@@ -305,7 +305,7 @@ public class DataNode extends Configured
 
     // connect to name node
     this.namenode = namenode;
-    
+
     // get version and id info from the name-node
     NamespaceInfo nsInfo = handshake();
     StartupOption startOpt = getStartupOption(conf);

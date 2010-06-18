@@ -7,6 +7,9 @@ Trunk (unreleased changes)
     HDFS-992. Re-factor block access token implementation to conform to the 
     generic Token interface in Common (Kan Zhang and Jitendra Pandey via jghoman)
 
+    HDFS-599. Allow NameNode to have a seprate port for service requests from
+    client requests. (Dmytro Molkov via hairong)
+
   IMPROVEMENTS
 
     HDFS-1110. Reuses objects for commonly used file names in namenode to

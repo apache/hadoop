@@ -56,6 +56,7 @@ public class BackupNode extends NameNode {
   private static final String BN_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_DEFAULT;
   private static final String BN_HTTP_ADDRESS_NAME_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
   private static final String BN_HTTP_ADDRESS_DEFAULT = DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
+  private static final String BN_SERVICE_RPC_ADDRESS_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY;
 
   /** Name-node proxy */
   NamenodeProtocol namenode;
@@ -80,10 +81,26 @@ public class BackupNode extends NameNode {
     String hostName = DNS.getDefaultHost("default");
     return new InetSocketAddress(hostName, port);
   }
+  
+  @Override
+  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) throws IOException {
+    String addr = conf.get(BN_SERVICE_RPC_ADDRESS_KEY);
+    if (addr == null || addr.isEmpty()) {
+      return null;
+    }
+    int port = NetUtils.createSocketAddr(addr).getPort();
+    String hostName = DNS.getDefaultHost("default");
+    return new InetSocketAddress(hostName, port);
+  }
 
   @Override // NameNode
   protected void setRpcServerAddress(Configuration conf) {
     conf.set(BN_ADDRESS_NAME_KEY, getHostPortString(rpcAddress));
+  }
+  
+  @Override // Namenode
+  protected void setRpcServiceServerAddress(Configuration conf) {
+    conf.set(BN_SERVICE_RPC_ADDRESS_KEY, getHostPortString(serviceRPCAddress));
   }
 
   @Override // NameNode
@@ -229,7 +246,7 @@ public class BackupNode extends NameNode {
 
   private NamespaceInfo handshake(Configuration conf) throws IOException {
     // connect to name node
-    InetSocketAddress nnAddress = super.getRpcServerAddress(conf);
+    InetSocketAddress nnAddress = NameNode.getServiceAddress(conf, true);
     this.namenode =
       (NamenodeProtocol) RPC.waitForProxy(NamenodeProtocol.class,
           NamenodeProtocol.versionID, nnAddress, conf);
