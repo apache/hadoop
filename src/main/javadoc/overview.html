@@ -314,6 +314,20 @@ do:</p>
 <pre>${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper</pre>
 </blockquote>
 
+<p>If you do let HBase manage ZooKeeper for you, make sure you configure
+where it's data is stored. By default, it will be stored in /tmp which is
+sometimes cleaned in live systems. Do modify this configuration:</p>
+<pre>
+    &lt;property&gt;
+      &lt;name&gt;hbase.zookeeper.property.dataDir&lt;/name&gt;
+      &lt;value&gt;${hbase.tmp.dir}/zookeeper&lt;/value&gt;
+      &lt;description>Property from ZooKeeper's config zoo.cfg.
+      The directory where the snapshot is stored.
+      &lt;/description&gt;
+    &lt;/property&gt;
+
+</pre>
+
 <p>Note that you can use HBase in this manner to spin up a ZooKeeper cluster,
 unrelated to HBase. Just make sure to set <code>HBASE_MANAGES_ZK</code> to
 <code>false</code> if you want it to stay up so that when HBase shuts down it
@@ -321,7 +335,7 @@ doesn't take ZooKeeper with it.</p>
 
 <p>For more information about setting up a ZooKeeper cluster on your own, see
 the ZooKeeper <a href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting Started Guide</a>.
-HBase currently uses ZooKeeper version 3.2.0, so any cluster setup with a
+HBase currently uses ZooKeeper version 3.3.1, so any cluster setup with a
 3.x.x version of ZooKeeper should work.</p>
 
 <p>Of note, if you have made <em>HDFS client configuration</em> on your Hadoop cluster, HBase will not

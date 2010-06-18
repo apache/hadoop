@@ -708,6 +708,8 @@ Release 0.21.0 - Unreleased
                message
    HBASE-2724  Update to new release of Guava library
    HBASE-2735  Make HBASE-2694 replication-friendly
+   HBASE-2683  Make it obvious in the documentation that ZooKeeper needs 
+               permanent storage
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
