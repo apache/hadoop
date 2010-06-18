@@ -86,6 +86,9 @@ public class HttpServer implements FilterContainer {
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+  static final String ADMINS_ACL = "admins.acl";
+
+  private AccessControlList adminsAcl;
 
   protected final Server webServer;
   protected final Connector listener;
@@ -115,9 +118,25 @@ public class HttpServer implements FilterContainer {
    */
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf) throws IOException {
+    this(name, bindAddress, port, findPort, conf, null);
+  }
+
+  /**
+   * Create a status server on the given port.
+   * The jsp scripts are taken from src/webapps/<name>.
+   * @param name The name of the server
+   * @param port The port to use on the server
+   * @param findPort whether the server should start at the given port and 
+   *        increment by 1 until it finds a free port.
+   * @param conf Configuration 
+   * @param adminsAcl {@link AccessControlList} of the admins
+   */
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, AccessControlList adminsAcl)
+      throws IOException {
     webServer = new Server();
     this.findPort = findPort;
-
+    this.adminsAcl = adminsAcl;
     listener = createBaseListener(conf);
     listener.setHost(bindAddress);
     listener.setPort(port);
@@ -139,6 +158,7 @@ public class HttpServer implements FilterContainer {
     webAppContext.setContextPath("/");
     webAppContext.setWar(appDir + "/" + name);
     webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+    webAppContext.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
     webServer.addHandler(webAppContext);
 
     addDefaultApps(contexts, appDir, conf);
@@ -201,7 +221,7 @@ public class HttpServer implements FilterContainer {
       logContext.setResourceBase(logDir);
       logContext.addServlet(AdminAuthorizedServlet.class, "/");
       logContext.setDisplayName("logs");
-      logContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+      setContextAttributes(logContext, conf);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
@@ -209,10 +229,15 @@ public class HttpServer implements FilterContainer {
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
     staticContext.setDisplayName("static");
-    staticContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+    setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
   
+  private void setContextAttributes(Context context, Configuration conf) {
+    context.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+    context.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
+  }
+
   /**
    * Add default servlets.
    */
@@ -586,20 +611,18 @@ public class HttpServer implements FilterContainer {
     if (remoteUser == null) {
       return true;
     }
-
-    String adminsAclString =
-        conf.get(
-            CommonConfigurationKeys.HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY,
-            "*");
-    AccessControlList adminsAcl = new AccessControlList(adminsAclString);
+    AccessControlList adminsAcl = (AccessControlList) servletContext
+        .getAttribute(ADMINS_ACL);
     UserGroupInformation remoteUserUGI =
         UserGroupInformation.createRemoteUser(remoteUser);
-    if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
-          + remoteUser + " is unauthorized to access this page. "
-          + "Only superusers/supergroup \"" + adminsAclString
-          + "\" can access this page.");
-      return false;
+    if (adminsAcl != null) {
+      if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
+            + remoteUser + " is unauthorized to access this page. "
+            + "Only \"" + adminsAcl.toString()
+            + "\" can access this page.");
+        return false;
+      }
     }
     return true;
   }
