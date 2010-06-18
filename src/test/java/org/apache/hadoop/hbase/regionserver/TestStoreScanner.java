@@ -256,7 +256,7 @@ public class TestStoreScanner extends TestCase {
         KeyValueTestUtil.create("R2", "cf", "z", now, KeyValue.Type.Put, "dont-care")
     };
     List<KeyValueScanner> scanners = scanFixture(kvs1, kvs2);
-    
+
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
@@ -378,9 +378,7 @@ public class TestStoreScanner extends TestCase {
     };
 
   public void testSkipColumn() throws IOException {
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           getCols("a", "d"), scanners);
@@ -441,9 +439,7 @@ public class TestStoreScanner extends TestCase {
   }
 
   public void testScannerReseekDoesntNPE() throws Exception {
-    KeyValueScanner [] scanners = new KeyValueScanner[] {
-        new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
-    };
+    List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
         new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
             getCols("a", "d"), scanners);
@@ -457,8 +453,8 @@ public class TestStoreScanner extends TestCase {
 
     scan.updateReaders();
   }
-    
-  
+
+
   /**
    * TODO this fails, since we don't handle deletions, etc, in peek
    */
@@ -472,6 +468,6 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
           getCols("a"), scanners);
-    assertNull(scan.peek());    
+    assertNull(scan.peek());
   }
 }
