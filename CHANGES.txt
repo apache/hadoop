@@ -81,6 +81,8 @@ Trunk (unreleased changes)
 
     HDSF-1198. Resolving cross-realm principals. (Jitendra Pandey via jghoman)
 
+    HDFS-1000. Updates libhdfs to the new API for UGI (ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
