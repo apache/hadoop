@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -129,6 +130,7 @@ import org.apache.hadoop.util.StringUtils;
  * secondary namenodes or rebalancing processes to get partial namenode's
  * state, for example partial blocksMap etc.
  **********************************************************/
+@InterfaceAudience.Private
 public class NameNode implements NamenodeProtocols, FSConstants {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");

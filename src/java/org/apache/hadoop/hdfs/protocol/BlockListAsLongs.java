@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocol;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 
@@ -40,6 +42,8 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
  *   represented by 4 longs: three for the block id, length, generation 
  *   stamp, and the forth for the replica state.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class BlockListAsLongs implements Iterable<Block> {
   /**
    * A finalized block as 3 longs
@@ -131,6 +135,8 @@ public class BlockListAsLongs implements Iterable<Block> {
    * Iterates over blocks in the block report.
    * Avoids object allocation on each iteration.
    */
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
   public class BlockReportIterator implements Iterator<Block> {
     private int currentBlockIndex;
     private Block block;

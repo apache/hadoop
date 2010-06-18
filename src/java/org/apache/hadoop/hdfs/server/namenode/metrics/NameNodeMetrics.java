@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -42,6 +43,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  *  <p> {@link #syncs}.inc()
  *
  */
+@InterfaceAudience.Private
 public class NameNodeMetrics implements Updater {
     private static Log log = LogFactory.getLog(NameNodeMetrics.class);
     private final MetricsRecord metricsRecord;

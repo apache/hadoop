@@ -20,6 +20,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -28,6 +30,8 @@ import org.apache.hadoop.io.WritableFactory;
  * This class defines a partial listing of a directory to support
  * iterative directory listing.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DirectoryListing implements Writable {
   static {                                      // register a ctor
     WritableFactories.setFactory

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.ipc.Server;
 
@@ -31,6 +32,7 @@ import java.util.*;
  * Mapping: Block -> TreeSet<DatanodeDescriptor> 
  */
 
+@InterfaceAudience.Private
 public class CorruptReplicasMap{
 
   private SortedMap<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =

@@ -42,6 +42,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * tool to get data from NameNode or DataNode using MBeans currently the
  * following MBeans are available (under hadoop domain):
@@ -58,6 +60,7 @@ import org.apache.commons.cli.ParseException;
  * implementation note: all logging is sent to System.err (since it is a command
  * line tool)
  */
+@InterfaceAudience.Private
 public class JMXGet {
 
   private static final String format = "%s=%s\n";

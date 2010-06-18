@@ -26,6 +26,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
  * Information sent by a subordinate name-node to the active name-node
  * during the registration process. 
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class NamenodeRegistration extends StorageInfo
 implements NodeRegistration {
   String rpcAddress;          // RPC address of the node

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -29,6 +31,8 @@ import org.apache.hadoop.io.Writable;
  * @see DatanodeProtocol
  * @see NamenodeProtocol
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class ServerCommand implements Writable {
   private int action;
 

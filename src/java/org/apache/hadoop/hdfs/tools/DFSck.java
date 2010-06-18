@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
@@ -58,6 +59,7 @@ import org.apache.hadoop.util.ToolRunner;
  *  The tool also provides and option to filter open files during the scan.
  *  
  */
+@InterfaceAudience.Private
 public class DFSck extends Configured implements Tool {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");

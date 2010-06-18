@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Writable;
 
 
@@ -29,6 +30,7 @@ import org.apache.hadoop.io.Writable;
  * 
  * TODO namespaceID should be long and computed as hash(address + port)
  */
+@InterfaceAudience.Private
 public class StorageInfo implements Writable {
   public int   layoutVersion;   // layout version of the storage data
   public int   namespaceID;     // id of the file system

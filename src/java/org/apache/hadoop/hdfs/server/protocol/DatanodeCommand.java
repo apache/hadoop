@@ -19,6 +19,9 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableFactories;
@@ -35,6 +38,8 @@ import org.apache.avro.reflect.Union;
       BlockCommand.class, UpgradeCommand.class,
       BlockRecoveryCommand.class, KeyUpdateCommand.class})
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class DatanodeCommand extends ServerCommand {
   static class Register extends DatanodeCommand {
     private Register() {super(DatanodeProtocol.DNA_REGISTER);}

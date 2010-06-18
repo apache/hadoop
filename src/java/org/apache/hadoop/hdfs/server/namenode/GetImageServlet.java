@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -32,6 +33,7 @@ import org.apache.hadoop.util.StringUtils;
  * Typically used by the Secondary NameNode to retrieve image and
  * edit file for periodic checkpointing.
  */
+@InterfaceAudience.Private
 public class GetImageServlet extends HttpServlet {
   private static final long serialVersionUID = -7669068179452648952L;
 

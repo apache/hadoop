@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,6 +54,7 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  * This class provides some DFS administrative access.
  */
+@InterfaceAudience.Private
 public class DFSAdmin extends FsShell {
 
   static{

@@ -12,9 +12,6 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    HDFS-1110. Reuses objects for commonly used file names in namenode to
-    reduce the heap usage. (suresh)
-
     HDFS-1096. fix for prev. commit. (boryas)
 
     HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group
@@ -51,8 +48,13 @@ Trunk (unreleased changes)
     HDFS-1190.  Remove unused getNamenode() method from DataNode.
     (Jeff Ames via jghoman)
 
+    HDFS-1110. Reuses objects for commonly used file names in namenode to
+    reduce the heap usage. (suresh)
+
     HDFS-1114. Implement LightWeightGSet for BlocksMap in order to reduce
     NameNode memory footprint.  (szetszwo)
+
+    HDFS-752. Add interfaces classification to to HDFS source code. (suresh)
 
   BUG FIXES
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -42,6 +43,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
  *  <p> {@link #filesTotal}.set()
  *
  */
+@InterfaceAudience.Private
 public class FSNamesystemMetrics implements Updater {
   private static Log log = LogFactory.getLog(FSNamesystemMetrics.class);
   private final MetricsRecord metricsRecord;

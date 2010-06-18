@@ -28,6 +28,7 @@ import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
@@ -63,6 +64,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  **********************************************************/
 @Deprecated // use BackupNode with -checkpoint argument instead.
+@InterfaceAudience.Private
 public class SecondaryNameNode implements Runnable {
     
   public static final Log LOG = 

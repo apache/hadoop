@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeObject;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
  * Base class for name-node upgrade objects.
  * Data-node upgrades are run in separate threads.
  */
+@InterfaceAudience.Private
 public abstract class UpgradeObjectNamenode extends UpgradeObject {
 
   /**

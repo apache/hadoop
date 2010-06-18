@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -40,6 +42,8 @@ import org.apache.hadoop.io.WritableFactory;
  * Block recovery is identified by a recoveryId, which is also the new
  * generation stamp, which the block will have after the recovery succeeds.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class BlockRecoveryCommand extends DatanodeCommand {
   Collection<RecoveringBlock> recoveringBlocks;
 
@@ -50,6 +54,8 @@ public class BlockRecoveryCommand extends DatanodeCommand {
    * 
    * The new generation stamp of the block, also plays role of the recovery id.
    */
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
   public static class RecoveringBlock extends LocatedBlock {
     private long newGenerationStamp;
 

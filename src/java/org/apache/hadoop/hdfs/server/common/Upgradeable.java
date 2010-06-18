@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.common;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 /**
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
  * That is all components whose layout version is greater or equal to the
  * one returned by {@link #getVersion()} must be upgraded with this object.
  */
+@InterfaceAudience.Private
 public interface Upgradeable extends Comparable<Upgradeable> {
   /**
    * Get the layout version of the upgrade object.

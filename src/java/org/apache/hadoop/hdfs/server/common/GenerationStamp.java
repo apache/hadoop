@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /****************************************************************
  * A GenerationStamp is a Hadoop FS primitive, identified by a long.
  ****************************************************************/
+@InterfaceAudience.Private
 public class GenerationStamp implements Comparable<GenerationStamp> {
   /**
    * The first valid generation stamp.

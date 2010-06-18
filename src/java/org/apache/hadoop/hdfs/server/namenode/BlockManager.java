@@ -32,6 +32,7 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
  * This class is a helper class for {@link FSNamesystem} and requires several
  * methods to be called with lock held on {@link FSNamesystem}.
  */
+@InterfaceAudience.Private
 public class BlockManager {
   // Default initial capacity and load factor of map
   public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;

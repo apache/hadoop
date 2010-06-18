@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -33,6 +35,8 @@ import org.apache.avro.reflect.Nullable;
 
 /** Interface that represents the over the wire information for a file.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class HdfsFileStatus implements Writable {
   static {                                      // register a ctor
     WritableFactories.setFactory

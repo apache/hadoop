@@ -26,7 +26,9 @@ import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 
+@InterfaceAudience.Private
 public final class Util {
   private final static Log LOG = LogFactory.getLog(Util.class.getName());
 

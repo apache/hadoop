@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.StringUtils;
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DSQuotaExceededException extends QuotaExceededException {
   protected static final long serialVersionUID = 1L;
 

@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FileUtil.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -32,6 +33,7 @@ import org.apache.hadoop.io.IOUtils;
  * This class is used by datanodes to maintain meta data of its replicas.
  * It provides a general interface for meta information of a replica.
  */
+@InterfaceAudience.Private
 abstract public class ReplicaInfo extends Block implements Replica {
   private FSVolume volume;      // volume where the replica belongs
   private File     dir;         // directory where block & meta files belong

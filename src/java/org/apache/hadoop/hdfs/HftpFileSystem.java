@@ -33,6 +33,8 @@ import java.util.EnumSet;
 import java.util.Random;
 import java.util.TimeZone;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -63,6 +65,8 @@ import org.xml.sax.helpers.XMLReaderFactory;
  * @see org.apache.hadoop.hdfs.server.namenode.ListPathsServlet
  * @see org.apache.hadoop.hdfs.server.namenode.FileDataServlet
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class HftpFileSystem extends FileSystem {
   static {
     HttpURLConnection.setFollowRedirects(true);

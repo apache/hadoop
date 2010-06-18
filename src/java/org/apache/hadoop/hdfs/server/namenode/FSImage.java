@@ -43,6 +43,8 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -76,6 +78,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
  * FSImage handles checkpointing and logging of the namespace edits.
  * 
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class FSImage extends Storage {
 
   private static final SimpleDateFormat DATE_FORM =

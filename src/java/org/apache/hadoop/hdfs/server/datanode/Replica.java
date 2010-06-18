@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 
 /** 
  * This represents block replicas which stored in DataNode.
  */
+@InterfaceAudience.Private
 public interface Replica {
   /** get block ID  */
   public long getBlockId();

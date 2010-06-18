@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -44,6 +45,7 @@ import org.apache.hadoop.util.StringUtils;
  * Fetch a DelegationToken from the current Namenode and store it in the
  * specified file.
  */
+@InterfaceAudience.Private
 public class DelegationTokenFetcher {
   private static final String USAGE =
     "fetchdt retrieves delegation tokens (optionally over http)\n" +

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -25,6 +27,8 @@ import org.apache.hadoop.io.WritableFactory;
  * Base class for name-node command.
  * Issued by the name-node to notify other name-nodes what should be done.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class NamenodeCommand extends ServerCommand {
   static {
     WritableFactories.setFactory(NamenodeCommand.class,

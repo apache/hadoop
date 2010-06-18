@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.common;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.UpgradeObjectCollection.UOSignature;
 
 /**
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdfs.server.common.UpgradeObjectCollection.UOSignature;
  * Contains default implementation of common methods of {@link Upgradeable}
  * interface.
  */
+@InterfaceAudience.Private
 public abstract class UpgradeObject implements Upgradeable {
   protected short status;
   

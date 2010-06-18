@@ -20,9 +20,12 @@ package org.apache.hadoop.hdfs.util;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A {@link GSet} implementation by {@link HashMap}.
  */
+@InterfaceAudience.Private
 public class GSetByHashMap<K, E extends K> implements GSet<K, E> {
   private final HashMap<K, E> m;
 

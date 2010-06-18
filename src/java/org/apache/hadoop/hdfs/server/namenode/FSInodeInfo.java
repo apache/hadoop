@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /** 
  * This interface is used used the pluggable block placement policy
  * to expose a few characteristics of an Inode.
  */
+@InterfaceAudience.Private
 public interface FSInodeInfo {
 
   /**

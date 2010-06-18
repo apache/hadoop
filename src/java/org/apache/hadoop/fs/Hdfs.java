@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class Hdfs extends AbstractFileSystem {
 
   DFSClient dfs;

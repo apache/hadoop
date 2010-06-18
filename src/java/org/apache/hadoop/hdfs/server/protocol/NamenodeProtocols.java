@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 
 /** The full set of RPC methods implemented by the Namenode.  */
+@InterfaceAudience.Private
 public interface NamenodeProtocols
   extends ClientProtocol,
           DatanodeProtocol,

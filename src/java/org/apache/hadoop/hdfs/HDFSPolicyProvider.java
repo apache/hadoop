@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -30,6 +31,7 @@ import org.apache.hadoop.security.authorize.Service;
 /**
  * {@link PolicyProvider} for HDFS protocols.
  */
+@InterfaceAudience.Private
 public class HDFSPolicyProvider extends PolicyProvider {
   private static final Service[] hdfsServices =
     new Service[] {

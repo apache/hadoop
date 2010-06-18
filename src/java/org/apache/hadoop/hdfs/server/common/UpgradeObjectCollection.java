@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.util.StringUtils;
 
@@ -29,6 +30,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  * Upgrade objects should be registered here before they can be used. 
  */
+@InterfaceAudience.Private
 public class UpgradeObjectCollection {
   static {
     initialize();

@@ -30,6 +30,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -43,6 +44,7 @@ import org.apache.hadoop.security.token.Token;
  * master and slave can generate and verify block tokens. Typically, master mode
  * is used by NN and slave mode is used by DN.
  */
+@InterfaceAudience.Private
 public class BlockTokenSecretManager extends
     SecretManager<BlockTokenIdentifier> {
   public static final Log LOG = LogFactory

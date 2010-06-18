@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import javax.management.ObjectName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -52,6 +53,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * from the metrics registry passed as an argument to the constructor
  */
 
+@InterfaceAudience.Private
 public class NameNodeActivityMBean extends MetricsDynamicMBeanBase {
   final private ObjectName mbeanName;
 

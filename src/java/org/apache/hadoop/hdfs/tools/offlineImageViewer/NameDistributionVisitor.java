@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * File name distribution visitor. 
  * <p>
@@ -30,6 +32,7 @@ import java.util.Map.Entry;
  * these same names</li>
  * <li>Heap saved if the file name objects are reused</li>
  */
+@InterfaceAudience.Private
 public class NameDistributionVisitor extends TextWriterImageVisitor {
   HashMap<String, Integer> counts = new HashMap<String, Integer>();
 

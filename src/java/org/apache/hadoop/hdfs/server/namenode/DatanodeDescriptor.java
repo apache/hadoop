@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.util.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -46,6 +48,7 @@ import org.apache.hadoop.io.WritableUtils;
  * fsImage.
 
  **************************************************/
+@InterfaceAudience.Private
 public class DatanodeDescriptor extends DatanodeInfo {
   
   // Stores status of decommissioning.
@@ -53,6 +56,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
   
   /** Block and targets pair */
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
   public static class BlockTargetPair {
     public final Block block;
     public final DatanodeDescriptor[] targets;    

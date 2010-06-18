@@ -22,6 +22,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -36,6 +38,8 @@ import org.apache.hadoop.io.WritableFactory;
  * to identify and verify a data-node when it contacts the name-node.
  * This information is sent by data-node with each communication request.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DatanodeRegistration extends DatanodeID
 implements Writable, NodeRegistration {
   static {                                      // register a ctor

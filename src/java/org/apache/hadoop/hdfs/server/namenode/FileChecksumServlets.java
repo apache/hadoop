@@ -29,13 +29,13 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -45,8 +45,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
 
 /** Servlets for file checksum */
+@InterfaceAudience.Private
 public class FileChecksumServlets {
   /** Redirect file checksum queries to an appropriate datanode. */
+  @InterfaceAudience.Private
   public static class RedirectServlet extends DfsServlet {
     /** For java.io.Serializable */
     private static final long serialVersionUID = 1L;
@@ -74,6 +76,7 @@ public class FileChecksumServlets {
   }
   
   /** Get FileChecksum */
+  @InterfaceAudience.Private
   public static class GetServlet extends DfsServlet {
     /** For java.io.Serializable */
     private static final long serialVersionUID = 1L;

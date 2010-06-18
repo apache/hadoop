@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -35,6 +37,8 @@ import org.apache.hadoop.io.WritableFactory;
  * The upgrade command contains version of the upgrade, which is verified 
  * on the receiving side and current status of the upgrade.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class UpgradeCommand extends DatanodeCommand {
   final static int UC_ACTION_UNKNOWN = DatanodeProtocol.DNA_UNKNOWN;
   public final static int UC_ACTION_REPORT_STATUS = 100; // report upgrade status

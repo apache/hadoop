@@ -31,6 +31,7 @@ import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -57,6 +58,7 @@ import org.apache.hadoop.util.VersionInfo;
  * The locks are released when the servers stop (normally or abnormally).
  * 
  */
+@InterfaceAudience.Private
 public abstract class Storage extends StorageInfo {
   public static final Log LOG = LogFactory.getLog(Storage.class.getName());
 
@@ -104,6 +106,7 @@ public abstract class Storage extends StorageInfo {
    * Implementations can define a type for storage directory by implementing
    * this interface.
    */
+  @InterfaceAudience.Private
   public interface StorageDirType {
     public StorageDirType getStorageDirType();
     public boolean isOfType(StorageDirType type);
@@ -190,6 +193,7 @@ public abstract class Storage extends StorageInfo {
   /**
    * One of the storage directories.
    */
+  @InterfaceAudience.Private
   public class StorageDirectory {
     File              root; // root directory
     FileLock          lock; // storage lock

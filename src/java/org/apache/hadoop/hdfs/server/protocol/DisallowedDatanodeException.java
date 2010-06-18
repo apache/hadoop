@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 
 
@@ -29,6 +31,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
  * or has been specifically excluded.
  * 
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DisallowedDatanodeException extends IOException {
   /** for java.io.Serializable */
   private static final long serialVersionUID = 1L;

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HftpFileSystem;
@@ -45,6 +46,7 @@ import javax.servlet.http.HttpServletResponse;
  * Obtain meta-information about a filesystem.
  * @see org.apache.hadoop.hdfs.HftpFileSystem
  */
+@InterfaceAudience.Private
 public class ListPathsServlet extends DfsServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;

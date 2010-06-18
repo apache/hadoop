@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.common;
 import java.io.IOException;
 import java.util.SortedSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
  * {@link #broadcastCommand} is the command that should be 
  *
  */
+@InterfaceAudience.Private
 public abstract class UpgradeManager {
   protected SortedSet<Upgradeable> currentUpgrades = null;
   protected boolean upgradeState = false; // true if upgrade is in progress

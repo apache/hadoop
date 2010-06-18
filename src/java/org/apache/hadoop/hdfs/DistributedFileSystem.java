@@ -25,6 +25,8 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -52,6 +54,8 @@ import org.apache.hadoop.fs.Options;
  * DistributedFileSystem.
  *
  *****************************************************************/
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DistributedFileSystem extends FileSystem {
   private Path workingDir;
   private URI uri;
@@ -413,6 +417,7 @@ public class DistributedFileSystem extends FileSystem {
   }        
   
   /** @deprecated Use {@link org.apache.hadoop.fs.FsStatus} instead */
+  @InterfaceAudience.Private
   @Deprecated
   public static class DiskStatus extends FsStatus {
     public DiskStatus(FsStatus stats) {

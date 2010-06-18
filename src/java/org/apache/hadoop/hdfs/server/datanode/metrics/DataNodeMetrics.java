@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
  *  <p> {@link #blocksRead}.inc()
  *
  */
+@InterfaceAudience.Private
 public class DataNodeMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private DataNodeActivityMBean datanodeActivityMBean;

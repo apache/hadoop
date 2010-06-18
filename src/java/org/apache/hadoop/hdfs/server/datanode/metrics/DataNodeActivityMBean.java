@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 import java.util.Random;
 
 import javax.management.ObjectName;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -53,6 +54,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * from the metrics registry passed as an argument to the constructor
  */
 
+@InterfaceAudience.Private
 public class DataNodeActivityMBean extends MetricsDynamicMBeanBase {
   final private ObjectName mbeanName;
   private Random rand = new Random(); 

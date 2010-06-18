@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -59,6 +61,8 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
  * FSEditLog maintains a log of the namespace modifications.
  * 
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class FSEditLog {
   public  static final byte OP_INVALID = -1;
   private static final byte OP_ADD = 0;

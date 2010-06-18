@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * An ImageLoader can accept a DataInputStream to an Hadoop FSImage file
  * and walk over its structure using the supplied ImageVisitor.
@@ -54,6 +56,7 @@ interface ImageLoader {
    * Factory for obtaining version of image loader that can read
    * a particular image format.
    */
+  @InterfaceAudience.Private
   public class LoaderFactory {
     // Java doesn't support static methods on interfaces, which necessitates
     // this factory class

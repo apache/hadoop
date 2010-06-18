@@ -24,9 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-
-
-
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -42,6 +40,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * SimulatedFSDataset (which simulates data).
  *
  */
+@InterfaceAudience.Private
 public interface FSDatasetInterface extends FSDatasetMBean {
   
   

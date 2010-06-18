@@ -22,10 +22,12 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 
+@InterfaceAudience.Private
 public class DFSUtil {
   /**
    * Whether the pathname is valid.  Currently prohibits relative paths, 
@@ -55,6 +57,7 @@ public class DFSUtil {
   /**
    * Utility class to facilitate junit test error simulation.
    */
+  @InterfaceAudience.Private
   public static class ErrorSimulator {
     private static boolean[] simulation = null; // error simulation events
     public static void initializeErrorSimulationEvent(int numberOfEvents) {

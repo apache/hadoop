@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeObject;
@@ -31,6 +32,7 @@ import java.net.SocketTimeoutException;
  * Base class for data-node upgrade objects.
  * Data-node upgrades are run in separate threads.
  */
+@InterfaceAudience.Private
 public abstract class UpgradeObjectDatanode extends UpgradeObject implements Runnable {
   private DataNode dataNode = null;
 

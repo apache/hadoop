@@ -22,6 +22,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Date;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -40,6 +42,8 @@ import org.apache.avro.reflect.Nullable;
  * This object is used for communication in the
  * Datanode Protocol and the Client Protocol.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DatanodeInfo extends DatanodeID implements Node {
   protected long capacity;
   protected long dfsUsed;

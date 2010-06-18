@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A {@link GSet} is set,
  * which supports the {@link #get(Object)} operation.
@@ -27,6 +29,7 @@ package org.apache.hadoop.hdfs.util;
  * @param <K> The type of the keys.
  * @param <E> The type of the elements, which must be a subclass of the keys.
  */
+@InterfaceAudience.Private
 public interface GSet<K, E extends K> extends Iterable<E> {
   /**
    * @return The size of this set.

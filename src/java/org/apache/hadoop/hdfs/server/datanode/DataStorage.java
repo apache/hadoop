@@ -31,6 +31,7 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil.HardLink;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
@@ -48,6 +49,7 @@ import org.apache.hadoop.util.Daemon;
  * <p>
  * @see Storage
  */
+@InterfaceAudience.Private
 public class DataStorage extends Storage {
   // Constants
   final static String BLOCK_SUBDIR_PREFIX = "subdir";

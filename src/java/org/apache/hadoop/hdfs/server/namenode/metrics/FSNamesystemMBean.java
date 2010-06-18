@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * 
  * This Interface defines the methods to get the status of a the FSNamesystem of
@@ -33,6 +35,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
  * @see org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeActivityMBean
  *
  */
+@InterfaceAudience.Private
 public interface FSNamesystemMBean {
 
   /**

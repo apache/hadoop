@@ -30,15 +30,15 @@ import org.apache.hadoop.fs.FsShell;
 import org.apache.tools.ant.AntClassLoader;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
-import org.apache.tools.ant.Project;
-import org.apache.tools.ant.types.Path;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
 /**
  * {@link org.apache.hadoop.fs.FsShell FsShell} wrapper for ant Task.
  */
+@InterfaceAudience.Private
 public class DfsTask extends Task {
 
   /**

@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** 
  * This exception is thrown when modification to HDFS results in violation
  * of a directory quota. A directory quota might be namespace quota (limit 
@@ -32,6 +35,8 @@ import java.io.IOException;
  *  DSQuotaExceededException or
  *  NSQuotaExceededException
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class QuotaExceededException extends IOException {
   protected static final long serialVersionUID = 1L;
   protected String pathName=null;

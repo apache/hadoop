@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -30,11 +32,15 @@ import org.apache.hadoop.io.WritableUtils;
  *  It provide efficient customized serialization/deserialization methods
  *  in stead of using the default array (de)serialization provided by RPC
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class BlocksWithLocations implements Writable {
 
   /**
    * A class to keep track of a block and its locations
    */
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
   public static class BlockWithLocations  implements Writable {
     Block block;
     String datanodeIDs[];

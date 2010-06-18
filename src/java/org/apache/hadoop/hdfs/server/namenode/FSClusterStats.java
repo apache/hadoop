@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /** 
  * This interface is used for retrieving the load related statistics of 
  * the cluster.
  */
+@InterfaceAudience.Private
 public interface FSClusterStats {
 
   /**

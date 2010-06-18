@@ -38,6 +38,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.DU;
@@ -68,6 +69,7 @@ import org.apache.hadoop.io.IOUtils;
  * has a unique name and an extent on disk.
  *
  ***************************************************/
+@InterfaceAudience.Private
 public class FSDataset implements FSConstants, FSDatasetInterface {
 
 

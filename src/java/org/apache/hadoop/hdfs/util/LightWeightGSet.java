@@ -23,6 +23,7 @@ import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 
 /**
@@ -42,6 +43,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
  *       (1) a subclass of K, and
  *       (2) implementing {@link LinkedElement} interface.
  */
+@InterfaceAudience.Private
 public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
   /**
    * Elements of {@link LightWeightGSet}.

@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
@@ -44,6 +45,7 @@ import org.apache.hadoop.util.DataChecksum;
 /** This is a wrapper around connection to datadone
  * and understands checksum, offset etc
  */
+@InterfaceAudience.Private
 public class BlockReader extends FSInputChecker {
 
   Socket dnSock; //for now just sending checksumOk.

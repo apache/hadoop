@@ -31,11 +31,14 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * OfflineImageViewer to dump the contents of an Hadoop image file to XML
  * or the console.  Main entry point into utility, either via the
  * command line or programatically.
  */
+@InterfaceAudience.Private
 public class OfflineImageViewer {
   private final static String usage = 
     "Usage: bin/hdfs oiv [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n" +
