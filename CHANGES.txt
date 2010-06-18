@@ -908,6 +908,9 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6748. Removes hadoop.cluster.administrators, cluster administrators
+    acl is passed as parameter in constructor. (amareshwari) 
+
     HADOOP-6828. Herrior uses old way of accessing logs directories (Sreekanth
     Ramakrishnan via cos)
 
