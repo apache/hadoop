@@ -629,8 +629,8 @@ public class Store implements HeapSize {
       this.conf, this.family.getBloomFilterType(), this.inMemory);
     Reader r = sf.createReader();
     this.storeSize += r.length();
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Added " + sf + ", entries=" + r.getEntries() +
+    if(LOG.isInfoEnabled()) {
+      LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
         ", filesize=" + StringUtils.humanReadableInt(r.length()) +
@@ -822,15 +822,17 @@ public class Store implements HeapSize {
       }
 
       // Ready to go.  Have list of files to compact.
-      LOG.debug("Started compaction of " + filesToCompact.size() + " file(s)" +
+      LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in " +
+          this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
         (references? ", hasReferences=true,": " ") + " into " +
           FSUtils.getPath(this.regionCompactionDir) + ", seqid=" + maxId);
       HFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
       // Move the compaction into place.
       StoreFile sf = completeCompaction(filesToCompact, writer);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed" + (majorcompaction? " major ": " ") +
-          "compaction of " + this.storeNameStr +
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Completed" + (majorcompaction? " major ": " ") +
+          "compaction of " + filesToCompact.size() + " file(s) in " +
+          this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
           "; new storefile is " + (sf == null? "none": sf.toString()) +
           "; store size is " + StringUtils.humanReadableInt(storeSize));
       }

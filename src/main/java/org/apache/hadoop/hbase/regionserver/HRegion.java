@@ -1080,7 +1080,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     if (LOG.isDebugEnabled()) {
       long now = EnvironmentEdgeManager.currentTimeMillis();
-      LOG.debug("Finished memstore flush of ~" +
+      LOG.info("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
         ", compaction requested=" + compactionRequested);
