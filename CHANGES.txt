@@ -56,6 +56,9 @@ Trunk (unreleased changes)
 
     HDFS-752. Add interfaces classification to to HDFS source code. (suresh)
 
+    HDFS-947. An Hftp read request is redirected to a datanode that has 
+    the most replicas of the blocks in the file. (Dmytro Molkov via dhruba)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)

@@ -77,7 +77,7 @@ public class FileDataServlet extends DfsServlet {
       NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
       return nn.getNamesystem().getRandomDatanode();
     }
-    return JspHelper.bestNode(blks.get(0));
+    return JspHelper.bestNode(blks);
   }
 
   /**

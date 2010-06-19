@@ -24,9 +24,11 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.TreeSet;
 
@@ -41,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
@@ -68,23 +71,89 @@ public class JspHelper {
 
   /** Private constructor for preventing creating JspHelper object. */
   private JspHelper() {} 
+  
+  // data structure to count number of blocks on datanodes.
+  private static class NodeRecord extends DatanodeInfo {
+    int frequency;
+
+    public NodeRecord() {
+      frequency = -1;
+    }
+    public NodeRecord(DatanodeInfo info, int count) {
+      super(info);
+      this.frequency = count;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      // Sufficient to use super equality as datanodes are uniquely identified
+      // by DatanodeID
+      return (this == obj) || super.equals(obj);
+    }
+    @Override
+    public int hashCode() {
+      // Super implementation is sufficient
+      return super.hashCode();
+    }
+  }
+ 
+  // compare two records based on their frequency
+  private static class NodeRecordComparator implements Comparator<NodeRecord> {
+
+    public int compare(NodeRecord o1, NodeRecord o2) {
+      if (o1.frequency < o2.frequency) {
+        return -1;
+      } else if (o1.frequency > o2.frequency) {
+        return 1;
+      } 
+      return 0;
+    }
+  }
+  public static DatanodeInfo bestNode(LocatedBlocks blks) throws IOException {
+    HashMap<DatanodeInfo, NodeRecord> map =
+      new HashMap<DatanodeInfo, NodeRecord>();
+    for (LocatedBlock block : blks.getLocatedBlocks()) {
+      DatanodeInfo[] nodes = block.getLocations();
+      for (DatanodeInfo node : nodes) {
+        NodeRecord record = map.get(node);
+        if (record == null) {
+          map.put(node, new NodeRecord(node, 1));
+        } else {
+          record.frequency++;
+        }
+      }
+    }
+    NodeRecord[] nodes = map.values().toArray(new NodeRecord[map.size()]);
+    Arrays.sort(nodes, new NodeRecordComparator());
+    return bestNode(nodes, false);
+  }
 
   public static DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
+    DatanodeInfo[] nodes = blk.getLocations();
+    return bestNode(nodes, true);
+  }
+
+  public static DatanodeInfo bestNode(DatanodeInfo[] nodes, boolean doRandom)
+    throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     DatanodeInfo chosenNode = null;
     int failures = 0;
     Socket s = null;
-    DatanodeInfo [] nodes = blk.getLocations();
+    int index = -1;
     if (nodes == null || nodes.length == 0) {
       throw new IOException("No nodes contain this block");
     }
     while (s == null) {
       if (chosenNode == null) {
         do {
-          chosenNode = nodes[rand.nextInt(nodes.length)];
+          if (doRandom) {
+            index = rand.nextInt(nodes.length);
+          } else {
+            index++;
+          }
+          chosenNode = nodes[index];
         } while (deadNodes.contains(chosenNode));
       }
-      int index = rand.nextInt(nodes.length);
       chosenNode = nodes[index];
 
       //just ping to check whether the node is alive
