@@ -3554,6 +3554,7 @@ public class TestFromClientSide {
    @Test
    public void testRegionCacheDeSerialization() throws Exception {
      // 1. test serialization.
+     LOG.info("Starting testRegionCacheDeSerialization");
      final byte[] TABLENAME = Bytes.toBytes("testCachePrewarm2");
      final byte[] FAMILY = Bytes.toBytes("family");
      Configuration conf = TEST_UTIL.getConfiguration();
@@ -3611,6 +3612,7 @@ public class TestFromClientSide {
      // delete the temp file
      File f = new java.io.File(tempFileName);
      f.delete();
+     LOG.info("Finishing testRegionCacheDeSerialization");
    }
 
   /**
@@ -3618,6 +3620,7 @@ public class TestFromClientSide {
    */
   @Test
   public void testRegionCachePreWarm() throws Exception {
+    LOG.info("Starting testRegionCachePreWarm");
     final byte [] TABLENAME = Bytes.toBytes("testCachePrewarm");
     Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -3669,6 +3672,7 @@ public class TestFromClientSide {
     int prefetchRegionNumber = conf.getInt("hbase.client.prefetch.limit", 10);
 
     // the total number of cached regions == region('aaa") + prefeched regions.
+    LOG.info("Testing how many regions cached");
     assertEquals("Number of cached region is incorrect ", prefetchRegionNumber,
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
@@ -3678,6 +3682,7 @@ public class TestFromClientSide {
     table.get(g3);
     assertEquals("Number of cached region is incorrect ", prefetchRegionNumber,
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+    LOG.info("Finishing testRegionCachePreWarm");
   }
 }
 
