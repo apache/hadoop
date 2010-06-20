@@ -219,11 +219,11 @@ public class ZooKeeperWrapper implements Watcher {
     }    
   }
 
-  public void registerListener(Watcher watcher) {
+  public synchronized void registerListener(Watcher watcher) {
     listeners.add(watcher);
   }
 
-  public void unregisterListener(Watcher watcher) {
+  public synchronized void unregisterListener(Watcher watcher) {
     listeners.remove(watcher);
   }
 

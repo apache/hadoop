@@ -396,6 +396,7 @@ Release 0.21.0 - Unreleased
    HBASE-2725  Shutdown hook management is gone in trunk; restore
    HBASE-2740  NPE in ReadWriteConsistencyControl
    HBASE-2752  Don't retry forever when waiting on too many store files
+   HBASE-2737  CME in ZKW introduced in HBASE-2694 (Karthik Ranganathan via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
