@@ -87,7 +87,9 @@ Trunk (unreleased changes)
     HDFS-1080. SecondaryNameNode image transfer should use the defined http 
     address rather than local ip address. (jghoman)
 
-    HDSF-1198. Resolving cross-realm principals. (Jitendra Pandey via jghoman)
+    HDFS-1198. Resolving cross-realm principals. (Jitendra Pandey via jghoman)
+
+    HDFS-1118. Fix socketleak on DFSClient. (Zheng Shao via dhruba)
 
 Release 0.21.0 - Unreleased
 

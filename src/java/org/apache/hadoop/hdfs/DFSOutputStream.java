@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -853,6 +854,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       // persist blocks on namenode on next flush
       persistBlocks.set(true);
 
+      boolean result = false;
       try {
         DFSClient.LOG.debug("Connecting to " + nodes[0].getName());
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
@@ -895,7 +897,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         }
 
         blockStream = out;
-        return true; // success
+        result =  true; // success
 
       } catch (IOException ie) {
 
@@ -915,8 +917,14 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         hasError = true;
         setLastException(ie);
         blockReplyStream = null;
-        return false;  // error
+        result =  false;  // error
+      } finally {
+        if (!result) {
+          IOUtils.closeSocket(s);
+          s = null;
+        }
       }
+      return result;
     }
 
     private LocatedBlock locateFollowingBlock(long start,
