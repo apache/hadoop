@@ -400,6 +400,8 @@ Release 0.21.0 - Unreleased
    HBASE-2756  MetaScanner.metaScan doesn't take configurations
    HBASE-2656  HMaster.getRegionTableClosest should not return null for closed
                regions
+   HBASE-2760  Fix MetaScanner TableNotFoundException when scanning starting at
+               the first row in a table.
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

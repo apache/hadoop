@@ -89,32 +89,41 @@ public class MetaScanner {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
 
     HConnection connection = HConnectionManager.getConnection(configuration);
-    byte [] startRow = tableName == null || tableName.length == 0 ?
-        HConstants.EMPTY_START_ROW :
-          HRegionInfo.createRegionName(tableName, row, HConstants.ZEROES,
-              false);
-
     // if row is not null, we want to use the startKey of the row's region as
     // the startRow for the meta scan.
+    byte[] startRow;
     if (row != null) {
+      // Scan starting at a particular row in a particular table
+      assert tableName != null;
+      byte[] searchRow =
+        HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
+          false);
+
       HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
-      Result startRowResult = metaTable.getRowOrBefore(startRow,
+      Result startRowResult = metaTable.getRowOrBefore(searchRow,
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {
         throw new TableNotFoundException("Cannot find row in .META. for table: "
-            + Bytes.toString(tableName) + ", row=" + Bytes.toString(startRow));
+            + Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
       }
       byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       if (value == null || value.length == 0) {
         throw new IOException("HRegionInfo was null or empty in Meta for " +
-          Bytes.toString(tableName) + ", row=" + Bytes.toString(startRow));
+          Bytes.toString(tableName) + ", row=" + Bytes.toString(searchRow));
       }
       HRegionInfo regionInfo = Writables.getHRegionInfo(value);
 
       byte[] rowBefore = regionInfo.getStartKey();
       startRow = HRegionInfo.createRegionName(tableName, rowBefore,
           HConstants.ZEROES, false);
+    } else if (tableName == null || tableName.length == 0) {
+      // Full META scan
+      startRow = HConstants.EMPTY_START_ROW;
+    } else {
+      // Scan META for an entire table
+      startRow = HRegionInfo.createRegionName(
+          tableName, HConstants.EMPTY_START_ROW, HConstants.ZEROES, false);
     }
 
     // Scan over each meta region
