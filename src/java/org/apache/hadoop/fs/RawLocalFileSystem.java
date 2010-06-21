@@ -244,14 +244,13 @@ public class RawLocalFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-    EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+    boolean overwrite, int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
-    return primitiveCreate(f,
-        permission.applyUMask(FsPermission.getUMask(getConf())), flag,
-        bufferSize,  replication,  blockSize,  progress,  -1);
-    
-    
-     
+
+    FSDataOutputStream out = create(f,
+        overwrite, bufferSize, replication, blockSize, progress);
+    setPermission(f, permission);
+    return out;
   }
   
 

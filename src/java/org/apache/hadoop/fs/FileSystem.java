@@ -607,15 +607,13 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault(), overwrite ? EnumSet
-        .of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE), bufferSize,
+    return this.create(f, FsPermission.getDefault(), overwrite, bufferSize,
         replication, blockSize, progress);
   }
 
   /**
    * Opens an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
-   * @deprecated Consider using {@link #create(Path, FsPermission, EnumSet, int, short, long, Progressable)} instead.
    * @param f the file name to open
    * @param permission
    * @param overwrite if a file with this name already exists, then if true,
@@ -627,35 +625,14 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
-  public FSDataOutputStream create(Path f,
+  public abstract FSDataOutputStream create(Path f,
       FsPermission permission,
       boolean overwrite,
       int bufferSize,
       short replication,
       long blockSize,
-      Progressable progress) throws IOException{
-    return create(f, permission, overwrite ? EnumSet.of(CreateFlag.OVERWRITE)
-        : EnumSet.of(CreateFlag.CREATE), bufferSize, replication, blockSize,
-        progress);
-  }
+      Progressable progress) throws IOException;
   
-  /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
-   * reporting.
-   * @param f the file name to open.
-   * @param permission - applied against umask
-   * @param flag determines the semantic of this create.
-   * @param bufferSize the size of the buffer to be used.
-   * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
-   * @throws IOException
-   * @see #setPermission(Path, FsPermission)
-   * @see CreateFlag
-   */
-  public abstract FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException ;
   
   /*.
    * This create has been added to support the FileContext that processes
@@ -674,117 +651,22 @@ public abstract class FileSystem extends Configured implements Closeable {
     // nor does the bytesPerChecksum  hence
     // calling the regular create is good enough.
     // FSs that implement permissions should override this.
+
+    if (exists(f)) {
+      if (flag.contains(CreateFlag.APPEND)) {
+        return append(f, bufferSize, progress);
+      } else if (!flag.contains(CreateFlag.OVERWRITE)) {
+        throw new IOException("File already exists: " + f);
+      }
+    } else {
+      if (flag.contains(CreateFlag.APPEND) && !flag.contains(CreateFlag.CREATE))
+        throw new IOException("File already exists: " + f.toString());
+    }
     
-    return this.create(f, absolutePermission, flag, bufferSize, replication,
+    return this.create(f, absolutePermission, flag.contains(CreateFlag.OVERWRITE), bufferSize, replication,
         blockSize, progress);
   }
   
-  
-  /*.
-   * This create has been added to support the FileContext that passes
-   * an absolute permission with (ie umask was already applied) 
-   * This a temporary method added to support the transition from FileSystem
-   * to FileContext for user applications.
-   */
-  @Deprecated
-  protected FSDataOutputStream primitiveCreate(final Path f,
-      final EnumSet<CreateFlag> createFlag,
-      CreateOpts... opts) throws IOException {
-    checkPath(f);
-    int bufferSize = -1;
-    short replication = -1;
-    long blockSize = -1;
-    int bytesPerChecksum = -1;
-    FsPermission permission = null;
-    Progressable progress = null;
-    Boolean createParent = null;
- 
-    for (CreateOpts iOpt : opts) {
-      if (CreateOpts.BlockSize.class.isInstance(iOpt)) {
-        if (blockSize != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        blockSize = ((CreateOpts.BlockSize) iOpt).getValue();
-      } else if (CreateOpts.BufferSize.class.isInstance(iOpt)) {
-        if (bufferSize != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        bufferSize = ((CreateOpts.BufferSize) iOpt).getValue();
-      } else if (CreateOpts.ReplicationFactor.class.isInstance(iOpt)) {
-        if (replication != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        replication = ((CreateOpts.ReplicationFactor) iOpt).getValue();
-      } else if (CreateOpts.BytesPerChecksum.class.isInstance(iOpt)) {
-        if (bytesPerChecksum != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        bytesPerChecksum = ((CreateOpts.BytesPerChecksum) iOpt).getValue();
-      } else if (CreateOpts.Perms.class.isInstance(iOpt)) {
-        if (permission != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        permission = ((CreateOpts.Perms) iOpt).getValue();
-      } else if (CreateOpts.Progress.class.isInstance(iOpt)) {
-        if (progress != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        progress = ((CreateOpts.Progress) iOpt).getValue();
-      } else if (CreateOpts.CreateParent.class.isInstance(iOpt)) {
-        if (createParent != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        createParent = ((CreateOpts.CreateParent) iOpt).getValue();
-      } else {
-        throw new IllegalArgumentException("Unkown CreateOpts of type " +
-            iOpt.getClass().getName());
-      }
-    }
-    if (blockSize % bytesPerChecksum != 0) {
-      throw new IllegalArgumentException(
-          "blockSize should be a multiple of checksumsize");
-    }
-    
-    FsServerDefaults ssDef = getServerDefaults();
-    
-    if (blockSize == -1) {
-      blockSize = ssDef.getBlockSize();
-    }
-    if (bufferSize == -1) {
-      bufferSize = ssDef.getFileBufferSize();
-    }
-    if (replication == -1) {
-      replication = ssDef.getReplication();
-    }
-    if (permission == null) {
-      permission = FsPermission.getDefault();
-    }
-    if (createParent == null) {
-      createParent = false;
-    }
-    
-    // Default impl  assumes that permissions do not matter and 
-    // nor does the bytesPerChecksum  hence
-    // calling the regular create is good enough.
-    // FSs that implement permissions should override this.
-
-    if (!createParent) { // parent must exist.
-      // since this.create makes parent dirs automatically
-      // we must throw exception if parent does not exist.
-      final FileStatus stat = getFileStatus(f.getParent());
-      if (stat == null) {
-        throw new FileNotFoundException("Missing parent:" + f);
-      }
-      if (!stat.isDirectory()) {
-        throw new ParentNotDirectoryException("parent is not a dir:" + f);
-      }
-      // parent does exist - go ahead with create of file.
-    }
-    return this.create(f, permission, createFlag, bufferSize, replication,
-        blockSize, progress);
-  }
-  
-
   /**
    * This version of the mkdirs method assumes that the permission is absolute.
    * It has been added to support the FileContext that processes the permission

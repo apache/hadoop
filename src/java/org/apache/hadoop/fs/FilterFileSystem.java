@@ -111,10 +111,10 @@ public class FilterFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     return fs.create(f, permission,
-        flag, bufferSize, replication, blockSize, progress);
+        overwrite, bufferSize, replication, blockSize, progress);
   }
 
   /**
