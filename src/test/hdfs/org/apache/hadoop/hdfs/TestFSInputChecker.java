@@ -56,7 +56,7 @@ public class TestFSInputChecker extends TestCase {
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, new FsPermission((short)0777),
-        EnumSet.of(CreateFlag.OVERWRITE), fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        true, fileSys.getConf().getInt("io.file.buffer.size", 4096),
         NUM_OF_DATANODES, BLOCK_SIZE, null);
     stm.write(expected);
     stm.close();

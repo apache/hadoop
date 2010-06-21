@@ -174,7 +174,7 @@ public class TestDFSPermission extends TestCase {
     // create the file/directory
     switch (op) {
     case CREATE:
-      FSDataOutputStream out = fs.create(name, permission, EnumSet.of(CreateFlag.OVERWRITE), 
+      FSDataOutputStream out = fs.create(name, permission, true, 
           conf.getInt("io.file.buffer.size", 4096),
           fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
       out.close();

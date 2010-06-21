@@ -612,91 +612,6 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
   
   /**
-   * Test file creation with all supported flags.
-   */
-  public void testFileCreationWithFlags() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
-    }
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
-    FileSystem fs = cluster.getFileSystem();
-    Path path = new Path("/" + System.currentTimeMillis()
-        + "-testFileCreationWithFlags");
-    FSDataOutputStream out = null;
-
-    // append to a non-exist file, it should throw an IOException
-    try {
-      IOException expectedException = null;
-      EnumSet<CreateFlag> appendNoFile = EnumSet.of(CreateFlag.APPEND);
-      // this should throw a IOException, because the file does not exist
-      try {
-        out = createFileWithFlag(fs, path, 1, appendNoFile);
-      } catch (IOException e) {
-        expectedException = e;
-      } finally {
-        if (out != null)
-          out.close();
-      }
-      assertTrue(
-          "Append a non-exists file with no create flag should throw an IOException ",
-          expectedException != null);
-
-      // the file already exists, and recreate it with CreateFlag.APPEND,
-      // CreateFlag.CREATE. It will not throw any exception.
-      EnumSet<CreateFlag> appendAndCreate = EnumSet.of(CreateFlag.APPEND,
-          CreateFlag.CREATE);
-      out = createFileWithFlag(fs, path, 1, appendAndCreate);
-      out.close();
-
-      // the file already exists, and recreate it only with CreateFlag.CREATE
-      // flag. it should throw an IOException
-      expectedException = null;
-      EnumSet<CreateFlag> createExistsFile = EnumSet.of(CreateFlag.CREATE);
-      // this should throw a IOException, because the file already exists
-      try {
-        createFileWithFlag(fs, path, 1, createExistsFile);
-      } catch (IOException e) {
-        expectedException = e;
-      }
-      assertTrue(
-          "create a file which already exists should throw an IOException ",
-          expectedException != null);
-
-      // the file exists, recreate it with the flag of CreateFlag.OVERWRITE.
-      EnumSet<CreateFlag> overwriteFile = EnumSet.of(CreateFlag.OVERWRITE);
-      out = createFileWithFlag(fs, path, 1, overwriteFile);
-      out.close();
-
-      // the file exists, recreate it with the flag of CreateFlag.OVERWRITE
-      // together with CreateFlag.CREATE. It has the same effect as only specify
-      // CreateFlag.OVERWRITE.
-      EnumSet<CreateFlag> overwriteWithCreateFile = EnumSet.of(
-          CreateFlag.OVERWRITE, CreateFlag.CREATE);
-      out = createFileWithFlag(fs, path, 1, overwriteWithCreateFile);
-      out.close();
-
-      // the file exists, recreate it with the flag of CreateFlag.OVERWRITE
-      // together with CreateFlag.APPEND. It has the same effect as only specify
-      // CreateFlag.OVERWRITE.
-      EnumSet<CreateFlag> overwriteWithAppendFile = EnumSet.of(
-          CreateFlag.OVERWRITE, CreateFlag.APPEND);
-      out = createFileWithFlag(fs, path, 1, overwriteWithAppendFile);
-      out.close();
-
-      fs.delete(path, true);
-
-      EnumSet<CreateFlag> createNonExistsFile = EnumSet.of(CreateFlag.CREATE,
-          CreateFlag.OVERWRITE);
-      out = createFileWithFlag(fs, path, 1, createNonExistsFile);
-      out.close();
-      fs.delete(path, true);
-    } finally {
-      cluster.shutdown();
-    }
-  }
-  
-  /**
    * Test file creation using createNonRecursive().
    */
   public void testFileCreationNonRecursive() throws IOException {
@@ -789,14 +704,6 @@ public class TestFileCreation extends junit.framework.TestCase {
     return stm;
   }
   
-  // creates a file with the flag api
-  static FSDataOutputStream createFileWithFlag(FileSystem fileSys, Path name, int repl, EnumSet<CreateFlag> flag)
-    throws IOException {
-    System.out.println("createFile: Created " + name + " with " + repl + " replica.");
-    FSDataOutputStream stm = fileSys.create(name, FsPermission.getDefault(), flag, 
-                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),(short)repl, (long)blockSize, null);
-    return stm;
-  }
 
 /**
  * Test that file data becomes available before file is closed.

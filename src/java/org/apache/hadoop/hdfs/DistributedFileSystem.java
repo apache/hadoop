@@ -219,11 +219,12 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-    EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+    boolean overwrite, int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
     return new FSDataOutputStream(dfs.create(getPathName(f), permission,
-                   flag, replication, blockSize, progress, bufferSize),
+        overwrite ? EnumSet.of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE),
+        replication, blockSize, progress, bufferSize),
         statistics);
   }
   
@@ -240,7 +241,6 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Same as create(), except fails if parent directory doesn't already exist.
-   * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable)
    */
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flag, int bufferSize, short replication,

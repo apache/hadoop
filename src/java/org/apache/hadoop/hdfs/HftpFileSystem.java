@@ -305,7 +305,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication,
+      boolean overwrite, int bufferSize, short replication,
       long blockSize, Progressable progress) throws IOException {
     throw new IOException("Not supported");
   }
