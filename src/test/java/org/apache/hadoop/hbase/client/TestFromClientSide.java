@@ -3637,7 +3637,13 @@ public class TestFromClientSide {
 
     // create many regions for the table.
     TEST_UTIL.createMultiRegions(table, FAMILY);
-
+    // This count effectively waits until the regions have been
+    // fully assigned
+    TEST_UTIL.countRows(table);
+    table.getConnection().clearRegionCache();
+    assertEquals("Clearing cache should have 0 cached ", 0,
+        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+    
     // A Get is suppose to do a region lookup request
     Get g = new Get(Bytes.toBytes("aaa"));
     table.get(g);
