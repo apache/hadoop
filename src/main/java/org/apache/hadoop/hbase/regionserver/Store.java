@@ -19,6 +19,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,31 +51,13 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
   * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -74,28 +68,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
   * services to manage sets of StoreFiles.  One of the most important of those
   * services is compaction services where files are aggregated once they pass
   * a configurable threshold.
-  *
-  * <p>The only thing having to do with logs that Store needs to deal with is
-  * the reconstructionLog.  This is a segment of an HRegion's log that might
-  * NOT be present upon startup.  If the param is NULL, there's nothing to do.
-  * If the param is non-NULL, we need to process the log to reconstruct
-  * a TreeMap that might not have been written to disk before the process
-  * died.
-  *
-  * <p>It's assumed that after this constructor returns, the reconstructionLog
-  * file will be deleted (by whoever has instantiated the Store).
  *
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
 public class Store implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
-  /**
-   * Comparator that looks at columns and compares their family portions.
-   * Presumes columns have already been checked for presence of delimiter.
-   * If no delimiter present, presume the buffer holds a store name so no need
-   * of a delimiter.
-   */
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final Path homedir;
@@ -111,7 +89,6 @@ public class Store implements HeapSize {
   private volatile long storeSize = 0L;
   private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  final byte [] storeName;
   private final String storeNameStr;
   private final boolean inMemory;
 
@@ -125,14 +102,6 @@ public class Store implements HeapSize {
   // All access must be synchronized.
   private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
     new CopyOnWriteArraySet<ChangedReadersObserver>();
-
-  // The most-recent log-seq-ID.  The most-recent such ID means we can ignore
-  // all log messages up to and including that ID (because they're already
-  // reflected in the TreeMaps).
-  private volatile long maxSeqId = -1;
-
-  // The most-recent log-seq-id before we recovered from the LOG.
-  private long maxSeqIdBeforeLogRecovery = -1;
 
   private final Path regionCompactionDir;
   private final Object compactLock = new Object();
@@ -151,21 +120,16 @@ public class Store implements HeapSize {
    * @param region
    * @param family HColumnDescriptor for this column
    * @param fs file system object
-   * @param reconstructionLog existing log file to apply if any
    * @param conf configuration object
-   * @param reporter Call on a period so hosting server can report we're
-   * making progress to master -- otherwise master might think region deploy
    * failed.  Can be null.
    * @throws IOException
    */
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
-    FileSystem fs, Path reconstructionLog, Configuration conf,
-    final Progressable reporter)
+    FileSystem fs, Configuration conf)
   throws IOException {
     HRegionInfo info = region.regionInfo;
     this.fs = fs;
-    this.homedir = getStoreHomedir(basedir, info.getEncodedName(),
-      family.getName());
+    this.homedir = getStoreHomedir(basedir, info.getEncodedName(), family.getName());
     if (!this.fs.exists(this.homedir)) {
       if (!this.fs.mkdirs(this.homedir))
         throw new IOException("Failed create of: " + this.homedir.toString());
@@ -191,8 +155,7 @@ public class Store implements HeapSize {
     this.memstore = new MemStore(this.comparator);
     this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir),
                                         info.getEncodedName());
-    this.storeName = this.family.getName();
-    this.storeNameStr = Bytes.toString(this.storeName);
+    this.storeNameStr = Bytes.toString(this.family.getName());
 
     // By default, we compact if an HStore has more than
     // MIN_COMMITS_FOR_COMPACTION map files
@@ -219,29 +182,18 @@ public class Store implements HeapSize {
     }
 
     this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
-
-    // loadStoreFiles calculates this.maxSeqId. as side-effect.
     this.storefiles = ImmutableList.copyOf(loadStoreFiles());
-
-    this.maxSeqIdBeforeLogRecovery = this.maxSeqId;
-
-    // Do reconstruction log.
-    long newId = runReconstructionLog(reconstructionLog, this.maxSeqId, reporter);
-    if (newId != -1) {
-      this.maxSeqId = newId; // start with the log id we just recovered.
-    }
   }
 
   HColumnDescriptor getFamily() {
     return this.family;
   }
 
+  /**
+   * @return The maximum sequence id in all store files.
+   */
   long getMaxSequenceId() {
-    return this.maxSeqId;
-  }
-
-  long getMaxSeqIdBeforeLogRecovery() {
-    return maxSeqIdBeforeLogRecovery;
+    return StoreFile.getMaxSequenceIdInList(this.getStorefiles());
   }
 
   /**
@@ -254,140 +206,6 @@ public class Store implements HeapSize {
       final String encodedName, final byte [] family) {
     return new Path(tabledir, new Path(encodedName,
       new Path(Bytes.toString(family))));
-  }
-
-  /*
-   * Run reconstruction log
-   * @param reconstructionLog
-   * @param msid
-   * @param reporter
-   * @return the new max sequence id as per the log
-   * @throws IOException
-   */
-  private long runReconstructionLog(final Path reconstructionLog,
-    final long msid, final Progressable reporter)
-  throws IOException {
-    try {
-      return doReconstructionLog(reconstructionLog, msid, reporter);
-    } catch (EOFException e) {
-      // Presume we got here because of lack of HADOOP-1700; for now keep going
-      // but this is probably not what we want long term.  If we got here there
-      // has been data-loss
-      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + Bytes.toString(this.storeName) +
-        " -- continuing.  Probably lack-of-HADOOP-1700 causing DATA LOSS!", e);
-    } catch (IOException e) {
-      // Presume we got here because of some HDFS issue. Don't just keep going.
-      // Fail to open the HStore.  Probably means we'll fail over and over
-      // again until human intervention but alternative has us skipping logs
-      // and losing edits: HBASE-642.
-      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + Bytes.toString(this.storeName), e);
-      throw e;
-    }
-    return -1;
-  }
-
-  /*
-   * Read the reconstructionLog and put into memstore.
-   *
-   * We can ignore any log message that has a sequence ID that's equal to or
-   * lower than maxSeqID.  (Because we know such log messages are already
-   * reflected in the HFiles.)
-   *
-   * @return the new max sequence id as per the log, or -1 if no log recovered
-   */
-  private long doReconstructionLog(final Path reconstructionLog,
-    final long maxSeqID, final Progressable reporter)
-  throws UnsupportedEncodingException, IOException {
-    if (reconstructionLog == null || !this.fs.exists(reconstructionLog)) {
-      // Nothing to do.
-      return -1;
-    }
-    FileStatus stat = this.fs.getFileStatus(reconstructionLog);
-    if (stat.getLen() <= 0) {
-      LOG.warn("Passed reconstruction log " + reconstructionLog +
-        " is zero-length. Deleting existing file");
-       fs.delete(reconstructionLog, false);
-      return -1;
-    }
-
-    // TODO: This could grow large and blow heap out.  Need to get it into
-    // general memory usage accounting.
-    long maxSeqIdInLog = -1;
-    long firstSeqIdInLog = -1;
-    HLog.Reader logReader = HLog.getReader(this.fs, reconstructionLog, conf);
-    try {
-      long skippedEdits = 0;
-      long editsCount = 0;
-      // How many edits to apply before we send a progress report.
-      int reportInterval =
-        this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
-      HLog.Entry entry;
-      // TBD: Need to add an exception handler around logReader.next.
-      //
-      // A transaction now appears as a single edit. If logReader.next()
-      // returns an exception, then it must be a incomplete/partial
-      // transaction at the end of the file. Rather than bubble up
-      // the exception, we should catch it and simply ignore the
-      // partial transaction during this recovery phase.
-      //
-      while ((entry = logReader.next()) != null) {
-        HLogKey key = entry.getKey();
-        WALEdit val = entry.getEdit();
-        if (firstSeqIdInLog == -1) {
-          firstSeqIdInLog = key.getLogSeqNum();
-        }
-        maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
-        if (key.getLogSeqNum() <= maxSeqID) {
-          skippedEdits++;
-          continue;
-        }
-
-        for (KeyValue kv : val.getKeyValues()) {
-          // Check this edit is for me. Also, guard against writing the special
-          // METACOLUMN info such as HBASE::CACHEFLUSH entries
-          if (kv.matchingFamily(HLog.METAFAMILY) ||
-              !Bytes.equals(key.getRegionName(), region.regionInfo.getRegionName()) ||
-              !kv.matchingFamily(family.getName())) {
-              continue;
-            }
-          if (kv.isDelete()) {
-            this.memstore.delete(kv);
-          } else {
-            this.memstore.add(kv);
-          }
-          editsCount++;
-       }
-
-        // Every 2k edits, tell the reporter we're making progress.
-        // Have seen 60k edits taking 3minutes to complete.
-        if (reporter != null && (editsCount % reportInterval) == 0) {
-          reporter.progress();
-        }
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
-          "; store maxSeqID=" + maxSeqID +
-          ", firstSeqIdInLog=" + firstSeqIdInLog +
-          ", maxSeqIdInLog=" + maxSeqIdInLog);
-      }
-    } finally {
-      logReader.close();
-    }
-
-    if (maxSeqIdInLog > -1) {
-      // We read some edits, so we should flush the memstore
-      StoreFlusher flusher = getStoreFlusher(maxSeqIdInLog);
-      flusher.prepare();
-      flusher.flushCache();
-      boolean needCompaction = flusher.commit();
-
-      if (needCompaction) {
-        this.compact(false);
-      }
-    }
-    return maxSeqIdInLog;
   }
 
   /*
@@ -428,7 +246,6 @@ public class Store implements HeapSize {
       }
       results.add(curfile);
     }
-    maxSeqId = StoreFile.getMaxSequenceIdInList(results);
     Collections.sort(results, StoreFile.Comparators.FLUSH_TIME);
     return results;
   }
@@ -584,7 +401,6 @@ public class Store implements HeapSize {
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
     return internalFlushCache(snapshot, logCacheFlushId);
-
   }
 
   /*

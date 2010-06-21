@@ -270,7 +270,8 @@ public class StoreFile {
    * the given list. Store files that were created by a mapreduce
    * bulk load are ignored, as they do not correspond to any edit
    * log items.
-   * @return 0 if no non-bulk-load files are provided
+   * @return 0 if no non-bulk-load files are provided or, this is Store that
+   * does not yet have any store files.
    */
   public static long getMaxSequenceIdInList(List<StoreFile> sfs) {
     long max = 0;

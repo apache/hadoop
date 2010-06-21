@@ -153,12 +153,12 @@ class HMerge {
         if (currentRegion == null) {
           currentRegion =
             HRegion.newHRegion(tabledir, hlog, fs, conf, info[i], null);
-          currentRegion.initialize(null, null);
+          currentRegion.initialize();
           currentSize = currentRegion.getLargestHStoreSize();
         }
         nextRegion =
           HRegion.newHRegion(tabledir, hlog, fs, conf, info[i + 1], null);
-        nextRegion.initialize(null, null);
+        nextRegion.initialize();
         nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
@@ -330,7 +330,7 @@ class HMerge {
 
       root = HRegion.newHRegion(rootTableDir, hlog, fs, conf,
           HRegionInfo.ROOT_REGIONINFO, null);
-      root.initialize(null, null);
+      root.initialize();
 
       Scan scan = new Scan();
       scan.addColumn(HConstants.CATALOG_FAMILY,

@@ -139,9 +139,6 @@ public final class HConstants {
   /** Like the previous, but for old logs that are about to be deleted */
   public static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
 
-  /** Name of old log file for reconstruction */
-  public static final String HREGION_OLDLOGFILE_NAME = "oldlogfile.log";
-
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 

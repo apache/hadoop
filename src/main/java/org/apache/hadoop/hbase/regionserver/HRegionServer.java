@@ -1241,26 +1241,6 @@ public class HRegionServer implements HRegionInterface,
     return result;
   }
 
-  private HServerInfo createServerInfoWithNewStartCode(final HServerInfo hsi) {
-    return new HServerInfo(hsi.getServerAddress(), hsi.getInfoPort(),
-      hsi.getHostname());
-  }
-
-  /* Add to the outbound message buffer */
-  private void reportOpen(HRegionInfo region) {
-    this.outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, region));
-  }
-
-  /* Add to the outbound message buffer */
-  private void reportClose(HRegionInfo region) {
-    reportClose(region, null);
-  }
-
-  /* Add to the outbound message buffer */
-  private void reportClose(final HRegionInfo region, final byte[] message) {
-    this.outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
-  }
-
   /**
    * Add to the outbound message buffer
    *
@@ -1431,7 +1411,7 @@ public class HRegionServer implements HRegionInterface,
     if (region == null) {
       try {
         zkUpdater.startRegionOpenEvent(null, true);
-        region = instantiateRegion(regionInfo);
+        region = instantiateRegion(regionInfo, this.hlog);
         // Startup a compaction early if one is needed, if region has references
         // or if a store has too many store files
         if (region.hasReferences() || region.hasTooManyStoreFiles()) {
@@ -1458,7 +1438,6 @@ public class HRegionServer implements HRegionInterface,
       }
       this.lock.writeLock().lock();
       try {
-        this.hlog.setSequenceNumber(region.getMinSequenceId());
         this.onlineRegions.put(mapKey, region);
       } finally {
         this.lock.writeLock().unlock();
@@ -1472,16 +1451,28 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  protected HRegion instantiateRegion(final HRegionInfo regionInfo)
-      throws IOException {
-    HRegion r = HRegion.newHRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
-        .getTableDesc().getName()), this.hlog, this.fs, conf, regionInfo,
-        this.cacheFlusher);
-    r.initialize(null,  new Progressable() {
+  /*
+   * @param regionInfo RegionInfo for the Region we're to instantiate and
+   * initialize.
+   * @param wal Set into here the regions' seqid.
+   * @return
+   * @throws IOException
+   */
+  protected HRegion instantiateRegion(final HRegionInfo regionInfo, final HLog wal)
+  throws IOException {
+    Path dir =
+      HTableDescriptor.getTableDir(rootDir, regionInfo.getTableDesc().getName());
+    HRegion r = HRegion.newHRegion(dir, this.hlog, this.fs, conf, regionInfo,
+      this.cacheFlusher);
+    long seqid = r.initialize(new Progressable() {
       public void progress() {
         addProcessingMessage(regionInfo);
       }
     });
+    // If a wal and its seqid is < that of new region, use new regions seqid.
+    if (wal != null) {
+      if (seqid > wal.getSequenceNumber()) wal.setSequenceNumber(seqid);
+    }
     return r;
   }
 

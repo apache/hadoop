@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -141,6 +140,11 @@ public class HLog implements Syncable {
   private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
+
+  /** Name of file that holds recovered edits written by the wal log splitting
+   * code, one per region
+   */
+  public static final String RECOVERED_EDITS = "recovered.edits";
 
   // used to indirectly tell syncFs to force the sync
   private boolean forceSync = false;
@@ -1257,8 +1261,7 @@ public class HLog implements Syncable {
     // Number of logs in a read batch
     // More means faster but bigger mem consumption
     //TODO make a note on the conf rename and update hbase-site.xml if needed
-    int logFilesPerStep =
-      conf.getInt("hbase.hlog.split.batch.size", 3);
+    int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
      boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
 
 
@@ -1626,7 +1629,7 @@ public class HLog implements Syncable {
       HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
     Path regionDir =
             HRegion.getRegionDir(tableDir, HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
-    return new Path(regionDir, HConstants.HREGION_OLDLOGFILE_NAME);
+    return new Path(regionDir, RECOVERED_EDITS);
    }
 
 

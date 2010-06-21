@@ -402,6 +402,7 @@ Release 0.21.0 - Unreleased
                regions
    HBASE-2760  Fix MetaScanner TableNotFoundException when scanning starting at
                the first row in a table.
+   HBASE-1025  Reconstruction log playback has no bounds on memory used
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -168,7 +168,7 @@ public abstract class HBaseTestCase extends TestCase {
     HRegion r = new HRegion(closedRegion.getBaseDir(), closedRegion.getLog(),
         closedRegion.getFilesystem(), closedRegion.getConf(),
         closedRegion.getRegionInfo(), null);
-    r.initialize(null, null);
+    r.initialize();
     return r;
   }
 

@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,15 +38,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -125,17 +121,7 @@ public class TestHLogSplit {
     Collections.addAll(regions, "bbb", "ccc");
     InstrumentedSequenceFileLogWriter.activateFailure = false;
     // Set the soft lease for hdfs to be down from default of 5 minutes or so.
-    // TODO: If 0.20 hadoop do one thing, if 0.21 hadoop do another.
-    // Not available in 0.20 hdfs
-    // TEST_UTIL.getDFSCluster().getNamesystem().leaseManager.
-    //  setLeasePeriod(100, 50000);
-    // Use reflection to get at the 0.20 version of above.
-    MiniDFSCluster dfsCluster = TEST_UTIL.getDFSCluster();
-    //   private NameNode nameNode;
-    Field field = dfsCluster.getClass().getDeclaredField("nameNode");
-    field.setAccessible(true);
-    NameNode nn = (NameNode)field.get(dfsCluster);
-    nn.namesystem.leaseManager.setLeasePeriod(100, 50000);
+    TEST_UTIL.setNameNodeNameSystemLeasePeriod(100, 50000);
   }
 
   @After
@@ -628,7 +614,7 @@ public class TestHLogSplit {
     return new Path(HRegion.getRegionDir(HTableDescriptor
             .getTableDir(rootdir, table),
             HRegionInfo.encodeRegionName(region.getBytes())),
-            HConstants.HREGION_OLDLOGFILE_NAME);
+            HLog.RECOVERED_EDITS);
   }
 
   private void corruptHLog(Path path, Corruptions corruption, boolean close,
@@ -736,8 +722,8 @@ public class TestHLogSplit {
     FileStatus[] f2 = fs.listStatus(p2);
 
     for (int i=0; i<f1.length; i++) {
-      if (!logsAreEqual(new Path(f1[i].getPath(), HConstants.HREGION_OLDLOGFILE_NAME),
-              new Path(f2[i].getPath(), HConstants.HREGION_OLDLOGFILE_NAME))) {
+      if (!logsAreEqual(new Path(f1[i].getPath(), HLog.RECOVERED_EDITS),
+              new Path(f2[i].getPath(), HLog.RECOVERED_EDITS))) {
         return -1;
       }
     }

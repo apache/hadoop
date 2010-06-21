@@ -20,22 +20,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.Progressable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +28,22 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
+
+import junit.framework.TestCase;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test class fosr the Store
@@ -96,10 +96,8 @@ public class TestStore extends TestCase {
     Path logdir = new Path(DIR+methodName+"/logs");
     Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
-    Path reconstructionLog = null;
-    Progressable reporter = null;
 
     fs.delete(logdir, true);
 
@@ -109,8 +107,7 @@ public class TestStore extends TestCase {
     HLog hlog = new HLog(fs, logdir, oldLogDir, conf, null);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
 
-    store = new Store(basedir, region, hcd, fs, reconstructionLog, conf,
-        reporter);
+    store = new Store(basedir, region, hcd, fs, conf);
   }
 
 
@@ -133,7 +130,7 @@ public class TestStore extends TestCase {
     StoreFile f = this.store.getStorefiles().get(0);
     Path storedir = f.getPath().getParent();
     long seqid = f.getMaxSequenceId();
-    HBaseConfiguration c = new HBaseConfiguration();
+    Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
     StoreFile.Writer w = StoreFile.createWriter(fs, storedir, 
         StoreFile.DEFAULT_BLOCKSIZE_SMALL);
@@ -143,7 +140,7 @@ public class TestStore extends TestCase {
     // Reopen it... should pick up two files
     this.store = new Store(storedir.getParent().getParent(),
       this.store.getHRegion(),
-      this.store.getFamily(), fs, null, c, null);
+      this.store.getFamily(), fs, c);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());
     this.store.get(get, qualifiers, result);
