@@ -21,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +31,6 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -200,28 +198,18 @@ public class FTPFileSystem extends FileSystem {
    */
   @Override
   public FSDataOutputStream create(Path file, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     final FTPClient client = connect();
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
-    
-    boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
-    boolean create = flag.contains(CreateFlag.CREATE);
-    boolean append= flag.contains(CreateFlag.APPEND);
-    
     if (exists(client, file)) {
       if (overwrite) {
         delete(client, file);
-      } else if(append){
-        return append(file, bufferSize, progress);
       } else {
         disconnect(client);
         throw new IOException("File already exists: " + file);
       }
-    } else {
-      if(append && !create)
-        throw new FileNotFoundException("File does not exist: "+ file);
     }
     
     Path parent = absolute.getParent();
