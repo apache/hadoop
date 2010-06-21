@@ -94,7 +94,7 @@ class MetaScanner {
     // if row is not null, we want to use the startKey of the row's region as
     // the startRow for the meta scan.
     if (row != null) {
-      HTable metaTable = new HTable(HConstants.META_TABLE_NAME);
+      HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
       Result startRowResult = metaTable.getRowOrBefore(startRow,
           HConstants.CATALOG_FAMILY);
       if (startRowResult == null) {
