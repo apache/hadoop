@@ -34,6 +34,8 @@ Release 0.20.3 - Unreleased
 
     MAPREDUCE-118. Fix Job.getJobID(). (Amareshwari Sriramadasu via sharad)
 
+    MAPREDUCE-1880. Fix BigDecimal.divide(..) in the pi example.  (szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
