@@ -423,6 +423,15 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
+  
+  /**
+   * Return true if the given row falls in this region.
+   */
+  public boolean containsRow(byte[] row) {
+    return Bytes.compareTo(row, startKey) >= 0 &&
+      (Bytes.compareTo(row, endKey) < 0 ||
+       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+  }
 
   /** @return the tableDesc */
   public HTableDescriptor getTableDesc(){

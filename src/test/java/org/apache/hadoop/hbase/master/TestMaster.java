@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -36,12 +37,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.base.Joiner;
+
 import static org.junit.Assert.*;
 
 public class TestMaster {
@@ -70,30 +75,38 @@ public class TestMaster {
     TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
     TEST_UTIL.loadTable(new HTable(TABLENAME), FAMILYNAME);
 
+    List<Pair<HRegionInfo, HServerAddress>> tableRegions =
+      m.getTableRegions(TABLENAME);
+    LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
+    assertEquals(1, tableRegions.size());
+    assertArrayEquals(HConstants.EMPTY_START_ROW,
+        tableRegions.get(0).getFirst().getStartKey());
+    assertArrayEquals(HConstants.EMPTY_END_ROW,
+        tableRegions.get(0).getFirst().getEndKey());
+
+    // Now trigger a split and stop when the split is in progress
+    
     CountDownLatch aboutToOpen = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
     RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
     HBaseEventHandler.registerListener(list);
 
+    LOG.info("Splitting table");
     admin.split(TABLENAME);
+    LOG.info("Waiting for split result to be about to open");
     aboutToOpen.await(60, TimeUnit.SECONDS);
-
     try {
-      m.getTableRegions(TABLENAME);
+      LOG.info("Making sure we can call getTableRegions while opening");
+      tableRegions = m.getTableRegions(TABLENAME);
+      LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
+      // We have three regions because one is split-in-progress
+      assertEquals(3, tableRegions.size());
+      LOG.info("Making sure we can call getTableRegionClosest while opening");
       Pair<HRegionInfo,HServerAddress> pair =
-        m.getTableRegionClosest(TABLENAME, Bytes.toBytes("cde"));
-      /**
-       * TODO: The assertNull below used to work before moving all RS->M 
-       * communication to ZK, find out why this test's behavior has changed.
-       * Tracked in HBASE-2656.
-        assertNull(pair);
-        assertNotNull(pair);
-        
-        We used to assert NotNull for the pair but it seems that ain't
-        always true either. For now disabling this assertion.  Filing
-        an issue for it to be checked -- St.Ack.
-      */
-      m.getTableRegionFromName(pair.getFirst().getRegionName());
+        m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
+      LOG.info("Result is: " + pair);
+      Pair<HRegionInfo, HServerAddress> tableRegionFromName = m.getTableRegionFromName(pair.getFirst().getRegionName());
+      assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
     } finally {
       proceed.countDown();
     }

@@ -33,6 +33,7 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -62,6 +63,8 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
@@ -96,6 +99,8 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
+
+import com.google.common.collect.Lists;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -838,99 +843,94 @@ public class HMaster extends Thread implements HMasterInterface,
     new ChangeTableState(this, tableName, false).process();
   }
 
-  // TODO: Redo so this method does not duplicate code with subsequent methods.
+  /**
+   * Get a list of the regions for a given table. The pairs may have
+   * null for their second element in the case that they are not
+   * currently deployed.
+   * TODO: Redo so this method does not duplicate code with subsequent methods.
+   */
   List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
       final byte [] tableName)
   throws IOException {
-    List<Pair<HRegionInfo,HServerAddress>> result =
-      new ArrayList<Pair<HRegionInfo,HServerAddress>>();
-    Set<MetaRegion> regions =
-      this.regionManager.getMetaRegionsForTable(tableName);
-    byte [] firstRowInTable = Bytes.toBytes(Bytes.toString(tableName) + ",,");
-    for (MetaRegion m: regions) {
-      byte [] metaRegionName = m.getRegionName();
-      HRegionInterface srvr =
-        this.connection.getHRegionConnection(m.getServer());
-      Scan scan = new Scan(firstRowInTable);
-      scan.addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      // TODO: Use caching.
-      long scannerid = srvr.openScanner(metaRegionName, scan);
-      try {
-        while (true) {
-          Result data = srvr.next(scannerid);
+    final ArrayList<Pair<HRegionInfo, HServerAddress>> result =
+      Lists.newArrayList();
+    MetaScannerVisitor visitor =
+      new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result data) throws IOException {
           if (data == null || data.size() <= 0)
-            break;
-          HRegionInfo info = Writables.getHRegionInfo(
-              data.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.REGIONINFO_QUALIFIER));
-          if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-            final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
-                HConstants.SERVER_QUALIFIER);
-            if (value != null && value.length > 0) {
-              HServerAddress server = new HServerAddress(Bytes.toString(value));
-              result.add(new Pair<HRegionInfo,HServerAddress>(info, server));
-            }
-          } else {
-            break;
+            return true;
+          Pair<HRegionInfo, HServerAddress> pair =
+            metaRowToRegionPair(data);
+          if (pair == null) return false;
+          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
+                tableName)) {
+            return false;
           }
+          result.add(pair);
+          return true;
         }
-      } finally {
-        srvr.close(scannerid);
-      }
-    }
+    };
+
+    MetaScanner.metaScan(conf, visitor, tableName); 
     return result;
   }
-
-  Pair<HRegionInfo,HServerAddress> getTableRegionClosest(
-      final byte [] tableName, final byte [] rowKey)
-  throws IOException {
-    Set<MetaRegion> regions =
-      this.regionManager.getMetaRegionsForTable(tableName);
-    for (MetaRegion m: regions) {
-      byte [] firstRowInTable = Bytes.toBytes(Bytes.toString(tableName) + ",,");
-      byte [] metaRegionName = m.getRegionName();
-      HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
-      Scan scan = new Scan(firstRowInTable);
-      scan.addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      long scannerid = srvr.openScanner(metaRegionName, scan);
-      try {
-        while (true) {
-          Result data = srvr.next(scannerid);
-          if (data == null || data.size() <= 0)
-            break;
-          HRegionInfo info = Writables.getHRegionInfo(
-              data.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.REGIONINFO_QUALIFIER));
-          if (Bytes.compareTo(info.getTableDesc().getName(), tableName) == 0) {
-            if ((Bytes.compareTo(info.getStartKey(), rowKey) >= 0) &&
-                (Bytes.compareTo(info.getEndKey(), rowKey) < 0)) {
-                final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
-                    HConstants.SERVER_QUALIFIER);
-                if (value != null && value.length > 0) {
-                  HServerAddress server =
-                    new HServerAddress(Bytes.toString(value));
-                  return new Pair<HRegionInfo,HServerAddress>(info, server);
-                }
-            }
-          } else {
-            break;
-          }
-        }
-      } finally {
-        srvr.close(scannerid);
-      }
-    }
-    return null;
+  
+  private Pair<HRegionInfo, HServerAddress> metaRowToRegionPair(
+      Result data) throws IOException {
+    HRegionInfo info = Writables.getHRegionInfo(
+        data.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER));
+    final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.SERVER_QUALIFIER);
+    if (value != null && value.length > 0) {
+      HServerAddress server = new HServerAddress(Bytes.toString(value));
+      return new Pair<HRegionInfo,HServerAddress>(info, server);
+    } else {
+      //undeployed
+      return new Pair<HRegionInfo, HServerAddress>(info, null);
+    }    
   }
 
+  /**
+   * Return the region and current deployment for the region containing
+   * the given row. If the region cannot be found, returns null. If it
+   * is found, but not currently deployed, the second element of the pair
+   * may be null.
+   */
+  Pair<HRegionInfo,HServerAddress> getTableRegionForRow(
+      final byte [] tableName, final byte [] rowKey)
+  throws IOException {
+    final AtomicReference<Pair<HRegionInfo, HServerAddress>> result =
+      new AtomicReference<Pair<HRegionInfo, HServerAddress>>(null);
+    
+    MetaScannerVisitor visitor =
+      new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result data) throws IOException {
+          if (data == null || data.size() <= 0)
+            return true;
+          Pair<HRegionInfo, HServerAddress> pair =
+            metaRowToRegionPair(data);
+          if (pair == null) return false;
+          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
+                tableName)) {
+            return false;
+          }
+          result.set(pair);
+          return true;
+        }
+    };
+
+    MetaScanner.metaScan(conf, visitor, tableName, rowKey, 1);
+    return result.get();
+  }
+  
   Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
       final byte [] regionName)
   throws IOException {
     byte [] tableName = HRegionInfo.parseRegionName(regionName)[0];
+    
     Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
     for (MetaRegion m: regions) {
       byte [] metaRegionName = m.getRegionName();
@@ -941,16 +941,7 @@ public class HMaster extends Thread implements HMasterInterface,
       get.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
       Result data = srvr.get(metaRegionName, get);
       if(data == null || data.size() <= 0) continue;
-      HRegionInfo info = Writables.getHRegionInfo(
-          data.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
-      final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.SERVER_QUALIFIER);
-      if(value != null && value.length > 0) {
-        HServerAddress server =
-          new HServerAddress(Bytes.toString(value));
-        return new Pair<HRegionInfo,HServerAddress>(info, server);
-      }
+      return metaRowToRegionPair(data);
     }
     return null;
   }
@@ -1008,16 +999,18 @@ public class HMaster extends Thread implements HMasterInterface,
           pair = getTableRegionFromName(regionName);
         } else {
           byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
-          pair = getTableRegionClosest(tableName, rowKey);
+          pair = getTableRegionForRow(tableName, rowKey);
         }
-        if (pair != null) {
+        if (pair != null && pair.getSecond() != null) {
           this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
         }
       } else {
-        for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName))
+        for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName)) {
+          if (pair.getSecond() == null) continue; // undeployed
           this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);
+        }
       }
       break;
 

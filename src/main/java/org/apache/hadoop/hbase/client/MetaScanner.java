@@ -33,8 +33,11 @@ import java.io.IOException;
  * Scanner class that contains the <code>.META.</code> table scanning logic
  * and uses a Retryable scanner. Provided visitors will be called
  * for each row.
+ * 
+ * Although public visibility, this is not a public-facing API and may evolve in
+ * minor releases.
  */
-class MetaScanner {
+public class MetaScanner {
 
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
@@ -160,7 +163,7 @@ class MetaScanner {
   /**
    * Visitor class called to process each row of the .META. table
    */
-  interface MetaScannerVisitor {
+  public interface MetaScannerVisitor {
     /**
      * Visitor method that accepts a RowResult and the meta region location.
      * Implementations can return false to stop the region's loop if it becomes
