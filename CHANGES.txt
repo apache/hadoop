@@ -995,6 +995,8 @@ Release 0.21.0 - Unreleased
     HDFS-609. Create a file with the append flag does not work in HDFS.
     (tomwhite)
 
+    HDFS-1255. Fix failing test-libhdfs.sh test. (tomwhite)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS

@@ -34,7 +34,7 @@ HADOOP_LIB_DIR=$HADOOP_HOME/lib
 HADOOP_BIN_DIR=$HADOOP_HOME/bin
 
 COMMON_BUILD_DIR=$HADOOP_HOME/build/ivy/lib/Hadoop-Hdfs/common
-COMMON_JAR=$COMMON_BUILD_DIR/hadoop-core-0.22.0-SNAPSHOT.jar
+COMMON_JAR=$COMMON_BUILD_DIR/hadoop-common-0.22.0-SNAPSHOT.jar
 
 cat > $HADOOP_CONF_DIR/core-site.xml <<EOF
 <?xml version="1.0"?>
@@ -74,18 +74,22 @@ cat > $HADOOP_CONF_DIR/slaves <<EOF
 localhost
 EOF
 
-# If we are running from the hdfs repo we need to create HADOOP_BIN_DIR.  
-# If the bin directory does not and we've got a core jar extract it's
+# If we are running from the hdfs repo we need to make sure
+# HADOOP_BIN_DIR contains the common scripts.  
+# If the bin directory does not and we've got a common jar extract its
 # bin directory to HADOOP_HOME/bin. The bin scripts hdfs-config.sh and
 # hadoop-config.sh assume the bin directory is named "bin" and that it
 # is located in HADOOP_HOME.
-created_bin_dir=0
-if [ ! -d $HADOOP_BIN_DIR ]; then
+unpacked_common_bin_dir=0
+
+if [ ! -f $HADOOP_BIN_DIR/hadoop-config.sh ]; then
+  echo 'OK'
+  echo $COMMON_JAR
+  ls -l $COMMON_JAR
   if [ -f $COMMON_JAR ]; then
-    mkdir $HADOOP_BIN_DIR
     jar xf $COMMON_JAR bin.tgz
     tar xfz bin.tgz -C $HADOOP_BIN_DIR
-    created_bin_dir=1
+    unpacked_common_bin_dir=1
   fi
 fi
 
@@ -188,8 +192,8 @@ sleep 3
 $HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop datanode && sleep 2
 $HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop namenode && sleep 2 
 
-if [ $created_bin_dir -eq 1 ]; then
-  rm -rf bin.tgz $HADOOP_BIN_DIR 
+if [ $unpacked_common_bin_dir -eq 1 ]; then
+  rm -rf bin.tgz
 fi
 
 echo exiting with $BUILD_STATUS
