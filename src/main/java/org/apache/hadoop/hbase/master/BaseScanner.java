@@ -132,7 +132,8 @@ abstract class BaseScanner extends Chore {
 
   BaseScanner(final HMaster master, final boolean rootRegion,
       final AtomicBoolean stop) {
-    super(master.getConfiguration().
+    super("Scanner for " + (rootRegion ? "-ROOT-":".META.") + " table",
+        master.getConfiguration().
         getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000), stop);
     this.rootRegion = rootRegion;
     this.master = master;

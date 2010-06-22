@@ -46,8 +46,8 @@ public abstract class Chore extends Thread {
    * @param s When this flag is set to true, this thread will cleanup and exit
    * cleanly.
    */
-  public Chore(final int p, final AtomicBoolean s) {
-    super();
+  public Chore(String name, final int p, final AtomicBoolean s) {
+    super(name);
     this.sleeper = new Sleeper(p, s);
     this.stop = s;
   }

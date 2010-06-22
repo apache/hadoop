@@ -104,7 +104,7 @@ public class ServerManager {
    */
   class ServerMonitor extends Chore {
     ServerMonitor(final int period, final AtomicBoolean stop) {
-      super(period, stop);
+      super("ServerMonitor", period, stop);
     }
 
     @Override

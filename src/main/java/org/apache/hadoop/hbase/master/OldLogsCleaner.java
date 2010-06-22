@@ -61,7 +61,7 @@ public class OldLogsCleaner extends Chore {
   public OldLogsCleaner(final int p, final AtomicBoolean s,
                         Configuration conf, FileSystem fs,
                         Path oldLogDir) {
-    super(p, s);
+    super("OldLogsCleaner", p, s);
     this.maxDeletedLogs =
         conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
     this.fs = fs;

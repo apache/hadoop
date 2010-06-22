@@ -869,7 +869,7 @@ public class HRegionServer implements HRegionInterface,
 
     MajorCompactionChecker(final HRegionServer h,
         final int sleepTime, final AtomicBoolean stopper) {
-      super(sleepTime, stopper);
+      super("MajorCompactionChecker", sleepTime, stopper);
       this.instance = h;
       LOG.info("Runs every " + sleepTime + "ms");
     }
