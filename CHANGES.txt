@@ -24,6 +24,7 @@ Release 0.21.0 - Unreleased
    HBASE-2542  Fold stargate contrib into core
    HBASE-2565  Remove contrib module from hbase
    HBASE-2397  Bytes.toStringBinary escapes printable chars
+   HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
