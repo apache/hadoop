@@ -523,6 +523,7 @@ public class HBaseClient {
           //noinspection ThrowableInstanceNeverThrown
           call.setException(new RemoteException( WritableUtils.readString(in),
               WritableUtils.readString(in)));
+          calls.remove(id);
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
