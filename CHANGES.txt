@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HADOOP-6652. Removes the unnecessary cache from ShellBasedUnixGroupsMapping.
     (ddas)
 
+    HADOOP-6815. refreshSuperUserGroupsConfiguration should use server side 
+configuration for the refresh (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
