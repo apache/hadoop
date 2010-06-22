@@ -722,6 +722,7 @@ Release 0.21.0 - Unreleased
    HBASE-2683  Make it obvious in the documentation that ZooKeeper needs 
                permanent storage
    HBASE-2764  Force all Chore tasks to have a thread name
+   HBASE-2762  Add warning to master if running without append enabled
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

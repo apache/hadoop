@@ -3,6 +3,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.JvmVersion"
+  import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
@@ -38,11 +39,20 @@
 <h1 id="page_title">Master: <%=master.getMasterAddress().getHostname()%>:<%=master.getMasterAddress().getPort()%></h1>
 <p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 
+<!-- Various warnings that cluster admins should be aware of -->
 <% if (JvmVersion.isBadJvmVersion()) { %>
   <div class="warning">
   Your current JVM version <%= System.getProperty("java.version") %> is known to be
   unstable with HBase. Please see the
   <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
+  for details.
+  </div>
+<% } %>
+<% if (!FSUtils.isAppendSupported(conf)) { %>
+  <div class="warning">
+  You are currently running the HMaster without HDFS append support enabled.
+  This may result in data loss.
+  Please see the <a href="http://wiki.apache.org/hadoop/Hbase/HdfsSyncSupport">HBase wiki</a>
   for details.
   </div>
 <% } %>

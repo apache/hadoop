@@ -601,6 +601,7 @@ public class FSUtils {
   public static void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
   throws IOException{
     if (!isAppendSupported(conf)) {
+      LOG.warn("Running on HDFS without append enabled may result in data loss");
       return;
     }
     // lease recovery not needed for local file system case.
