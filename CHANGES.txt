@@ -763,7 +763,9 @@ Release 0.21.0 - Unreleased
    HBASE-1923  Bulk incremental load into an existing table
    HBASE-2579  Add atomic checkAndDelete support (Michael Dalton via Stack)
    HBASE-2400  new connector for Avro RPC access to HBase cluster
-   	       (Jeff Hammerbacher via Ryan Rawson)
+               (Jeff Hammerbacher via Ryan Rawson)
+   HBASE-7     Provide a HBase checker and repair tool similar to fsck
+               (dhruba borthakur via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
