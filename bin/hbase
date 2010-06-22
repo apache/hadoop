@@ -73,6 +73,7 @@ if [ $# = 0 ]; then
   echo "  avro             run an HBase Avro server" 
   echo "  zookeeper        run a Zookeeper server"
   echo "  migrate          upgrade an hbase.rootdir"
+  echo "  hbck             run the hbase 'fsck' tool"
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -245,6 +246,8 @@ elif [ "$COMMAND" = "avro" ] ; then
   fi
 elif [ "$COMMAND" = "migrate" ] ; then
   CLASS='org.apache.hadoop.hbase.util.Migrate'
+elif [ "$COMMAND" = "hbck" ] ; then
+  CLASS='org.apache.hadoop.hbase.client.HBaseFsck'
 elif [ "$COMMAND" = "zookeeper" ] ; then
   CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
   if [ "$1" != "stop" ] ; then
