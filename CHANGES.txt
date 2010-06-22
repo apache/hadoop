@@ -68,6 +68,9 @@ Release 0.20-append - Unreleased
     HDFS-1118. Fix socketleak on DFSClient. 
     (Zheng Shao via dhruba)
 
+    HDFS-1254. Support append/sync via the default configuration.
+    (dhruba)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
