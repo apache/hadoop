@@ -100,6 +100,7 @@ public class TestDelegationTokenForProxyUser {
         null, null);
     cluster.waitActive();
     cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
+    ProxyUsers.refreshSuperUserGroupsConfiguration(config);
   }
 
   @After

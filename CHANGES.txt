@@ -91,6 +91,9 @@ Trunk (unreleased changes)
 
     HDFS-1118. Fix socketleak on DFSClient. (Zheng Shao via dhruba)
 
+    HDFS-1192. refreshSuperUserGroupsConfiguration should use server side 
+    configuration for the refresh (for HADOOP-6815) (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
