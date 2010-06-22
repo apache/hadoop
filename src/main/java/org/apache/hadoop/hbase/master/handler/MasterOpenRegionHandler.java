@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -46,11 +47,17 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
   protected byte[] serializedData;
   private String regionName;
   private RegionTransitionEventData hbEventData;
+  ServerManager serverManager;
 
-  public MasterOpenRegionHandler(HBaseEventType eventType, String regionName, byte[] serData) {
-    super(false, HMaster.MASTER, eventType);
+  public MasterOpenRegionHandler(HBaseEventType eventType, 
+                                 ServerManager serverManager, 
+                                 String serverName, 
+                                 String regionName, 
+                                 byte[] serData) {
+    super(false, serverName, eventType);
     this.regionName = regionName;
     this.serializedData = serData;
+    this.serverManager = serverManager;
   }
 
   /**

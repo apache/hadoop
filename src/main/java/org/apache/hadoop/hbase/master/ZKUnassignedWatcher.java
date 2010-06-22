@@ -41,14 +41,20 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 public class ZKUnassignedWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZKUnassignedWatcher.class);
 
-  private ZooKeeperWrapper zkWrapper = null;
+  private ZooKeeperWrapper zkWrapper;
+  String serverName;
+  ServerManager serverManager;
 
-  public static void start(Configuration conf) throws IOException {
-    new ZKUnassignedWatcher(conf);
+  public static void start(Configuration conf, ServerManager serverManager,
+                           String serverName) throws IOException {
+    new ZKUnassignedWatcher(conf, serverManager, serverName);
     LOG.debug("Started ZKUnassigned watcher");
   }
 
-  public ZKUnassignedWatcher(Configuration conf) throws IOException {
+  public ZKUnassignedWatcher(Configuration conf, ServerManager serverManager,
+                             String serverName) throws IOException {
+    this.serverName = serverName;
+    this.serverManager = serverManager;
     zkWrapper =
         ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
     // If the UNASSIGNED ZNode does not exist, create it.
@@ -80,7 +86,8 @@ public class ZKUnassignedWatcher implements Watcher {
 
     // check if the path is for the UNASSIGNED directory we care about
     if(event.getPath() == null ||
-       !event.getPath().startsWith(zkWrapper.getZNodePathForHBase(zkWrapper.getRegionInTransitionZNode()))) {
+       !event.getPath().startsWith(zkWrapper.getZNodePathForHBase(
+           zkWrapper.getRegionInTransitionZNode()))) {
       return;
     }
 
@@ -107,10 +114,12 @@ public class ZKUnassignedWatcher implements Watcher {
        * If there were some nodes created then watch those nodes
        */
       else if(type.equals(EventType.NodeChildrenChanged)) {
-        List<ZNodePathAndData> newZNodes = zkWrapper.watchAndGetNewChildren(event.getPath());
+        List<ZNodePathAndData> newZNodes =
+            zkWrapper.watchAndGetNewChildren(event.getPath());
         for(ZNodePathAndData zNodePathAndData : newZNodes) {
           LOG.debug("Handling updates for znode: " + zNodePathAndData.getzNodePath());
-          handleRegionStateInZK(zNodePathAndData.getzNodePath(), zNodePathAndData.getData());
+          handleRegionStateInZK(zNodePathAndData.getzNodePath(),
+              zNodePathAndData.getData());
         }
       }
     }
@@ -139,17 +148,18 @@ public class ZKUnassignedWatcher implements Watcher {
       return;
     }
     String rgnInTransitNode = zkWrapper.getRegionInTransitionZNode();
-    String region = zNodePath.substring(zNodePath.indexOf(rgnInTransitNode) + rgnInTransitNode.length() + 1);
+    String region = zNodePath.substring(
+        zNodePath.indexOf(rgnInTransitNode) + rgnInTransitNode.length() + 1);
     HBaseEventType rsEvent = HBaseEventType.fromByte(data[0]);
 
     // if the node was CLOSED then handle it
     if(rsEvent == HBaseEventType.RS2ZK_REGION_CLOSED) {
-      new MasterCloseRegionHandler(rsEvent, region, data).submit();
+      new MasterCloseRegionHandler(rsEvent, serverManager, serverName, region, data).submit();
     }
     // if the region was OPENED then handle that
     else if(rsEvent == HBaseEventType.RS2ZK_REGION_OPENED || 
             rsEvent == HBaseEventType.RS2ZK_REGION_OPENING) {
-      new MasterOpenRegionHandler(rsEvent, region, data).submit();
+      new MasterOpenRegionHandler(rsEvent, serverManager, serverName, region, data).submit();
     }
   }
 }

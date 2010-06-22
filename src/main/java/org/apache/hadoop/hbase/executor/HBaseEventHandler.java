@@ -60,18 +60,7 @@ public abstract class HBaseEventHandler implements Runnable
   // listeners that are called before and after an event is processed
   protected static List<HBaseEventHandlerListener> eventHandlerListeners = 
     Collections.synchronizedList(new ArrayList<HBaseEventHandlerListener>());  
-  // static instances needed by the handlers
-  protected static ServerManager serverManager;
-  
-  /**
-   * Note that this has to be called first BEFORE the subclass constructors.
-   * 
-   * TODO: take out after refactor
-   */
-  public static void init(ServerManager serverManager) {
-    HBaseEventHandler.serverManager = serverManager;
-  }
-  
+
   /**
    * This interface provides hooks to listen to various events received by the 
    * queue. A class implementing this can listen to the updates by calling 
@@ -124,7 +113,7 @@ public abstract class HBaseEventHandler implements Runnable
 
       case RS2ZK_REGION_OPENING:
       case RS2ZK_REGION_OPENED:
-        executorServiceType = HBaseExecutorServiceType.MASTER_CLOSEREGION;
+        executorServiceType = HBaseExecutorServiceType.MASTER_OPENREGION;
         break;
         
       case M2ZK_REGION_OFFLINE:
@@ -212,7 +201,11 @@ public abstract class HBaseEventHandler implements Runnable
     }
     
     // call the main process function
-    process();
+    try {
+      process();
+    } catch(Throwable t) {
+      LOG.error("Caught throwable while processing event " + eventType, t);
+    }
 
     // fire all afterProcess listeners
     for(HBaseEventHandlerListener listener : eventHandlerListeners) {

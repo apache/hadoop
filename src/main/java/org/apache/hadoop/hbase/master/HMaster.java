@@ -222,13 +222,11 @@ public class HMaster extends Thread implements HMasterInterface,
     // Start the unassigned watcher - which will create the unassgined region 
     // in ZK. This is needed before RegionManager() constructor tries to assign 
     // the root region.
-    ZKUnassignedWatcher.start(this.conf);
-    // init the various event handlers
-    HBaseEventHandler.init(serverManager);
+    ZKUnassignedWatcher.start(this.conf, serverManager, address.toString());
     // start the "close region" executor service
-    HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(MASTER);
+    HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(address.toString());
     // start the "open region" executor service
-    HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(MASTER);
+    HBaseEventType.RS2ZK_REGION_OPENED.startMasterExecutorService(address.toString());
 
     
     // start the region manager

@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -41,11 +42,17 @@ public class MasterCloseRegionHandler extends HBaseEventHandler
   private String regionName;
   protected byte[] serializedData;
   RegionTransitionEventData hbEventData;
+  ServerManager serverManager;
   
-  public MasterCloseRegionHandler(HBaseEventType eventType, String regionName, byte[] serializedData) {
-    super(false, HMaster.MASTER, eventType);
+  public MasterCloseRegionHandler(HBaseEventType eventType, 
+                                  ServerManager serverManager, 
+                                  String serverName, 
+                                  String regionName, 
+                                  byte[] serializedData) {
+    super(false, serverName, eventType);
     this.regionName = regionName;
     this.serializedData = serializedData;
+    this.serverManager = serverManager;
   }
 
   /**
