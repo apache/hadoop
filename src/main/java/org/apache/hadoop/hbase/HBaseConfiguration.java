@@ -42,7 +42,7 @@ public class HBaseConfiguration extends Configuration {
     //TODO:replace with private constructor, HBaseConfiguration should not extend Configuration
     super();
     addHbaseResources(this);
-    LOG.warn("instantinating HBaseConfiguration() is deprecated. Please use" +
+    LOG.warn("instantiating HBaseConfiguration() is deprecated. Please use" +
     		" HBaseConfiguration#create() to construct a plain Configuration");
   }
 

@@ -406,6 +406,7 @@ Release 0.21.0 - Unreleased
    HBASE-2757  Fix flaky TestFromClientSide test by forcing region assignment
    HBASE-2741  HBaseExecutorService needs to be multi-cluster friendly
                (Karthik Ranganathan via JD)
+   HBASE-2769  Fix typo in warning message for HBaseConfiguration
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
