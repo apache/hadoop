@@ -81,11 +81,7 @@ EOF
 # hadoop-config.sh assume the bin directory is named "bin" and that it
 # is located in HADOOP_HOME.
 unpacked_common_bin_dir=0
-
 if [ ! -f $HADOOP_BIN_DIR/hadoop-config.sh ]; then
-  echo 'OK'
-  echo $COMMON_JAR
-  ls -l $COMMON_JAR
   if [ -f $COMMON_JAR ]; then
     jar xf $COMMON_JAR bin.tgz
     tar xfz bin.tgz -C $HADOOP_BIN_DIR
