@@ -14,12 +14,22 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<faqs id="faqs1">
-  <part id="part1">
-    <faq id="faq1">
-      <question>What is a good question?</question>
+<faqs id="faqs">
+  <part id="General">
+    <faq id="otherfaqs">
+      <question>Are there other HBase FAQs?</question>
       <answer>
-        <p>Any valid XHTML can be placed in the <code>answer</code> element</p>
+          <p>See the FAQ that is up on the wiki, <a href="http://wiki.apache.org/hadoop/Hbase/FAQ">HBase Wiki FAQ</a>
+              as well as the <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting">Troubleshooting</a> page and
+              the <a href="http://wiki.apache.org/hadoop/Hbase/FrequentlySeenErrors">Frequently Seen Errors</a> page.</p>
+      </answer>
+    </faq>
+  </part>
+  <part id="ec2">
+    <faq id="ec2ips">
+      <question>Why doesn't my remote java connection into my ec2 cluster work?</question>
+      <answer>
+          <p>See Andrew's answer here, up on the user list: <a href="http://search-hadoop.com/m/sPdqNFAwyg2">Remote Java client connection into EC2 instance</a></p>
       </answer>
     </faq>
   </part>
