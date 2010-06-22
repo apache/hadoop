@@ -162,8 +162,8 @@ public class TestFilter extends HBaseTestCase {
   }
 
   protected void tearDown() throws Exception {
-    super.tearDown();
     this.region.close();
+    super.tearDown();
   }
 
   public void testNoFilter() throws Exception {
