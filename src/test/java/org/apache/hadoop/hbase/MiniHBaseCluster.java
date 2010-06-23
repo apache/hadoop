@@ -386,15 +386,25 @@ public class MiniHBaseCluster {
 
   /**
    * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
-   * of HRS carrying .META.  Returns -1 if none found.
+   * of HRS carrying regionName. Returns -1 if none found.
    */
   public int getServerWithMeta() {
+    return getServerWith(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+  }
+
+  /**
+   * Get the location of the specified region
+   * @param regionName Name of the region in bytes
+   * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
+   * of HRS carrying .META.. Returns -1 if none found.
+   */
+  public int getServerWith(byte[] regionName) {
     int index = -1;
     int count = 0;
     for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       HRegion metaRegion =
-        hrs.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+        hrs.getOnlineRegion(regionName);
       if (metaRegion != null) {
         index = count;
         break;

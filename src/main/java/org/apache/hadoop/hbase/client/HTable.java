@@ -942,19 +942,24 @@ public class HTable implements HTableInterface {
               values = getConnection().getRegionServerWithRetries(callable);
             }
           } catch (DoNotRetryIOException e) {
-            long timeout = lastNext + scannerTimeout;
-            if (e instanceof UnknownScannerException &&
-                timeout < System.currentTimeMillis()) {
-              long elapsed = System.currentTimeMillis() - lastNext;
-              ScannerTimeoutException ex = new ScannerTimeoutException(
-                  elapsed + "ms passed since the last invocation, " +
-                      "timeout is currently set to " + scannerTimeout);
-              ex.initCause(e);
-              throw ex;
-            }
-            Throwable cause = e.getCause();
-            if (cause == null || !(cause instanceof NotServingRegionException)) {
-              throw e;
+            if (e instanceof UnknownScannerException) {
+              long timeout = lastNext + scannerTimeout;
+              // If we are over the timeout, throw this exception to the client
+              // Else, it's because the region moved and we used the old id
+              // against the new region server; reset the scanner.
+              if (timeout < System.currentTimeMillis()) {
+                long elapsed = System.currentTimeMillis() - lastNext;
+                ScannerTimeoutException ex = new ScannerTimeoutException(
+                    elapsed + "ms passed since the last invocation, " +
+                        "timeout is currently set to " + scannerTimeout);
+                ex.initCause(e);
+                throw ex;
+              }
+            } else {
+              Throwable cause = e.getCause();
+              if (cause == null || !(cause instanceof NotServingRegionException)) {
+                throw e;
+              }
             }
             // Else, its signal from depths of ScannerCallable that we got an
             // NSRE on a next and that we need to reset the scanner.

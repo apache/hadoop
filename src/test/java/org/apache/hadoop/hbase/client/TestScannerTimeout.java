@@ -23,7 +23,11 @@ public class TestScannerTimeout {
       TEST_UTIL = new HBaseTestingUtility();
 
   final Log LOG = LogFactory.getLog(getClass());
-  private final byte[] someBytes = Bytes.toBytes("f");
+  private final static byte[] SOME_BYTES = Bytes.toBytes("f");
+  private final static byte[] TABLE_NAME = Bytes.toBytes("t");
+  private final static int NB_ROWS = 10;
+  private final static int SCANNER_TIMEOUT = 6000;
+  private static HTable table;
 
    /**
    * @throws java.lang.Exception
@@ -31,8 +35,14 @@ public class TestScannerTimeout {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
-    c.setInt("hbase.regionserver.lease.period", 1000);
-    TEST_UTIL.startMiniCluster(1);
+    c.setInt("hbase.regionserver.lease.period", SCANNER_TIMEOUT);
+    TEST_UTIL.startMiniCluster(2);
+    table = TEST_UTIL.createTable(Bytes.toBytes("t"), SOME_BYTES);
+     for (int i = 0; i < NB_ROWS; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.add(SOME_BYTES, SOME_BYTES, SOME_BYTES);
+      table.put(put);
+    }
   }
 
   /**
@@ -48,13 +58,7 @@ public class TestScannerTimeout {
    */
   @Before
   public void setUp() throws Exception {
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
+    TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
 
   /**
@@ -63,22 +67,16 @@ public class TestScannerTimeout {
    */
   @Test
   public void test2481() throws Exception {
-    int initialCount = 10;
-    HTable t = TEST_UTIL.createTable(Bytes.toBytes("t"), someBytes);
-    for (int i = 0; i < initialCount; i++) {
-      Put put = new Put(Bytes.toBytes(i));
-      put.add(someBytes, someBytes, someBytes);
-      t.put(put);
-    }
     Scan scan = new Scan();
-    ResultScanner r = t.getScanner(scan);
+    ResultScanner r = table.getScanner(scan);
     int count = 0;
     try {
       Result res = r.next();
       while (res != null) {
         count++;
         if (count == 5) {
-          Thread.sleep(1500);
+          // Sleep just a bit more to be sure
+          Thread.sleep(SCANNER_TIMEOUT+100);
         }
         res = r.next();
       }
@@ -87,5 +85,25 @@ public class TestScannerTimeout {
       return;
     }
     fail("We should be timing out");
+  }
+
+  /**
+   * Test that scanner can continue even if the region server it was reading
+   * from failed. Before 2772, it reused the same scanner id.
+   * @throws Exception
+   */
+  @Test
+  public void test2772() throws Exception {
+    int rs = TEST_UTIL.getHBaseCluster().getServerWith(
+        TEST_UTIL.getHBaseCluster().getRegions(
+            TABLE_NAME).get(0).getRegionName());
+    Scan scan = new Scan();
+    ResultScanner r = table.getScanner(scan);
+    // This takes exactly 5 seconds
+    TEST_UTIL.getHBaseCluster().getRegionServer(rs).abort("die!");
+    Result[] results = r.next(NB_ROWS);
+    assertEquals(NB_ROWS, results.length);
+    r.close();
+
   }
 }
