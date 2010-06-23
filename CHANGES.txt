@@ -410,6 +410,8 @@ Release 0.21.0 - Unreleased
    HBASE-2769  Fix typo in warning message for HBaseConfiguration
    HBASE-2768  Fix teardown order in TestFilter
    HBASE-2763  Cross-port HADOOP-6833 IPC parameter leak bug
+   HBASE-2758  META region stuck in RS2ZK_REGION_OPENED state
+               (Karthik Ranganathan via jgray)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

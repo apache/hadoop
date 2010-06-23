@@ -161,6 +161,9 @@ public class HMaster extends Thread implements HMasterInterface,
   private long lastFragmentationQuery = -1L;
   private Map<String, Integer> fragmentation = null;
   private final RegionServerOperationQueue regionServerOperationQueue;
+  
+  // True if this is the master that started the cluster.
+  boolean isClusterStartup;
 
   /**
    * Constructor
@@ -169,6 +172,14 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
+    
+    // Figure out if this is a fresh cluster start. This is done by checking the 
+    // number of RS ephemeral nodes. RS ephemeral nodes are created only after 
+    // the primary master has written the address to ZK. So this has to be done 
+    // before we race to write our address to zookeeper.
+    zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
+    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
+    
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
@@ -206,8 +217,6 @@ public class HMaster extends Thread implements HMasterInterface,
     // We'll succeed if we are only  master or if we win the race when many
     // masters.  Otherwise we park here inside in writeAddressToZooKeeper.
     // TODO: Bring up the UI to redirect to active Master.
-    zooKeeperWrapper =
-        ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
     zooKeeperWrapper.registerListener(this);
     this.zkMasterAddressWatcher =
       new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
@@ -219,10 +228,10 @@ public class HMaster extends Thread implements HMasterInterface,
     serverManager = new ServerManager(this);
 
     
-    // Start the unassigned watcher - which will create the unassgined region 
+    // Start the unassigned watcher - which will create the unassigned region 
     // in ZK. This is needed before RegionManager() constructor tries to assign 
     // the root region.
-    ZKUnassignedWatcher.start(this.conf, serverManager, address.toString());
+    ZKUnassignedWatcher.start(this.conf, this);
     // start the "close region" executor service
     HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(address.toString());
     // start the "open region" executor service
@@ -237,6 +246,22 @@ public class HMaster extends Thread implements HMasterInterface,
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
+  }
+  
+  /**
+   * Returns true if this master process was responsible for starting the 
+   * cluster.
+   */
+  public boolean isClusterStartup() {
+    return isClusterStartup;
+  }
+  
+  public void resetClusterStartup() {
+    isClusterStartup = false;
+  }
+  
+  public HServerAddress getHServerAddress() {
+    return address;
   }
 
   /*
@@ -1156,6 +1181,9 @@ public class HMaster extends Thread implements HMasterInterface,
           throw new Exception("Another Master is currently active");
         }
 
+        // we are a failed over master, reset the fact that we started the 
+        // cluster
+        resetClusterStartup();
         // Verify the cluster to see if anything happened while we were away
         joinCluster();
       } catch (Exception e) {

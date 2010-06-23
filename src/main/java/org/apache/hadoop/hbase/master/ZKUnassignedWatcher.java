@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.master.handler.MasterCloseRegionHandler;
 import org.apache.hadoop.hbase.master.handler.MasterOpenRegionHandler;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper.ZNodePathAndData;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
@@ -45,28 +46,45 @@ public class ZKUnassignedWatcher implements Watcher {
   String serverName;
   ServerManager serverManager;
 
-  public static void start(Configuration conf, ServerManager serverManager,
-                           String serverName) throws IOException {
-    new ZKUnassignedWatcher(conf, serverManager, serverName);
+  public static void start(Configuration conf, HMaster master) 
+  throws IOException {
+    new ZKUnassignedWatcher(conf, master);
     LOG.debug("Started ZKUnassigned watcher");
   }
 
-  public ZKUnassignedWatcher(Configuration conf, ServerManager serverManager,
-                             String serverName) throws IOException {
-    this.serverName = serverName;
-    this.serverManager = serverManager;
-    zkWrapper =
-        ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
-    // If the UNASSIGNED ZNode does not exist, create it.
-    zkWrapper.createZNodeIfNotExists(zkWrapper.getRegionInTransitionZNode());
-    // TODO: get the outstanding changes in UNASSIGNED
+  public ZKUnassignedWatcher(Configuration conf, HMaster master) 
+  throws IOException {
+    this.serverName = master.getHServerAddress().toString();
+    this.serverManager = master.getServerManager();
+    zkWrapper = ZooKeeperWrapper.getInstance(conf, HMaster.class.getName());
+    String unassignedZNode = zkWrapper.getRegionInTransitionZNode();
     
+    // If the UNASSIGNED ZNode exists and this is a fresh cluster start, then 
+    // delete it.
+    if(master.isClusterStartup() && zkWrapper.exists(unassignedZNode, false)) {
+      LOG.info("Cluster start, but found " + unassignedZNode + ", deleting it.");
+      try {
+        zkWrapper.deleteZNode(unassignedZNode, true);
+      } catch (KeeperException e) {
+        LOG.error("Could not delete znode " + unassignedZNode, e);
+        throw new IOException(e);
+      } catch (InterruptedException e) {
+        LOG.error("Could not delete znode " + unassignedZNode, e);
+        throw new IOException(e);
+      }
+    }
+    
+    // If the UNASSIGNED ZNode does not exist, create it.
+    zkWrapper.createZNodeIfNotExists(unassignedZNode);
+    
+    // TODO: get the outstanding changes in UNASSIGNED
+
     // Set a watch on Zookeeper's UNASSIGNED node if it exists.
     zkWrapper.registerListener(this);
   }
 
   /**
-   * This is the processing loop that gets triggerred from the ZooKeeperWrapper.
+   * This is the processing loop that gets triggered from the ZooKeeperWrapper.
    * This zookeeper events process function dies the following:
    *   - WATCHES the following events: NodeCreated, NodeDataChanged, NodeChildrenChanged
    *   - IGNORES the following events: None, NodeDeleted
