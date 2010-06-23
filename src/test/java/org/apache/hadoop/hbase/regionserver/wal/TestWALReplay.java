@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,12 +52,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 /**
  * Test replay of edits out of a WAL split.
  */
 public class TestWALReplay {
+  public static final Log LOG = LogFactory.getLog(TestWALReplay.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path hbaseRootDir = null;
@@ -68,14 +70,14 @@ public class TestWALReplay {
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("dfs.support.append", true);
-    // The below config not supported until 
+    // The below config supported by 0.20-append and CDH3b2
     conf.setInt("dfs.client.block.recovery.retries", 2);
     conf.setInt("hbase.regionserver.flushlogentries", 1);
     TEST_UTIL.startMiniDFSCluster(3);
     TEST_UTIL.setNameNodeNameSystemLeasePeriod(100, 10000);
     Path hbaseRootDir =
       TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
-    Log.info("hbase.rootdir=" + hbaseRootDir);
+    LOG.info("hbase.rootdir=" + hbaseRootDir);
     conf.set(HConstants.HBASE_DIR, hbaseRootDir.toString());
   }
 
@@ -411,7 +413,7 @@ public class TestWALReplay {
     assertEquals(1, splits.size());
     // Make sure the file exists
     assertTrue(fs.exists(splits.get(0)));
-    Log.info("Split file=" + splits.get(0));
+    LOG.info("Split file=" + splits.get(0));
     return splits.get(0);
   }
 
@@ -424,13 +426,7 @@ public class TestWALReplay {
     HLog wal = new HLog(FileSystem.get(c), logDir, oldLogDir, c, null);
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.
-    try {
-      HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
-    } catch (Exception e) {
-      // These exceptions should never happen... make RuntimeException of them
-      // if they do.
-      throw new RuntimeException(e);
-    }
+    HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
     return wal;
   }
 }

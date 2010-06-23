@@ -73,7 +73,7 @@ import com.google.common.base.Preconditions;
  * logging levels nor make changes to configuration parameters.
  */
 public class HBaseTestingUtility {
-  private final Log LOG = LogFactory.getLog(getClass());
+  private final static Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private final Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
   private MiniDFSCluster dfsCluster = null;
@@ -888,7 +888,7 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Set maxRecoveryErrorCount in DFSClient.  Currently its hard-coded to 5 and
+   * Set maxRecoveryErrorCount in DFSClient.  In 0.20 pre-append its hard-coded to 5 and
    * makes tests linger.  Here is the exception you'll see:
    * <pre>
    * 2010-06-15 11:52:28,511 WARN  [DataStreamer for file /hbase/.logs/hlog.1276627923013 block blk_928005470262850423_1021] hdfs.DFSClient$DFSOutputStream(2657): Error Recovery for block blk_928005470262850423_1021 failed  because recovery from primary datanode 127.0.0.1:53683 failed 4 times.  Pipeline was 127.0.0.1:53687, 127.0.0.1:53683. Will retry...
@@ -901,20 +901,23 @@ public class HBaseTestingUtility {
    * @throws IllegalArgumentException 
    */
   public static void setMaxRecoveryErrorCount(final OutputStream stream,
-      final int max)
-  throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
-    Class<?> [] clazzes = DFSClient.class.getDeclaredClasses();
-    for (Class<?> clazz: clazzes) {
-      String className = clazz.getSimpleName();
-      if (className.equals("DFSOutputStream")) {
-        if (clazz.isInstance(stream)) {
-          Field maxRecoveryErrorCountField =
-            stream.getClass().getDeclaredField("maxRecoveryErrorCount");
-          maxRecoveryErrorCountField.setAccessible(true);
-          maxRecoveryErrorCountField.setInt(stream, max);
-          break;
+      final int max) {
+    try {
+      Class<?> [] clazzes = DFSClient.class.getDeclaredClasses();
+      for (Class<?> clazz: clazzes) {
+        String className = clazz.getSimpleName();
+        if (className.equals("DFSOutputStream")) {
+          if (clazz.isInstance(stream)) {
+            Field maxRecoveryErrorCountField =
+              stream.getClass().getDeclaredField("maxRecoveryErrorCount");
+            maxRecoveryErrorCountField.setAccessible(true);
+            maxRecoveryErrorCountField.setInt(stream, max);
+            break;
+          }
         }
       }
+    } catch (Exception e) {
+      LOG.info("Could not set max recovery field", e);
     }
   }
 }
