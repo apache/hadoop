@@ -301,6 +301,7 @@
           <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
             <descriptor>src/assembly/bin.xml</descriptor>
+            <descriptor>src/assembly/src.xml</descriptor>
           </descriptors>
         </configuration>
       </plugin>

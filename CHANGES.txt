@@ -734,6 +734,8 @@ Release 0.21.0 - Unreleased
                permanent storage
    HBASE-2764  Force all Chore tasks to have a thread name
    HBASE-2762  Add warning to master if running without append enabled
+   HBASE-2779  Build a -src tgz to sit beside our -bin tgz when you call
+               maven assembly:assembly
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
