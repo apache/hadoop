@@ -413,6 +413,8 @@ Release 0.21.0 - Unreleased
    HBASE-2758  META region stuck in RS2ZK_REGION_OPENED state
                (Karthik Ranganathan via jgray)
    HBASE-2767  Fix reflection in tests that was made incompatible by HDFS-1209
+   HBASE-2617  Load balancer falls into pathological state if one server under
+               average - slop; endless churn
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
