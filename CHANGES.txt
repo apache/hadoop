@@ -94,6 +94,8 @@ Trunk (unreleased changes)
     HDFS-1192. refreshSuperUserGroupsConfiguration should use server side 
     configuration for the refresh (for HADOOP-6815) (boryas)
 
+    HDFS-1036. in DelegationTokenFetch dfs.getURI returns no port (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

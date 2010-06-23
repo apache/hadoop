@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
@@ -31,11 +32,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.DelegationTokenServlet;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -55,6 +56,7 @@ public class DelegationTokenFetcher {
   private final DistributedFileSystem dfs;
   private final UserGroupInformation ugi;
   private final DataOutputStream out;
+  private final Configuration conf;
 
   /**
    * Command-line interface
@@ -87,7 +89,7 @@ public class DelegationTokenFetcher {
           out = new DataOutputStream(new FileOutputStream(args[0]));
           UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-          new DelegationTokenFetcher(dfs, out, ugi).go();
+          new DelegationTokenFetcher(dfs, out, ugi, conf).go();
           
           out.flush();
           System.out.println("Succesfully wrote token of size " + 
@@ -105,10 +107,11 @@ public class DelegationTokenFetcher {
   }
   
   public DelegationTokenFetcher(DistributedFileSystem dfs, 
-      DataOutputStream out, UserGroupInformation ugi) {
+      DataOutputStream out, UserGroupInformation ugi, Configuration conf) {
     checkNotNull("dfs", dfs); this.dfs = dfs;
     checkNotNull("out", out); this.out = out;
     checkNotNull("ugi", ugi); this.ugi = ugi;
+    checkNotNull("conf",conf); this.conf = conf;
   }
   
   private void checkNotNull(String s, Object o) {
@@ -122,9 +125,9 @@ public class DelegationTokenFetcher {
       dfs.getDelegationToken(new Text(fullName));
     
     // Reconstruct the ip:port of the Namenode
+    URI uri = FileSystem.getDefaultUri(conf);
     String nnAddress = 
-      InetAddress.getByName(dfs.getUri().getHost()).getHostAddress() 
-      + ":" + dfs.getUri().getPort();
+      InetAddress.getByName(uri.getHost()).getHostAddress() + ":" + uri.getPort();
     token.setService(new Text(nnAddress));
     
     TokenStorage ts = new TokenStorage();
