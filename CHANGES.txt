@@ -96,6 +96,9 @@ Trunk (unreleased changes)
 
     HDFS-1036. in DelegationTokenFetch dfs.getURI returns no port (boryas)
 
+    HDFS-1017. browsedfs jsp should call JspHelper.getUGI rather 
+    than using createRemoteUser() (jnp via boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -18,7 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
+
+import javax.servlet.http.HttpServletRequest;
 
 import junit.framework.Assert;
 
@@ -32,10 +36,11 @@ import org.junit.Test;
 public class TestNameNodeJspHelper {
 
   private MiniDFSCluster cluster = null;
+  Configuration conf = null;
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     cluster  = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();
   }
@@ -49,7 +54,9 @@ public class TestNameNodeJspHelper {
   @Test
   public void testDelegationToken() throws IOException, InterruptedException {
     NameNode nn = cluster.getNameNode();
-    String tokenString = NamenodeJspHelper.getDelegationToken(nn, "SomeUser");
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    String tokenString = NamenodeJspHelper
+        .getDelegationToken(nn, request, conf);
     //tokenString returned must be null because security is disabled
     Assert.assertEquals(null, tokenString);
   }

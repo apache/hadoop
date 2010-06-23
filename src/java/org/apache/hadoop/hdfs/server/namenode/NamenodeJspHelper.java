@@ -295,20 +295,19 @@ class NamenodeJspHelper {
     }
   }
 
-  static String getDelegationToken(final NameNode nn, final String user
-                                   ) throws IOException, InterruptedException {
-    if (!UserGroupInformation.isSecurityEnabled() ||  user == null) {
-      return null;
-    }
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-    Token<DelegationTokenIdentifier> token =
-      ugi.doAs(
-               new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-                 public Token<DelegationTokenIdentifier> run() throws IOException {
-                   return nn.getDelegationToken(new Text(user));
-                 }
-               });
-    return token.encodeToUrlString();
+  static String getDelegationToken(final NameNode nn,
+      HttpServletRequest request, Configuration conf) throws IOException,
+      InterruptedException {
+    final UserGroupInformation ugi = JspHelper.getUGI(request, conf);
+
+    Token<DelegationTokenIdentifier> token = ugi
+        .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+          public Token<DelegationTokenIdentifier> run() throws IOException {
+            return nn.getDelegationToken(new Text(ugi.getUserName()));
+          }
+        });
+
+    return token == null ? null : token.encodeToUrlString();
   }
 
   static void redirectToRandomDataNode(final NameNode nn, 
@@ -318,8 +317,7 @@ class NamenodeJspHelper {
                                        ) throws IOException,
                                                 InterruptedException {
     final DatanodeID datanode = nn.getNamesystem().getRandomDatanode();
-    final String user = request.getRemoteUser();
-    String tokenString = getDelegationToken(nn, user);
+    String tokenString = getDelegationToken(nn, request, conf);
     // if the user is defined, get a delegation token and stringify it
     final String redirectLocation;
     final String nodeToRedirect;
