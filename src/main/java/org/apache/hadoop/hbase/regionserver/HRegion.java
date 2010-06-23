@@ -156,14 +156,17 @@ public class HRegion implements HeapSize { // , Writable{
 
   final AtomicLong memstoreSize = new AtomicLong(0);
 
-  // This is the table subdirectory.
-  final Path basedir;
+  /**
+   * The directory for the table this region is part of.
+   * This directory contains the directory for this region.
+   */
+  final Path tableDir;
+  
   final HLog log;
   final FileSystem fs;
   final Configuration conf;
   final HRegionInfo regionInfo;
   final Path regiondir;
-  private final Path regionCompactionDir;
   KeyValue.KVComparator comparator;
 
   /*
@@ -238,14 +241,13 @@ public class HRegion implements HeapSize { // , Writable{
    * Should only be used for testing purposes
    */
   public HRegion(){
-    this.basedir = null;
+    this.tableDir = null;
     this.blockingMemStoreSize = 0L;
     this.conf = null;
     this.flushListener = null;
     this.fs = null;
     this.memstoreFlushSize = 0L;
     this.log = null;
-    this.regionCompactionDir = null;
     this.regiondir = null;
     this.regionInfo = null;
     this.threadWakeFrequency = 0L;
@@ -257,7 +259,7 @@ public class HRegion implements HeapSize { // , Writable{
    * {@link HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)} method.
    *
    *
-   * @param basedir qualified path of directory where region should be located,
+   * @param tableDir qualified path of directory where region should be located,
    * usually the table directory.
    * @param log The HLog is the outbound log for any updates to the HRegion
    * (There's a single HLog for all the HRegions on a single HRegionServer.)
@@ -277,9 +279,9 @@ public class HRegion implements HeapSize { // , Writable{
    * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
 
    */
-  public HRegion(Path basedir, HLog log, FileSystem fs, Configuration conf,
+  public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
       HRegionInfo regionInfo, FlushRequester flushListener) {
-    this.basedir = basedir;
+    this.tableDir = tableDir;
     this.comparator = regionInfo.getComparator();
     this.log = log;
     this.fs = fs;
@@ -289,13 +291,11 @@ public class HRegion implements HeapSize { // , Writable{
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
     String encodedNameStr = this.regionInfo.getEncodedName();
-    this.regiondir = new Path(basedir, encodedNameStr);
+    this.regiondir = new Path(tableDir, encodedNameStr);
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
       LOG.debug("Creating region " + this);
     }
-    this.regionCompactionDir =
-      new Path(getCompactionDir(basedir), encodedNameStr);
     long flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
       flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
@@ -327,11 +327,14 @@ public class HRegion implements HeapSize { // , Writable{
     // Write HRI to a file in case we need to recover .META.
     checkRegioninfoOnFilesystem();
 
+    // Remove temporary data left over from old regions
+    cleanupTmpDir();
+    
     // Load in all the HStores.  Get min and max seqids across all families.
     long maxSeqId = -1;
     long minSeqId = Integer.MAX_VALUE;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
-      Store store = instantiateHStore(this.basedir, c);
+      Store store = instantiateHStore(this.tableDir, c);
       this.stores.put(c.getName(), store);
       long storeSeqId = store.getMaxSequenceId();
       if (storeSeqId > maxSeqId) {
@@ -694,10 +697,10 @@ public class HRegion implements HeapSize { // , Writable{
       // Create a region instance and then move the splits into place under
       // regionA and regionB.
       HRegion regionA =
-        HRegion.newHRegion(basedir, log, fs, conf, regionAInfo, null);
+        HRegion.newHRegion(tableDir, log, fs, conf, regionAInfo, null);
       moveInitialFilesIntoPlace(this.fs, dirA, regionA.getRegionDir());
       HRegion regionB =
-        HRegion.newHRegion(basedir, log, fs, conf, regionBInfo, null);
+        HRegion.newHRegion(tableDir, log, fs, conf, regionBInfo, null);
       moveInitialFilesIntoPlace(this.fs, dirB, regionB.getRegionDir());
 
       return new HRegion [] {regionA, regionB};
@@ -730,28 +733,25 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /*
-   * @param dir
-   * @return compaction directory for the passed in <code>dir</code>
-   */
-  static Path getCompactionDir(final Path dir) {
-   return new Path(dir, HConstants.HREGION_COMPACTIONDIR_NAME);
-  }
-
-  /*
    * Do preparation for pending compaction.
-   * Clean out any vestiges of previous failed compactions.
    * @throws IOException
    */
   private void doRegionCompactionPrep() throws IOException {
-    doRegionCompactionCleanup();
   }
 
   /*
-   * Removes the compaction directory for this Store.
-   * @throws IOException
+   * Removes the temporary directory for this Store.
    */
-  private void doRegionCompactionCleanup() throws IOException {
-    FSUtils.deleteDirectory(this.fs, this.regionCompactionDir);
+  private void cleanupTmpDir() throws IOException {
+    FSUtils.deleteDirectory(this.fs, getTmpDir());
+  }
+  
+  /**
+   * Get the temporary diretory for this region. This directory
+   * will have its contents removed when the region is reopened.
+   */
+  Path getTmpDir() {
+    return new Path(getRegionDir(), ".tmp");
   }
 
   void setForceMajorCompaction(final boolean b) {
@@ -832,7 +832,6 @@ public class HRegion implements HeapSize { // , Writable{
             splitRow = ss.getSplitRow();
           }
         }
-        doRegionCompactionCleanup();
         String timeTaken = StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(),
             startTime);
         LOG.info("compaction completed on region " + this + " in " + timeTaken);
@@ -2040,9 +2039,9 @@ public class HRegion implements HeapSize { // , Writable{
     return true;
   }
 
-  protected Store instantiateHStore(Path baseDir, HColumnDescriptor c)
+  protected Store instantiateHStore(Path tableDir, HColumnDescriptor c)
   throws IOException {
-    return new Store(baseDir, this, c, this.fs, this.conf);
+    return new Store(tableDir, this, c, this.fs, this.conf);
   }
 
   /**
@@ -2270,8 +2269,8 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /** @return Path of region base directory */
-  public Path getBaseDir() {
-    return this.basedir;
+  public Path getTableDir() {
+    return this.tableDir;
   }
 
   /**
@@ -2465,7 +2464,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * A utility method to create new instances of HRegion based on the
    * {@link HConstants#REGION_IMPL} configuration property.
-   * @param basedir qualified path of directory where region should be located,
+   * @param tableDir qualified path of directory where region should be located,
    * usually the table directory.
    * @param log The HLog is the outbound log for any updates to the HRegion
    * (There's a single HLog for all the HRegions on a single HRegionServer.)
@@ -2483,7 +2482,7 @@ public class HRegion implements HeapSize { // , Writable{
    * failed.  Can be null.
    * @return the new instance
    */
-  public static HRegion newHRegion(Path basedir, HLog log, FileSystem fs, Configuration conf,
+  public static HRegion newHRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
                                    HRegionInfo regionInfo, FlushRequester flushListener) {
     try {
       @SuppressWarnings("unchecked")
@@ -2494,7 +2493,7 @@ public class HRegion implements HeapSize { // , Writable{
           regionClass.getConstructor(Path.class, HLog.class, FileSystem.class,
               Configuration.class, HRegionInfo.class, FlushRequester.class);
 
-      return c.newInstance(basedir, log, fs, conf, regionInfo, flushListener);
+      return c.newInstance(tableDir, log, fs, conf, regionInfo, flushListener);
     } catch (Throwable e) {
       // todo: what should I throw here?
       throw new IllegalStateException("Could not instantiate a region instance.", e);
@@ -2796,7 +2795,7 @@ public class HRegion implements HeapSize { // , Writable{
     Configuration conf = a.getConf();
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
-    Path basedir = a.getBaseDir();
+    Path tableDir = a.getTableDir();
     // Presume both are of same region type -- i.e. both user or catalog
     // table regions.  This way can use comparator.
     final byte[] startKey =
@@ -2825,7 +2824,7 @@ public class HRegion implements HeapSize { // , Writable{
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
     LOG.info("Creating new region " + newRegionInfo.toString());
     String encodedName = newRegionInfo.getEncodedName();
-    Path newRegionDir = HRegion.getRegionDir(a.getBaseDir(), encodedName);
+    Path newRegionDir = HRegion.getRegionDir(a.getTableDir(), encodedName);
     if(fs.exists(newRegionDir)) {
       throw new IOException("Cannot merge; target file collision at " +
           newRegionDir);
@@ -2844,7 +2843,7 @@ public class HRegion implements HeapSize { // , Writable{
     byFamily = filesByFamily(byFamily, b.close());
     for (Map.Entry<byte [], List<StoreFile>> es : byFamily.entrySet()) {
       byte [] colFamily = es.getKey();
-      makeColumnFamilyDirs(fs, basedir, newRegionInfo, colFamily);
+      makeColumnFamilyDirs(fs, tableDir, newRegionInfo, colFamily);
       // Because we compacted the source regions we should have no more than two
       // HStoreFiles per family and there will be no reference store
       List<StoreFile> srcFiles = es.getValue();
@@ -2860,7 +2859,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       for (StoreFile hsf: srcFiles) {
         StoreFile.rename(fs, hsf.getPath(),
-          StoreFile.getUniqueFile(fs, Store.getStoreHomedir(basedir,
+          StoreFile.getUniqueFile(fs, Store.getStoreHomedir(tableDir,
             newRegionInfo.getEncodedName(), colFamily)));
       }
     }
@@ -2868,7 +2867,7 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Files for new region");
       listPaths(fs, newRegionDir);
     }
-    HRegion dstRegion = HRegion.newHRegion(basedir, log, fs, conf, newRegionInfo, null);
+    HRegion dstRegion = HRegion.newHRegion(tableDir, log, fs, conf, newRegionInfo, null);
     dstRegion.initialize();
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
@@ -3073,7 +3072,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (21 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +

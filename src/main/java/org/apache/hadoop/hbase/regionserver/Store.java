@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
@@ -103,7 +102,6 @@ public class Store implements HeapSize {
   private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
     new CopyOnWriteArraySet<ChangedReadersObserver>();
 
-  private final Path regionCompactionDir;
   private final Object compactLock = new Object();
   private final int compactionThreshold;
   private final int blocksize;
@@ -153,8 +151,6 @@ public class Store implements HeapSize {
       this.ttl *= 1000;
     }
     this.memstore = new MemStore(this.comparator);
-    this.regionCompactionDir = new Path(HRegion.getCompactionDir(basedir),
-                                        info.getEncodedName());
     this.storeNameStr = Bytes.toString(this.family.getName());
 
     // By default, we compact if an HStore has more than
@@ -206,6 +202,14 @@ public class Store implements HeapSize {
       final String encodedName, final byte [] family) {
     return new Path(tabledir, new Path(encodedName,
       new Path(Bytes.toString(family))));
+  }
+  
+  /**
+   * Return the directory in which this store stores its
+   * StoreFiles
+   */
+  public Path getHomedir() {
+    return homedir;
   }
 
   /*
@@ -322,8 +326,7 @@ public class Store implements HeapSize {
     if (!srcFs.equals(fs)) {
       LOG.info("File " + srcPath + " on different filesystem than " +
           "destination store - moving to this filesystem.");
-      Path tmpDir = new Path(homedir, "_tmp");
-      Path tmpPath = StoreFile.getRandomFilename(fs, tmpDir);
+      Path tmpPath = getTmpPath();
       FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
       LOG.info("Copied to temporary path on dst filesystem: " + tmpPath);
       srcPath = tmpPath;
@@ -352,6 +355,16 @@ public class Store implements HeapSize {
     }
     LOG.info("Successfully loaded store file " + srcPath
         + " into store " + this + " (new location: " + dstPath + ")");
+  }
+
+  /**
+   * Get a temporary path in this region. These temporary files
+   * will get cleaned up when the region is re-opened if they are
+   * still around.
+   */
+  private Path getTmpPath() throws IOException {
+    return StoreFile.getRandomFilename(
+        fs, region.getTmpDir());
   }
 
   /**
@@ -424,7 +437,7 @@ public class Store implements HeapSize {
     // if we fail.
     synchronized (flushLock) {
       // A. Write the map out to the disk
-      writer = createWriter(this.homedir, set.size());
+      writer = createWriterInTmp(set.size());
       int entries = 0;
       try {
         for (KeyValue kv: set) {
@@ -441,7 +454,13 @@ public class Store implements HeapSize {
         writer.close();
       }
     }
-    StoreFile sf = new StoreFile(this.fs, writer.getPath(), blockcache,
+    
+    // Write-out finished successfully, move into the right spot
+    Path dstPath = StoreFile.getUniqueFile(fs, homedir);
+    LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
+    fs.rename(writer.getPath(), dstPath);
+    
+    StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
       this.conf, this.family.getBloomFilterType(), this.inMemory);
     Reader r = sf.createReader();
     this.storeSize += r.length();
@@ -456,13 +475,11 @@ public class Store implements HeapSize {
   }
 
   /*
-   * @return Writer for this store.
-   * @param basedir Directory to put writer in.
-   * @throws IOException
+   * @return Writer for a new StoreFile in the tmp dir.
    */
-  private StoreFile.Writer createWriter(final Path basedir, int maxKeyCount)
+  private StoreFile.Writer createWriterInTmp(int maxKeyCount)
   throws IOException {
-    return StoreFile.createWriter(this.fs, basedir, this.blocksize,
+    return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         this.compression, this.comparator, this.conf,
         this.family.getBloomFilterType(), maxKeyCount);
   }
@@ -570,12 +587,6 @@ public class Store implements HeapSize {
         return checkSplit(forceSplit);
       }
 
-      if (!fs.exists(this.regionCompactionDir) &&
-          !fs.mkdirs(this.regionCompactionDir)) {
-        LOG.warn("Mkdir on " + this.regionCompactionDir.toString() + " failed");
-        return checkSplit(forceSplit);
-      }
-
       // HBASE-745, preparing all store file sizes for incremental compacting
       // selection.
       int countOfFiles = filesToCompact.size();
@@ -641,7 +652,7 @@ public class Store implements HeapSize {
       LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in " +
           this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
         (references? ", hasReferences=true,": " ") + " into " +
-          FSUtils.getPath(this.regionCompactionDir) + ", seqid=" + maxId);
+          region.getTmpDir() + ", seqid=" + maxId);
       HFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
       // Move the compaction into place.
       StoreFile sf = completeCompaction(filesToCompact, writer);
@@ -783,7 +794,7 @@ public class Store implements HeapSize {
           // output to writer:
           for (KeyValue kv : kvs) {
             if (writer == null) {
-              writer = createWriter(this.regionCompactionDir, maxKeyCount);
+              writer = createWriterInTmp(maxKeyCount);
             }
             writer.append(kv);
           }
@@ -798,7 +809,7 @@ public class Store implements HeapSize {
       MinorCompactingStoreScanner scanner = null;
       try {
         scanner = new MinorCompactingStoreScanner(this, scanners);
-        writer = createWriter(this.regionCompactionDir, maxKeyCount);
+        writer = createWriterInTmp(maxKeyCount);
         while (scanner.next(writer)) {
           // Nothing to do
         }
@@ -1451,7 +1462,7 @@ public class Store implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (15 * ClassSize.REFERENCE) +
+      ClassSize.OBJECT + (14 * ClassSize.REFERENCE) +
       (4 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + (Bytes.SIZEOF_BOOLEAN * 2));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +

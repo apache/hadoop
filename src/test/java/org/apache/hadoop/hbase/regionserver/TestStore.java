@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -31,8 +32,15 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -44,11 +52,17 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+
+import com.google.common.base.Joiner;
 
 /**
  * Test class fosr the Store
  */
 public class TestStore extends TestCase {
+  public static final Log LOG = LogFactory.getLog(TestStore.class);
+  
   Store store;
   byte [] table = Bytes.toBytes("table");
   byte [] family = Bytes.toBytes("family");
@@ -91,12 +105,16 @@ public class TestStore extends TestCase {
   }
 
   private void init(String methodName) throws IOException {
+    init(methodName, HBaseConfiguration.create());
+  }
+  
+  private void init(String methodName, Configuration conf)
+  throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
     Path logdir = new Path(DIR+methodName+"/logs");
     Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
-    Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
 
     fs.delete(logdir, true);
@@ -309,6 +327,93 @@ public class TestStore extends TestCase {
 
   }
 
+  public void testHandleErrorsInFlush() throws Exception {
+    LOG.info("Setting up a faulty file system that cannot write");
+
+    Configuration conf = HBaseConfiguration.create();
+    // Set a different UGI so we don't get the same cached LocalFS instance
+    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        "testhandleerrorsinflush,foo");
+    // Inject our faulty LocalFileSystem
+    conf.setClass("fs.file.impl", FaultyFileSystem.class,
+        FileSystem.class);
+    // Make sure it worked (above is sensitive to caching details in hadoop core)
+    FileSystem fs = FileSystem.get(conf);
+    assertEquals(FaultyFileSystem.class, fs.getClass());
+    
+    // Initialize region
+    init(getName(), conf);
+
+    LOG.info("Adding some data");
+    this.store.add(new KeyValue(row, family, qf1, null));
+    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf3, null));
+
+    LOG.info("Before flush, we should have no files");
+    FileStatus[] files = fs.listStatus(store.getHomedir());
+    Path[] paths = FileUtil.stat2Paths(files);
+    System.err.println("Got paths: " + Joiner.on(",").join(paths));
+    assertEquals(0, paths.length);
+        
+    //flush
+    try {
+      LOG.info("Flushing");
+      flush(1);
+      fail("Didn't bubble up IOE!");
+    } catch (IOException ioe) {
+      assertTrue(ioe.getMessage().contains("Fault injected"));
+    }
+ 
+    LOG.info("After failed flush, we should still have no files!");
+    files = fs.listStatus(store.getHomedir());
+    paths = FileUtil.stat2Paths(files);
+    System.err.println("Got paths: " + Joiner.on(",").join(paths));
+    assertEquals(0, paths.length);
+  }
+
+  
+  static class FaultyFileSystem extends FilterFileSystem {
+    List<SoftReference<FaultyOutputStream>> outStreams =
+      new ArrayList<SoftReference<FaultyOutputStream>>();
+    private long faultPos = 200;
+    
+    public FaultyFileSystem() {
+      super(new LocalFileSystem());
+      System.err.println("Creating faulty!");
+    }
+    
+    @Override
+    public FSDataOutputStream create(Path p) throws IOException {
+      return new FaultyOutputStream(super.create(p), faultPos);
+    }
+
+  }
+  
+  static class FaultyOutputStream extends FSDataOutputStream {
+    volatile long faultPos = Long.MAX_VALUE;
+    
+    public FaultyOutputStream(FSDataOutputStream out,
+        long faultPos) throws IOException {
+      super(out, null);
+      this.faultPos = faultPos;
+    }
+
+    @Override
+    public void write(byte[] buf, int offset, int length) throws IOException {
+      System.err.println("faulty stream write at pos " + getPos());
+      injectFault();
+      super.write(buf, offset, length);
+    }
+    
+    private void injectFault() throws IOException {
+      if (getPos() >= faultPos) {
+        throw new IOException("Fault injected");
+      }
+    }
+  }
+
+  
+  
   private static void flushStore(Store store, long id) throws IOException {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();

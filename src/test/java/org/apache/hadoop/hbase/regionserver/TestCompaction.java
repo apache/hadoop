@@ -74,9 +74,6 @@ public class TestCompaction extends HBaseTestCase {
     super.setUp();
     HTableDescriptor htd = createTableDescriptor(getName());
     this.r = createNewHRegion(htd, null, null);
-    this.compactionDir = HRegion.getCompactionDir(this.r.getBaseDir());
-    this.regionCompactionDir = new Path(this.compactionDir,
-                        this.r.getRegionInfo().getEncodedName());
   }
 
   @Override
@@ -150,10 +147,6 @@ public class TestCompaction extends HBaseTestCase {
 //    assertEquals(cellValues.length, 3);
     r.flushcache();
     r.compactStores();
-    // check compaction dir is exists
-    assertTrue(this.cluster.getFileSystem().exists(this.compactionDir));
-    // check Compaction Dir for this Regions is cleaned up
-    assertTrue(!this.cluster.getFileSystem().exists(this.regionCompactionDir));
     // Always 3 versions if that is what max versions is.
     byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
