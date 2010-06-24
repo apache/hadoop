@@ -118,7 +118,7 @@ public class PerformanceEvaluation {
   private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
-  private boolean flushCommits = false;
+  private boolean flushCommits = true;
   private boolean writeToWAL = true;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -1250,7 +1250,7 @@ public class PerformanceEvaluation {
 
         final String writeToWAL = "--writeToWAL=";
         if (cmd.startsWith(writeToWAL)) {
-          this.flushCommits = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
+          this.writeToWAL = Boolean.parseBoolean(cmd.substring(writeToWAL.length()));
           continue;
         }
 
