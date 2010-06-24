@@ -417,6 +417,8 @@ Release 0.21.0 - Unreleased
                average - slop; endless churn
    HBASE-2729  Interrupted or failed memstore flushes should not corrupt the
                region
+   HBASE-2774  Spin in ReadWriteConsistencyControl eating CPU (load > 40) and
+               no progress running YCSB on clean cluster startup                     
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
