@@ -9,11 +9,7 @@
   <fileSets>
     <fileSet>
       <includes>
-        <include>${basedir}/CHANGES*</include>
-        <include>${basedir}/README*</include>
-        <include>${basedir}/LICENSE*</include>
-        <include>${basedir}/NOTICE*</include>
-        <include>${basedir}/KNOWN*</include>
+        <include>${basedir}/*.txt</include>
       </includes>
     </fileSet>
     <fileSet>
