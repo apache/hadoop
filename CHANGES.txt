@@ -417,6 +417,8 @@ Release 0.21.0 - Unreleased
                average - slop; endless churn
    HBASE-2729  Interrupted or failed memstore flushes should not corrupt the
                region
+   HBASE-2772  Scan doesn't recover from region server failure
+   HBASE-2775  Update of hadoop jar in HBASE-2771 broke TestMultiClusters
    HBASE-2774  Spin in ReadWriteConsistencyControl eating CPU (load > 40) and
                no progress running YCSB on clean cluster startup                     
 
