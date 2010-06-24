@@ -242,7 +242,8 @@
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
     <mkdir dir="${build.anttasks}"/>
- 
+    <mkdir dir="${build.dir}/c++"/>
+    
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
     <mkdir dir="${test.build.extraconf}"/>
@@ -947,6 +948,10 @@
 
     <copy todir="${dist.dir}/src" includeEmptyDirs="true">
       <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
+    </copy>
+
+    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
+      <fileset dir="${build.dir}/c++"/>
     </copy>
 
     <copy todir="${dist.dir}/" file="build.xml"/>

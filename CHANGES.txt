@@ -1002,6 +1002,8 @@ Release 0.21.0 - Unreleased
 
     HDFS-1255. Fix failing test-libhdfs.sh test. (tomwhite)
 
+    HDFS-1256. libhdfs is missing from the tarball. (tomwhite)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS
