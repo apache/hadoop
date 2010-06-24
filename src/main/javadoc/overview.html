@@ -54,7 +54,13 @@
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
   <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available except u18 (u19 is fine).</li>
-  <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.</li>
+  <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.
+ HBase will lose data unless it is running on an HDFS that has a durable sync operation.
+ Currently only the <a href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">0.20-append</a>
+ branch has this attribute.  No official releases have been made from this branch as of this writing
+ so you will have to build your own Hadoop from the tip of this branch
+ (or install Cloudera's <a href="http://archive.cloudera.com/docs/">CDH3b2</a>
+ when its available; it will have a durable sync).</li>
   <li>
     <em>ssh</em> must be installed and <em>sshd</em> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
    You must be able to ssh to all nodes, including your local node, using passwordless login
@@ -77,22 +83,7 @@
     on your cluster, or an equivalent.
   </li>
   <li>
-    This is the current list of patches we recommend you apply to your running Hadoop cluster:
-    <ul>
-      <li>
-        <a href="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630: <em>"In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block"</em></a>.
-        Dead DataNodes take ten minutes to timeout at NameNode.
-        In the meantime the NameNode can still send DFSClients to the dead DataNode as host for
-        a replicated block. DFSClient can get stuck on trying to get block from a
-        dead node. This patch allows DFSClients pass NameNode lists of known dead DataNodes.
-        Recommended, particularly if your cluster is small. Apply to your hadoop cluster and
-        replace the <code>${HBASE_HOME}/lib/hadoop-hdfs-X.X.X.jar</code> with the built
-        patched version.
-      </li>
-    </ul>
-  </li>
-  <li>
-    HBase is a database, it uses a lot of files at the same time. The default <b>ulimit -n</b> of 1024 on *nix systems is insufficient.
+    The default <b>ulimit -n</b> of 1024 on *nix systems will be insufficient.
     Any significant amount of loading will lead you to
     <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>.
     You will also notice errors like:
@@ -100,8 +91,9 @@
 2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
 2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
     </pre>
-    Do yourself a favor and change this to more than 10k using the FAQ.
-    Also, HDFS has an upper bound of files that it can serve at the same time, called xcievers (yes, this is <em>misspelled</em>). Again, before doing any loading,
+    Do yourself a favor and change this to more than 10k. See the FAQ in the hbase wiki for how.
+    Also, HDFS has an upper bound of files that it can serve at the same time,
+    called xcievers (yes, this is <em>misspelled</em>). Again, before doing any loading,
     make sure you configured Hadoop's conf/hdfs-site.xml with this:
     <pre>
 &lt;property&gt;
