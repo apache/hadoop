@@ -88,14 +88,14 @@ public class ReadWriteConsistencyControl {
       synchronized (readWaiters) {
         try {
           readWaiters.wait(0);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ie) {
           // We were interrupted... finish the loop -- i.e. cleanup --and then
           // on our way out, reset the interrupt flag.
           interrupted = true;
         }
       }
     }
-    if (interrupted) Thread.currentThread.interrupt();
+    if (interrupted) Thread.currentThread().interrupt();
   }
 
   public long memstoreReadPoint() {
