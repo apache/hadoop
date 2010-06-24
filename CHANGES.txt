@@ -743,6 +743,7 @@ Release 0.21.0 - Unreleased
    HBASE-2783  Quick edit of 'Getting Started' for development release 0.89.x
    HBASE-2345  Add Test in 0.20 to Check for proper HDFS-200 append/sync support
                (Nicolas Spiegelberg via JD)
+   HBASE-2786  TestHLog.testSplit hangs (Nicolas Spiegelberg via JD)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

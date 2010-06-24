@@ -38,9 +38,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -141,13 +138,10 @@ public class TestHLog extends HBaseTestCase {
         }
         log.rollWriter();
       }
-      Configuration newConf = new Configuration(this.conf);
-      // We disable appends here because the last file is still being
-      // considered as under construction by the same DFSClient.
-      newConf.setBoolean("dfs.support.append", false);
+      log.close();
       Path splitsdir = new Path(this.dir, "splits");
       List<Path> splits =
-        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, newConf);
+        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
