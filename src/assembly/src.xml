@@ -24,9 +24,6 @@
       <directory>conf</directory>
     </fileSet>
     <fileSet>
-      <directory>docs</directory>
-    </fileSet>
-    <fileSet>
       <directory>bin</directory>
       <fileMode>755</fileMode>
     </fileSet>
