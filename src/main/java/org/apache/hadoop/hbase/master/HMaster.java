@@ -504,8 +504,7 @@ public class HMaster extends Thread implements HMasterInterface,
               this.serverManager.getServersToServerInfo().keySet().toString());
           }
         }
-        final HServerAddress root = this.regionManager.getRootRegionLocation();
-        switch (this.regionServerOperationQueue.process(root)) {
+        switch (this.regionServerOperationQueue.process()) {
         case FAILED:
             // If FAILED op processing, bad. Exit.
           break FINISHED;

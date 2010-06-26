@@ -423,6 +423,8 @@ Release 0.21.0 - Unreleased
                no progress running YCSB on clean cluster startup                     
    HBASE-2785  TestScannerTimeout.test2772 is flaky
    HBASE-2787  PE is confused about flushCommits
+   HBASE-2707  Can't recover from a dead ROOT server if any exceptions happens
+               during log splitting
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -111,17 +111,16 @@ public class RegionServerOperationQueue {
 
   /**
    * Try to get an operation off of the queue and process it.
-   * @param rootRegionLocation Location of the root region.
    * @return {@link ProcessingResultCode#PROCESSED},
    * {@link ProcessingResultCode#REQUEUED},
    * {@link ProcessingResultCode#REQUEUED_BUT_PROBLEM}
    */
-  public synchronized ProcessingResultCode process(final HServerAddress rootRegionLocation) {
+  public synchronized ProcessingResultCode process() {
     RegionServerOperation op = null;
     // Only process the delayed queue if root region is online.  If offline,
     // the operation to put it online is probably in the toDoQueue.  Process
     // it first.
-    if (rootRegionLocation != null) {
+    if (toDoQueue.isEmpty()) {
       op = delayedToDoQueue.poll();
     }
     if (op == null) {

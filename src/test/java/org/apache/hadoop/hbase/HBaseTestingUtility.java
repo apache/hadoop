@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -918,6 +919,37 @@ public class HBaseTestingUtility {
       }
     } catch (Exception e) {
       LOG.info("Could not set max recovery field", e);
+    }
+  }
+
+
+  /**
+   * Wait until <code>countOfRegion</code> in .META. have a non-empty
+   * info:server.  This means all regions have been deployed, master has been
+   * informed and updated .META. with the regions deployed server.
+   * @param conf Configuration
+   * @param countOfRegions How many regions in .META.
+   * @throws IOException
+   */
+  public void waitUntilAllRegionsAssigned(final int countOfRegions)
+  throws IOException {
+    HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
+    while (true) {
+      int rows = 0;
+      Scan scan = new Scan();
+      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+      ResultScanner s = meta.getScanner(scan);
+      for (Result r = null; (r = s.next()) != null;) {
+        byte [] b =
+          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+        if (b == null || b.length <= 0) break;
+        rows++;
+      }
+      s.close();
+      // If I get to here and all rows have a Server, then all have been assigned.
+      if (rows == countOfRegions) break;
+      LOG.info("Found=" + rows);
+      Threads.sleep(1000); 
     }
   }
 }
