@@ -18,9 +18,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
+import static org.junit.Assert.*;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.master.RegionServerOperationQueue.ProcessingResultCode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,6 +51,8 @@ public class TestRegionServerOperationQueue {
   }
 
   @Test
-  public void testNothing() throws Exception {
+  public void testWeDoNotGetStuckInDelayQueue() throws Exception {
+    ProcessingResultCode code = this.queue.process();
+    assertTrue(ProcessingResultCode.NOOP == code);
   }
 }
