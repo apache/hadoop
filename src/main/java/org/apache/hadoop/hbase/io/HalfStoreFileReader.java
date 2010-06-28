@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,9 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -155,11 +152,6 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return this.delegate.seekBefore(key, offset, length);
       }
 
-      public boolean shouldSeek(byte[] row, 
-          final SortedSet<byte[]> columns) {
-        return this.delegate.shouldSeek(row, columns);
-      }
-
       public boolean seekTo() throws IOException {
         if (top) {
           int r = this.delegate.seekTo(splitkey);
@@ -209,7 +201,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return delegate.seekTo(key, offset, length);
       }
 
-      public Reader getReader() {
+      public org.apache.hadoop.hbase.io.hfile.HFile.Reader getReader() {
         return this.delegate.getReader();
       }
 

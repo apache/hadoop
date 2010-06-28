@@ -24,28 +24,31 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
-
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.SortedSet;
 
 /**
- * A KeyValue scanner that iterates over a single HFile
+ * KeyValueScanner adaptor over the Reader.  It also provides hooks into
+ * bloom filter things.
  */
 class StoreFileScanner implements KeyValueScanner {
   static final Log LOG = LogFactory.getLog(Store.class);
 
-  private HFileScanner hfs;
+  // the reader it comes from:
+  private final StoreFile.Reader reader;
+  private final HFileScanner hfs;
   private KeyValue cur = null;
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  private StoreFileScanner(HFileScanner hfs) {
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs) {
+    this.reader = reader;
     this.hfs = hfs;
   }
 
@@ -60,16 +63,12 @@ class StoreFileScanner implements KeyValueScanner {
     List<StoreFileScanner> scanners =
       new ArrayList<StoreFileScanner>(filesToCompact.size());
     for (StoreFile file : filesToCompact) {
-      Reader r = file.createReader();
-      scanners.add(new StoreFileScanner(r.getScanner(cacheBlocks, usePread)));
+      StoreFile.Reader r = file.createReader();
+      scanners.add(r.getStoreFileScanner(cacheBlocks, usePread));
     }
     return scanners;
   }
-  
-  public HFileScanner getHFileScanner() {
-    return this.hfs;
-  }
-  
+
   public String toString() {
     return "StoreFileScanner[" + hfs.toString() + ", cur=" + cur + "]";
   }
@@ -130,5 +129,11 @@ class StoreFileScanner implements KeyValueScanner {
     }
     // Seeked to the exact key
     return true;
+  }
+
+  // Bloom filter hook.
+  public boolean shouldSeek(final byte[] row,
+                            final SortedSet<byte[]> columns) {
+    return reader.shouldSeek(row, columns);
   }
 }

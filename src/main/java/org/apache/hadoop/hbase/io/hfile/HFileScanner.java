@@ -66,17 +66,6 @@ public interface HFileScanner {
   public boolean seekBefore(byte [] key) throws IOException;
   public boolean seekBefore(byte []key, int offset, int length) throws IOException;
   /**
-   * Optimization for single key lookups.  If the file has a filter, 
-   * perform a lookup on the key.
-   * @param row the row to scan
-   * @param family the column family to scan
-   * @param columns the array of column qualifiers to scan
-   * @return False if the key definitely does not exist in this ScanFile
-   * @throws IOException
-   */
-  public boolean shouldSeek(final byte[] row,
-      final SortedSet<byte[]> columns);
-  /**
    * Positions this scanner at the start of the file.
    * @return False if empty file; i.e. a call to next would return false and
    * the current key and value are undefined.

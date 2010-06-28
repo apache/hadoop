@@ -79,7 +79,7 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
    * @return True if more.
    * @throws IOException
    */
-  public boolean next(HFile.Writer writer) throws IOException {
+  public boolean next(StoreFile.Writer writer) throws IOException {
     KeyValue row = heap.peek();
     if (row == null) {
       close();

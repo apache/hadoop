@@ -1,35 +1,6 @@
-/**
+/*
+ * Copyright 2010 The Apache Software Foundation
  *
- * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
- * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
- * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
- *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
- *    the documentation and/or other materials provided with the distribution.
- *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
- *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,41 +19,38 @@
  */
 
 package org.apache.hadoop.hbase.util;
- 
-import java.io.DataOutput;
-import java.io.DataInput;
-import java.io.IOException;
-import java.lang.Math;
-import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.util.bloom.Filter;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * Implements a <i>Bloom filter</i>, as defined by Bloom in 1970.
  * <p>
- * The Bloom filter is a data structure that was introduced in 1970 and that has been adopted by 
+ * The Bloom filter is a data structure that was introduced in 1970 and that has been adopted by
  * the networking research community in the past decade thanks to the bandwidth efficiencies that it
- * offers for the transmission of set membership information between networked hosts.  A sender encodes 
- * the information into a bit vector, the Bloom filter, that is more compact than a conventional 
- * representation. Computation and space costs for construction are linear in the number of elements.  
- * The receiver uses the filter to test whether various elements are members of the set. Though the 
- * filter will occasionally return a false positive, it will never return a false negative. When creating 
- * the filter, the sender can choose its desired point in a trade-off between the false positive rate and the size. 
- * 
+ * offers for the transmission of set membership information between networked hosts.  A sender encodes
+ * the information into a bit vector, the Bloom filter, that is more compact than a conventional
+ * representation. Computation and space costs for construction are linear in the number of elements.
+ * The receiver uses the filter to test whether various elements are members of the set. Though the
+ * filter will occasionally return a false positive, it will never return a false negative. When creating
+ * the filter, the sender can choose its desired point in a trade-off between the false positive rate and the size.
+ *
  * <p>
- * Originally created by
+ * Originally inspired by
  * <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
- * 
+ *
  * @see BloomFilter The general behavior of a filter
- * 
+ *
  * @see <a href="http://portal.acm.org/citation.cfm?id=362692&dl=ACM&coll=portal">Space/Time Trade-Offs in Hash Coding with Allowable Errors</a>
  */
 public class ByteBloomFilter implements BloomFilter {
   /** Current file format version */
   public static final int VERSION = 1;
-  
+
   /** Bytes (B) in the array */
   protected int byteSize;
   /** Number of hash functions */
@@ -97,7 +65,7 @@ public class ByteBloomFilter implements BloomFilter {
   protected int maxKeys;
   /** Bloom bits */
   protected ByteBuffer bloom;
-  
+
   /** Bit-value lookup array to prevent doing the same work over and over */
   private static final byte [] bitvals = {
     (byte) 0x01,
@@ -115,11 +83,11 @@ public class ByteBloomFilter implements BloomFilter {
    * @param meta stored bloom meta data
    * @throws IllegalArgumentException meta data is invalid
    */
-  public ByteBloomFilter(ByteBuffer meta) 
-  throws IllegalArgumentException { 
+  public ByteBloomFilter(ByteBuffer meta)
+  throws IllegalArgumentException {
     int version = meta.getInt();
     if (version != VERSION) throw new IllegalArgumentException("Bad version");
-    
+
     this.byteSize = meta.getInt();
     this.hashCount = meta.getInt();
     this.hashType = meta.getInt();
@@ -136,30 +104,30 @@ public class ByteBloomFilter implements BloomFilter {
    * @param maxKeys Maximum expected number of keys that will be stored in this bloom
    * @param errorRate Desired false positive error rate.  Lower rate = more storage required
    * @param hashType Type of hash function to use
-   * @param foldFactor When finished adding entries, you may be able to 'fold' 
-   * this bloom to save space.  Tradeoff potentially excess bytes in bloom for 
+   * @param foldFactor When finished adding entries, you may be able to 'fold'
+   * this bloom to save space.  Tradeoff potentially excess bytes in bloom for
    * ability to fold if keyCount is exponentially greater than maxKeys.
    * @throws IllegalArgumentException
    */
   public ByteBloomFilter(int maxKeys, float errorRate, int hashType, int foldFactor)
-  throws IllegalArgumentException { 
-    /* 
-     * Bloom filters are very sensitive to the number of elements inserted 
-     * into them. For HBase, the number of entries depends on the size of the 
-     * data stored in the column. Currently the default region size is 256MB, 
-     * so entry count ~= 256MB / (average value size for column).  Despite 
-     * this rule of thumb, there is no efficient way to calculate the entry 
-     * count after compactions.  Therefore, it is often easier to use a 
+      throws IllegalArgumentException {
+    /*
+     * Bloom filters are very sensitive to the number of elements inserted
+     * into them. For HBase, the number of entries depends on the size of the
+     * data stored in the column. Currently the default region size is 256MB,
+     * so entry count ~= 256MB / (average value size for column).  Despite
+     * this rule of thumb, there is no efficient way to calculate the entry
+     * count after compactions.  Therefore, it is often easier to use a
      * dynamic bloom filter that will add extra space instead of allowing the
      * error rate to grow.
-     * 
+     *
      * ( http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/BloomFilterSurvey.pdf )
      *
      * m denotes the number of bits in the Bloom filter (bitSize)
      * n denotes the number of elements inserted into the Bloom filter (maxKeys)
      * k represents the number of hash functions used (nbHash)
      * e represents the desired false positive rate for the bloom (err)
-     * 
+     *
      * If we fix the error rate (e) and know the number of entries, then
      * the optimal bloom size m = -(n * ln(err) / (ln(2)^2)
      *                         ~= n * ln(err) / ln(0.6185)
@@ -196,12 +164,12 @@ public class ByteBloomFilter implements BloomFilter {
     this.bloom = ByteBuffer.allocate(this.byteSize);
     assert this.bloom.hasArray();
   }
-  
+
   void sanityCheck() throws IllegalArgumentException {
     if(this.byteSize <= 0) {
       throw new IllegalArgumentException("maxValue must be > 0");
     }
-    
+
     if(this.hashCount <= 0) {
       throw new IllegalArgumentException("Hash function count must be > 0");
     }
@@ -209,12 +177,12 @@ public class ByteBloomFilter implements BloomFilter {
     if (this.hash == null) {
       throw new IllegalArgumentException("hashType must be known");
     }
-    
+
     if (this.keyCount < 0) {
       throw new IllegalArgumentException("must have positive keyCount");
     }
   }
-  
+
   void bloomCheck(ByteBuffer bloom)  throws IllegalArgumentException {
     if (this.byteSize != bloom.limit()) {
       throw new IllegalArgumentException(
@@ -243,14 +211,14 @@ public class ByteBloomFilter implements BloomFilter {
 
     ++this.keyCount;
   }
-  
+
   /**
    * Should only be used in tests when writing a bloom filter.
    */
   boolean contains(byte [] buf) {
     return contains(buf, 0, buf.length, this.bloom);
   }
-  
+
   /**
    * Should only be used in tests when writing a bloom filter.
    */
@@ -264,7 +232,7 @@ public class ByteBloomFilter implements BloomFilter {
   }
 
   @Override
-  public boolean contains(byte [] buf, int offset, int length, 
+  public boolean contains(byte [] buf, int offset, int length,
       ByteBuffer theBloom) {
 
     if(theBloom.limit() != this.byteSize) {
@@ -282,11 +250,11 @@ public class ByteBloomFilter implements BloomFilter {
     }
     return true;
   }
-  
+
   //---------------------------------------------------------------------------
   /** Private helpers */
-  
-  /** 
+
+  /**
    * Set the bit at the specified index to 1.
    *
    * @param pos index of bit
@@ -298,7 +266,7 @@ public class ByteBloomFilter implements BloomFilter {
     curByte |= bitvals[bitPos];
     bloom.put(bytePos, curByte);
   }
-  
+
   /**
    * Check if bit at specified index is 1.
    *
@@ -312,37 +280,37 @@ public class ByteBloomFilter implements BloomFilter {
     curByte &= bitvals[bitPos];
     return (curByte != 0);
   }
-  
+
   @Override
   public int getKeyCount() {
     return this.keyCount;
   }
-  
+
   @Override
   public int getMaxKeys() {
     return this.maxKeys;
   }
-  
+
   @Override
   public int getByteSize() {
     return this.byteSize;
   }
 
   @Override
-  public void finalize() {
+  public void compactBloom() {
     // see if the actual size is exponentially smaller than expected.
     if (this.keyCount > 0 && this.bloom.hasArray()) {
       int pieces = 1;
       int newByteSize = this.byteSize;
       int newMaxKeys = this.maxKeys;
-      
+
       // while exponentially smaller & folding is lossless
       while ( (newByteSize & 1) == 0 && newMaxKeys > (this.keyCount<<1) ) {
         pieces <<= 1;
         newByteSize >>= 1;
         newMaxKeys >>= 1;
       }
-      
+
       // if we should fold these into pieces
       if (pieces > 1) {
         byte[] array = this.bloom.array();
@@ -351,7 +319,7 @@ public class ByteBloomFilter implements BloomFilter {
         int off = end;
         for(int p = 1; p < pieces; ++p) {
           for(int pos = start; pos < end; ++pos) {
-            array[pos] |= array[off++]; 
+            array[pos] |= array[off++];
           }
         }
         // folding done, only use a subset of this array
@@ -388,9 +356,9 @@ public class ByteBloomFilter implements BloomFilter {
   public Writable getDataWriter() {
     return new DataWriter();
   }
-  
+
   private class MetaWriter implements Writable {
-    protected MetaWriter() {} 
+    protected MetaWriter() {}
     @Override
     public void readFields(DataInput arg0) throws IOException {
       throw new IOException("Cant read with this class.");

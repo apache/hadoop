@@ -1,35 +1,6 @@
-/**
+/*
+ * Copyright 2010 The Apache Software Foundation
  *
- * Copyright (c) 2005, European Commission project OneLab under contract 034819 (http://www.one-lab.org)
- * All rights reserved.
- * Redistribution and use in source and binary forms, with or 
- * without modification, are permitted provided that the following 
- * conditions are met:
- *  - Redistributions of source code must retain the above copyright 
- *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
- *    the documentation and/or other materials provided with the distribution.
- *  - Neither the name of the University Catholique de Louvain - UCL
- *    nor the names of its contributors may be used to endorse or 
- *    promote products derived from this software without specific prior 
- *    written permission.
- *    
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,30 +20,30 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.io.Writable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.io.Writable;
-
 /**
  * Implements a <i>dynamic Bloom filter</i>, as defined in the INFOCOM 2006 paper.
  * <p>
  * A dynamic Bloom filter (DBF) makes use of a <code>s * m</code> bit matrix but
- * each of the <code>s</code> rows is a standard Bloom filter. The creation 
+ * each of the <code>s</code> rows is a standard Bloom filter. The creation
  * process of a DBF is iterative. At the start, the DBF is a <code>1 * m</code>
  * bit matrix, i.e., it is composed of a single standard Bloom filter.
- * It assumes that <code>n<sub>r</sub></code> elements are recorded in the 
+ * It assumes that <code>n<sub>r</sub></code> elements are recorded in the
  * initial bit vector, where <code>n<sub>r</sub> <= n</code> (<code>n</code> is
- * the cardinality of the set <code>A</code> to record in the filter).  
+ * the cardinality of the set <code>A</code> to record in the filter).
  * <p>
  * As the size of <code>A</code> grows during the execution of the application,
  * several keys must be inserted in the DBF.  When inserting a key into the DBF,
  * one must first get an active Bloom filter in the matrix.  A Bloom filter is
- * active when the number of recorded keys, <code>n<sub>r</sub></code>, is 
+ * active when the number of recorded keys, <code>n<sub>r</sub></code>, is
  * strictly less than the current cardinality of <code>A</code>, <code>n</code>.
- * If an active Bloom filter is found, the key is inserted and 
+ * If an active Bloom filter is found, the key is inserted and
  * <code>n<sub>r</sub></code> is incremented by one. On the other hand, if there
  * is no active Bloom filter, a new one is created (i.e., a new row is added to
  * the matrix) according to the current size of <code>A</code> and the element
@@ -84,7 +55,7 @@ import org.apache.hadoop.io.Writable;
  * <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
  * @see BloomFilter A Bloom filter
- * 
+ *
  * @see <a href="http://www.cse.fau.edu/~jie/research/publications/Publication_files/infocom2006.pdf">Theory and Network Applications of Dynamic Bloom Filters</a>
  */
 public class DynamicByteBloomFilter implements BloomFilter {
@@ -108,8 +79,7 @@ public class DynamicByteBloomFilter implements BloomFilter {
    * @param meta stored bloom meta data
    * @throws IllegalArgumentException meta data is invalid
    */
-  public DynamicByteBloomFilter(ByteBuffer meta) 
-  throws IllegalArgumentException { 
+  public DynamicByteBloomFilter(ByteBuffer meta) throws IllegalArgumentException {
     int version = meta.getInt();
     if (version != VERSION) throw new IllegalArgumentException("Bad version");
 
@@ -118,7 +88,7 @@ public class DynamicByteBloomFilter implements BloomFilter {
     this.hashType = meta.getInt();
     this.readMatrixSize = meta.getInt();
     this.curKeys = meta.getInt();
-    
+
     readSanityCheck();
 
     this.matrix = new ByteBloomFilter[1];
@@ -126,12 +96,9 @@ public class DynamicByteBloomFilter implements BloomFilter {
 }
 
   /**
-   * Normal write constructor.  Note that this doesn't allocate bloom data by 
+   * Normal write constructor.  Note that this doesn't allocate bloom data by
    * default.  Instead, call allocBloom() before adding entries.
-   * @param bitSize The vector size of <i>this</i> filter.
-   * @param functionCount The number of hash function to consider.
-   * @param hashType type of the hashing function (see
-   * {@link org.apache.hadoop.util.hash.Hash}).
+   * @param hashType type of the hashing function (see {@link org.apache.hadoop.util.hash.Hash}).
    * @param keyInterval Maximum number of keys to record per Bloom filter row.
    * @throws IllegalArgumentException The input parameters were invalid
    */
@@ -141,7 +108,7 @@ public class DynamicByteBloomFilter implements BloomFilter {
     this.errorRate = errorRate;
     this.hashType = hashType;
     this.curKeys = 0;
-    
+
     if(keyInterval <= 0) {
       throw new IllegalArgumentException("keyCount must be > 0");
     }
@@ -164,7 +131,7 @@ public class DynamicByteBloomFilter implements BloomFilter {
       throw new IllegalArgumentException("matrix size must be known");
     }
   }
-  
+
   @Override
   public void add(byte []buf, int offset, int len) {
     BloomFilter bf = getCurBloom();
@@ -207,17 +174,17 @@ public class DynamicByteBloomFilter implements BloomFilter {
   public boolean contains(byte [] buf, ByteBuffer theBloom) {
     return contains(buf, 0, buf.length, theBloom);
   }
-  
+
   @Override
-  public boolean contains(byte[] buf, int offset, int length, 
+  public boolean contains(byte[] buf, int offset, int length,
       ByteBuffer theBloom) {
     if(offset + length > buf.length) {
       return false;
     }
-    
+
     // current version assumes uniform size
-    int bytesPerBloom = this.matrix[0].getByteSize(); 
-   
+    int bytesPerBloom = this.matrix[0].getByteSize();
+
     if(theBloom.limit() != bytesPerBloom * readMatrixSize) {
       throw new IllegalArgumentException("Bloom does not match expected size");
     }
@@ -233,7 +200,7 @@ public class DynamicByteBloomFilter implements BloomFilter {
         return true;
       }
     }
-    
+
     // matched no bloom filters
     return false;
   }
@@ -251,14 +218,14 @@ public class DynamicByteBloomFilter implements BloomFilter {
   public int getMaxKeys() {
     return bloomCount() * this.keyInterval;
   }
-  
+
   @Override
   public int getByteSize() {
     return bloomCount() * this.matrix[0].getByteSize();
   }
 
   @Override
-  public void finalize() {
+  public void compactBloom() {
   }
 
   /**
@@ -298,9 +265,9 @@ public class DynamicByteBloomFilter implements BloomFilter {
   public Writable getDataWriter() {
     return new DataWriter();
   }
-  
+
   private class MetaWriter implements Writable {
-    protected MetaWriter() {} 
+    protected MetaWriter() {}
     @Override
     public void readFields(DataInput arg0) throws IOException {
       throw new IOException("Cant read with this class.");

@@ -61,11 +61,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
 
   public static String NAME = "completebulkload";
-  
+
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
   }
-  
+
   public LoadIncrementalHFiles() {
     super();
   }
@@ -73,7 +73,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private void usage() {
     System.err.println("usage: " + NAME +
-        " /path/to/hfileoutputformat-output " + 
+        " /path/to/hfileoutputformat-output " +
         "tablename");
   }
 
@@ -88,7 +88,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private static class LoadQueueItem {
     final byte[] family;
     final Path hfilePath;
-    
+
     public LoadQueueItem(byte[] family, Path hfilePath) {
       this.family = family;
       this.hfilePath = hfilePath;
@@ -102,17 +102,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private Deque<LoadQueueItem> discoverLoadQueue(Path hfofDir)
   throws IOException {
     FileSystem fs = hfofDir.getFileSystem(getConf());
-    
+
     if (!fs.exists(hfofDir)) {
       throw new FileNotFoundException("HFileOutputFormat dir " +
-          hfofDir + " not found"); 
+          hfofDir + " not found");
     }
-    
+
     FileStatus[] familyDirStatuses = fs.listStatus(hfofDir);
     if (familyDirStatuses == null) {
       throw new FileNotFoundException("No families found in " + hfofDir);
     }
-    
+
     Deque<LoadQueueItem> ret = new LinkedList<LoadQueueItem>();
     for (FileStatus stat : familyDirStatuses) {
       if (!stat.isDir()) {
@@ -144,13 +144,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     throws TableNotFoundException, IOException
   {
     HConnection conn = table.getConnection();
-    
+
     if (!conn.isTableAvailable(table.getTableName())) {
-      throw new TableNotFoundException("Table " + 
+      throw new TableNotFoundException("Table " +
           Bytes.toStringBinary(table.getTableName()) +
           "is not currently available.");
     }
-    
+
     Deque<LoadQueueItem> queue = null;
     try {
       queue = discoverLoadQueue(hfofDir);
@@ -193,7 +193,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }  finally {
       hfr.close();
     }
-    
+
     LOG.info("Trying to load hfile=" + hfilePath +
         " first=" + Bytes.toStringBinary(first) +
         " last="  + Bytes.toStringBinary(last));
@@ -202,7 +202,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       LOG.info("hfile " + hfilePath + " has no entries, skipping");
       return;
     }
-    
+
     // We use a '_' prefix which is ignored when walking directory trees
     // above.
     final Path tmpDir = new Path(item.hfilePath.getParent(), "_tmp");
@@ -217,8 +217,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           if (!hri.containsRange(first, last)) {
             LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
                 "region. Splitting...");
-            
-            HColumnDescriptor familyDesc = hri.getTableDesc().getFamily(item.family); 
+
+            HColumnDescriptor familyDesc = hri.getTableDesc().getFamily(item.family);
             Path botOut = new Path(tmpDir, hri.getEncodedName() + ".bottom");
             Path topOut = new Path(tmpDir, hri.getEncodedName() + ".top");
             splitStoreFile(getConf(), hfilePath, familyDesc, hri.getEndKey(),
@@ -231,14 +231,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             LOG.info("Successfully split into new HFiles " + botOut + " and " + topOut);
             return null;
           }
-          
+
           byte[] regionName = location.getRegionInfo().getRegionName();
           server.bulkLoadHFile(hfilePath.toString(), regionName, item.family);
           return null;
         }
       });
   }
-  
+
   /**
    * Split a storefile into a top and bottom half, maintaining
    * the metadata, recreating bloom filters, etc.
@@ -251,11 +251,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     // Open reader with no block cache, and not in-memory
     Reference topReference = new Reference(splitKey, Range.top);
     Reference bottomReference = new Reference(splitKey, Range.bottom);
-    
+
     copyHFileHalf(conf, inFile, topOut, topReference, familyDesc);
     copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc);
   }
-  
+
   /**
    * Copy half of an HFile into a new HFile.
    */
@@ -265,15 +265,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
     HalfStoreFileReader halfReader = null;
-    HFile.Writer halfWriter = null;
+    StoreFile.Writer halfWriter = null;
     try {
       halfReader = new HalfStoreFileReader(fs, inFile, null, reference);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
-      
+
       int blocksize = familyDescriptor.getBlocksize();
       Algorithm compression = familyDescriptor.getCompression();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
-      
+
       halfWriter = new StoreFile.Writer(
           fs, outFile, blocksize, compression, conf, KeyValue.COMPARATOR,
           bloomFilterType, 0);
@@ -283,7 +283,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         KeyValue kv = scanner.getKeyValue();
         halfWriter.append(kv);
       } while (scanner.next());
-      
+
       for (Map.Entry<byte[],byte[]> entry : fileInfo.entrySet()) {
         if (shouldCopyHFileMetaKey(entry.getKey())) {
           halfWriter.appendFileInfo(entry.getKey(), entry.getValue());
@@ -292,9 +292,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     } finally {
       if (halfWriter != null) halfWriter.close();
       if (halfReader != null) halfReader.close();
-    }    
+    }
   }
-  
+
   private static boolean shouldCopyHFileMetaKey(byte[] key) {
     return !HFile.isReservedFileInfoKey(key);
   }
@@ -306,10 +306,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       usage();
       return -1;
     }
-    
+
     Path hfofDir = new Path(args[0]);
     HTable table = new HTable(args[1]);
-    
+
     doBulkLoad(hfofDir, table);
     return 0;
   }
@@ -317,5 +317,5 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public static void main(String[] args) throws Exception {
     ToolRunner.run(new LoadIncrementalHFiles(), args);
   }
-  
+
 }

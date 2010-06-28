@@ -425,6 +425,7 @@ Release 0.21.0 - Unreleased
    HBASE-2787  PE is confused about flushCommits
    HBASE-2707  Can't recover from a dead ROOT server if any exceptions happens
                during log splitting
+   HBASE-2501  Refactor StoreFile Code
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

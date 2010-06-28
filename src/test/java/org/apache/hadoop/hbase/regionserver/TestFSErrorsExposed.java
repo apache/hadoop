@@ -57,9 +57,9 @@ import org.junit.Test;
  */
 public class TestFSErrorsExposed {
   private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
-  
+
   HBaseTestingUtility util = new HBaseTestingUtility();
-  
+
   /**
    * Injects errors into the pread calls of an on-disk file, and makes
    * sure those bubble up to the HFile scanner
@@ -73,21 +73,21 @@ public class TestFSErrorsExposed {
     StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2*1024);
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
-    
+
     StoreFile sf = new StoreFile(fs, writer.getPath(), false,
         util.getConfiguration(), StoreFile.BloomType.NONE, false);
-    HFile.Reader reader = sf.createReader();
+    StoreFile.Reader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
-    
+
     FaultyInputStream inStream = fs.inStreams.get(0).get();
     assertNotNull(inStream);
-    
+
     scanner.seekTo();
     // Do at least one successful read
     assertTrue(scanner.next());
-    
+
     inStream.startFaults();
-    
+
     try {
       int scanned=0;
       while (scanner.next()) {
@@ -100,7 +100,7 @@ public class TestFSErrorsExposed {
     }
     reader.close();
   }
-  
+
   /**
    * Injects errors into the pread calls of an on-disk file, and makes
    * sure those bubble up to the StoreFileScanner
@@ -111,25 +111,25 @@ public class TestFSErrorsExposed {
         HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
-    HFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024);
+    StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024);
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
-    
+
     StoreFile sf = new StoreFile(fs, writer.getPath(), false,
         util.getConfiguration(), BloomType.NONE, false);
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true);
     KeyValueScanner scanner = scanners.get(0);
-    
+
     FaultyInputStream inStream = fs.inStreams.get(0).get();
     assertNotNull(inStream);
-    
+
     scanner.seek(KeyValue.LOWESTKEY);
     // Do at least one successful read
     assertNotNull(scanner.next());
-    
+
     inStream.startFaults();
-    
+
     try {
       int scanned=0;
       while (scanner.next() != null) {
@@ -142,7 +142,7 @@ public class TestFSErrorsExposed {
     }
     scanner.close();
   }
-  
+
   /**
    * Cluster test which starts a region server with a region, then
    * removes the data from HDFS underneath it, and ensures that
@@ -154,25 +154,25 @@ public class TestFSErrorsExposed {
       util.startMiniCluster(1);
       byte[] tableName = Bytes.toBytes("table");
       byte[] fam = Bytes.toBytes("fam");
-      
+
       HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
       HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(
           fam, 1, HColumnDescriptor.DEFAULT_COMPRESSION,
           false, false, HConstants.FOREVER, "NONE"));
       admin.createTable(desc);
-      
+
       HTable table = new HTable(tableName);
-      
+
       // Load some data
       util.loadTable(table, fam);
       table.flushCommits();
       util.flush();
       util.countRows(table);
-            
+
       // Kill the DFS cluster
       util.getDFSCluster().shutdownDataNodes();
-      
+
       try {
         util.countRows(table);
         fail("Did not fail to count after removing data");
@@ -180,16 +180,16 @@ public class TestFSErrorsExposed {
         LOG.info("Got expected error", e);
         assertTrue(e.getMessage().contains("Could not seek"));
       }
-      
+
     } finally {
       util.shutdownMiniCluster();
     }
   }
-  
+
   static class FaultyFileSystem extends FilterFileSystem {
     List<SoftReference<FaultyInputStream>> inStreams =
       new ArrayList<SoftReference<FaultyInputStream>>();
-    
+
     public FaultyFileSystem(FileSystem testFileSystem) {
       super(testFileSystem);
     }
@@ -202,16 +202,16 @@ public class TestFSErrorsExposed {
       return faulty;
     }
   }
-  
+
   static class FaultyInputStream extends FSDataInputStream {
     boolean faultsStarted = false;
-    
+
     public FaultyInputStream(InputStream in) throws IOException {
       super(in);
     }
 
     public void startFaults() {
-      faultsStarted = true;      
+      faultsStarted = true;
     }
 
     public int read(long position, byte[] buffer, int offset, int length)
@@ -219,7 +219,7 @@ public class TestFSErrorsExposed {
       injectFault();
       return ((PositionedReadable)in).read(position, buffer, offset, length);
     }
-    
+
     private void injectFault() throws IOException {
       if (faultsStarted) {
         throw new IOException("Fault injected");
@@ -227,5 +227,5 @@ public class TestFSErrorsExposed {
     }
   }
 
-  
+
 }

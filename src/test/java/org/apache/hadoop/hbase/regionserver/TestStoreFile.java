@@ -82,14 +82,14 @@ public class TestStoreFile extends HBaseTestCase {
    */
   public void testBasicHalfMapFile() throws Exception {
     // Make up a directory hierarchy that has a regiondir and familyname.
-    HFile.Writer writer = StoreFile.createWriter(this.fs,
+    StoreFile.Writer writer = StoreFile.createWriter(this.fs,
       new Path(new Path(this.testDir, "regionname"), "familyname"), 2 * 1024);
     writeStoreFile(writer);
-    checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf, 
+    checkHalfHFile(new StoreFile(this.fs, writer.getPath(), true, conf,
         StoreFile.BloomType.NONE, false));
   }
 
-  private void writeStoreFile(final HFile.Writer writer) throws IOException {
+  private void writeStoreFile(final StoreFile.Writer writer) throws IOException {
     writeStoreFile(writer, Bytes.toBytes(getName()), Bytes.toBytes(getName()));
   }
   /*
@@ -98,7 +98,7 @@ public class TestStoreFile extends HBaseTestCase {
    * @param writer
    * @throws IOException
    */
-  public static void writeStoreFile(final HFile.Writer writer, byte[] fam, byte[] qualifier)
+  public static void writeStoreFile(final StoreFile.Writer writer, byte[] fam, byte[] qualifier)
   throws IOException {
     long now = System.currentTimeMillis();
     try {
@@ -123,11 +123,11 @@ public class TestStoreFile extends HBaseTestCase {
     Path storedir = new Path(new Path(this.testDir, "regionname"), "familyname");
     Path dir = new Path(storedir, "1234567890");
     // Make a store file and write data to it.
-    HFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024);
+    StoreFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024);
     writeStoreFile(writer);
-    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf, 
+    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf,
         StoreFile.BloomType.NONE, false);
-    HFile.Reader reader = hsf.createReader();
+    StoreFile.Reader reader = hsf.createReader();
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
@@ -137,7 +137,7 @@ public class TestStoreFile extends HBaseTestCase {
     byte [] finalRow = kv.getRow();
     // Make a reference
     Path refPath = StoreFile.split(fs, dir, hsf, midRow, Range.top);
-    StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf, 
+    StoreFile refHsf = new StoreFile(this.fs, refPath, true, conf,
         StoreFile.BloomType.NONE, false);
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
@@ -174,9 +174,9 @@ public class TestStoreFile extends HBaseTestCase {
     Path bottomPath = StoreFile.split(this.fs, bottomDir,
       f, midRow, Range.bottom);
     // Make readers on top and bottom.
-    HFile.Reader top = new StoreFile(this.fs, topPath, true, conf, 
+    StoreFile.Reader top = new StoreFile(this.fs, topPath, true, conf,
         StoreFile.BloomType.NONE, false).createReader();
-    HFile.Reader bottom = new StoreFile(this.fs, bottomPath, true, conf, 
+    StoreFile.Reader bottom = new StoreFile(this.fs, bottomPath, true, conf,
         StoreFile.BloomType.NONE, false).createReader();
     ByteBuffer previous = null;
     LOG.info("Midkey: " + midKV.toString());
@@ -229,9 +229,9 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, true, conf, 
+      top = new StoreFile(this.fs, topPath, true, conf,
           StoreFile.BloomType.NONE, false).createReader();
-      bottom = new StoreFile(this.fs, bottomPath, true, conf, 
+      bottom = new StoreFile(this.fs, bottomPath, true, conf,
           StoreFile.BloomType.NONE, false).createReader();
       bottomScanner = bottom.getScanner(false, false);
       int count = 0;
@@ -250,7 +250,6 @@ public class TestStoreFile extends HBaseTestCase {
         assertTrue(topScanner.getReader().getComparator().compare(key.array(),
           key.arrayOffset(), key.limit(), badmidkey, 0, badmidkey.length) >= 0);
         if (first) {
-          first = false;
           first = false;
           KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
           LOG.info("First top when key < bottom: " + keyKV);
@@ -275,9 +274,9 @@ public class TestStoreFile extends HBaseTestCase {
       topPath = StoreFile.split(this.fs, topDir, f, badmidkey, Range.top);
       bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey,
         Range.bottom);
-      top = new StoreFile(this.fs, topPath, true, conf, 
+      top = new StoreFile(this.fs, topPath, true, conf,
           StoreFile.BloomType.NONE, false).createReader();
-      bottom = new StoreFile(this.fs, bottomPath, true, conf, 
+      bottom = new StoreFile(this.fs, bottomPath, true, conf,
           StoreFile.BloomType.NONE, false).createReader();
       first = true;
       bottomScanner = bottom.getScanner(false, false);
@@ -317,44 +316,44 @@ public class TestStoreFile extends HBaseTestCase {
       fs.delete(f.getPath(), true);
     }
   }
-  
+
   private static String ROOT_DIR =
     HBaseTestingUtility.getTestDir("TestStoreFile").toString();
   private static String localFormatter = "%010d";
-  
+
   public void testBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     conf.setFloat("io.hfile.bloom.error.rate", (float)0.01);
     conf.setBoolean("io.hfile.bloom.enabled", true);
-    
+
     // write the file
     Path f = new Path(ROOT_DIR, getName());
-    StoreFile.Writer writer = new StoreFile.Writer(fs, f, 
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM, 
+    StoreFile.Writer writer = new StoreFile.Writer(fs, f,
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
         conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
 
     long now = System.currentTimeMillis();
     for (int i = 0; i < 2000; i += 2) {
-      String row = String.format(localFormatter, Integer.valueOf(i));
+      String row = String.format(localFormatter, i);
       KeyValue kv = new KeyValue(row.getBytes(), "family".getBytes(),
         "col".getBytes(), now, "value".getBytes());
       writer.append(kv);
     }
     writer.close();
-    
+
     StoreFile.Reader reader = new StoreFile.Reader(fs, f, null, false);
     reader.loadFileInfo();
     reader.loadBloomfilter();
-    HFileScanner scanner = reader.getScanner(false, false);
+    StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
 
     // check false positives rate
     int falsePos = 0;
     int falseNeg = 0;
     for (int i = 0; i < 2000; i++) {
-      String row = String.format(localFormatter, Integer.valueOf(i));
+      String row = String.format(localFormatter, i);
       TreeSet<byte[]> columns = new TreeSet<byte[]>();
       columns.add("family:col".getBytes());
-      
+
       boolean exists = scanner.shouldSeek(row.getBytes(), columns);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
@@ -369,19 +368,19 @@ public class TestStoreFile extends HBaseTestCase {
     System.out.println("False positives: " + falsePos);
     assertTrue(falsePos < 2);
   }
-  
+
   public void testBloomTypes() throws Exception {
     float err = (float) 0.01;
     FileSystem fs = FileSystem.getLocal(conf);
     conf.setFloat("io.hfile.bloom.error.rate", err);
     conf.setBoolean("io.hfile.bloom.enabled", true);
-    
+
     int rowCount = 50;
     int colCount = 10;
     int versions = 2;
-    
+
     // run once using columns and once using rows
-    StoreFile.BloomType[] bt = 
+    StoreFile.BloomType[] bt =
       {StoreFile.BloomType.ROWCOL, StoreFile.BloomType.ROW};
     int[] expKeys    = {rowCount*colCount, rowCount};
     // below line deserves commentary.  it is expected bloom false positives
@@ -393,19 +392,19 @@ public class TestStoreFile extends HBaseTestCase {
     for (int x : new int[]{0,1}) {
       // write the file
       Path f = new Path(ROOT_DIR, getName());
-      StoreFile.Writer writer = new StoreFile.Writer(fs, f, 
-          StoreFile.DEFAULT_BLOCKSIZE_SMALL, 
+      StoreFile.Writer writer = new StoreFile.Writer(fs, f,
+          StoreFile.DEFAULT_BLOCKSIZE_SMALL,
           HFile.DEFAULT_COMPRESSION_ALGORITHM,
           conf, KeyValue.COMPARATOR, bt[x], expKeys[x]);
-  
+
       long now = System.currentTimeMillis();
       for (int i = 0; i < rowCount*2; i += 2) { // rows
         for (int j = 0; j < colCount*2; j += 2) {   // column qualifiers
-          String row = String.format(localFormatter, Integer.valueOf(i));
-          String col = String.format(localFormatter, Integer.valueOf(j)); 
-          for (int k= 0; k < versions; ++k) { // versions 
-            KeyValue kv = new KeyValue(row.getBytes(), 
-              "family".getBytes(), ("col" + col).getBytes(), 
+          String row = String.format(localFormatter, i);
+          String col = String.format(localFormatter, j);
+          for (int k= 0; k < versions; ++k) { // versions
+            KeyValue kv = new KeyValue(row.getBytes(),
+              "family".getBytes(), ("col" + col).getBytes(),
                 now-k, Bytes.toBytes((long)-1));
             writer.append(kv);
           }
@@ -416,16 +415,16 @@ public class TestStoreFile extends HBaseTestCase {
       StoreFile.Reader reader = new StoreFile.Reader(fs, f, null, false);
       reader.loadFileInfo();
       reader.loadBloomfilter();
-      HFileScanner scanner = reader.getScanner(false, false);
-      assertEquals(expKeys[x], reader.getBloomFilter().getKeyCount());
-      
+      StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+      assertEquals(expKeys[x], reader.bloomFilter.getKeyCount());
+
       // check false positives rate
       int falsePos = 0;
       int falseNeg = 0;
       for (int i = 0; i < rowCount*2; ++i) { // rows
         for (int j = 0; j < colCount*2; ++j) {   // column qualifiers
-          String row = String.format(localFormatter, Integer.valueOf(i));
-          String col = String.format(localFormatter, Integer.valueOf(j)); 
+          String row = String.format(localFormatter, i);
+          String col = String.format(localFormatter, j);
           TreeSet<byte[]> columns = new TreeSet<byte[]>();
           columns.add(("col" + col).getBytes());
 
@@ -448,7 +447,6 @@ public class TestStoreFile extends HBaseTestCase {
       assertEquals(0, falseNeg);
       assertTrue(falsePos < 2*expErr[x]);
     }
-    
   }
   
   public void testFlushTimeComparator() {

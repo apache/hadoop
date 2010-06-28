@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -59,14 +58,24 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 /**
-  * A Store holds a column family in a Region.  Its a memstore and a set of zero
-  * or more StoreFiles, which stretch backwards over time.
-  *
-  * <p>There's no reason to consider append-logging at this level; all logging
-  * and locking is handled at the HRegion level.  Store just provides
-  * services to manage sets of StoreFiles.  One of the most important of those
-  * services is compaction services where files are aggregated once they pass
-  * a configurable threshold.
+ * A Store holds a column family in a Region.  Its a memstore and a set of zero
+ * or more StoreFiles, which stretch backwards over time.
+ *
+ * <p>There's no reason to consider append-logging at this level; all logging
+ * and locking is handled at the HRegion level.  Store just provides
+ * services to manage sets of StoreFiles.  One of the most important of those
+ * services is compaction services where files are aggregated once they pass
+ * a configurable threshold.
+ *
+ * <p>The only thing having to do with logs that Store needs to deal with is
+ * the reconstructionLog.  This is a segment of an HRegion's log that might
+ * NOT be present upon startup.  If the param is NULL, there's nothing to do.
+ * If the param is non-NULL, we need to process the log to reconstruct
+ * a TreeMap that might not have been written to disk before the process
+ * died.
+ *
+ * <p>It's assumed that after this constructor returns, the reconstructionLog
+ * file will be deleted (by whoever has instantiated the Store).
  *
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
@@ -303,7 +312,10 @@ public class Store implements HeapSize {
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
-      byte[] lastKey = reader.getLastRowKey();
+      byte[] lk = reader.getLastKey();
+      byte[] lastKey =
+          (lk == null) ? null :
+              KeyValue.createKeyValueFromKey(lk).getRow();
 
       LOG.debug("HFile bounds: first=" + Bytes.toStringBinary(firstKey) +
           " last=" + Bytes.toStringBinary(lastKey));
@@ -423,8 +435,8 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
-    final long logCacheFlushId)
-  throws IOException {
+                                       final long logCacheFlushId)
+      throws IOException {
     StoreFile.Writer writer = null;
     long flushed = 0;
     // Don't flush if there are no entries.
@@ -462,7 +474,7 @@ public class Store implements HeapSize {
     
     StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
       this.conf, this.family.getBloomFilterType(), this.inMemory);
-    Reader r = sf.createReader();
+    StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     if(LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
@@ -601,7 +613,7 @@ public class Store implements HeapSize {
           LOG.warn("Path is null for " + file);
           return null;
         }
-        Reader r = file.getReader();
+        StoreFile.Reader r = file.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + file + " has a null Reader");
           return null;
@@ -653,7 +665,7 @@ public class Store implements HeapSize {
           this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
         (references? ", hasReferences=true,": " ") + " into " +
           region.getTmpDir() + ", seqid=" + maxId);
-      HFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
+      StoreFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
       // Move the compaction into place.
       StoreFile sf = completeCompaction(filesToCompact, writer);
       if (LOG.isInfoEnabled()) {
@@ -689,8 +701,7 @@ public class Store implements HeapSize {
    * @param dir
    * @throws IOException
    */
-  private static long getLowestTimestamp(FileSystem fs, Path dir)
-  throws IOException {
+  private static long getLowestTimestamp(FileSystem fs, Path dir) throws IOException {
     FileStatus[] stats = fs.listStatus(dir);
     if (stats == null || stats.length == 0) {
       return 0l;
@@ -716,8 +727,7 @@ public class Store implements HeapSize {
    * @param filesToCompact Files to compact. Can be null.
    * @return True if we should run a major compaction.
    */
-  private boolean isMajorCompaction(final List<StoreFile> filesToCompact)
-  throws IOException {
+  private boolean isMajorCompaction(final List<StoreFile> filesToCompact) throws IOException {
     boolean result = false;
     if (filesToCompact == null || filesToCompact.isEmpty() ||
         majorCompactionTime == 0) {
@@ -758,9 +768,9 @@ public class Store implements HeapSize {
    * nothing made it through the compaction.
    * @throws IOException
    */
-  private HFile.Writer compact(final List<StoreFile> filesToCompact,
-      final boolean majorCompaction, final long maxId)
-  throws IOException {
+  private StoreFile.Writer compact(final List<StoreFile> filesToCompact,
+                               final boolean majorCompaction, final long maxId)
+      throws IOException {
     // calculate maximum key count after compaction (for blooms)
     int maxKeyCount = 0;
     for (StoreFile file : filesToCompact) {
@@ -850,8 +860,8 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private StoreFile completeCompaction(final List<StoreFile> compactedFiles,
-    final HFile.Writer compactedFile)
-  throws IOException {
+                                       final StoreFile.Writer compactedFile)
+      throws IOException {
     // 1. Moving the new files into place -- if there is a new file (may not
     // be if all cells were expired or deleted).
     StoreFile result = null;
@@ -907,7 +917,7 @@ public class Store implements HeapSize {
       // 4. Compute new store size
       this.storeSize = 0L;
       for (StoreFile hsf : this.storefiles) {
-        Reader r = hsf.getReader();
+        StoreFile.Reader r = hsf.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + hsf + " has a null Reader");
           continue;
@@ -970,8 +980,7 @@ public class Store implements HeapSize {
    * @return Found keyvalue or null if none found.
    * @throws IOException
    */
-  KeyValue getRowKeyAtOrBefore(final KeyValue kv)
-  throws IOException {
+  KeyValue getRowKeyAtOrBefore(final KeyValue kv) throws IOException {
     GetClosestRowBeforeTracker state = new GetClosestRowBeforeTracker(
       this.comparator, kv, this.ttl, this.region.getRegionInfo().isMetaRegion());
     this.lock.readLock().lock();
@@ -997,9 +1006,9 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private void rowAtOrBeforeFromStoreFile(final StoreFile f,
-    final GetClosestRowBeforeTracker state)
-  throws IOException {
-    Reader r = f.getReader();
+                                          final GetClosestRowBeforeTracker state)
+      throws IOException {
+    StoreFile.Reader r = f.getReader();
     if (r == null) {
       LOG.warn("StoreFile " + f + " has a null Reader");
       return;
@@ -1049,8 +1058,9 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private boolean seekToScanner(final HFileScanner scanner,
-    final KeyValue firstOnRow, final KeyValue firstKV)
-  throws IOException {
+                                final KeyValue firstOnRow,
+                                final KeyValue firstKV)
+      throws IOException {
     KeyValue kv = firstOnRow;
     // If firstOnRow < firstKV, set to firstKV
     if (this.comparator.compareRows(firstKV, firstOnRow) == 0) kv = firstKV;
@@ -1070,8 +1080,9 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private boolean walkForwardInSingleRow(final HFileScanner scanner,
-    final KeyValue firstOnRow, final GetClosestRowBeforeTracker state)
-  throws IOException {
+                                         final KeyValue firstOnRow,
+                                         final GetClosestRowBeforeTracker state)
+      throws IOException {
     boolean foundCandidate = false;
     do {
       KeyValue kv = scanner.getKeyValue();
@@ -1129,7 +1140,7 @@ public class Store implements HeapSize {
             return null;
           }
         }
-        Reader r = sf.getReader();
+        StoreFile.Reader r = sf.getReader();
         if (r == null) {
           LOG.warn("Storefile " + sf + " Reader is null");
           continue;
@@ -1141,7 +1152,7 @@ public class Store implements HeapSize {
           largestSf = sf;
         }
       }
-      HFile.Reader r = largestSf.getReader();
+      StoreFile.Reader r = largestSf.getReader();
       if (r == null) {
         LOG.warn("Storefile " + largestSf + " Reader is null");
         return null;
@@ -1217,7 +1228,7 @@ public class Store implements HeapSize {
   long getStorefilesSize() {
     long size = 0;
     for (StoreFile s: storefiles) {
-      Reader r = s.getReader();
+      StoreFile.Reader r = s.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + s + " has a null Reader");
         continue;
@@ -1233,7 +1244,7 @@ public class Store implements HeapSize {
   long getStorefilesIndexSize() {
     long size = 0;
     for (StoreFile s: storefiles) {
-      Reader r = s.getReader();
+      StoreFile.Reader r = s.getReader();
       if (r == null) {
         LOG.warn("StoreFile " + s + " has a null Reader");
         continue;
@@ -1284,7 +1295,7 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   static boolean getClosest(final HFileScanner s, final KeyValue kv)
-  throws IOException {
+      throws IOException {
     // Pass offsets to key content of a KeyValue; thats whats in the hfile index.
     int result = s.seekTo(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
     if (result < 0) {
@@ -1311,7 +1322,7 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   public void get(Get get, NavigableSet<byte[]> columns, List<KeyValue> result)
-  throws IOException {
+      throws IOException {
     KeyComparator keyComparator = this.comparator.getRawComparator();
 
     // Column matching and version enforcement
@@ -1333,7 +1344,7 @@ public class Store implements HeapSize {
       // Get storefiles for this store
       List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
       for (StoreFile sf : Iterables.reverse(this.storefiles)) {
-        HFile.Reader r = sf.getReader();
+        StoreFile.Reader r = sf.getReader();
         if (r == null) {
           LOG.warn("StoreFile " + sf + " has a null Reader");
           continue;
@@ -1367,8 +1378,8 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   public long updateColumnValue(byte [] row, byte [] f,
-      byte [] qualifier, long newValue)
-  throws IOException {
+                                byte [] qualifier, long newValue)
+      throws IOException {
     List<KeyValue> result = new ArrayList<KeyValue>();
     KeyComparator keyComparator = this.comparator.getRawComparator();
 

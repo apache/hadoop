@@ -155,9 +155,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
 
     // exclude scan files that have failed file filters
-    for(StoreFileScanner sfs : sfScanners) {
+    for (StoreFileScanner sfs : sfScanners) {
       if (isGet &&
-          !sfs.getHFileScanner().shouldSeek(scan.getStartRow(), columns)) {
+          !sfs.shouldSeek(scan.getStartRow(), columns)) {
         continue; // exclude this hfs
       }
       scanners.add(sfs);
