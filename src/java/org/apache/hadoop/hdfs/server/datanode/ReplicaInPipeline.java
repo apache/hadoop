@@ -41,6 +41,7 @@ class ReplicaInPipeline extends ReplicaInfo
                         implements ReplicaInPipelineInterface {
   private long bytesAcked;
   private long bytesOnDisk;
+  private byte[] lastChecksum;  
   private Thread writer;
   
   /**
@@ -122,11 +123,17 @@ class ReplicaInPipeline extends ReplicaInfo
     return bytesOnDisk;
   }
   
-  @Override //ReplicaInPipelineInterface
-  public void setBytesOnDisk(long bytesOnDisk) {
-    this.bytesOnDisk = bytesOnDisk;
+  @Override // ReplicaInPipelineInterface
+  public synchronized void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum) {
+    this.bytesOnDisk = dataLength;
+    this.lastChecksum = lastChecksum;
   }
   
+  @Override // ReplicaInPipelineInterface
+  public synchronized ChunkChecksum getLastChecksumAndDataLen() {
+    return new ChunkChecksum(getBytesOnDisk(), lastChecksum);
+  }
+
   /**
    * Set the thread that is writing to this replica
    * @param writer a thread writing to this replica

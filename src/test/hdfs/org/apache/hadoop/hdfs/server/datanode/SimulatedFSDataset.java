@@ -249,10 +249,13 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
 
     @Override
-    synchronized public void setBytesOnDisk(long bytesOnDisk) {
-      if (!finalized) {
-        oStream.setLength(bytesOnDisk);
-      }
+    public void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum) {
+      oStream.setLength(dataLength);
+    }
+
+    @Override
+    public ChunkChecksum getLastChecksumAndDataLen() {
+      return new ChunkChecksum(oStream.getLength(), null);
     }
   }
   

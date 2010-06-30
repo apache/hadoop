@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
  * Exception indicating that DataNode does not have a replica
  * that matches the target block.  
  */
-class ReplicaNotFoundException extends IOException {
+public class ReplicaNotFoundException extends IOException {
   private static final long serialVersionUID = 1L;
   final static String NON_RBW_REPLICA = "Cannot recover a non-RBW replica ";
   final static String UNFINALIZED_REPLICA = 

@@ -1004,6 +1004,9 @@ Release 0.21.0 - Unreleased
 
     HDFS-1256. libhdfs is missing from the tarball. (tomwhite)
 
+    HDFS_1057. Concurrent readers hit ChecksumExceptions if following a
+    writer to very end of file. (sam rash via hairong)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS

@@ -44,10 +44,17 @@ interface ReplicaInPipelineInterface extends Replica {
   void setBytesAcked(long bytesAcked);
   
   /**
-   * Set the number of bytes on disk
-   * @param bytesOnDisk number of bytes on disk
+   * store the checksum for the last chunk along with the data length
+   * @param dataLength number of bytes on disk
+   * @param lastChecksum - checksum bytes for the last chunk
    */
-  void setBytesOnDisk(long bytesOnDisk);
+  public void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum);
+  
+  /**
+   * gets the last chunk checksum and the length of the block corresponding
+   * to that checksum
+   */
+  public ChunkChecksum getLastChecksumAndDataLen();
   
   /**
    * Create output streams for writing to this replica, 

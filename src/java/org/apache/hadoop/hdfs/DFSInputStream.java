@@ -36,7 +36,9 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -139,6 +141,8 @@ class DFSInputStream extends FSInputStream {
     if (locatedblock == null || locatedblock.getLocations().length == 0) {
       return 0;
     }
+    int replicaNotFoundCount = locatedblock.getLocations().length;
+    
     for(DatanodeInfo datanode : locatedblock.getLocations()) {
       try {
         final ClientDatanodeProtocol cdp = DFSClient.createClientDatanodeProtocolProxy(
@@ -149,12 +153,28 @@ class DFSInputStream extends FSInputStream {
         }
       }
       catch(IOException ioe) {
+        if (ioe instanceof RemoteException &&
+          (((RemoteException) ioe).unwrapRemoteException() instanceof
+            ReplicaNotFoundException)) {
+          // special case : replica might not be on the DN, treat as 0 length
+          replicaNotFoundCount--;
+        }
+        
         if (DFSClient.LOG.isDebugEnabled()) {
-          DFSClient.LOG.debug("Faild to getReplicaVisibleLength from datanode "
+          DFSClient.LOG.debug("Failed to getReplicaVisibleLength from datanode "
               + datanode + " for block " + locatedblock.getBlock(), ioe);
         }
       }
     }
+
+    // Namenode told us about these locations, but none know about the replica
+    // means that we hit the race between pipeline creation start and end.
+    // we require all 3 because some other exception could have happened
+    // on a DN that has it.  we want to report that error
+    if (replicaNotFoundCount == 0) {
+      return 0;
+    }
+
     throw new IOException("Cannot obtain block length for " + locatedblock);
   }
   

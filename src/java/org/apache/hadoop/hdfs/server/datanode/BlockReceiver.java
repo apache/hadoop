@@ -28,6 +28,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.zip.Checksum;
 
@@ -509,6 +510,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         verifyChunks(pktBuf, dataOff, len, pktBuf, checksumOff);
       }
 
+      byte[] lastChunkChecksum;
+      
       try {
         long onDiskLen = replicaInfo.getBytesOnDisk();
         if (onDiskLen<offsetInBlock) {
@@ -546,16 +549,28 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             }
             partialCrc.update(pktBuf, startByteToDisk, numBytesToDisk);
             byte[] buf = FSOutputSummer.convertToByteStream(partialCrc, checksumSize);
+            lastChunkChecksum = Arrays.copyOfRange(
+              buf, buf.length - checksumSize, buf.length
+            );
             checksumOut.write(buf);
             LOG.debug("Writing out partial crc for data len " + len);
             partialCrc = null;
           } else {
+            lastChunkChecksum = Arrays.copyOfRange(
+              pktBuf, 
+              checksumOff + checksumLen - checksumSize, 
+              checksumOff + checksumLen
+            );
             checksumOut.write(pktBuf, checksumOff, checksumLen);
           }
-          replicaInfo.setBytesOnDisk(offsetInBlock);
-          datanode.myMetrics.bytesWritten.inc(len);
           /// flush entire packet
           flush();
+          
+          replicaInfo.setLastChecksumAndDataLen(
+            offsetInBlock, lastChunkChecksum
+          );
+          
+          datanode.myMetrics.bytesWritten.inc(len);
         }
       } catch (IOException iex) {
         datanode.checkDiskError(iex);
