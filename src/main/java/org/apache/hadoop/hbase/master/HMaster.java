@@ -1023,6 +1023,7 @@ public class HMaster extends Thread implements HMasterInterface,
           byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionForRow(tableName, rowKey);
         }
+        LOG.info("About to " + op.toString() + " on " + Bytes.toString(tableName) + " and pair is " + pair);
         if (pair != null && pair.getSecond() != null) {
           this.regionManager.startAction(pair.getFirst().getRegionName(),
             pair.getFirst(), pair.getSecond(), op);

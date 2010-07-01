@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+
+<!--
+   Copyright 2010 The Apache Software Foundation
+
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<head />
+<body bgcolor="white">
+<h1>Multi Cluster Replication</h1>
+This package provides replication between HBase clusters.
+<p>
+
+<h2>Table Of Contents</h2>
+<ol>
+    <li><a href="#status">Status</a></li>
+    <li><a href="#requirements">Requirements</a></li>
+    <li><a href="#deployment">Deployment</a></li>
+</ol>
+
+<p>
+<a name="status">
+<h2>Status</h2>
+</a>
+<p>
+This package is alpha quality software and is only meant to be a base
+for future developments. The current implementation offers the following
+features:
+
+<ol>
+    <li>Master/Slave replication limited to 1 slave cluster. </li>
+    <li>Replication of scoped families in user tables.</li>
+    <li>Start/stop replication stream.</li>
+    <li>Supports clusters of different sizes.</li>
+    <li>Handling of partitions longer than 10 minutes</li>
+</ol>
+Please report bugs on the project's Jira when found.
+<p>
+<a name="requirements">
+<h2>Requirements</h2>
+</a>
+<p>
+
+Before trying out replication, make sure to review the following requirements:
+
+<ol>
+    <li>Zookeeper should be handled by yourself, not by HBase, and should
+    always be available during the deployment.</li>
+    <li>All machines from both clusters should be able to reach every
+    other machine since replication goes from any region server to any
+    other one on the slave cluster. That also includes the
+    Zookeeper clusters.</li>
+    <li>Both clusters should have the same HBase and Hadoop major revision.
+    For example, having 0.21.1 on the master and 0.21.0 on the slave is
+    correct but not 0.21.1 and 0.22.0.</li>
+    <li>Every table that contains families that are scoped for replication
+    should exist on every cluster with the exact same name, same for those
+    replicated families.</li>
+</ol>
+
+<p>
+<a name="deployment">
+<h2>Deployment</h2>
+</a>
+<p>
+
+The following steps describe how to enable replication from a cluster
+to another. This must be done with both clusters offlined.
+<ol>
+    <li>Edit ${HBASE_HOME}/conf/hbase-site.xml on both cluster to add
+    the following configurations:
+        <pre>
+&lt;property&gt;
+  &lt;name&gt;hbase.replication.enabled&lt;/name&gt;
+  &lt;value&gt;true&lt;/value&gt;
+&lt;/property&gt;</pre>
+    </li>
+    <li>Run the following command on any cluster:
+    <pre>
+$HBASE_HOME/bin/hbase org.jruby.Main $HBASE_HOME/replication/bin/add_peer.tb</pre>
+    This will show you the help to setup the replication stream between
+    both clusters. If both clusters use the same Zookeeper cluster, you have
+    to use a different <b>zookeeper.znode.parent</b> since they can't
+    write in the same folder.
+    </li>
+    <li>You can now start and stop the clusters with your preferred method.</li>
+</ol>
+
+You can confirm that your setup works by looking at any region server's log
+on the master cluster and look for the following lines;
+
+<pre>
+Considering 1 rs, with ratio 0.1
+Getting 1 rs from peer cluster # 0
+Choosing peer 10.10.1.49:62020</pre>
+
+In this case it indicates that 1 region server from the slave cluster
+was chosen for replication.<br><br>
+
+Should you want to stop the replication while the clusters are running, open
+the shell on the master cluster and issue this command:
+<pre>
+hbase(main):001:0> zk 'set /zookeeper.znode.parent/replication/state false'</pre>
+
+Where you replace the znode parent with the one configured on your master
+cluster. Replication of already queued edits will still happen after you
+issued that command but new entries won't be. To start it back, simply replace
+"false" with "true" in the command.
+
+<p>
+
+</body>
+</html>

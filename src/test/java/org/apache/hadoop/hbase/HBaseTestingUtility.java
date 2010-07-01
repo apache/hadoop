@@ -466,6 +466,7 @@ public class HBaseTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[] f) throws IOException {
+    t.setAutoFlush(false);
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
@@ -481,6 +482,7 @@ public class HBaseTestingUtility {
         }
       }
     }
+    t.flushCommits();
     return rowCount;
   }
 

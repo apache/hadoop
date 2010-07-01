@@ -467,6 +467,7 @@ public class ZooKeeperWrapper implements Watcher {
 
   private HServerAddress readAddress(String znode, Watcher watcher) {
     try {
+      LOG.debug("<" + instanceName + ">" + "Trying to read " + znode);
       return readAddressOrThrow(znode, watcher);
     } catch (IOException e) {
       LOG.debug("<" + instanceName + ">" + "Failed to read " + e.getMessage());
@@ -572,7 +573,7 @@ public class ZooKeeperWrapper implements Watcher {
     if (recursive) {
       LOG.info("<" + instanceName + ">" + "deleteZNode get children for " + znode);
       List<String> znodes = this.zooKeeper.getChildren(znode, false);
-      if (znodes.size() > 0) {
+      if (znodes != null && znodes.size() > 0) {
         for (String child : znodes) {
           String childFullPath = getZNode(znode, child);
           LOG.info("<" + instanceName + ">" + "deleteZNode recursive call " + childFullPath);
@@ -914,10 +915,10 @@ public class ZooKeeperWrapper implements Watcher {
     if (failOnWrite || stat == null) {
       this.zooKeeper.create(path, data,
           Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-      LOG.debug("<" + instanceName + ">" + "Created " + path);
+      LOG.debug("<" + instanceName + ">" + "Created " + path + " with data " + strData);
     } else {
       this.zooKeeper.setData(path, data, -1);
-      LOG.debug("<" + instanceName + ">" + "Updated " + path);
+      LOG.debug("<" + instanceName + ">" + "Updated " + path + " with data " + strData);
     }
   }
 

@@ -46,7 +46,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
   private long writeTime;
 
   private byte clusterId;
-  private int scope;
 
   /** Writable Consructor -- Do not use. */
   public HLogKey() {
@@ -70,7 +69,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
     this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
-    this.scope = HConstants.REPLICATION_SCOPE_LOCAL;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -119,22 +117,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     this.clusterId = clusterId;
   }
 
-  /**
-   * Get the replication scope of this key
-   * @return replication scope
-   */
-  public int getScope() {
-    return this.scope;
-  }
-
-  /**
-   * Set the replication scope of this key
-   * @param scope The new scope
-   */
-  public void setScope(int scope) {
-    this.scope = scope;
-  }
-
   @Override
   public String toString() {
     return Bytes.toString(tablename) + "/" + Bytes.toString(regionName) + "/" +
@@ -158,7 +140,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     result ^= this.logSeqNum;
     result ^= this.writeTime;
     result ^= this.clusterId;
-    result ^= this.scope;
     return result;
   }
 
@@ -187,7 +168,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     out.writeLong(this.logSeqNum);
     out.writeLong(this.writeTime);
     out.writeByte(this.clusterId);
-    out.writeInt(this.scope);
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -197,7 +177,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     this.writeTime = in.readLong();
     try {
       this.clusterId = in.readByte();
-      this.scope = in.readInt();
     } catch(EOFException e) {
       // Means it's an old key, just continue
     }

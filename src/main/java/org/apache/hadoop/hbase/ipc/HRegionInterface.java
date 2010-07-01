@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 import java.io.IOException;
 import java.util.List;
@@ -279,10 +280,22 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion {
    * @throws IOException e
    */
   public MultiPutResponse multiPut(MultiPut puts) throws IOException;
-  
+
   /**
    * Bulk load an HFile into an open region
    */
   public void bulkLoadHFile(String hfilePath,
       byte[] regionName, byte[] familyName) throws IOException;
+
+  /**
+   * Replicates the given entries. The guarantee is that the given entries
+   * will be durable on the slave cluster if this method returns without
+   * any exception.
+   * hbase.replication has to be set to true for this to work.
+   *
+   * @param entries entries to replicate
+   * @throws IOException
+   */
+  public void replicateLogEntries(HLog.Entry[] entries) throws IOException;
+
 }

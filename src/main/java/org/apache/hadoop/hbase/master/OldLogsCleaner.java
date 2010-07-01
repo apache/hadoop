@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
@@ -62,6 +63,13 @@ public class OldLogsCleaner extends Chore {
                         Configuration conf, FileSystem fs,
                         Path oldLogDir) {
     super("OldLogsCleaner", p, s);
+    // Use the log cleaner provided by replication if enabled, unless something
+    // was already provided
+    if (conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false) &&
+        conf.get("hbase.master.logcleanerplugin.impl") == null) {
+      conf.set("hbase.master.logcleanerplugin.impl",
+          "org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner");
+    }
     this.maxDeletedLogs =
         conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
     this.fs = fs;

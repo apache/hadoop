@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -235,6 +236,10 @@ public class HRegionServer implements HRegionInterface,
   private Thread regionServerThread;
 
   private final String machineName;
+
+  // Replication-related attributes
+  private Replication replicationHandler;
+  // End of replication
 
   /**
    * Starts a HRegionServer at the default location
@@ -913,15 +918,18 @@ public class HRegionServer implements HRegionInterface,
         "running at " + this.serverInfo.getServerName() +
         " because logdir " + logdir.toString() + " exists");
     }
-    HLog newlog = instantiateHLog(logdir, oldLogDir);
-    return newlog;
+    this.replicationHandler = new Replication(this.conf,this.serverInfo,
+        this.fs, oldLogDir, stopRequested);
+    HLog log = instantiateHLog(logdir, oldLogDir);
+    this.replicationHandler.addLogEntryVisitor(log);
+    return log;
   }
 
   // instantiate
   protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
-    HLog newlog = new HLog(fs, logdir, oldLogDir, conf, hlogRoller, null,
-        serverInfo.getServerAddress().toString());
-    return newlog;
+    return new HLog(this.fs, logdir, oldLogDir, this.conf, this.hlogRoller,
+      this.replicationHandler.getReplicationManager(),
+        this.serverInfo.getServerAddress().toString());
   }
 
 
@@ -1046,11 +1054,13 @@ public class HRegionServer implements HRegionInterface,
           port++;
           // update HRS server info port.
           this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
-            this.serverInfo.getStartCode(),  port,
+            this.serverInfo.getStartCode(), port,
             this.serverInfo.getHostname());
         }
       }
     }
+
+    this.replicationHandler.startReplicationServices();
 
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
@@ -1140,7 +1150,7 @@ public class HRegionServer implements HRegionInterface,
     this.abortRequested = true;
     this.reservedSpace.clear();
     if (this.metrics != null) {
-      LOG.info("Dump of metrics: " + this.metrics.toString());
+      LOG.info("Dump of metrics: " + this.metrics);
     }
     stop();
   }
@@ -1172,6 +1182,7 @@ public class HRegionServer implements HRegionInterface,
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.compactSplitThread);
     Threads.shutdown(this.hlogRoller);
+    this.replicationHandler.join();
   }
 
   private boolean getMaster() {
@@ -2442,6 +2453,11 @@ public class HRegionServer implements HRegionInterface,
       throw new RuntimeException("Failed construction of " +
         "Master: " + regionServerClass.toString(), e);
     }
+  }
+
+  @Override
+  public void replicateLogEntries(HLog.Entry[] entries) throws IOException {
+    this.replicationHandler.replicateLogEntries(entries);
   }
 
   /**

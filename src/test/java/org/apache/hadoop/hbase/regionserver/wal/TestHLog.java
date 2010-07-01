@@ -525,4 +525,47 @@ public class TestHLog extends HBaseTestCase {
       }
     }
   }
+
+  /**
+   * Test that we can visit entries before they are appended
+   * @throws Exception
+   */
+  public void testVisitors() throws Exception {
+    final int COL_COUNT = 10;
+    final byte [] tableName = Bytes.toBytes("tablename");
+    final byte [] row = Bytes.toBytes("row");
+    this.conf.setBoolean("dfs.support.append", true);
+    HLog log = new HLog(this.fs, dir, this.oldLogDir, this.conf, null);
+    DumbLogEntriesVisitor visitor = new DumbLogEntriesVisitor();
+    log.addLogEntryVisitor(visitor);
+    long timestamp = System.currentTimeMillis();
+    HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    for (int i = 0; i < COL_COUNT; i++) {
+      WALEdit cols = new WALEdit();
+      cols.add(new KeyValue(row, Bytes.toBytes("column"),
+          Bytes.toBytes(Integer.toString(i)),
+          timestamp, new byte[]{(byte) (i + '0')}));
+      log.append(hri, tableName, cols, System.currentTimeMillis());
+    }
+    assertEquals(COL_COUNT, visitor.increments);
+    log.removeLogEntryVisitor(visitor);
+    WALEdit cols = new WALEdit();
+    cols.add(new KeyValue(row, Bytes.toBytes("column"),
+        Bytes.toBytes(Integer.toString(11)),
+        timestamp, new byte[]{(byte) (11 + '0')}));
+    log.append(hri, tableName, cols, System.currentTimeMillis());
+    assertEquals(COL_COUNT, visitor.increments);
+  }
+
+  static class DumbLogEntriesVisitor implements LogEntryVisitor {
+
+    int increments = 0;
+
+    @Override
+    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+                                         WALEdit logEdit) {
+      increments++;
+    }
+  }
 }

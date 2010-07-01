@@ -36,11 +36,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -117,6 +119,7 @@ import com.google.common.util.concurrent.NamingThreadFactory;
  */
 public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
+  private static final String HLOG_DATFILE = "hlog.dat.";
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
   private final FileSystem fs;
@@ -218,6 +221,9 @@ public class HLog implements Syncable {
    * Thread that handles group commit
    */
   private final LogSyncer logSyncerThread;
+
+  private final List<LogEntryVisitor> logEntryVisitors =
+      new CopyOnWriteArrayList<LogEntryVisitor>();
 
   /**
    * Pattern used to validate a HLog file name
@@ -1028,6 +1034,11 @@ public class HLog implements Syncable {
     if (!this.enabled) {
       return;
     }
+    if (!this.logEntryVisitors.isEmpty()) {
+      for (LogEntryVisitor visitor : this.logEntryVisitors) {
+        visitor.visitLogEntryBeforeWrite(info, logKey, logEdit);
+      }
+    }
     try {
       long now = System.currentTimeMillis();
       this.writer.append(new HLog.Entry(logKey, logEdit));
@@ -1179,8 +1190,16 @@ public class HLog implements Syncable {
       srcDir.toString());
     splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
     try {
-      LOG.info("Spliting is done. Removing old log dir "+srcDir);
-      fs.delete(srcDir, false);
+      FileStatus[] files = fs.listStatus(srcDir);
+      for(FileStatus file : files) {
+        Path newPath = getHLogArchivePath(oldLogDir, file.getPath());
+        LOG.info("Moving " +  FSUtils.getPath(file.getPath()) + " to " +
+                   FSUtils.getPath(newPath));
+        fs.rename(file.getPath(), newPath);
+      }
+      LOG.debug("Moved " + files.length + " log files to " +
+        FSUtils.getPath(oldLogDir));
+      fs.delete(srcDir, true);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       IOException io = new IOException("Cannot delete: " + srcDir);
@@ -1632,11 +1651,21 @@ public class HLog implements Syncable {
     return new Path(regionDir, RECOVERED_EDITS);
    }
 
+  /**
+   *
+   * @param visitor
+   */
+  public void addLogEntryVisitor(LogEntryVisitor visitor) {
+    this.logEntryVisitors.add(visitor);
+  }
 
-
-
-
-
+  /**
+   * 
+   * @param visitor
+   */
+  public void removeLogEntryVisitor(LogEntryVisitor visitor) {
+    this.logEntryVisitors.remove(visitor);
+  }
 
 
   public void addLogActionsListerner(LogActionsListener list) {

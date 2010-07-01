@@ -345,6 +345,9 @@ public final class HConstants {
    */
   public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
 
+  public static final String
+      REPLICATION_ENABLE_KEY = "hbase.replication";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
