@@ -480,7 +480,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
     /// flush entire packet before sending ack
     flush();
-
+    
+    // update length only after flush to disk
+    datanode.data.setVisibleLength(block, offsetInBlock);
+    
     // put in queue for pending acks
     if (responder != null) {
       ((PacketResponder)responder.getRunnable()).enqueue(seqno,

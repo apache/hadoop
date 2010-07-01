@@ -40,7 +40,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  *
  */
 public interface FSDatasetInterface extends FSDatasetMBean {
-  
+
   
   /**
    * Returns the length of the metadata file of the specified block
@@ -49,7 +49,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @throws IOException
    */
   public long getMetaDataLength(Block b) throws IOException;
-  
+
   /**
    * This class provides the input stream and length of the metadata
    * of a block
@@ -92,6 +92,25 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @throws IOException
    */
   public long getLength(Block b) throws IOException;
+
+  /**
+   * Returns the specified block's visible length (has metadata for this)
+   * @param b
+   * @return   the specified block's visible length
+   * @throws IOException
+   */
+  public long getVisibleLength(Block b) throws IOException;
+
+  /**
+   * update the specified blocks visible meta data.  NOTE: only applies
+   * to blocks that are being written to.  If called on closed blocks,
+   * throws IOException
+   * 
+   * @param b block to update the length for
+   * @param length value to set visible length to
+   * @throws IOException if the block is not in ongoingCreates
+   */
+  public void setVisibleLength(Block b, long length) throws IOException;
 
   /**
    * @return the generation stamp stored with the block.

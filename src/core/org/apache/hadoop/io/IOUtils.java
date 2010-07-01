@@ -20,6 +20,8 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 import org.apache.commons.logging.Log;
 
@@ -98,6 +100,28 @@ public class IOUtils {
     int toRead = len;
     while ( toRead > 0 ) {
       int ret = in.read( buf, off, toRead );
+      if ( ret < 0 ) {
+        throw new IOException( "Premeture EOF from inputStream");
+      }
+      toRead -= ret;
+      off += ret;
+    }
+  }
+
+  /** Reads len bytes in a loop using the channel of the stream
+   * @param fileChannel a FileChannel to read len bytes into buf
+   * @param buf The buffer to fill
+   * @param off offset from the buffer
+   * @param len the length of bytes to read
+   * @throws IOException if it could not read requested number of bytes 
+   * for any reason (including EOF)
+   */
+  public static void readFileChannelFully( FileChannel fileChannel, byte buf[],
+      int off, int len ) throws IOException {
+    int toRead = len;
+    ByteBuffer byteBuffer = ByteBuffer.wrap(buf, off, len);
+    while ( toRead > 0 ) {
+      int ret = fileChannel.read(byteBuffer);
       if ( ret < 0 ) {
         throw new IOException( "Premeture EOF from inputStream");
       }
