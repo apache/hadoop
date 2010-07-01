@@ -1009,6 +1009,8 @@ Release 0.21.0 - Unreleased
 
     HDFS-1212. Harmonize HDFS JAR library versions with Common. (tomwhite)
 
+    HDFS-1267. fuse-dfs does not compile. (Devaraj Das via tomwhite)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS

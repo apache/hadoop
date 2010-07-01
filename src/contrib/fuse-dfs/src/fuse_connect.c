@@ -37,7 +37,7 @@ hdfsFS doConnectAsUser(const char *hostname, int port) {
     return NULL;
   int numgroups = 0;
   char **groups = getGroups(uid, &numgroups);
-  hdfsFS fs = hdfsConnectAsUser(hostname, port, user, (const char **)groups, numgroups);
+  hdfsFS fs = hdfsConnectAsUser(hostname, port, user);
   freeGroups(groups, numgroups);
   if (user) 
     free(user);
