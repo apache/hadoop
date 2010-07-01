@@ -436,7 +436,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
 
-    long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
+    long heartbeatInterval = conf.getLong(
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000;
     this.heartbeatRecheckInterval = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
@@ -2818,8 +2820,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                              newReport.getNumberOfBlocks()+" blocks");
     }
     DatanodeDescriptor node = getDatanode(nodeID);
-    if (node == null) {
-      throw new IOException("ProcessReport from unregisterted node: "
+    if (node == null || !node.isAlive) {
+      throw new IOException("ProcessReport from dead or unregisterted node: "
                             + nodeID.getName());
     }
 
@@ -2943,13 +2945,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                          String delHint
                                          ) throws IOException {
     DatanodeDescriptor node = getDatanode(nodeID);
-    if (node == null) {
-      NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: "
-                                   + block + " is received from an unrecorded node " 
-                                   + nodeID.getName());
-      throw new IllegalArgumentException(
-                                         "Unexpected exception.  Got blockReceived message from node " 
-                                         + block + ", but there is no info for it");
+    if (node == null || !node.isAlive) {
+      NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: " + block
+          + " is received from dead or unregistered node " + nodeID.getName());
+      throw new IOException(
+          "Got blockReceived message from unregistered or dead node " + block);
     }
         
     if (NameNode.stateChangeLog.isDebugEnabled()) {

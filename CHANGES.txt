@@ -99,6 +99,9 @@ Trunk (unreleased changes)
     HDFS-1017. browsedfs jsp should call JspHelper.getUGI rather 
     than using createRemoteUser() (jnp via boryas)
 
+    HDFS-1250. Namenode should reject block reports and block received
+    requests from dead datanodes (suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
