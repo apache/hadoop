@@ -265,6 +265,8 @@
       name="avro"
       rev="${avro.version}"
       conf="common->default">
+      <exclude module="ant"/>
+      <exclude module="jetty"/>
       <exclude module="slf4j-simple"/>
     </dependency>
     <dependency org="org.codehaus.jackson"

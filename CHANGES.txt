@@ -1657,6 +1657,8 @@ Release 0.21.0 - Unreleased
     HADOOP-6826.  Revert FileSystem create method that takes CreateFlags.
     (tomwhite)
 
+    HADOOP-6800.  Harmonize JAR library versions.  (tomwhite)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
