@@ -1007,6 +1007,8 @@ Release 0.21.0 - Unreleased
     HDFS_1057. Concurrent readers hit ChecksumExceptions if following a
     writer to very end of file. (sam rash via hairong)
 
+    HADOOP-1212. Harmonize HDFS JAR library versions with Common. (tomwhite)
+
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS

@@ -60,7 +60,11 @@
     <dependency org="org.apache.hadoop" name="hadoop-common-instrumented" rev="${hadoop-common.version}" conf="system->default"/>
     <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="common->master"/>
     <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
-    <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="common->default"/>
+    <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" conf="common->default">
+      <exclude module="ant"/>
+      <exclude module="jetty"/>
+      <exclude module="slf4j-simple"/>
+    </dependency>
     <dependency org="org.aspectj" name="aspectjrt" rev="${aspectj.version}" conf="common->default"/>
     <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}" conf="common->default"/>
 
