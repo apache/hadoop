@@ -1,1 +1,1158 @@
-THIS IS A PLACEHOLDER.  REAL RELEASE NOTES WILL BE ADDED TO THIS FILE IN RELEASE BRANCHES.
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop Common 0.21.0 Release Notes</title>
+<STYLE type="text/css">
+		H1 {font-family: sans-serif}
+		H2 {font-family: sans-serif; margin-left: 7mm}
+		TABLE {margin-left: 7mm}
+	</STYLE>
+</head>
+<body>
+<h1>Hadoop Common 0.21.0 Release Notes</h1>
+		These release notes include new developer and user-facing incompatibilities, features, and major improvements.
+
+
+<a name="changes"></a>
+<h2>Changes Since Hadoop 0.20.2</h2>
+    
+<h3>        Sub-task
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4490'>HADOOP-4490</a>] -         Map and Reduce tasks should run as the user who submitted the job
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4930'>HADOOP-4930</a>] -         Implement setuid executable for Linux to assist in launching tasks as job owners
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4940'>HADOOP-4940</a>] -         Remove delete(Path f)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4941'>HADOOP-4941</a>] -         Remove getBlockSize(Path f), getLength(Path f) and getReplication(Path src)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4942'>HADOOP-4942</a>] -         Remove getName() and getNamed(String name, Configuration conf)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5037'>HADOOP-5037</a>] -         Deprecate FSNamesystem.getFSNamesystem() and change fsNamesystemObject to private
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5045'>HADOOP-5045</a>] -         FileSystem.isDirectory() should not be deprecated.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5073'>HADOOP-5073</a>] -         Hadoop 1.0 Interface Classification - scope (visibility - public/private) and stability
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5097'>HADOOP-5097</a>] -         Remove static variable JspHelper.fsn
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5120'>HADOOP-5120</a>] -         UpgradeManagerNamenode and UpgradeObjectNamenode should not use FSNamesystem.getFSNamesystem()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5217'>HADOOP-5217</a>] -         Split the AllTestDriver for core, hdfs and mapred
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5792'>HADOOP-5792</a>] -         to resolve jsp-2.1 jars through IVY
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6170'>HADOOP-6170</a>] -         add Avro-based RPC serialization
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6223'>HADOOP-6223</a>] -         New improved FileSystem interface for those implementing new files systems.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6230'>HADOOP-6230</a>] -         Move process tree, and memory calculator classes out of Common into Map/Reduce.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6409'>HADOOP-6409</a>] -         TestHDFSCLI has to check if it's running any testcases at all
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6410'>HADOOP-6410</a>] -         Rename TestCLI class to prevent JUnit from trying to run this class as a test
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6422'>HADOOP-6422</a>] -         permit RPC protocols to be implemented by Avro
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6486'>HADOOP-6486</a>] -         fix common classes to work with Avro 1.3 reflection
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6538'>HADOOP-6538</a>] -         Set hadoop.security.authentication to &quot;simple&quot; by default
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6568'>HADOOP-6568</a>] -         Authorization for default servlets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6658'>HADOOP-6658</a>] -         Exclude Private elements from generated Javadoc
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6668'>HADOOP-6668</a>] -         Apply audience and stability annotations to classes in common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6692'>HADOOP-6692</a>] -         Add FileContext#listStatus that returns an iterator
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6752'>HADOOP-6752</a>] -         Remote cluster control functionality needs JavaDocs improvement
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6771'>HADOOP-6771</a>] -         Herriot's artifact id for Maven deployment should be set to hadoop-core-instrumented
+</li>
+</ul>
+    
+<h3>        Bug
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2337'>HADOOP-2337</a>] -         Trash never closes FileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2366'>HADOOP-2366</a>] -         Space in the value for dfs.data.dir can cause great problems
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2413'>HADOOP-2413</a>] -         Is FSNamesystem.fsNamesystemObject unique?
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2827'>HADOOP-2827</a>] -         Remove deprecated NetUtils.getServerAddress
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3205'>HADOOP-3205</a>] -         Read multiple chunks directly from FSInputChecker subclass into user buffers
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3327'>HADOOP-3327</a>] -         Shuffling fetchers waited too long between map output fetch re-tries
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3426'>HADOOP-3426</a>] -         Datanode does not start up if the local machines DNS isnt working right and dfs.datanode.dns.interface==default
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4041'>HADOOP-4041</a>] -         IsolationRunner does not work as documented
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4045'>HADOOP-4045</a>] -         Increment checkpoint if we see failures in rollEdits
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4220'>HADOOP-4220</a>] -         Job Restart tests take 10 minutes, can time out very easily
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4584'>HADOOP-4584</a>] -         Slow generation of blockReport at DataNode causes delay of sending heartbeat to NameNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4648'>HADOOP-4648</a>] -         Remove ChecksumDistriubtedFileSystem and InMemoryFileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4655'>HADOOP-4655</a>] -         FileSystem.CACHE should be ref-counted
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4779'>HADOOP-4779</a>] -         Remove deprecated FileSystem methods
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4864'>HADOOP-4864</a>] -         -libjars with multiple jars broken when client and cluster reside on different OSs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4933'>HADOOP-4933</a>] -         ConcurrentModificationException in JobHistory.java
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4948'>HADOOP-4948</a>] -         ant test-patch does not work
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4959'>HADOOP-4959</a>] -         System metrics does not output correctly for Redhat 5.1.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4960'>HADOOP-4960</a>] -         Hadoop metrics are showing in irregular intervals
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4975'>HADOOP-4975</a>] -         CompositeRecordReader: ClassLoader set in JobConf is not passed onto WrappedRecordReaders
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4985'>HADOOP-4985</a>] -         IOException is abused in FSDirectory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5017'>HADOOP-5017</a>] -         NameNode.namesystem should be private
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5022'>HADOOP-5022</a>] -         [HOD] logcondense should delete all hod logs for a user, including jobtracker logs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5031'>HADOOP-5031</a>] -         metrics aggregation is incorrect in database
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5032'>HADOOP-5032</a>] -         CHUKWA_CONF_DIR environment variable needs to be exported to shell script
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5039'>HADOOP-5039</a>] -         Hourly&amp;daily rolling are not using the right path
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5050'>HADOOP-5050</a>] -         TestDFSShell fails intermittently
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5070'>HADOOP-5070</a>] -         Update the year for the copyright to 2009
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5072'>HADOOP-5072</a>] -         testSequenceFileGzipCodec won't pass without native gzip codec
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5078'>HADOOP-5078</a>] -         Broken AMI/AKI for ec2 on hadoop
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5095'>HADOOP-5095</a>] -         chukwa watchdog does not monitor the system correctly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5100'>HADOOP-5100</a>] -         Chukwa Log4JMetricsContext class should append new log to current log file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5103'>HADOOP-5103</a>] -         Too many logs saying &quot;Adding new node&quot; on JobClient console
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5113'>HADOOP-5113</a>] -         logcondense should delete hod logs for a user , whose username has any of the characters in the value passed to &quot;-l&quot; options 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5138'>HADOOP-5138</a>] -         Current Chukwa Trunk failed contrib unit tests.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5148'>HADOOP-5148</a>] -         make watchdog disable-able
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5149'>HADOOP-5149</a>] -         HistoryViewer throws IndexOutOfBoundsException when there are files or directories not confrming to log file name convention
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5172'>HADOOP-5172</a>] -         Chukwa : TestAgentConfig.testInitAdaptors_vs_Checkpoint regularly fails 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5191'>HADOOP-5191</a>] -         After creation and startup of the hadoop namenode on AIX or Solaris, you will only be allowed to connect to the namenode via hostname but not IP.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5194'>HADOOP-5194</a>] -         DiskErrorException in TaskTracker when running a job
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5198'>HADOOP-5198</a>] -         NPE in Shell.runCommand()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5200'>HADOOP-5200</a>] -         NPE when the namenode comes up but the filesystem is set to file://
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5203'>HADOOP-5203</a>] -         TT's version build is too restrictive
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5204'>HADOOP-5204</a>] -         hudson trunk build failure due to autoheader failure in create-c++-configure-libhdfs task
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5206'>HADOOP-5206</a>] -         All &quot;unprotected*&quot; methods of FSDirectory should synchronize on the root.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5209'>HADOOP-5209</a>] -         Update year to 2009 for javadoc
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5212'>HADOOP-5212</a>] -         cygwin path translation not happening correctly after Hadoop-4868
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5213'>HADOOP-5213</a>] -         BZip2CompressionOutputStream NullPointerException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5218'>HADOOP-5218</a>] -         libhdfs unit test failed because it was unable to start namenode/datanode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5219'>HADOOP-5219</a>] -         SequenceFile is using mapred property
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5226'>HADOOP-5226</a>] -         Add license headers to html and jsp files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5229'>HADOOP-5229</a>] -         duplicate variables in build.xml hadoop.version vs version let build fails at assert-hadoop-jar-exists
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5251'>HADOOP-5251</a>] -         TestHdfsProxy and TestProxyUgiManager frequently fail
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5252'>HADOOP-5252</a>] -         Streaming overrides -inputformat option
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5253'>HADOOP-5253</a>] -         to remove duplicate calls to the cn-docs target.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5273'>HADOOP-5273</a>] -         License header missing in TestJobInProgress.java
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5276'>HADOOP-5276</a>] -         Upon a lost tracker, the task's start time is reset to 0
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5278'>HADOOP-5278</a>] -         Finish time of a TIP is incorrectly logged to the jobhistory upon jobtracker restart
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5300'>HADOOP-5300</a>] -         &quot;ant javadoc-dev&quot; does not work
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5314'>HADOOP-5314</a>] -         needToSave incorrectly calculated in loadFSImage()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5322'>HADOOP-5322</a>] -         comments in JobInProgress related to TaskCommitThread are not valid
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5341'>HADOOP-5341</a>] -         hadoop-daemon isn't compatible after HADOOP-4868
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5347'>HADOOP-5347</a>] -         bbp example cannot be run.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5386'>HADOOP-5386</a>] -         To Probe free ports dynamically for Unit test to replace fixed ports
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5406'>HADOOP-5406</a>] -         Misnamed function in ZlibCompressor.c
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5420'>HADOOP-5420</a>] -         Support killing of process groups in LinuxTaskController binary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5442'>HADOOP-5442</a>] -         The job history display needs to be paged 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5456'>HADOOP-5456</a>] -         javadoc warning: can't find restoreFailedStorage() in ClientProtocol
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5458'>HADOOP-5458</a>] -         Remove Chukwa from .gitignore
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5462'>HADOOP-5462</a>] -         Glibc double free exception thrown when chown syscall fails.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5464'>HADOOP-5464</a>] -         DFSClient does not treat write timeout of 0 properly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5472'>HADOOP-5472</a>] -         Distcp does not support globbing of input paths
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5476'>HADOOP-5476</a>] -         calling new SequenceFile.Reader(...) leaves an InputStream open, if the given sequence file is broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5477'>HADOOP-5477</a>] -         TestCLI fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5486'>HADOOP-5486</a>] -         ReliabilityTest does not test lostTrackers, some times.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5488'>HADOOP-5488</a>] -         HADOOP-2721 doesn't clean up descendant processes of a jvm that exits cleanly after running a task successfully
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5489'>HADOOP-5489</a>] -         hadoop-env.sh still refers to java1.5
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5491'>HADOOP-5491</a>] -         Better control memory usage in contrib/index
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5507'>HADOOP-5507</a>] -         javadoc warning in JMXGet
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5511'>HADOOP-5511</a>] -         Add Apache License to EditLogBackupOutputStream
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5556'>HADOOP-5556</a>] -         A few improvements to DataNodeCluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5561'>HADOOP-5561</a>] -         Javadoc-dev ant target runs out of heap space
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5581'>HADOOP-5581</a>] -         libhdfs does not get FileNotFoundException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5582'>HADOOP-5582</a>] -         Hadoop Vaidya throws number format exception due to changes in the job history counters string format (escaped compact representation).
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5592'>HADOOP-5592</a>] -         Hadoop Streaming - GzipCodec
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5604'>HADOOP-5604</a>] -         TestBinaryPartitioner javac warnings.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5635'>HADOOP-5635</a>] -         distributed cache doesn't work with other distributed file systems
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5650'>HADOOP-5650</a>] -         Namenode log that indicates why it is not leaving safemode may be confusing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5652'>HADOOP-5652</a>] -         Reduce does not respect in-memory segment memory limit when number of on disk segments == io.sort.factor
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5656'>HADOOP-5656</a>] -         Counter for S3N Read Bytes does not work
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5658'>HADOOP-5658</a>] -         Eclipse templates fail out of the box; need updating
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5661'>HADOOP-5661</a>] -         Resolve findbugs warnings in mapred
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5679'>HADOOP-5679</a>] -         Resolve findbugs warnings in core/streaming/pipes/examples
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5704'>HADOOP-5704</a>] -         Scheduler test code does not compile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5709'>HADOOP-5709</a>] -         Remove the additional synchronization in MapTask.MapOutputBuffer.Buffer.write
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5710'>HADOOP-5710</a>] -         Counter MAP_INPUT_BYTES missing from new mapreduce api.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5715'>HADOOP-5715</a>] -         Should conf/mapred-queue-acls.xml be added to the ignore list?
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5734'>HADOOP-5734</a>] -         HDFS architecture documentation describes outdated placement policy
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5737'>HADOOP-5737</a>] -         UGI checks in testcases are broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5738'>HADOOP-5738</a>] -         Split waiting tasks field in JobTracker metrics to individual tasks
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5762'>HADOOP-5762</a>] -         distcp does not copy empty directories
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5764'>HADOOP-5764</a>] -         Hadoop Vaidya test rule (ReadingHDFSFilesAsSideEffect) fails w/ exception if number of map input bytes for a job is zero.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5775'>HADOOP-5775</a>] -         HdfsProxy Unit Test should not depend on HDFSPROXY_CONF_DIR environment
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5780'>HADOOP-5780</a>] -         Fix slightly confusing log from &quot;-metaSave&quot; on NameNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5782'>HADOOP-5782</a>] -         Make formatting of BlockManager.java similar to FSNamesystem.java to simplify porting patch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5801'>HADOOP-5801</a>] -         JobTracker should refresh the hosts list upon recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5804'>HADOOP-5804</a>] -         neither s3.block.size not fs.s3.block.size are honoured
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5805'>HADOOP-5805</a>] -         problem using top level s3 buckets as input/output directories
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5808'>HADOOP-5808</a>] -         Fix hdfs un-used import warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5809'>HADOOP-5809</a>] -         Job submission fails if hadoop.tmp.dir exists
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5818'>HADOOP-5818</a>] -         Revert the renaming from checkSuperuserPrivilege to checkAccess by HADOOP-5643
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5820'>HADOOP-5820</a>] -         Fix findbugs warnings for http related codes in hdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5823'>HADOOP-5823</a>] -         Handling javac &quot;deprecated&quot; warning for using UTF8
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5824'>HADOOP-5824</a>] -         remove OP_READ_METADATA functionality from Datanode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5827'>HADOOP-5827</a>] -         Remove unwanted file that got checked in by accident
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5829'>HADOOP-5829</a>] -         Fix javac warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5835'>HADOOP-5835</a>] -         Fix findbugs warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5836'>HADOOP-5836</a>] -         Bug in S3N handling of directory markers using an object with a trailing &quot;/&quot; causes jobs to fail
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5841'>HADOOP-5841</a>] -         Resolve findbugs warnings in DistributedFileSystem.java, DatanodeInfo.java, BlocksMap.java, DataNodeDescriptor.java
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5842'>HADOOP-5842</a>] -         Fix a few javac warnings under packages fs and util
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5845'>HADOOP-5845</a>] -         Build successful despite test failure on test-core target
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5847'>HADOOP-5847</a>] -         Streaming unit tests failing for a while on trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5853'>HADOOP-5853</a>] -         Undeprecate HttpServer.addInternalServlet method to fix javac warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5855'>HADOOP-5855</a>] -         Fix javac warnings for DisallowedDatanodeException and UnsupportedActionException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5856'>HADOOP-5856</a>] -         FindBugs : fix &quot;unsafe multithreaded use of DateFormat&quot; warning in hdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5859'>HADOOP-5859</a>] -         FindBugs : fix &quot;wait() or sleep() with locks held&quot; warnings in hdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5861'>HADOOP-5861</a>] -         s3n files are not getting split by default 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5864'>HADOOP-5864</a>] -         Fix DMI and OBL findbugs in packages hdfs and metrics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5866'>HADOOP-5866</a>] -         Move DeprecatedUTF8 to o.a.h.hdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5877'>HADOOP-5877</a>] -         Fix javac warnings in TestHDFSServerPorts, TestCheckpoint, TestNameEditsConfig, TestStartup and TestStorageRestore
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5878'>HADOOP-5878</a>] -         Fix hdfs jsp import and Serializable javac warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5891'>HADOOP-5891</a>] -         If dfs.http.address is default, SecondaryNameNode can't find NameNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5895'>HADOOP-5895</a>] -         Log message shows -ve number of bytes to be merged in the final merge pass when there are no intermediate merges and merge factor is &gt; number of segments
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5899'>HADOOP-5899</a>] -         Minor - move info log to the right place to avoid printing unnecessary log
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5900'>HADOOP-5900</a>] -         Minor correction in HDFS Documentation 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5902'>HADOOP-5902</a>] -         4 contrib test cases are failing for the svn committed code
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5935'>HADOOP-5935</a>] -         Hudson's release audit warnings link is broken
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5940'>HADOOP-5940</a>] -         trunk eclipse-plugin build fails while trying to copy commons-cli jar from the lib dir
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5944'>HADOOP-5944</a>] -         BlockManager needs Apache license header.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5947'>HADOOP-5947</a>] -         org.apache.hadoop.mapred.lib.TestCombineFileInputFormat fails trunk builds
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5951'>HADOOP-5951</a>] -         StorageInfo needs Apache license header.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5953'>HADOOP-5953</a>] -         KosmosFileSystem.isDirectory() should not be deprecated.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5954'>HADOOP-5954</a>] -         Fix javac warnings in HDFS tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5956'>HADOOP-5956</a>] -         org.apache.hadoop.hdfsproxy.TestHdfsProxy.testHdfsProxyInterface test fails on trunk
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5958'>HADOOP-5958</a>] -         Use JDK 1.6 File APIs in DF.java wherever possible
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5963'>HADOOP-5963</a>] -         unnecessary exception catch in NNBench
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5980'>HADOOP-5980</a>] -         LD_LIBRARY_PATH not passed to tasks spawned off by LinuxTaskController
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5981'>HADOOP-5981</a>] -         HADOOP-2838 doesnt work as expected
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5989'>HADOOP-5989</a>] -         streaming tests fails trunk builds
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6004'>HADOOP-6004</a>] -         BlockLocation deserialization is incorrect
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6009'>HADOOP-6009</a>] -         S3N listStatus incorrectly returns null instead of empty array when called on empty root
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6017'>HADOOP-6017</a>] -         NameNode and SecondaryNameNode fail to restart because of abnormal filenames.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6031'>HADOOP-6031</a>] -         Remove @author tags from Java source files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6074'>HADOOP-6074</a>] -         TestDFSIO does not use configuration properly.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6076'>HADOOP-6076</a>] -         Forrest documentation compilation is broken because of HADOOP-5913
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6079'>HADOOP-6079</a>] -         In DataTransferProtocol, the serialization of proxySource is not consistent
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6090'>HADOOP-6090</a>] -         GridMix is broke after upgrading random(text)writer to newer mapreduce apis
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6096'>HADOOP-6096</a>] -         Fix Eclipse project and classpath files following project split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6103'>HADOOP-6103</a>] -         Configuration clone constructor does not clone all the members.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6112'>HADOOP-6112</a>] -         to fix hudsonPatchQueueAdmin for different projects
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6114'>HADOOP-6114</a>] -         bug in documentation: org.apache.hadoop.fs.FileStatus.getLen() 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6122'>HADOOP-6122</a>] -         64 javac compiler warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6123'>HADOOP-6123</a>] -         hdfs script does not work after project split.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6124'>HADOOP-6124</a>] -         patchJavacWarnings and trunkJavacWarnings are not consistent.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6131'>HADOOP-6131</a>] -         A sysproperty should not be set unless the property is set on the ant command line in build.xml.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6132'>HADOOP-6132</a>] -         RPC client opens an extra connection for VersionedProtocol
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6137'>HADOOP-6137</a>] -         to fix project specific test-patch requirements 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6138'>HADOOP-6138</a>] -         eliminate the depracate warnings introduced by H-5438
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6142'>HADOOP-6142</a>] -         archives relative path changes in common.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6151'>HADOOP-6151</a>] -         The servlets should quote html characters
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6152'>HADOOP-6152</a>] -         Hadoop scripts do not correctly put jars on the classpath
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6169'>HADOOP-6169</a>] -         Removing deprecated method calls in TFile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6172'>HADOOP-6172</a>] -         bin/hadoop version not working
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6175'>HADOOP-6175</a>] -         Incorret version compilation with es_ES.ISO8859-15 locale on Solaris 10
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6177'>HADOOP-6177</a>] -         FSInputChecker.getPos() would return position greater than the file size
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6180'>HADOOP-6180</a>] -         Namenode slowed down when many files with same filename were moved to Trash
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6181'>HADOOP-6181</a>] -         Fixes for Eclipse template
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6184'>HADOOP-6184</a>] -         Provide a configuration dump in json format.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6188'>HADOOP-6188</a>] -         TestHDFSTrash fails because of TestTrash in common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6192'>HADOOP-6192</a>] -         Shell.getUlimitMemoryCommand is tied to Map-Reduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6196'>HADOOP-6196</a>] -         sync(0); next() breaks SequenceFile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6199'>HADOOP-6199</a>] -         Add the documentation for io.map.index.skip in core-default
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6227'>HADOOP-6227</a>] -         Configuration does not lock parameters marked final if they have no value.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6229'>HADOOP-6229</a>] -         Atempt to make a directory under an existing file on LocalFileSystem should throw an Exception.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6234'>HADOOP-6234</a>] -         Permission configuration files should use octal and symbolic
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6240'>HADOOP-6240</a>] -         Rename operation is not consistent between different implementations of FileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6243'>HADOOP-6243</a>] -         NPE in handling deprecated configuration keys.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6250'>HADOOP-6250</a>] -         test-patch.sh doesn't clean up conf/*.xml files after the trunk run.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6254'>HADOOP-6254</a>] -         s3n fails with SocketTimeoutException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6257'>HADOOP-6257</a>] -         Two TestFileSystem classes are confusing hadoop-hdfs-hdfwithmr
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6274'>HADOOP-6274</a>] -         TestLocalFSFileContextMainOperations tests wrongly expect a certain order to be returned.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6281'>HADOOP-6281</a>] -         HtmlQuoting throws NullPointerException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6283'>HADOOP-6283</a>] -         The exception meessage in FileUtil$HardLink.getLinkCount(..) is not clear
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6285'>HADOOP-6285</a>] -         HttpServer.QuotingInputFilter has the wrong signature for getParameterMap
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6286'>HADOOP-6286</a>] -         The Glob methods in FileContext doe not deal with URIs correctly
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6293'>HADOOP-6293</a>] -         FsShell -text should work on filesystems other than the default
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6303'>HADOOP-6303</a>] -         Eclipse .classpath template has outdated jar files and is missing some new ones.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6314'>HADOOP-6314</a>] -         &quot;bin/hadoop fs -help count&quot;  fails to show help about only &quot;count&quot; command. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6327'>HADOOP-6327</a>] -         Fix build error for one of the FileContext Tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6334'>HADOOP-6334</a>] -         GenericOptionsParser does not understand uri for -files -libjars and -archives option
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6341'>HADOOP-6341</a>] -         Hudson giving a +1 though no tests are included.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6347'>HADOOP-6347</a>] -         run-test-core-fault-inject runs a test case twice if -Dtestcase is set
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6374'>HADOOP-6374</a>] -         JUnit tests should never depend on anything in conf
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6375'>HADOOP-6375</a>] -         Update documentation for FsShell du command
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6386'>HADOOP-6386</a>] -         NameNode's HttpServer can't instantiate InetSocketAddress: IllegalArgumentException is thrown
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6390'>HADOOP-6390</a>] -         Block slf4j-simple from avro's pom
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6391'>HADOOP-6391</a>] -         Classpath should not be part of command line arguments
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6395'>HADOOP-6395</a>] -         Inconsistent versions of libraries are being included
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6396'>HADOOP-6396</a>] -         Provide a description in the exception when an error is encountered parsing umask
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6398'>HADOOP-6398</a>] -         Build is broken after HADOOP-6395 patch has been applied
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6402'>HADOOP-6402</a>] -         testConf.xsl is not well-formed XML
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6404'>HADOOP-6404</a>] -         Rename the generated artifacts to common instead of core
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6405'>HADOOP-6405</a>] -         Update Eclipse configuration to match changes to Ivy configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6411'>HADOOP-6411</a>] -         Remove deprecated file src/test/hadoop-site.xml
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6414'>HADOOP-6414</a>] -         Add command line help for -expunge command.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6439'>HADOOP-6439</a>] -         Shuffle deadlocks on wrong number of maps
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6441'>HADOOP-6441</a>] -         Prevent remote CSS attacks in Hostname and UTF-7.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6451'>HADOOP-6451</a>] -         Contrib tests are not being run
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6452'>HADOOP-6452</a>] -         Hadoop JSP pages don't work under a security manager
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6461'>HADOOP-6461</a>] -         webapps aren't located correctly post-split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6462'>HADOOP-6462</a>] -         contrib/cloud failing, target &quot;compile&quot; does not exist
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6478'>HADOOP-6478</a>] -         0.21 -   .eclipse-templates/.classpath out of sync with file system 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6489'>HADOOP-6489</a>] -         Findbug report: LI_LAZY_INIT_STATIC, OBL_UNSATISFIED_OBLIGATION
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6504'>HADOOP-6504</a>] -         Invalid example in the documentation of org.apache.hadoop.util.Tool
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6505'>HADOOP-6505</a>] -         sed in build.xml fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6520'>HADOOP-6520</a>] -         UGI should load tokens from the environment
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6521'>HADOOP-6521</a>] -         FsPermission:SetUMask not updated to use new-style umask setting.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6522'>HADOOP-6522</a>] -         TestUTF8 fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6540'>HADOOP-6540</a>] -         Contrib unit tests have invalid XML for core-site, etc.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6545'>HADOOP-6545</a>] -         Cached FileSystem objects can lead to wrong token being used in setting up connections
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6546'>HADOOP-6546</a>] -         BloomMapFile can return false negatives
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6548'>HADOOP-6548</a>] -         Replace org.mortbay.log.Log imports with commons logging
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6549'>HADOOP-6549</a>] -         TestDoAsEffectiveUser should use ip address of the host for superuser ip check
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6551'>HADOOP-6551</a>] -         Delegation tokens when renewed or cancelled should throw an exception that explains what went wrong
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6552'>HADOOP-6552</a>] -         KEYTAB_KERBEROS_OPTIONS in UserGroupInformation should have options for automatic renewal of keytab based tickets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6558'>HADOOP-6558</a>] -         archive does not work with distcp -update
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6560'>HADOOP-6560</a>] -         HarFileSystem throws NPE for har://hdfs-/foo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6570'>HADOOP-6570</a>] -         RPC#stopProxy throws NullPointerExcption if getProxyEngine(proxy) returns null
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6572'>HADOOP-6572</a>] -         RPC responses may be out-of-order with respect to SASL
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6577'>HADOOP-6577</a>] -         IPC server response buffer reset threshold should be configurable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6591'>HADOOP-6591</a>] -         HarFileSystem cannot handle paths with the space character
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6593'>HADOOP-6593</a>] -         TextRecordInputStream doesn't close SequenceFile.Reader
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6609'>HADOOP-6609</a>] -         Deadlock in DFSClient#getBlockLocations even with the security disabled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6630'>HADOOP-6630</a>] -         hadoop-config.sh fails to get executed if hadoop wrapper scripts are in path
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6631'>HADOOP-6631</a>] -         FileUtil.fullyDelete() should continue to delete other files despite failure at any level.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6634'>HADOOP-6634</a>] -         AccessControlList uses full-principal names to verify acls causing queue-acls to fail
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6640'>HADOOP-6640</a>] -         FileSystem.get() does RPC retries within a static synchronized block
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6645'>HADOOP-6645</a>] -         Bugs on listStatus for HarFileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6646'>HADOOP-6646</a>] -         Move HarfileSystem out of Hadoop Common.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6654'>HADOOP-6654</a>] -         Example in WritableComparable javadoc doesn't compile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6665'>HADOOP-6665</a>] -         DFSadmin commands setQuota and setSpaceQuota allowed when NameNode is in safemode.  
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6677'>HADOOP-6677</a>] -         InterfaceAudience.LimitedPrivate should take a string not an enum
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6690'>HADOOP-6690</a>] -         FilterFileSystem doesn't overwrite setTimes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6691'>HADOOP-6691</a>] -         TestFileSystemCaching sometimes hang
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6698'>HADOOP-6698</a>] -         Revert the io.serialization package to 0.20.2's api
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6701'>HADOOP-6701</a>] -          Incorrect exit codes for &quot;dfs -chown&quot;, &quot;dfs -chgrp&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6702'>HADOOP-6702</a>] -         Incorrect exit codes for &quot;dfs -chown&quot;, &quot;dfs -chgrp&quot;  when input is given in wildcard format.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6703'>HADOOP-6703</a>] -         Prevent renaming a file, symlink or directory to itself
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6719'>HADOOP-6719</a>] -         Missing methods on FilterFs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6722'>HADOOP-6722</a>] -         NetUtils.connect should check that it hasn't connected a socket to itself
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6723'>HADOOP-6723</a>] -         unchecked exceptions thrown in IPC Connection orphan clients
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6727'>HADOOP-6727</a>] -         Remove UnresolvedLinkException from public FileContext APIs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6740'>HADOOP-6740</a>] -         Move commands_manual.xml from mapreduce into common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6742'>HADOOP-6742</a>] -         Add methods HADOOP-6709 from to TestFilterFileSystem 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6748'>HADOOP-6748</a>] -         Remove hadoop.cluster.administrators
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6750'>HADOOP-6750</a>] -         UserGroupInformation incompatibility: getCurrentUGI() and setCurrentUser() missing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6782'>HADOOP-6782</a>] -         TestAvroRpc fails with avro-1.3.1 and avro-1.3.2
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6785'>HADOOP-6785</a>] -         Fix references to 0.22 in 0.21 branch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6788'>HADOOP-6788</a>] -         [Herriot] Exception exclusion functionality is not working correctly.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6800'>HADOOP-6800</a>] -         Harmonize JAR library versions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6821'>HADOOP-6821</a>] -         Document changes to memory monitoring
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6826'>HADOOP-6826</a>] -         Revert FileSystem create method that takes CreateFlags
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6828'>HADOOP-6828</a>] -         Herrior uses old way of accessing logs directories
+</li>
+</ul>
+    
+<h3>        Improvement
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-1722'>HADOOP-1722</a>] -         Make streaming to handle non-utf8 byte array
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2141'>HADOOP-2141</a>] -         speculative execution start up condition based on completion time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2721'>HADOOP-2721</a>] -         Use job control for tasks (and therefore for pipes and streaming)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2838'>HADOOP-2838</a>] -         Add HADOOP_LIBRARY_PATH config setting so Hadoop will include external directories for jni
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2898'>HADOOP-2898</a>] -         HOD should allow setting MapReduce UI ports within a port range
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3659'>HADOOP-3659</a>] -         Patch to allow hadoop native to compile on Mac OS X
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3953'>HADOOP-3953</a>] -         Sticky bit for directories
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4191'>HADOOP-4191</a>] -         Add a testcase for jobhistory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4365'>HADOOP-4365</a>] -         Configuration.getProps() should be made protected for ease of overriding
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4372'>HADOOP-4372</a>] -         Improve the way the job history files are managed during job recovery
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4546'>HADOOP-4546</a>] -         Minor fix in dfs to make hadoop work in AIX
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4656'>HADOOP-4656</a>] -         Add a user to groups mapping service 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4788'>HADOOP-4788</a>] -         Set mapred.fairscheduler.assignmultiple to true by default
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4794'>HADOOP-4794</a>] -         separate branch for HadoopVersionAnnotation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4842'>HADOOP-4842</a>] -         Streaming combiner should allow command, not just JavaClass
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4859'>HADOOP-4859</a>] -         Make the M/R Job output dir unique for Daily rolling
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4868'>HADOOP-4868</a>] -         Split the hadoop script into 3 parts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4885'>HADOOP-4885</a>] -         Try to restore failed replicas of Name Node storage (at checkpoint time)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4895'>HADOOP-4895</a>] -         Remove deprecated methods in DFSClient
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4936'>HADOOP-4936</a>] -         Improvements to TestSafeMode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5015'>HADOOP-5015</a>] -         Separate block/replica management code from FSNamesystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5023'>HADOOP-5023</a>] -         Add Tomcat support to hdfsproxy
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5033'>HADOOP-5033</a>] -         chukwa writer API is confusing
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5038'>HADOOP-5038</a>] -         remove System.out.println statement
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5088'>HADOOP-5088</a>] -         include releaseaudit as part of  test-patch.sh script 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5094'>HADOOP-5094</a>] -         Show dead nodes information in dfsadmin -report
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5101'>HADOOP-5101</a>] -         optimizing build.xml target dependencies
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5107'>HADOOP-5107</a>] -         split the core, hdfs, and mapred jars from each other and publish them independently to the Maven repository
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5124'>HADOOP-5124</a>] -         A few optimizations to FsNamesystem#RecentInvalidateSets
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5126'>HADOOP-5126</a>] -         Empty file BlocksWithLocations.java should be removed
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5135'>HADOOP-5135</a>] -         Separate the core, hdfs and mapred junit tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5144'>HADOOP-5144</a>] -         manual way of turning on restore of failed storage replicas for namenode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5147'>HADOOP-5147</a>] -         remove refs to slaves file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5163'>HADOOP-5163</a>] -         FSNamesystem#getRandomDatanode() should not use Replicator to choose a random datanode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5176'>HADOOP-5176</a>] -         TestDFSIO reports itself as TestFDSIO
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5196'>HADOOP-5196</a>] -         avoiding unnecessary byte[] allocation in SequenceFile.CompressedBytes and SequenceFile.UncompressedBytes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5205'>HADOOP-5205</a>] -         Change CHUKWA_IDENT_STRING from &quot;demo&quot; to &quot;TODO-AGENTS-INSTANCE-NAME&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5222'>HADOOP-5222</a>] -         Add offset in client trace
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5240'>HADOOP-5240</a>] -         'ant javadoc' does not check whether outputs are up to date and always rebuilds
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5264'>HADOOP-5264</a>] -         TaskTracker should have single conf reference
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5266'>HADOOP-5266</a>] -         Values Iterator should support &quot;mark&quot; and &quot;reset&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5279'>HADOOP-5279</a>] -         test-patch.sh scirpt should just call the test-core target as part of runtestcore function.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5317'>HADOOP-5317</a>] -         Provide documentation for LazyOutput Feature
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5331'>HADOOP-5331</a>] -         KFS: Add support for append
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5364'>HADOOP-5364</a>] -         Adding SSL certificate expiration warning to hdfsproxy
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5365'>HADOOP-5365</a>] -         hdfsprxoy should log every access
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5369'>HADOOP-5369</a>] -         Small tweaks to reduce MapFile index size
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5396'>HADOOP-5396</a>] -         Queue ACLs should be refreshed without requiring a restart of the job tracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5419'>HADOOP-5419</a>] -         Provide a way for users to find out what operations they can do on which M/R queues
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5423'>HADOOP-5423</a>] -         It should be posible to specify metadata for the output file produced by SequenceFile.Sorter.sort
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5438'>HADOOP-5438</a>] -         Merge FileSystem.create and FileSystem.append
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5450'>HADOOP-5450</a>] -         Add support for application-specific typecodes to typed bytes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5455'>HADOOP-5455</a>] -         default &quot;hadoop-metrics.properties&quot; doesn't mention &quot;rpc&quot; context
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5485'>HADOOP-5485</a>] -         Authorisation machanism required for acceesing jobtracker url :- jobtracker.com:port/scheduler
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5494'>HADOOP-5494</a>] -         IFile.Reader should have a nextRawKey/nextRawValue
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5500'>HADOOP-5500</a>] -         Allow number of fields to be supplied when field names are not known in DBOutputFormat#setOutput()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5502'>HADOOP-5502</a>] -         Backup and checkpoint nodes should be documented
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5509'>HADOOP-5509</a>] -         PendingReplicationBlocks should not start monitor in constructor.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5572'>HADOOP-5572</a>] -         The map progress value should have a separate phase for doing the final sort.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5589'>HADOOP-5589</a>] -         TupleWritable: Lift implicit limit on the number of values that can be stored
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5595'>HADOOP-5595</a>] -         NameNode does not need to run a replicator to choose a random DataNode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5596'>HADOOP-5596</a>] -         Make ObjectWritable support EnumSet
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5603'>HADOOP-5603</a>] -         Improve block placement performance
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5613'>HADOOP-5613</a>] -         change S3Exception to checked exception
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5618'>HADOOP-5618</a>] -         Convert Storage.storageDirs into a map.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5620'>HADOOP-5620</a>] -         discp can preserve modification times of files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5625'>HADOOP-5625</a>] -         Add I/O duration time in client trace 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5638'>HADOOP-5638</a>] -         More improvement on block placement performance
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5657'>HADOOP-5657</a>] -         Validate data passed through TestReduceFetch
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5664'>HADOOP-5664</a>] -         Use of ReentrantLock.lock() in MapOutputBuffer takes up too much cpu time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5675'>HADOOP-5675</a>] -         DistCp should not launch a job if it is not necessary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5687'>HADOOP-5687</a>] -         Hadoop NameNode throws NPE if fs.default.name is the default value
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5705'>HADOOP-5705</a>] -         Improved tries in TotalOrderPartitioner to eliminate large leaf nodes.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5717'>HADOOP-5717</a>] -         Create public enum class for the Framework counters in org.apache.hadoop.mapreduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5721'>HADOOP-5721</a>] -         Provide EditLogFileInputStream and EditLogFileOutputStream as independent classes 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5727'>HADOOP-5727</a>] -         Faster, simpler id.hashCode() which does not allocate memory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5733'>HADOOP-5733</a>] -         Add map/reduce slot capacity and lost map/reduce slot capacity to JobTracker metrics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5771'>HADOOP-5771</a>] -         Create unit test for LinuxTaskController
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5784'>HADOOP-5784</a>] -         The length of the heartbeat cycle should be configurable.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5790'>HADOOP-5790</a>] -         Allow shuffle read and connection timeouts to be configurable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5822'>HADOOP-5822</a>] -         Fix javac warnings in several dfs tests related to unncessary casts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5838'>HADOOP-5838</a>] -         Remove a few javac warnings under hdfs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5839'>HADOOP-5839</a>] -         fixes to ec2 scripts to allow remote job submission
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5854'>HADOOP-5854</a>] -         findbugs : fix &quot;Inconsistent Synchronization&quot; warnings in hdfs 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5857'>HADOOP-5857</a>] -         Refactor hdfs jsp codes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5858'>HADOOP-5858</a>] -         Eliminate UTF8 and fix warnings in test/hdfs-with-mr package
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5867'>HADOOP-5867</a>] -         Cleaning NNBench* off javac warnings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5873'>HADOOP-5873</a>] -         Remove deprecated methods randomDataNode() and getDatanodeByIndex(..) in FSNamesystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5879'>HADOOP-5879</a>] -         GzipCodec should read compression level etc from configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5890'>HADOOP-5890</a>] -         Use exponential backoff on Thread.sleep during DN shutdown
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5896'>HADOOP-5896</a>] -         Remove the dependency of GenericOptionsParser on Option.withArgPattern
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5897'>HADOOP-5897</a>] -         Add more Metrics to Namenode to capture heap usage
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5925'>HADOOP-5925</a>] -         EC2 scripts should exit on error
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5961'>HADOOP-5961</a>] -         DataNode should understand generic hadoop options
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5967'>HADOOP-5967</a>] -         Sqoop should only use a single map task
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5968'>HADOOP-5968</a>] -         Sqoop should only print a warning about mysql import speed once
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5976'>HADOOP-5976</a>] -         create script to provide classpath for external tools
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6099'>HADOOP-6099</a>] -         Allow configuring the IPC module to send pings
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6105'>HADOOP-6105</a>] -         Provide a way to automatically handle backward compatibility of deprecated keys
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6106'>HADOOP-6106</a>] -         Provide an option in ShellCommandExecutor to timeout commands that do not complete within a certain amount of time.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6109'>HADOOP-6109</a>] -         Handle large (several MB) text input lines in a reasonable amount of time
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6133'>HADOOP-6133</a>] -         ReflectionUtils performance regression
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6146'>HADOOP-6146</a>] -         Upgrade to JetS3t version 0.7.1
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6148'>HADOOP-6148</a>] -         Implement a pure Java CRC32 calculator
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6150'>HADOOP-6150</a>] -         Need to be able to instantiate a comparator instance from a comparator string without creating a TFile.Reader object
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6160'>HADOOP-6160</a>] -         releaseaudit (rats) should not be run againt the entire release binary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6161'>HADOOP-6161</a>] -         Add get/setEnum to Configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6163'>HADOOP-6163</a>] -         Progress class should provide an api if phases exist
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6166'>HADOOP-6166</a>] -         Improve PureJavaCrc32
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6182'>HADOOP-6182</a>] -         Adding Apache License Headers and reduce releaseaudit warnings to zero
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6201'>HADOOP-6201</a>] -         FileSystem::ListStatus should throw FileNotFoundException
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6203'>HADOOP-6203</a>] -         Improve error message when moving to trash fails due to quota issue
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6204'>HADOOP-6204</a>] -         Implementing aspects development and fault injeciton framework for Hadoop
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6216'>HADOOP-6216</a>] -         HDFS Web UI displays comments from dfs.exclude file and counts them as dead nodes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6224'>HADOOP-6224</a>] -         Add a method to WritableUtils performing a bounded read of a String
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6233'>HADOOP-6233</a>] -         Changes in common to rename the config keys as detailed in HDFS-531.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6246'>HADOOP-6246</a>] -         Update umask code to use key deprecation facilities from HADOOP-6105
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6252'>HADOOP-6252</a>] -         Provide method to determine if a deprecated key was set in the config file
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6267'>HADOOP-6267</a>] -         build-contrib.xml unnecessarily enforces that contrib projects be located in contrib/ dir
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6268'>HADOOP-6268</a>] -         Add ivy jar to .gitignore
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6271'>HADOOP-6271</a>] -         Fix FileContext to allow both recursive and non recursive create and mkdir
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6279'>HADOOP-6279</a>] -         Add JVM memory usage to JvmMetrics
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6289'>HADOOP-6289</a>] -         Add interface classification stable &amp; scope to common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6299'>HADOOP-6299</a>] -         Use JAAS LoginContext for our login
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6301'>HADOOP-6301</a>] -         Need to post Injection HowTo to Apache Hadoop's Wiki 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6305'>HADOOP-6305</a>] -         Unify build property names to facilitate cross-projects modifications
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6307'>HADOOP-6307</a>] -         Support reading on un-closed SequenceFile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6318'>HADOOP-6318</a>] -         Upgrade to Avro 1.2.0
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6326'>HADOOP-6326</a>] -         Hundson runs should check for AspectJ warnings and report failure if any is present
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6343'>HADOOP-6343</a>] -         Stack trace of any runtime exceptions should be recorded in the server logs. 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6366'>HADOOP-6366</a>] -         Reduce ivy console output to ovservable level
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6367'>HADOOP-6367</a>] -         Move Access Token implementation from Common to HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6394'>HADOOP-6394</a>] -         Helper class for FileContext tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6400'>HADOOP-6400</a>] -         Log errors getting Unix UGI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6403'>HADOOP-6403</a>] -         Deprecate EC2 bash scripts
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6407'>HADOOP-6407</a>] -         Have a way to automatically update Eclipse .classpath file when new libs are added to the classpath through Ivy
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6413'>HADOOP-6413</a>] -         Move TestReflectionUtils to Common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6420'>HADOOP-6420</a>] -         String-to-String Maps should be embeddable in Configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6434'>HADOOP-6434</a>] -         Make HttpServer slightly easier to manage/diagnose faults with
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6435'>HADOOP-6435</a>] -         Make RPC.waitForProxy with timeout public
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6443'>HADOOP-6443</a>] -         Serialization classes accept invalid metadata
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6467'>HADOOP-6467</a>] -         Performance improvement for liststatus on directories in hadoop archives.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6471'>HADOOP-6471</a>] -         StringBuffer -&gt; StringBuilder - conversion of references as necessary
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6479'>HADOOP-6479</a>] -         TestUTF8 assertions could fail with better text 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6492'>HADOOP-6492</a>] -         Make avro serialization APIs public
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6515'>HADOOP-6515</a>] -         Make maximum number of http threads configurable
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6518'>HADOOP-6518</a>] -         Kerberos login in UGI should honor KRB5CCNAME
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6531'>HADOOP-6531</a>] -         add FileUtil.fullyDeleteContents(dir) api to delete contents of a directory
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6534'>HADOOP-6534</a>] -         LocalDirAllocator should use whitespace trimming configuration getters
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6537'>HADOOP-6537</a>] -         Proposal for exceptions thrown by FileContext and Abstract File System
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6543'>HADOOP-6543</a>] -         Allow authentication-enabled RPC clients to connect to authentication-disabled RPC servers 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6559'>HADOOP-6559</a>] -         The RPC client should try to re-login when it detects that the TGT expired
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6569'>HADOOP-6569</a>] -         FsShell#cat should avoid calling unecessary getFileStatus before opening a file to read
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6579'>HADOOP-6579</a>] -         A utility for reading and writing tokens into a URL safe string.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6582'>HADOOP-6582</a>] -         Token class should have a toString, equals and hashcode method
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6583'>HADOOP-6583</a>] -         Capture metrics for authentication/authorization at the RPC layer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6585'>HADOOP-6585</a>] -         Add FileStatus#isDirectory and isFile
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6589'>HADOOP-6589</a>] -         Better error messages for RPC clients when authentication fails
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6635'>HADOOP-6635</a>] -         Install or deploy source jars to maven repo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6657'>HADOOP-6657</a>] -         Common portion of MAPREDUCE-1545
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6678'>HADOOP-6678</a>] -         Remove FileContext#isFile, isDirectory and exists
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6686'>HADOOP-6686</a>] -         Remove redundant exception class name in unwrapped exceptions thrown at the RPC client
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6709'>HADOOP-6709</a>] -         Re-instate deprecated FileSystem methods that were removed after 0.20
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6713'>HADOOP-6713</a>] -         The RPC server Listener thread is a scalability bottleneck
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6717'>HADOOP-6717</a>] -         Log levels in o.a.h.security.Groups too high
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6769'>HADOOP-6769</a>] -         Add an API in FileSystem to get FileSystem instances based on users
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6777'>HADOOP-6777</a>] -         Implement a functionality for suspend and resume a process.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6794'>HADOOP-6794</a>] -         Move configuration and script files post split
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6798'>HADOOP-6798</a>] -         Align Ivy version for all Hadoop subprojects.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6813'>HADOOP-6813</a>] -         Add a new newInstance method in FileSystem that takes a &quot;user&quot; as argument
+</li>
+</ul>
+    
+<h3>        New Feature
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3741'>HADOOP-3741</a>] -         SecondaryNameNode has http server on dfs.secondary.http.address but without any contents
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4012'>HADOOP-4012</a>] -         Providing splitting support for bzip2 compressed files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4268'>HADOOP-4268</a>] -         Permission checking in fsck
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4359'>HADOOP-4359</a>] -         Access Token: Support for data access authorization checking on DataNodes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4368'>HADOOP-4368</a>] -         Superuser privileges required to do &quot;df&quot;
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4539'>HADOOP-4539</a>] -         Streaming Edits to a Backup Node.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4756'>HADOOP-4756</a>] -         Create a command line tool to access JMX exported properties from a NameNode server
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4768'>HADOOP-4768</a>] -         Dynamic Priority Scheduler that allows queue shares to be controlled dynamically by a currency
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4829'>HADOOP-4829</a>] -         Allow FileSystem shutdown hook to be disabled
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4861'>HADOOP-4861</a>] -         Add disk usage with human-readable size (-duh)
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4927'>HADOOP-4927</a>] -         Part files on the output filesystem are created irrespective of whether the corresponding task has anything to write there
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-4952'>HADOOP-4952</a>] -         Improved files system interface for the application writer.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5018'>HADOOP-5018</a>] -         Chukwa should support pipelined writers
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5042'>HADOOP-5042</a>] -          Add expiration handling to the chukwa log4j appender
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5052'>HADOOP-5052</a>] -         Add an example for computing exact digits of Pi
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5170'>HADOOP-5170</a>] -         Set max map/reduce tasks on a per-job basis, either per-node or cluster-wide
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5175'>HADOOP-5175</a>] -         Option to prohibit jars unpacking
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5232'>HADOOP-5232</a>] -         preparing HadoopPatchQueueAdmin.sh,test-patch.sh scripts to run builds on hudson slaves.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5257'>HADOOP-5257</a>] -         Export namenode/datanode functionality through a pluggable RPC layer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5258'>HADOOP-5258</a>] -         Provide dfsadmin functionality to report on namenode's view of network topology
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5363'>HADOOP-5363</a>] -         Proxying for multiple HDFS clusters of different versions
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5366'>HADOOP-5366</a>] -         Support for retrieving files using standard HTTP clients like curl
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5467'>HADOOP-5467</a>] -         Create an offline fsimage image viewer
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5469'>HADOOP-5469</a>] -         Exposing Hadoop metrics via HTTP
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5518'>HADOOP-5518</a>] -         MRUnit unit test library
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5528'>HADOOP-5528</a>] -         Binary partitioner
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5643'>HADOOP-5643</a>] -         Ability to blacklist tasktracker
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5745'>HADOOP-5745</a>] -         Allow setting the default value of maxRunningJobs for all pools
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5752'>HADOOP-5752</a>] -         Provide examples of using offline image viewer (oiv) to analyze hadoop file systems
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5815'>HADOOP-5815</a>] -         Sqoop: A database import tool for Hadoop
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5844'>HADOOP-5844</a>] -         Use mysqldump when connecting to local mysql instance in Sqoop
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5887'>HADOOP-5887</a>] -         Sqoop should create tables in Hive metastore after importing to HDFS
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5913'>HADOOP-5913</a>] -         Allow administrators to be able to start and stop queues 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6120'>HADOOP-6120</a>] -         Add support for Avro types in hadoop
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6165'>HADOOP-6165</a>] -         Add metadata to Serializations
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6173'>HADOOP-6173</a>] -         src/native/packageNativeHadoop.sh only packages files with &quot;hadoop&quot; in the name
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6185'>HADOOP-6185</a>] -         Replace FSDataOutputStream#sync() by hflush()
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6218'>HADOOP-6218</a>] -         Split TFile by Record Sequence Number
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6226'>HADOOP-6226</a>] -         Create a LimitedByteArrayOutputStream that does not expand its buffer on write
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6235'>HADOOP-6235</a>] -         Adding a new method for getting server default values from a FileSystem
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6270'>HADOOP-6270</a>] -         FileContext needs to provide deleteOnExit functionality
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6313'>HADOOP-6313</a>] -         Expose flush APIs to application users
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6323'>HADOOP-6323</a>] -         Serialization should provide comparators
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6332'>HADOOP-6332</a>] -         Large-scale Automated Test Framework
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6337'>HADOOP-6337</a>] -         Update FilterInitializer class to be more visible and take a conf for further development
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6408'>HADOOP-6408</a>] -         Add a /conf servlet to dump running configuration
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6415'>HADOOP-6415</a>] -         Adding a common token interface for both job token and delegation token
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6419'>HADOOP-6419</a>] -         Change RPC layer to support SASL based mutual authentication
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6433'>HADOOP-6433</a>] -         Add AsyncDiskService that is used in both hdfs and mapreduce
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6497'>HADOOP-6497</a>] -         Introduce wrapper around FSDataInputStream providing Avro SeekableInput interface
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6510'>HADOOP-6510</a>] -         doAs for proxy user
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6517'>HADOOP-6517</a>] -         Ability to add/get tokens from UserGroupInformation
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6547'>HADOOP-6547</a>] -         Move the Delegation Token feature to common since both HDFS and MapReduce needs it
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6566'>HADOOP-6566</a>] -         Hadoop daemons should not start up if the ownership/permissions on the directories used at runtime are misconfigured
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6573'>HADOOP-6573</a>] -         Delegation Tokens should be persisted.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6594'>HADOOP-6594</a>] -         Update hdfs script to provide fetchdt tool
+</li>
+</ul>
+                    
+<h3>        Task
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6155'>HADOOP-6155</a>] -         deprecate Record IO
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6217'>HADOOP-6217</a>] -         Hadoop Doc Split: Common Docs
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6292'>HADOOP-6292</a>] -         Native Libraries Guide - Update 
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6321'>HADOOP-6321</a>] -         Hadoop Common - Site logo
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6329'>HADOOP-6329</a>] -         Add build-fi directory to the ignore list
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6346'>HADOOP-6346</a>] -         Add support for specifying unpack pattern regex to RunJar.unJar
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6353'>HADOOP-6353</a>] -         Create Apache Wiki page for JSure and FlashLight tools
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6477'>HADOOP-6477</a>] -         0.21.0 - upload of the latest snapshot to apache snapshot repository
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6507'>HADOOP-6507</a>] -         Hadoop Common Docs - delete 3 doc files that do not belong under Common
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6772'>HADOOP-6772</a>] -         Utilities for system tests specific.
+</li>
+</ul>
+        
+<h3>        Test
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5080'>HADOOP-5080</a>] -         Update TestCLI with additional test cases.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5081'>HADOOP-5081</a>] -         Split TestCLI into HDFS, Mapred and Core tests
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5457'>HADOOP-5457</a>] -         Failing contrib tests should not stop the build
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5948'>HADOOP-5948</a>] -         Modify TestJavaSerialization to use LocalJobRunner instead of MiniMR/DFS cluster
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5952'>HADOOP-5952</a>] -         Hudson -1 wording change
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5955'>HADOOP-5955</a>] -         TestFileOuputFormat can use LOCAL_MR instead of CLUSTER_MR
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6176'>HADOOP-6176</a>] -         Adding a couple private methods to AccessTokenHandler for testing purposes
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6222'>HADOOP-6222</a>] -         Core doesn't have TestCommonCLI facility
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6260'>HADOOP-6260</a>] -         Unit tests for FileSystemContextUtil.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6261'>HADOOP-6261</a>] -         Junit tests for FileContextURI
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6309'>HADOOP-6309</a>] -         Enable asserts for tests by default
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6563'>HADOOP-6563</a>] -         Add more tests to FileContextSymlinkBaseTest that cover intermediate symlinks in paths
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6689'>HADOOP-6689</a>] -         Add directory renaming test to FileContextMainOperationsBaseTest
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6705'>HADOOP-6705</a>] -         jiracli fails to upload test-patch comments to jira
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-6738'>HADOOP-6738</a>] -         Move cluster_setup.xml from MapReduce to Common
+</li>
+</ul>
+    
+<h3>        Wish
+</h3>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-5992'>HADOOP-5992</a>] -         Add ivy/ivy*.jar to .gitignore
+</li>
+</ul>
+
+</body>
+</html>
