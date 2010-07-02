@@ -255,6 +255,8 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
+    HDFS-1199. Extract a subset of tests for smoke (DOA) validation. (cos)
+
     HDFS-381. Remove blocks from DataNode maps when corresponding file
     is deleted. (Suresh Srinivas via rangadi)
 

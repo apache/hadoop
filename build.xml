@@ -97,6 +97,7 @@
   <property name="test.hdfs.build.classes" value="${test.build.dir}/classes"/>
 
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.hdfs.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
   <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
 
   <property name="test.hdfs.rpc.engine" value=""/>
@@ -532,6 +533,15 @@
   </condition>
 
   <!-- ================================================================== -->
+  <!-- Define exclude lists for different kinds of testing                -->
+  <!-- ================================================================== -->
+  <patternset id="empty.exclude.list.id" />
+    <patternset id="commit.smoke.exclude.list.id">
+    <excludesfile name="${test.hdfs.commit.tests.file}"/>
+    <excludesfile name="${test.hdfs.smoke.tests.file}"/>
+  </patternset>
+
+  <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
   <macrodef name="macro-test-runner">
@@ -541,6 +551,7 @@
     <attribute name="test.dir" />
     <attribute name="fileset.dir" />
     <attribute name="hadoop.conf.dir.deployed" default="" />
+    <attribute name="exclude.list.id" default="empty.exclude.list.id" />
     <sequential>
       <delete dir="@{test.dir}/data"/>
       <mkdir dir="@{test.dir}/data"/>
@@ -581,6 +592,7 @@
              <patternset>
                <includesfile name="@{test.file}"/>
              </patternset>
+             <patternset refid="@{exclude.list.id}"/>
          </fileset>
         </batchtest>
         <batchtest todir="@{test.dir}" if="tests.notestcase.fi">
@@ -605,18 +617,34 @@
     </sequential>
   </macrodef>
 
-  <target name="run-test-hdfs" depends="compile-hdfs-test" description="Run full set of hdfs unit tests">
+  <target name="run-test-hdfs" depends="run-commit-test, run-smoke-test,
+    run-test-hdfs-excluding-commit-and-smoke"
+    description="Run full set of hdfs unit tests">
+  </target>
+
+  <target name="run-test-hdfs-excluding-commit-and-smoke" depends="compile-hdfs-test">
     <macro-test-runner
       test.file="${test.hdfs.all.tests.file}"
       suite.type="hdfs"
       classpath="${test.classpath.id}"
       test.dir="${test.build.dir}"
-      fileset.dir="${test.src.dir}"/>
+      fileset.dir="${test.src.dir}"
+      exclude.list.id="commit.smoke.exclude.list.id"/>
   </target>
 
   <target name="run-commit-test" depends="compile-hdfs-test" description="Run approximate 10-minute set of unit tests prior to commiting">
      <macro-test-runner
        test.file="${test.hdfs.commit.tests.file}"
+       suite.type="hdfs"
+       classpath="${test.classpath.id}"
+       test.dir="${test.build.dir}"
+       fileset.dir="${test.src.dir}"/>
+  </target>
+
+  <target name="run-smoke-test" depends="compile-hdfs-test"
+    description="Run approximate 30-minute set of functional tests prior to guarantee HDFS viability">
+     <macro-test-runner
+       test.file="${test.hdfs.smoke.tests.file}"
        suite.type="hdfs"
        classpath="${test.classpath.id}"
        test.dir="${test.build.dir}"
