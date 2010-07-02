@@ -2,15 +2,19 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
   NEW FEATURES
-   HADOOP-6791.  Refresh for proxy superuser config
+
+    HADOOP-6791.  Refresh for proxy superuser config
     (common part for HDFS-1096) (boryas)
 
-   HADOOP-6581. Add authenticated TokenIdentifiers to UGI so that 
-   they can be used for authorization (Kan Zhang and Jitendra Pandey 
-   via jghoman)
+    HADOOP-6581. Add authenticated TokenIdentifiers to UGI so that 
+    they can be used for authorization (Kan Zhang and Jitendra Pandey 
+    via jghoman)
 
   IMPROVEMENTS
+
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
     - should use common naming convention (boryas)
 
@@ -47,7 +51,13 @@ Trunk (unreleased changes)
     HADOOP-6814. Adds an API in UserGroupInformation to get the real
     authentication method of a passed UGI. (Jitendra Pandey via ddas)
 
+    HADOOP-6756. Documentation for common configuration keys.
+    (Erik Steffl via shv)
+
+  OPTIMIZATIONS
+
   BUG FIXES
+
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
     only in case the subject is loginUser or proxyUgi.realUser. (boryas)
 
@@ -92,7 +102,7 @@ Trunk (unreleased changes)
     (ddas)
 
     HADOOP-6815. refreshSuperUserGroupsConfiguration should use server side 
-configuration for the refresh (boryas)
+    configuration for the refresh (boryas)
 
 Release 0.21.0 - Unreleased
 

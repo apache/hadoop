@@ -53,6 +53,8 @@
   ordering of the filters.</description>
 </property>
 
+<!--- security properties -->
+
 <property>
   <name>hadoop.security.authorization</name>
   <value>false</value>
@@ -63,6 +65,35 @@
   <name>hadoop.security.authentication</name>
   <value>simple</value>
   <description>Possible values are simple (no authentication), and kerberos
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
+  <description>
+    Class for user to group mapping (get groups for a given user) for ACL
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.groups.cache.secs</name>
+  <value>300</value>
+  <description>
+    This is the config controlling the validity of the entries in the cache
+    containing the user->group mapping. When this duration has expired,
+    then the implementation of the group mapping provider is invoked to get
+    the groups of the user and then cached back.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.service.user.name.key</name>
+  <value></value>
+  <description>
+    For those cases where the same RPC protocol is implemented by multiple
+    servers, this configuration is required for specifying the principal
+    name to use for the service when the client wishes to make an RPC call.
   </description>
 </property>
 
@@ -146,6 +177,19 @@
   <description>Number of index entries to skip between each entry.
   Zero by default. Setting this to values larger than zero can
   facilitate opening large MapFiles using less memory.</description>
+</property>
+
+<property>
+  <name>io.map.index.interval</name>
+  <value>128</value>
+  <description>
+    MapFile consist of two files - data file (tuples) and index file
+    (keys). For every io.map.index.interval records written in the
+    data file, an entry (record-key, data-file-position) is written
+    in the index file. This is to allow for doing binary search later
+    within the index file to look up records by their keys and get their
+    closest positions in the data file.
+  </description>
 </property>
 
 <!-- file system properties -->
@@ -237,6 +281,20 @@
   <name>fs.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
   <description>The FileSystem for ftp: uris.</description>
+</property>
+
+<property>
+  <name>fs.ftp.host</name>
+  <value>0.0.0.0</value>
+  <description>FTP filesystem connects to this server</description>
+</property>
+
+<property>
+  <name>fs.ftp.host.port</name>
+  <value>21</value>
+  <description>
+    FTP filesystem connects to fs.ftp.host on this port
+  </description>
 </property>
 
 <property>
@@ -717,5 +775,33 @@
   <description>Replication factor</description>
 </property>
 
+<!-- Tfile -->
+
+<property>
+  <name>tfile.io.chunk.size</name>
+  <value>1048576</value>
+  <description>
+    Value chunk size in bytes. Default  to
+    1MB. Values of the length less than the chunk size is
+    guaranteed to have known value length in read time (See also
+    TFile.Reader.Scanner.Entry.isValueLengthKnown()).
+  </description>
+</property>
+
+<property>
+  <name>tfile.fs.output.buffer.size</name>
+  <value>262144</value>
+  <description>
+    Buffer size used for FSDataOutputStream in bytes.
+  </description>
+</property>
+
+<property>
+  <name>tfile.fs.input.buffer.size</name>
+  <value>262144</value>
+  <description>
+    Buffer size used for FSDataInputStream in bytes.
+  </description>
+</property>
 
 </configuration>
