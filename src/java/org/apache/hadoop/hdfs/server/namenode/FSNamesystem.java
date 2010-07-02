@@ -3746,13 +3746,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         } catch (InterruptedException ie) {
         }
       }
-      // leave safe mode and stop the monitor
-      try {
-        leaveSafeMode(true);
-      } catch(SafeModeException es) { // should never happen
-        String msg = "SafeModeMonitor may not run during distributed upgrade.";
-        assert false : msg;
-        throw new RuntimeException(msg, es);
+      if (!fsRunning) {
+        LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread. ");
+      } else {
+        // leave safe mode and stop the monitor
+        try {
+          leaveSafeMode(true);
+        } catch(SafeModeException es) { // should never happen
+          String msg = "SafeModeMonitor may not run during distributed upgrade.";
+          assert false : msg;
+          throw new RuntimeException(msg, es);
+        }
       }
       smmthread = null;
     }

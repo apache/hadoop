@@ -102,6 +102,9 @@ Trunk (unreleased changes)
     HDFS-1250. Namenode should reject block reports and block received
     requests from dead datanodes (suresh)
 
+    HDFS-1145. When NameNode is shutdown it does not try to exit
+    safemode anymore. (dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
