@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -412,48 +413,80 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     this.emptier.start();
   }
 
-  private void startHttpServer(Configuration conf) throws IOException {
-    InetSocketAddress infoSocAddr = getHttpServerAddress(conf);
-    String infoHost = infoSocAddr.getHostName();
-    int infoPort = infoSocAddr.getPort();
-    this.httpServer = new HttpServer("hdfs", infoHost, infoPort, 
-        infoPort == 0, conf);
-    if (conf.getBoolean("dfs.https.enable", false)) {
-      boolean needClientAuth = conf.getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
-                                               DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
-      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 0));
-      Configuration sslConf = new HdfsConfiguration(false);
-      sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
-          "ssl-server.xml"));
-      this.httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
-      // assume same ssl port for all datanodes
-      InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
-          "dfs.datanode.https.address", infoHost + ":" + 50475));
-      this.httpServer.setAttribute("datanode.https.port", datanodeSslPort
-          .getPort());
-    }
-    this.httpServer.setAttribute("name.node", this);
-    this.httpServer.setAttribute("name.node.address", getNameNodeAddress());
-    this.httpServer.setAttribute("name.system.image", getFSImage());
-    this.httpServer.setAttribute("name.conf", conf);
-    this.httpServer.addInternalServlet("getDelegationToken", 
-        DelegationTokenServlet.PATH_SPEC, DelegationTokenServlet.class);
-    this.httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class);
-    this.httpServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
-    this.httpServer.addInternalServlet("listPaths", "/listPaths/*", ListPathsServlet.class);
-    this.httpServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
-    this.httpServer.addInternalServlet("checksum", "/fileChecksum/*",
-        FileChecksumServlets.RedirectServlet.class);
-    this.httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
-        ContentSummaryServlet.class);
-    this.httpServer.start();
+  private void startHttpServer(final Configuration conf) throws IOException {
+    // Kerberized SSL servers must be run from the host principal...
+    DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY);
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    try {
+      this.httpServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
+        @Override
+        public HttpServer run() throws IOException, InterruptedException {
+          InetSocketAddress infoSocAddr = getHttpServerAddress(conf);
+          String infoHost = infoSocAddr.getHostName();
+          int infoPort = infoSocAddr.getPort();
+          httpServer = new HttpServer("hdfs", infoHost, infoPort,
+              infoPort == 0, conf);
 
-    // The web-server port can be ephemeral... ensure we have the correct info
-    infoPort = this.httpServer.getPort();
-    this.httpAddress = new InetSocketAddress(infoHost, infoPort);
-    setHttpServerAddress(conf);
-    LOG.info(getRole() + " Web-server up at: " + httpAddress);
+          boolean certSSL = conf.getBoolean("dfs.https.enable", false);
+          boolean useKrb = UserGroupInformation.isSecurityEnabled();
+          if (certSSL || useKrb) {
+            boolean needClientAuth = conf.getBoolean(
+                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
+            InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf
+                .get(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, infoHost
+                    + ":" + 0));
+            Configuration sslConf = new HdfsConfiguration(false);
+            if (certSSL) {
+              sslConf.addResource(conf.get(
+                  "dfs.https.server.keystore.resource", "ssl-server.xml"));
+            }
+            httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth,
+                useKrb);
+            // assume same ssl port for all datanodes
+            InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf
+                .get("dfs.datanode.https.address", infoHost + ":" + 50475));
+            httpServer.setAttribute("datanode.https.port", datanodeSslPort
+                .getPort());
+          }
+          httpServer.setAttribute("name.node", NameNode.this);
+          httpServer.setAttribute("name.node.address", getNameNodeAddress());
+          httpServer.setAttribute("name.system.image", getFSImage());
+          httpServer.setAttribute("name.conf", conf);
+          httpServer.addInternalServlet("getDelegationToken",
+              DelegationTokenServlet.PATH_SPEC, DelegationTokenServlet.class,
+              true);
+          httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
+              true);
+          httpServer.addInternalServlet("getimage", "/getimage",
+              GetImageServlet.class, true);
+          httpServer.addInternalServlet("listPaths", "/listPaths/*",
+              ListPathsServlet.class, true);
+          httpServer.addInternalServlet("data", "/data/*",
+              FileDataServlet.class, true);
+          httpServer.addInternalServlet("checksum", "/fileChecksum/*",
+              FileChecksumServlets.RedirectServlet.class, true);
+          httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
+              ContentSummaryServlet.class, true);
+          httpServer.start();
+
+          // The web-server port can be ephemeral... ensure we have the correct
+          // info
+          infoPort = httpServer.getPort();
+          httpAddress = new InetSocketAddress(infoHost, infoPort);
+          setHttpServerAddress(conf);
+          LOG.info(getRole() + " Web-server up at: " + httpAddress);
+          return httpServer;
+        }
+      });
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    } finally {
+      // Go back to being the correct Namenode principal
+      DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
+    }
   }
 
   /**

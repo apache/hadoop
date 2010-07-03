@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     HDFS-599. Allow NameNode to have a seprate port for service requests from
     client requests. (Dmytro Molkov via hairong)
 
+    HDFS-1004. Update NN to support Kerberized SSL from HADOOP-6584. 
+    (jghoman and Kan Zhang via jghoman)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)
