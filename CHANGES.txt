@@ -428,6 +428,7 @@ Release 0.21.0 - Unreleased
    HBASE-2501  Refactor StoreFile Code
    HBASE-2806  DNS hiccups cause uncaught NPE in HServerAddress#getBindAddress
                (Benoit Sigoure via Stack)
+   HBASE-2806  (small compile fix via jgray)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

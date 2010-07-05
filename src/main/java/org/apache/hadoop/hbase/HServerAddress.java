@@ -100,7 +100,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     }
   }
 
-  private checkBindAddressCanBeResolved() {
+  private void checkBindAddressCanBeResolved() {
     if (getBindAddress() == null) {
       throw new IllegalArgumentException("Could not resolve the"
           + " DNS name of " + stringValue);
