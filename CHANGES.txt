@@ -36,6 +36,9 @@ Release 0.20.3 - Unreleased
 
     MAPREDUCE-1880. Fix BigDecimal.divide(..) in the pi example.  (szetszwo)
 
+    HDFS-1258. Clearing namespace quota on "/" corrupts fs image.  
+    (Aaron T. Myers via szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match

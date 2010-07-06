@@ -253,6 +253,12 @@ public class TestQuota extends TestCase {
       args = new String[] {"-clrQuota", parent.toString()};
       runCommand(userAdmin, args, true);
       runCommand(userAdmin, true, "-clrSpaceQuota",  args[1]);      
+
+      // 19: clrQuota on the root directory ("/") should fail
+      runCommand(admin, true, "-clrQuota", "/");
+
+      // 20: setQuota on the root directory ("/") should succeed
+      runCommand(admin, false, "-setQuota", "1000000", "/");
     } finally {
       cluster.shutdown();
     }
