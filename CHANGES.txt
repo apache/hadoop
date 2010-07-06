@@ -22,6 +22,9 @@ Release 0.20-append - Unreleased
     HDFS-1057.  Concurrent readers hit ChecksumExceptions if following 
     a writer to very end of file (Sam Rash via dhruba)
 
+    HDFS-1202.  DataBlockScanner throws NPE when updated before 
+    initialized. (Todd Lipcon via dhruba)
+
   IMPROVEMENTS
 
   BUG FIXES
