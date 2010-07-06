@@ -1043,6 +1043,9 @@ Release 0.20.3 - Unreleased
     HDFS-909. Wait until edits syncing is finishes before purging edits.
     (Todd Lipcon via shv)
 
+    HDFS-1258. Clearing namespace quota on "/" corrupts fs image.
+    (Aaron T. Myers via szetszwo)
+
 Release 0.20.2 - Unreleased
 
   IMPROVEMENTS
