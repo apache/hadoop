@@ -108,6 +108,9 @@ Trunk (unreleased changes)
     HDFS-1145. When NameNode is shutdown it does not try to exit
     safemode anymore. (dhruba)
 
+    HDFS-1202. DataBlockScanner throws NPE when updated before 
+    initialized. (Todd Lipcon via dhruba)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
