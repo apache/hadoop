@@ -114,6 +114,8 @@ Trunk (unreleased changes)
     HDFS-882. Datanode logs the hostname and port its listening on.
     (Steve Loughran via dhruba)
 
+    HDFS-1238. ant eclipse-files has drifted again, (jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
