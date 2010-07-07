@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,8 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -76,6 +79,15 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
   }
+  
+  private String getInfoServer() {
+    Configuration conf = getConf();
+    return UserGroupInformation.isSecurityEnabled() ? conf.get(
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT) : conf.get(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT);
+  }
 
   /**
    * Print fsck usage information
@@ -101,15 +113,34 @@ public class DFSck extends Configured implements Tool {
   /**
    * @param args
    */
-  public int run(String[] args) throws IOException {
+  public int run(final String[] args) throws IOException {
     if (args.length == 0) {
       printUsage();
       return -1;
     }
 
-    final StringBuilder url = new StringBuilder("http://");
-    url.append(getConf().get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, 
-                             DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
+    try {
+      return UserGroupInformation.getCurrentUser().doAs(
+          new PrivilegedExceptionAction<Integer>() {
+            @Override
+            public Integer run() throws Exception {
+              return doWork(args);
+            }
+          });
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+            
+  private int doWork(final String[] args) throws IOException {
+    String proto = "http://";
+    if (UserGroupInformation.isSecurityEnabled()) {
+      System.setProperty("https.cipherSuites",
+          Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES[0]);
+      proto = "https://";
+    }
+    final StringBuilder url = new StringBuilder(proto);
+    url.append(getInfoServer());
     url.append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
 
     String dir = "/";
@@ -129,6 +160,7 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
     }
     URL path = new URL(url.toString());
+    SecurityUtil.fetchServiceTicket(path);
     URLConnection connection = path.openConnection();
     InputStream stream = connection.getInputStream();
     BufferedReader input = new BufferedReader(new InputStreamReader(

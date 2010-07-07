@@ -13,6 +13,8 @@ Trunk (unreleased changes)
     HDFS-1004. Update NN to support Kerberized SSL from HADOOP-6584. 
     (jghoman and Kan Zhang via jghoman)
 
+    HDFS-1005. Fsck security. (borya and Kan Zhang via jghoman)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)
