@@ -57,6 +57,9 @@ Trunk (unreleased changes)
     HADOOP-6756. Documentation for common configuration keys.
     (Erik Steffl via shv)
 
+    HADOOP-6835. Add support for concatenated gzip input. (Greg Roelofs via
+    cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

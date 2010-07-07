@@ -166,7 +166,7 @@ public class ZlibDecompressor implements Decompressor {
   }
 
   public synchronized boolean needsInput() {
-    // Consume remanining compressed data?
+    // Consume remaining compressed data?
     if (uncompressedDirectBuf.remaining() > 0) {
       return false;
     }
@@ -189,7 +189,7 @@ public class ZlibDecompressor implements Decompressor {
   }
 
   public synchronized boolean finished() {
-    // Check if 'zlib' says its 'finished' and
+    // Check if 'zlib' says it's 'finished' and
     // all compressed data has been consumed
     return (finished && uncompressedDirectBuf.remaining() == 0);
   }
@@ -221,7 +221,7 @@ public class ZlibDecompressor implements Decompressor {
     n = inflateBytesDirect();
     uncompressedDirectBuf.limit(n);
 
-    // Get atmost 'len' bytes
+    // Get at most 'len' bytes
     n = Math.min(n, len);
     ((ByteBuffer)uncompressedDirectBuf).get(b, off, n);
 
@@ -229,9 +229,9 @@ public class ZlibDecompressor implements Decompressor {
   }
   
   /**
-   * Returns the total number of compressed bytes output so far.
+   * Returns the total number of uncompressed bytes output so far.
    *
-   * @return the total (non-negative) number of compressed bytes output so far
+   * @return the total (non-negative) number of uncompressed bytes output so far
    */
   public synchronized long getBytesWritten() {
     checkStream();
@@ -239,15 +239,30 @@ public class ZlibDecompressor implements Decompressor {
   }
 
   /**
-   * Returns the total number of uncompressed bytes input so far.</p>
+   * Returns the total number of compressed bytes input so far.</p>
    *
-   * @return the total (non-negative) number of uncompressed bytes input so far
+   * @return the total (non-negative) number of compressed bytes input so far
    */
   public synchronized long getBytesRead() {
     checkStream();
     return getBytesRead(stream);
   }
 
+  /**
+   * Returns the number of bytes remaining in the input buffers; normally
+   * called when finished() is true to determine amount of post-gzip-stream
+   * data.</p>
+   *
+   * @return the total (non-negative) number of unprocessed bytes in input
+   */
+  public synchronized int getRemaining() {
+    checkStream();
+    return userBufLen + getRemaining(stream);  // userBuf + compressedDirectBuf
+  }
+
+  /**
+   * Resets everything including the input buffers (user and direct).</p>
+   */
   public synchronized void reset() {
     checkStream();
     reset(stream);
@@ -282,6 +297,7 @@ public class ZlibDecompressor implements Decompressor {
   private native int inflateBytesDirect();
   private native static long getBytesRead(long strm);
   private native static long getBytesWritten(long strm);
+  private native static int getRemaining(long strm);
   private native static void reset(long strm);
   private native static void end(long strm);
 }

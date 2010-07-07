@@ -53,6 +53,11 @@ public class BZip2DummyDecompressor implements Decompressor {
   }
 
   @Override
+  public int getRemaining() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void reset() {
     // do nothing
   }

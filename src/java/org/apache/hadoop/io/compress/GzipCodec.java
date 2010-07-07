@@ -91,58 +91,7 @@ public class GzipCodec extends DefaultCodec {
       ((ResetableGZIPOutputStream) out).resetState();
     }
   }
-  
-  @InterfaceStability.Evolving
-  protected static class GzipInputStream extends DecompressorStream {
-    
-    private static class ResetableGZIPInputStream extends GZIPInputStream {
 
-      public ResetableGZIPInputStream(InputStream in) throws IOException {
-        super(in);
-      }
-      
-      public void resetState() throws IOException {
-        inf.reset();
-      }
-    }
-    
-    public GzipInputStream(InputStream in) throws IOException {
-      super(new ResetableGZIPInputStream(in));
-    }
-    
-    /**
-     * Allow subclasses to directly set the inflater stream.
-     * @throws IOException
-     */
-    protected GzipInputStream(DecompressorStream in) throws IOException {
-      super(in);
-    }
-
-    public int available() throws IOException {
-      return in.available(); 
-    }
-
-    public void close() throws IOException {
-      in.close();
-    }
-
-    public int read() throws IOException {
-      return in.read();
-    }
-    
-    public int read(byte[] data, int offset, int len) throws IOException {
-      return in.read(data, offset, len);
-    }
-    
-    public long skip(long offset) throws IOException {
-      return in.skip(offset);
-    }
-    
-    public void resetState() throws IOException {
-      ((ResetableGZIPInputStream) in).resetState();
-    }
-  }  
-  
   public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
     return (ZlibFactory.isNativeZlibLoaded(conf)) ?
@@ -158,8 +107,7 @@ public class GzipCodec extends DefaultCodec {
                new CompressorStream(out, compressor,
                                     conf.getInt("io.file.buffer.size", 
                                                 4*1024)) :
-               createOutputStream(out);                                               
-
+               createOutputStream(out);
   }
 
   public Compressor createCompressor() {
@@ -174,35 +122,31 @@ public class GzipCodec extends DefaultCodec {
       : null;
   }
 
-  public CompressionInputStream createInputStream(InputStream in) 
+  public CompressionInputStream createInputStream(InputStream in)
   throws IOException {
-  return (ZlibFactory.isNativeZlibLoaded(conf)) ?
-             new DecompressorStream(in, createDecompressor(),
-                                    conf.getInt("io.file.buffer.size", 
-                                                4*1024)) :
-             new GzipInputStream(in);                                         
+    return createInputStream(in, null);
   }
 
-  public CompressionInputStream createInputStream(InputStream in, 
-                                                  Decompressor decompressor) 
+  public CompressionInputStream createInputStream(InputStream in,
+                                                  Decompressor decompressor)
   throws IOException {
-    return (decompressor != null) ? 
-               new DecompressorStream(in, decompressor,
-                                      conf.getInt("io.file.buffer.size", 
-                                                  4*1024)) :
-               createInputStream(in); 
+    if (decompressor == null) {
+      decompressor = createDecompressor();  // always succeeds (or throws)
+    }
+    return new DecompressorStream(in, decompressor,
+                                  conf.getInt("io.file.buffer.size", 4*1024));
   }
 
   public Decompressor createDecompressor() {
     return (ZlibFactory.isNativeZlibLoaded(conf))
       ? new GzipZlibDecompressor()
-      : null;
+      : new BuiltInGzipDecompressor();
   }
 
   public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibDecompressor.class
-      : null;
+      : BuiltInGzipDecompressor.class;
   }
 
   public String getDefaultExtension() {
