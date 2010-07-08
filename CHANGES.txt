@@ -908,6 +908,9 @@ Release 0.21.0 - 2010-07-01
 
   BUG FIXES
 
+    HADOOP-6847. Problem staging 0.21.0 artifacts to Apache Nexus Maven
+    Repository (Giridharan Kesavan via cos)
+
     HADOOP-6748. Removes hadoop.cluster.administrators, cluster administrators
     acl is passed as parameter in constructor. (amareshwari) 
 
