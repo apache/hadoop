@@ -169,15 +169,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   }
 
   public synchronized KeyValue peek() {
-    try {
-      checkReseek();
-    } catch (IOException e) {
-      throw new RuntimeException("IOE conversion", e);
-    }
     if (this.heap == null) {
-      return null;
+      return this.lastTop;
     }
-
     return this.heap.peek();
   }
 
