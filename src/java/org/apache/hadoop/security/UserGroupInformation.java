@@ -50,7 +50,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -486,6 +485,45 @@ public class UserGroupInformation {
     } 
   }
 
+  /**
+   * Log a user in from a keytab file. Loads a user identity from a keytab
+   * file and login them in. This new user does not affect the currently
+   * logged-in user.
+   * @param user the principal name to load from the keytab
+   * @param path the path to the keytab file
+   * @throws IOException if the keytab file can't be read
+   */
+  public synchronized
+  static UserGroupInformation loginUserFromKeytabAndReturnUGI(String user,
+                                  String path
+                                  ) throws IOException {
+    if (!isSecurityEnabled())
+      return UserGroupInformation.getCurrentUser();
+    String oldKeytabFile = null;
+    String oldKeytabPrincipal = null;
+
+    try {
+      oldKeytabFile = keytabFile;
+      oldKeytabPrincipal = keytabPrincipal;
+      keytabFile = path;
+      keytabPrincipal = user;
+      Subject subject = new Subject();
+      LoginContext login = 
+        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject); 
+       
+      login.login();
+      UserGroupInformation newLoginUser = new UserGroupInformation(subject);
+      newLoginUser.setLogin(login);
+      
+      return newLoginUser;
+    } catch (LoginException le) {
+      throw new IOException("Login failure for " + user + " from keytab " + 
+                            path, le);
+    } finally {
+      if(oldKeytabFile != null) keytabFile = oldKeytabFile;
+      if(oldKeytabPrincipal != null) keytabPrincipal = oldKeytabPrincipal;
+    }
+  }
 
   public synchronized static boolean isLoginKeytabBased() {
     return keytabFile != null;

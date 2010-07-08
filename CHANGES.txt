@@ -16,6 +16,8 @@ Trunk (unreleased changes)
     HADOOP-6584. Provide Kerberized SSL encryption for webservices.
     (jghoman and Kan Zhang via jghoman)
 
+    HADOOP-6853. Common component of HDFS-1045. (jghoman)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
