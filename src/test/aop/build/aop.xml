@@ -29,12 +29,13 @@
   <!-- Properties specifically for system fault-injections and system tests -->
 
   <property name="herriot.suffix" value="instrumented"/>
+  <property name="herriot.final.name" value="${name}-${herriot.suffix}-${version}"/>
   <property name="hadoop-common-instrumented.pom"
             location="${ivy.dir}/hadoop-common-${herriot.suffix}.xml" />
   <property name="hadoop-common-instrumented.jar"
-            location="${system-test-build-dir}/${final.name}-${herriot.suffix}.jar" />
+            location="${system-test-build-dir}/${herriot.final.name}.jar" />
   <property name="hadoop-common-instrumented-sources.jar"
-            location="${system-test-build-dir}/${final.name}-${herriot.suffix}-sources.jar" />
+            location="${system-test-build-dir}/${herriot.final.name}-sources.jar" />
 
   <!--All Fault Injection (FI) related targets are located in this session -->
     
@@ -129,9 +130,9 @@
     <macro-jar-fault-inject target.name="jar"
       build.dir="${system-test-build-dir}"
       jar.final.name="final.name"
-      jar.final.value="${final.name}-${herriot.suffix}">
+      jar.final.value="${herriot.final.name}">
     </macro-jar-fault-inject>
-    <jar jarfile="${system-test-build-dir}/${final.name}-${herriot.suffix}-sources.jar"
+    <jar jarfile="${system-test-build-dir}/${herriot.final.name}-sources.jar"
       update="yes">
       <fileset dir="${test.src.dir}/system/java" includes="org/apache/hadoop/**/*.java"/>
       <fileset dir="${test.src.dir}/system/aop" includes="org/apache/hadoop/**/*.aj"/>
@@ -258,7 +259,8 @@
        <attach file="${hadoop-common-instrumented-sources.jar}" classifier="sources" />
     </artifact:install>
   </target>
-
+  <!-- -mvn-system-deploy target is no more called from the root
+  build.xml -->
   <target name="-mvn-system-deploy" depends="mvn-taskdef, jar-system">
      <artifact:pom file="${hadoop-common-instrumented.pom}" 
                    id="hadoop.core.${herriot.suffix}"/>

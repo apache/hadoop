@@ -133,7 +133,10 @@
   <property name="ivy.repo.dir" value="${user.home}/ivyrepo" />
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
-  <property name="asfrepo" value="https://repository.apache.org/content/repositories/snapshots"/>
+  <property name="asfrepo" value="https://repository.apache.org"/> 
+  <property name="asfsnapshotrepo" value="${asfrepo}/content/repositories/snapshots"/>
+  <property name="asfstagingrepo"
+  value="${asfrepo}/service/local/staging/deploy/maven2"/>
   <property name="mvnrepo" value="http://repo2.maven.org/maven2"/>
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
   <property name="ant_task.jar" location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
@@ -188,7 +191,11 @@
     </and>
   </condition>
 
-  <!-- the normal classpath -->
+  <condition property="staging">
+     <equals arg1="${repo}" arg2="staging"/>
+  </condition>
+
+<!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
     <pathelement location="${conf.dir}"/>
@@ -1222,25 +1229,117 @@
      </artifact:install>
   </target>
 
-  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version,
-    -mvn-system-deploy"
-     description="To deploy hadoop common and test jar's to apache snapshot's repository">
+  
+  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
+     jar-system, set-version, signanddeploy, simpledeploy"
+     description="To deploy hadoop common and test jar's to apache
+     snapshot's repository"/>
+
+  <target name="signanddeploy" if="staging" depends="sign">
      <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
      <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
+     <artifact:pom file="${hadoop-common-instrumented.pom}" 
+       id="hadoop.core.${herriot.suffix}"/>
+     <artifact:install-provider artifactId="wagon-http"
+     version="${wagon-http.version}"/>
 
-     <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
      <artifact:deploy file="${hadoop-common.jar}">
-         <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
-         <pom refid="hadoop.core"/>
-	<attach file="${hadoop-common-sources.jar}" classifier="sources" />
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.core"/>
+       <attach file="${hadoop-common.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-common.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-common-sources.jar}.asc" type="jar.asc" />
+       <attach file="${hadoop-common-sources.jar}" classifier="sources"/>
      </artifact:deploy>
+
      <artifact:deploy file="${hadoop-common-test.jar}">
-         <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
-         <pom refid="hadoop.core.test"/>
-	<attach file="${hadoop-common-test-sources.jar}" classifier="sources" />
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.core.test"/>
+       <attach file="${hadoop-common-test.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-common-test.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-common-test-sources.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-common-test-sources.jar}" classifier="sources"/>
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-common-instrumented.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.core.${herriot.suffix}"/>
+       <attach file="${hadoop-common-instrumented.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-common-instrumented.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-common-instrumented-sources.jar}.asc" 
+         type="jar.asc"/>
+       <attach file="${hadoop-common-instrumented-sources.jar}"
+         classifier="sources"/>
      </artifact:deploy>
   </target>
-  
+
+  <target name="sign" depends="clean-sign" if="staging">
+    <input message="password:>" addproperty="gpg.passphrase">
+     <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+    </input>
+    <macrodef name="sign-artifact" description="Signs the artifact">
+      <attribute name="input.file"/>
+      <attribute name="output.file" default="@{input.file}.asc"/>
+      <attribute name="gpg.passphrase"/>
+      <sequential>
+        <echo>Signing @{input.file} Sig File: @{output.file}</echo>
+        <exec executable="gpg" >
+          <arg value="--armor"/>
+          <arg value="--output"/>
+          <arg value="@{output.file}"/>
+          <arg value="--passphrase"/>
+          <arg value="@{gpg.passphrase}"/>
+          <arg value="--detach-sig"/>
+          <arg value="@{input.file}"/>
+        </exec>
+      </sequential>
+    </macrodef>
+    <sign-artifact input.file="${hadoop-common.jar}" 
+     output.file="${hadoop-common.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-test.jar}" 
+     output.file="${hadoop-common-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-sources.jar}" 
+     output.file="${hadoop-common-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-test-sources.jar}" 
+     output.file="${hadoop-common-test-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common.pom}" 
+     output.file="${hadoop-common.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-test.pom}" 
+     output.file="${hadoop-common-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-instrumented.jar}" 
+     output.file="${hadoop-common-instrumented.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-instrumented.pom}" 
+     output.file="${hadoop-common-instrumented.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-common-instrumented-sources.jar}" 
+     output.file="${hadoop-common-instrumented-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+  </target>
+
+  <target name="simpledeploy" unless="staging">
+     <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.test"/>
+     <artifact:pom file="${hadoop-common-instrumented.pom}" 
+       id="hadoop.core.${herriot.suffix}"/>
+
+     <artifact:install-provider artifactId="wagon-http" version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-common.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.core"/>
+	 <attach file="${hadoop-common-sources.jar}" classifier="sources" />
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-common-test.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.core.test"/>
+	 <attach file="${hadoop-common-test-sources.jar}" classifier="sources" />
+     </artifact:deploy> 
+
+     <artifact:deploy file="${hadoop-common-instrumented.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.core.${herriot.suffix}"/>
+         <attach file="${hadoop-common-instrumented-sources.jar}" classifier="sources" />
+     </artifact:deploy>
+  </target>
+
   <target name="set-version">
     <delete file="${basedir}/ivy/hadoop-common.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
@@ -1287,14 +1386,22 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete file="${basedir}/ivy/hadoop-common.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-pom.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-test-pom.xml"/>
     <delete file="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
   </target>
+
+  <target name="clean-sign" description="Clean.  Delete .asc files">
+    <delete>
+      <fileset dir="." includes="**/**/*.asc"/>
+    </delete>
+  </target>  
 
   <target name="veryclean" depends="clean" description="Delete mvn ant task jar and ivy ant taks jar">
     <delete file="${ant_task.jar}"/>
