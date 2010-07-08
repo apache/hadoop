@@ -248,7 +248,7 @@ class FSDirectory implements Closeable {
     }
   }
 
-  INodeDirectory addToParent( String src,
+  INodeDirectory addToParent( byte[][] src,
                               INodeDirectory parentINode,
                               PermissionStatus permissions,
                               Block[] blocks, 

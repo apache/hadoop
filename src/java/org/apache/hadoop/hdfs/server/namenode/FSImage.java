@@ -32,6 +32,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -1080,14 +1081,14 @@ public class FSImage extends Storage {
 
       LOG.info("Number of files = " + numFiles);
 
-      String path;
-      String parentPath = "";
+      byte[][] pathComponents;
+      byte[][] parentPath = {{}};
       INodeDirectory parentINode = fsDir.rootDir;
       for (long i = 0; i < numFiles; i++) {
         long modificationTime = 0;
         long atime = 0;
         long blockSize = 0;
-        path = readString(in);
+        pathComponents = readPathComponents(in);
         replication = in.readShort();
         replication = editLog.adjustReplication(replication);
         modificationTime = in.readLong();
@@ -1149,7 +1150,7 @@ public class FSImage extends Storage {
           permissions = PermissionStatus.read(in);
         }
         
-        if (path.length() == 0) { // it is the root
+        if (isRoot(pathComponents)) { // it is the root
           // update the root's attributes
           if (nsQuota != -1 || dsQuota != -1) {
             fsDir.rootDir.setQuota(nsQuota, dsQuota);
@@ -1159,13 +1160,13 @@ public class FSImage extends Storage {
           continue;
         }
         // check if the new inode belongs to the same parent
-        if(!isParent(path, parentPath)) {
+        if(!isParent(pathComponents, parentPath)) {
           parentINode = null;
-          parentPath = getParent(path);
+          parentPath = getParent(pathComponents);
         }
         // add new inode
         // without propagating modification time to parent
-        parentINode = fsDir.addToParent(path, parentINode, permissions,
+        parentINode = fsDir.addToParent(pathComponents, parentINode, permissions,
                                         blocks, symlink, replication, modificationTime, 
                                         atime, nsQuota, dsQuota, blockSize, false);
       }
@@ -1191,12 +1192,33 @@ public class FSImage extends Storage {
   String getParent(String path) {
     return path.substring(0, path.lastIndexOf(Path.SEPARATOR));
   }
-
-  private boolean isParent(String path, String parent) {
-    return parent != null && path != null
-          && path.indexOf(parent) == 0
-          && path.lastIndexOf(Path.SEPARATOR) == parent.length();
+  
+  byte[][] getParent(byte[][] path) {
+    byte[][] result = new byte[path.length - 1][];
+    for (int i = 0; i < result.length; i++) {
+      result[i] = new byte[path[i].length];
+      System.arraycopy(path[i], 0, result[i], 0, path[i].length);
+    }
+    return result;
   }
+
+  private boolean isRoot(byte[][] path) {
+    return path.length == 1 &&
+      path[0] == null;    
+  }
+
+  private boolean isParent(byte[][] path, byte[][] parent) {
+    if (path == null || parent == null)
+      return false;
+    if (parent.length == 0 || path.length != parent.length + 1)
+      return false;
+    boolean isParent = true;
+    for (int i = 0; i < parent.length; i++) {
+      isParent = isParent && Arrays.equals(path[i], parent[i]); 
+    }
+    return isParent;
+  }
+
 
   /**
    * Load and merge edits from two edits files
@@ -2103,6 +2125,22 @@ public class FSImage extends Storage {
   static String readString_EmptyAsNull(DataInputStream in) throws IOException {
     final String s = readString(in);
     return s.isEmpty()? null: s;
+  }
+  
+  /**
+   * Reading the path from the image and converting it to byte[][] directly
+   * this saves us an array copy and conversions to and from String
+   * @param in
+   * @return the array each element of which is a byte[] representation 
+   *            of a path component
+   * @throws IOException
+   */
+  public static byte[][] readPathComponents(DataInputStream in)
+      throws IOException {
+      U_STR.readFields(in);
+      return DFSUtil.bytes2byteArray(U_STR.getBytes(),
+        U_STR.getLength(), (byte) Path.SEPARATOR_CHAR);
+    
   }
 
   // Same comments apply for this method as for readString()

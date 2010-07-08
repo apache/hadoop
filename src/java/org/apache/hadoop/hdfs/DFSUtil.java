@@ -124,5 +124,87 @@ public class DFSUtil {
     }
     return null;
   }
+
+  /**
+   * Given a list of path components returns a path as a UTF8 String
+   */
+  public static String byteArray2String(byte[][] pathComponents) {
+    if (pathComponents.length == 0)
+      return "";
+    if (pathComponents.length == 1 && pathComponents[0].length == 0) {
+      return Path.SEPARATOR;
+    }
+    try {
+      StringBuilder result = new StringBuilder();
+      for (int i = 0; i < pathComponents.length; i++) {
+        result.append(new String(pathComponents[i], "UTF-8"));
+        if (i < pathComponents.length - 1) {
+          result.append(Path.SEPARATOR_CHAR);
+        }
+      }
+      return result.toString();
+    } catch (UnsupportedEncodingException ex) {
+      assert false : "UTF8 encoding is not supported ";
+    }
+    return null;
+  }
+
+  /**
+   * Splits the array of bytes into array of arrays of bytes
+   * on byte separator
+   * @param bytes the array of bytes to split
+   * @param separator the delimiting byte
+   */
+  public static byte[][] bytes2byteArray(byte[] bytes, byte separator) {
+    return bytes2byteArray(bytes, bytes.length, separator);
+  }
+
+  /**
+   * Splits first len bytes in bytes to array of arrays of bytes
+   * on byte separator
+   * @param bytes the byte array to split
+   * @param len the number of bytes to split
+   * @param separator the delimiting byte
+   */
+  public static byte[][] bytes2byteArray(byte[] bytes,
+                                         int len,
+                                         byte separator) {
+    assert len <= bytes.length;
+    int splits = 0;
+    if (len == 0) {
+      return new byte[][]{null};
+    }
+    // Count the splits. Omit multiple separators and the last one
+    for (int i = 0; i < len; i++) {
+      if (bytes[i] == separator) {
+        splits++;
+      }
+    }
+    int last = len - 1;
+    while (last > -1 && bytes[last--] == separator) {
+      splits--;
+    }
+    if (splits == 0 && bytes[0] == separator) {
+      return new byte[][]{null};
+    }
+    splits++;
+    byte[][] result = new byte[splits][];
+    int startIndex = 0;
+    int nextIndex = 0;
+    int index = 0;
+    // Build the splits
+    while (index < splits) {
+      while (nextIndex < len && bytes[nextIndex] != separator) {
+        nextIndex++;
+      }
+      result[index] = new byte[nextIndex - startIndex];
+      System.arraycopy(bytes, startIndex, result[index], 0, nextIndex
+              - startIndex);
+      index++;
+      startIndex = nextIndex + 1;
+      nextIndex = startIndex;
+    }
+    return result;
+  }
 }
 

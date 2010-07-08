@@ -317,7 +317,9 @@ class INodeDirectory extends INode {
    */
   <T extends INode> T addNode(String path, T newNode, boolean inheritPermission
       ) throws FileNotFoundException, UnresolvedLinkException  {
-    if(addToParent(path, newNode, null, inheritPermission, true) == null)
+    byte[][] pathComponents = getPathComponents(path);        
+    if(addToParent(pathComponents, newNode, null,
+                    inheritPermission, true) == null)
       return null;
     return newNode;
   }
@@ -332,24 +334,14 @@ class INodeDirectory extends INode {
    *          is not a directory.
    */
   <T extends INode> INodeDirectory addToParent(
-                                      String path,
-                                      T newNode,
-                                      INodeDirectory parent,
-                                      boolean inheritPermission
-                                    ) throws FileNotFoundException, 
-                                             UnresolvedLinkException {
-    return addToParent(path, newNode, parent, inheritPermission, true);
-  }
-  <T extends INode> INodeDirectory addToParent(
-                                      String path,
+                                      byte[][] pathComponents,
                                       T newNode,
                                       INodeDirectory parent,
                                       boolean inheritPermission,
                                       boolean propagateModTime
                                     ) throws FileNotFoundException, 
                                              UnresolvedLinkException {
-    byte[][] pathComponents = getPathComponents(path);
-    assert pathComponents != null : "Incorrect path " + path;
+              
     int pathLen = pathComponents.length;
     if (pathLen < 2)  // add root
       return null;
@@ -359,10 +351,12 @@ class INodeDirectory extends INode {
       getExistingPathINodes(pathComponents, inodes, false);
       INode inode = inodes[0];
       if (inode == null) {
-        throw new FileNotFoundException("Parent path does not exist: "+path);
+        throw new FileNotFoundException("Parent path does not exist: "+
+            DFSUtil.byteArray2String(pathComponents));
       }
       if (!inode.isDirectory()) {
-        throw new FileNotFoundException("Parent path is not a directory: "+path);
+        throw new FileNotFoundException("Parent path is not a directory: "+
+            DFSUtil.byteArray2String(pathComponents));
       }
       parent = (INodeDirectory)inode;
     }

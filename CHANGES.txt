@@ -64,6 +64,10 @@ Trunk (unreleased changes)
     HDFS-947. An Hftp read request is redirected to a datanode that has 
     the most replicas of the blocks in the file. (Dmytro Molkov via dhruba)
 
+  OPTIMIZATIONS
+
+    HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)
