@@ -173,8 +173,10 @@ public class ScanQueryMatcher extends QueryMatcher {
 
     if (filterResponse == ReturnCode.SKIP)
       return MatchCode.SKIP;
-
+    else if (filterResponse == ReturnCode.NEXT_COL)
+      return MatchCode.SEEK_NEXT_COL;
     // else if (filterResponse == ReturnCode.NEXT_ROW)
+
     stickyNextRow = true;
     return MatchCode.SEEK_NEXT_ROW;
   }

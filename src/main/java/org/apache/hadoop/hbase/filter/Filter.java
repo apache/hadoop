@@ -102,6 +102,10 @@ public interface Filter extends Writable {
      */
     SKIP,
     /**
+     * Skip this column. Go to the next column in this row.
+     */
+    NEXT_COL,
+    /**
      * Done with columns, skip to next row. Note that filterRow() will
      * still be called.
      */

@@ -754,6 +754,8 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via JD)
    HBASE-2786  TestHLog.testSplit hangs (Nicolas Spiegelberg via JD)
    HBASE-2790  Purge apache-forrest from TRUNK
+   HBASE-2793  Add ability to extract a specified list of versions of a column 
+   	       in a single roundtrip (Kannan via Ryan)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
