@@ -15,6 +15,9 @@ Trunk (unreleased changes)
 
     HDFS-1005. Fsck security. (borya and Kan Zhang via jghoman)
 
+    HDFS-1006. getImage/putImage http requests should be https for the case 
+    of security enabled. (borya and jghoman via jghoman)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

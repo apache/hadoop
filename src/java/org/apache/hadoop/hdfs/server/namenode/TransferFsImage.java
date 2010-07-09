@@ -28,6 +28,8 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
+import org.apache.hadoop.security.UserGroupInformation;
+
 
 /**
  * This class provides fetching a specified file from the NameNode.
@@ -154,7 +156,8 @@ class TransferFsImage implements FSConstants {
   static void getFileClient(String fsName, String id, File[] localPath)
     throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
-    StringBuilder str = new StringBuilder("http://"+fsName+"/getimage?");
+    String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
+    StringBuilder str = new StringBuilder(proto+fsName+"/getimage?");
     str.append(id);
 
     //

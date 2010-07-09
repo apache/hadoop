@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
 import javax.servlet.ServletContext;
@@ -26,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -38,33 +40,41 @@ public class GetImageServlet extends HttpServlet {
   private static final long serialVersionUID = -7669068179452648952L;
 
   @SuppressWarnings("unchecked")
-  public void doGet(HttpServletRequest request,
-                    HttpServletResponse response
+  public void doGet(final HttpServletRequest request,
+                    final HttpServletResponse response
                     ) throws ServletException, IOException {
     Map<String,String[]> pmap = request.getParameterMap();
     try {
       ServletContext context = getServletContext();
-      FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
-      TransferFsImage ff = new TransferFsImage(pmap, request, response);
-      if (ff.getImage()) {
-        response.setHeader(TransferFsImage.CONTENT_LENGTH,
-          String.valueOf(nnImage.getFsImageName().length()));
-        // send fsImage
-        TransferFsImage.getFileServer(response.getOutputStream(),
-                                      nnImage.getFsImageName()); 
-      } else if (ff.getEdit()) {
-        response.setHeader(TransferFsImage.CONTENT_LENGTH,
-          String.valueOf(nnImage.getFsEditName().length()));
-        // send edits
-        TransferFsImage.getFileServer(response.getOutputStream(),
-                                      nnImage.getFsEditName());
-      } else if (ff.putImage()) {
-        // issue a HTTP get request to download the new fsimage 
-        nnImage.validateCheckpointUpload(ff.getToken());
-        TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
-                                      nnImage.getFsImageNameCheckpoint());
-        nnImage.checkpointUploadDone();
-      }
+      final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
+      final TransferFsImage ff = new TransferFsImage(pmap, request, response);
+      UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
+
+        @Override
+        public Void run() throws Exception {
+          if (ff.getImage()) {
+            response.setHeader(TransferFsImage.CONTENT_LENGTH,
+                String.valueOf(nnImage.getFsImageName().length()));
+            // send fsImage
+            TransferFsImage.getFileServer(response.getOutputStream(),
+                nnImage.getFsImageName()); 
+          } else if (ff.getEdit()) {
+            response.setHeader(TransferFsImage.CONTENT_LENGTH,
+                String.valueOf(nnImage.getFsEditName().length()));
+            // send edits
+            TransferFsImage.getFileServer(response.getOutputStream(),
+                nnImage.getFsEditName());
+          } else if (ff.putImage()) {
+            // issue a HTTP get request to download the new fsimage 
+            nnImage.validateCheckpointUpload(ff.getToken());
+            TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
+                nnImage.getFsImageNameCheckpoint());
+            nnImage.checkpointUploadDone();
+          }
+          return null;
+        }
+      });
+      
     } catch (Exception ie) {
       String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
