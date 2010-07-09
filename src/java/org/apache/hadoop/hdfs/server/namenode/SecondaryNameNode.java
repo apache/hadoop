@@ -159,17 +159,16 @@ public class SecondaryNameNode implements Runnable {
 
     // initialize the webserver for uploading files.
     // Kerberized SSL servers must be run from the host principal...
-    DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, 
-        DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY);
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    UserGroupInformation httpUGI = 
+      UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+          conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY), 
+          conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
     try {
-      infoServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
-
+      infoServer = httpUGI.doAs(new PrivilegedExceptionAction<HttpServer>() {
         @Override
         public HttpServer run() throws IOException, InterruptedException {
           LOG.info("Starting web server as: " +
-              UserGroupInformation.getLoginUser().getUserName());
-
+              UserGroupInformation.getCurrentUser().getUserName());
           InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(
               conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
                        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
@@ -200,14 +199,9 @@ public class SecondaryNameNode implements Runnable {
       });
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
-    } finally {
-      // Go back to being the correct Namenode principal
-      LOG.info("Web server init done, returning to: " + 
-          UserGroupInformation.getLoginUser().getUserName());
-      DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
-      
-    }
+    } 
+    
+    LOG.info("Web server init done");
 
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = infoServer.getPort();
@@ -384,6 +378,9 @@ public class SecondaryNameNode implements Runnable {
                             "after creating edits.new");
     }
 
+    // We may have lost our ticket since last checkpoint, log in again, just in case
+    if(UserGroupInformation.isSecurityEnabled())
+      UserGroupInformation.getCurrentUser().reloginFromKeytab();
     downloadCheckpointFiles(sig);   // Fetch fsimage and edits
     doMerge(sig);                   // Do the merge
   

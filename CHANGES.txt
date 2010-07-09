@@ -125,6 +125,9 @@ Trunk (unreleased changes)
 
     HDFS-1238. ant eclipse-files has drifted again, (jghoman)
 
+    HDFS-1045. In secure clusters, re-login is necessary for https 
+    clients before opening connections. (jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
