@@ -33,17 +33,17 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * A class that provides the facilities of reading and writing 
  * secret keys and Tokens.
  */
-@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class TokenStorage implements Writable {
+public class Credentials implements Writable {
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
   private  Map<Text, Token<? extends TokenIdentifier>> tokenMap = 
@@ -119,7 +119,7 @@ public class TokenStorage implements Writable {
     Path localTokensFile = new Path (filename);
     FileSystem localFS = FileSystem.getLocal(conf);
     FSDataInputStream in = localFS.open(localTokensFile);
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     ts.readFields(in);
     for (Token<? extends TokenIdentifier> token : ts.getAllTokens()) {
       ugi.addToken(token);

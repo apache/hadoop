@@ -46,7 +46,7 @@ public class ServiceAuthorizationManager {
    * 
    * @deprecated Use
    *             {@link CommonConfigurationKeys#HADOOP_SECURITY_AUTHORIZATION}
-   *             Instead.
+   *             instead.
    */
   @Deprecated
   public static final String SERVICE_AUTHORIZATION_CONFIG = 

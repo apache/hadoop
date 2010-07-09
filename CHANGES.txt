@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HADOOP-6835. Add support for concatenated gzip input. (Greg Roelofs via
     cdouglas)
 
+    HADOOP-6845. Renames the TokenStorage class to Credentials. 
+    (Jitendra Pandey via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
