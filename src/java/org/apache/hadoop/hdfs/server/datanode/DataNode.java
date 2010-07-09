@@ -248,11 +248,6 @@ public class DataNode extends Configured
            final DatanodeProtocol namenode) throws IOException {
     super(conf);
 
-    UserGroupInformation.setConfiguration(conf);
-    DFSUtil.login(conf, 
-        DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
-    
     DataNode.setDataNode(this);
     
     try {
@@ -1398,6 +1393,10 @@ public class DataNode extends Configured
     Collection<URI> dataDirs = getStorageDirs(conf);
     dnThreadName = "DataNode: [" +
                     StringUtils.uriToString(dataDirs.toArray(new URI[0])) + "]";
+    UserGroupInformation.setConfiguration(conf);
+    DFSUtil.login(conf, 
+        DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
     return makeInstance(dataDirs, conf);
   }
 

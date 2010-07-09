@@ -131,6 +131,8 @@ Trunk (unreleased changes)
     HDFS-1045. In secure clusters, re-login is necessary for https 
     clients before opening connections. (jghoman)
 
+    HDFS-1289. Datanode secure mode is broken. (Kan Zhang via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
