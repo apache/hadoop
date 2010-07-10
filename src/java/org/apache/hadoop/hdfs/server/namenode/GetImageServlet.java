@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY;
+
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
@@ -25,6 +30,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +49,8 @@ import org.apache.hadoop.util.StringUtils;
 public class GetImageServlet extends HttpServlet {
   private static final long serialVersionUID = -7669068179452648952L;
 
+  private static final Log LOG = LogFactory.getLog(GetImageServlet.class);
+
   @SuppressWarnings("unchecked")
   public void doGet(final HttpServletRequest request,
                     final HttpServletResponse response
@@ -51,9 +61,17 @@ public class GetImageServlet extends HttpServlet {
       final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
       final Configuration conf = (Configuration)getServletContext().getAttribute("name.conf");
+      
+      if(UserGroupInformation.isSecurityEnabled() && 
+          !isValidRequestor(request.getRemoteUser(), conf)) {
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, 
+            "Only Namenode and Secondary Namenode may access this servlet");
+        LOG.warn("Received non-NN/SNN request for image or edits from " 
+            + request.getRemoteHost());
+        return;
+      }
 
-     UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
-
+      UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
           if (ff.getImage()) {
@@ -102,5 +120,26 @@ public class GetImageServlet extends HttpServlet {
     } finally {
       response.getOutputStream().close();
     }
+  }
+  
+  protected boolean isValidRequestor(String remoteUser, Configuration conf) {
+    if(remoteUser == null) { // This really shouldn't happen...
+      LOG.warn("Received null remoteUser while authorizing access to getImage servlet");
+      return false;
+    }
+
+    String [] validRequestors = {conf.get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
+                                 conf.get(DFS_NAMENODE_USER_NAME_KEY),
+                                 conf.get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
+                                 conf.get(DFS_SECONDARY_NAMENODE_USER_NAME_KEY) };
+
+    for(String v : validRequestors) {
+      if(v != null && v.equals(remoteUser)) {
+        if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is allowing: " + remoteUser);
+        return true;
+      }
+    }
+    if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is rejecting: " + remoteUser);
+    return false;
   }
 }

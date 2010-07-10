@@ -115,8 +115,8 @@ public class SecondaryNameNode implements Runnable {
   public SecondaryNameNode(Configuration conf)  throws IOException {
     UserGroupInformation.setConfiguration(conf);
     DFSUtil.login(conf, 
-        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY);
 
     try {
       initialize(conf);

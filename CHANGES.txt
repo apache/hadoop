@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     HDFS-1006. getImage/putImage http requests should be https for the case 
     of security enabled. (borya and jghoman via jghoman)
 
+    HDFS-1033. In secure clusters, NN and SNN should verify that the remote 
+    principal during image and edits transfer. (jghoman)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)
