@@ -21,6 +21,9 @@ Trunk (unreleased changes)
     HDFS-1033. In secure clusters, NN and SNN should verify that the remote 
     principal during image and edits transfer. (jghoman)
 
+    HDFS-1023. Allow http server to start as regular principal if https 
+    principal not defined. (jghoman)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)
