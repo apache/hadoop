@@ -1023,6 +1023,10 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6819. [Herriot] Shell command for getting the new exceptions in
+    the logs returning exitcode 1 after executing successfully. (Vinay Thota
+    via cos)
+
     HADOOP-6847. Problem staging 0.21.0 artifacts to Apache Nexus Maven
     Repository (Giridharan Kesavan via cos)
 

@@ -264,7 +264,7 @@ public aspect DaemonProtocolAspect {
         if (index++ < list.length -1) {
            filterExpPattern.append("grep -v " + excludeExp + " | ");
         } else {
-           filterExpPattern.append("grep -vc " + excludeExp);
+           filterExpPattern.append("grep -v " + excludeExp + " | wc -l");
         }
       }
       cmd = new String[] {
