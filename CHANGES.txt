@@ -115,6 +115,9 @@ Trunk (unreleased changes)
     HADOOP-6815. refreshSuperUserGroupsConfiguration should use server side 
     configuration for the refresh (boryas)
 
+    HADOOP-6648. Adds a check for null tokens in Credentials.addToken api.
+    (ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

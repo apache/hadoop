@@ -36,6 +36,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A class that provides the facilities of reading and writing 
@@ -44,6 +46,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class Credentials implements Writable {
+  private static final Log LOG = LogFactory.getLog(Credentials.class);
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
   private  Map<Text, Token<? extends TokenIdentifier>> tokenMap = 
@@ -73,7 +76,11 @@ public class Credentials implements Writable {
    * @param t the token object
    */
   public void addToken(Text alias, Token<? extends TokenIdentifier> t) {
-    tokenMap.put(alias, t);
+    if (t != null) {
+      tokenMap.put(alias, t);
+    } else {
+      LOG.warn("Null token ignored for " + alias);
+    }
   }
   
   /**
