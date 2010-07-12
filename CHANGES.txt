@@ -117,6 +117,9 @@ Trunk (unreleased changes)
 
     HADOOP-6648. Adds a check for null tokens in Credentials.addToken api.
     (ddas)
+ 
+    HADOOP-6647. balancer fails with "is not authorized for protocol 
+    interface NamenodeProtocol" in secure environment (boryas)
 
 Release 0.21.0 - Unreleased
 
