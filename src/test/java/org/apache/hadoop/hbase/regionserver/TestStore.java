@@ -49,10 +49,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import com.google.common.base.Joiner;
@@ -419,5 +421,89 @@ public class TestStore extends TestCase {
     storeFlusher.prepare();
     storeFlusher.flushCache();
     storeFlusher.commit();
+  }
+
+
+
+  /**
+   * Generate a list of KeyValues for testing based on given parameters
+   * @param timestamps
+   * @param numRows
+   * @param qualifier
+   * @param family
+   * @return
+   */
+  List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
+      byte[] qualifier, byte[] family) {
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    for (int i=1;i<=numRows;i++) {
+      byte[] b = Bytes.toBytes(i);
+      for (long timestamp: timestamps) {
+        kvList.add(new KeyValue(b, family, qualifier, timestamp, b));
+      }
+    }
+    return kvList;
+  }
+
+  /**
+   * Test to ensure correctness when using Stores with multiple timestamps
+   * @throws IOException
+   */
+  public void testMultipleTimestamps() throws IOException {
+    int numRows = 1;
+    long[] timestamps1 = new long[] {1,5,10,20};
+    long[] timestamps2 = new long[] {30,80};
+
+    init(this.getName());
+
+    List<KeyValue> kvList1 = getKeyValueSet(timestamps1,numRows, qf1, family);
+    for (KeyValue kv : kvList1) {
+      this.store.add(kv);
+    }
+
+    this.store.snapshot();
+    flushStore(store, id++);
+
+    List<KeyValue> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
+    for(KeyValue kv : kvList2) {
+      this.store.add(kv);
+    }
+
+    NavigableSet<byte[]> columns = new ConcurrentSkipListSet<byte[]>(
+        Bytes.BYTES_COMPARATOR);
+    columns.add(qf1);
+    List<KeyValue> result;
+    Get get = new Get(Bytes.toBytes(1));
+    get.addColumn(family,qf1);
+
+    get.setTimeRange(0,15);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(40,90);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(10,45);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(80,145);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(1,2);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()>0);
+
+    get.setTimeRange(90,200);
+    result = new ArrayList<KeyValue>();
+    this.store.get(get, columns, result);
+    assertTrue(result.size()==0);
   }
 }

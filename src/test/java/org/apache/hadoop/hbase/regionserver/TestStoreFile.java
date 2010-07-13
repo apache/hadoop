@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -354,7 +356,9 @@ public class TestStoreFile extends HBaseTestCase {
       TreeSet<byte[]> columns = new TreeSet<byte[]>();
       columns.add("family:col".getBytes());
 
-      boolean exists = scanner.shouldSeek(row.getBytes(), columns);
+      Scan scan = new Scan(row.getBytes(),row.getBytes());
+      scan.addColumn("family".getBytes(), "family:col".getBytes());
+      boolean exists = scanner.shouldSeek(scan, columns);
       if (i % 2 == 0) {
         if (!exists) falseNeg++;
       } else {
@@ -428,7 +432,9 @@ public class TestStoreFile extends HBaseTestCase {
           TreeSet<byte[]> columns = new TreeSet<byte[]>();
           columns.add(("col" + col).getBytes());
 
-          boolean exists = scanner.shouldSeek(row.getBytes(), columns);
+          Scan scan = new Scan(row.getBytes(),row.getBytes());
+          scan.addColumn("family".getBytes(), ("col"+col).getBytes());
+          boolean exists = scanner.shouldSeek(scan, columns);
           boolean shouldRowExist = i % 2 == 0;
           boolean shouldColExist = j % 2 == 0;
           shouldColExist = shouldColExist || bt[x] == StoreFile.BloomType.ROW;
@@ -496,5 +502,77 @@ public class TestStoreFile extends HBaseTestCase {
     Mockito.doReturn(name).when(mock).toString();
     return mock;
   }
-  
+
+  /**
+   *Generate a list of KeyValues for testing based on given parameters
+   * @param timestamps
+   * @param numRows
+   * @param qualifier
+   * @param family
+   * @return
+   */
+  List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
+      byte[] qualifier, byte[] family) {
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    for (int i=1;i<=numRows;i++) {
+      byte[] b = Bytes.toBytes(i) ;
+      LOG.info(Bytes.toString(b));
+      LOG.info(Bytes.toString(b));
+      for (long timestamp: timestamps)
+      {
+        kvList.add(new KeyValue(b, family, qualifier, timestamp, b));
+      }
+    }
+    return kvList;
+  }
+
+  /**
+   * Test to ensure correctness when using StoreFile with multiple timestamps
+   * @throws IOException
+   */
+  public void testMultipleTimestamps() throws IOException {
+    byte[] family = Bytes.toBytes("familyname");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    int numRows = 10;
+    long[] timestamps = new long[] {20,10,5,1};
+    Scan scan = new Scan();
+
+    Path storedir = new Path(new Path(this.testDir, "regionname"),
+    "familyname");
+    Path dir = new Path(storedir, "1234567890");
+    StoreFile.Writer writer = StoreFile.createWriter(this.fs, dir, 8 * 1024);
+
+    List<KeyValue> kvList = getKeyValueSet(timestamps,numRows,
+        family, qualifier);
+
+    for (KeyValue kv : kvList) {
+      writer.append(kv);
+    }
+    writer.appendMetadata(0, false);
+    writer.close();
+
+    StoreFile hsf = new StoreFile(this.fs, writer.getPath(), true, conf,
+        StoreFile.BloomType.NONE, false);
+    StoreFile.Reader reader = hsf.createReader();
+    StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+    TreeSet<byte[]> columns = new TreeSet<byte[]>();
+    columns.add(qualifier);
+
+    scan.setTimeRange(20, 100);
+    assertTrue(scanner.shouldSeek(scan, columns));
+
+    scan.setTimeRange(1, 2);
+    assertTrue(scanner.shouldSeek(scan, columns));
+
+    scan.setTimeRange(8, 10);
+    assertTrue(scanner.shouldSeek(scan, columns));
+
+    scan.setTimeRange(7, 50);
+    assertTrue(scanner.shouldSeek(scan, columns));
+
+    /*This test is not required for correctness but it should pass when
+     * timestamp range optimization is on*/
+    //scan.setTimeRange(27, 50);
+    //assertTrue(!scanner.shouldSeek(scan, columns));
+  }
 }

@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.DeleteCompare.DeleteCode;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -81,6 +82,9 @@ public class MemStore implements HeapSize {
   // Used to track own heapSize
   final AtomicLong size;
 
+  TimeRangeTracker timeRangeTracker;
+  TimeRangeTracker snapshotTimeRangeTracker;
+
   /**
    * Default constructor. Used for tests.
    */
@@ -99,6 +103,8 @@ public class MemStore implements HeapSize {
     this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
     this.kvset = new KeyValueSkipListSet(c);
     this.snapshot = new KeyValueSkipListSet(c);
+    timeRangeTracker = new TimeRangeTracker();
+    snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
   }
 
@@ -128,6 +134,8 @@ public class MemStore implements HeapSize {
         if (!this.kvset.isEmpty()) {
           this.snapshot = this.kvset;
           this.kvset = new KeyValueSkipListSet(this.comparator);
+          this.snapshotTimeRangeTracker = this.timeRangeTracker;
+          this.timeRangeTracker = new TimeRangeTracker();
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
         }
@@ -167,6 +175,7 @@ public class MemStore implements HeapSize {
       // create a new snapshot and let the old one go.
       if (!ss.isEmpty()) {
         this.snapshot = new KeyValueSkipListSet(this.comparator);
+        this.snapshotTimeRangeTracker = new TimeRangeTracker();
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -183,6 +192,7 @@ public class MemStore implements HeapSize {
     this.lock.readLock().lock();
     try {
       s = heapSizeChange(kv, this.kvset.add(kv));
+      timeRangeTracker.includeTimestamp(kv);
       this.size.addAndGet(s);
     } finally {
       this.lock.readLock().unlock();
@@ -198,9 +208,9 @@ public class MemStore implements HeapSize {
   long delete(final KeyValue delete) {
     long s = 0;
     this.lock.readLock().lock();
-
     try {
       s += heapSizeChange(delete, this.kvset.add(delete));
+      timeRangeTracker.includeTimestamp(delete);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -487,6 +497,19 @@ public class MemStore implements HeapSize {
     return false;
   }
 
+  /**
+   * Check if this memstore may contain the required keys
+   * @param scan
+   * @return False if the key definitely does not exist in this Memstore
+   */
+  public boolean shouldSeek(Scan scan) {
+    return timeRangeTracker.includesTimeRange(scan.getTimeRange()) ||
+        snapshotTimeRangeTracker.includesTimeRange(scan.getTimeRange());
+  }
+
+  public TimeRangeTracker getSnapshotTimeRangeTracker() {
+    return this.snapshotTimeRangeTracker;
+  }
 
   /*
    * MemStoreScanner implements the KeyValueScanner.
@@ -520,7 +543,7 @@ public class MemStore implements HeapSize {
       StoreScanner level with coordination with MemStoreScanner.
 
     */
-    
+
     MemStoreScanner() {
       super();
 
@@ -531,7 +554,7 @@ public class MemStore implements HeapSize {
       KeyValue ret = null;
       long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
-      
+
       while (ret == null && it.hasNext()) {
         KeyValue v = it.next();
         if (v.getMemstoreTS() <= readPoint) {
@@ -566,7 +589,7 @@ public class MemStore implements HeapSize {
       //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
       //    snapshot.size() + " threadread = " + readPoint);
 
-      
+
       KeyValue lowest = getLowest();
 
       // has data := (lowest != null)
@@ -631,7 +654,7 @@ public class MemStore implements HeapSize {
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
-  
+
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
       ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +

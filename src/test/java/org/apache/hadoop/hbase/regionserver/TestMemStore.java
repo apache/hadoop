@@ -163,7 +163,7 @@ public class TestMemStore extends TestCase {
 
   /**
    * A simple test which verifies the 3 possible states when scanning across snapshot.
-   * @throws IOException 
+   * @throws IOException
    */
   public void testScanAcrossSnapshot2() throws IOException {
     // we are going to the scanning across snapshot with two kvs
@@ -210,7 +210,7 @@ public class TestMemStore extends TestCase {
       throws IOException {
     scanner.seek(KeyValue.createFirstOnRow(new byte[]{}));
     List<KeyValue> returned = Lists.newArrayList();
-    
+
     while (true) {
       KeyValue next = scanner.next();
       if (next == null) break;
@@ -313,15 +313,15 @@ public class TestMemStore extends TestCase {
 
     // COMPLETE INSERT 2
     rwcc.completeMemstoreInsert(w);
-    
+
     // NOW SHOULD SEE NEW KVS IN ADDITION TO OLD KVS.
     // See HBASE-1485 for discussion about what we should do with
     // the duplicate-TS inserts
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     s = this.memstore.getScanners().get(0);
-    assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});    
+    assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});
   }
-  
+
   /**
    * When we insert a higher-memstoreTS deletion of a cell but with
    * the same timestamp, we still need to provide consistent reads
@@ -369,9 +369,9 @@ public class TestMemStore extends TestCase {
     // NOW WE SHOULD SEE DELETE
     ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
     s = this.memstore.getScanners().get(0);
-    assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});    
+    assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});
   }
-  
+
 
   private static class ReadOwnWritesTester extends Thread {
     static final int NUM_TRIES = 1000;
@@ -454,7 +454,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  /** 
+  /**
    * Test memstore snapshots
    * @throws IOException
    */
@@ -785,7 +785,7 @@ public class TestMemStore extends TestCase {
     expected.add(put2);
     expected.add(put1);
 
-    
+
     assertEquals(4, memstore.kvset.size());
     int i = 0;
     for (KeyValue kv: memstore.kvset) {
@@ -825,7 +825,7 @@ public class TestMemStore extends TestCase {
     expected.add(put3);
 
 
-    
+
     assertEquals(5, memstore.kvset.size());
     int i = 0;
     for (KeyValue kv: memstore.kvset) {
@@ -884,9 +884,42 @@ public class TestMemStore extends TestCase {
   }
 
 
+  ////////////////////////////////////
+  //Test for timestamps
+  ////////////////////////////////////
+
+  /**
+   * Test to ensure correctness when using Memstore with multiple timestamps
+   */
+  public void testMultipleTimestamps() throws IOException {
+    long[] timestamps = new long[] {20,10,5,1};
+    Scan scan = new Scan();
+
+    for (long timestamp: timestamps)
+      addRows(memstore,timestamp);
+
+    scan.setTimeRange(0, 2);
+    assertTrue(memstore.shouldSeek(scan));
+
+    scan.setTimeRange(20, 82);
+    assertTrue(memstore.shouldSeek(scan));
+
+    scan.setTimeRange(10, 20);
+    assertTrue(memstore.shouldSeek(scan));
+
+    scan.setTimeRange(8, 12);
+    assertTrue(memstore.shouldSeek(scan));
+
+    /*This test is not required for correctness but it should pass when
+     * timestamp range optimization is on*/
+    //scan.setTimeRange(28, 42);
+    //assertTrue(!memstore.shouldSeek(scan));
+  }
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
-  //////////////////////////////////////////////////////////////////////////////  
+  //////////////////////////////////////////////////////////////////////////////
   private static byte [] makeQualifier(final int i1, final int i2){
     return Bytes.toBytes(Integer.toString(i1) + ";" +
         Integer.toString(i2));
@@ -1008,5 +1041,5 @@ public class TestMemStore extends TestCase {
 
   }
 
-  
+
 }

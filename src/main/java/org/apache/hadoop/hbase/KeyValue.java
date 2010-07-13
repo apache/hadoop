@@ -925,6 +925,15 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   *
+   * @return True if this KV is a delete family or column type.
+   */
+  public boolean isDeleteColumnOrFamily() {
+    int t = getType();
+    return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
+  }
+
+  /**
    * Primarily for use client-side.  Returns the family of this KeyValue in a
    * new byte array.<p>
    *

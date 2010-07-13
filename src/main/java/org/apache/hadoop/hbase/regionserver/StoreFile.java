@@ -24,9 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -38,7 +38,9 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Function;
@@ -105,6 +107,8 @@ public class StoreFile {
   public static final byte [] MAJOR_COMPACTION_KEY = Bytes.toBytes("MAJOR_COMPACTION_KEY");
   /** Bloom filter Type in FileInfo */
   static final byte[] BLOOM_FILTER_TYPE_KEY = Bytes.toBytes("BLOOM_FILTER_TYPE");
+  /** Key for Timerange information in metadata*/
+  static final byte[] TIMERANGE_KEY = Bytes.toBytes("TIMERANGE");
 
   /** Meta data block name for bloom filter meta-info (ie: bloom params/specs) */
   static final String BLOOM_FILTER_META_KEY = "BLOOM_FILTER_META";
@@ -411,6 +415,17 @@ public class StoreFile {
       this.reader.loadBloomfilter();
     }
 
+    try {
+      byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
+      if (b != null) {
+        this.reader.timeRangeTracker = new TimeRangeTracker();
+        Writables.copyWritable(timerangeBytes, this.reader.timeRangeTracker);
+      }
+    } catch (IllegalArgumentException e) {
+      LOG.error("Error reading timestamp range data from meta -- " +
+          "proceeding without", e);
+      this.reader.timeRangeTracker = null;
+    }
     return this.reader;
   }
 
@@ -647,6 +662,14 @@ public class StoreFile {
     private KVComparator kvComparator;
     private KeyValue lastKv = null;
     private byte[] lastByteArray = null;
+    TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
+    /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
+     * When flushing a memstore, we set TimeRange and use this variable to
+     * indicate that it doesn't need to be calculated again while
+     * appending KeyValues.
+     * It is not set in cases of compactions when it is recalculated using only
+     * the appended KeyValues*/
+    boolean isTimeRangeTrackerSet = false;
 
     protected HFile.Writer writer;
     /**
@@ -693,7 +716,49 @@ public class StoreFile {
     public void appendMetadata(final long maxSequenceId, final boolean majorCompaction)
     throws IOException {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-      writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+      writer.appendFileInfo(MAJOR_COMPACTION_KEY,
+          Bytes.toBytes(majorCompaction));
+      appendTimeRangeMetadata();
+    }
+
+    /**
+     * Add TimestampRange to Metadata
+     */
+    public void appendTimeRangeMetadata() throws IOException {
+      appendFileInfo(TIMERANGE_KEY,WritableUtils.toByteArray(timeRangeTracker));
+    }
+
+    /**
+     * Set TimeRangeTracker
+     * @param trt
+     */
+    public void setTimeRangeTracker(final TimeRangeTracker trt) {
+      this.timeRangeTracker = trt;
+      isTimeRangeTrackerSet = true;
+    }
+
+    /**
+     * If the timeRangeTracker is not set,
+     * update TimeRangeTracker to include the timestamp of this key
+     * @param kv
+     * @throws IOException
+     */
+    public void includeInTimeRangeTracker(final KeyValue kv) {
+      if (!isTimeRangeTrackerSet) {
+        timeRangeTracker.includeTimestamp(kv);
+      }
+    }
+
+    /**
+     * If the timeRangeTracker is not set,
+     * update TimeRangeTracker to include the timestamp of this key
+     * @param key
+     * @throws IOException
+     */
+    public void includeInTimeRangeTracker(final byte [] key) {
+      if (!isTimeRangeTrackerSet) {
+        timeRangeTracker.includeTimestamp(key);
+      }
     }
 
     public void append(final KeyValue kv) throws IOException {
@@ -744,6 +809,7 @@ public class StoreFile {
         }
       }
       writer.append(kv);
+      includeInTimeRangeTracker(kv);
     }
 
     public Path getPath() {
@@ -759,6 +825,7 @@ public class StoreFile {
         }
       }
       writer.append(key, value);
+      includeInTimeRangeTracker(key);
     }
 
     public void close() throws IOException {
@@ -794,6 +861,7 @@ public class StoreFile {
     protected BloomFilter bloomFilter = null;
     protected BloomType bloomFilterType;
     private final HFile.Reader reader;
+    protected TimeRangeTracker timeRangeTracker = null;
 
     public Reader(FileSystem fs, Path path, BlockCache blockCache, boolean inMemory)
         throws IOException {
@@ -834,13 +902,28 @@ public class StoreFile {
       reader.close();
     }
 
-    public boolean shouldSeek(final byte[] row,
-                              final SortedSet<byte[]> columns) {
+    public boolean shouldSeek(Scan scan, final SortedSet<byte[]> columns) {
+        return (passesTimerangeFilter(scan) && passesBloomFilter(scan,columns));
+    }
 
-      if (this.bloomFilter == null) {
+    /**
+     * Check if this storeFile may contain keys within the TimeRange
+     * @param scan
+     * @return False if it definitely does not exist in this StoreFile
+     */
+    private boolean passesTimerangeFilter(Scan scan) {
+      if (timeRangeTracker == null) {
+        return true;
+      } else {
+        return timeRangeTracker.includesTimeRange(scan.getTimeRange());
+      }
+    }
+
+    private boolean passesBloomFilter(Scan scan, final SortedSet<byte[]> columns) {
+      if (this.bloomFilter == null || !scan.isGetScan()) {
         return true;
       }
-
+      byte[] row = scan.getStartRow();
       byte[] key;
       switch (this.bloomFilterType) {
         case ROW:

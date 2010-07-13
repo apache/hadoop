@@ -212,7 +212,7 @@ public class Store implements HeapSize {
     return new Path(tabledir, new Path(encodedName,
       new Path(Bytes.toString(family))));
   }
-  
+
   /**
    * Return the directory in which this store stores its
    * StoreFiles
@@ -417,15 +417,17 @@ public class Store implements HeapSize {
    * Write out current snapshot.  Presumes {@link #snapshot()} has been called
    * previously.
    * @param logCacheFlushId flush sequence number
+   * @param snapshot
    * @return true if a compaction is needed
    * @throws IOException
    */
   private StoreFile flushCache(final long logCacheFlushId,
-                               SortedSet<KeyValue> snapshot) throws IOException {
+      SortedSet<KeyValue> snapshot,
+      TimeRangeTracker snapshotTimeRangeTracker) throws IOException {
     // If an exception happens flushing, we let it out without clearing
     // the memstore snapshot.  The old snapshot will be returned when we say
     // 'snapshot', the next time flush comes around.
-    return internalFlushCache(snapshot, logCacheFlushId);
+    return internalFlushCache(snapshot, logCacheFlushId, snapshotTimeRangeTracker);
   }
 
   /*
@@ -435,7 +437,8 @@ public class Store implements HeapSize {
    * @throws IOException
    */
   private StoreFile internalFlushCache(final SortedSet<KeyValue> set,
-                                       final long logCacheFlushId)
+      final long logCacheFlushId,
+      TimeRangeTracker snapshotTimeRangeTracker)
       throws IOException {
     StoreFile.Writer writer = null;
     long flushed = 0;
@@ -450,6 +453,7 @@ public class Store implements HeapSize {
     synchronized (flushLock) {
       // A. Write the map out to the disk
       writer = createWriterInTmp(set.size());
+      writer.setTimeRangeTracker(snapshotTimeRangeTracker);
       int entries = 0;
       try {
         for (KeyValue kv: set) {
@@ -466,12 +470,12 @@ public class Store implements HeapSize {
         writer.close();
       }
     }
-    
+
     // Write-out finished successfully, move into the right spot
     Path dstPath = StoreFile.getUniqueFile(fs, homedir);
     LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
     fs.rename(writer.getPath(), dstPath);
-    
+
     StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
       this.conf, this.family.getBloomFilterType(), this.inMemory);
     StoreFile.Reader r = sf.createReader();
@@ -1436,6 +1440,7 @@ public class Store implements HeapSize {
     private long cacheFlushId;
     private SortedSet<KeyValue> snapshot;
     private StoreFile storeFile;
+    private TimeRangeTracker snapshotTimeRangeTracker;
 
     private StoreFlusherImpl(long cacheFlushId) {
       this.cacheFlushId = cacheFlushId;
@@ -1445,11 +1450,12 @@ public class Store implements HeapSize {
     public void prepare() {
       memstore.snapshot();
       this.snapshot = memstore.getSnapshot();
+      this.snapshotTimeRangeTracker = memstore.getSnapshotTimeRangeTracker();
     }
 
     @Override
     public void flushCache() throws IOException {
-      storeFile = Store.this.flushCache(cacheFlushId, snapshot);
+      storeFile = Store.this.flushCache(cacheFlushId, snapshot, snapshotTimeRangeTracker);
     }
 
     @Override

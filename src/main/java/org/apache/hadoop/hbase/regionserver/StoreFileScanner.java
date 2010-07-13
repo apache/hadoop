@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 
 import java.io.IOException;
@@ -131,9 +132,8 @@ class StoreFileScanner implements KeyValueScanner {
     return true;
   }
 
-  // Bloom filter hook.
-  public boolean shouldSeek(final byte[] row,
-                            final SortedSet<byte[]> columns) {
-    return reader.shouldSeek(row, columns);
+  // StoreFile filter hook.
+  public boolean shouldSeek(Scan scan, final SortedSet<byte[]> columns) {
+    return reader.shouldSeek(scan, columns);
   }
 }
