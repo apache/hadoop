@@ -889,9 +889,6 @@ Release 0.21.0 - Unreleased
 
     HDFS-1072. Fix TestReadWhileWriting failure. (Erik Steffl via shv)
 
-    HDFS-132. Fix namenode to not report files deleted metrics for deletions
-    done while replaying edits during startup. (suresh)
-
     HDFS-913. Rename fault injection test TestRename.java to TestFiRename.java
     to include it in tests run by ant target run-test-hdfs-fault-inject.
     (suresh)
@@ -1070,6 +1067,9 @@ Release 0.20.3 - Unreleased
 
     HDFS-1258. Clearing namespace quota on "/" corrupts fs image.
     (Aaron T. Myers via szetszwo)
+
+    HDFS-132. Fix namenode to not report files deleted metrics for deletions
+    done while replaying edits during startup. (suresh & shv)
 
 Release 0.20.2 - Unreleased
 
