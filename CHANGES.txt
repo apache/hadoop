@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     HADOOP-6845. Renames the TokenStorage class to Credentials. 
     (Jitendra Pandey via ddas)
 
+    HADOOP-6826. FileStatus needs unit tests. (Rodrigo Schmidt via Eli
+    Collins)
+
   OPTIMIZATIONS
 
   BUG FIXES
