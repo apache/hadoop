@@ -39,6 +39,9 @@ Release 0.20.3 - Unreleased
     HDFS-1258. Clearing namespace quota on "/" corrupts fs image.  
     (Aaron T. Myers via szetszwo)
 
+    HDFS-132. Fix namenode to not report files deleted metrics for deletions
+    done while replaying edits during startup. (suresh & shv)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
