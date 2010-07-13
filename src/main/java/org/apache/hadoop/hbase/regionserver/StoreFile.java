@@ -417,7 +417,7 @@ public class StoreFile {
 
     try {
       byte [] timerangeBytes = metadataMap.get(TIMERANGE_KEY);
-      if (b != null) {
+      if (timerangeBytes != null) {
         this.reader.timeRangeTracker = new TimeRangeTracker();
         Writables.copyWritable(timerangeBytes, this.reader.timeRangeTracker);
       }
