@@ -430,6 +430,8 @@ Release 0.21.0 - Unreleased
                (Benoit Sigoure via Stack)
    HBASE-2806  (small compile fix via jgray)
    HBASE-2797  Another NPE in ReadWriteConsistencyControl
+   HBASE-2831  Fix '$bin' path duplication in setup scripts
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

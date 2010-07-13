@@ -40,7 +40,7 @@ done
 # convert relative path to absolute path
 bin=`dirname "$this"`
 script=`basename "$this"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin">/dev/null; pwd`
 this="$bin/$script"
 
 # the root of the hbase installation

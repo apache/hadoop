@@ -43,7 +43,7 @@ if [ $# -le 1 ]; then
 fi
 
 bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
 
