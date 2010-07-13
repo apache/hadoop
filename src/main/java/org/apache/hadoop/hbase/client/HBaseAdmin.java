@@ -49,7 +49,11 @@ import java.util.Map;
 import java.util.NavigableMap;
 
 /**
- * Provides administrative functions for HBase
+ * Provides an interface to manage HBase database table metadata + general 
+ * administrative functions.  Use HBaseAdmin to create, drop, list, enable and 
+ * disable tables. Use it also to add and drop table column families. 
+ * 
+ * See {@link HTable} to add, update, and delete data from an individual table.
  */
 public class HBaseAdmin {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());

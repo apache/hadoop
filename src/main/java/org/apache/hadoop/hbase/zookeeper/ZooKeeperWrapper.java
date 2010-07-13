@@ -748,6 +748,21 @@ public class ZooKeeperWrapper implements Watcher {
       LOG.warn("<" + instanceName + ">" + "Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
     }
   }
+  
+  /**
+   * @return the number of region server znodes in the RS directory
+   */
+  public int getRSDirectoryCount() { 
+    Stat stat = null;
+    try {
+      stat = zooKeeper.exists(rsZNode, false);
+    } catch (KeeperException e) {
+      LOG.warn("Problem getting stats for " + rsZNode, e);
+    } catch (InterruptedException e) {
+      LOG.warn("Problem getting stats for " + rsZNode, e);
+    }
+    return (stat != null) ? stat.getNumChildren() : 0;
+  }
 
   private boolean checkExistenceOf(String path) {
     Stat stat = null;

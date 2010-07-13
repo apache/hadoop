@@ -57,11 +57,13 @@ import java.io.DataOutput;
 
 /**
  * Used to communicate with a single HBase table.
- * <p>
+ * 
  * This class is not thread safe for writes.
  * Gets, puts, and deletes take out a row lock for the duration
  * of their operation.  Scans (currently) do not respect
  * row locking.
+ * 
+ * See {@link HBaseAdmin} to create, drop, list, enable and disable tables.
  */
 public class HTable implements HTableInterface {
   private final HConnection connection;
@@ -167,9 +169,11 @@ public class HTable implements HTableInterface {
    * @return the number of region servers that are currently running
    * @throws IOException if a remote or network exception occurs
    */
-  private int getCurrentNrHRS() throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(this.configuration);
-    return admin.getClusterStatus().getServers();
+  int getCurrentNrHRS() throws IOException {
+    return HConnectionManager
+      .getClientZooKeeperWatcher(this.configuration)
+      .getZooKeeperWrapper()
+      .getRSDirectoryCount();
   }
 
   // For multiput
