@@ -1073,6 +1073,14 @@ public class ZooKeeperWrapper implements Watcher {
       }
     }
   
+  /**
+   * Given a region name and some data, this method creates a new the region 
+   * znode data under the UNASSGINED znode with the data passed in. This method 
+   * will not update data for existing znodes.
+   * 
+   * @param regionName - encoded name of the region
+   * @param data - new serialized data to update the region znode
+   */
   public void createUnassignedRegion(String regionName, byte[] data) {
     String znode = getZNode(getRegionInTransitionZNode(), regionName);
     if(LOG.isDebugEnabled()) {
@@ -1106,6 +1114,66 @@ public class ZooKeeperWrapper implements Watcher {
     synchronized(unassignedZNodesWatched) {
       unassignedZNodesWatched.add(znode);
       createZNodeIfNotExists(znode, data, CreateMode.PERSISTENT, true);
+    }
+  }
+
+  /**
+   * Given a region name and some data, this method updates the region znode 
+   * data under the UNASSGINED znode with the latest data. This method will 
+   * update the znode data only if it already exists.
+   * 
+   * @param regionName - encoded name of the region
+   * @param data - new serialized data to update the region znode
+   */
+  public void updateUnassignedRegion(String regionName, byte[] data) {
+    String znode = getZNode(getRegionInTransitionZNode(), regionName);
+    // this is an update - make sure the node already exists
+    if(!exists(znode, true)) {
+      LOG.error("Cannot update " + znode + " - node does not exist" );
+      return;
+    }
+    
+    if(LOG.isDebugEnabled()) {
+      // Check existing state for logging purposes.
+      Stat stat = new Stat();
+      byte[] oldData = null;
+      try {
+        oldData = readZNode(znode, stat);
+      } catch (IOException e) {
+        LOG.error("Error reading data for " + znode);
+      }
+      if(oldData == null) {
+        LOG.debug("While updating UNASSIGNED region " + regionName + " - node exists with no data" );          
+      }
+      else {
+        LOG.debug("While updating UNASSIGNED region " + regionName + " exists, state = " + (HBaseEventType.fromByte(oldData[0])));
+      }
+    }
+    synchronized(unassignedZNodesWatched) {
+      unassignedZNodesWatched.add(znode);
+      try {
+        writeZNode(znode, data, -1, true);
+      } catch (IOException e) {
+        LOG.error("Error writing data for " + znode + ", could not update state to " + (HBaseEventType.fromByte(data[0])));
+      }
+    }
+  }
+
+  /**
+   * This method will create a new region in transition entry in ZK with the 
+   * speficied data if none exists. If one already exists, it will update the 
+   * data with whatever is passed in.
+   * 
+   * @param regionName - encoded name of the region
+   * @param data - serialized data for the region znode
+   */
+  public void createOrUpdateUnassignedRegion(String regionName, byte[] data) {
+    String znode = getZNode(getRegionInTransitionZNode(), regionName);
+    if(exists(znode, true)) {
+      updateUnassignedRegion(regionName, data);
+    }
+    else {
+      createUnassignedRegion(regionName, data);
     }
   }
 

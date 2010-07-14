@@ -432,6 +432,8 @@ Release 0.21.0 - Unreleased
    HBASE-2797  Another NPE in ReadWriteConsistencyControl
    HBASE-2831  Fix '$bin' path duplication in setup scripts
                (Nicolas Spiegelberg via Stack)
+   HBASE-2781  ZKW.createUnassignedRegion doesn't make sure existing znode is 
+               in the right state (Karthik Ranganathan via JD)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

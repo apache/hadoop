@@ -993,8 +993,9 @@ public class RegionManager {
           //       should never happen
           LOG.error("Error creating event data for " + HBaseEventType.M2ZK_REGION_OFFLINE, e);
         }
-        zkWrapper.createUnassignedRegion(info.getEncodedName(), data);
-        LOG.debug("Created UNASSIGNED zNode " + info.getRegionNameAsString() + " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
+        zkWrapper.createOrUpdateUnassignedRegion(info.getEncodedName(), data);          
+        LOG.debug("Created/updated UNASSIGNED zNode " + info.getRegionNameAsString() + 
+                  " in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
         s = new RegionState(info, RegionState.State.UNASSIGNED);
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
