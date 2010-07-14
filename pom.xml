@@ -822,6 +822,20 @@
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
         <version>2.1.2</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>project-team</report>
+              <report>mailing-list</report>
+              <report>cim</report>
+              <report>issue-tracking</report>
+              <report>license</report>
+              <report>scm</report>
+              <report>index</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+
       </plugin>
       <!-- Disabled for now.
       <plugin>
@@ -862,6 +876,14 @@
         <configuration>
           <docfilessubdirs>true</docfilessubdirs>
         </configuration>
+        <reportSets>
+          <reportSet>
+            <id>default</id>
+            <reports>
+              <report>javadoc</report>
+            </reports>
+          </reportSet>
+        </reportSets>
         <!--
           This is probably not needed, given the smallness of the HBase source code, but left here in case
           <minmemory>128m</minmemory>
