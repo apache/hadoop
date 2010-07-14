@@ -1032,6 +1032,9 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6836. [Herriot]: Generic method for adding/modifying the attributes
+    for new configuration. (Vinay Thota via cos)
+
     HADOOP-6839. [Herriot] Implement a functionality for getting the user list
     for creating proxy users. (Vinay Thota via cos)
 
