@@ -1081,7 +1081,7 @@ public class ZooKeeperWrapper implements Watcher {
    * @param regionName - encoded name of the region
    * @param data - new serialized data to update the region znode
    */
-  public void createUnassignedRegion(String regionName, byte[] data) {
+  private void createUnassignedRegion(String regionName, byte[] data) {
     String znode = getZNode(getRegionInTransitionZNode(), regionName);
     if(LOG.isDebugEnabled()) {
       // check if this node already exists - 

@@ -71,8 +71,10 @@ public class TestRestartCluster {
     } catch (IOException e) {
       LOG.error("Error creating event data for " + hbEventType, e);
     }
-    zkWrapper.createUnassignedRegion(HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
-    zkWrapper.createUnassignedRegion(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), data);
+    zkWrapper.createOrUpdateUnassignedRegion(
+        HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
+    zkWrapper.createOrUpdateUnassignedRegion(
+        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), data);
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
     
     // start the HB cluster
