@@ -21,6 +21,8 @@ package org.apache.hadoop.test.system;
 import java.io.IOException;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.DataInputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,6 +50,8 @@ public abstract class AbstractDaemonCluster {
   private String newConfDir = null;  
   private static final  String CONF_HADOOP_LOCAL_DIR =
       "test.system.hdrc.hadoop.local.confdir"; 
+  private static final  String CONF_HADOOP_MULTI_USER_LIST =
+      "test.system.hdrc.multi-user.list.path";
   private final static Object waitLock = new Object();
   
   /**
@@ -295,6 +299,30 @@ public abstract class AbstractDaemonCluster {
         d.assertNoExceptionsOccurred(excludeExpList);
       }
     }
+  }
+
+  /**
+   * Get the multi users list.
+   * @return ArrayList - users list as a array list.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public ArrayList<String> getHadoopMultiUsersList() throws
+     IOException {
+    String hadoopUserListPath = conf.get(CONF_HADOOP_MULTI_USER_LIST);
+    if (hadoopUserListPath == null || hadoopUserListPath.isEmpty()) {
+      LOG.error("Proxy user list path has not been passed for "
+          + CONF_HADOOP_MULTI_USER_LIST);
+      throw new IllegalArgumentException(
+          "Proxy user list hasn't been provided.");
+    }
+    File fileObj = new File(hadoopUserListPath);
+    DataInputStream disObj = new DataInputStream(new FileInputStream(fileObj));
+    ArrayList<String> usersList = new ArrayList<String>();
+    String strLine = null;
+    while((strLine = disObj.readLine()) != null){
+      usersList.add(strLine.substring(0,strLine.indexOf(',')));
+    }
+    return usersList;
   }
   
   /**
