@@ -35,6 +35,7 @@
       <item name="Bulk Loads" href="bulk-loads.html" />
       <item name="Metrics"      href="metrics.html" />
       <item name="HBase on Windows"      href="cygwin.html" />
+      <item name="Cluster replication"      href="replication.html" />
     </menu>
   </body>
     <skin>

@@ -765,6 +765,7 @@ Release 0.21.0 - Unreleased
    HBASE-2265  HFile and Memstore should maintain minimum and maximum timestamps
                (Pranav via Ryan)
    HBASE-2836  Speed mvn site building by removing generation of useless reports
+   HBASE-2808  Document the implementation of replication
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
