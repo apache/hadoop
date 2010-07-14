@@ -347,7 +347,7 @@ public abstract class AbstractDaemonCluster {
    * @param configFile configuration file.
    * @throws IOException if an I/O error occurs.
    */
-  public void restartClusterWithNewConfig(Hashtable<String,Long> props, 
+  public void restartClusterWithNewConfig(Hashtable<String,?> props, 
       String configFile) throws IOException {
 
     String mapredConf = null;
@@ -359,8 +359,8 @@ public abstract class AbstractDaemonCluster {
     Enumeration<String> e = props.keys();
     while (e.hasMoreElements()) {
       String propKey = e.nextElement();
-      Long propValue = props.get(propKey);
-      initConf.setLong(propKey,propValue.longValue());
+      Object propValue = props.get(propKey);
+      initConf.set(propKey,propValue.toString());
     }
 
     localDirPath = getHadoopLocalConfDir();
