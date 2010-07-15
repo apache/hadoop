@@ -79,6 +79,180 @@ public class TestMultipleTimestamps {
   }
 
   @Test
+  public void testReseeksWithOneColumnMiltipleTimestamp() throws IOException {
+    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
+    "ColumnMiltipleTimestamps");
+    byte [] FAMILY = Bytes.toBytes("event_log");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+
+    // create table; set versions to max...
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+
+    Integer[] putRows = new Integer[] {1, 3, 5, 7};
+    Integer[] putColumns = new Integer[] { 1, 3, 5};
+    Long[] putTimestamps = new Long[] {1L, 2L, 3L, 4L, 5L};
+
+    Integer[] scanRows = new Integer[] {3, 5};
+    Integer[] scanColumns = new Integer[] {3};
+    Long[] scanTimestamps = new Long[] {3L, 4L};
+    int scanMaxVersions = 2;
+
+    put(ht, FAMILY, putRows, putColumns, putTimestamps);
+
+    flush();
+
+    ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
+        scanTimestamps, scanMaxVersions);
+
+    KeyValue[] kvs;
+
+    kvs = scanner.next().raw();
+    assertEquals(2, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 3, 3, 4);
+    checkOneCell(kvs[1], FAMILY, 3, 3, 3);
+    kvs = scanner.next().raw();
+    assertEquals(2, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 5, 3, 4);
+    checkOneCell(kvs[1], FAMILY, 5, 3, 3);
+  }
+
+  @Test
+  public void testReseeksWithMultipleColumnOneTimestamp() throws IOException {
+    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
+    "ColumnMiltipleTimestamps");
+    byte [] FAMILY = Bytes.toBytes("event_log");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+
+    // create table; set versions to max...
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+
+    Integer[] putRows = new Integer[] {1, 3, 5, 7};
+    Integer[] putColumns = new Integer[] { 1, 3, 5};
+    Long[] putTimestamps = new Long[] {1L, 2L, 3L, 4L, 5L};
+
+    Integer[] scanRows = new Integer[] {3, 5};
+    Integer[] scanColumns = new Integer[] {3,4};
+    Long[] scanTimestamps = new Long[] {3L};
+    int scanMaxVersions = 2;
+
+    put(ht, FAMILY, putRows, putColumns, putTimestamps);
+
+    flush();
+
+    ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
+        scanTimestamps, scanMaxVersions);
+
+    KeyValue[] kvs;
+
+    kvs = scanner.next().raw();
+    assertEquals(1, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 3, 3, 3);
+    kvs = scanner.next().raw();
+    assertEquals(1, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 5, 3, 3);
+  }
+
+  @Test
+  public void testReseeksWithMultipleColumnMultipleTimestamp() throws
+  IOException {
+    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
+    "ColumnMiltipleTimestamps");
+    byte [] FAMILY = Bytes.toBytes("event_log");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+
+    // create table; set versions to max...
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+
+    Integer[] putRows = new Integer[] {1, 3, 5, 7};
+    Integer[] putColumns = new Integer[] { 1, 3, 5};
+    Long[] putTimestamps = new Long[] {1L, 2L, 3L, 4L, 5L};
+
+    Integer[] scanRows = new Integer[] {5, 7};
+    Integer[] scanColumns = new Integer[] {3, 4, 5};
+    Long[] scanTimestamps = new Long[] {2l, 3L};
+    int scanMaxVersions = 2;
+
+    put(ht, FAMILY, putRows, putColumns, putTimestamps);
+
+    flush();
+
+    ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
+        scanTimestamps, scanMaxVersions);
+
+    KeyValue[] kvs;
+
+    kvs = scanner.next().raw();
+    assertEquals(4, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 5, 3, 3);
+    checkOneCell(kvs[1], FAMILY, 5, 3, 2);
+    checkOneCell(kvs[2], FAMILY, 5, 5, 3);
+    checkOneCell(kvs[3], FAMILY, 5, 5, 2);
+    kvs = scanner.next().raw();
+    assertEquals(4, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 7, 3, 3);
+    checkOneCell(kvs[1], FAMILY, 7, 3, 2);
+    checkOneCell(kvs[2], FAMILY, 7, 5, 3);
+    checkOneCell(kvs[3], FAMILY, 7, 5, 2);
+  }
+
+  @Test
+  public void testReseeksWithMultipleFiles() throws IOException {
+    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
+    "ColumnMiltipleTimestamps");
+    byte [] FAMILY = Bytes.toBytes("event_log");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+
+    // create table; set versions to max...
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+
+    Integer[] putRows1 = new Integer[] {1, 2, 3};
+    Integer[] putColumns1 = new Integer[] { 2, 5, 6};
+    Long[] putTimestamps1 = new Long[] {1L, 2L, 5L};
+
+    Integer[] putRows2 = new Integer[] {6, 7};
+    Integer[] putColumns2 = new Integer[] {3, 6};
+    Long[] putTimestamps2 = new Long[] {4L, 5L};
+
+    Integer[] putRows3 = new Integer[] {2, 3, 5};
+    Integer[] putColumns3 = new Integer[] {1, 2, 3};
+    Long[] putTimestamps3 = new Long[] {4L,8L};
+
+
+    Integer[] scanRows = new Integer[] {3, 5, 7};
+    Integer[] scanColumns = new Integer[] {3, 4, 5};
+    Long[] scanTimestamps = new Long[] {2l, 4L};
+    int scanMaxVersions = 5;
+
+    put(ht, FAMILY, putRows1, putColumns1, putTimestamps1);
+    flush();
+    put(ht, FAMILY, putRows2, putColumns2, putTimestamps2);
+    flush();
+    put(ht, FAMILY, putRows3, putColumns3, putTimestamps3);
+
+    ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
+        scanTimestamps, scanMaxVersions);
+
+    KeyValue[] kvs;
+
+    kvs = scanner.next().raw();
+    assertEquals(2, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 3, 3, 4);
+    checkOneCell(kvs[1], FAMILY, 3, 5, 2);
+
+    kvs = scanner.next().raw();
+    assertEquals(1, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 5, 3, 4);
+
+    kvs = scanner.next().raw();
+    assertEquals(1, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 6, 3, 4);
+
+    kvs = scanner.next().raw();
+    assertEquals(1, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 7, 3, 4);
+  }
+
+  @Test
   public void testWithVersionDeletes() throws Exception {
 
     // first test from memstore (without flushing).
@@ -109,7 +283,8 @@ public class TestMultipleTimestamps {
 
     // request a bunch of versions including the deleted version. We should
     // only get back entries for the versions that exist.
-    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L, 4L, 5L));
+    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0,
+        Arrays.asList(2L, 3L, 4L, 5L));
     assertEquals(3, kvs.length);
     checkOneCell(kvs[0], FAMILY, 0, 0, 5);
     checkOneCell(kvs[1], FAMILY, 0, 0, 3);
@@ -238,6 +413,44 @@ public class TestMultipleTimestamps {
     Result result = ht.get(get);
 
     return result.raw();
+  }
+
+  private  ResultScanner scan(HTable ht, byte[] cf,
+      Integer[] rowIndexes, Integer[] columnIndexes,
+      Long[] versions, int maxVersions)
+  throws IOException {
+    Arrays.asList(rowIndexes);
+    byte startRow[] = Bytes.toBytes("row:" +
+        Collections.min( Arrays.asList(rowIndexes)));
+    byte endRow[] = Bytes.toBytes("row:" +
+        Collections.max( Arrays.asList(rowIndexes))+1);
+    Scan scan = new Scan(startRow, endRow);
+    for (Integer colIdx: columnIndexes) {
+      byte column[] = Bytes.toBytes("column:" + colIdx);
+      scan.addColumn(cf, column);
+    }
+    scan.setMaxVersions(maxVersions);
+    scan.setTimeRange(Collections.min(Arrays.asList(versions)),
+        Collections.max(Arrays.asList(versions))+1);
+    ResultScanner scanner = ht.getScanner(scan);
+    return scanner;
+  }
+
+  private void put(HTable ht, byte[] cf, Integer[] rowIndexes,
+      Integer[] columnIndexes, Long[] versions)
+  throws IOException {
+    for (int rowIdx: rowIndexes) {
+      byte row[] = Bytes.toBytes("row:" + rowIdx);
+      Put put = new Put(row);
+      for(int colIdx: columnIndexes) {
+        byte column[] = Bytes.toBytes("column:" + colIdx);
+        for (long version: versions) {
+          put.add(cf, column, version, Bytes.toBytes("value-version-" +
+              version));
+        }
+      }
+      ht.put(put);
+    }
   }
 
   /**

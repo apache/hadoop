@@ -256,6 +256,10 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           return false;
 
         case SEEK_NEXT_ROW:
+          if (!matcher.moreRowsMayExistAfter(kv)) {
+            outResult.addAll(results);
+            return false;
+          }
           heap.next();
           break;
 

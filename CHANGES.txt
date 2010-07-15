@@ -766,6 +766,8 @@ Release 0.21.0 - Unreleased
                (Pranav via Ryan)
    HBASE-2836  Speed mvn site building by removing generation of useless reports
    HBASE-2808  Document the implementation of replication
+   HBASE-2517  During reads when passed the specified time range, seek to
+               next column (Pranav via jgray)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

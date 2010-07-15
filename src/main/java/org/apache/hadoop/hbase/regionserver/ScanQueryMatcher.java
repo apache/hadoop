@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
@@ -34,6 +35,7 @@ public class ScanQueryMatcher extends QueryMatcher {
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.
   private boolean stickyNextRow;
+  private byte[] stopRow;
 
   /**
    * Constructs a QueryMatcher for a Scan.
@@ -50,6 +52,7 @@ public class ScanQueryMatcher extends QueryMatcher {
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
     this.deletes =  new ScanDeleteTracker();
+    this.stopRow = scan.getStopRow();
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
     this.filter = scan.getFilter();
 
@@ -140,17 +143,37 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.SKIP;
     }
 
-    if (!tr.withinTimeRange(timestamp)) {
-      return MatchCode.SKIP;
-    }
-
     if (!this.deletes.isEmpty() &&
         deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
       return MatchCode.SKIP;
     }
 
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength);
+    int timestampComparison = tr.compare(timestamp);
+    if (timestampComparison >= 1) {
+      return MatchCode.SKIP;
+    } else if (timestampComparison <= -1) {
+      return getNextRowOrNextColumn(bytes, offset, qualLength);
+    }
 
+    /**
+     * Filters should be checked before checking column trackers. If we do
+     * otherwise, as was previously being done, ColumnTracker may increment its
+     * counter for even that KV which may be discarded later on by Filter. This
+     * would lead to incorrect results in certain cases.
+     */
+    if (filter != null) {
+      ReturnCode filterResponse = filter.filterKeyValue(kv);
+      if (filterResponse == ReturnCode.SKIP) {
+        return MatchCode.SKIP;
+      } else if (filterResponse == ReturnCode.NEXT_COL) {
+        return getNextRowOrNextColumn(bytes, offset, qualLength);
+      } else if (filterResponse == ReturnCode.NEXT_ROW) {
+        stickyNextRow = true;
+        return MatchCode.SEEK_NEXT_ROW;
+      }
+    }
+
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength);
     // if SKIP -> SEEK_NEXT_COL
     // if (NEXT,DONE) -> SEEK_NEXT_ROW
     // if (INCLUDE) -> INCLUDE
@@ -161,24 +184,35 @@ public class ScanQueryMatcher extends QueryMatcher {
       return MatchCode.SEEK_NEXT_ROW;
     }
 
-    // else INCLUDE
-    // if (colChecker == MatchCode.INCLUDE)
-    // give the filter a chance to run.
-    if (filter == null)
-      return MatchCode.INCLUDE;
+    return MatchCode.INCLUDE;
 
-    ReturnCode filterResponse = filter.filterKeyValue(kv);
-    if (filterResponse == ReturnCode.INCLUDE)
-      return MatchCode.INCLUDE;
+  }
 
-    if (filterResponse == ReturnCode.SKIP)
-      return MatchCode.SKIP;
-    else if (filterResponse == ReturnCode.NEXT_COL)
+  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
+      int qualLength) {
+    if (columns instanceof ExplicitColumnTracker) {
+      //We only come here when we know that columns is an instance of
+      //ExplicitColumnTracker so we should never have a cast exception
+      ((ExplicitColumnTracker)columns).doneWithColumn(bytes, offset,
+          qualLength);
+      if (columns.getColumnHint() == null) {
+        return MatchCode.SEEK_NEXT_ROW;
+      } else {
+        return MatchCode.SEEK_NEXT_COL;
+      }
+    } else {
       return MatchCode.SEEK_NEXT_COL;
-    // else if (filterResponse == ReturnCode.NEXT_ROW)
+    }
+  }
 
-    stickyNextRow = true;
-    return MatchCode.SEEK_NEXT_ROW;
+  public boolean moreRowsMayExistAfter(KeyValue kv) {
+    if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
+        rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
+            kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   /**

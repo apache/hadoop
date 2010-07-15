@@ -147,6 +147,23 @@ public class TimeRange implements Writable {
     return (timestamp >= minStamp);
   }
 
+  /**
+   * Compare the timestamp to timerange
+   * @param timestamp
+   * @return -1 if timestamp is less than timerange,
+   * 0 if timestamp is within timerange,
+   * 1 if timestamp is greater than timerange
+   */
+  public int compare(long timestamp) {
+    if (timestamp < minStamp) {
+      return -1;
+    } else if (timestamp >= maxStamp) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

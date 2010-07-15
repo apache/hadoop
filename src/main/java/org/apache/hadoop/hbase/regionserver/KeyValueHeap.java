@@ -111,9 +111,16 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
       return false;
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    currentAsInternal.next(result, limit);
+    boolean mayContainsMoreRows = currentAsInternal.next(result, limit);
     KeyValue pee = this.current.peek();
-    if (pee == null) {
+    /*
+     * By definition, any InternalScanner must return false only when it has no
+     * further rows to be fetched. So, we can close a scanner if it returns
+     * false. All existing implementations seem to be fine with this. It is much
+     * more efficient to close scanners which are not needed than keep them in
+     * the heap. This is also required for certain optimizations.
+     */
+    if (pee == null || !mayContainsMoreRows) {
       this.current.close();
     } else {
       this.heap.add(this.current);

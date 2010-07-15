@@ -163,4 +163,39 @@ public class ExplicitColumnTracker implements ColumnTracker {
       col.setCount(this.maxVersions);
     }
   }
+
+  /**
+   * This method is used to inform the column tracker that we are done with
+   * this column. We may get this information from external filters or
+   * timestamp range and we then need to indicate this information to
+   * tracker. It is required only in case of ExplicitColumnTracker.
+   * @param bytes
+   * @param offset
+   * @param length
+   */
+  public void doneWithColumn(byte [] bytes, int offset, int length) {
+    while (this.column != null) {
+      int compare = Bytes.compareTo(column.getBuffer(), column.getOffset(),
+          column.getLength(), bytes, offset, length);
+      if (compare == 0) {
+        this.columns.remove(this.index);
+        if (this.columns.size() == this.index) {
+          // Will not hit any more columns in this storefile
+          this.column = null;
+        } else {
+          this.column = this.columns.get(this.index);
+        }
+        return;
+      } else if ( compare <= -1) {
+        if(++this.index != this.columns.size()) {
+          this.column = this.columns.get(this.index);
+        } else {
+          this.column = null;
+        }
+      } else {
+        return;
+      }
+    }
+  }
+
 }
