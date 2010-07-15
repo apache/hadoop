@@ -349,6 +349,21 @@ public class MiniHBaseCluster {
   }
 
   /**
+   * Call flushCache on all regions of the specified table.
+   * @throws IOException
+   */
+  public void flushcache(byte [] tableName) throws IOException {
+    for (JVMClusterUtil.RegionServerThread t:
+        this.hbaseCluster.getRegionServers()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegions()) {
+        if(Bytes.equals(r.getTableDesc().getName(), tableName)) {
+          r.flushcache();
+        }
+      }
+    }
+  }
+
+  /**
    * @return List of region server threads.
    */
   public List<JVMClusterUtil.RegionServerThread> getRegionServerThreads() {

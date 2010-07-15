@@ -99,7 +99,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    flush();
+    flush(TABLE);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -118,8 +118,8 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleColumnOneTimestamp() throws IOException {
-    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
-    "ColumnMiltipleTimestamps");
+    byte [] TABLE = Bytes.toBytes("testReseeksWithMultiple" +
+    "ColumnOneTimestamps");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -137,7 +137,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    flush();
+    flush(TABLE);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -155,7 +155,7 @@ public class TestMultipleTimestamps {
   @Test
   public void testReseeksWithMultipleColumnMultipleTimestamp() throws
   IOException {
-    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
+    byte [] TABLE = Bytes.toBytes("testReseeksWithMultiple" +
     "ColumnMiltipleTimestamps");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
@@ -174,7 +174,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    flush();
+    flush(TABLE);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -197,8 +197,7 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleFiles() throws IOException {
-    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
-    "ColumnMiltipleTimestamps");
+    byte [] TABLE = Bytes.toBytes("testReseeksWithMultipleFiles");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -224,9 +223,9 @@ public class TestMultipleTimestamps {
     int scanMaxVersions = 5;
 
     put(ht, FAMILY, putRows1, putColumns1, putTimestamps1);
-    flush();
+    flush(TABLE);
     put(ht, FAMILY, putRows2, putColumns2, putTimestamps2);
-    flush();
+    flush(TABLE);
     put(ht, FAMILY, putRows3, putColumns3, putTimestamps3);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
@@ -275,7 +274,7 @@ public class TestMultipleTimestamps {
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
     if (flushTables) {
-      flush();
+      flush(TABLE);
     }
 
     // delete version 4.
@@ -303,7 +302,7 @@ public class TestMultipleTimestamps {
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    flush();
+    flush(TABLE);
 
     // delete all versions before 4.
     deleteAllVersionsBefore(ht, FAMILY, 0, 0, 4);
@@ -326,7 +325,7 @@ public class TestMultipleTimestamps {
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    flush();
+    flush(TABLE);
 
     // delete all versions before 4.
     deleteColumn(ht, FAMILY, 0, 0);
@@ -349,7 +348,7 @@ public class TestMultipleTimestamps {
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    flush();
+    flush(TABLE);
 
     // delete all versions before 4.
     deleteFamily(ht, FAMILY, 0);
@@ -361,8 +360,8 @@ public class TestMultipleTimestamps {
   }
 
   // Flush tables. Since flushing is asynchronous, sleep for a bit.
-  private void flush() throws IOException {
-    TEST_UTIL.flush();
+  private void flush(byte [] tableName) throws IOException {
+    TEST_UTIL.flush(tableName);
     try {
       Thread.sleep(3000);
     } catch (InterruptedException i) {

@@ -344,6 +344,14 @@ public class HBaseTestingUtility {
     this.hbaseCluster.flushcache();
   }
 
+  /**
+   * Flushes all caches in the mini hbase cluster
+   * @throws IOException
+   */
+  public void flush(byte [] tableName) throws IOException {
+    this.hbaseCluster.flushcache(tableName);
+  }
+
 
   /**
    * Create a table.
