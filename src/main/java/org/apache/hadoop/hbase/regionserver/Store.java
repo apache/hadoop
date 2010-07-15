@@ -190,7 +190,7 @@ public class Store implements HeapSize {
     this.storefiles = ImmutableList.copyOf(loadStoreFiles());
   }
 
-  HColumnDescriptor getFamily() {
+  public HColumnDescriptor getFamily() {
     return this.family;
   }
 
@@ -958,13 +958,6 @@ public class Store implements HeapSize {
     return wantedVersions > maxVersions ? maxVersions: wantedVersions;
   }
 
-  static void expiredOrDeleted(final Set<KeyValue> set, final KeyValue kv) {
-    boolean b = set.remove(kv);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(kv.toString() + " expired: " + b);
-    }
-  }
-
   static boolean isExpired(final KeyValue key, final long oldestTimestamp) {
     return key.getTimestamp() < oldestTimestamp;
   }
@@ -1204,7 +1197,7 @@ public class Store implements HeapSize {
    * Return a scanner for both the memstore and the HStore files
    * @throws IOException
    */
-  protected KeyValueScanner getScanner(Scan scan,
+  public KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
@@ -1286,85 +1279,6 @@ public class Store implements HeapSize {
 
   HRegionInfo getHRegionInfo() {
     return this.region.regionInfo;
-  }
-
-  /**
-   * Convenience method that implements the old MapFile.getClosest on top of
-   * HFile Scanners.  getClosest used seek to the asked-for key or just after
-   * (HFile seeks to the key or just before).
-   * @param s Scanner to use
-   * @param kv Key to find.
-   * @return True if we were able to seek the scanner to <code>b</code> or to
-   * the key just after.
-   * @throws IOException
-   */
-  static boolean getClosest(final HFileScanner s, final KeyValue kv)
-      throws IOException {
-    // Pass offsets to key content of a KeyValue; thats whats in the hfile index.
-    int result = s.seekTo(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-    if (result < 0) {
-      // Not in file.  Will the first key do?
-      if (!s.seekTo()) {
-        return false;
-      }
-    } else if (result > 0) {
-      // Less than what was asked for but maybe < because we're asking for
-      // r/c/HConstants.LATEST_TIMESTAMP -- what was returned was r/c-1/SOME_TS...
-      // A next will get us a r/c/SOME_TS.
-      if (!s.next()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Retrieve results from this store given the specified Get parameters.
-   * @param get Get operation
-   * @param columns List of columns to match, can be empty (not null)
-   * @param result List to add results to
-   * @throws IOException
-   */
-  public void get(Get get, NavigableSet<byte[]> columns, List<KeyValue> result)
-      throws IOException {
-    KeyComparator keyComparator = this.comparator.getRawComparator();
-
-    // Column matching and version enforcement
-    QueryMatcher matcher = new QueryMatcher(get, this.family.getName(), columns,
-      this.ttl, keyComparator, versionsToReturn(get.getMaxVersions()));
-    this.lock.readLock().lock();
-    try {
-      // Read from memstore
-      if(this.memstore.get(matcher, result)) {
-        // Received early-out from memstore
-        return;
-      }
-
-      // Check if we even have storefiles
-      if (this.storefiles.isEmpty()) {
-        return;
-      }
-
-      // Get storefiles for this store
-      List<HFileScanner> storefileScanners = new ArrayList<HFileScanner>();
-      for (StoreFile sf : Iterables.reverse(this.storefiles)) {
-        StoreFile.Reader r = sf.getReader();
-        if (r == null) {
-          LOG.warn("StoreFile " + sf + " has a null Reader");
-          continue;
-        }
-        // Get a scanner that caches the block and uses pread
-        storefileScanners.add(r.getScanner(true, true));
-      }
-
-      // StoreFileGetScan will handle reading this store's storefiles
-      StoreFileGetScan scanner = new StoreFileGetScan(storefileScanners, matcher);
-
-      // Run a GET scan and put results into the specified list
-      scanner.get(result);
-    } finally {
-      this.lock.readLock().unlock();
-    }
   }
 
   /**

@@ -3007,14 +3007,11 @@ public class HRegion implements HeapSize { // , Writable{
     try {
       Store store = stores.get(family);
 
-      // TODO call the proper GET API
       // Get the old value:
       Get get = new Get(row);
       get.addColumn(family, qualifier);
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      NavigableSet<byte[]> qualifiers = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      qualifiers.add(qualifier);
-      store.get(get, qualifiers, results);
+
+      List<KeyValue> results = get(get);
 
       if (!results.isEmpty()) {
         KeyValue kv = results.get(0);

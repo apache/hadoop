@@ -25,6 +25,7 @@ Release 0.21.0 - Unreleased
    HBASE-2565  Remove contrib module from hbase
    HBASE-2397  Bytes.toStringBinary escapes printable chars
    HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
+   HBASE-2803  Remove remaining Get code from Store.java,etc
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

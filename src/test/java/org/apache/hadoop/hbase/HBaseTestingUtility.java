@@ -29,6 +29,9 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -39,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -48,6 +52,9 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -280,7 +287,7 @@ public class HBaseTestingUtility {
     // Do old style too just to be safe.
     this.conf.set("fs.default.name", fs.getUri().toString());
     this.dfsCluster.waitClusterUp();
-   
+
     // Start up a zk cluster.
     if (this.zkCluster == null) {
       startMiniZKCluster(this.clusterTestBuildDir);
@@ -961,5 +968,43 @@ public class HBaseTestingUtility {
       LOG.info("Found=" + rows);
       Threads.sleep(1000); 
     }
+  }
+
+  /**
+   * Do a small get/scan against one store. This is required because store
+   * has no actual methods of querying itself, and relies on StoreScanner.
+   */
+  public static List<KeyValue> getFromStoreFile(Store store,
+                                                Get get) throws IOException {
+    ReadWriteConsistencyControl.resetThreadReadPoint();
+    Scan scan = new Scan(get);
+    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
+        scan.getFamilyMap().get(store.getFamily().getName()));
+
+    List<KeyValue> result = new ArrayList<KeyValue>();
+    scanner.next(result);
+    if (!result.isEmpty()) {
+      // verify that we are on the row we want:
+      KeyValue kv = result.get(0);
+      if (!Bytes.equals(kv.getRow(), get.getRow())) {
+        result.clear();
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Do a small get/scan against one store. This is required because store
+   * has no actual methods of querying itself, and relies on StoreScanner.
+   */
+  public static List<KeyValue> getFromStoreFile(Store store,
+                                                byte [] row,
+                                                NavigableSet<byte[]> columns
+                                                ) throws IOException {
+    Get get = new Get(row);
+    Map<byte[], NavigableSet<byte[]>> s = get.getFamilyMap();
+    s.put(store.getFamily().getName(), columns);
+
+    return getFromStoreFile(store,get);
   }
 }

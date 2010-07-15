@@ -64,7 +64,7 @@ import com.google.common.base.Joiner;
  */
 public class TestStore extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestStore.class);
-  
+
   Store store;
   byte [] table = Bytes.toBytes("table");
   byte [] family = Bytes.toBytes("family");
@@ -101,7 +101,7 @@ public class TestStore extends TestCase {
     Iterator<byte[]> iter = qualifiers.iterator();
     while(iter.hasNext()){
       byte [] next = iter.next();
-      expected.add(new KeyValue(row, family, next, null));
+      expected.add(new KeyValue(row, family, next, 1, (byte[])null));
       get.addColumn(family, next);
     }
   }
@@ -109,7 +109,7 @@ public class TestStore extends TestCase {
   private void init(String methodName) throws IOException {
     init(methodName, HBaseConfiguration.create());
   }
-  
+
   private void init(String methodName, Configuration conf)
   throws IOException {
     //Setting up a Store
@@ -142,8 +142,8 @@ public class TestStore extends TestCase {
   public void testEmptyStoreFile() throws IOException {
     init(this.getName());
     // Write a store file.
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
     flush(1);
     // Now put in place an empty store file.  Its a little tricky.  Have to
     // do manually with hacked in sequence id.
@@ -152,7 +152,7 @@ public class TestStore extends TestCase {
     long seqid = f.getMaxSequenceId();
     Configuration c = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(c);
-    StoreFile.Writer w = StoreFile.createWriter(fs, storedir, 
+    StoreFile.Writer w = StoreFile.createWriter(fs, storedir,
         StoreFile.DEFAULT_BLOCKSIZE_SMALL);
     w.appendMetadata(seqid + 1, false);
     w.close();
@@ -163,7 +163,10 @@ public class TestStore extends TestCase {
       this.store.getFamily(), fs, c);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());
-    this.store.get(get, qualifiers, result);
+
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(),
+        qualifiers);
     assertEquals(1, result.size());
   }
 
@@ -175,15 +178,16 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
-    this.store.add(new KeyValue(row, family, qf3, null));
-    this.store.add(new KeyValue(row, family, qf4, null));
-    this.store.add(new KeyValue(row, family, qf5, null));
-    this.store.add(new KeyValue(row, family, qf6, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
 
     //Get
-    this.store.get(get, qualifiers, result);
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(), qualifiers);
 
     //Compare
     assertCheck();
@@ -197,25 +201,28 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, null));
-    this.store.add(new KeyValue(row, family, qf4, null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, null));
-    this.store.add(new KeyValue(row, family, qf6, null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
     //flush
     flush(3);
 
     //Get
-    this.store.get(get, qualifiers, result);
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(),
+        qualifiers);
+    //this.store.get(get, qualifiers, result);
 
     //Need to sort the result since multiple files
     Collections.sort(result, KeyValue.COMPARATOR);
@@ -232,23 +239,24 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, null));
-    this.store.add(new KeyValue(row, family, qf4, null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, null));
-    this.store.add(new KeyValue(row, family, qf6, null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
 
     //Get
-    this.store.get(get, qualifiers, result);
+    result = HBaseTestingUtility.getFromStoreFile(store,
+        get.getRow(), qualifiers);
 
     //Need to sort the result since multiple files
     Collections.sort(result, KeyValue.COMPARATOR);
@@ -316,7 +324,7 @@ public class TestStore extends TestCase {
     NavigableSet<byte[]> cols = new TreeSet<byte[]>();
     cols.add(qf1);
 
-    this.store.get(get, cols, results);
+    results = HBaseTestingUtility.getFromStoreFile(store, get);
     assertEquals(2, results.size());
 
     long ts1 = results.get(0).getTimestamp();
@@ -342,21 +350,21 @@ public class TestStore extends TestCase {
     // Make sure it worked (above is sensitive to caching details in hadoop core)
     FileSystem fs = FileSystem.get(conf);
     assertEquals(FaultyFileSystem.class, fs.getClass());
-    
+
     // Initialize region
     init(getName(), conf);
 
     LOG.info("Adding some data");
-    this.store.add(new KeyValue(row, family, qf1, null));
-    this.store.add(new KeyValue(row, family, qf2, null));
-    this.store.add(new KeyValue(row, family, qf3, null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
 
     LOG.info("Before flush, we should have no files");
     FileStatus[] files = fs.listStatus(store.getHomedir());
     Path[] paths = FileUtil.stat2Paths(files);
     System.err.println("Got paths: " + Joiner.on(",").join(paths));
     assertEquals(0, paths.length);
-        
+
     //flush
     try {
       LOG.info("Flushing");
@@ -365,7 +373,7 @@ public class TestStore extends TestCase {
     } catch (IOException ioe) {
       assertTrue(ioe.getMessage().contains("Fault injected"));
     }
- 
+
     LOG.info("After failed flush, we should still have no files!");
     files = fs.listStatus(store.getHomedir());
     paths = FileUtil.stat2Paths(files);
@@ -373,27 +381,27 @@ public class TestStore extends TestCase {
     assertEquals(0, paths.length);
   }
 
-  
+
   static class FaultyFileSystem extends FilterFileSystem {
     List<SoftReference<FaultyOutputStream>> outStreams =
       new ArrayList<SoftReference<FaultyOutputStream>>();
     private long faultPos = 200;
-    
+
     public FaultyFileSystem() {
       super(new LocalFileSystem());
       System.err.println("Creating faulty!");
     }
-    
+
     @Override
     public FSDataOutputStream create(Path p) throws IOException {
       return new FaultyOutputStream(super.create(p), faultPos);
     }
 
   }
-  
+
   static class FaultyOutputStream extends FSDataOutputStream {
     volatile long faultPos = Long.MAX_VALUE;
-    
+
     public FaultyOutputStream(FSDataOutputStream out,
         long faultPos) throws IOException {
       super(out, null);
@@ -406,7 +414,7 @@ public class TestStore extends TestCase {
       injectFault();
       super.write(buf, offset, length);
     }
-    
+
     private void injectFault() throws IOException {
       if (getPos() >= faultPos) {
         throw new IOException("Fault injected");
@@ -414,8 +422,8 @@ public class TestStore extends TestCase {
     }
   }
 
-  
-  
+
+
   private static void flushStore(Store store, long id) throws IOException {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();
@@ -469,41 +477,32 @@ public class TestStore extends TestCase {
       this.store.add(kv);
     }
 
-    NavigableSet<byte[]> columns = new ConcurrentSkipListSet<byte[]>(
-        Bytes.BYTES_COMPARATOR);
-    columns.add(qf1);
     List<KeyValue> result;
     Get get = new Get(Bytes.toBytes(1));
     get.addColumn(family,qf1);
 
     get.setTimeRange(0,15);
-    result = new ArrayList<KeyValue>();
-    this.store.get(get, columns, result);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(40,90);
-    result = new ArrayList<KeyValue>();
-    this.store.get(get, columns, result);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(10,45);
-    result = new ArrayList<KeyValue>();
-    this.store.get(get, columns, result);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(80,145);
-    result = new ArrayList<KeyValue>();
-    this.store.get(get, columns, result);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(1,2);
-    result = new ArrayList<KeyValue>();
-    this.store.get(get, columns, result);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()>0);
 
     get.setTimeRange(90,200);
-    result = new ArrayList<KeyValue>();
-    this.store.get(get, columns, result);
+    result = HBaseTestingUtility.getFromStoreFile(store, get);
     assertTrue(result.size()==0);
   }
 }

@@ -570,64 +570,6 @@ public class TestMemStore extends TestCase {
     }
   }
 
-  public void testGet_Basic_Found() throws IOException {
-    byte [] row = Bytes.toBytes("testrow");
-    byte [] fam = Bytes.toBytes("testfamily");
-    byte [] qf1 = Bytes.toBytes("testqualifier1");
-    byte [] qf2 = Bytes.toBytes("testqualifier2");
-    byte [] qf3 = Bytes.toBytes("testqualifier3");
-    byte [] val = Bytes.toBytes("testval");
-
-    //Setting up memstore
-    KeyValue add1 = new KeyValue(row, fam ,qf1, val);
-    KeyValue add2 = new KeyValue(row, fam ,qf2, val);
-    KeyValue add3 = new KeyValue(row, fam ,qf3, val);
-    memstore.add(add1);
-    memstore.add(add2);
-    memstore.add(add3);
-
-    //test
-    Get get = new Get(row);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf2);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher =
-      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memstore.get(matcher, result);
-    assertEquals(true, res);
-  }
-
-  public void testGet_Basic_NotFound() throws IOException {
-    byte [] row = Bytes.toBytes("testrow");
-    byte [] fam = Bytes.toBytes("testfamily");
-    byte [] qf1 = Bytes.toBytes("testqualifier1");
-    byte [] qf2 = Bytes.toBytes("testqualifier2");
-    byte [] qf3 = Bytes.toBytes("testqualifier3");
-    byte [] val = Bytes.toBytes("testval");
-
-    //Setting up memstore
-    KeyValue add1 = new KeyValue(row, fam ,qf1, val);
-    KeyValue add3 = new KeyValue(row, fam ,qf3, val);
-    memstore.add(add1);
-    memstore.add(add3);
-
-    //test
-    Get get = new Get(row);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf2);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher =
-      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
-
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memstore.get(matcher, result);
-    assertEquals(false, res);
-  }
-
   public void testGet_memstoreAndSnapShot() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -637,16 +579,6 @@ public class TestMemStore extends TestCase {
     byte [] qf4 = Bytes.toBytes("testqualifier4");
     byte [] qf5 = Bytes.toBytes("testqualifier5");
     byte [] val = Bytes.toBytes("testval");
-
-    //Creating get
-    Get get = new Get(row);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf2);
-    columns.add(qf4);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher =
-      new QueryMatcher(get, fam, columns, ttl, KeyValue.KEY_COMPARATOR, 1);
 
     //Setting up memstore
     memstore.add(new KeyValue(row, fam ,qf1, val));
@@ -660,64 +592,6 @@ public class TestMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam ,qf4, val));
     memstore.add(new KeyValue(row, fam ,qf5, val));
     assertEquals(2, memstore.kvset.size());
-
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    boolean res = memstore.get(matcher, result);
-    assertEquals(true, res);
-  }
-
-  public void testGet_SpecificTimeStamp() throws IOException {
-    byte [] row = Bytes.toBytes("testrow");
-    byte [] fam = Bytes.toBytes("testfamily");
-    byte [] qf1 = Bytes.toBytes("testqualifier1");
-    byte [] qf2 = Bytes.toBytes("testqualifier2");
-    byte [] qf3 = Bytes.toBytes("testqualifier3");
-    byte [] val = Bytes.toBytes("testval");
-
-    long ts1 = System.currentTimeMillis();
-    long ts2 = ts1++;
-    long ts3 = ts2++;
-
-    //Creating get
-    Get get = new Get(row);
-    get.setTimeStamp(ts2);
-    NavigableSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    columns.add(qf1);
-    columns.add(qf2);
-    columns.add(qf3);
-    long ttl = Long.MAX_VALUE;
-
-    QueryMatcher matcher = new QueryMatcher(get, fam, columns, ttl,
-      KeyValue.KEY_COMPARATOR, 1);
-
-    //Setting up expected
-    List<KeyValue> expected = new ArrayList<KeyValue>();
-    KeyValue kv1 = new KeyValue(row, fam ,qf1, ts2, val);
-    KeyValue kv2 = new KeyValue(row, fam ,qf2, ts2, val);
-    KeyValue kv3 = new KeyValue(row, fam ,qf3, ts2, val);
-    expected.add(kv1);
-    expected.add(kv2);
-    expected.add(kv3);
-
-    //Setting up memstore
-    memstore.add(new KeyValue(row, fam ,qf1, ts1, val));
-    memstore.add(new KeyValue(row, fam ,qf2, ts1, val));
-    memstore.add(new KeyValue(row, fam ,qf3, ts1, val));
-    memstore.add(kv1);
-    memstore.add(kv2);
-    memstore.add(kv3);
-    memstore.add(new KeyValue(row, fam ,qf1, ts3, val));
-    memstore.add(new KeyValue(row, fam ,qf2, ts3, val));
-    memstore.add(new KeyValue(row, fam ,qf3, ts3, val));
-
-    //Get
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    memstore.get(matcher, result);
-
-    assertEquals(expected.size(), result.size());
-    for(int i=0; i<expected.size(); i++){
-      assertEquals(expected.get(i), result.get(i));
-    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
