@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -46,7 +47,7 @@ public class FsckServlet extends DfsServlet {
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
     final Configuration conf = 
-      (Configuration) getServletContext().getAttribute("name.conf");
+      (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
 
     final UserGroupInformation ugi = getUGI(request, conf);
     try {

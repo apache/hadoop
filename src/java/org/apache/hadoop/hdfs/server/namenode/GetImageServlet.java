@@ -37,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -60,7 +61,8 @@ public class GetImageServlet extends HttpServlet {
       ServletContext context = getServletContext();
       final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
-      final Configuration conf = (Configuration)getServletContext().getAttribute("name.conf");
+      final Configuration conf = 
+        (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
       
       if(UserGroupInformation.isSecurityEnabled() && 
           !isValidRequestor(request.getRemoteUser(), conf)) {

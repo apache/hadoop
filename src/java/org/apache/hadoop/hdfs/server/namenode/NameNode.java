@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -464,7 +465,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
           httpServer.setAttribute("name.node", NameNode.this);
           httpServer.setAttribute("name.node.address", getNameNodeAddress());
           httpServer.setAttribute("name.system.image", getFSImage());
-          httpServer.setAttribute("name.conf", conf);
+          httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
           httpServer.addInternalServlet("getDelegationToken",
               DelegationTokenServlet.PATH_SPEC, DelegationTokenServlet.class,
               true);
@@ -473,13 +474,13 @@ public class NameNode implements NamenodeProtocols, FSConstants {
           httpServer.addInternalServlet("getimage", "/getimage",
               GetImageServlet.class, true);
           httpServer.addInternalServlet("listPaths", "/listPaths/*",
-              ListPathsServlet.class, true);
+              ListPathsServlet.class, false);
           httpServer.addInternalServlet("data", "/data/*",
-              FileDataServlet.class, true);
+              FileDataServlet.class, false);
           httpServer.addInternalServlet("checksum", "/fileChecksum/*",
-              FileChecksumServlets.RedirectServlet.class, true);
+              FileChecksumServlets.RedirectServlet.class, false);
           httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
-              ContentSummaryServlet.class, true);
+              ContentSummaryServlet.class, false);
           httpServer.start();
 
           // The web-server port can be ephemeral... ensure we have the correct

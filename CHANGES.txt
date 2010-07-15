@@ -139,6 +139,8 @@ Trunk (unreleased changes)
 
     HDFS-1289. Datanode secure mode is broken. (Kan Zhang via jghoman)
 
+    HDFS-1007. HFTP needs to be updated to use delegation tokens (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -54,7 +54,7 @@ abstract class DfsServlet extends HttpServlet {
     ServletContext context = getServletContext();
     InetSocketAddress nnAddr = (InetSocketAddress)context.getAttribute("name.node.address");
     Configuration conf = new HdfsConfiguration(
-        (Configuration)context.getAttribute("name.conf"));
+        (Configuration)context.getAttribute(JspHelper.CURRENT_CONF));
     return DFSClient.createNamenode(nnAddr, conf);
   }
 

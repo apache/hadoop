@@ -61,6 +61,7 @@ import org.apache.hadoop.util.VersionInfo;
 
 @InterfaceAudience.Private
 public class JspHelper {
+  public static final String CURRENT_CONF = "current.conf";
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
   public static final String DELEGATION_PARAMETER_NAME = "delegation";
   public static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
@@ -469,6 +470,7 @@ public class JspHelper {
                                             Configuration conf
                                            ) throws IOException {
     UserGroupInformation ugi = null;
+    final String RANDOM_USER = "webuser1234";
     if(UserGroupInformation.isSecurityEnabled()) {
       String user = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
@@ -476,6 +478,12 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
+        if (user == null) {
+          //this really doesn't break any security since we use the 
+          //delegation token for authentication in
+          //the back end.
+          user = RANDOM_USER;
+        }
         InetSocketAddress serviceAddr = NameNode.getAddress(conf);
         LOG.info("Setting service in token: "
             + new Text(serviceAddr.getAddress().getHostAddress() + ":"
@@ -501,7 +509,7 @@ public class JspHelper {
       if(user == null) { // not specified in request
         ugi = getDefaultWebUser(conf);
       } else {
-        ugi = UserGroupInformation.createRemoteUser(user);
+        ugi = UserGroupInformation.createRemoteUser(user.split(",")[0]);
       }
       ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
     }

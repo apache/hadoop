@@ -21,6 +21,7 @@
   contentType="text/html; charset=UTF-8"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.util.ServletUtil"
+  import="org.apache.hadoop.hdfs.server.common.JspHelper"
 %>
 <%!
   //for java.io.Serializable
@@ -34,7 +35,7 @@
 <% 
   NameNode nn = (NameNode)application.getAttribute("name.node");
   Configuration conf = 
-     (Configuration) application.getAttribute("name.conf");
+     (Configuration) application.getAttribute(JspHelper.CURRENT_CONF);
   NamenodeJspHelper.redirectToRandomDataNode(nn, request, response, conf); 
 %>
 <hr>

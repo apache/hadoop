@@ -54,7 +54,7 @@ public class StreamFile extends DfsServlet {
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException, InterruptedException {
     final Configuration conf =
-      (Configuration) getServletContext().getAttribute("datanode.conf");
+      (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     
     UserGroupInformation ugi = getUGI(request, conf);
     DFSClient client = ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {

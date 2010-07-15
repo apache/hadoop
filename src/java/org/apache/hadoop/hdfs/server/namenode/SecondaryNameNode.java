@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -190,7 +191,7 @@ public class SecondaryNameNode implements Runnable {
           
           infoServer.setAttribute("secondary.name.node", this);
           infoServer.setAttribute("name.system.image", checkpointImage);
-          infoServer.setAttribute("name.conf", conf);
+          infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
           infoServer.addInternalServlet("getimage", "/getimage",
               GetImageServlet.class, true);
           infoServer.start();

@@ -35,7 +35,7 @@
 <body onload="document.goto.dir.focus()">
 <% 
   Configuration conf = 
-     (Configuration) application.getAttribute("datanode.conf");
+     (Configuration) application.getAttribute(JspHelper.CURRENT_CONF);
   DatanodeJspHelper.generateFileChunks(out, request, conf); 
 %>
 <hr>

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfsproxy;
 
 import java.io.IOException;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 
 /**
  * A HTTPS/SSL proxy to HDFS, implementing certificate based access control.
@@ -68,7 +70,7 @@ public class HdfsProxy {
     this.server = new ProxyHttpServer(sslAddr, sslConf);
     this.server.setAttribute("proxy.https.port", server.getPort());
     this.server.setAttribute("name.node.address", nnAddr);
-    this.server.setAttribute("name.conf", new HdfsConfiguration());
+    this.server.setAttribute(JspHelper.CURRENT_CONF, new HdfsConfiguration());
     this.server.addGlobalFilter("ProxyFilter", ProxyFilter.class.getName(), null);
     this.server.addServlet("listPaths", "/listPaths/*", ProxyListPathsServlet.class);
     this.server.addServlet("data", "/data/*", ProxyFileDataServlet.class);

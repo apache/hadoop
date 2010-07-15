@@ -47,7 +47,7 @@ body
 <% 
   try {
     Configuration conf = 
-      (Configuration) application.getAttribute("datanode.conf");
+      (Configuration) application.getAttribute(JspHelper.CURRENT_CONF);
     DatanodeJspHelper.generateDirectoryStructure(out,request,response, conf);
   }
   catch(IOException ioe) {
