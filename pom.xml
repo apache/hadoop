@@ -445,7 +445,7 @@
   <properties>
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hbase.version>0.21.0-SNAPSHOT</hbase.version>
+    <hbase.version>0.89.0-SNAPSHOT</hbase.version>
     <hadoop.version>0.20.3-append-r956776+1240+tail</hadoop.version>
 
     <commons-cli.version>1.2</commons-cli.version>
