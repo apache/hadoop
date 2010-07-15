@@ -653,7 +653,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (7 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (9 * ClassSize.REFERENCE));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
