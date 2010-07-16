@@ -19,6 +19,27 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -64,28 +85,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.Lists;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Constructor;
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
  * for each row. A given table consists of one or more HRegions.
@@ -126,6 +125,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
+
   final AtomicBoolean closed = new AtomicBoolean(false);
   /* Closing can take some time; use the closing flag if there is stuff we don't
    * want to do while in closing state; e.g. like offer this region up to the
@@ -330,9 +330,8 @@ public class HRegion implements HeapSize { // , Writable{
     // Remove temporary data left over from old regions
     cleanupTmpDir();
     
-    // Load in all the HStores.  Get min and max seqids across all families.
+    // Load in all the HStores.  Get maximum seqid.
     long maxSeqId = -1;
-    long minSeqId = Integer.MAX_VALUE;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
       Store store = instantiateHStore(this.tableDir, c);
       this.stores.put(c.getName(), store);
@@ -340,12 +339,9 @@ public class HRegion implements HeapSize { // , Writable{
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
-      if (minSeqId > storeSeqId) {
-        minSeqId = storeSeqId;
-      }
     }
     // Recover any edits if available.
-    long seqid = replayRecoveredEditsIfAny(this.regiondir, minSeqId, reporter);
+    maxSeqId = replayRecoveredEditsIfAny(this.regiondir, maxSeqId, reporter);
 
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
@@ -362,7 +358,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
-    long nextSeqid = Math.max(seqid, maxSeqId) + 1;
+    long nextSeqid = maxSeqId + 1;
     LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
     return nextSeqid;
   }
@@ -902,7 +898,9 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Flushing the cache is a little tricky. We have a lot of updates in the
+   * Flush the memstore.
+   * 
+   * Flushing the memstore is a little tricky. We have a lot of updates in the
    * memstore, all of which have also been written to the log. We need to
    * write those updates in the memstore out to disk, while being able to
    * process reads/writes as much as possible during the flush operation. Also,
@@ -934,6 +932,19 @@ public class HRegion implements HeapSize { // , Writable{
    * because a Snapshot was not properly persisted.
    */
   protected boolean internalFlushcache() throws IOException {
+    return internalFlushcache(this.log, -1);
+  }
+
+  /**
+   * @param wal Null if we're NOT to go via hlog/wal.
+   * @param myseqid The seqid to use if <code>wal</code> is null writing out
+   * flush file.
+   * @return true if the region needs compacting
+   * @throws IOException
+   * @see {@link #internalFlushcache()}
+   */
+  protected boolean internalFlushcache(final HLog wal, final long myseqid)
+  throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
     // Record latest flush time
@@ -945,7 +956,8 @@ public class HRegion implements HeapSize { // , Writable{
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started memstore flush for region " + this +
         ". Current region memstore size " +
-          StringUtils.humanReadableInt(this.memstoreSize.get()));
+        StringUtils.humanReadableInt(this.memstoreSize.get()) +
+        ((wal != null)? "": "; wal is null, using passed myseqid=" + myseqid));
     }
 
     // Stop updates while we snapshot the memstore of all stores. We only have
@@ -958,14 +970,14 @@ public class HRegion implements HeapSize { // , Writable{
     long sequenceId = -1L;
     long completeSequenceId = -1L;
 
-    // we have to take a write lock during snapshot, or else a write could
+    // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
     this.updatesLock.writeLock().lock();
     final long currentMemStoreSize = this.memstoreSize.get();
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
-      sequenceId = log.startCacheFlush();
+      sequenceId = (wal == null)? myseqid: wal.startCacheFlush();
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
 
       for (Store s : stores.values()) {
@@ -1009,9 +1021,9 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       try {
-	if (atomicWork != null) {
-	  atomicWork.call();
-	}
+        if (atomicWork != null) {
+          atomicWork.call();
+        }
 
         // Switch snapshot (in memstore) -> new hfile (thus causing
         // all the store scanners to reset/reseek).
@@ -1038,7 +1050,7 @@ public class HRegion implements HeapSize { // , Writable{
       // We used to only catch IOEs but its possible that we'd get other
       // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
       // all and sundry.
-      this.log.abortCacheFlush();
+      if (wal != null) wal.abortCacheFlush();
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
           Bytes.toStringBinary(getRegionName()));
       dse.initCause(t);
@@ -1052,9 +1064,11 @@ public class HRegion implements HeapSize { // , Writable{
     //     This tells future readers that the HStores were emitted correctly,
     //     and that all updates to the log for this regionName that have lower
     //     log-sequence-ids can be safely ignored.
-    this.log.completeCacheFlush(getRegionName(),
+    if (wal != null) {
+      wal.completeCacheFlush(getRegionName(),
         regionInfo.getTableDesc().getName(), completeSequenceId,
         this.getRegionInfo().isMetaRegion());
+    }
 
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
@@ -1067,11 +1081,11 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.info("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
         this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
-        ", compaction requested=" + compactionRequested);
+        ", compaction requested=" + compactionRequested +
+        ((wal == null)? "; wal=null": ""));
     }
     return compactionRequested;
   }
-
 
    /**
     * A hook for sub classed wishing to perform operations prior to the cache
@@ -1853,46 +1867,75 @@ public class HRegion implements HeapSize { // , Writable{
    * Read the edits log put under this region by wal log splitting process.  Put
    * the recovered edits back up into this region.
    *
-   * We can ignore any log message that has a sequence ID that's equal to or
+   * <p>We can ignore any log message that has a sequence ID that's equal to or
    * lower than minSeqId.  (Because we know such log messages are already
    * reflected in the HFiles.)
+   * 
+   * <p>While this is running we are putting pressure on memory yet we are
+   * outside of our usual accounting because we are not yet an onlined region
+   * (this stuff is being run as part of Region initialization).  This means
+   * that if we're up against global memory limits, we'll not be flagged to flush
+   * because we are not online. We can't be flushed by usual mechanisms anyways;
+   * we're not yet online so our relative sequenceids are not yet aligned with
+   * HLog sequenceids -- not till we come up online, post processing of split
+   * edits.
+   * 
+   * <p>But to help relieve memory pressure, at least manage our own heap size
+   * flushing if are in excess of per-region limits.  Flushing, though, we have
+   * to be careful and avoid using the regionserver/hlog sequenceid.  Its running
+   * on a different line to whats going on in here in this region context so if we
+   * crashed replaying these edits, but in the midst had a flush that used the
+   * regionserver log with a sequenceid in excess of whats going on in here
+   * in this region and with its split editlogs, then we could miss edits the
+   * next time we go to recover. So, we have to flush inline, using seqids that
+   * make sense in a this single region context only -- until we online.
+   * 
    * @param regiondir
-   * @param minSeqId Minimum sequenceid found in a store file.  Edits in log
-   * must be larger than this to be replayed.
+   * @param minSeqId Any edit found in split editlogs needs to be in excess of
+   * this minSeqId to be applied, else its skipped.
    * @param reporter
    * @return the sequence id of the last edit added to this region out of the
-   * recovered edits log, or -1 if no log recovered
+   * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    * @throws UnsupportedEncodingException
    * @throws IOException
    */
   protected long replayRecoveredEditsIfAny(final Path regiondir,
       final long minSeqId, final Progressable reporter)
   throws UnsupportedEncodingException, IOException {
-    Path edits = new Path(regiondir, HLog.RECOVERED_EDITS);
-    if (edits == null || !this.fs.exists(edits)) return -1;
-    if (isZeroLengthThenDelete(this.fs, edits)) return -1;
-    long maxSeqIdInLog = -1;
-    try {
-      maxSeqIdInLog = replayRecoveredEdits(edits, minSeqId, reporter);
-      LOG.debug("Deleting recovered edits file: " + edits);
-      if (!this.fs.delete(edits, false)) {
-        LOG.error("Failed delete of " + edits);
+    long seqid = minSeqId;
+    NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
+    if (files == null || files.isEmpty()) return seqid;
+    for (Path edits: files) {
+      if (edits == null || !this.fs.exists(edits)) {
+        LOG.warn("Null or non-existent edits file: " + edits);
+        continue;
       }
-    } catch (IOException e) {
-      boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
-      if (skipErrors) {
-        Path moveAsideName = new Path(edits.getParent(), edits.getName() + "." +
-          System.currentTimeMillis());
-        LOG.error("hbase.skip.errors=true so continuing. Renamed " + edits +
-          " as " + moveAsideName, e);
-        if (!this.fs.rename(edits, moveAsideName)) {
-          LOG.error("hbase.skip.errors=true so continuing. Rename failed");
+      if (isZeroLengthThenDelete(this.fs, edits)) continue;
+      try {
+        seqid = replayRecoveredEdits(edits, seqid, reporter);
+      } catch (IOException e) {
+        boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
+        if (skipErrors) {
+          Path p = HLog.moveAsideBadEditsFile(fs, edits);
+          LOG.error("hbase.skip.errors=true so continuing. Renamed " + edits +
+            " as " + p, e);
+        } else {
+          throw e;
         }
-      } else {
-        throw e;
       }
     }
-    return maxSeqIdInLog;
+    if (seqid > minSeqId) {
+      // Then we added some edits to memory. Flush and cleanup split edit files.
+      internalFlushcache(null, seqid);
+      for (Path file: files) {
+        if (!this.fs.delete(file, false)) {
+          LOG.error("Failed delete of " + file);
+        } else {
+          LOG.debug("Deleted recovered.edits file=" + file);
+        }
+      }
+    }
+    return seqid;
   }
 
   /*
@@ -1901,12 +1944,13 @@ public class HRegion implements HeapSize { // , Writable{
    * must be larger than this to be replayed.
    * @param reporter
    * @return the sequence id of the last edit added to this region out of the
-   * recovered edits log, or -1 if no log recovered
+   * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    * @throws IOException
    */
   private long replayRecoveredEdits(final Path edits,
       final long minSeqId, final Progressable reporter)
     throws IOException {
+    LOG.info("Replaying edits from " + edits + "; minSeqId=" + minSeqId);
     HLog.Reader reader = HLog.getReader(this.fs, edits, conf);
     try {
       return replayRecoveredEdits(reader, minSeqId, reporter);
@@ -1916,26 +1960,22 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
  /* @param reader Reader against file of recovered edits.
-  * @param minSeqId Minimum sequenceid found in a store file.  Edits in log
-  * must be larger than this to be replayed.
+  * @param minSeqId Any edit found in split editlogs needs to be in excess of
+  * this minSeqId to be applied, else its skipped.
   * @param reporter
   * @return the sequence id of the last edit added to this region out of the
-  * recovered edits log, or -1 if no log recovered
+  * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
   * @throws IOException
   */
   private long replayRecoveredEdits(final HLog.Reader reader,
     final long minSeqId, final Progressable reporter)
   throws IOException {
-    long currentEditSeqId = -1;
+    long currentEditSeqId = minSeqId;
     long firstSeqIdInLog = -1;
     long skippedEdits = 0;
     long editsCount = 0;
     HLog.Entry entry;
     Store store = null;
-    // Get map of family name to maximum sequence id.  Do it here up front
-    // because as we progress, the sequence id can change if we happen to flush
-    // The flush ups the seqid for the Store.  The new seqid can cause us skip edits.
-    Map<byte [], Long> familyToOriginalMaxSeqId = familyToMaxSeqId(this.stores);
     // How many edits to apply before we send a progress report.
     int interval = this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
     while ((entry = reader.next()) != null) {
@@ -1945,12 +1985,13 @@ public class HRegion implements HeapSize { // , Writable{
         firstSeqIdInLog = key.getLogSeqNum();
       }
       // Now, figure if we should skip this edit.
-      currentEditSeqId = Math.max(currentEditSeqId, key.getLogSeqNum());
-      if (key.getLogSeqNum() <= minSeqId) {
+      if (key.getLogSeqNum() <= currentEditSeqId) {
         skippedEdits++;
         continue;
       }
-      for (KeyValue kv : val.getKeyValues()) {
+      currentEditSeqId = key.getLogSeqNum();
+      boolean flush = false;
+      for (KeyValue kv: val.getKeyValues()) {
         // Check this edit is for me. Also, guard against writing the special
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         if (kv.matchingFamily(HLog.METAFAMILY) ||
@@ -1969,16 +2010,13 @@ public class HRegion implements HeapSize { // , Writable{
           skippedEdits++;
           continue;
         }
-        // The edits' id has to be in excess of the original max seqid of the
-        // targeted store.
-        long storeMaxSeqId = familyToOriginalMaxSeqId.get(store.getFamily().getName());
-        if (currentEditSeqId < storeMaxSeqId) {
-          skippedEdits++;
-          continue;
-        }
-        restoreEdit(kv);
+        // Once we are over the limit, restoreEdit will keep returning true to
+        // flush -- but don't flush until we've played all the kvs that make up
+        // the WALEdit.
+        flush = restoreEdit(store, kv);
         editsCount++;
      }
+     if (flush) internalFlushcache(null, currentEditSeqId);
 
       // Every 'interval' edits, tell the reporter we're making progress.
       // Have seen 60k edits taking 3minutes to complete.
@@ -1994,34 +2032,14 @@ public class HRegion implements HeapSize { // , Writable{
     return currentEditSeqId;
   }
 
-  /*
-   * @param stores
-   * @return Map of family name to maximum sequenceid.
+  /**
+   * Used by tests
+   * @param s Store to add edit too.
+   * @param kv KeyValue to add.
+   * @return True if we should flush.
    */
-  private Map<byte [], Long> familyToMaxSeqId(final Map<byte [], Store> stores) {
-    Map<byte [], Long> map = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte [], Store> e: stores.entrySet()) {
-      map.put(e.getKey(), e.getValue().getMaxSequenceId());
-    }
-    return map;
-  }
-
-  /*
-   * @param kv Apply this value to this region.
-   * @throws IOException
-   */
-  // This method is protected so can be called from tests.
-  protected void restoreEdit(final KeyValue kv) throws IOException {
-    // This is really expensive to do per edit.  Loads of object creation.
-    // TODO: Optimization.  Apply edits batched by family.
-    Map<byte [], List<KeyValue>> map =
-      new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
-    map.put(kv.getFamily(), Collections.singletonList(kv));
-    if (kv.isDelete()) {
-      delete(map, true);
-    } else {
-      put(map, true);
-    }
+  protected boolean restoreEdit(final Store s, final KeyValue kv) {
+    return isFlushSize(this.memstoreSize.addAndGet(s.add(kv)));
   }
 
   /*

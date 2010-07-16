@@ -476,9 +476,6 @@ public class TestHLogSplit {
     assertEquals(0, compareHLogSplitDirs(firstSplitPath, splitPath));
   }
 
-
-
-
   /**
    * This thread will keep writing to the file after the split process has started
    * It simulates a region server that was considered dead but woke up and wrote
@@ -610,11 +607,14 @@ public class TestHLogSplit {
     }
   }
 
-  private Path getLogForRegion(Path rootdir, byte[] table, String region) {
-    return new Path(HRegion.getRegionDir(HTableDescriptor
-            .getTableDir(rootdir, table),
-            HRegionInfo.encodeRegionName(region.getBytes())),
-            HLog.RECOVERED_EDITS);
+  private Path getLogForRegion(Path rootdir, byte[] table, String region)
+  throws IOException {
+    Path tdir = HTableDescriptor.getTableDir(rootdir, table);
+    Path editsdir = HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
+      HRegionInfo.encodeRegionName(region.getBytes())));
+    FileStatus [] files = this.fs.listStatus(editsdir);
+    assertEquals(1, files.length);
+    return files[0].getPath();
   }
 
   private void corruptHLog(Path path, Corruptions corruption, boolean close,
@@ -722,8 +722,15 @@ public class TestHLogSplit {
     FileStatus[] f2 = fs.listStatus(p2);
 
     for (int i=0; i<f1.length; i++) {
-      if (!logsAreEqual(new Path(f1[i].getPath(), HLog.RECOVERED_EDITS),
-              new Path(f2[i].getPath(), HLog.RECOVERED_EDITS))) {
+      // Regions now have a directory named RECOVERED_EDITS_DIR and in here
+      // are split edit files.  In below presume only 1.
+      Path rd1 = HLog.getRegionDirRecoveredEditsDir(f1[i].getPath());
+      FileStatus [] rd1fs = fs.listStatus(rd1);
+      assertEquals(1, rd1fs.length);
+      Path rd2 = HLog.getRegionDirRecoveredEditsDir(f2[i].getPath());
+      FileStatus [] rd2fs = fs.listStatus(rd2);
+      assertEquals(1, rd2fs.length);
+      if (!logsAreEqual(rd1fs[0].getPath(), rd2fs[0].getPath())) {
         return -1;
       }
     }
@@ -745,6 +752,4 @@ public class TestHLogSplit {
     }
     return true;
   }
-
-
 }

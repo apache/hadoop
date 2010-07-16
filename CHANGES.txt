@@ -435,6 +435,8 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-2781  ZKW.createUnassignedRegion doesn't make sure existing znode is 
                in the right state (Karthik Ranganathan via JD)
+   HBASE-2727  Splits writing one file only is untenable; need dir of recovered
+               edits ordered by sequenceid
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

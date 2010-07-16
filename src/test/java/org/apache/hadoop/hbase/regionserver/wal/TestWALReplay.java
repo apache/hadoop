@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -111,6 +111,57 @@ public class TestWALReplay {
       if (!this.fs.delete(p, true)) {
         throw new IOException("Failed remove of " + p);
       }
+    }
+  }
+
+  /**
+   * Tests for hbase-2727.
+   * @throws Exception
+   * @see https://issues.apache.org/jira/browse/HBASE-2727
+   */
+  @Test
+  public void test2727() throws Exception {
+    // Test being able to have > 1 set of edits in the recovered.edits directory.
+    // Ensure edits are replayed properly.
+    final String tableNameStr = "test2727";
+    HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
+    Path basedir = new Path(hbaseRootDir, tableNameStr);
+    deleteDir(basedir);
+
+    final byte [] tableName = Bytes.toBytes(tableNameStr);
+    final byte [] rowName = tableName;
+
+    HLog wal1 = createWAL(this.conf);
+    // Add 1k to each family.
+    final int countPerFamily = 1000;
+    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee, wal1);
+    }
+    wal1.close();
+    runWALSplit(this.conf);
+
+    HLog wal2 = createWAL(this.conf);
+    // Up the sequenceid so that these edits are after the ones added above.
+    wal2.setSequenceNumber(wal1.getSequenceNumber());
+    // Add 1k to each family.
+    for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
+      addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee, wal2);
+    }
+    wal2.close();
+    runWALSplit(this.conf);
+
+    HLog wal3 = createWAL(this.conf);
+    wal3.setSequenceNumber(wal2.getSequenceNumber());
+    try {
+      final HRegion region = new HRegion(basedir, wal3, this.fs, this.conf, hri,
+          null);
+      long seqid = region.initialize();
+      assertTrue(seqid > wal3.getSequenceNumber());
+
+      // TODO: Scan all.
+      region.close();
+    } finally {
+      wal3.closeAndDelete();
     }
   }
 
@@ -210,8 +261,8 @@ public class TestWALReplay {
     HLog wal2 = createWAL(this.conf);
     HRegion region2 = new HRegion(basedir, wal2, this.fs, this.conf, hri, null) {
       @Override
-      protected void restoreEdit(KeyValue kv) throws IOException {
-        super.restoreEdit(kv);
+      protected boolean restoreEdit(Store s, KeyValue kv) {
+        super.restoreEdit(s, kv);
         throw new RuntimeException("Called when it should not have been!");
       }
     };
@@ -221,7 +272,7 @@ public class TestWALReplay {
     assertTrue(seqid + result.size() < seqid2);
 
     // Next test.  Add more edits, then 'crash' this region by stealing its wal
-    // out from under it and assert that replay of the log addes the edits back
+    // out from under it and assert that replay of the log adds the edits back
     // correctly when region is opened again.
     for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region2, "y");
@@ -242,9 +293,10 @@ public class TestWALReplay {
     final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
     HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, null) {
       @Override
-      protected void restoreEdit(KeyValue kv) throws IOException {
-        super.restoreEdit(kv);
+      protected boolean restoreEdit(Store s, KeyValue kv) {
+        boolean b = super.restoreEdit(s, kv);
         countOfRestoredEdits.incrementAndGet();
+        return b;
       }
     };
     long seqid3 = region3.initialize();
@@ -317,14 +369,20 @@ public class TestWALReplay {
     newConf.setInt("hbase.hregion.memstore.flush.size", 1024 * 100);
     // Make a new wal for new region.
     HLog newWal = createWAL(newConf);
+    final AtomicInteger flushcount = new AtomicInteger(0);
     try {
-      TestFlusher flusher = new TestFlusher();
       final HRegion region = new HRegion(basedir, newWal, newFS, newConf, hri,
-          flusher);
-      flusher.r = region;
+          null) {
+        protected boolean internalFlushcache(HLog wal, long myseqid)
+        throws IOException {
+          boolean b = super.internalFlushcache(wal, myseqid);
+          flushcount.incrementAndGet();
+          return b;
+        };
+      };
       long seqid = region.initialize();
-      // Assert we flushed.
-      assertTrue(flusher.count > 0);
+      // We flushed during init.
+      assertTrue(flushcount.get() > 0);
       assertTrue(seqid > wal.getSequenceNumber());
 
       Get get = new Get(rowName);
@@ -335,23 +393,6 @@ public class TestWALReplay {
       region.close();
     } finally {
       newWal.closeAndDelete();
-    }
-  }
-
-  // Flusher used in this test.  Keep count of how often we are called and
-  // actually run the flush inside here.
-  class TestFlusher implements FlushRequester {
-    private int count = 0;
-    private HRegion r;
-
-    @Override
-    public void request(HRegion region) {
-      count++;
-      try {
-        r.flushcache();
-      } catch (IOException e) {
-        throw new RuntimeException("Exception flushing", e);
-      }
     }
   }
 
