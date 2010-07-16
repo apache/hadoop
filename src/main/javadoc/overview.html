@@ -56,11 +56,13 @@
   <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available except u18 (u19 is fine).</li>
   <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.
  HBase will lose data unless it is running on an HDFS that has a durable sync operation.
- Currently only the <a href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">0.20-append</a>
+ Currently only the <a href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</a>
  branch has this attribute.  No official releases have been made from this branch as of this writing
  so you will have to build your own Hadoop from the tip of this branch
- (or install Cloudera's <a href="http://archive.cloudera.com/docs/">CDH3b2</a>
- when its available; it will have a durable sync).</li>
+ (or install Cloudera's <a href="http://archive.cloudera.com/docs/">CDH3</a> (as of this writing, it is in beta); it has the
+ 0.20-append patches needed to add a durable sync).
+ See <a href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</a>
+ in branch-0.20.-append to see list of patches involved.</li>
   <li>
     <em>ssh</em> must be installed and <em>sshd</em> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
    You must be able to ssh to all nodes, including your local node, using passwordless login
@@ -172,7 +174,7 @@ it should run with one replica only (recommended for pseudo-distributed mode):</
   &lt;property&gt;
     &lt;name&gt;dfs.replication&lt;/name&gt;
     &lt;value&gt;1&lt;/value&gt;
-    &lt;description&gt;The replication count for HLog & HFile storage. Should not be greater than HDFS datanode count.
+    &lt;description&gt;The replication count for HLog &amp; HFile storage. Should not be greater than HDFS datanode count.
     &lt;/description&gt;
   &lt;/property&gt;
   ...
@@ -410,13 +412,21 @@ the HBase version. It does not change your install unless you explicitly ask it 
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
   <li><a href="http://hbase.org">HBase Home Page</a>
+  </li>
   <li><a href="http://wiki.apache.org/hadoop/Hbase">HBase Wiki</a>
+  </li>
   <li><a href="http://hadoop.apache.org/">Hadoop Home Page</a>
+  </li>
   <li><a href="http://wiki.apache.org/hadoop/Hbase/MultipleMasters">Setting up Multiple HBase Masters</a>
+  </li>
   <li><a href="http://wiki.apache.org/hadoop/Hbase/RollingRestart">Rolling Upgrades</a>
+  </li>
   <li><a href="org/apache/hadoop/hbase/client/transactional/package-summary.html#package_description">Transactional HBase</a>
+  </li>
   <li><a href="org/apache/hadoop/hbase/client/tableindexed/package-summary.html">Table Indexed HBase</a>
+  </li>
   <li><a href="org/apache/hadoop/hbase/stargate/package-summary.html#package_description">Stargate</a> -- a RESTful Web service front end for HBase.
+  </li>
 </ul>
 
 </body>
