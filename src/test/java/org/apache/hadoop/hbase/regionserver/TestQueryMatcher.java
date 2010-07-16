@@ -25,12 +25,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -53,6 +52,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
   long ttl = Long.MAX_VALUE;
   KeyComparator rowComparator;
+  private Scan scan;
 
   public void setUp() throws Exception {
     super.setUp();
@@ -74,6 +74,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     get.addColumn(fam2, col2);
     get.addColumn(fam2, col4);
     get.addColumn(fam2, col5);
+    this.scan = new Scan(get);
 
     rowComparator = KeyValue.KEY_COMPARATOR;
 
@@ -85,15 +86,15 @@ public class TestQueryMatcher extends HBaseTestCase {
     //of just byte []
 
     //Expected result
-    List<MatchCode> expected = new ArrayList<MatchCode>();
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.DONE);
+    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
 
-    QueryMatcher qm = new QueryMatcher(get, fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2,
         get.getFamilyMap().get(fam2), ttl, rowComparator, 1);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
@@ -105,9 +106,10 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     memstore.add(new KeyValue(row2, fam1, col1, data));
 
-    List<MatchCode> actual = new ArrayList<MatchCode>();
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
     for(KeyValue kv : memstore){
+      qm.setRow(kv.getRow());
       actual.add(qm.match(kv));
     }
 
@@ -128,15 +130,15 @@ public class TestQueryMatcher extends HBaseTestCase {
     //of just byte []
 
     //Expected result
-    List<MatchCode> expected = new ArrayList<MatchCode>();
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.NEXT);
+    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.NEXT);
 
-    QueryMatcher qm = new QueryMatcher(get, fam2, null, ttl, rowComparator, 1);
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2, null, ttl, rowComparator, 1);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, data));
@@ -146,9 +148,10 @@ public class TestQueryMatcher extends HBaseTestCase {
     memstore.add(new KeyValue(row1, fam2, col5, data));
     memstore.add(new KeyValue(row2, fam1, col1, data));
 
-    List<MatchCode> actual = new ArrayList<MatchCode>();
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
-    for(KeyValue kv : memstore){
+    for(KeyValue kv : memstore) {
+      qm.setRow(kv.getRow());
       actual.add(qm.match(kv));
     }
 
@@ -164,7 +167,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
 
   /**
-   * Verify that {@link QueryMatcher} only skips expired KeyValue
+   * Verify that {@link ScanQueryMatcher} only skips expired KeyValue
    * instances and does not exit early from the row (skipping
    * later non-expired KeyValues).  This version mimics a Get with
    * explicitly specified column qualifiers.
@@ -176,15 +179,15 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     long testTTL = 1000;
     MatchCode [] expected = new MatchCode[] {
-        MatchCode.SKIP,
-        MatchCode.INCLUDE,
-        MatchCode.SKIP,
-        MatchCode.INCLUDE,
-        MatchCode.SKIP,
-        MatchCode.NEXT
+        ScanQueryMatcher.MatchCode.SKIP,
+        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.SKIP,
+        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.SKIP,
+        ScanQueryMatcher.MatchCode.NEXT
     };
 
-    QueryMatcher qm = new QueryMatcher(get, fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2,
         get.getFamilyMap().get(fam2), testTTL, rowComparator, 1);
 
     long now = System.currentTimeMillis();
@@ -199,6 +202,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
+      qm.setRow(kv.getRow());
       actual.add( qm.match(kv) );
     }
 
@@ -214,7 +218,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
 
   /**
-   * Verify that {@link QueryMatcher} only skips expired KeyValue
+   * Verify that {@link ScanQueryMatcher} only skips expired KeyValue
    * instances and does not exit early from the row (skipping
    * later non-expired KeyValues).  This version mimics a Get with
    * wildcard-inferred column qualifiers.
@@ -226,15 +230,15 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     long testTTL = 1000;
     MatchCode [] expected = new MatchCode[] {
-        MatchCode.INCLUDE,
-        MatchCode.INCLUDE,
-        MatchCode.SKIP,
-        MatchCode.INCLUDE,
-        MatchCode.SKIP,
-        MatchCode.NEXT
+        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.SKIP,
+        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.SKIP,
+        ScanQueryMatcher.MatchCode.NEXT
     };
 
-    QueryMatcher qm = new QueryMatcher(get, fam2,
+    ScanQueryMatcher qm = new ScanQueryMatcher(scan, fam2,
         null, testTTL, rowComparator, 1);
 
     long now = System.currentTimeMillis();
@@ -247,8 +251,9 @@ public class TestQueryMatcher extends HBaseTestCase {
         new KeyValue(row2, fam1, col1, now-10, data)
     };
 
-    List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
+      qm.setRow(kv.getRow());
       actual.add( qm.match(kv) );
     }
 

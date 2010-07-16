@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
-
 /**
  * Implementing classes of this interface will be used for the tracking
  * and enforcement of columns and numbers of versions during the course of a
@@ -29,12 +27,10 @@ import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
  * Currently there are two different types of Store/Family-level queries.
  * <ul><li>{@link ExplicitColumnTracker} is used when the query specifies
  * one or more column qualifiers to return in the family.
- * <li>{@link WildcardColumnTracker} is used when the query asks for all
- * qualifiers within the family.
  * <p>
- * This class is utilized by {@link QueryMatcher} through two methods:
+ * This class is utilized by {@link ScanQueryMatcher} through two methods:
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
- * conditions of the query.  This method returns a {@link MatchCode} to define
+ * conditions of the query.  This method returns a {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode} to define
  * what action should be taken.
  * <li>{@link #update} is called at the end of every StoreFile or memstore.
  * <p>
@@ -48,7 +44,7 @@ public interface ColumnTracker {
    * @param length
    * @return The match code instance.
    */
-  public MatchCode checkColumn(byte [] bytes, int offset, int length);
+  public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset, int length);
 
   /**
    * Updates internal variables in between files

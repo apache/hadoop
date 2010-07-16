@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -65,15 +65,15 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       currentCount = 0;
 
       if (++currentCount > maxVersions)
-        return MatchCode.SKIP;
-      return MatchCode.INCLUDE;
+        return ScanQueryMatcher.MatchCode.SKIP;
+      return ScanQueryMatcher.MatchCode.INCLUDE;
     }
     int cmp = Bytes.compareTo(bytes, offset, length,
         columnBuffer, columnOffset, columnLength);
     if (cmp == 0) {
       if (++currentCount > maxVersions)
-        return MatchCode.SKIP; // skip to next col
-      return MatchCode.INCLUDE;
+        return ScanQueryMatcher.MatchCode.SKIP; // skip to next col
+      return ScanQueryMatcher.MatchCode.INCLUDE;
     }
 
     // new col > old col
@@ -84,8 +84,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       columnLength = length;
       currentCount = 0;
       if (++currentCount > maxVersions)
-        return MatchCode.SKIP;
-      return MatchCode.INCLUDE;
+        return ScanQueryMatcher.MatchCode.SKIP;
+      return ScanQueryMatcher.MatchCode.INCLUDE;
     }
 
     // new col < oldcol
@@ -102,8 +102,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     columnLength = length;
     currentCount = 0;
     if (++currentCount > maxVersions)
-      return MatchCode.SKIP;
-    return MatchCode.INCLUDE;
+      return ScanQueryMatcher.MatchCode.SKIP;
+    return ScanQueryMatcher.MatchCode.INCLUDE;
   }
 
   @Override

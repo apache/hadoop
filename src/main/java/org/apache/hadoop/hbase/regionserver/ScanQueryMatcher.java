@@ -23,7 +23,9 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.NavigableSet;
@@ -31,14 +33,36 @@ import java.util.NavigableSet;
 /**
  * A query matcher that is specifically designed for the scan case.
  */
-public class ScanQueryMatcher extends QueryMatcher {
+public class ScanQueryMatcher {
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.
   private boolean stickyNextRow;
   private byte[] stopRow;
 
+  protected TimeRange tr;
+
+  protected Filter filter;
+
+  /** Keeps track of deletes */
+  protected DeleteTracker deletes;
+
+  /** Keeps track of columns and versions */
+  protected ColumnTracker columns;
+
+  /** Key to seek to in memstore and StoreFiles */
+  protected KeyValue startKey;
+
+  /** Oldest allowed version stamp for TTL enforcement */
+  protected long oldestStamp;
+
+  /** Row comparator for the region this query is for */
+  KeyValue.KeyComparator rowComparator;
+
+  /** Row the query is on */
+  protected byte [] row;
+
   /**
-   * Constructs a QueryMatcher for a Scan.
+   * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
    * @param family
    * @param columns
@@ -219,15 +243,79 @@ public class ScanQueryMatcher extends QueryMatcher {
    * Set current row
    * @param row
    */
-  @Override
   public void setRow(byte [] row) {
     this.row = row;
     reset();
   }
 
-  @Override
   public void reset() {
-    super.reset();
+    this.deletes.reset();
+    this.columns.reset();
+
     stickyNextRow = false;
+  }
+
+  // should be in KeyValue.
+  protected boolean isDelete(byte type) {
+    return (type != KeyValue.Type.Put.getCode());
+  }
+
+  protected boolean isExpired(long timestamp) {
+    return (timestamp < oldestStamp);
+  }
+
+  /**
+   *
+   * @return the start key
+   */
+  public KeyValue getStartKey() {
+    return this.startKey;
+  }
+
+  /**
+   * {@link #match} return codes.  These instruct the scanner moving through
+   * memstores and StoreFiles what to do with the current KeyValue.
+   * <p>
+   * Additionally, this contains "early-out" language to tell the scanner to
+   * move on to the next File (memstore or Storefile), or to return immediately.
+   */
+  public static enum MatchCode {
+    /**
+     * Include KeyValue in the returned result
+     */
+    INCLUDE,
+
+    /**
+     * Do not include KeyValue in the returned result
+     */
+    SKIP,
+
+    /**
+     * Do not include, jump to next StoreFile or memstore (in time order)
+     */
+    NEXT,
+
+    /**
+     * Do not include, return current result
+     */
+    DONE,
+
+    /**
+     * These codes are used by the ScanQueryMatcher
+     */
+
+    /**
+     * Done with the row, seek there.
+     */
+    SEEK_NEXT_ROW,
+    /**
+     * Done with column, seek to next.
+     */
+    SEEK_NEXT_COL,
+
+    /**
+     * Done with scan, thanks to the row filter.
+     */
+    DONE_SCAN,
   }
 }

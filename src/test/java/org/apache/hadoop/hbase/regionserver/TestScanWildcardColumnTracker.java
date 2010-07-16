@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestScanWildcardColumnTracker extends HBaseTestCase {
@@ -32,7 +32,6 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
   final static int VERSIONS = 2;
 
   public void testCheckColumn_Ok() {
-    //Create a WildcardColumnTracker
     ScanWildcardColumnTracker tracker =
       new ScanWildcardColumnTracker(VERSIONS);
 
@@ -45,15 +44,15 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     //Setting up expected result
     List<MatchCode> expected = new ArrayList<MatchCode>();
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
 
-    List<MatchCode> actual = new ArrayList<MatchCode>();
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<MatchCode>();
 
     for(byte [] qualifier : qualifiers) {
-      MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length);
+      ScanQueryMatcher.MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length);
       actual.add(mc);
     }
 
@@ -64,7 +63,6 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
   }
 
   public void testCheckColumn_EnforceVersions() {
-    //Create a WildcardColumnTracker
     ScanWildcardColumnTracker tracker =
       new ScanWildcardColumnTracker(VERSIONS);
 
@@ -76,13 +74,13 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     qualifiers.add(Bytes.toBytes("qualifer2"));
 
     //Setting up expected result
-    List<MatchCode> expected = new ArrayList<MatchCode>();
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.INCLUDE);
+    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
 
-    List<MatchCode> actual = new ArrayList<MatchCode>();
+    List<MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
     for(byte [] qualifier : qualifiers) {
       MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length);
@@ -96,7 +94,6 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
   }
 
   public void DisabledTestCheckColumn_WrongOrder() {
-    //Create a WildcardColumnTracker
     ScanWildcardColumnTracker tracker =
       new ScanWildcardColumnTracker(VERSIONS);
 

@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * between rows.
  *
  * <p>
- * This class is utilized by {@link QueryMatcher} through two methods:
+ * This class is utilized by {@link ScanQueryMatcher} through two methods:
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
- * conditions of the query.  This method returns a {@link MatchCode} to define
+ * conditions of the query.  This method returns a {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode} to define
  * what action should be taken.
  * <li>{@link #update} is called at the end of every StoreFile or memstore.
  * <p>
@@ -84,18 +84,18 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @param bytes KeyValue buffer
    * @param offset offset to the start of the qualifier
    * @param length length of the qualifier
-   * @return MatchCode telling QueryMatcher what action to take
+   * @return MatchCode telling ScanQueryMatcher what action to take
    */
-  public MatchCode checkColumn(byte [] bytes, int offset, int length) {
+  public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset, int length) {
     do {
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
-        return MatchCode.DONE; // done_row
+        return ScanQueryMatcher.MatchCode.DONE; // done_row
       }
 
       // No more columns to match against, done with storefile
       if(this.column == null) {
-        return MatchCode.NEXT; // done_row
+        return ScanQueryMatcher.MatchCode.NEXT; // done_row
       }
 
       // Compare specific column to current column
@@ -114,13 +114,13 @@ public class ExplicitColumnTracker implements ColumnTracker {
             this.column = this.columns.get(this.index);
           }
         }
-        return MatchCode.INCLUDE;
+        return ScanQueryMatcher.MatchCode.INCLUDE;
       }
 
 
       if (ret > 0) {
          // Specified column is smaller than the current, skip to next column.
-        return MatchCode.SKIP;
+        return ScanQueryMatcher.MatchCode.SKIP;
       }
 
       // Specified column is bigger than current column
@@ -128,7 +128,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       if(ret <= -1) {
         if(++this.index == this.columns.size()) {
           // No more to match, do not include, done with storefile
-          return MatchCode.NEXT; // done_row
+          return ScanQueryMatcher.MatchCode.NEXT; // done_row
         }
         // This is the recursive case.
         this.column = this.columns.get(this.index);

@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * State and utility processing {@link HRegion#getClosestRowBefore(byte[], byte[])}.
- * Like {@link GetDeleteTracker} and {@link ScanDeleteTracker} but does not
+ * Like {@link ScanDeleteTracker} and {@link ScanDeleteTracker} but does not
  * implement the {@link DeleteTracker} interface since state spans rows (There
  * is no update nor reset method).
  */

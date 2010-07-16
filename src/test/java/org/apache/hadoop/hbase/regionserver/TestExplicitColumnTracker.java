@@ -26,8 +26,7 @@ import java.util.TreeSet;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.QueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -49,7 +48,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
 
 
     //Initialize result
-    List<MatchCode> result = new ArrayList<MatchCode>();
+    List<ScanQueryMatcher.MatchCode> result = new ArrayList<ScanQueryMatcher.MatchCode>();
 
     //"Match"
     for(byte [] col : scannerColumns){
@@ -76,12 +75,12 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     //Looking for every other
     columns.add(col2);
     columns.add(col4);
-    List<MatchCode> expected = new ArrayList<MatchCode>();
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.DONE);
+    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
     int maxVersions = 1;
 
     //Create "Scanner"
@@ -106,26 +105,26 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     columns.add(col2);
     columns.add(col4);
 
-    List<MatchCode> expected = new ArrayList<MatchCode>();
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.SKIP);
+    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
 
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
 
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.SKIP);
-    expected.add(MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SKIP);
 
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.INCLUDE);
-    expected.add(MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
 
-    expected.add(MatchCode.DONE);
-    expected.add(MatchCode.DONE);
-    expected.add(MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.DONE);
     int maxVersions = 2;
 
     //Create "Scanner"
@@ -183,10 +182,10 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
       col2, col3, col5 }));
     List<byte[]> scanner = Arrays.<byte[]>asList(
       new byte[][] { col1, col4 });
-    List<MatchCode> expected = Arrays.<MatchCode>asList(
-      new MatchCode[] {
-        MatchCode.SKIP,
-        MatchCode.SKIP });
+    List<ScanQueryMatcher.MatchCode> expected = Arrays.<ScanQueryMatcher.MatchCode>asList(
+      new ScanQueryMatcher.MatchCode[] {
+        ScanQueryMatcher.MatchCode.SKIP,
+        ScanQueryMatcher.MatchCode.SKIP });
     runTest(1, columns, scanner, expected);
   }
 }

@@ -774,6 +774,8 @@ Release 0.21.0 - Unreleased
                next column (Pranav via jgray)
    HBASE-2835  Update hadoop jar to head of branch-0.20-append to catch three
                added patches
+   HBASE-2840  Remove the final remnants of the old Get code - the query matchers 
+   	       and other helper classes
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -361,7 +361,7 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(OperationStatusCode.SUCCESS, codes[i]);
     }
     assertEquals(1, HLog.getSyncOps());
-    
+
     LOG.info("Next a batch put with one invalid family");
     puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
     codes = this.region.put(puts);
@@ -371,7 +371,7 @@ public class TestHRegion extends HBaseTestCase {
         OperationStatusCode.SUCCESS, codes[i]);
     }
     assertEquals(1, HLog.getSyncOps());
-    
+
     LOG.info("Next a batch put that has to break into two batches to avoid a lock");
     Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
 
@@ -396,7 +396,7 @@ public class TestHRegion extends HBaseTestCase {
       if (System.currentTimeMillis() - startWait > 10000) {
         fail("Timed out waiting for thread to sync first minibatch");
       }
-    }    
+    }
     LOG.info("...releasing row lock, which should let put thread continue");
     region.releaseRowLock(lockedRow);
     LOG.info("...joining on thread");
@@ -408,7 +408,7 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
         OperationStatusCode.SUCCESS, codes[i]);
     }
-    
+
     LOG.info("Nexta, a batch put which uses an already-held lock");
     lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
     LOG.info("...obtained row lock");
@@ -427,13 +427,13 @@ public class TestHRegion extends HBaseTestCase {
     }
     // Make sure we didn't do an extra batch
     assertEquals(1, HLog.getSyncOps());
-    
+
     // Make sure we still hold lock
     assertTrue(region.isRowLocked(lockedRow));
     LOG.info("...releasing lock");
     region.releaseRowLock(lockedRow);
   }
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // checkAndMutate tests
   //////////////////////////////////////////////////////////////////////////////
@@ -834,7 +834,7 @@ public class TestHRegion extends HBaseTestCase {
     result = region.get(get, null);
     assertEquals(0, result.size());
   }
-  
+
   /**
    * Tests that the special LATEST_TIMESTAMP option for puts gets
    * replaced by the actual timestamp
@@ -863,7 +863,7 @@ public class TestHRegion extends HBaseTestCase {
     LOG.info("Got: " + kv);
     assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
         kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
-    
+
     // Check same with WAL enabled (historically these took different
     // code paths, so check both)
     row = Bytes.toBytes("row2");
