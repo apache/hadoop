@@ -351,6 +351,74 @@ public class MemStore implements HeapSize {
     }
   }
 
+  /**
+   * Given the specs of a column, update it, first by inserting a new record,
+   * then removing the old one.  Since there is only 1 KeyValue involved, the memstoreTS
+   * will be set to 0, thus ensuring that they instantly appear to anyone. The underlying
+   * store will ensure that the insert/delete each are atomic. A scanner/reader will either
+   * get the new value, or the old value and all readers will eventually only see the new
+   * value after the old was removed.
+   *
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param newValue
+   * @param now
+   * @return
+   */
+  public long updateColumnValue(byte[] row,
+                                byte[] family,
+                                byte[] qualifier,
+                                long newValue,
+                                long now) {
+   this.lock.readLock().lock();
+    try {
+      // create a new KeyValue with 'now' and a 0 memstoreTS == immediately visible
+      KeyValue newKv = new KeyValue(row, family, qualifier,
+          now,
+          Bytes.toBytes(newValue));
+
+      long addedSize = add(newKv);
+
+      // now find and RM the old one(s) to prevent version explosion:
+      SortedSet<KeyValue> ss = kvset.tailSet(newKv);
+      Iterator<KeyValue> it = ss.iterator();
+      while ( it.hasNext() ) {
+        KeyValue kv = it.next();
+
+        if (kv == newKv) {
+          // ignore the one i just put in (heh)
+          continue;
+        }
+        // if this isnt the row we are interested in, then bail:
+        if (0 != Bytes.compareTo(
+            newKv.getBuffer(), newKv.getRowOffset(), newKv.getRowLength(),
+            kv.getBuffer(), kv.getRowOffset(), kv.getRowLength())) {
+          break; // rows dont match, bail.
+        }
+
+        // if the qualifier matches and it's a put, just RM it out of the kvset.
+        if (0 == Bytes.compareTo(
+            newKv.getBuffer(), newKv.getQualifierOffset(), newKv.getQualifierLength(),
+            kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength())) {
+
+          // to be extra safe we only remove Puts that have a memstoreTS==0
+          if (kv.getType() == KeyValue.Type.Put.getCode() &&
+              kv.getMemstoreTS() == 0) {
+            // false means there was a change, so give us the size.
+            addedSize -= heapSizeChange(kv, false);
+
+            it.remove();
+          }
+        }
+      }
+
+      return addedSize;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
   /*
    * Immutable data structure to hold member found in set and the set it was
    * found in.  Include set because it is carrying context.
@@ -398,76 +466,6 @@ public class MemStore implements HeapSize {
     } finally {
       this.lock.readLock().unlock();
     }
-  }
-
-
-  // TODO fix this not to use QueryMatcher!
-  /**
-   * Gets from either the memstore or the snapshop, and returns a code
-   * to let you know which is which.
-   *
-   * @param matcher query matcher
-   * @param result puts results here
-   * @return 1 == memstore, 2 == snapshot, 0 == none
-   */
-  int getWithCode(QueryMatcher matcher, List<KeyValue> result) {
-    this.lock.readLock().lock();
-    try {
-      boolean fromMemstore = internalGet(this.kvset, matcher, result);
-      if (fromMemstore || matcher.isDone())
-        return 1;
-
-      matcher.update();
-      boolean fromSnapshot = internalGet(this.snapshot, matcher, result);
-      if (fromSnapshot || matcher.isDone())
-        return 2;
-
-      return 0;
-    } finally {
-      this.lock.readLock().unlock();
-    }
-  }
-
-  /**
-   * Small utility functions for use by Store.incrementColumnValue
-   * _only_ under the threat of pain and everlasting race conditions.
-   */
-  void readLockLock() {
-    this.lock.readLock().lock();
-  }
-  void readLockUnlock() {
-    this.lock.readLock().unlock();
-  }
-
-  /**
-   *
-   * @param set memstore or snapshot
-   * @param matcher query matcher
-   * @param result list to add results to
-   * @return true if done with store (early-out), false if not
-   */
-  boolean internalGet(final NavigableSet<KeyValue> set,
-      final QueryMatcher matcher, final List<KeyValue> result) {
-    if(set.isEmpty()) return false;
-    // Seek to startKey
-    SortedSet<KeyValue> tail = set.tailSet(matcher.getStartKey());
-    for (KeyValue kv : tail) {
-      QueryMatcher.MatchCode res = matcher.match(kv);
-      switch(res) {
-        case INCLUDE:
-          result.add(kv);
-          break;
-        case SKIP:
-          break;
-        case NEXT:
-          return false;
-        case DONE:
-          return true;
-        default:
-          throw new RuntimeException("Unexpected " + res);
-      }
-    }
-    return false;
   }
 
   /**

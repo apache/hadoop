@@ -843,27 +843,27 @@ public class Bytes {
   /**
    * Lexographically compare two arrays.
    *
-   * @param b1 left operand
-   * @param b2 right operand
-   * @param s1 Where to start comparing in the left buffer
-   * @param s2 Where to start comparing in the right buffer
-   * @param l1 How much to compare from the left buffer
-   * @param l2 How much to compare from the right buffer
+   * @param buffer1 left operand
+   * @param buffer2 right operand
+   * @param offset1 Where to start comparing in the left buffer
+   * @param offset2 Where to start comparing in the right buffer
+   * @param length1 How much to compare from the left buffer
+   * @param length2 How much to compare from the right buffer
    * @return 0 if equal, < 0 if left is less than right, etc.
    */
-  public static int compareTo(byte[] b1, int s1, int l1,
-      byte[] b2, int s2, int l2) {
+  public static int compareTo(byte[] buffer1, int offset1, int length1,
+      byte[] buffer2, int offset2, int length2) {
     // Bring WritableComparator code local
-    int end1 = s1 + l1;
-    int end2 = s2 + l2;
-    for (int i = s1, j = s2; i < end1 && j < end2; i++, j++) {
-      int a = (b1[i] & 0xff);
-      int b = (b2[j] & 0xff);
+    int end1 = offset1 + length1;
+    int end2 = offset2 + length2;
+    for (int i = offset1, j = offset2; i < end1 && j < end2; i++, j++) {
+      int a = (buffer1[i] & 0xff);
+      int b = (buffer2[j] & 0xff);
       if (a != b) {
         return a - b;
       }
     }
-    return l1 - l2;
+    return length1 - length2;
   }
 
   /**

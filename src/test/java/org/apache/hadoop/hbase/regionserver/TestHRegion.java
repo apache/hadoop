@@ -1859,7 +1859,8 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(value+amount, result);
 
     Store store = region.getStore(fam1);
-    assertEquals(1, store.memstore.kvset.size());
+    // we will have the original Put, and also the ICV'ed Put as well.
+    assertEquals(2, store.memstore.kvset.size());
     assertTrue(store.memstore.snapshot.isEmpty());
 
     assertICV(row, fam1, qual1, value+amount);

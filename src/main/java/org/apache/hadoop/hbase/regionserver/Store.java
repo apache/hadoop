@@ -1298,49 +1298,18 @@ public class Store implements HeapSize {
   public long updateColumnValue(byte [] row, byte [] f,
                                 byte [] qualifier, long newValue)
       throws IOException {
-    List<KeyValue> result = new ArrayList<KeyValue>();
-    KeyComparator keyComparator = this.comparator.getRawComparator();
 
-    KeyValue kv = null;
-    // Setting up the QueryMatcher
-    Get get = new Get(row);
-    NavigableSet<byte[]> qualifiers =
-      new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    qualifiers.add(qualifier);
-    QueryMatcher matcher = new QueryMatcher(get, f, qualifiers, this.ttl,
-      keyComparator, 1);
-
-    // lock memstore snapshot for this critical section:
     this.lock.readLock().lock();
-    memstore.readLockLock();
     try {
-      int memstoreCode = this.memstore.getWithCode(matcher, result);
+      long now = System.currentTimeMillis();
 
-      if (memstoreCode != 0) {
-        // was in memstore (or snapshot)
-        kv = result.get(0).clone();
-        byte [] buffer = kv.getBuffer();
-        int valueOffset = kv.getValueOffset();
-        Bytes.putBytes(buffer, valueOffset, Bytes.toBytes(newValue), 0,
-            Bytes.SIZEOF_LONG);
-        if (memstoreCode == 2) {
-          // from snapshot, assign new TS
-          long currTs = System.currentTimeMillis();
-          if (currTs == kv.getTimestamp()) {
-            currTs++; // unlikely but catastrophic
-          }
-          Bytes.putBytes(buffer, kv.getTimestampOffset(),
-              Bytes.toBytes(currTs), 0, Bytes.SIZEOF_LONG);
-        }
-      } else {
-        kv = new KeyValue(row, f, qualifier,
-            System.currentTimeMillis(),
-            Bytes.toBytes(newValue));
-      }
-      return add(kv);
-      // end lock
+      return this.memstore.updateColumnValue(row,
+          f,
+          qualifier,
+          newValue,
+          now);
+
     } finally {
-      memstore.readLockUnlock();
       this.lock.readLock().unlock();
     }
   }
