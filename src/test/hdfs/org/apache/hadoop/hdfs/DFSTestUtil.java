@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -370,5 +371,9 @@ public class DFSTestUtil {
     }
 
     return result;
+  }
+  
+  public static Statistics getStatistics(FileSystem fs) {
+    return FileSystem.getStatistics(fs.getUri().getScheme(), fs.getClass());
   }
 }

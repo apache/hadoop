@@ -76,6 +76,10 @@ Trunk (unreleased changes)
     HDFS-1272. Fixes to take care of the changes in HADOOP-6845.
     (Jitendra Pandey via ddas)
 
+    HDFS-1298 - Add support in HDFS for new statistics added in FileSystem
+    to track the file system operations. (suresh)
+    
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

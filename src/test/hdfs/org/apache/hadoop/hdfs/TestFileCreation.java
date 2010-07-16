@@ -96,36 +96,6 @@ public class TestFileCreation extends junit.framework.TestCase {
     stm.write(buffer, 0, size);
   }
 
-  static private void checkData(byte[] actual, int from, byte[] expected, String message) {
-    for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                   expected[from+idx]+" actual "+actual[idx],
-                   expected[from+idx], actual[idx]);
-      actual[idx] = 0;
-    }
-  }
-
-  static void checkFullFile(FileSystem fs, Path name) throws IOException {
-    FileStatus stat = fs.getFileStatus(name);
-    BlockLocation[] locations = fs.getFileBlockLocations(stat, 0, 
-                                                         fileSize);
-    for (int idx = 0; idx < locations.length; idx++) {
-      String[] hosts = locations[idx].getNames();
-      for (int i = 0; i < hosts.length; i++) {
-        System.out.print( hosts[i] + " ");
-      }
-      System.out.println(" off " + locations[idx].getOffset() +
-                         " len " + locations[idx].getLength());
-    }
-
-    byte[] expected = AppendTestUtil.randomBytes(seed, fileSize);
-    FSDataInputStream stm = fs.open(name);
-    byte[] actual = new byte[fileSize];
-    stm.readFully(0, actual);
-    checkData(actual, 0, expected, "Read 2");
-    stm.close();
-  }
-
   /**
    * Test that server default values can be retrieved on the client side
    */
