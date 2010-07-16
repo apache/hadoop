@@ -1038,6 +1038,9 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-6860. 'compile-fault-inject' should never be called directly.
+    (Konstantin Boudnik)
+
     HADOOP-6836. [Herriot]: Generic method for adding/modifying the attributes
     for new configuration. (Vinay Thota via cos)
 

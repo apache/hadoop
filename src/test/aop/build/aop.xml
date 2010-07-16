@@ -50,7 +50,7 @@
   <!-- Target -classes-compilation has to be defined in build.xml and
   needs to depend on classes compilation and test classes compilation
   targets. This is a poor man parametrization for targets -->
-  <target name="compile-fault-inject" depends="-classes-compilation" >
+  <target name="-compile-fault-inject" depends="-classes-compilation" >
     <!-- AspectJ task definition -->
     <taskdef
       resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
@@ -143,7 +143,7 @@
     <attribute name="dest.dir" />
     <attribute name="src.dir" />
     <sequential>
-      <subant buildpath="build.xml" target="compile-fault-inject"
+      <subant buildpath="build.xml" target="-compile-fault-inject"
         output="${compile-inject.output}">
         <property name="build.dir" value="${build-fi.dir}" />
         <property name="src.dir.path" value="@{src.dir}" />
