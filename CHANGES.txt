@@ -18,6 +18,9 @@ Trunk (unreleased changes)
 
     HADOOP-6853. Common component of HDFS-1045. (jghoman)
 
+    HADOOP-6859 - Introduce additional statistics to FileSystem to track 
+    file system operations (suresh)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
