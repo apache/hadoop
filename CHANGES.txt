@@ -127,6 +127,9 @@ Trunk (unreleased changes)
     HADOOP-6647. balancer fails with "is not authorized for protocol 
     interface NamenodeProtocol" in secure environment (boryas)
 
+    HADOOP-6834. TFile.append compares initial key against null lastKey
+    (hong tang via mahadev)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

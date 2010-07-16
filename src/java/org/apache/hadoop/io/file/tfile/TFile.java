@@ -452,7 +452,7 @@ public class TFile {
             tfileIndex.setFirstKey(key, 0, len);
           }
 
-          if (tfileMeta.isSorted()) {
+          if (tfileMeta.isSorted() && tfileMeta.getRecordCount()>0) {
             byte[] lastKey = lastKeyBufferOS.getBuffer();
             int lastLen = lastKeyBufferOS.size();
             if (tfileMeta.getComparator().compare(key, 0, len, lastKey, 0,
