@@ -98,6 +98,13 @@
   </description>
 </property>
 <property>
+  <name>test.system.hdrc.multi-user.list.path</name>
+  <value>$(TO_DO_HADOOP_INSTALL)/conf/hadoop/proxyusers</value>
+  <description>
+  Multi user list for creating the proxy users.
+  </description>
+</property>
+<property>
   <name>test.system.hdrc.multi-user.binary.path</name>
   <value>$(TO_DO_HADOOP_INSTALL)/conf/hadoop/runAs</value>
   <description>

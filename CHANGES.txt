@@ -294,6 +294,9 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
+    HDFS-1277. [Herriot] New property for multi user list. (Vinay Thota via
+    cos)
+
     HDFS-1174. New properties for suspend and resume process. (Vinay Thota via
     cos)
 
