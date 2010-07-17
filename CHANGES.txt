@@ -130,6 +130,9 @@ Trunk (unreleased changes)
     HADOOP-6834. TFile.append compares initial key against null lastKey
     (hong tang via mahadev)
 
+    HADOOP-6670. Use the UserGroupInformation's Subject as the criteria for
+    equals and hashCode. (Owen O'Malley and Kan Zhang via ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

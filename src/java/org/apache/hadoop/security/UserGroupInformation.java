@@ -804,7 +804,7 @@ public class UserGroupInformation {
     } else if (o == null || getClass() != o.getClass()) {
       return false;
     } else {
-      return subject.equals(((UserGroupInformation) o).subject);
+      return subject == ((UserGroupInformation) o).subject;
     }
   }
 
@@ -813,7 +813,7 @@ public class UserGroupInformation {
    */
   @Override
   public int hashCode() {
-    return subject.hashCode();
+    return System.identityHashCode(subject);
   }
 
   /**
