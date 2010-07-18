@@ -69,10 +69,10 @@ if [ $# = 0 ]; then
   fi
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
-  echo "  thrift           run an HBase Thrift server" 
-  echo "  rest             run an HBase REST server" 
-  echo "  avro             run an HBase Avro server" 
   echo "  zookeeper        run a Zookeeper server"
+  echo "  rest             run an HBase REST server" 
+  echo "  thrift           run an HBase Thrift server" 
+  echo "  avro             run an HBase Avro server" 
   echo "  migrate          upgrade an hbase.rootdir"
   echo "  hbck             run the hbase 'fsck' tool"
   echo " or"
