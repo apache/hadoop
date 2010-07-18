@@ -439,6 +439,7 @@ Release 0.21.0 - Unreleased
    HBASE-2727  Splits writing one file only is untenable; need dir of recovered
                edits ordered by sequenceid
    HBASE-2843  Readd bloomfilter test over zealously removed by HBASE-2625 
+   HBASE-2846  Make rest server be same as thrift and avro servers
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

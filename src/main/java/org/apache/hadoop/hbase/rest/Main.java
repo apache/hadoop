@@ -22,8 +22,15 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.util.Arrays;
+import java.util.List;
 
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -40,17 +47,43 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * </ul>
  */
 public class Main implements Constants {
+  private static final String DEFAULT_LISTEN_PORT = "8080";
+
+  private static void printUsageAndExit(Options options, int exitCode) {
+    HelpFormatter formatter = new HelpFormatter();
+    formatter.printHelp("REST", null, options,
+      "To start the REST server run 'bin/hbase-daemon.sh start rest'\n" +
+      "To shutdown the REST server run 'bin/hbase-daemon.sh stop rest' or" +
+      " send a kill signal to the rest server pid",
+      true);
+    System.exit(exitCode);
+  }
 
   public static void main(String[] args) throws Exception {
-    // process command line
-
+    Log LOG = LogFactory.getLog("RESTServer");
     Options options = new Options();
-    options.addOption("p", "port", true, "service port");
+    options.addOption("p", "port", true, "Port to bind to [default:" +
+      DEFAULT_LISTEN_PORT + "]");
     CommandLineParser parser = new PosixParser();
     CommandLine cmd = parser.parse(options, args);
-    int port = 8080;
-    if (cmd.hasOption("p")) {
-      port = Integer.valueOf(cmd.getOptionValue("p"));
+    /**
+     * This is so complicated to please both bin/hbase and bin/hbase-daemon.
+     * hbase-daemon provides "start" and "stop" arguments
+     * hbase should print the help if no argument is provided
+     */
+    List<String> commandLine = Arrays.asList(args);
+    boolean stop = commandLine.contains("stop");
+    boolean start = commandLine.contains("start");
+    if (cmd.hasOption("help") || !start || stop) {
+      printUsageAndExit(options, 1);
+    }
+    // Get port to bind to
+    int port = 0;
+    try {
+      port = Integer.parseInt(cmd.getOptionValue("port", DEFAULT_LISTEN_PORT));
+    } catch (NumberFormatException e) {
+      LOG.error("Could not parse the value provided for the port option", e);
+      printUsageAndExit(options, -1);
     }
 
     // set up the Jersey servlet container for Jetty
