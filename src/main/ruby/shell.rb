@@ -143,8 +143,6 @@ module Shell
       puts
       puts '-' * 80
       puts
-      puts "Here is the list of groups with their commands:"
-      puts
       ::Shell.command_groups.each do |name, group|
         puts "  " + group[:full_name] + ": "
         puts "    group name: " + name
@@ -162,39 +160,33 @@ module Shell
     end
 
     def help_header
-      return "There are few groups of commands in HBase\n\n" +
-             "Use help 'group_name' (e.g. help 'general') to get help on all commands in a group\n" +
-             "Use help 'command' (e.g. help 'get') to get help on a specific command"
+      return "Enter, help 'COMMAND_GROUP', (e.g. help 'general') to get help on all commands in a group\n" +
+             "Enter, help 'COMMAND', (e.g. help 'get') to get help on a specific command"
     end
 
     def help_footer
-      puts "GENERAL NOTES:"
       puts <<-HERE
-        Quote all names in the hbase shell such as table and column names.  Don't
-        forget commas delimit command parameters.  Type <RETURN> after entering a
-        command to run it.  Dictionaries of configuration used in the creation
-        and alteration of tables are ruby Hashes. They look like this:
+Quote all names in HBase shell such as table and column names.  Commas delimit
+command parameters.  Type <RETURN> after entering a command to run it.
+Dictionaries of configuration used in the creation and alteration of tables are
+Ruby Hashes. They look like this:
 
-          {'key1' => 'value1', 'key2' => 'value2', ...}
+  {'key1' => 'value1', 'key2' => 'value2', ...}
 
-        They are opened and closed with curley-braces.  Key/values are delimited
-        by the '=>' character combination.  Usually keys are predefined constants
-        such as NAME, VERSIONS, COMPRESSION, etc.  Constants do not need to be
-        quoted.  Type 'Object.constants' to see a (messy) list of all constants
-        in the environment.
+and are opened and closed with curley-braces.  Key/values are delimited by the
+'=>' character combination.  Usually keys are predefined constants such as
+NAME, VERSIONS, COMPRESSION, etc.  Constants do not need to be quoted.  Type
+'Object.constants' to see a (messy) list of all constants in the environment.
 
-        In case you are using binary keys or values and need to enter them into
-        the shell then use double-quotes to make use of hexadecimal for example:
+If you are using binary keys or values and need to enter them in the shell, use
+double-quote'd hexadecimal representation. For example:
 
-          hbase> get 't1', "key\\x03\\x3f\\xcd"
-          hbase> get 't1', "key\\003\\023\\011"
-          hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
+  hbase> get 't1', "key\\x03\\x3f\\xcd"
+  hbase> get 't1', "key\\003\\023\\011"
+  hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
-        Using the double-quote notation you can directly use the values output by
-        the shell for example during a "scan" call.
-
-        This HBase shell is the JRuby IRB with the above HBase-specific commands
-        added.  For more on the HBase Shell, see http://wiki.apache.org/hadoop/Hbase/Shell
+The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
+For more on the HBase Shell, see http://wiki.apache.org/hadoop/Hbase/Shell
       HERE
     end
   end
