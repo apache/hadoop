@@ -36,6 +36,7 @@
       <item name="Metrics"      href="metrics.html" />
       <item name="HBase on Windows"      href="cygwin.html" />
       <item name="Cluster replication"      href="replication.html" />
+      <item name="Pseudo-Distributed HBase"      href="pseudo-distributed.html" />
     </menu>
   </body>
     <skin>

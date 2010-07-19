@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2010 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title> 
+Running HBase in pseudo-distributed mode
+    </title>
+  </properties>
+
+  <body>
+      <p>This document augments what is described in the HBase 'Getting Started' in the 
+ <a href="http://hbase.apache.org/docs/current/api/overview-summary.html#distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a> section.
+ In particular it describes scripts that allow you start extra masters and regionservers when running in pseudo-distributed mode.
+ </p>
+
+ <ol><li>Copy the psuedo-distributed suggested configuration file (feel free to take a peek and understand what it's doing)
+             <source>% cp conf/hbase-site.xml{.psuedo-distributed.template,}</source>
+    </li>
+    <li>(Optional) Start up <a href="http://hadoop.apache.org/common/docs/r0.20.2/quickstart.html#PseudoDistributed">Pseudo-distributed HDFS</a>.
+             <ol><li>If you do, go to conf/hbase-site.xml.  Uncomment the 'hbase.rootdir' property.
+                 </li>
+               <li>Additionally, if you want to test HBase with high data durability enabled, also uncomment the 'dfs.support.append' property.
+               </li>
+       </ol>
+   </li>
+<li>Start up the initial HBase cluster
+                   <source>% bin/start-hbase.sh</source>
+                   <ol>    <li>To start up an extra backup master(s) on the same server run
+                       <source>% bin/local-master-backup.sh start 1</source>
+                       Here the '1' means use ports 60001 &amp; 60011, and this backup master's logfile will be at <i>logs/hbase-${USER}-1-master-${HOSTNAME}.log</i>.
+                       To startup multiple backup masters run <source>% bin/local-master-backup.sh start 2 3</source> You can start up to 9 backup masters (10 total).
+ </li>
+ <li>To start up more regionservers
+     <source>% bin/local-regionservers.sh start 1</source>
+     where '1' means use ports 60201 &amp; 60301 and its logfile will be at <i>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</i>.
+     To add 4 more regionservers in addition to the one you just started by running <source>% bin/local-regionservers.sh start 2 3 4 5</source>
+     Supports up to 99 extra regionservers (100 total).
+                    </li>
+                </ol>
+</li>
+<li>To stop the cluster
+    <ol>
+        <li>Assuming you want to stop master backup # 1, run
+            <source>% cat /tmp/hbase-${USER}-1-master.pid |xargs kill -9</source>
+            Note that bin/local-master-backup.sh stop 1 will try to stop the cluster along with the master
+                        </li>
+                        <li>To stop an individual regionserver, run
+                            <source>% bin/local-regionservers.sh stop 1
+                            </source>
+                        </li>
+                    </ol>
+</li>
+</ol>
+</body>
+
+</document>
+

@@ -37,6 +37,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1199,6 +1203,7 @@ public class HMaster extends Thread implements HMasterInterface,
     System.err.println(" stop   Start cluster shutdown; Master signals RegionServer shutdown");
     System.err.println(" where [opts] are:");
     System.err.println("   --minServers=<servers>    Minimum RegionServers needed to host user tables.");
+    System.err.println("   -D opt=<value>            Override HBase configuration settings.");
     System.exit(0);
   }
 
@@ -1250,20 +1255,34 @@ public class HMaster extends Thread implements HMasterInterface,
 
   protected static void doMain(String [] args,
       Class<? extends HMaster> masterClass) {
-    if (args.length < 1) {
-      printUsageAndExit();
-    }
     Configuration conf = HBaseConfiguration.create();
-    // Process command-line args.
-    for (String cmd: args) {
 
-      if (cmd.startsWith("--minServers=")) {
+    Options opt = new Options();
+    opt.addOption("minServers", true, "Minimum RegionServers needed to host user tables");
+    opt.addOption("D", true, "Override HBase Configuration Settings");
+    try {
+      CommandLine cmd = new GnuParser().parse(opt, args);
+
+      if (cmd.hasOption("minServers")) {
+        String val = cmd.getOptionValue("minServers");
         conf.setInt("hbase.regions.server.count.min",
-          Integer.valueOf(cmd.substring(13)));
-        continue;
+            Integer.valueOf(val));
+        LOG.debug("minServers set to " + val);
       }
 
-      if (cmd.equalsIgnoreCase("start")) {
+      if (cmd.hasOption("D")) {
+        for (String confOpt : cmd.getOptionValues("D")) {
+          String[] kv = confOpt.split("=", 2);
+          if (kv.length == 2) {
+            conf.set(kv[0], kv[1]);
+            LOG.debug("-D configuration override: " + kv[0] + "=" + kv[1]);
+          } else {
+            throw new ParseException("-D option format invalid: " + confOpt);
+          }
+        }
+      }
+
+      if (cmd.getArgList().contains("start")) {
         try {
           // Print out vm stats before starting up.
           RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
@@ -1312,10 +1331,7 @@ public class HMaster extends Thread implements HMasterInterface,
           LOG.error("Failed to start master", t);
           System.exit(-1);
         }
-        break;
-      }
-
-      if (cmd.equalsIgnoreCase("stop")) {
+      } else if (cmd.getArgList().contains("stop")) {
         HBaseAdmin adm = null;
         try {
           adm = new HBaseAdmin(conf);
@@ -1329,10 +1345,12 @@ public class HMaster extends Thread implements HMasterInterface,
           LOG.error("Failed to stop master", t);
           System.exit(-1);
         }
-        break;
+      } else {
+        throw new ParseException("Unknown argument(s): " +
+            org.apache.commons.lang.StringUtils.join(cmd.getArgs(), " "));
       }
-
-      // Print out usage if we get to here.
+    } catch (ParseException e) {
+      LOG.error("Could not parse: ", e);
       printUsageAndExit();
     }
   }
