@@ -138,47 +138,4 @@ public class TestByteBloomFilter extends TestCase {
 
     // test: foldFactor > log(max/actual)
   }
-
-  public void testDynamicBloom() throws Exception {
-    int keyInterval = 1000;
-    float err = (float)0.01;
-    BitSet valid = new BitSet(keyInterval*4);
-
-    DynamicByteBloomFilter bf1 = new DynamicByteBloomFilter(keyInterval, err,
-        Hash.MURMUR_HASH);
-    bf1.allocBloom();
-    
-    for (int i = 0; i < keyInterval*4; ++i) { // add
-      if (Math.random() > 0.5) {
-        bf1.add(Bytes.toBytes(i));
-        valid.set(i);
-      }
-    }
-    assertTrue(2 <= bf1.bloomCount() && bf1.bloomCount() <= 3);
-
-    // test serialization/deserialization
-    ByteArrayOutputStream metaOut = new ByteArrayOutputStream();
-    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
-    bf1.getMetaWriter().write(new DataOutputStream(metaOut));
-    bf1.getDataWriter().write(new DataOutputStream(dataOut));
-    ByteBuffer bb = ByteBuffer.wrap(dataOut.toByteArray()); 
-    DynamicByteBloomFilter newBf1 = new DynamicByteBloomFilter(
-        ByteBuffer.wrap(metaOut.toByteArray()));
-
-    int falsePositives = 0;
-    for (int i = 0; i < keyInterval*4; ++i) { // check
-      if (newBf1.contains(Bytes.toBytes(i), bb)) {
-        if (!valid.get(i)) ++falsePositives;
-      } else {
-        if (valid.get(i)) {
-          assert false;
-        }
-      }
-    }
-    
-    // note that actualErr = err * bloomCount
-    // error rate should be roughly: (keyInterval*2)*(err*2), allow some tolerance
-    System.out.println("False positives: " + falsePositives);
-    assertTrue(falsePositives <= (keyInterval*5)*err); 
-  }
 }

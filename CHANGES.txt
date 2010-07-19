@@ -442,6 +442,8 @@ Release 0.21.0 - Unreleased
    HBASE-2846  Make rest server be same as thrift and avro servers
    HBASE-1511  Pseudo distributed mode in LocalHBaseCluster
                (Nicolas Spiegelberg via Stack)
+   HBASE-2851  Remove testDynamicBloom() unit test
+               (Nicolas Spiegelberg via Stack)
          
 
   IMPROVEMENTS
