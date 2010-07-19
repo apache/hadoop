@@ -145,6 +145,9 @@ Trunk (unreleased changes)
 
     HDFS-1007. HFTP needs to be updated to use delegation tokens (boryas)
 
+    HDFS-1085. HFTP read may fail silently on the client side if there is an
+    exception on the server side.  (szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

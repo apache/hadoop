@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 
 
 /**
@@ -64,6 +66,8 @@ class ByteRangeInputStream extends FSInputStream {
   protected URLOpener resolvedURL;
   protected long startPos = 0;
   protected long currentPos = 0;
+  protected long filelength;
+
   protected int status = STATUS_SEEK;
   protected static final int STATUS_NORMAL = 0;
   protected static final int STATUS_SEEK = 1;
@@ -102,6 +106,11 @@ class ByteRangeInputStream extends FSInputStream {
         connection.setRequestProperty("Range", "bytes="+startPos+"-");
       }
       connection.connect();
+      final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
+      filelength = cl == null? -1: Long.parseLong(cl);
+      if (HftpFileSystem.LOG.isDebugEnabled()) {
+        HftpFileSystem.LOG.debug("filelength = " + filelength);
+      }
       in = connection.getInputStream();
       
       if (startPos != 0 && connection.getResponseCode() != 206) {
@@ -123,12 +132,20 @@ class ByteRangeInputStream extends FSInputStream {
     return in;
   }
   
-  public int read() throws IOException {
-    int ret = getInputStream().read();
-    if (ret != -1) {
-     currentPos++;
+  private void update(final boolean isEOF, final int n
+      ) throws IOException {
+    if (!isEOF) {
+      currentPos += n;
+    } else if (currentPos < filelength) {
+      throw new IOException("Got EOF but currentPos = " + currentPos
+          + " < filelength = " + filelength);
     }
-    return ret;
+  }
+
+  public int read() throws IOException {
+    final int b = getInputStream().read();
+    update(b == -1, 1);
+    return b;
   }
   
   /**

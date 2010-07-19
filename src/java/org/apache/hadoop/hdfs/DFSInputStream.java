@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -47,7 +48,8 @@ import org.apache.hadoop.util.StringUtils;
  * DFSInputStream provides bytes from a named file.  It handles 
  * negotiation of the namenode and various datanodes as necessary.
  ****************************************************************/
-class DFSInputStream extends FSInputStream {
+@InterfaceAudience.Private
+public class DFSInputStream extends FSInputStream {
   private final DFSClient dfsClient;
   private Socket s = null;
   private boolean closed = false;

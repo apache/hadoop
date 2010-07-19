@@ -17,24 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.ByteArrayInputStream;
+import static org.junit.Assert.assertArrayEquals;
+
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Vector;
+
 import javax.servlet.http.HttpServletResponse;
+
 import junit.framework.TestCase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.mortbay.jetty.InclusiveByteRange;
-import static org.junit.Assert.*;
 
 /*
   Mock input stream class that always outputs the current position of the stream
@@ -78,7 +75,6 @@ class MockHttpServletResponse implements HttpServletResponse {
     status = sc;
   }
   
-  @SuppressWarnings("deprecation")
   public void setStatus(int sc, java.lang.String sm) {
   }
   
@@ -189,8 +185,6 @@ class MockHttpServletResponse implements HttpServletResponse {
 
 public class TestStreamFile extends TestCase {
   
-  private static final Log LOG =  LogFactory.getLog(TestStreamFile.class);
-
   // return an array matching the output of mockfsinputstream
   private static byte[] getOutputArray(int start, int count) {
     byte[] a = new byte[count];
@@ -231,9 +225,9 @@ public class TestStreamFile extends TestCase {
     
   }
   
-  private List strToRanges(String s, int contentLength) {
+  private List<?> strToRanges(String s, int contentLength) {
     List<String> l = Arrays.asList(new String[]{"bytes="+s});
-    Enumeration e = (new Vector<String>(l)).elements();
+    Enumeration<?> e = (new Vector<String>(l)).elements();
     return InclusiveByteRange.satisfiableRanges(e, contentLength);
   }
   
@@ -243,7 +237,7 @@ public class TestStreamFile extends TestCase {
 
     // test if multiple ranges, then 416
     { 
-      List ranges = strToRanges("0-,10-300", 500);
+      List<?> ranges = strToRanges("0-,10-300", 500);
       MockHttpServletResponse response = new MockHttpServletResponse();
       StreamFile.sendPartialData(in, os, response, 500, ranges);
       assertEquals("Multiple ranges should result in a 416 error",
@@ -261,7 +255,7 @@ public class TestStreamFile extends TestCase {
 
     // test if invalid single range (out of bounds), then 416
     { 
-      List ranges = strToRanges("600-800", 500);
+      List<?> ranges = strToRanges("600-800", 500);
       MockHttpServletResponse response = new MockHttpServletResponse();
       StreamFile.sendPartialData(in, os, response, 500, ranges);
       assertEquals("Single (but invalid) range should result in a 416",
@@ -271,7 +265,7 @@ public class TestStreamFile extends TestCase {
       
     // test if one (valid) range, then 206
     { 
-      List ranges = strToRanges("100-300", 500);
+      List<?> ranges = strToRanges("100-300", 500);
       MockHttpServletResponse response = new MockHttpServletResponse();
       StreamFile.sendPartialData(in, os, response, 500, ranges);
       assertEquals("Single (valid) range should result in a 206",
