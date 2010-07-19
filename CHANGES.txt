@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-6826. FileStatus needs unit tests. (Rodrigo Schmidt via Eli
     Collins)
 
+    HADOOP-6905. add buildDTServiceName method to SecurityUtil 
+    (as part of MAPREDUCE-1718)  (boryas)
+
   OPTIMIZATIONS
 
   BUG FIXES
