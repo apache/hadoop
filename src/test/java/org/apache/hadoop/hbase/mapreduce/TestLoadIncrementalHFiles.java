@@ -175,10 +175,11 @@ public class TestLoadIncrementalHFiles {
   {
     HFile.Writer writer = new HFile.Writer(fs, path, BLOCKSIZE, COMPRESSION,
         KeyValue.KEY_COMPARATOR);
+    long now = System.currentTimeMillis();
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows-2)) {
-        KeyValue kv = new KeyValue(key, family, qualifier, key);
+        KeyValue kv = new KeyValue(key, family, qualifier, now, key);
         writer.append(kv);
       }
     } finally {
