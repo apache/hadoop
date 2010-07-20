@@ -78,6 +78,9 @@ Trunk (unreleased changes)
 
     HDFS-1298 - Add support in HDFS for new statistics added in FileSystem
     to track the file system operations. (suresh)
+
+    HDFS-1201. The HDFS component for HADOOP-6632. 
+    (Kan Zhang & Jitendra Pandey via ddas)
     
 
   OPTIMIZATIONS

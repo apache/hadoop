@@ -106,6 +106,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.Daemon;
@@ -1394,8 +1395,7 @@ public class DataNode extends Configured
     dnThreadName = "DataNode: [" +
                     StringUtils.uriToString(dataDirs.toArray(new URI[0])) + "]";
     UserGroupInformation.setConfiguration(conf);
-    DFSUtil.login(conf, 
-        DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
+    SecurityUtil.login(conf, DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY,
         DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
     return makeInstance(dataDirs, conf);
   }

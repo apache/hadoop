@@ -29,6 +29,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -78,15 +79,6 @@ public class DFSck extends Configured implements Tool {
   public DFSck(Configuration conf) throws IOException {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
-  }
-  
-  private String getInfoServer() {
-    Configuration conf = getConf();
-    return UserGroupInformation.isSecurityEnabled() ? conf.get(
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT) : conf.get(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT);
   }
 
   /**
@@ -140,7 +132,7 @@ public class DFSck extends Configured implements Tool {
       proto = "https://";
     }
     final StringBuilder url = new StringBuilder(proto);
-    url.append(getInfoServer());
+    url.append(NameNode.getInfoServer(getConf()));
     url.append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
 
     String dir = "/";

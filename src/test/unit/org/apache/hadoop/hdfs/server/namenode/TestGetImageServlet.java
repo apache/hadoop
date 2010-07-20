@@ -23,30 +23,46 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HT
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.security.SecurityUtil;
 import org.junit.Test;
 
 public class TestGetImageServlet {
+  private static final String HOST = "foo.com";
+  private static final String KERBEROS_DOMAIN = "@HADOOP.ORG";
+  
+  private static Configuration getConf() {
+    Configuration conf = new Configuration();
+    FileSystem.setDefaultUri(conf, "hdfs://" + HOST);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, HOST
+        + ":50090");
+    return conf;
+  }
   
   // Worker class to poke the isValidRequestor method with verifying it accepts
   // or rejects with these standard allowed principals
   private void verifyIsValidReqBehavior(GetImageServlet gim, 
-                                        boolean shouldSucceed, String msg) {
+                                        boolean shouldSucceed, String msg) 
+      throws IOException {
     final String [] validRequestors = {DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
                                        DFS_NAMENODE_USER_NAME_KEY,
                                        DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
                                        DFS_SECONDARY_NAMENODE_USER_NAME_KEY };
     
+    Configuration conf = getConf();
     for(String v : validRequestors) {
-      Configuration conf = new Configuration();
-      conf.set(v, "a");
-      assertEquals(msg + v, gim.isValidRequestor(shouldSucceed ? "a" : "b", conf), 
-                   shouldSucceed);
+      conf.set(v, "a/" + SecurityUtil.HOSTNAME_PATTERN + KERBEROS_DOMAIN);
+      assertEquals(msg + v, gim.isValidRequestor(shouldSucceed ? "a/" + HOST
+          + KERBEROS_DOMAIN : "b/" + HOST + KERBEROS_DOMAIN, conf),
+          shouldSucceed);
     }
   }
   
   @Test
-  public void IsValidRequestorAcceptsCorrectly() {
+  public void IsValidRequestorAcceptsCorrectly() throws IOException {
     GetImageServlet gim = new GetImageServlet();
 
     verifyIsValidReqBehavior(gim, true, 
@@ -54,12 +70,12 @@ public class TestGetImageServlet {
   }
   
   @Test
-  public void IsValidRequestorRejectsCorrectly() {
+  public void IsValidRequestorRejectsCorrectly() throws IOException {
     GetImageServlet gim = new GetImageServlet();
     
     // Don't set any valid requestors
     assertFalse("isValidRequestor allowed a requestor despite no values being set",
-                gim.isValidRequestor("not set", new Configuration()));
+                gim.isValidRequestor("not set", getConf()));
     
     verifyIsValidReqBehavior(gim, false, 
         "isValidRequestor has allowed an invalid requestor: ");

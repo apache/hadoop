@@ -4565,7 +4565,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot cancel delegation token", safeMode);
     }
-    String canceller = UserGroupInformation.getCurrentUser().getShortUserName();
+    String canceller = UserGroupInformation.getCurrentUser().getUserName();
     DelegationTokenIdentifier id = dtSecretManager
         .cancelToken(token, canceller);
     logCancelDelegationToken(id);
