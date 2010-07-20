@@ -82,6 +82,9 @@ Trunk (unreleased changes)
     HDFS-1201. The HDFS component for HADOOP-6632. 
     (Kan Zhang & Jitendra Pandey via ddas)
     
+    HDFS-1307 Add start time, end time and total time taken for FSCK to 
+    FSCK report (suresh)
+    
 
   OPTIMIZATIONS
 
