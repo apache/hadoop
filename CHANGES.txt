@@ -445,7 +445,7 @@ Release 0.21.0 - Unreleased
    HBASE-2851  Remove testDynamicBloom() unit test
                (Nicolas Spiegelberg via Stack)
    HBASE-2853  TestLoadIncrementalHFiles fails on TRUNK
-         
+   HBASE-2854  broken tests on trunk         
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -286,7 +286,7 @@ public class TestStore extends TestCase {
    * test the internal details of how ICV works, especially during a flush scenario.
    */
   public void testIncrementColumnValue_ICVDuringFlush()
-    throws IOException {
+      throws IOException, InterruptedException {
     init(this.getName());
 
     long oldValue = 1L;
@@ -302,6 +302,9 @@ public class TestStore extends TestCase {
     this.store.add(new KeyValue(row, family, qf2,
         System.currentTimeMillis(),
         Bytes.toBytes(oldValue)));
+
+    // sleep 2 ms to space out the increments.
+    Thread.sleep(2);
 
     // update during the snapshot.
     long ret = this.store.updateColumnValue(row, family, qf1, newValue);
