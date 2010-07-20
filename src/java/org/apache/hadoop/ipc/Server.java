@@ -827,6 +827,7 @@ public abstract class Server {
     // Cache the remote host & port info so that even if the socket is 
     // disconnected, we can say where it used to connect to.
     private String hostAddress;
+    private String hostName;
     private int remotePort;
     
     ConnectionHeader header = new ConnectionHeader();
@@ -869,6 +870,7 @@ public abstract class Server {
         this.hostAddress = "*Unknown*";
       } else {
         this.hostAddress = addr.getHostAddress();
+        this.hostName = addr.getCanonicalHostName();
       }
       this.remotePort = socket.getPort();
       this.responseQueue = new LinkedList<Call>();
@@ -891,6 +893,10 @@ public abstract class Server {
       return hostAddress;
     }
 
+    public String getHostName() {
+      return hostName;
+    }
+    
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
     }
@@ -1296,7 +1302,7 @@ public abstract class Server {
             && (authMethod != AuthMethod.DIGEST)) {
           ProxyUsers.authorize(user, this.getHostAddress(), conf);
         }
-        authorize(user, header);
+        authorize(user, header, getHostName());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Successfully authorized " + header);
         }
@@ -1626,10 +1632,12 @@ public abstract class Server {
    * 
    * @param user client user
    * @param connection incoming connection
+   * @param hostname fully-qualified domain name of incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
   public void authorize(UserGroupInformation user, 
-                        ConnectionHeader connection
+                        ConnectionHeader connection,
+                        String hostname
                         ) throws AuthorizationException {
     if (authorize) {
       Class<?> protocol = null;
@@ -1639,7 +1647,7 @@ public abstract class Server {
         throw new AuthorizationException("Unknown protocol: " + 
                                          connection.getProtocol());
       }
-      ServiceAuthorizationManager.authorize(user, protocol, getConf());
+      ServiceAuthorizationManager.authorize(user, protocol, getConf(), hostname);
     }
   }
   

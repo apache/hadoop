@@ -17,6 +17,9 @@
 package org.apache.hadoop.security;
 
 import static org.junit.Assert.*;
+
+import java.io.IOException;
+
 import org.junit.Test;
 
 public class TestSecurityUtil {
@@ -31,5 +34,31 @@ public class TestSecurityUtil {
     assertFalse(SecurityUtil.isOriginalTGT("/@"));
     assertFalse(SecurityUtil.isOriginalTGT("this@is/notright"));
     assertFalse(SecurityUtil.isOriginalTGT("krbtgt/foo@FOO"));
+  }
+  
+  private void verify(String original, String hostname, String expected)
+      throws IOException {
+    assertTrue(SecurityUtil.getServerPrincipal(original, hostname).equals(
+        expected));
+    assertTrue(SecurityUtil.getServerPrincipal(original, null).equals(
+        expected));
+    assertTrue(SecurityUtil.getServerPrincipal(original, "").equals(
+        expected));
+    assertTrue(SecurityUtil.getServerPrincipal(original, "0.0.0.0").equals(
+        expected));
+  }
+
+  @Test
+  public void testGetServerPrincipal() throws IOException {
+    String service = "hdfs/";
+    String realm = "@REALM";
+    String hostname = SecurityUtil.getLocalHostName();
+    String shouldReplace = service + SecurityUtil.HOSTNAME_PATTERN + realm;
+    String replaced = service + hostname + realm;
+    verify(shouldReplace, hostname, replaced);
+    String shouldNotReplace = service + SecurityUtil.HOSTNAME_PATTERN + "NAME"
+        + realm;
+    verify(shouldNotReplace, hostname, shouldNotReplace);
+    verify(shouldNotReplace, shouldNotReplace, shouldNotReplace);
   }
 }

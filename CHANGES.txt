@@ -74,6 +74,12 @@ Trunk (unreleased changes)
     HADOOP-6905. add buildDTServiceName method to SecurityUtil 
     (as part of MAPREDUCE-1718)  (boryas)
 
+    HADOOP-6632. Adds support for using different keytabs for different
+    servers in a Hadoop cluster. In the earier implementation, all servers 
+    of a certain type (like TaskTracker), would have the same keytab and the
+    same principal. Now the principal name is a pattern that has _HOST in it.
+    (Kan Zhang & Jitendra Pandey via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
