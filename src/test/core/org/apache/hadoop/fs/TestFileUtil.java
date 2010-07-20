@@ -95,6 +95,69 @@ public class TestFileUtil {
     validateTmpDir();
   }
 
+  /**
+   * Tests if fullyDelete deletes
+   * (a) symlink to file only and not the file pointed to by symlink.
+   * (b) symlink to dir only and not the dir pointed to by symlink.
+   * @throws IOException
+   */
+  @Test
+  public void testFullyDeleteSymlinks() throws IOException {
+    setupDirs();
+    
+    File link = new File(del, LINK);
+    Assert.assertEquals(5, del.list().length);
+    // Since tmpDir is symlink to tmp, fullyDelete(tmpDir) should not
+    // delete contents of tmp. See setupDirs for details.
+    boolean ret = FileUtil.fullyDelete(link);
+    Assert.assertTrue(ret);
+    Assert.assertFalse(link.exists());
+    Assert.assertEquals(4, del.list().length);
+    validateTmpDir();
+
+    File linkDir = new File(del, "tmpDir");
+    // Since tmpDir is symlink to tmp, fullyDelete(tmpDir) should not
+    // delete contents of tmp. See setupDirs for details.
+    ret = FileUtil.fullyDelete(linkDir);
+    Assert.assertTrue(ret);
+    Assert.assertFalse(linkDir.exists());
+    Assert.assertEquals(3, del.list().length);
+    validateTmpDir();
+  }
+
+  /**
+   * Tests if fullyDelete deletes
+   * (a) dangling symlink to file properly
+   * (b) dangling symlink to directory properly
+   * @throws IOException
+   */
+  @Test
+  public void testFullyDeleteDanglingSymlinks() throws IOException {
+    setupDirs();
+    // delete the directory tmp to make tmpDir a dangling link to dir tmp and
+    // to make y as a dangling link to file tmp/x
+    boolean ret = FileUtil.fullyDelete(tmp);
+    Assert.assertTrue(ret);
+    Assert.assertFalse(tmp.exists());
+
+    // dangling symlink to file
+    File link = new File(del, LINK);
+    Assert.assertEquals(5, del.list().length);
+    // Even though 'y' is dangling symlink to file tmp/x, fullyDelete(y)
+    // should delete 'y' properly.
+    ret = FileUtil.fullyDelete(link);
+    Assert.assertTrue(ret);
+    Assert.assertEquals(4, del.list().length);
+
+    // dangling symlink to directory
+    File linkDir = new File(del, "tmpDir");
+    // Even though tmpDir is dangling symlink to tmp, fullyDelete(tmpDir) should
+    // delete tmpDir properly.
+    ret = FileUtil.fullyDelete(linkDir);
+    Assert.assertTrue(ret);
+    Assert.assertEquals(3, del.list().length);
+  }
+
   @Test
   public void testFullyDeleteContents() throws IOException {
     setupDirs();

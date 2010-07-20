@@ -142,6 +142,9 @@ Trunk (unreleased changes)
     HADOOP-6670. Use the UserGroupInformation's Subject as the criteria for
     equals and hashCode. (Owen O'Malley and Kan Zhang via ddas)
 
+    HADOOP-6536. Fixes FileUtil.fullyDelete() not to delete the contents of
+    the sym-linked directory. (Ravi Gummadi via amareshwari)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

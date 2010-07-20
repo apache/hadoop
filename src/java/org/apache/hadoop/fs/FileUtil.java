@@ -79,8 +79,22 @@ public class FileUtil {
   /**
    * Delete a directory and all its contents.  If
    * we return false, the directory may be partially-deleted.
+   * (1) If dir is symlink to a file, the symlink is deleted. The file pointed
+   *     to by the symlink is not deleted.
+   * (2) If dir is symlink to a directory, symlink is deleted. The directory
+   *     pointed to by symlink is not deleted.
+   * (3) If dir is a normal file, it is deleted.
+   * (4) If dir is a normal directory, then dir and all its contents recursively
+   *     are deleted.
    */
   public static boolean fullyDelete(File dir) throws IOException {
+    if (dir.delete()) {
+      // dir is (a) normal file, (b) symlink to a file, (c) empty directory or
+      // (d) symlink to a directory
+      return true;
+    }
+
+    // handle nonempty directory deletion
     if (!fullyDeleteContents(dir)) {
       return false;
     }
@@ -90,6 +104,8 @@ public class FileUtil {
   /**
    * Delete the contents of a directory, not the directory itself.  If
    * we return false, the directory may be partially-deleted.
+   * If dir is a symlink to a directory, all the contents of the actual
+   * directory pointed to by dir will be deleted.
    */
   public static boolean fullyDeleteContents(File dir) throws IOException {
     boolean deletionSucceeded = true;
@@ -97,13 +113,13 @@ public class FileUtil {
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
-          if (!contents[i].delete()) {
+          if (!contents[i].delete()) {// normal file or symlink to another file
             deletionSucceeded = false;
             continue; // continue deletion of other files/dirs under dir
           }
         } else {
-          //try deleting the directory
-          // this might be a symlink
+          // Either directory or symlink to another directory.
+          // Try deleting the directory as this might be a symlink
           boolean b = false;
           b = contents[i].delete();
           if (b){
