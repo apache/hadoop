@@ -87,6 +87,9 @@ Trunk (unreleased changes)
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
 
+    HDFS-1081. Performance regression in 
+    DistributedFileSystem::getFileBlockLocations in secure systems (jghoman)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)

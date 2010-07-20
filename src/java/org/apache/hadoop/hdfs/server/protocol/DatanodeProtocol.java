@@ -44,9 +44,9 @@ import org.apache.avro.reflect.Nullable;
 @InterfaceAudience.Private
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 24: register() renamed registerDatanode()
+   * 25: HDFS-1081. Performance optimization on getBlocksLocation()
    */
-  public static final long versionID = 24L;
+  public static final long versionID = 25L;
   
   // error code
   final static int NOTIFY = 0;
