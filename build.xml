@@ -632,7 +632,9 @@
       exclude.list.id="commit.smoke.exclude.list.id"/>
   </target>
 
-  <target name="run-commit-test" depends="compile-hdfs-test" description="Run approximate 10-minute set of unit tests prior to commiting">
+  <target name="run-commit-test" depends="compile-hdfs-test"
+    description="Run approximate 10-minute set of unit tests prior to commiting"
+    unless="testcase">
      <macro-test-runner
        test.file="${test.hdfs.commit.tests.file}"
        suite.type="hdfs"
@@ -642,7 +644,8 @@
   </target>
 
   <target name="run-smoke-test" depends="compile-hdfs-test"
-    description="Run approximate 30-minute set of functional tests prior to guarantee HDFS viability">
+    description="Run approximate 30-minute set of functional tests to guarantee HDFS viability"
+    unless="testcase">
      <macro-test-runner
        test.file="${test.hdfs.smoke.tests.file}"
        suite.type="hdfs"

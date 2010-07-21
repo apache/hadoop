@@ -694,6 +694,9 @@ Release 0.21.0 - Unreleased
 
   BUG FIXES
 
+    HDFS-1311. Running tests with 'testcase' cause triple execution of the
+    same test case (Cos)
+
     HDFS-1299. 'compile-fault-inject' never should be called directly. (cos)
 
     HDFS-1193. -mvn-system-deploy target is broken which inturn fails the
