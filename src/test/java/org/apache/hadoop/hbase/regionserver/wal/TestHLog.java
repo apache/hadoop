@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -31,9 +34,10 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -49,9 +53,13 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.log4j.Level;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /** JUnit test case for HLog */
-public class TestHLog extends HBaseTestCase {
+public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
@@ -61,45 +69,57 @@ public class TestHLog extends HBaseTestCase {
     ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  private Path dir;
-  private Path oldLogDir;
-  private MiniDFSCluster cluster;
+  private static Configuration conf;
+  private static FileSystem fs;
+  private static Path dir;
+  private static MiniDFSCluster cluster;
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static Path hbaseDir;
+  private static Path oldLogDir;
 
-  @Override
+  @Before
   public void setUp() throws Exception {
-    // Make block sizes small.
-    this.conf.setInt("dfs.blocksize", 1024 * 1024);
-    this.conf.setInt("hbase.regionserver.flushlogentries", 1);
-    // needed for testAppendClose()
-    conf.setBoolean("dfs.support.append", true);
-    // quicker heartbeat interval for faster DN death notification
-    conf.setInt("heartbeat.recheck.interval", 5000);
-    conf.setInt("dfs.heartbeat.interval", 1);
-    conf.setInt("dfs.socket.timeout", 5000);
-    // faster failover with cluster.shutdown();fs.close() idiom
-    conf.setInt("ipc.client.connect.max.retries", 1);
-    conf.setInt("dfs.client.block.recovery.retries", 1);
 
-    cluster = new MiniDFSCluster(conf, 3, true, (String[])null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.cluster.getFileSystem().getHomeDirectory().toString());
-    super.setUp();
-    this.dir = new Path("/hbase", getName());
-    if (fs.exists(dir)) {
-      fs.delete(dir, true);
+    FileStatus[] entries = fs.listStatus(new Path("/"));
+    for (FileStatus dir : entries) {
+      fs.delete(dir.getPath(), true);
     }
-    this.oldLogDir = new Path(this.dir, HConstants.HREGION_OLDLOGDIR_NAME);
 
   }
 
-  @Override
+  @After
   public void tearDown() throws Exception {
-    if (this.fs.exists(this.dir)) {
-      this.fs.delete(this.dir, true);
-    }
-    shutdownDfs(cluster);
-    super.tearDown();
+  }
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    // Make block sizes small.
+    TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
+    TEST_UTIL.getConfiguration().setInt(
+        "hbase.regionserver.flushlogentries", 1);
+    // needed for testAppendClose()
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
+    // quicker heartbeat interval for faster DN death notification
+    TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
+    TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
+    TEST_UTIL.getConfiguration().setInt("dfs.socket.timeout", 5000);
+    // faster failover with cluster.shutdown();fs.close() idiom
+    TEST_UTIL.getConfiguration()
+        .setInt("ipc.client.connect.max.retries", 1);
+    TEST_UTIL.getConfiguration().setInt(
+        "dfs.client.block.recovery.retries", 1);
+    TEST_UTIL.startMiniCluster(3);
+
+    conf = TEST_UTIL.getConfiguration();
+    cluster = TEST_UTIL.getDFSCluster();
+    fs = cluster.getFileSystem();
+
+    hbaseDir = new Path(TEST_UTIL.getConfiguration().get("hbase.rootdir"));
+    oldLogDir = new Path(hbaseDir, ".oldlogs");
+    dir = new Path(hbaseDir, getName());
+  }
+  private static String getName() {
+    // TODO Auto-generated method stub
+    return "TestHLog";
   }
 
   /**
@@ -107,12 +127,13 @@ public class TestHLog extends HBaseTestCase {
    * would fail.
    * @throws IOException
    */
+  @Test
   public void testSplit() throws IOException {
 
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
-    Path logdir = new Path(this.dir, HConstants.HREGION_LOGDIR_NAME);
-    HLog log = new HLog(this.fs, logdir, this.oldLogDir, this.conf, null);
+    Path logdir = new Path(dir, HConstants.HREGION_LOGDIR_NAME);
+    HLog log = new HLog(fs, logdir, oldLogDir, conf, null);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
     for(int i = 0; i < howmany; i++) {
@@ -139,9 +160,9 @@ public class TestHLog extends HBaseTestCase {
         log.rollWriter();
       }
       log.close();
-      Path splitsdir = new Path(this.dir, "splits");
+      Path splitsdir = new Path(dir, "splits");
       List<Path> splits =
-        HLog.splitLog(splitsdir, logdir, this.oldLogDir, this.fs, conf);
+        HLog.splitLog(splitsdir, logdir, oldLogDir, fs, conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -155,10 +176,11 @@ public class TestHLog extends HBaseTestCase {
    * Test new HDFS-265 sync.
    * @throws Exception
    */
+  @Test
   public void Broken_testSync() throws Exception {
     byte [] bytes = Bytes.toBytes(getName());
     // First verify that using streams all works.
-    Path p = new Path(this.dir, getName() + ".fsdos");
+    Path p = new Path(dir, getName() + ".fsdos");
     FSDataOutputStream out = fs.create(p);
     out.write(bytes);
     out.sync();
@@ -169,8 +191,8 @@ public class TestHLog extends HBaseTestCase {
     assertEquals(bytes.length, read);
     out.close();
     in.close();
-    Path subdir = new Path(this.dir, "hlogdir");
-    HLog wal = new HLog(this.fs, subdir, this.oldLogDir, this.conf, null);
+    Path subdir = new Path(dir, "hlogdir");
+    HLog wal = new HLog(fs, subdir, oldLogDir, conf, null);
     final int total = 20;
 
     HRegionInfo info = new HRegionInfo(new HTableDescriptor(bytes),
@@ -238,6 +260,7 @@ public class TestHLog extends HBaseTestCase {
    * Test the findMemstoresWithEditsOlderThan method.
    * @throws IOException
    */
+  @Test
   public void testFindMemstoresWithEditsOlderThan() throws IOException {
     Map<byte [], Long> regionsToSeqids = new HashMap<byte [], Long>();
     for (int i = 0; i < 10; i++) {
@@ -264,7 +287,7 @@ public class TestHLog extends HBaseTestCase {
     assertEquals(howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
       LOG.info("Verifying=" + splits.get(i));
-      HLog.Reader reader = HLog.getReader(this.fs, splits.get(i), conf);
+      HLog.Reader reader = HLog.getReader(fs, splits.get(i), conf);
       try {
         int count = 0;
         String previousRegion = null;
@@ -272,7 +295,6 @@ public class TestHLog extends HBaseTestCase {
         HLog.Entry entry = new HLog.Entry();
         while((entry = reader.next(entry)) != null) {
           HLogKey key = entry.getKey();
-          WALEdit kv = entry.getEdit();
           String region = Bytes.toString(key.getRegionName());
           // Assert that all edits are for same region.
           if (previousRegion != null) {
@@ -296,14 +318,14 @@ public class TestHLog extends HBaseTestCase {
   // 2. HDFS-988 (SafeMode should freeze file operations 
   //              [FSNamesystem.nextGenerationStampForBlock])
   // 3. HDFS-142 (on restart, maintain pendingCreates) 
+  @Test
   public void testAppendClose() throws Exception {
-    this.conf.setBoolean("dfs.support.append", true);
     byte [] tableName = Bytes.toBytes(getName());
     HRegionInfo regioninfo = new HRegionInfo(new HTableDescriptor(tableName),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
-    Path subdir = new Path(this.dir, "hlogdir");
-    Path archdir = new Path(this.dir, "hlogdir_archive");
-    HLog wal = new HLog(this.fs, subdir, archdir, this.conf, null);
+    Path subdir = new Path(dir, "hlogdir");
+    Path archdir = new Path(dir, "hlogdir_archive");
+    HLog wal = new HLog(fs, subdir, archdir, conf, null);
     final int total = 20;
 
     for (int i = 0; i < total; i++) {
@@ -313,12 +335,14 @@ public class TestHLog extends HBaseTestCase {
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync(true);
+     int namenodePort = cluster.getNameNodePort();
     final Path walPath = wal.computeFilename();
+    
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
-      this.cluster.getNameNode().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      this.cluster.shutdown();
+      cluster.getNameNode().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.shutdown();
       try {
         // wal.writer.close() will throw an exception, 
         // but still call this since it closes the LogSyncer thread first
@@ -326,19 +350,23 @@ public class TestHLog extends HBaseTestCase {
       } catch (IOException e) {
         LOG.info(e);
       }
-      this.fs.close(); // closing FS last so DFSOutputStream can't call close
+      fs.close(); // closing FS last so DFSOutputStream can't call close
       LOG.info("STOPPED first instance of the cluster");
     } finally {
       // Restart the cluster
-      this.cluster = new MiniDFSCluster(conf, 2, false, null);
-      this.cluster.waitActive();
-      this.fs = cluster.getFileSystem();
+      while (cluster.isClusterUp()){
+        LOG.error("Waiting for cluster to go down");
+        Thread.sleep(1000);
+      }
+      cluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
       LOG.info("START second instance.");
     }
 
     // set the lease period to be 1 second so that the
     // namenode triggers lease recovery upon append request
-    Method setLeasePeriod = this.cluster.getClass()
+    Method setLeasePeriod = cluster.getClass()
       .getDeclaredMethod("setLeasePeriod", new Class[]{Long.TYPE, Long.TYPE});
     setLeasePeriod.setAccessible(true);
     setLeasePeriod.invoke(cluster, 
@@ -350,8 +378,8 @@ public class TestHLog extends HBaseTestCase {
     }
     
     // Now try recovering the log, like the HMaster would do
-    final FileSystem recoveredFs = this.fs;
-    final Configuration rlConf = this.conf;
+    final FileSystem recoveredFs = fs;
+    final Configuration rlConf = conf;
     
     class RecoverLogThread extends Thread {
       public Exception exception = null;
@@ -378,9 +406,9 @@ public class TestHLog extends HBaseTestCase {
 
     // Make sure you can read all the content
     SequenceFile.Reader reader 
-      = new SequenceFile.Reader(this.fs, walPath, this.conf);
+      = new SequenceFile.Reader(fs, walPath, conf);
     int count = 0;
-    HLogKey key = HLog.newKey(this.conf);
+    HLogKey key = HLog.newKey(conf);
     WALEdit val = new WALEdit();
     while (reader.next(key, val)) {
       count++;
@@ -395,12 +423,13 @@ public class TestHLog extends HBaseTestCase {
    * Tests that we can write out an edit, close, and then read it back in again.
    * @throws IOException
    */
+  @Test
   public void testEditAdd() throws IOException {
     final int COL_COUNT = 10;
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
     HLog.Reader reader = null;
-    HLog log = new HLog(fs, dir, this.oldLogDir, this.conf, null);
+    HLog log = new HLog(fs, dir, oldLogDir, conf, null);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
@@ -463,13 +492,13 @@ public class TestHLog extends HBaseTestCase {
   /**
    * @throws IOException
    */
+  @Test
   public void testAppend() throws IOException {
     final int COL_COUNT = 10;
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
-    this.conf.setBoolean("dfs.support.append", true);
     Reader reader = null;
-    HLog log = new HLog(this.fs, dir, this.oldLogDir, this.conf, null);
+    HLog log = new HLog(fs, dir, oldLogDir, conf, null);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
@@ -530,12 +559,12 @@ public class TestHLog extends HBaseTestCase {
    * Test that we can visit entries before they are appended
    * @throws Exception
    */
+  @Test
   public void testVisitors() throws Exception {
     final int COL_COUNT = 10;
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
-    this.conf.setBoolean("dfs.support.append", true);
-    HLog log = new HLog(this.fs, dir, this.oldLogDir, this.conf, null);
+    HLog log = new HLog(fs, dir, oldLogDir, conf, null);
     DumbLogEntriesVisitor visitor = new DumbLogEntriesVisitor();
     log.addLogEntryVisitor(visitor);
     long timestamp = System.currentTimeMillis();

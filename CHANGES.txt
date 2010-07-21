@@ -446,6 +446,7 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-2853  TestLoadIncrementalHFiles fails on TRUNK
    HBASE-2854  broken tests on trunk         
+   HBASE-2859  Cleanup deprecated stuff in TestHLog (Alex Newman via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
