@@ -555,11 +555,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
         "blocks=" + size() +", " +
         "accesses=" + stats.getRequestCount() + ", " +
         "hits=" + stats.getHitCount() + ", " +
-        "misses=" + stats.getMissCount() + ", " +
+        "hitRatio=" + StringUtils.formatPercent(stats.getHitRatio(), 2) + "%, " +
         "evictions=" + stats.getEvictionCount() + ", " +
         "evicted=" + stats.getEvictedCount() + ", " +
-        "hitRatio=" + StringUtils.formatPercent(stats.getHitRatio(), 2) + "%, " +
-        "missRatio=" + StringUtils.formatPercent(stats.getMissRatio(), 2) + "%, " +
         "evictedPerRun=" + stats.evictedPerEviction());
   }
 
