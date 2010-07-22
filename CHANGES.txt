@@ -836,6 +836,8 @@ Release 0.21.0 - Unreleased
    HBASE-7     Provide a HBase checker and repair tool similar to fsck
                (dhruba borthakur via Stack)
    HBASE-2223  Handle 10min+ network partitions between clusters
+   HBASE-2862  Name DFSClient for Improved Debugging
+               (Nicolas Spiegelberg via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

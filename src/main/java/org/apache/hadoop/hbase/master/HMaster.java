@@ -184,6 +184,27 @@ public class HMaster extends Thread implements HMasterInterface,
     zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf, HMaster.class.getName());
     isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
     
+    // Get my address and create an rpc server instance.  The rpc-server port
+    // can be ephemeral...ensure we have the correct info
+    HServerAddress a = new HServerAddress(getMyAddress(this.conf));
+    this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
+      a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      false, conf);
+    this.address = new HServerAddress(this.rpcServer.getListenerAddress());
+
+    this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
+    this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000);
+
+    this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
+    this.connection = ServerConnectionManager.getConnection(conf);
+
+    // hack! Maps DFSClient => Master for logs.  HDFS made this 
+    // config param for task trackers, but we can piggyback off of it.
+    if (this.conf.get("mapred.task.id") == null) {
+      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString());
+    }
+
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
@@ -201,21 +222,6 @@ public class HMaster extends Thread implements HMasterInterface,
     if(!this.fs.exists(this.oldLogDir)) {
       this.fs.mkdirs(this.oldLogDir);
     }
-
-    // Get my address and create an rpc server instance.  The rpc-server port
-    // can be ephemeral...ensure we have the correct info
-    HServerAddress a = new HServerAddress(getMyAddress(this.conf));
-    this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
-      a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
-    this.address = new HServerAddress(this.rpcServer.getListenerAddress());
-
-    this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
-    this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-        10 * 1000);
-
-    this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
-    this.connection = ServerConnectionManager.getConnection(conf);
 
     // Get our zookeeper wrapper and then try to write our address to zookeeper.
     // We'll succeed if we are only  master or if we win the race when many

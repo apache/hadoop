@@ -728,6 +728,14 @@ public class HRegionServer implements HRegionInterface,
           this.serverInfo.getServerAddress() + ", Now=" + hra);
         this.serverInfo.setServerAddress(hsa);
       }
+      
+      // hack! Maps DFSClient => RegionServer for logs.  HDFS made this 
+      // config param for task trackers, but we can piggyback off of it.
+      if (this.conf.get("mapred.task.id") == null) {
+        this.conf.set("mapred.task.id", 
+            "hb_rs_" + this.serverInfo.getServerName());
+      }
+      
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included.  Set 'fs.defaultFS'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
