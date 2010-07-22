@@ -1492,10 +1492,8 @@ public class HRegionServer implements HRegionInterface,
         addProcessingMessage(regionInfo);
       }
     });
-    // If a wal and its seqid is < that of new region, use new regions seqid.
-    if (wal != null) {
-      if (seqid > wal.getSequenceNumber()) wal.setSequenceNumber(seqid);
-    }
+    // If seqid  > current wal seqid, the wal seqid is updated.
+    if (wal != null) wal.setSequenceNumber(seqid);
     return r;
   }
 

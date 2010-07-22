@@ -793,6 +793,8 @@ Release 0.21.0 - Unreleased
                and hadoop/avro 1.4.x
    HBASE-2865  Cleanup of LRU logging; its hard to read, uses custom MB'maker,
                repeats info, too many numbers after the point, etc.
+   HBASE-2869  Regularize how we log sequenceids -- sometimes its myseqid,
+               other times its sequence id, etc.
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

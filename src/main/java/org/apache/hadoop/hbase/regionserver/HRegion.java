@@ -957,7 +957,7 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Started memstore flush for region " + this +
         ". Current region memstore size " +
         StringUtils.humanReadableInt(this.memstoreSize.get()) +
-        ((wal != null)? "": "; wal is null, using passed myseqid=" + myseqid));
+        ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
     }
 
     // Stop updates while we snapshot the memstore of all stores. We only have
@@ -1080,7 +1080,7 @@ public class HRegion implements HeapSize { // , Writable{
       long now = EnvironmentEdgeManager.currentTimeMillis();
       LOG.info("Finished memstore flush of ~" +
         StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
-        this + " in " + (now - startTime) + "ms, sequence id=" + sequenceId +
+        this + " in " + (now - startTime) + "ms, sequenceid=" + sequenceId +
         ", compaction requested=" + compactionRequested +
         ((wal == null)? "; wal=null": ""));
     }
@@ -1950,7 +1950,7 @@ public class HRegion implements HeapSize { // , Writable{
   private long replayRecoveredEdits(final Path edits,
       final long minSeqId, final Progressable reporter)
     throws IOException {
-    LOG.info("Replaying edits from " + edits + "; minSeqId=" + minSeqId);
+    LOG.info("Replaying edits from " + edits + "; minSequenceid=" + minSeqId);
     HLog.Reader reader = HLog.getReader(this.fs, edits, conf);
     try {
       return replayRecoveredEdits(reader, minSeqId, reporter);
@@ -2026,8 +2026,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
-        ", firstSeqIdInLog=" + firstSeqIdInLog +
-        ", maxSeqIdInLog=" + currentEditSeqId);
+        ", firstSequenceidInLog=" + firstSeqIdInLog +
+        ", maxSequenceidInLog=" + currentEditSeqId);
     }
     return currentEditSeqId;
   }
@@ -2573,9 +2573,8 @@ public class HRegion implements HeapSize { // , Writable{
         HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName()),
         log, FileSystem.get(conf), conf, info, null);
     long seqid = r.initialize();
-    if (log != null) {
-      log.setSequenceNumber(seqid);
-    }
+    // If seqid  > current wal seqid, the wal seqid is updated.
+    if (log != null) log.setSequenceNumber(seqid);
     return r;
   }
 

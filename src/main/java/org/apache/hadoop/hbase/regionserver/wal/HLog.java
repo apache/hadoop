@@ -397,7 +397,7 @@ public class HLog implements Syncable {
         !this.logSeqNum.compareAndSet(id, newvalue); id = this.logSeqNum.get()) {
       // This could spin on occasion but better the occasional spin than locking
       // every increment of sequence number.
-      LOG.debug("Change sequence number from " + logSeqNum + " to " + newvalue);
+      LOG.debug("Changed sequenceid from " + logSeqNum + " to " + newvalue);
     }
   }
 
@@ -475,7 +475,7 @@ public class HLog implements Syncable {
         // Can we delete any of the old log files?
         if (this.outputfiles.size() > 0) {
           if (this.lastSeqWritten.size() <= 0) {
-            LOG.debug("Last sequence written is empty. Deleting all old hlogs");
+            LOG.debug("Last sequenceid written is empty. Deleting all old hlogs");
             // If so, then no new writes have come in since all regions were
             // flushed (and removed from the lastSeqWritten map). Means can
             // remove all but currently open log file.
@@ -569,7 +569,7 @@ public class HLog implements Syncable {
         byte [] oldestRegion = getOldestRegion(oldestOutstandingSeqNum);
         LOG.debug("Found " + logsToRemove + " hlogs to remove " +
           " out of total " + this.outputfiles.size() + "; " +
-          "oldest outstanding seqnum is " + oldestOutstandingSeqNum +
+          "oldest outstanding sequenceid is " + oldestOutstandingSeqNum +
           " from region " + Bytes.toString(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
@@ -669,7 +669,7 @@ public class HLog implements Syncable {
   private void archiveLogFile(final Path p, final Long seqno) throws IOException {
     Path newPath = getHLogArchivePath(this.oldLogDir, p);
     LOG.info("moving old hlog file " + FSUtils.getPath(p) +
-      " whose highest sequence/edit id is " + seqno + " to " +
+      " whose highest sequenceid is " + seqno + " to " +
       FSUtils.getPath(newPath));
     this.fs.rename(p, newPath);
   }
