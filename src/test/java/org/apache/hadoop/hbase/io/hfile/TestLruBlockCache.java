@@ -117,6 +117,9 @@ public class TestLruBlockCache extends TestCase {
 
     // Expect no evictions
     assertEquals(0, cache.getEvictionCount());
+    Thread t = new LruBlockCache.StatisticsThread(cache);
+    t.start();
+    t.join();
   }
 
   public void testCacheEvictionSimple() throws Exception {

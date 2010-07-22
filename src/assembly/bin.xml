@@ -28,7 +28,7 @@
       <outputDirectory>/</outputDirectory>
       <includes>
           <include>hbase-${project.version}.jar</include>
-          <include>hbase-${project.version}-tests.jar</include>
+          <include>hbase-${project.version}-test.jar</include>
       </includes>
     </fileSet>
     <fileSet>

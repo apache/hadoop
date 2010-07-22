@@ -109,4 +109,3 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     return this.priority;
   }
 }
-

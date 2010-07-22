@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
+
 import junit.framework.TestCase;
 
 public class TestCachedBlockQueue extends TestCase {
@@ -57,15 +59,16 @@ public class TestCachedBlockQueue extends TestCase {
 
     assertEquals(queue.heapSize(), expectedSize);
 
-    org.apache.hadoop.hbase.io.hfile.CachedBlock [] blocks = queue.get();
-    assertEquals(blocks[0].getName(), "cb1");
-    assertEquals(blocks[1].getName(), "cb2");
-    assertEquals(blocks[2].getName(), "cb3");
-    assertEquals(blocks[3].getName(), "cb4");
-    assertEquals(blocks[4].getName(), "cb5");
-    assertEquals(blocks[5].getName(), "cb6");
-    assertEquals(blocks[6].getName(), "cb7");
-    assertEquals(blocks[7].getName(), "cb8");
+    LinkedList<org.apache.hadoop.hbase.io.hfile.CachedBlock> blocks =
+      queue.get();
+    assertEquals(blocks.poll().getName(), "cb1");
+    assertEquals(blocks.poll().getName(), "cb2");
+    assertEquals(blocks.poll().getName(), "cb3");
+    assertEquals(blocks.poll().getName(), "cb4");
+    assertEquals(blocks.poll().getName(), "cb5");
+    assertEquals(blocks.poll().getName(), "cb6");
+    assertEquals(blocks.poll().getName(), "cb7");
+    assertEquals(blocks.poll().getName(), "cb8");
 
   }
 
@@ -109,16 +112,16 @@ public class TestCachedBlockQueue extends TestCase {
 
     assertEquals(queue.heapSize(), expectedSize);
 
-    org.apache.hadoop.hbase.io.hfile.CachedBlock [] blocks = queue.get();
-    assertEquals(blocks[0].getName(), "cb0");
-    assertEquals(blocks[1].getName(), "cb1");
-    assertEquals(blocks[2].getName(), "cb2");
-    assertEquals(blocks[3].getName(), "cb3");
-    assertEquals(blocks[4].getName(), "cb4");
-    assertEquals(blocks[5].getName(), "cb5");
-    assertEquals(blocks[6].getName(), "cb6");
-    assertEquals(blocks[7].getName(), "cb7");
-    assertEquals(blocks[8].getName(), "cb8");
+    LinkedList<org.apache.hadoop.hbase.io.hfile.CachedBlock> blocks = queue.get();
+    assertEquals(blocks.poll().getName(), "cb0");
+    assertEquals(blocks.poll().getName(), "cb1");
+    assertEquals(blocks.poll().getName(), "cb2");
+    assertEquals(blocks.poll().getName(), "cb3");
+    assertEquals(blocks.poll().getName(), "cb4");
+    assertEquals(blocks.poll().getName(), "cb5");
+    assertEquals(blocks.poll().getName(), "cb6");
+    assertEquals(blocks.poll().getName(), "cb7");
+    assertEquals(blocks.poll().getName(), "cb8");
 
   }
 
@@ -130,5 +133,4 @@ public class TestCachedBlockQueue extends TestCase {
           accessTime,false);
     }
   }
-
 }

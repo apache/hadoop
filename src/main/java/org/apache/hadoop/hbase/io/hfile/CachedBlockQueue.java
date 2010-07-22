@@ -84,15 +84,14 @@ public class CachedBlockQueue implements HeapSize {
   }
 
   /**
-   * Get a sorted List of all elements in this queue, in descending order.
-   * @return list of cached elements in descending order
+   * @return a sorted List of all elements in this queue, in descending order
    */
-  public CachedBlock [] get() {
+  public LinkedList<CachedBlock> get() {
     LinkedList<CachedBlock> blocks = new LinkedList<CachedBlock>();
-    while(!queue.isEmpty()) {
+    while (!queue.isEmpty()) {
       blocks.addFirst(queue.poll());
     }
-    return blocks.toArray(new CachedBlock[blocks.size()]);
+    return blocks;
   }
 
   /**

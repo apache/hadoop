@@ -790,6 +790,8 @@ Release 0.21.0 - Unreleased
                space and text
    HBASE-2850  slf4j version needs to be reconciled in pom: thrift wants 1.5.x
                and hadoop/avro 1.4.x
+   HBASE-2865  Cleanup of LRU logging; its hard to read, uses custom MB'maker,
+               repeats info, too many numbers after the point, etc.
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

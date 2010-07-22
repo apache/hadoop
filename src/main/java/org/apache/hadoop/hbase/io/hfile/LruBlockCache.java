@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
@@ -317,11 +319,14 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
     try {
       evictionInProgress = true;
+      long currentSize = this.size.get();
+      long bytesToFree = currentSize - minSize();
 
-      long bytesToFree = size.get() - minSize();
-
-      LOG.debug("Block cache LRU eviction started.  Attempting to free " +
-          bytesToFree + " bytes");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Block cache LRU eviction started; Attempting to free " +
+          StringUtils.byteDesc(bytesToFree) + " of total=" +
+          StringUtils.byteDesc(currentSize));
+      }
 
       if(bytesToFree <= 0) return;
 
@@ -372,17 +377,17 @@ public class LruBlockCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
 
-      float singleMB = ((float)bucketSingle.totalSize())/((float)(1024*1024));
-      float multiMB = ((float)bucketMulti.totalSize())/((float)(1024*1024));
-      float memoryMB = ((float)bucketMemory.totalSize())/((float)(1024*1024));
-
-      LOG.debug("Block cache LRU eviction completed. " +
-          "Freed " + bytesFreed + " bytes.  " +
-          "Priority Sizes: " +
-          "Single=" + singleMB + "MB (" + bucketSingle.totalSize() + "), " +
-          "Multi=" + multiMB + "MB (" + bucketMulti.totalSize() + ")," +
-          "Memory=" + memoryMB + "MB (" + bucketMemory.totalSize() + ")");
-
+      if (LOG.isDebugEnabled()) {
+        long single = bucketSingle.totalSize();
+        long multi = bucketMulti.totalSize();
+        long memory = bucketMemory.totalSize();
+        LOG.debug("Block cache LRU eviction completed; " +
+          "freed=" + StringUtils.byteDesc(bytesFreed) + ", " +
+          "total=" + StringUtils.byteDesc(this.size.get()) + ", " +
+          "single=" + StringUtils.byteDesc(single) + ", " +
+          "multi=" + StringUtils.byteDesc(multi) + ", " +
+          "memory=" + StringUtils.byteDesc(memory));
+      }
     } finally {
       stats.evict();
       evictionInProgress = false;
@@ -414,10 +419,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
 
     public long free(long toFree) {
-      CachedBlock [] blocks = queue.get();
+      LinkedList<CachedBlock> blocks = queue.get();
       long freedBytes = 0;
-      for(int i=0; i<blocks.length; i++) {
-        freedBytes += evictBlock(blocks[i]);
+      for(CachedBlock cb: blocks) {
+        freedBytes += evictBlock(cb);
         if(freedBytes >= toFree) {
           return freedBytes;
         }
@@ -524,7 +529,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /*
    * Statistics thread.  Periodically prints the cache statistics to the log.
    */
-  private static class StatisticsThread extends Thread {
+  static class StatisticsThread extends Thread {
     LruBlockCache lru;
 
     public StatisticsThread(LruBlockCache lru) {
@@ -539,27 +544,23 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   public void logStats() {
+    if (!LOG.isDebugEnabled()) return;
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
-    float sizeMB = ((float)totalSize)/((float)(1024*1024));
-    float freeMB = ((float)freeSize)/((float)(1024*1024));
-    float maxMB = ((float)maxSize)/((float)(1024*1024));
-    LruBlockCache.LOG.debug("Cache Stats: Sizes: " +
-        "Total=" + sizeMB + "MB (" + totalSize + "), " +
-        "Free=" + freeMB + "MB (" + freeSize + "), " +
-        "Max=" + maxMB + "MB (" + maxSize +")" +
-      ", Counts: " +
-        "Blocks=" + size() +", " +
-        "Access=" + stats.getRequestCount() + ", " +
-        "Hit=" + stats.getHitCount() + ", " +
-        "Miss=" + stats.getMissCount() + ", " +
-        "Evictions=" + stats.getEvictionCount() + ", " +
-        "Evicted=" + stats.getEvictedCount() +
-      ", Ratios: " +
-        "Hit Ratio=" + stats.getHitRatio()*100 + "%, " +
-        "Miss Ratio=" + stats.getMissRatio()*100 + "%, " +
-        "Evicted/Run=" + stats.evictedPerEviction());
+    LruBlockCache.LOG.debug("LRU Stats: " +
+        "total=" + StringUtils.byteDesc(totalSize) + ", " +
+        "free=" + StringUtils.byteDesc(freeSize) + ", " +
+        "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
+        "blocks=" + size() +", " +
+        "accesses=" + stats.getRequestCount() + ", " +
+        "hits=" + stats.getHitCount() + ", " +
+        "misses=" + stats.getMissCount() + ", " +
+        "evictions=" + stats.getEvictionCount() + ", " +
+        "evicted=" + stats.getEvictedCount() + ", " +
+        "hitRatio=" + StringUtils.formatPercent(stats.getHitRatio(), 2) + "%, " +
+        "missRatio=" + StringUtils.formatPercent(stats.getMissRatio(), 2) + "%, " +
+        "evictedPerRun=" + stats.evictedPerEviction());
   }
 
   /**
