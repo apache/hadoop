@@ -908,6 +908,9 @@ Release 0.21.0 - 2010-07-01
 
   BUG FIXES
 
+    HADOOP-6790. Instrumented (Herriot) build uses too wide mask to include
+    aspect files. (Konstantin Boudnik)
+
     HADOOP-6860. 'compile-fault-inject' should never be called directly.
     (Konstantin Boudnik)
 
