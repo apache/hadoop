@@ -582,21 +582,6 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
-
-    <!--
-      This is highly dubious!
-
-      We need SLF4J >= 1.5.6 and Thrift depends on that version.
-      hadoop-core on the other hand depends on SLF4J 1.4.3 (even though it is optional)
-      and Mavens dependency resolution mechanism choses the 'nearest' dependency in case
-      of a conflict of dependencies on the same level. The nearest is always the one
-      that was defined first in the pom:
-      http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
-
-      That's why we've added an explicit dependency to SFL4J-API even though we don't need it.
-      Make sure to check the version of SLF4J Hadoop and Thrift depend on when you upgrade
-      one of them.
-    -->
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>thrift</artifactId>
@@ -724,7 +709,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.4.3</version>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -734,7 +719,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.4.3</version>
+      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
