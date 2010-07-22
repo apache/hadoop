@@ -72,6 +72,8 @@ public class ReplicationSourceManager implements LogActionsListener {
   private Path latestPath;
   // List of all the other region servers in this cluster
   private final List<String> otherRegionServers;
+  // Path to the hlogs directories
+  private final Path logDir;
   // Path to the hlog archive
   private final Path oldLogDir;
 
@@ -83,6 +85,7 @@ public class ReplicationSourceManager implements LogActionsListener {
    * @param stopper the stopper object for this region server
    * @param fs the file system to use
    * @param replicating the status of the replication on this cluster
+   * @param logDir the directory that contains all hlog directories of live RSs
    * @param oldLogDir the directory where old logs are archived
    */
   public ReplicationSourceManager(final ReplicationZookeeperWrapper zkHelper,
@@ -90,6 +93,7 @@ public class ReplicationSourceManager implements LogActionsListener {
                                   final AtomicBoolean stopper,
                                   final FileSystem fs,
                                   final AtomicBoolean replicating,
+                                  final Path logDir,
                                   final Path oldLogDir) {
     this.sources = new ArrayList<ReplicationSourceInterface>();
     this.replicating = replicating;
@@ -99,6 +103,7 @@ public class ReplicationSourceManager implements LogActionsListener {
     this.oldsources = new ArrayList<ReplicationSourceInterface>();
     this.conf = conf;
     this.fs = fs;
+    this.logDir = logDir;
     this.oldLogDir = oldLogDir;
     List<String> otherRSs =
         this.zkHelper.getRegisteredRegionServers(new OtherRegionServerWatcher());
@@ -216,13 +221,6 @@ public class ReplicationSourceManager implements LogActionsListener {
     this.latestPath = newLog;
     for (ReplicationSourceInterface source : this.sources) {
       source.enqueueLog(newLog);
-    }
-  }
-
-  @Override
-  public void logArchived(Path oldPath, Path newPath) {
-    for (ReplicationSourceInterface source : this.sources) {
-      source.logArchived(oldPath, newPath);
     }
   }
 
@@ -348,6 +346,30 @@ public class ReplicationSourceManager implements LogActionsListener {
         transferQueues(rsZnodeParts[rsZnodeParts.length-1]);
       }
     }
+  }
+
+  /**
+   * Get the directory where hlogs are archived
+   * @return the directory where hlogs are archived
+   */
+  public Path getOldLogDir() {
+    return this.oldLogDir;
+  }
+
+  /**
+   * Get the directory where hlogs are stored by their RSs
+   * @return the directory where hlogs are stored by their RSs
+   */
+  public Path getLogDir() {
+    return this.logDir;
+  }
+
+  /**
+   * Get the handle on the local file system
+   * @returnthe handle on the local file system
+   */
+  public FileSystem getFs() {
+    return this.fs;
   }
 
 }

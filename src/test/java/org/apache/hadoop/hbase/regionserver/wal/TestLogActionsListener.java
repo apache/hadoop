@@ -117,10 +117,5 @@ public class TestLogActionsListener {
     public void logRolled(Path newFile) {
       logRollCounter++;
     }
-
-    @Override
-    public void logArchived(Path oldPath, Path newPath) {
-      // This one is a bit tricky to test since it involves seq numbers
-    }
   }
 }

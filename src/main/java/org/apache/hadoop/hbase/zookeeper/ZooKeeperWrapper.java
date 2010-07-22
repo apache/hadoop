@@ -861,9 +861,9 @@ public class ZooKeeperWrapper implements Watcher {
     }
     try {
       if (checkExistenceOf(znode)) {
-        nodes = zooKeeper.getChildren(znode, this);
+        nodes = zooKeeper.getChildren(znode, watcher);
         for (String node : nodes) {
-          getDataAndWatch(znode, node, this);
+          getDataAndWatch(znode, node, watcher);
         }
       }
     } catch (KeeperException e) {

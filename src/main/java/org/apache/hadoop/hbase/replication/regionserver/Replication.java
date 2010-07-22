@@ -64,7 +64,7 @@ public class Replication implements LogEntryVisitor {
    * @throws IOException
    */
   public Replication(Configuration conf, HServerInfo hsi,
-                     FileSystem fs, Path oldLogDir,
+                     FileSystem fs, Path logDir, Path oldLogDir,
                      AtomicBoolean stopRequested) throws IOException {
     this.conf = conf;
     this.stopRequested = stopRequested;
@@ -77,7 +77,7 @@ public class Replication implements LogEntryVisitor {
       this.replicationMaster = zkHelper.isReplicationMaster();
       this.replicationManager = this.replicationMaster ?
         new ReplicationSourceManager(zkHelper, conf, stopRequested,
-          fs, this.replicating, oldLogDir) : null;
+          fs, this.replicating, logDir, oldLogDir) : null;
     } else {
       replicationManager = null;
       zkHelper = null;

@@ -118,7 +118,7 @@ public class TestReplicationSourceManager {
         HConstants.HREGION_LOGDIR_NAME);
 
     manager = new ReplicationSourceManager(helper,
-        conf, STOPPER, fs, REPLICATING, oldLogDir);
+        conf, STOPPER, fs, REPLICATING, logDir, oldLogDir);
     manager.addSource("1");
 
     htd = new HTableDescriptor(test);

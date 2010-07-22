@@ -672,11 +672,6 @@ public class HLog implements Syncable {
       " whose highest sequence/edit id is " + seqno + " to " +
       FSUtils.getPath(newPath));
     this.fs.rename(p, newPath);
-    if (!this.actionListeners.isEmpty()) {
-      for (LogActionsListener list : this.actionListeners) {
-        list.logArchived(p, newPath);
-      }
-    }
   }
 
   /**

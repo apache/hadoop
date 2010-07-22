@@ -923,7 +923,7 @@ public class HRegionServer implements HRegionInterface,
         " because logdir " + logdir.toString() + " exists");
     }
     this.replicationHandler = new Replication(this.conf,this.serverInfo,
-        this.fs, oldLogDir, stopRequested);
+        this.fs, logdir, oldLogDir, stopRequested);
     HLog log = instantiateHLog(logdir, oldLogDir);
     this.replicationHandler.addLogEntryVisitor(log);
     return log;

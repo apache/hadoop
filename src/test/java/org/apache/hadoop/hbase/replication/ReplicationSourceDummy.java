@@ -70,8 +70,4 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public String getPeerClusterZnode() {
     return peerClusterId;
   }
-
-  @Override
-  public void logArchived(Path oldPath, Path newPath) {
-  }
 }

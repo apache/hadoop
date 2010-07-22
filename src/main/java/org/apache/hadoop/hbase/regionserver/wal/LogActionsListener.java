@@ -33,11 +33,4 @@ public interface LogActionsListener {
    * @param newFile the path to the new hlog
    */
   public void logRolled(Path newFile);
-
-  /**
-   * Notify that the following log moved
-   * @param oldPath the old path
-   * @param newPath the new path
-   */
-  public void logArchived(Path oldPath, Path newPath);
 }

@@ -77,11 +77,4 @@ public interface ReplicationSourceInterface {
    * @return peer cluster id
    */
   public String getPeerClusterZnode();
-
-  /**
-   * Notify this source that a log was archived
-   * @param oldPath old path of the log
-   * @param newPath new path of the log (archive)
-   */
-  public void logArchived(Path oldPath, Path newPath);
 }
