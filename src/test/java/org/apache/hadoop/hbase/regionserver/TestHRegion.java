@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -1859,14 +1860,16 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(value+amount, result);
 
     Store store = region.getStore(fam1);
-    // we will have the original Put, and also the ICV'ed Put as well.
-    assertEquals(2, store.memstore.kvset.size());
+    // ICV removes any extra values floating around in there.
+    assertEquals(1, store.memstore.kvset.size());
     assertTrue(store.memstore.snapshot.isEmpty());
 
     assertICV(row, fam1, qual1, value+amount);
   }
 
   public void testIncrementColumnValue_BumpSnapshot() throws IOException {
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManagerTestHelper.injectEdge(mee);
     initHRegion(tableName, getName(), fam1);
 
     long value = 42L;

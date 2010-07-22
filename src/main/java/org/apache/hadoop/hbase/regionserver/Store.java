@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableList;
@@ -1301,7 +1303,7 @@ public class Store implements HeapSize {
 
     this.lock.readLock().lock();
     try {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
 
       return this.memstore.updateColumnValue(row,
           f,

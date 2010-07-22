@@ -218,7 +218,7 @@ public class KeyValue implements Writable, HeapSize {
 
   /** Dragon time over, return to normal business */
 
-  
+
   /** Writable Constructor -- DO NOT USE */
   public KeyValue() {}
 
@@ -965,7 +965,7 @@ public class KeyValue implements Writable, HeapSize {
     System.arraycopy(this.bytes, o, result, 0, l);
     return result;
   }
-  
+
   //---------------------------------------------------------------------------
   //
   //  KeyValue splitter
@@ -1047,12 +1047,20 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if matching families.
    */
   public boolean matchingFamily(final byte [] family) {
+    return matchingFamily(family, 0, family.length);
+  }
+
+  public boolean matchingFamily(final byte[] family, int offset, int length) {
     if (this.length == 0 || this.bytes.length == 0) {
       return false;
     }
-    int o = getFamilyOffset();
-    int l = getFamilyLength(o);
-    return Bytes.compareTo(family, 0, family.length, this.bytes, o, l) == 0;
+    return Bytes.compareTo(family, offset, length,
+        this.bytes, getFamilyOffset(), getFamilyLength()) == 0;
+  }
+
+  public boolean matchingFamily(final KeyValue other) {
+    return matchingFamily(other.getBuffer(), other.getFamilyOffset(),
+        other.getFamilyLength());
   }
 
   /**
@@ -1060,10 +1068,31 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if matching qualifiers.
    */
   public boolean matchingQualifier(final byte [] qualifier) {
-    int o = getQualifierOffset();
-    int l = getQualifierLength();
-    return Bytes.compareTo(qualifier, 0, qualifier.length,
-        this.bytes, o, l) == 0;
+    return matchingQualifier(qualifier, 0, qualifier.length);
+  }
+
+  public boolean matchingQualifier(final byte [] qualifier, int offset, int length) {
+    return Bytes.compareTo(qualifier, offset, length,
+        this.bytes, getQualifierOffset(), getQualifierLength()) == 0;
+  }
+
+  public boolean matchingQualifier(final KeyValue other) {
+    return matchingQualifier(other.getBuffer(), other.getQualifierOffset(),
+        other.getQualifierLength());
+  }
+
+  public boolean matchingRow(final byte [] row) {
+    return matchingRow(row, 0, row.length);
+  }
+
+  public boolean matchingRow(final byte[] row, int offset, int length) {
+    return Bytes.compareTo(row, offset, length,
+        this.bytes, getRowOffset(), getRowLength()) == 0;
+  }
+
+  public boolean matchingRow(KeyValue other) {
+    return matchingRow(other.getBuffer(), other.getRowOffset(),
+        other.getRowLength());
   }
 
   /**
@@ -1089,12 +1118,12 @@ public class KeyValue implements Writable, HeapSize {
     int o = getFamilyOffset(rl);
     int fl = getFamilyLength(o);
     int ql = getQualifierLength(rl,fl);
-    if(Bytes.compareTo(family, 0, family.length, this.bytes, o, family.length)
+    if (Bytes.compareTo(family, 0, family.length, this.bytes, o, family.length)
         != 0) {
       return false;
     }
-    if(qualifier == null || qualifier.length == 0) {
-      if(ql == 0) {
+    if (qualifier == null || qualifier.length == 0) {
+      if (ql == 0) {
         return true;
       }
       return false;
@@ -1520,7 +1549,7 @@ public class KeyValue implements Writable, HeapSize {
    * Create a KeyValue that is smaller than all other possible KeyValues
    * for the given row. That is any (valid) KeyValue on 'row' would sort
    * _after_ the result.
-   * 
+   *
    * @param row - row key (arbitrary byte array)
    * @return First possible KeyValue on passed <code>row</code>
    */
@@ -1760,7 +1789,7 @@ public class KeyValue implements Writable, HeapSize {
 
       // if row matches, and no column in the 'left' AND put type is 'minimum',
       // then return that left is larger than right.
-      
+
       // This supports 'last key on a row' - the magic is if there is no column in the
       // left operand, and the left operand has a type of '0' - magical value,
       // then we say the left is bigger.  This will let us seek to the last key in
@@ -1835,8 +1864,8 @@ public class KeyValue implements Writable, HeapSize {
 
   // HeapSize
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE + 
-        ClassSize.align(ClassSize.ARRAY + length) + 
+    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE +
+        ClassSize.align(ClassSize.ARRAY + length) +
         (2 * Bytes.SIZEOF_INT) +
         Bytes.SIZEOF_LONG);
   }

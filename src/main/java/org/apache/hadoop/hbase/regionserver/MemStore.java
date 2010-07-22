@@ -369,16 +369,59 @@ public class MemStore implements HeapSize {
                                 long now) {
    this.lock.readLock().lock();
     try {
+      KeyValue firstKv = KeyValue.createFirstOnRow(
+          row, family, qualifier);
       // create a new KeyValue with 'now' and a 0 memstoreTS == immediately visible
-      KeyValue newKv = new KeyValue(row, family, qualifier,
+      KeyValue newKv;
+      // Is there a KeyValue in 'snapshot' with the same TS? If so, upgrade the timestamp a bit.
+      SortedSet<KeyValue> snSs = snapshot.tailSet(firstKv);
+      if (!snSs.isEmpty()) {
+        KeyValue snKv = snSs.first();
+        // is there a matching KV in the snapshot?
+        if (snKv.matchingRow(firstKv) && snKv.matchingQualifier(firstKv)) {
+          if (snKv.getTimestamp() == now) {
+            // poop,
+            now += 1;
+          }
+        }
+      }
+
+      // logic here: the new ts MUST be at least 'now'. But it could be larger if necessary.
+      // But the timestamp should also be max(now, mostRecentTsInMemstore)
+
+      // so we cant add the new KV w/o knowing what's there already, but we also
+      // want to take this chance to delete some kvs. So two loops (sad)
+
+      SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
+      Iterator<KeyValue> it = ss.iterator();
+      while ( it.hasNext() ) {
+        KeyValue kv = it.next();
+
+        // if this isnt the row we are interested in, then bail:
+        if (!firstKv.matchingRow(kv)) {
+          break; // rows dont match, bail.
+        }
+
+        // if the qualifier matches and it's a put, just RM it out of the kvset.
+        if (firstKv.matchingQualifier(kv)) {
+          // to be extra safe we only remove Puts that have a memstoreTS==0
+          if (kv.getType() == KeyValue.Type.Put.getCode()) {
+            now = Math.max(now, kv.getTimestamp());
+          }
+        }
+      }
+
+
+      // add the new value now. this might have the same TS as an existing KV, thus confusing
+      // readers slightly for a MOMENT until we erase the old one (and thus old value).
+      newKv = new KeyValue(row, family, qualifier,
           now,
           Bytes.toBytes(newValue));
-
       long addedSize = add(newKv);
 
-      // now find and RM the old one(s) to prevent version explosion:
-      SortedSet<KeyValue> ss = kvset.tailSet(newKv);
-      Iterator<KeyValue> it = ss.iterator();
+      // remove extra versions.
+      ss = kvset.tailSet(firstKv);
+      it = ss.iterator();
       while ( it.hasNext() ) {
         KeyValue kv = it.next();
 
@@ -386,21 +429,16 @@ public class MemStore implements HeapSize {
           // ignore the one i just put in (heh)
           continue;
         }
+
         // if this isnt the row we are interested in, then bail:
-        if (0 != Bytes.compareTo(
-            newKv.getBuffer(), newKv.getRowOffset(), newKv.getRowLength(),
-            kv.getBuffer(), kv.getRowOffset(), kv.getRowLength())) {
+        if (!firstKv.matchingRow(kv)) {
           break; // rows dont match, bail.
         }
 
         // if the qualifier matches and it's a put, just RM it out of the kvset.
-        if (0 == Bytes.compareTo(
-            newKv.getBuffer(), newKv.getQualifierOffset(), newKv.getQualifierLength(),
-            kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength())) {
-
+        if (firstKv.matchingQualifier(kv)) {
           // to be extra safe we only remove Puts that have a memstoreTS==0
-          if (kv.getType() == KeyValue.Type.Put.getCode() &&
-              kv.getMemstoreTS() == 0) {
+          if (kv.getType() == KeyValue.Type.Put.getCode()) {
             // false means there was a change, so give us the size.
             addedSize -= heapSizeChange(kv, false);
 

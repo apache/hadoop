@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import junit.framework.TestCase;
@@ -49,12 +48,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import com.google.common.base.Joiner;
@@ -303,9 +302,6 @@ public class TestStore extends TestCase {
         System.currentTimeMillis(),
         Bytes.toBytes(oldValue)));
 
-    // sleep 2 ms to space out the increments.
-    Thread.sleep(2);
-
     // update during the snapshot.
     long ret = this.store.updateColumnValue(row, family, qf1, newValue);
 
@@ -324,9 +320,6 @@ public class TestStore extends TestCase {
     get.setMaxVersions(); // all versions.
     List<KeyValue> results = new ArrayList<KeyValue>();
 
-    NavigableSet<byte[]> cols = new TreeSet<byte[]>();
-    cols.add(qf1);
-
     results = HBaseTestingUtility.getFromStoreFile(store, get);
     assertEquals(2, results.size());
 
@@ -337,7 +330,73 @@ public class TestStore extends TestCase {
 
     assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
     assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+  }
 
+  public void testIncrementColumnValue_SnapshotFlushCombo() throws Exception {
+    ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
+    EnvironmentEdgeManagerTestHelper.injectEdge(mee);
+    init(this.getName());
+
+    long oldValue = 1L;
+    long newValue = 3L;
+    this.store.add(new KeyValue(row, family, qf1,
+        EnvironmentEdgeManager.currentTimeMillis(),
+        Bytes.toBytes(oldValue)));
+
+    // snapshot the store.
+    this.store.snapshot();
+
+    // update during the snapshot, the exact same TS as the Put (lololol)
+    long ret = this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // memstore should have grown by some amount.
+    assertTrue(ret > 0);
+
+    // then flush.
+    flushStore(store, id++);
+    assertEquals(1, this.store.getStorefiles().size());
+    assertEquals(1, this.store.memstore.kvset.size());
+
+    // now increment again:
+    newValue += 1;
+    this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // at this point we have a TS=1 in snapshot, and a TS=2 in kvset, so increment again:
+    newValue += 1;
+    this.store.updateColumnValue(row, family, qf1, newValue);
+
+    // the second TS should be TS=2 or higher., even though 'time=1' right now.
+
+
+    // how many key/values for this row are there?
+    Get get = new Get(row);
+    get.addColumn(family, qf1);
+    get.setMaxVersions(); // all versions.
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    results = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertEquals(2, results.size());
+
+    long ts1 = results.get(0).getTimestamp();
+    long ts2 = results.get(1).getTimestamp();
+
+    assertTrue(ts1 > ts2);
+    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
+    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+
+    mee.setValue(2); // time goes up slightly
+    newValue += 1;
+    this.store.updateColumnValue(row, family, qf1, newValue);
+
+    results = HBaseTestingUtility.getFromStoreFile(store, get);
+    assertEquals(2, results.size());
+
+    ts1 = results.get(0).getTimestamp();
+    ts2 = results.get(1).getTimestamp();
+
+    assertTrue(ts1 > ts2);
+    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
+    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
   }
 
   public void testHandleErrorsInFlush() throws Exception {
