@@ -132,7 +132,7 @@ public class DelegationTokenFetcher {
     
     Credentials ts = new Credentials();
     ts.addToken(new Text(shortName), token);
-    ts.write(out);
+    ts.writeTokenStorageToStream(out);
   }
   
 
@@ -178,8 +178,9 @@ public class DelegationTokenFetcher {
   static private void getDTfromRemoteIntoFile(String nnAddr, String filename) 
   throws IOException {
     Credentials ts = getDTfromRemote(nnAddr, null); 
+
     DataOutputStream file = new DataOutputStream(new FileOutputStream(filename));
-    ts.write(file);
+    ts.writeTokenStorageToStream(file);
     file.flush();
     System.out.println("Successfully wrote token of " + file.size() 
         + " bytes  to " + filename);

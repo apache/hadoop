@@ -84,6 +84,9 @@ Trunk (unreleased changes)
     
     HDFS-1307 Add start time, end time and total time taken for FSCK to 
     FSCK report (suresh)
+
+    HDFS-1302. The HDFS side of the changes corresponding to HADOOP-6861.
+    (Jitendra Pandey & Owen O'Malley via ddas)
     
 
   OPTIMIZATIONS
