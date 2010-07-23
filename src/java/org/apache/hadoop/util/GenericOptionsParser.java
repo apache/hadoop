@@ -317,7 +317,9 @@ public class GenericOptionsParser {
           throw new FileNotFoundException("File "+fileName+" does not exist.");
       }
       LOG.debug("setting conf tokensFile: " + fileName);
-      conf.set("tokenCacheFile", localFs.makeQualified(p).toString());
+      conf.set("mapreduce.job.credentials.json", localFs.makeQualified(p)
+          .toString());
+
     }
   }
   

@@ -80,6 +80,9 @@ Trunk (unreleased changes)
     same principal. Now the principal name is a pattern that has _HOST in it.
     (Kan Zhang & Jitendra Pandey via ddas)
 
+    HADOOP-6861. Adds new non-static methods in Credentials to read and 
+    write token storage file. (Jitendra Pandey & Owen O'Malley via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
