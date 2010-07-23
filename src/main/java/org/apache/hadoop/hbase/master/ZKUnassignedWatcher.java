@@ -169,6 +169,7 @@ public class ZKUnassignedWatcher implements Watcher {
     String region = zNodePath.substring(
         zNodePath.indexOf(rgnInTransitNode) + rgnInTransitNode.length() + 1);
     HBaseEventType rsEvent = HBaseEventType.fromByte(data[0]);
+    LOG.debug("Got event type [ " + rsEvent + " ] for region " + region);
 
     // if the node was CLOSED then handle it
     if(rsEvent == HBaseEventType.RS2ZK_REGION_CLOSED) {

@@ -1133,22 +1133,36 @@ public class ZooKeeperWrapper implements Watcher {
       return;
     }
     
-    if(LOG.isDebugEnabled()) {
-      // Check existing state for logging purposes.
-      Stat stat = new Stat();
-      byte[] oldData = null;
-      try {
-        oldData = readZNode(znode, stat);
-      } catch (IOException e) {
-        LOG.error("Error reading data for " + znode);
-      }
-      if(oldData == null) {
-        LOG.debug("While updating UNASSIGNED region " + regionName + " - node exists with no data" );          
-      }
-      else {
-        LOG.debug("While updating UNASSIGNED region " + regionName + " exists, state = " + (HBaseEventType.fromByte(oldData[0])));
-      }
+    Stat stat = new Stat();
+    byte[] oldData = null;
+    try {
+      oldData = readZNode(znode, stat);
+    } catch (IOException e) {
+      LOG.error("Error reading data for " + znode);
     }
+    // If there is no data in the ZNode, then update it
+    if(oldData == null) {
+      LOG.debug("While updating UNASSIGNED region " + regionName + " - node exists with no data" );
+    }
+    // If there is data in the ZNode, do not update if it is already correct
+    else {
+      HBaseEventType curState = HBaseEventType.fromByte(oldData[0]);
+      HBaseEventType newState = HBaseEventType.fromByte(data[0]);
+      // If the znode has the right state already, do not update it. Updating
+      // the znode again and again will bump up the zk version. This may cause
+      // the region server to fail. The RS expects that the znode is never
+      // updated by anyone else while it is opening/closing a region.
+      if(curState == newState) {
+        LOG.debug("No need to update UNASSIGNED region " + regionName +
+                  " as it already exists in state = " + curState);
+        return;
+      }
+
+      // If the ZNode is in another state, then update it
+      LOG.debug("UNASSIGNED region " + regionName + " is currently in state = " +
+                curState + ", updating it to " + newState);
+    }
+    // Update the ZNode
     synchronized(unassignedZNodesWatched) {
       unassignedZNodesWatched.add(znode);
       try {

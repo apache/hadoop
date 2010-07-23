@@ -449,6 +449,7 @@ Release 0.21.0 - Unreleased
    HBASE-2859  Cleanup deprecated stuff in TestHLog (Alex Newman via Stack)
    HBASE-2858  TestReplication.queueFailover fails half the time
    HBASE-2863  HBASE-2553 removed an important edge case
+   HBASE-2866  Region permanently offlined
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
