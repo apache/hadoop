@@ -160,6 +160,9 @@ Trunk (unreleased changes)
     HDFS-1085. HFTP read may fail silently on the client side if there is an
     exception on the server side.  (szetszwo)
 
+    HDFS-1308. job conf key for the services name of DelegationToken for HFTP
+     url is constructed incorrectly in HFTPFileSystem (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
