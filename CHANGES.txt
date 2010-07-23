@@ -88,6 +88,8 @@ Trunk (unreleased changes)
     HDFS-1302. The HDFS side of the changes corresponding to HADOOP-6861.
     (Jitendra Pandey & Owen O'Malley via ddas)
     
+    HDFS-1315. Add fsck event to audit log and remove other audit log events 
+    corresponding to FSCK listStatus and open calls. (suresh)
 
   OPTIMIZATIONS
 

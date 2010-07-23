@@ -675,7 +675,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     checkOwner(src);
     dir.setPermission(src, permission);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -704,7 +704,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
     dir.setOwner(src, username, group);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -719,7 +719,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
-    LocatedBlocks blocks = getBlockLocations(src, offset, length, true);
+    LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
     if (blocks != null) {
       //sort the blocks
       DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
@@ -737,7 +737,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws FileNotFoundException
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length,
-      boolean doAccessTime) throws FileNotFoundException,
+      boolean doAccessTime, boolean needBlockToken) throws FileNotFoundException,
       UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.READ);
@@ -752,8 +752,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           "Negative length is not supported. File: " + src);
     }
     final LocatedBlocks ret = getBlockLocationsInternal(src,
-        offset, length, doAccessTime);  
-    if (auditLog.isInfoEnabled()) {
+        offset, length, doAccessTime, needBlockToken);  
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "open", src, null, null);
@@ -764,7 +764,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private synchronized LocatedBlocks getBlockLocationsInternal(String src,
                                                        long offset, 
                                                        long length,
-                                                       boolean doAccessTime)
+                                                       boolean doAccessTime, 
+                                                       boolean needBlockToken)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     INodeFile inode = dir.getFileINode(src);
     if (inode == null)
@@ -793,7 +794,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         LOG.debug("last = " + last);
       }
 
-      if(isBlockTokenEnabled) setBlockTokens(locatedblocks);
+      if(isBlockTokenEnabled && needBlockToken) {
+        setBlockTokens(locatedblocks);
+      }
 
       if (last.isComplete()) {
         return new LocatedBlocks(n, inode.isUnderConstruction(), locatedblocks,
@@ -957,7 +960,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     getEditLog().logSync();
    
     
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(target, false);
       logAuditEvent(UserGroupInformation.getLoginUser(),
                     Server.getRemoteIp(),
@@ -985,7 +988,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     INodeFile inode = dir.getFileINode(src);
     if (inode != null) {
       dir.setTimes(src, inode, mtime, atime, true);
-      if (auditLog.isInfoEnabled()) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
         final HdfsFileStatus stat = dir.getFileInfo(src, false);
         logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
@@ -1007,7 +1010,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
     createSymlinkInternal(target, link, dirPerms, createParent);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(link, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -1063,7 +1066,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     throws IOException, UnresolvedLinkException {
     boolean status = setReplicationInternal(src, replication);
     getEditLog().logSync();
-    if (status && auditLog.isInfoEnabled()) {
+    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setReplication", src, null, null);
@@ -1148,7 +1151,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     startFileInternal(src, permissions, holder, clientMachine, flag,
         createParent, replication, blockSize);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -1407,7 +1410,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       }
     }
 
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "append", src, null, null);
@@ -1695,7 +1698,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     throws IOException, UnresolvedLinkException {
     boolean status = renameToInternal(src, dst);
     getEditLog().logSync();
-    if (status && auditLog.isInfoEnabled()) {
+    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(dst, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -1738,7 +1741,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       throws IOException, UnresolvedLinkException {
     renameToInternal(src, dst, options);
     getEditLog().logSync();
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       StringBuilder cmd = new StringBuilder("rename options=");
       for (Rename option : options) {
         cmd.append(option.value()).append(" ");
@@ -1787,7 +1790,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
       }
       boolean status = deleteInternal(src, true);
-      if (status && auditLog.isInfoEnabled()) {
+      if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
         logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
                       "delete", src, null, null);
@@ -1895,7 +1898,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       boolean createParent) throws IOException, UnresolvedLinkException {
     boolean status = mkdirsInternal(src, permissions, createParent);
     getEditLog().logSync();
-    if (status && auditLog.isInfoEnabled()) {
+    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
       final HdfsFileStatus stat = dir.getFileInfo(src, false);
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
@@ -2268,7 +2271,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         checkTraverse(src);
       }
     }
-    if (auditLog.isInfoEnabled()) {
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "listStatus", src, null, null);
@@ -4678,5 +4681,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       authMethod = ugi.getRealUser().getAuthenticationMethod();
     }
     return authMethod;
+  }
+  
+  /**
+   * If the remote IP for namenode method invokation is null, then the
+   * invocation is internal to the namenode. Client invoked methods are invoked
+   * over RPC and always have address != null.
+   */
+  private boolean isExternalInvocation() {
+    return Server.getRemoteIp() != null;
+  }
+  
+  /**
+   * Log fsck event in the audit log 
+   */
+  void logFsckEvent(String src, InetAddress remoteAddress) throws IOException {
+    if (auditLog.isInfoEnabled()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
+                    remoteAddress,
+                    "fsck", src, null, null);
+    }
   }
 }

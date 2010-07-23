@@ -38,7 +38,7 @@ public class NameNodeAdapter {
   public static LocatedBlocks getBlockLocations(NameNode namenode,
       String src, long offset, long length) throws IOException {
     return namenode.getNamesystem().getBlockLocations(
-        src, offset, length, false);
+        src, offset, length, false, true);
   }
 
   /**
