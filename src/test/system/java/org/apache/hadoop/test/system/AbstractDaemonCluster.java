@@ -389,6 +389,17 @@ public abstract class AbstractDaemonCluster {
     waitForClusterToStop();
     start();
     waitForClusterToStart();
+    cleanupNewConf(newConfDir);
+  }
+
+  /**
+   * It uses to delete the new configuration folder.
+   * @param path - configuration directory path.
+   * @throws IOException if an I/O error occurs.
+   */
+  public void cleanupNewConf(String path) throws IOException {
+    File file = new File(path);
+    file.delete();
   }
   
   /**

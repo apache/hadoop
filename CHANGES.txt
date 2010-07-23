@@ -1587,6 +1587,9 @@ Release 0.21.0 - 2010-07-01
     HADOOP-6790. Instrumented (Herriot) build uses too wide mask to include
     aspect files. (Konstantin Boudnik)
 
+    HADOOP-6875. [Herriot] Cleanup of temp. configurations is needed upon
+    restart of a cluster (Vinay Thota via cos)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
