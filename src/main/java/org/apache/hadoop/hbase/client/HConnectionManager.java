@@ -211,13 +211,10 @@ public class HConnectionManager {
      *
      * @param event WatchedEvent witnessed by ZooKeeper.
      */
-    public void process(WatchedEvent event) {
-      KeeperState state = event.getState();
-      if(!state.equals(KeeperState.SyncConnected)) {
-        LOG.debug("Got ZooKeeper event, state: " + state + ", type: "
-            + event.getType() + ", path: " + event.getPath());
-      }
-      if (state == KeeperState.Expired) {
+    public void process(final WatchedEvent event) {
+      final KeeperState state = event.getState();
+      if (!state.equals(KeeperState.SyncConnected)) {
+        LOG.warn("No longer connected to ZooKeeper, current state: " + state);
         resetZooKeeper();
       }
     }
@@ -228,7 +225,7 @@ public class HConnectionManager {
      * @throws java.io.IOException if a remote or network exception occurs
      */
     public synchronized ZooKeeperWrapper getZooKeeperWrapper() throws IOException {
-      if(zooKeeperWrapper == null) {
+      if (zooKeeperWrapper == null) {
         zooKeeperWrapper =
             ZooKeeperWrapper.createInstance(conf, HConnectionManager.class.getName());
         zooKeeperWrapper.registerListener(this);

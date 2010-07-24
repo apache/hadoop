@@ -450,6 +450,8 @@ Release 0.21.0 - Unreleased
    HBASE-2858  TestReplication.queueFailover fails half the time
    HBASE-2863  HBASE-2553 removed an important edge case
    HBASE-2866  Region permanently offlined
+   HBASE-2849  HBase clients cannot recover when their ZooKeeper session
+               becomes invalid (Benôit Sigoure via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
