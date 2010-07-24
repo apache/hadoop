@@ -799,6 +799,8 @@ Release 0.21.0 - Unreleased
    HBASE-2873  Minor clean up in basescanner; fix a log and make deletes of
                region processing run in order
    HBASE-2830  NotServingRegionException shouldn't log a stack trace
+   HBASE-2874  Unnecessary double-synchronization in ZooKeeperWrapper
+               (Benoît Sigoure via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
