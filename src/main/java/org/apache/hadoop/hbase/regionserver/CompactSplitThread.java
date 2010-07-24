@@ -134,7 +134,6 @@ class CompactSplitThread extends Thread {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
         "requested for region " + r.getRegionNameAsString() +
-        "/" + r.getRegionInfo().getEncodedName() +
         (why != null && !why.isEmpty()? " because: " + why: ""));
     }
     synchronized (regionsInQueue) {
