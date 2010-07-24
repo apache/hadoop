@@ -918,7 +918,7 @@ public abstract class HBaseServer {
           try {
             value = call(call.param, call.timestamp);             // make the call
           } catch (Throwable e) {
-            LOG.info(getName()+", call "+call+": error: " + e, e);
+            LOG.debug(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }

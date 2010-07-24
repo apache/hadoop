@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -1474,8 +1475,21 @@ public class HConnectionManager {
             LOG.debug("Failed all from " + request.address, e);
             failed.addAll(request.allPuts());
           } catch (ExecutionException e) {
-            // all go into the failed list.
-            LOG.debug("Failed all from " + request.address, e);
+            Throwable cause = e.getCause();
+            // Don't print stack trace if NSRE; NSRE is 'normal' operation.
+            if (cause instanceof NotServingRegionException) {
+              String msg = cause.getMessage();
+              if (msg != null && msg.length() > 0) {
+                // msg is the exception as a String... we just want first line.
+                msg = msg.split("[\\n\\r]+\\s*at")[0];
+              }
+              LOG.debug("Failed execution of all on " + request.address +
+                " because: " + msg);
+            } else {
+              // all go into the failed list.
+              LOG.debug("Failed execution of all on " + request.address,
+                e.getCause());
+            }
             failed.addAll(request.allPuts());
 
             // Just give up, leaving the batch put list in an untouched/semi-committed state

@@ -811,6 +811,11 @@ public class HRegionServer implements HRegionInterface,
    * @return Throwable converted to an IOE; methods can only let out IOEs.
    */
   private Throwable cleanup(final Throwable t, final String msg) {
+    // Don't log as error if NSRE; NSRE is 'normal' operation.
+    if (t instanceof NotServingRegionException) {
+      LOG.debug("NotServingRegionException; " +  t.getMessage());
+      return t;
+    }
     if (msg == null) {
       LOG.error("", RemoteExceptionHandler.checkThrowable(t));
     } else {

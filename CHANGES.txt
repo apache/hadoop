@@ -798,6 +798,7 @@ Release 0.21.0 - Unreleased
                other times its sequence id, etc.
    HBASE-2873  Minor clean up in basescanner; fix a log and make deletes of
                region processing run in order
+   HBASE-2830  NotServingRegionException shouldn't log a stack trace
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
