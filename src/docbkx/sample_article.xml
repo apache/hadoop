@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article version="5.0" xmlns="http://docbook.org/ns/docbook"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         xmlns:xi="http://www.w3.org/2001/XInclude"
+         xmlns:svg="http://www.w3.org/2000/svg"
+         xmlns:m="http://www.w3.org/1998/Math/MathML"
+         xmlns:html="http://www.w3.org/1999/xhtml"
+         xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <title>Wah-wah
+<?eval ${project.version}?>
+    </title>
+
+
+  </info>
+
+  <section xml:id="wahwah">
+    <title>Wah-Wah changed my life</title>
+
+    <para>I was born very young...</para>
+
+    <para>This is a sample docbook article.</para>
+    <para>
+    <?eval ${project.version}?>
+    </para>
+
+    <section xml:id="then">
+      <title>Then</title>
+
+      <para></para>
+    </section>
+
+    <section xml:id="and">
+      <title>And</title>
+
+      <para></para>
+    </section>
+
+    <section xml:id="later">
+      <title>Later</title>
+
+      <para></para>
+    </section>
+  </section>
+
+  <section xml:id="good_books">
+    <title>Good books</title>
+
+    <para></para>
+  </section>
+
+  <section xml:id="rainy_days">
+    <title>Rainy days</title>
+
+    <para>Today it was raining</para>
+  </section>
+</article>

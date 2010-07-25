@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<book version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+  <info>
+    <title>HBase Book
+<?eval ${project.version}?>
+
+    </title>
+  </info>
+
+  <chapter xml:id="getting_started">
+    <title >Getting Started</title>
+
+    <section>
+      <title>Requirements</title>
+
+      <para>First...</para>
+    </section>
+  </chapter>
+
+  <chapter xml:id="datamodel">
+    <title>Data Model</title>
+
+    <para></para>
+  </chapter>
+
+  <chapter xml:id="implementation">
+    <title>Implementation</title>
+
+    <para></para>
+  </chapter>
+
+  <chapter xml:id="mapreduce">
+    <title>MapReduce</title>
+
+    <para></para>
+  </chapter>
+
+  <chapter xml:id="schema">
+    <title>Schema Design</title>
+
+    <para></para>
+  </chapter>
+
+  <chapter xml:id="shell">
+    <title>Shell</title>
+
+    <para></para>
+  </chapter>
+
+  <chapter xml:id="thrift">
+    <title>Thrift</title>
+
+    <para></para>
+  </chapter>
+
+  <chapter xml:id="rest">
+    <title>REST</title>
+
+    <para></para>
+  </chapter>
+</book>
