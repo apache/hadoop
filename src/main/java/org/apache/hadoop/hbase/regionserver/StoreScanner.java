@@ -227,7 +227,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       return false;
     }
 
-    matcher.setRow(peeked.getRow());
+    // only call setRow if the row changes; avoids confusing the query matcher
+    // if scanning intra-row
+    if ((matcher.row == null) || !peeked.matchingRow(matcher.row)) {
+      matcher.setRow(peeked.getRow());
+    }
+
     KeyValue kv;
     List<KeyValue> results = new ArrayList<KeyValue>();
     LOOP: while((kv = this.heap.peek()) != null) {
