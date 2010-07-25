@@ -30,13 +30,9 @@ module Shell
       end
 
       def refresh_width()
-        @max_width = Java::jline.Terminal.getTerminal().getTerminalWidth()
-
-        # the above doesn't work in some terminals
-        # (such as shell running within emacs)
-        if @max_width == 0
-          @max_width = 100
-        end
+        @max_width = Java::jline.Terminal.getTerminal().getTerminalWidth() if $stdout.tty?
+        # the above doesn't work in some terminals (such as shell running within emacs)
+        @max_width = 100 if @max_width.to_i.zero?
       end
 
       # Takes an output stream and a print width.
