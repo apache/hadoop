@@ -318,14 +318,6 @@ Release 0.21.0 - Unreleased
 
   IMPROVEMENTS
 
-    HDFS-1277. [Herriot] New property for multi user list. (Vinay Thota via
-    cos)
-
-    HDFS-1174. New properties for suspend and resume process. (Vinay Thota via
-    cos)
-
-    HDFS-1199. Extract a subset of tests for smoke (DOA) validation. (cos)
-
     HDFS-381. Remove blocks from DataNode maps when corresponding file
     is deleted. (Suresh Srinivas via rangadi)
 
@@ -694,6 +686,14 @@ Release 0.21.0 - Unreleased
 
     HDFS-1170.  Add more assertions to TestLargeDirectoryDelete.
     (Steve Loughran via tomwhite)
+
+    HDFS-1199. Extract a subset of tests for smoke (DOA) validation. (cos)
+
+    HDFS-1174. New properties for suspend and resume process. (Vinay Thota via
+    cos)
+
+    HDFS-1277. [Herriot] New property for multi user list. (Vinay Thota via
+    cos)
 
   OPTIMIZATIONS
 
