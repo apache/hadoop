@@ -83,6 +83,9 @@ Trunk (unreleased changes)
     HADOOP-6861. Adds new non-static methods in Credentials to read and 
     write token storage file. (Jitendra Pandey & Owen O'Malley via ddas)
 
+    HADOOP-6877. Common part of HDFS-1178 (NameNode servlets should communicate
+    with NameNode directrly). (Kan Zhang via jghoman)
+
   OPTIMIZATIONS
 
   BUG FIXES
