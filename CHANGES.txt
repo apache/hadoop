@@ -151,6 +151,11 @@ Trunk (unreleased changes)
     HADOOP-6536. Fixes FileUtil.fullyDelete() not to delete the contents of
     the sym-linked directory. (Ravi Gummadi via amareshwari)
 
+    HADOOP-6881. Make WritableComparator intialize classes when
+    looking for their raw comparator, as classes often register raw
+    comparators in initializers, which are no longer automatically run
+    in Java 6 when a class is referenced. (cutting via omalley)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
