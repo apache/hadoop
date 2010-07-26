@@ -42,6 +42,11 @@ Release 0.20.3 - Unreleased
     HDFS-132. Fix namenode to not report files deleted metrics for deletions
     done while replaying edits during startup. (suresh & shv)
 
+    HADOOP-6881. Make WritableComparator intialize classes when
+    looking for their raw comparator, as classes often register raw
+    comparators in initializers, which are no longer automatically run
+    in Java 6 when a class is referenced. (cutting via omalley)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
