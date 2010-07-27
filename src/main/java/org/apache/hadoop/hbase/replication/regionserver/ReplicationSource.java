@@ -53,7 +53,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Class that handles the source of a replication stream.
@@ -119,8 +118,12 @@ public class ReplicationSource extends Thread
   private long maxRetriesMultiplier;
   // Current number of entries that we need to replicate
   private int currentNbEntries = 0;
+  // Current number of operations (Put/Delete) that we need to replicate
+  private int currentNbOperations = 0;
   // Indicates if this particular source is running
   private volatile boolean running = true;
+  // Metrics for this source
+  private ReplicationSourceMetrics metrics;
 
   /**
    * Instantiation method used by region servers
@@ -167,6 +170,7 @@ public class ReplicationSource extends Thread
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
     this.clusterId = Byte.valueOf(zkHelper.getClusterId());
+    this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
 
     // Finally look if this is a recovered queue
     this.checkIfQueueRecovered(peerClusterZnode);
@@ -213,6 +217,7 @@ public class ReplicationSource extends Thread
   @Override
   public void enqueueLog(Path log) {
     this.queue.put(log);
+    this.metrics.sizeOfLogQueue.set(queue.size());
   }
 
   @Override
@@ -334,6 +339,7 @@ public class ReplicationSource extends Thread
     HLog.Entry entry = this.reader.next(this.entriesArray[currentNbEntries]);
     while (entry != null) {
       WALEdit edit = entry.getEdit();
+      this.metrics.logEditsReadRate.inc(1);
       seenEntries++;
       // Remove all KVs that should not be replicated
       removeNonReplicableEdits(edit);
@@ -344,7 +350,10 @@ public class ReplicationSource extends Thread
           Bytes.equals(logKey.getTablename(), HConstants.META_TABLE_NAME)) &&
           edit.size() != 0 && replicating.get()) {
         logKey.setClusterId(this.clusterId);
+        currentNbOperations += countDistinctRowKeys(edit);
         currentNbEntries++;
+      } else {
+        this.metrics.logEditsFilteredRate.inc(1);
       }
       // Stop if too many entries or too big
       if ((this.reader.getPosition() - this.position)
@@ -354,7 +363,7 @@ public class ReplicationSource extends Thread
       }
       entry = this.reader.next(entriesArray[currentNbEntries]);
     }
-    LOG.debug("currentNbEntries:" + currentNbEntries +
+    LOG.debug("currentNbOperations:" + currentNbOperations +
         " and seenEntries:" + seenEntries +
         " and size: " + (this.reader.getPosition() - this.position));
     // If we didn't get anything and the queue has an object, it means we
@@ -382,6 +391,7 @@ public class ReplicationSource extends Thread
     try {
       if (this.currentPath == null) {
         this.currentPath = queue.poll(this.sleepForRetries, TimeUnit.MILLISECONDS);
+        this.metrics.sizeOfLogQueue.set(queue.size());
       }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while reading edits", e);
@@ -485,6 +495,24 @@ public class ReplicationSource extends Thread
   }
 
   /**
+   * Count the number of different row keys in the given edit because of
+   * mini-batching. We assume that there's at least one KV in the WALEdit.
+   * @param edit edit to count row keys from
+   * @return number of different row keys
+   */
+  private int countDistinctRowKeys(WALEdit edit) {
+    List<KeyValue> kvs = edit.getKeyValues();
+    int distinctRowKeys = 1;
+    KeyValue lastKV = kvs.get(0);
+    for (int i = 0; i < edit.size(); i++) {
+      if (!kvs.get(i).matchingRow(lastKV)) {
+        distinctRowKeys++;
+      }
+    }
+    return distinctRowKeys;
+  }
+
+  /**
    * Do the shipping logic
    */
   protected void shipEdits() {
@@ -497,6 +525,11 @@ public class ReplicationSource extends Thread
         this.manager.logPositionAndCleanOldLogs(this.currentPath,
             this.peerClusterZnode, this.position, queueRecovered);
         this.totalReplicatedEdits += currentNbEntries;
+        this.metrics.shippedBatchesRate.inc(1);
+        this.metrics.shippedOpsRate.inc(
+            this.currentNbOperations);
+        this.metrics.setAgeOfLastShippedOp(
+            this.entriesArray[this.entriesArray.length-1].getKey().getWriteTime());
         LOG.debug("Replicated in total: " + this.totalReplicatedEdits);
         break;
 

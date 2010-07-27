@@ -219,6 +219,7 @@ public class ReplicationSourceManager implements LogActionsListener {
       this.hlogs.add(newLog.getName());
     }
     this.latestPath = newLog;
+    // This only update the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources) {
       source.enqueueLog(newLog);
     }

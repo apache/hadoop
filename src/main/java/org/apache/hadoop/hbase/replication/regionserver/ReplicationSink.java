@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -35,16 +33,10 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * This class is responsible for replicating the edits coming
@@ -70,6 +62,7 @@ public class ReplicationSink {
   private final HTablePool pool;
   // boolean coming from HRS to know when the process stops
   private final AtomicBoolean stop;
+  private final ReplicationSinkMetrics metrics;
 
   /**
    * Create a sink for replication
@@ -84,6 +77,7 @@ public class ReplicationSink {
     this.pool = new HTablePool(this.conf,
         conf.getInt("replication.sink.htablepool.capacity", 10));
     this.stop = stopper;
+    this.metrics = new ReplicationSinkMetrics();
   }
 
   /**
@@ -95,6 +89,9 @@ public class ReplicationSink {
    */
   public synchronized void replicateEntries(HLog.Entry[] entries)
       throws IOException {
+    if (entries.length == 0) {
+      return;
+    }
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -139,6 +136,9 @@ public class ReplicationSink {
         totalReplicated++;
       }
       put(lastTable, puts);
+      this.metrics.setAgeOfLastAppliedOp(
+          entries[entries.length-1].getKey().getWriteTime());
+      this.metrics.appliedBatchesRate.inc(1);
       LOG.info("Total replicated: " + totalReplicated);
     } catch (IOException ex) {
       if (ex.getCause() instanceof TableNotFoundException) {
@@ -173,6 +173,7 @@ public class ReplicationSink {
     try {
       table = this.pool.getTable(tableName);
       table.put(puts);
+      this.metrics.appliedOpsRate.inc(puts.size());
       this.pool.putTable(table);
       puts.clear();
     } finally {
@@ -193,6 +194,7 @@ public class ReplicationSink {
     try {
       table = this.pool.getTable(tableName);
       table.delete(delete);
+      this.metrics.appliedOpsRate.inc(1);
       this.pool.putTable(table);
     } finally {
       if (table != null) {

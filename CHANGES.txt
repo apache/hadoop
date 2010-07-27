@@ -854,6 +854,7 @@ Release 0.21.0 - Unreleased
    HBASE-2223  Handle 10min+ network partitions between clusters
    HBASE-2862  Name DFSClient for Improved Debugging
                (Nicolas Spiegelberg via Stack)
+   HBASE-2838  Replication metrics
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

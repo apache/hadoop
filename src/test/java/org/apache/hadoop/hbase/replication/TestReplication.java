@@ -180,7 +180,7 @@ public class TestReplication {
    * Add a row, check it's replicated, delete it, check's gone
    * @throws Exception
    */
-  //@Test
+  @Test
   public void testSimplePutDelete() throws Exception {
     LOG.info("testSimplePutDelete");
     Put put = new Put(row);
@@ -228,7 +228,7 @@ public class TestReplication {
    * Try a small batch upload using the write buffer, check it's replicated
    * @throws Exception
    */
-  //@Test
+  @Test
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
     Put put;
@@ -272,7 +272,7 @@ public class TestReplication {
    * replicated, enable it, try replicating and it should work
    * @throws Exception
    */
-  //@Test
+  @Test
   public void testStartStop() throws Exception {
 
     // Test stopping replication
@@ -341,7 +341,7 @@ public class TestReplication {
    * hlog rolling and other non-trivial code paths
    * @throws Exception
    */
-  //@Test
+  @Test
   public void loadTesting() throws Exception {
     htable1.setWriteBufferSize(1024);
     htable1.setAutoFlush(false);
