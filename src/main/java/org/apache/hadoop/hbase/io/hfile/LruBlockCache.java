@@ -95,7 +95,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   static final float DEFAULT_MEMORY_FACTOR = 0.25f;
 
   /** Statistics thread */
-  static final int statThreadPeriod = 60;
+  static final int statThreadPeriod = 60 * 5;
 
   /** Concurrent map (the cache) */
   private final ConcurrentHashMap<String,CachedBlock> map;
