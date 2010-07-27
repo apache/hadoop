@@ -2658,7 +2658,52 @@ public class TestHRegion extends HBaseTestCase {
 
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Bloom filter test
+  //////////////////////////////////////////////////////////////////////////////
 
+  public void testAllColumnsWithBloomFilter() throws IOException {
+    byte [] TABLE = Bytes.toBytes("testAllColumnsWithBloomFilter");
+    byte [] FAMILY = Bytes.toBytes("family");
+
+    //Create table
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY, Integer.MAX_VALUE,
+        HColumnDescriptor.DEFAULT_COMPRESSION,
+        HColumnDescriptor.DEFAULT_IN_MEMORY,
+        HColumnDescriptor.DEFAULT_BLOCKCACHE,
+        Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+        "rowcol",
+        HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    htd.addFamily(hcd);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    Path path = new Path(DIR + "testAllColumnsWithBloomFilter");
+    region = HRegion.createHRegion(info, path, conf);
+
+    // For row:0, col:0: insert versions 1 through 5.
+    byte row[] = Bytes.toBytes("row:" + 0);
+    byte column[] = Bytes.toBytes("column:" + 0);
+    Put put = new Put(row);
+    for (long idx = 1; idx <= 4; idx++) {
+      put.add(FAMILY, column, idx, Bytes.toBytes("value-version-" + idx));
+    }
+    region.put(put);
+
+    //Flush
+    region.flushcache();
+
+    //Get rows
+    Get get = new Get(row);
+    get.setMaxVersions();
+    KeyValue[] kvs = region.get(get, null).raw();
+
+    //Check if rows are correct
+    assertEquals(4, kvs.length);
+    checkOneCell(kvs[0], FAMILY, 0, 0, 4);
+    checkOneCell(kvs[1], FAMILY, 0, 0, 3);
+    checkOneCell(kvs[2], FAMILY, 0, 0, 2);
+    checkOneCell(kvs[3], FAMILY, 0, 0, 1);
+  }
 
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
@@ -2784,4 +2829,24 @@ public class TestHRegion extends HBaseTestCase {
     Path path = new Path(DIR + callingMethod);
     region = HRegion.createHRegion(info, path, conf);
   }
+
+  /**
+   * Assert that the passed in KeyValue has expected contents for the
+   * specified row, column & timestamp.
+   */
+  private void checkOneCell(KeyValue kv, byte[] cf,
+                             int rowIdx, int colIdx, long ts) {
+    String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
+    assertEquals("Row mismatch which checking: " + ctx,
+                 "row:"+ rowIdx, Bytes.toString(kv.getRow()));
+    assertEquals("ColumnFamily mismatch while checking: " + ctx,
+                 Bytes.toString(cf), Bytes.toString(kv.getFamily()));
+    assertEquals("Column qualifier mismatch while checking: " + ctx,
+                 "column:" + colIdx, Bytes.toString(kv.getQualifier()));
+    assertEquals("Timestamp mismatch while checking: " + ctx,
+                 ts, kv.getTimestamp());
+    assertEquals("Value mismatch while checking: " + ctx,
+                 "value-version-" + ts, Bytes.toString(kv.getValue()));
+  }
+
 }

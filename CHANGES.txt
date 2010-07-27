@@ -456,6 +456,7 @@ Release 0.21.0 - Unreleased
                that are in offline state in meta after a split
    HBASE-2815  not able to run the test suite in background because TestShell
                gets suspended on tty output (Alexey Kovyrin via Stack)
+   HBASE-2852  Bloom filter NPE (pranav via jgray)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

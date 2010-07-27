@@ -930,7 +930,7 @@ public class StoreFile {
           key = row;
           break;
         case ROWCOL:
-          if (columns.size() == 1) {
+          if (columns != null && columns.size() == 1) {
             byte[] col = columns.first();
             key = Bytes.add(row, col);
             break;
