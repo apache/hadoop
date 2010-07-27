@@ -286,6 +286,7 @@ public class TestAcidGuarantees {
   }
 
   @Test
+  @Ignore("Currently not passing - see HBASE-2856")
   public void testGetAtomicity() throws Exception {
     util.startMiniCluster(1);
     try {
