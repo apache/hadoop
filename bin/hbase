@@ -67,6 +67,7 @@ if [ $# = 0 ]; then
   if $in_sources_dir; then
     echo "  shell-tests      run the HBase shell tests"
   fi
+  echo "  zkcli            run the ZooKeeper shell"
   echo "  master           run an HBase HMaster node" 
   echo "  regionserver     run an HBase HRegionServer node" 
   echo "  zookeeper        run a Zookeeper server"
@@ -259,6 +260,8 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
   fi
+elif [ "$COMMAND" = "zkcli" ] ; then
+  CLASS='org.apache.zookeeper.ZooKeeperMain'
 else
   CLASS=$COMMAND
 fi

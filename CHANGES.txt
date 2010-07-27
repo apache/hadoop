@@ -808,6 +808,8 @@ Release 0.21.0 - Unreleased
    HBASE-2830  NotServingRegionException shouldn't log a stack trace
    HBASE-2874  Unnecessary double-synchronization in ZooKeeperWrapper
                (Benoît Sigoure via Stack)
+   HBASE-2879  Offer ZK CLI outside of HBase Shell
+               (Nicolas Spiegelberg via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

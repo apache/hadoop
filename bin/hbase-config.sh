@@ -24,9 +24,9 @@
 # also should not be passed any arguments, since we need original $*
 # Modelled after $HADOOP_HOME/bin/hadoop-env.sh.
 
-# resolve links - $0 may be a softlink
+# resolve links - "${BASH_SOURCE-$0}" may be a softlink
 
-this="$0"
+this="${BASH_SOURCE-$0}"
 while [ -h "$this" ]; do
   ls=`ls -ld "$this"`
   link=`expr "$ls" : '.*-> \(.*\)$'`

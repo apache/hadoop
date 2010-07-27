@@ -3,11 +3,11 @@
 # run it from hbase-dir/ just like 'bin/hbase'
 # Supports up to 100 regionservers (limitation = overlapping ports)
 
-bin=`dirname "$0"`
+bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin" >/dev/null && pwd`
 
 if [ $# -lt 2 ]; then
-  S=`basename $0`
+  S=`basename "${BASH_SOURCE-$0}"`
   echo "Usage: $S [start|stop] offset(s)"
   echo ""
   echo "    e.g. $S start 1 2"
