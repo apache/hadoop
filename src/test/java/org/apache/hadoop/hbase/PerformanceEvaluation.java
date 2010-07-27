@@ -745,7 +745,6 @@ public class PerformanceEvaluation {
       this.admin = new HBaseAdmin(conf);
       this.table = new HTable(conf, tableName);
       this.table.setAutoFlush(false);
-      this.table.setWriteBufferSize(1024*1024*12);
       this.table.setScannerCaching(30);
     }
 
