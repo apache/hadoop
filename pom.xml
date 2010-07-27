@@ -948,12 +948,10 @@
         <artifactId>taglist-maven-plugin</artifactId>
         <version>2.4</version>
       </plugin>
-      -->
       <plugin>
         <artifactId>maven-surefire-report-plugin</artifactId>
         <version>2.5</version>
       </plugin>
-      <!--
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>2.1</version>
