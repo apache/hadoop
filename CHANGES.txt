@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HDFS-1315. Add fsck event to audit log and remove other audit log events 
     corresponding to FSCK listStatus and open calls. (suresh)
 
+    HDFS-1178. The NameNode servlets should not use RPC to connect to the 
+    NameNode. (Kan Zhang via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

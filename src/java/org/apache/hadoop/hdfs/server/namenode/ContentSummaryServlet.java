@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
 
@@ -47,9 +46,9 @@ public class ContentSummaryServlet extends DfsServlet {
       (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
-      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
-        public Object run() throws Exception {
+        public Void run() throws Exception {
           final String path = request.getPathInfo();
 
           final PrintWriter out = response.getWriter();
@@ -72,8 +71,7 @@ public class ContentSummaryServlet extends DfsServlet {
             }
             xml.endTag();
           } catch(IOException ioe) {
-            new RemoteException(ioe.getClass().getName(), ioe.getMessage()
-                ).writeXml(path, xml);
+            writeXml(ioe, path, xml);
           }
           xml.endDocument();
           return null;

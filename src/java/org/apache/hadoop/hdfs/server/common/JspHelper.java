@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.common;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -470,7 +472,6 @@ public class JspHelper {
                                             Configuration conf
                                            ) throws IOException {
     UserGroupInformation ugi = null;
-    final String RANDOM_USER = "webuser1234";
     if(UserGroupInformation.isSecurityEnabled()) {
       String user = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
@@ -478,19 +479,18 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
-        if (user == null) {
-          //this really doesn't break any security since we use the 
-          //delegation token for authentication in
-          //the back end.
-          user = RANDOM_USER;
-        }
         InetSocketAddress serviceAddr = NameNode.getAddress(conf);
         LOG.info("Setting service in token: "
             + new Text(serviceAddr.getAddress().getHostAddress() + ":"
                 + serviceAddr.getPort()));
         token.setService(new Text(serviceAddr.getAddress().getHostAddress()
             + ":" + serviceAddr.getPort()));
-        ugi = UserGroupInformation.createRemoteUser(user);
+        ByteArrayInputStream buf = new ByteArrayInputStream(token
+            .getIdentifier());
+        DataInputStream in = new DataInputStream(buf);
+        DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+        id.readFields(in);
+        ugi = id.getUser();
         ugi.addToken(token);
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {

@@ -94,39 +94,40 @@ public class FileDataServlet extends DfsServlet {
    * GET http://<nn>:<port>/data[/<path>] HTTP/1.1
    * }
    */
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
+  public void doGet(final HttpServletRequest request,
+      final HttpServletResponse response)
       throws IOException {
     final Configuration conf = 
       (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     final UserGroupInformation ugi = getUGI(request, conf);
 
     try {
-      final ClientProtocol nnproxy = ugi
-          .doAs(new PrivilegedExceptionAction<ClientProtocol>() {
-            @Override
-            public ClientProtocol run() throws IOException {
-              return createNameNodeProxy();
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws IOException {
+          ClientProtocol nn = createNameNodeProxy();
+          final String path = request.getPathInfo() != null ? request
+              .getPathInfo() : "/";
+
+          String delegationToken = request
+              .getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
+
+          HdfsFileStatus info = nn.getFileInfo(path);
+          if ((info != null) && !info.isDir()) {
+            try {
+              response.sendRedirect(createUri(path, info, ugi, nn, request,
+                  delegationToken).toURL().toString());
+            } catch (URISyntaxException e) {
+              response.getWriter().println(e.toString());
             }
-          });
-
-      final String path =
-        request.getPathInfo() != null ? request.getPathInfo() : "/";
-
-      String delegationToken = 
-        request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
-
-      HdfsFileStatus info = nnproxy.getFileInfo(path);
-      if ((info != null) && !info.isDir()) {
-        String redirect = createUri(path, info, ugi, nnproxy,
-              request, delegationToken).toURL().toString();
-        response.sendRedirect(redirect);
-      } else if (info == null){
-        response.sendError(400, "cat: File not found " + path);
-      } else {
-        response.sendError(400, "cat: " + path + ": is a directory");
-      }
-    } catch (URISyntaxException e) {
-      response.getWriter().println(e.toString());
+          } else if (info == null) {
+            response.sendError(400, "cat: File not found " + path);
+          } else {
+            response.sendError(400, "cat: " + path + ": is a directory");
+          }
+          return null;
+        }
+      });
     } catch (IOException e) {
       response.sendError(400, e.getMessage());
     } catch (InterruptedException e) {

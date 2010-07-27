@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
@@ -107,12 +106,9 @@ public class FileChecksumServlets {
             filename, nnproxy, socketFactory, socketTimeout);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
       } catch(IOException ioe) {
-        new RemoteException(ioe.getClass().getName(), ioe.getMessage()
-            ).writeXml(filename, xml);
+        writeXml(ioe, filename, xml);
       } catch (InterruptedException e) {
-        new RemoteException(e.getClass().getName(), e.getMessage()
-        ).writeXml(filename, xml);
-        
+        writeXml(e, filename, xml);
       }
       xml.endDocument();
     }
