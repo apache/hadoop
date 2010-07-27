@@ -151,11 +151,6 @@ Trunk (unreleased changes)
     HADOOP-6536. Fixes FileUtil.fullyDelete() not to delete the contents of
     the sym-linked directory. (Ravi Gummadi via amareshwari)
 
-    HADOOP-6881. Make WritableComparator intialize classes when
-    looking for their raw comparator, as classes often register raw
-    comparators in initializers, which are no longer automatically run
-    in Java 6 when a class is referenced. (cutting via omalley)
-
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -1754,6 +1749,11 @@ Release 0.20.3 - Unreleased
     HADOOP-6760. WebServer shouldn't increase port number in case of negative
     port setting caused by Jetty's race (cos)
     
+    HADOOP-6881. Make WritableComparator intialize classes when
+    looking for their raw comparator, as classes often register raw
+    comparators in initializers, which are no longer automatically run
+    in Java 6 when a class is referenced. (cutting via omalley)
+
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES
