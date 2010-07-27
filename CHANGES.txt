@@ -166,7 +166,10 @@ Trunk (unreleased changes)
     exception on the server side.  (szetszwo)
 
     HDFS-1308. job conf key for the services name of DelegationToken for HFTP
-     url is constructed incorrectly in HFTPFileSystem (boryas)
+    url is constructed incorrectly in HFTPFileSystem (boryas)
+
+    HDFS-1319. Fix location of re-login for secondary namenode from HDFS-999. 
+    (jghoman)
 
 Release 0.21.0 - Unreleased
 
