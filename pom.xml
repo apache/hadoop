@@ -884,6 +884,7 @@
         <configuration>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
+          <templateFile>src/site/site.vm</templateFile>
         </configuration>
       </plugin>
       <plugin>
