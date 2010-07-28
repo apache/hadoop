@@ -811,6 +811,8 @@ Release 0.21.0 - Unreleased
    HBASE-2879  Offer ZK CLI outside of HBase Shell
                (Nicolas Spiegelberg via Stack)
    HBASE-2886  Add search box to site (Alex Baranau via Stack)
+   HBASE-2868  Do some small cleanups in org.apache.hadoop.hbase.regionserver.wal
+               (Alex Newman via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -58,9 +58,9 @@ public class TestLogActionsListener {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.regionserver.maxlogs", 5);
     fs = FileSystem.get(conf);
-    oldLogDir = new Path(TEST_UTIL.getTestDir(),
+    oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(TEST_UTIL.getTestDir(),
+    logDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
   }
 
