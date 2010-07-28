@@ -437,7 +437,7 @@ Release 0.21.0 - Unreleased
     HADOOP-6692. Add FileContext#listStatus that returns an iterator.
     (hairong)
 
-    HADOOP-6869. Functionality to creating file or folder on a remote daemon
+    HADOOP-6869. Functionality to create file or folder on a remote daemon
     side (Vinay Thota via cos)
 
   IMPROVEMENTS
