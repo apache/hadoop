@@ -85,6 +85,9 @@ Trunk (unreleased changes)
 
     HADOOP-6877. Common part of HDFS-1178 (NameNode servlets should communicate
     with NameNode directrly). (Kan Zhang via jghoman)
+    
+    HADOOP-6475. Adding some javadoc to Server.RpcMetrics, UGI. 
+    (Jitendra Pandey and borya via jghoman)
 
   OPTIMIZATIONS
 
