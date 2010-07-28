@@ -80,8 +80,8 @@ public class HBaseFsck extends HBaseAdmin {
     this.conf = conf;
 
     // setup filesystem properties
-    this.fs = FileSystem.get(conf);
     this.rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    this.fs = rootDir.getFileSystem(conf);
 
 
     // fetch information from master

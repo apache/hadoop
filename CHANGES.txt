@@ -457,6 +457,7 @@ Release 0.21.0 - Unreleased
    HBASE-2815  not able to run the test suite in background because TestShell
                gets suspended on tty output (Alexey Kovyrin via Stack)
    HBASE-2852  Bloom filter NPE (pranav via jgray)
+   HBASE-2820  hbck throws an error if HBase root dir isn't on the default FS
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
