@@ -35,8 +35,9 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 class User implements Principal {
   private final String fullName;
   private final String shortName;
-  private AuthenticationMethod authMethod = null;
-  private LoginContext login = null;
+  private volatile AuthenticationMethod authMethod = null;
+  private volatile LoginContext login = null;
+  private volatile long lastLogin = 0;
 
   public User(String name) {
     this(name, null, null);
@@ -113,5 +114,21 @@ class User implements Principal {
    */
   public void setLogin(LoginContext login) {
     this.login = login;
+  }
+  
+  /**
+   * Set the last login time.
+   * @param time the number of milliseconds since the beginning of time
+   */
+  public void setLastLogin(long time) {
+    lastLogin = time;
+  }
+  
+  /**
+   * Get the time of the last login.
+   * @return the number of milliseconds since the beginning of time.
+   */
+  public long getLastLogin() {
+    return lastLogin;
   }
 }

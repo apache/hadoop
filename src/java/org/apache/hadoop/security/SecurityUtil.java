@@ -25,6 +25,7 @@ import java.security.AccessController;
 import java.util.Set;
 
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
 import org.apache.commons.logging.Log;
@@ -62,21 +63,36 @@ public class SecurityUtil {
     Set<KerberosTicket> tickets = current
         .getPrivateCredentials(KerberosTicket.class);
     for (KerberosTicket t : tickets) {
-      if (isOriginalTGT(t.getServer().getName()))
+      if (isOriginalTGT(t))
         return t;
     }
     throw new IOException("Failed to find TGT from current Subject");
   }
   
-  // Original TGT must be of form "krbtgt/FOO@FOO". Verify this
-  protected static boolean isOriginalTGT(String name) {
-    if(name == null) return false;
-    
-    String [] components = name.split("[/@]");
-
-    return components.length == 3 &&
-           "krbtgt".equals(components[0]) &&
-           components[1].equals(components[2]);
+  /**
+   * TGS must have the server principal of the form "krbtgt/FOO@FOO".
+   * @param principal
+   * @return true or false
+   */
+  static boolean 
+  isTGSPrincipal(KerberosPrincipal principal) {
+    if (principal == null)
+      return false;
+    if (principal.getName().equals("krbtgt/" + principal.getRealm() + 
+        "@" + principal.getRealm())) {
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Check whether the server principal is the TGS's principal
+   * @param ticket the original TGT (the ticket that is obtained when a 
+   * kinit is done)
+   * @return true or false
+   */
+  protected static boolean isOriginalTGT(KerberosTicket ticket) {
+    return isTGSPrincipal(ticket.getServer());
   }
 
   /**

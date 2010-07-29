@@ -20,20 +20,29 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import javax.security.auth.kerberos.KerberosPrincipal;
+
 import org.junit.Test;
 
 public class TestSecurityUtil {
   @Test
   public void isOriginalTGTReturnsCorrectValues() {
-    assertTrue(SecurityUtil.isOriginalTGT("krbtgt/foo@foo"));
-    assertTrue(SecurityUtil.isOriginalTGT("krbtgt/foo.bar.bat@foo.bar.bat"));
-    assertFalse(SecurityUtil.isOriginalTGT(null));
-    assertFalse(SecurityUtil.isOriginalTGT("blah"));
-    assertFalse(SecurityUtil.isOriginalTGT(""));
-    assertFalse(SecurityUtil.isOriginalTGT("krbtgt/hello"));
-    assertFalse(SecurityUtil.isOriginalTGT("/@"));
-    assertFalse(SecurityUtil.isOriginalTGT("this@is/notright"));
-    assertFalse(SecurityUtil.isOriginalTGT("krbtgt/foo@FOO"));
+    assertTrue(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("krbtgt/foo@foo")));
+    assertTrue(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("krbtgt/foo.bar.bat@foo.bar.bat")));
+    assertFalse(SecurityUtil.isTGSPrincipal
+        (null));
+    assertFalse(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("blah")));
+    assertFalse(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("")));
+    assertFalse(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("krbtgt/hello")));
+    assertFalse(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("/@")));
+    assertFalse(SecurityUtil.isTGSPrincipal
+        (new KerberosPrincipal("krbtgt/foo@FOO")));
   }
   
   private void verify(String original, String hostname, String expected)

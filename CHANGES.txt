@@ -94,6 +94,9 @@ Trunk (unreleased changes)
     HADOOP-6475. Adding some javadoc to Server.RpcMetrics, UGI. 
     (Jitendra Pandey and borya via jghoman)
 
+    HADOOP-6656. Adds a thread in the UserGroupInformation to renew TGTs 
+    periodically. (Owen O'Malley and ddas via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
