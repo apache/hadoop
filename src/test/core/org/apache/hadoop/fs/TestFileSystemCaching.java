@@ -179,4 +179,33 @@ public class TestFileSystemCaching {
     fs1.close();
     fs2.close();
   }
+  
+  @Test
+  public void testCloseAllForUGI() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
+    FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Now we should get the cached filesystem
+    FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    assertSame(fsA, fsA1);
+    
+    FileSystem.closeAllForUGI(ugiA);
+    
+    //Now we should get a different (newly created) filesystem
+    fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    assertNotSame(fsA, fsA1);
+  }
 }

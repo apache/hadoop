@@ -26,6 +26,9 @@ Trunk (unreleased changes)
     input path if recursive is true. Block locations are returned together
     with each file's status. (hairong)
 
+    HADOOP-6888. Add a new FileSystem API closeAllForUGI(..) for closing all
+    file systems associated with a particular UGI.  (Kan Zhang via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
