@@ -27,7 +27,8 @@ Trunk (unreleased changes)
     with each file's status. (hairong)
 
     HADOOP-6888. Add a new FileSystem API closeAllForUGI(..) for closing all
-    file systems associated with a particular UGI.  (Kan Zhang via szetszwo)
+    file systems associated with a particular UGI.  (Devaraj Das and Kan Zhang
+    via szetszwo)
 
   IMPROVEMENTS
 
