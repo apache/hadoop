@@ -35,6 +35,9 @@ public class TestFilterFs extends TestCase {
     public Iterator<FileStatus> listStatusIterator(Path f) {
       return null;
     }
+    public Iterator<LocatedFileStatus> listLocatedStatus(final Path f) {
+      return null;
+    }
   }
   
   public void testFilterFileSystem() throws Exception {

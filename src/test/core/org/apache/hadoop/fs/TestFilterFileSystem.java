@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
@@ -105,6 +106,10 @@ public class TestFilterFileSystem extends TestCase {
     public FileStatus[] listStatus(Path[] files, PathFilter filter) { return null; }
     public FileStatus[] globStatus(Path pathPattern) { return null; }
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter) {
+      return null;
+    }
+    public Iterator<LocatedFileStatus> listFiles(
+        final Path path, final boolean isRecursive) {
       return null;
     }
     public void copyFromLocalFile(Path src, Path dst) { }

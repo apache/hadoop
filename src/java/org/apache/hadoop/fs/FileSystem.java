@@ -29,9 +29,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -1278,6 +1281,91 @@ public abstract class FileSystem extends Configured implements Closeable {
     return globPathsLevel(parents, filePattern, level + 1, hasGlob);
   }
 
+  /**
+   * List the statuses and block locations of the files in the given path 
+   * if the path is a directory.
+   * If the given path is a file, return the file's status and block locations.
+   * if recursive is true, list all file statuses and block locations in
+   * the subtree rooted at the given path.
+   * 
+   * @param f is the path
+   * @param recursive if the subdirectories need to be traversed recursively
+   *
+   * @return an iterator that traverses statuses of the files
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation
+   */
+  public Iterator<LocatedFileStatus> listFiles(
+      final Path f, final boolean recursive)
+  throws FileNotFoundException, IOException {
+    return new Iterator<LocatedFileStatus>() {
+      private LinkedList<FileStatus> fileStats = new LinkedList<FileStatus>();
+      private Stack<FileStatus> dirStats = new Stack<FileStatus>();
+      
+      { // initializer
+        list(f);
+      }
+      
+      @Override
+      public boolean hasNext() {
+        if (fileStats.isEmpty()) {
+          listDir();
+        }
+        return !fileStats.isEmpty();
+      }
+      
+      /**
+       * list at least one directory until file list is not empty
+       */
+      private void listDir() {
+        while (fileStats.isEmpty() && !dirStats.isEmpty()) {
+          FileStatus dir = dirStats.pop();
+          list(dir.getPath());
+        }
+      }
+
+      /**
+       * List the given path
+       * 
+       * @param dirPath a path
+       */
+      private void list(Path dirPath) {
+        try {
+          FileStatus[] stats = listStatus(dirPath);
+          for (FileStatus stat : stats) {
+            if (stat.isFile()) {
+              fileStats.add(stat);
+            } else if (recursive) { // directory & recursive
+              dirStats.push(stat);
+            }
+          }
+        } catch (IOException ioe) {
+          throw (RuntimeException) new RuntimeException().initCause(ioe);
+        }        
+      }
+      
+      @Override
+      public LocatedFileStatus next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        FileStatus status = fileStats.remove();
+        try {
+          BlockLocation[] locs = getFileBlockLocations(
+              status, 0, status.getLen());
+          return new LocatedFileStatus(status, locs);
+        } catch (IOException ioe) {
+          throw (RuntimeException) new RuntimeException().initCause(ioe);
+        }
+      }
+      
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("Remove is not supported");
+      }
+    };
+  }
+  
   /** Return the current user's home directory in this filesystem.
    * The default implementation returns "/user/$USER/".
    */

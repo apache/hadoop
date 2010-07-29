@@ -21,6 +21,11 @@ Trunk (unreleased changes)
     HADOOP-6859 - Introduce additional statistics to FileSystem to track 
     file system operations (suresh)
 
+    HADOOP-6870. Add a new API getFiles to FileSystem and FileContext that
+    lists all files under the input path or the subtree rooted at the
+    input path if recursive is true. Block locations are returned together
+    with each file's status. (hairong)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
