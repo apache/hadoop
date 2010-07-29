@@ -171,6 +171,9 @@ Trunk (unreleased changes)
     HDFS-1319. Fix location of re-login for secondary namenode from HDFS-999. 
     (jghoman)
 
+    HDFS-1317. Remove the FILEPATH_PATTERN from hdfsproxy.AuthorizationFilter.
+    (Rohini Palaniswamy via szetszwo)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
