@@ -463,6 +463,7 @@ Release 0.21.0 - Unreleased
    HBASE-2890  Initialize RPC JMX metrics on startup (Gary Helmling via Stack)
    HBASE-2755  Duplicate assignment of a region after region server recovery
                (Kannan Muthukkaruppan via Stack)
+   HBASE-2892  Replication metrics aren't updated
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

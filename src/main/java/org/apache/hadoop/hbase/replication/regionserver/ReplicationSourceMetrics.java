@@ -73,8 +73,6 @@ public class ReplicationSourceMetrics implements Updater {
     metricsRecord = MetricsUtil.createRecord(context, "replication");
     metricsRecord.setTag("RegionServer", name);
     context.registerUpdater(this);
-    // Add jvmmetrics.
-    JvmMetrics.init("RegionServer", name);
     // export for JMX
     new ReplicationStatistics(this.registry, "ReplicationSource for " + id);
   }
@@ -97,5 +95,6 @@ public class ReplicationSourceMetrics implements Updater {
       this.ageOfLastShippedOp.pushMetric(this.metricsRecord);
       this.sizeOfLogQueue.pushMetric(this.metricsRecord);
     }
+    this.metricsRecord.update();
   }
 }

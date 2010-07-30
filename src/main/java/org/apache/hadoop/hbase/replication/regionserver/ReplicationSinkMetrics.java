@@ -58,8 +58,6 @@ public class ReplicationSinkMetrics implements Updater {
     metricsRecord = MetricsUtil.createRecord(context, "replication");
     metricsRecord.setTag("RegionServer", name);
     context.registerUpdater(this);
-    // Add jvmmetrics.
-    JvmMetrics.init("RegionServer", name);
     // export for JMX
     new ReplicationStatistics(this.registry, "ReplicationSink");
   }
@@ -78,5 +76,6 @@ public class ReplicationSinkMetrics implements Updater {
       this.appliedBatchesRate.pushMetric(this.metricsRecord);
       this.ageOfLastAppliedOp.pushMetric(this.metricsRecord);
     }
+    this.metricsRecord.update();
   }
 }
