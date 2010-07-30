@@ -27,14 +27,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -43,31 +39,22 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
-
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test log deletion as logs are rolled.
  */
-public class TestLogRolling  {
+public class TestLogRolling extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
   private HRegionServer server;
   private HLog log;
   private String tableName;
   private byte[] value;
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Configuration conf;
-  private static FileSystem fs;
-  private static MiniHBaseCluster cluster;
 
  // verbose logging on classes that are touched in these tests
  {
@@ -108,43 +95,40 @@ public class TestLogRolling  {
 
   // Need to override this setup so we can edit the config before it gets sent
  // to the HDFS & HBase cluster startup.
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Override
+  protected void setUp() throws Exception {
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
-    TEST_UTIL.getConfiguration().setLong("hbase.hregion.max.filesize", 768L * 1024L);
+    conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
 
     // We roll the log after every 32 writes
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
+    conf.setInt("hbase.regionserver.maxlogentries", 32);
 
     // For less frequently updated regions flush after every 2 flushes
-    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.optionalflushcount", 2);
+    conf.setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.flush.size", 8192);
+    conf.setInt("hbase.hregion.memstore.flush.size", 8192);
 
     // Increase the amount of time between client retries
-    TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 15 * 1000);
+    conf.setLong("hbase.client.pause", 15 * 1000);
 
     // Reduce thread wake frequency so that other threads can get
     // a chance to run.
-    TEST_UTIL.getConfiguration().setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
+    conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
 
    /**** configuration for testLogRollOnDatanodeDeath ****/
    // make sure log.hflush() calls syncFs() to open a pipeline
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
-   // lower the namenode & datanode heartbeat so the namenode
+   conf.setBoolean("dfs.support.append", true);
+   // lower the namenode & datanode heartbeat so the namenode 
    // quickly detects datanode failures
-    TEST_UTIL.getConfiguration().setInt("heartbeat.recheck.interval", 5000);
-    TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
-   // the namenode might still try to choose the recently-dead datanode
+   conf.setInt("heartbeat.recheck.interval", 5000);
+   conf.setInt("dfs.heartbeat.interval", 1);
+   // the namenode might still try to choose the recently-dead datanode 
    // for a pipeline, so try to a new pipeline multiple times
-    TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
-    TEST_UTIL.startMiniCluster(3);
-
-    conf = TEST_UTIL.getConfiguration();
-    cluster = TEST_UTIL.getHBaseCluster();
-    fs = TEST_UTIL.getDFSCluster().getFileSystem();
+   conf.setInt("dfs.client.block.write.retries", 30);
+   
+   super.setUp();
   }
 
   private void startAndWriteData() throws Exception {
@@ -179,7 +163,6 @@ public class TestLogRolling  {
    *
    * @throws Exception
    */
-  @Test
   public void testLogRolling() throws Exception {
     this.tableName = getName();
     try {
@@ -207,11 +190,6 @@ public class TestLogRolling  {
     }
   }
 
-  private static String getName() {
-    // TODO Auto-generated method stub
-    return "TestLogRolling";
-  }
-
   void writeData(HTable table, int rownum) throws Exception {
     Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", rownum)));
     put.add(HConstants.CATALOG_FAMILY, null, value);
@@ -224,31 +202,30 @@ public class TestLogRolling  {
       // continue
     }
   }
-
+  
   /**
    * Tests that logs are rolled upon detecting datanode death
    * Requires an HDFS jar with HDFS-826 & syncFs() support (HDFS-200)
-   *
+   * 
    * @throws Exception
    */
-  @Test
   public void testLogRollOnDatanodeDeath() throws Exception {
-    assertTrue("This test requires HLog file replication.",
+    assertTrue("This test requires HLog file replication.", 
         fs.getDefaultReplication() > 1);
-
+    
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
     this.server = cluster.getRegionServer(0);
     this.log = server.getLog();
-
+    
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
     assertTrue("Need append support for this test", FSUtils.isAppendSupported(conf));
 
     // add up the datanode count, to ensure proper replication when we kill 1
-    TEST_UTIL.getDFSCluster().startDataNodes(conf, 1, true, null, null);
-    TEST_UTIL.getDFSCluster().waitActive();
-    assertTrue(TEST_UTIL.getDFSCluster().getDataNodes().size() >=
+    dfsCluster.startDataNodes(conf, 1, true, null, null);
+    dfsCluster.waitActive();
+    assertTrue(dfsCluster.getDataNodes().size() >= 
                fs.getDefaultReplication() + 1);
 
     // Create the test table and open it
@@ -262,12 +239,12 @@ public class TestLogRolling  {
 
     long curTime = System.currentTimeMillis();
     long oldFilenum = log.getFilenum();
-    assertTrue("Log should have a timestamp older than now",
+    assertTrue("Log should have a timestamp older than now", 
              curTime > oldFilenum && oldFilenum != -1);
 
     // normal write
     writeData(table, 1);
-    assertTrue("The log shouldn't have rolled yet",
+    assertTrue("The log shouldn't have rolled yet", 
               oldFilenum == log.getFilenum());
 
     // kill a datanode in the pipeline to force a log roll on the next sync()
@@ -280,12 +257,12 @@ public class TestLogRolling  {
         break;
       }
     }
-    assertTrue("Need DFSOutputStream.getPipeline() for this test",
+    assertTrue("Need DFSOutputStream.getPipeline() for this test", 
                 getPipeline != null);
     Object repl = getPipeline.invoke(stm, new Object []{} /*NO_ARGS*/);
     DatanodeInfo[] pipeline = (DatanodeInfo[]) repl;
     assertTrue(pipeline.length == fs.getDefaultReplication());
-    DataNodeProperties dnprop = TEST_UTIL.getDFSCluster().stopDataNode(pipeline[0].getName());
+    DataNodeProperties dnprop = dfsCluster.stopDataNode(pipeline[0].getName());
     assertTrue(dnprop != null);
 
     // this write should succeed, but trigger a log roll
