@@ -29,6 +29,8 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
+import java.lang.reflect.Method;
+
 /**
  *
  * This class is for maintaining  the various RPC statistics
@@ -57,6 +59,9 @@ public class HBaseRpcMetrics implements Updater {
 
     context.registerUpdater(this);
 
+    initMethods(HMasterInterface.class);
+    initMethods(HMasterRegionInterface.class);
+    initMethods(HRegionInterface.class);
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }
 
@@ -73,6 +78,12 @@ public class HBaseRpcMetrics implements Updater {
 
   //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
 
+  private void initMethods(Class<? extends HBaseRPCProtocolVersion> protocol) {
+    for (Method m : protocol.getDeclaredMethods()) {
+      if (get(m.getName()) == null)
+        create(m.getName());
+    }
+  }
 
   private MetricsTimeVaryingRate get(String key) {
     return (MetricsTimeVaryingRate) registry.get(key);
