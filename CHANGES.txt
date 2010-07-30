@@ -460,7 +460,7 @@ Release 0.21.0 - Unreleased
    HBASE-2820  hbck throws an error if HBase root dir isn't on the default FS
    HBASE-2884  TestHFileOutputFormat flaky when map tasks generate identical
                data
-   HBASE-2890  init per-method RPC metrics on startup (Gary Helmling via Stack)
+   HBASE-2890  Initialize RPC JMX metrics on startup (Gary Helmling via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
