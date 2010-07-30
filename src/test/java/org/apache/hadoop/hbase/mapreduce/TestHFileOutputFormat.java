@@ -106,10 +106,15 @@ public class TestHFileOutputFormat  {
       byte keyBytes[] = new byte[keyLength];
       byte valBytes[] = new byte[valLength];
       
-      Random random = new Random(System.currentTimeMillis());
+      int taskId = context.getTaskAttemptID().getTaskID().getId();
+      assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
+
+      Random random = new Random();
       for (int i = 0; i < ROWSPERSPLIT; i++) {
 
         random.nextBytes(keyBytes);
+        // Ensure that unique tasks generate unique keys
+        keyBytes[keyLength - 1] = (byte)(taskId & 0xFF);
         random.nextBytes(valBytes);
         ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
 
