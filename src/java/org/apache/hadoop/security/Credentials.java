@@ -28,20 +28,20 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * A class that provides the facilities of reading and writing 
@@ -124,15 +124,18 @@ public class Credentials implements Writable {
    * @param conf
    * @throws IOException
    */
-  public void readTokenStorageFile(Path filename, 
-                                   Configuration conf) throws IOException {
-    FSDataInputStream in = filename.getFileSystem(conf).open(filename);
+  public static Credentials readTokenStorageFile(Path filename, Configuration conf)
+  throws IOException {
+    FSDataInputStream in = null;
+    Credentials credentials = new Credentials();
     try {
-    readTokenStorageStream(in);
-    } catch(IOException ioe) {
-      throw new IOException("Exception reading " + filename, ioe);
-    } finally {
+      in = filename.getFileSystem(conf).open(filename);
+      credentials.readTokenStorageStream(in);
       in.close();
+      return credentials;
+    } catch(IOException ioe) {
+      IOUtils.cleanup(LOG, in);
+      throw new IOException("Exception reading " + filename, ioe);
     }
   }
   

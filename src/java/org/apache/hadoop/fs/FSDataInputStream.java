@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable {
+    implements Seekable, PositionedReadable, Closeable {
 
   public FSDataInputStream(InputStream in)
     throws IOException {

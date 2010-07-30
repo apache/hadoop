@@ -47,9 +47,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -169,6 +170,22 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
   
+  /**
+   * Get the default port for this file system.
+   * @return the default port or 0 if there isn't one
+   */
+  protected int getDefaultPort() {
+    return 0;
+  }
+
+  /**
+   * Get a canonical name for this file system.
+   * @return a URI string that uniquely identifies this file system
+   */
+  public String getCanonicalServiceName() {
+    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
+  }
+
   /** @deprecated call #getUri() instead.*/
   @Deprecated
   public String getName() { return getUri().toString(); }
@@ -328,6 +345,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     return path.makeQualified(this.getUri(), this.getWorkingDirectory());
   }
     
+  /**
+   * Get a new delegation token for this file system.
+   * @param renewer the account name that is allowed to renew the token.
+   * @return a new delegation token
+   * @throws IOException
+   */
+  public Token<?> getDelegationToken(String renewer) throws IOException {
+    return null;
+  }
+
   /** create a file with the provided permission
    * The permission of the file is set to be the provided permission as in
    * setPermission, not permission&~umask
