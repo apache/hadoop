@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LogCleanerDelegate;
-import org.apache.hadoop.hbase.master.TimeToLiveLogCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
@@ -44,8 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
 
   private static final Log LOG =
-      LogFactory.getLog(ReplicationLogCleaner.class);
-  private TimeToLiveLogCleaner ttlCleaner;
+    LogFactory.getLog(ReplicationLogCleaner.class);
   private Configuration conf;
   private ReplicationZookeeperWrapper zkHelper;
   private Set<String> hlogs = new HashSet<String>();
@@ -57,12 +55,6 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
 
   @Override
   public boolean isLogDeletable(Path filePath) {
-
-    // Don't bother going further if the hlog isn't even expired
-    if (!ttlCleaner.isLogDeletable(filePath)) {
-      LOG.debug("Won't delete log since not past due " + filePath);
-      return false;
-    }
     String log = filePath.getName();
     // If we saw the hlog previously, let's consider it's still used
     // At some point in the future we will refresh the list and it will be gone
@@ -72,7 +64,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
 
     // Let's see it's still there
     // This solution makes every miss very expensive to process since we
-    // almost completly refresh the cache each time
+    // almost completely refresh the cache each time
     return !refreshHLogsAndSearch(log);
   }
 
@@ -117,8 +109,6 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-    this.ttlCleaner = new TimeToLiveLogCleaner();
-    this.ttlCleaner.setConf(conf);
     try {
       this.zkHelper = new ReplicationZookeeperWrapper(
           ZooKeeperWrapper.createInstance(this.conf,

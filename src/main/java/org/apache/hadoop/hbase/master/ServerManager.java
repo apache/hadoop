@@ -96,7 +96,7 @@ public class ServerManager {
 
   private int minimumServerCount;
 
-  private final OldLogsCleaner oldLogCleaner;
+  private final LogsCleaner logCleaner;
 
   /*
    * Dumps into log current stats on dead servers and number of servers
@@ -150,11 +150,11 @@ public class ServerManager {
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
-    this.oldLogCleaner = new OldLogsCleaner(
+    this.logCleaner = new LogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
         this.master.getShutdownRequested(), c,
         master.getFileSystem(), master.getOldLogDir());
-    Threads.setDaemonThreadRunning(oldLogCleaner,
+    Threads.setDaemonThreadRunning(logCleaner,
       n + ".oldLogCleaner");
 
   }

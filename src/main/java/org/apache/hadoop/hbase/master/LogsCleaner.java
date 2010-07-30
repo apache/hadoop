@@ -31,24 +31,25 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 /**
  * This Chore, everytime it runs, will clear the logs in the old logs folder
- * that are older than hbase.master.logcleaner.ttl and, in order to limit the
+ * that are deletable for each log cleaner in the chain, in order to limit the
  * number of deletes it sends, will only delete maximum 20 in a single run.
  */
-public class OldLogsCleaner extends Chore {
+public class LogsCleaner extends Chore {
 
-  static final Log LOG = LogFactory.getLog(OldLogsCleaner.class.getName());
+  static final Log LOG = LogFactory.getLog(LogsCleaner.class.getName());
 
   // Max number we can delete on every chore, this is to make sure we don't
   // issue thousands of delete commands around the same time
   private final int maxDeletedLogs;
   private final FileSystem fs;
   private final Path oldLogDir;
-  private final LogCleanerDelegate logCleaner;
+  private List<LogCleanerDelegate> logCleanersChain;
   private final Configuration conf;
 
   /**
@@ -59,36 +60,65 @@ public class OldLogsCleaner extends Chore {
    * @param fs handle to the FS
    * @param oldLogDir the path to the archived logs
    */
-  public OldLogsCleaner(final int p, final AtomicBoolean s,
+  public LogsCleaner(final int p, final AtomicBoolean s,
                         Configuration conf, FileSystem fs,
                         Path oldLogDir) {
-    super("OldLogsCleaner", p, s);
-    // Use the log cleaner provided by replication if enabled, unless something
-    // was already provided
-    if (conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false) &&
-        conf.get("hbase.master.logcleanerplugin.impl") == null) {
-      conf.set("hbase.master.logcleanerplugin.impl",
-          "org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner");
-    }
+    super("LogsCleaner", p, s);
+
     this.maxDeletedLogs =
         conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
     this.fs = fs;
     this.oldLogDir = oldLogDir;
     this.conf = conf;
-    this.logCleaner = getLogCleaner();
+    this.logCleanersChain = new LinkedList<LogCleanerDelegate>();
+
+    initLogCleanersChain();
   }
 
-  private LogCleanerDelegate getLogCleaner() {
+  /*
+   * Initialize the chain of log cleaners from the configuration. The default
+   * three LogCleanerDelegates in this chain are: TimeToLiveLogCleaner,
+   * ReplicationLogCleaner and SnapshotLogCleaner.
+   */
+  private void initLogCleanersChain() {
+    String[] logCleaners = conf.getStrings("hbase.master.logcleaner.plugins");
+    if (logCleaners != null) {
+      for (String className : logCleaners) {
+        LogCleanerDelegate logCleaner = newLogCleaner(className, conf);
+        addLogCleaner(logCleaner);
+      }
+    }
+  }
+
+  /**
+   * A utility method to create new instances of LogCleanerDelegate based
+   * on the class name of the LogCleanerDelegate.
+   * @param className fully qualified class name of the LogCleanerDelegate
+   * @param conf
+   * @return the new instance
+   */
+  public static LogCleanerDelegate newLogCleaner(String className, Configuration conf) {
     try {
-      Class c = Class.forName(conf.get("hbase.master.logcleanerplugin.impl",
-        TimeToLiveLogCleaner.class.getCanonicalName()));
+      Class c = Class.forName(className);
       LogCleanerDelegate cleaner = (LogCleanerDelegate) c.newInstance();
       cleaner.setConf(conf);
       return cleaner;
-    } catch (Exception e) {
-      LOG.warn("Passed log cleaner implementation throws errors, " +
-          "defaulting to TimeToLiveLogCleaner", e);
-      return new TimeToLiveLogCleaner();
+    } catch(Exception e) {
+      LOG.warn("Can NOT create LogCleanerDelegate: " + className, e);
+      // skipping if can't instantiate
+      return null;
+    }
+  }
+
+  /**
+   * Add a LogCleanerDelegate to the log cleaner chain. A log file is deletable
+   * if it is deletable for each LogCleanerDelegate in the chain.
+   * @param logCleaner
+   */
+  public void addLogCleaner(LogCleanerDelegate logCleaner) {
+    if (logCleaner != null && !logCleanersChain.contains(logCleaner)) {
+      logCleanersChain.add(logCleaner);
+      LOG.debug("Add log cleaner in chain: " + logCleaner.getClass().getName());
     }
   }
 
@@ -97,13 +127,18 @@ public class OldLogsCleaner extends Chore {
     try {
       FileStatus[] files = this.fs.listStatus(this.oldLogDir);
       int nbDeletedLog = 0;
-      for (FileStatus file : files) {
+      FILE: for (FileStatus file : files) {
         Path filePath = file.getPath();
         if (HLog.validateHLogFilename(filePath.getName())) {
-          if (logCleaner.isLogDeletable(filePath) ) {
-            this.fs.delete(filePath, true);
-            nbDeletedLog++;
+          for (LogCleanerDelegate logCleaner : logCleanersChain) {
+            if (!logCleaner.isLogDeletable(filePath) ) {
+              // this log is not deletable, continue to process next log file
+              continue FILE;
+            }
           }
+          // delete this log file if it passes all the log cleaners
+          this.fs.delete(filePath, true);
+          nbDeletedLog++;
         } else {
           LOG.warn("Found a wrongly formated file: "
               + file.getPath().getName());
