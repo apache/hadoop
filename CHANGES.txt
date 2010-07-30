@@ -101,6 +101,7 @@ Trunk (unreleased changes)
     HADOOP-6656. Adds a thread in the UserGroupInformation to renew TGTs 
     periodically. (Owen O'Malley and ddas via ddas)
 
+    HADOOP-6890. Improve listFiles API introduced by HADOOP-6870. (hairong)
   OPTIMIZATIONS
 
   BUG FIXES

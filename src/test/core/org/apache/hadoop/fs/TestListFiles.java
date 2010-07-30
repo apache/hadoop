@@ -106,15 +106,15 @@ public class TestListFiles {
   public void testDirectory() throws IOException {
     fs.mkdirs(DIR1);
 
+    // test empty directory
     Iterator<LocatedFileStatus> itor = fs.listFiles(
         DIR1, true);
     assertFalse(itor.hasNext());
     itor = fs.listFiles(DIR1, false);
     assertFalse(itor.hasNext());
     
-    writeFile(fs, FILE2, FILE_LEN);
-    
-    // test empty directory
+    // testing directory with 1 file
+    writeFile(fs, FILE2, FILE_LEN);    
     itor = fs.listFiles(DIR1, true);
     LocatedFileStatus stat = itor.next();
     assertFalse(itor.hasNext());
@@ -123,7 +123,6 @@ public class TestListFiles {
     assertEquals(fs.makeQualified(FILE2), stat.getPath());
     assertEquals(1, stat.getBlockLocations().length);
     
-    // testing directory with 1 file
     itor = fs.listFiles(DIR1, false);
     stat = itor.next();
     assertFalse(itor.hasNext());

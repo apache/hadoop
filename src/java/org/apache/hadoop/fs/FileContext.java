@@ -1286,103 +1286,21 @@ public final class FileContext {
       }
     }.resolve(this, absF);
   }
-
-  /**
-   * List the statuses and block locations of the files in the given path 
-   * if the path is a directory.
-   * If the given path is a file, return the file's status and block locations.
-   * if recursive is true, list all file statuses and block locations in
-   * the subtree rooted at the given path.
-   * Files across symbolic links are also returned.
-   * 
-   * @param f is the path
-   * @param recursive if the subdirectories need to be traversed recursively
-   *
-   * @return an iterator that traverses statuses of the files
-   *
-   * @throws AccessControlException If access is denied
-   * @throws FileNotFoundException If <code>f</code> does not exist
-   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
-   *           not supported
-   * @throws IOException If an I/O error occurred
-   * 
-   * Exceptions applicable to file systems accessed over RPC:
-   * @throws RpcClientException If an exception occurred in the RPC client
-   * @throws RpcServerException If an exception occurred in the RPC server
-   * @throws UnexpectedServerException If server implementation throws 
-   *           undeclared exception to RPC server
-   */
-  public Iterator<LocatedFileStatus> listFiles(
-      final Path f, final boolean recursive) throws AccessControlException,
-      FileNotFoundException, UnsupportedFileSystemException, 
-      IOException {
-    return new Iterator<LocatedFileStatus>() {
-      private Stack<Path> dirs = new Stack<Path>();
-      private Stack<Path> symLinks = new Stack<Path>();
-      Iterator<LocatedFileStatus> itor = listLocatedStatus(f);
-      LocatedFileStatus curFile;
-
-      @Override
-      public boolean hasNext() {
-        try {
-          while (curFile == null) {
-            if (itor.hasNext()) {
-              handleFileStat(itor.next());
-            } else if (!dirs.isEmpty()) {
-              Path dirPath = dirs.pop(); 
-              itor = listLocatedStatus(dirPath);
-            } else if (!symLinks.isEmpty()) {
-              Path symLink = symLinks.pop();
-              FileStatus stat = getFileStatus(symLink);
-              if (stat.isFile() || (recursive && stat.isDirectory())) {
-                itor = listLocatedStatus(stat.getPath());
-              }
-            } else {
-              return false;
-            }
-          }
-          return true;
-        } catch (IOException ioe) {
-          throw (RuntimeException)new RuntimeException().initCause(ioe);
-        }
-      }
-
-      private void handleFileStat(LocatedFileStatus stat) throws IOException {
-        if (stat.isFile()) { // file
-          curFile = stat;
-        } else if (stat.isSymlink()) { // symbolic link
-          symLinks.push(stat.getSymlink());
-        } else if (recursive) { // directory
-          dirs.push(stat.getPath());
-        }
-      }
-
-      @Override
-      public LocatedFileStatus next() {
-        if (hasNext()) {
-          LocatedFileStatus result = curFile;
-          curFile = null;
-          return result;
-        } 
-        throw new java.util.NoSuchElementException("No more entry in " + f);
-      }
-
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported");
-
-      }
-    };
-  }
   
   /**
    * List the statuses of the files/directories in the given path if the path is
-   * a directory. Each returned status contains a file's block locations.
+   * a directory. 
+   * Return the file's status and block locations If the path is a file.
+   * 
+   * If a returned status is a file, it contains the file's block locations.
    * 
    * @param f is the path
    *
    * @return an iterator that traverses statuses of the files/directories 
    *         in the given path
+   * If any IO exception (for example the input directory gets deleted while
+   * listing is being executed), next() or hasNext() of the returned iterator
+   * may throw a RuntimeException with the io exception as the cause.
    *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException If <code>f</code> does not exist
@@ -1676,6 +1594,123 @@ public final class FileContext {
           return fs.listStatus(p);
         }
       }.resolve(FileContext.this, absF);
+    }
+
+    /**
+     * List the statuses and block locations of the files in the given path.
+     * 
+     * If the path is a directory, 
+     *   if recursive is false, returns files in the directory;
+     *   if recursive is true, return files in the subtree rooted at the path.
+     *   The subtree is traversed in the depth-first order.
+     * If the path is a file, return the file's status and block locations.
+     * Files across symbolic links are also returned.
+     * 
+     * @param f is the path
+     * @param recursive if the subdirectories need to be traversed recursively
+     *
+     * @return an iterator that traverses statuses of the files
+     * If any IO exception (for example a sub-directory gets deleted while
+     * listing is being executed), next() or hasNext() of the returned iterator
+     * may throw a RuntimeException with the IO exception as the cause.
+     *
+     * @throws AccessControlException If access is denied
+     * @throws FileNotFoundException If <code>f</code> does not exist
+     * @throws UnsupportedFileSystemException If file system for <code>f</code>
+     *         is not supported
+     * @throws IOException If an I/O error occurred
+     * 
+     * Exceptions applicable to file systems accessed over RPC:
+     * @throws RpcClientException If an exception occurred in the RPC client
+     * @throws RpcServerException If an exception occurred in the RPC server
+     * @throws UnexpectedServerException If server implementation throws 
+     *           undeclared exception to RPC server
+     */
+    public Iterator<LocatedFileStatus> listFiles(
+        final Path f, final boolean recursive) throws AccessControlException,
+        FileNotFoundException, UnsupportedFileSystemException, 
+        IOException {
+      return new Iterator<LocatedFileStatus>() {
+        private Stack<Iterator<LocatedFileStatus>> itors = 
+          new Stack<Iterator<LocatedFileStatus>>();
+        Iterator<LocatedFileStatus> curItor = listLocatedStatus(f);
+        LocatedFileStatus curFile;
+       
+        /**
+         *  {@inheritDoc}
+         *  @return {@inheritDog} 
+         *  @throws Runtimeexception if any IOException occurs during traversal;
+         *  the IOException is set as the cause of the RuntimeException
+         */
+        @Override
+        public boolean hasNext() {
+            while (curFile == null) {
+              if (curItor.hasNext()) {
+                handleFileStat(curItor.next());
+              } else if (!itors.empty()) {
+                curItor = itors.pop();
+              } else {
+                return false;
+              }
+            }
+            return true;
+        }
+
+        /**
+         * Process the input stat.
+         * If it is a file, return the file stat.
+         * If it is a directory, tranverse the directory if recursive is true;
+         * ignore it if recursive is false.
+         * If it is a symlink, resolve the symlink first and then process it
+         * depending on if it is a file or directory.
+         * @param stat input status
+         * @throws RuntimeException if any io error occurs; the io exception
+         * is set as the cause of RuntimeException
+         */
+        private void handleFileStat(LocatedFileStatus stat) {
+          try {
+            if (stat.isFile()) { // file
+              curFile = stat;
+            } else if (stat.isSymlink()) { // symbolic link
+              // resolve symbolic link
+              FileStatus symstat = FileContext.this.getFileStatus(
+                  stat.getSymlink());
+              if (symstat.isFile() || (recursive && symstat.isDirectory())) {
+                itors.push(curItor);
+                curItor = listLocatedStatus(stat.getPath());
+              }
+            } else if (recursive) { // directory
+              itors.push(curItor);
+              curItor = listLocatedStatus(stat.getPath());
+            }
+          } catch (IOException ioe) {
+            throw (RuntimeException)new RuntimeException().initCause(ioe);
+          }
+        }
+
+        /**
+         *  {@inheritDoc}
+         *  @return {@inheritDoc} 
+         *  @throws Runtimeexception if any IOException occurs during traversal;
+         *  the IOException is set as the cause of the RuntimeException
+         *  @exception {@inheritDoc}
+         */
+        @Override
+        public LocatedFileStatus next() {
+          if (hasNext()) {
+            LocatedFileStatus result = curFile;
+            curFile = null;
+            return result;
+          } 
+          throw new java.util.NoSuchElementException("No more entry in " + f);
+        }
+
+        @Override
+        public void remove() {
+          throw new UnsupportedOperationException("Remove is not supported");
+
+        }
+      };
     }
 
     /**
