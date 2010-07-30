@@ -194,7 +194,7 @@ abstract class BaseScanner extends Chore {
         long startCode = getStartCode(values);
 
         // Note Region has been assigned.
-        checkAssigned(regionServer, region, info, serverAddress, startCode);
+        checkAssigned(regionServer, region, info, serverAddress, startCode, true);
         if (isSplitParent(info)) {
           splitParents.put(info, values);
         }
@@ -533,12 +533,15 @@ abstract class BaseScanner extends Chore {
    * @param info
    * @param hostnameAndPort hostname ':' port as it comes out of .META.
    * @param startCode
+   * @param checkTwice should we check twice before adding a region
+   * to unassigned pool.              
    * @throws IOException
    */
   protected void checkAssigned(final HRegionInterface regionServer,
     final MetaRegion meta, final HRegionInfo info,
-    final String hostnameAndPort, final long startCode)
+    final String hostnameAndPort, final long startCode, boolean checkTwice)
   throws IOException {
+    boolean tryAgain = false;
     String serverName = null;
     String sa = hostnameAndPort;
     long sc = startCode;
@@ -575,15 +578,30 @@ abstract class BaseScanner extends Chore {
       // If we can't find the HServerInfo, then add it to the list of
       //  unassigned regions.
       if (storedInfo == null) {
-        // The current assignment is invalid
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Current assignment of " + info.getRegionNameAsString() +
-            " is not valid; " + " serverAddress=" + sa +
-            ", startCode=" + sc + " unknown.");
+        if (checkTwice) {
+          tryAgain = true;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Current assignment of " + info.getRegionNameAsString() +
+              " is not valid; " + " serverAddress=" + sa +
+              ", startCode=" + sc + " unknown.");
+          }
+          // Now get the region assigned
+          this.master.getRegionManager().setUnassigned(info, true);
         }
-        // Now get the region assigned
-        this.master.getRegionManager().setUnassigned(info, true);
       }
+    }
+    if (tryAgain) {
+      // The current assignment is invalid. But we need to try again.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Current assignment of " + info.getRegionNameAsString() +
+          " is not valid; " + " serverAddress=" + sa +
+          ", startCode=" + sc + " unknown; checking once more!");
+      }
+      // passing null for hostNameAndPort will force the function
+      // to reget the assignment from META and protect against
+      // double assignment race conditions (HBASE-2755).
+      checkAssigned(regionServer, meta, info, null, 0, false);
     }
   }
 
