@@ -144,7 +144,7 @@ public class TestDelegationToken {
   public void testDelegationTokenDFSApi() throws Exception {
     DelegationTokenSecretManager dtSecretManager = cluster.getNamesystem().getDelegationTokenSecretManager();
     DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
-    Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
+    Token<DelegationTokenIdentifier> token = dfs.getDelegationToken(new Text("JobTracker"));
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
@@ -157,8 +157,8 @@ public class TestDelegationToken {
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
     final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
-    final Token<DelegationTokenIdentifier> token = 
-      dfs.getDelegationToken("JobTracker");
+    final Token<DelegationTokenIdentifier> token = dfs.getDelegationToken(new Text(
+        "JobTracker"));
     final UserGroupInformation longUgi = UserGroupInformation
         .createRemoteUser("JobTracker/foo.com@FOO.COM");
     final UserGroupInformation shortUgi = UserGroupInformation

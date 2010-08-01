@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
@@ -27,30 +27,30 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 /**
- * Renew delegation tokens over http for use in hftp.
+ * Serve delegation tokens over http for use in hftp.
  */
+@InterfaceAudience.Private
 @SuppressWarnings("serial")
-public class RenewDelegationTokenServlet extends DfsServlet {
-  private static final Log LOG = LogFactory.getLog(RenewDelegationTokenServlet.class);
-  public static final String PATH_SPEC = "/renewDelegationToken";
-  public static final String TOKEN = "token";
+public class DelegationTokenServlet extends DfsServlet {
+  private static final Log LOG = LogFactory.getLog(DelegationTokenServlet.class);
+  public static final String PATH_SPEC = "/getDelegationToken";
+  public static final String RENEWER = "renewer";
   
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
       throws ServletException, IOException {
     final UserGroupInformation ugi;
-    final ServletContext context = getServletContext();
-    final Configuration conf = 
-      (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
     try {
-      ugi = getUGI(req, conf);
+      ugi = getUGI(req, new Configuration());
     } catch(IOException ioe) {
       LOG.info("Request for token received with no authentication from "
           + req.getRemoteAddr(), ioe);
@@ -58,29 +58,39 @@ public class RenewDelegationTokenServlet extends DfsServlet {
           "Unable to identify or authenticate user");
       return;
     }
+    LOG.info("Sending token: {" + ugi.getUserName() + "," + req.getRemoteAddr() +"}");
+    final ServletContext context = getServletContext();
     final NameNode nn = (NameNode) context.getAttribute("name.node");
-    String tokenString = req.getParameter(TOKEN);
-    if (tokenString == null) {
-      resp.sendError(HttpServletResponse.SC_MULTIPLE_CHOICES,
-                     "Token to renew not specified");
-    }
-    final Token<DelegationTokenIdentifier> token = 
-      new Token<DelegationTokenIdentifier>();
-    token.decodeFromUrlString(tokenString);
+    String renewer = req.getParameter(RENEWER);
+    final String renewerFinal = (renewer == null) ? 
+        req.getUserPrincipal().getName() : renewer;
     
+    DataOutputStream dos = null;
     try {
-      long result = ugi.doAs(new PrivilegedExceptionAction<Long>() {
-        public Long run() throws Exception {
-          return nn.renewDelegationToken(token);
+      dos = new DataOutputStream(resp.getOutputStream());
+      final DataOutputStream dosFinal = dos; // for doAs block
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          
+          Token<DelegationTokenIdentifier> token = 
+            nn.getDelegationToken(new Text(renewerFinal));
+          String s = nn.rpcAddress.getAddress().getHostAddress() 
+                     + ":" + nn.rpcAddress.getPort();
+          token.setService(new Text(s));
+          Credentials ts = new Credentials();
+          ts.addToken(new Text(ugi.getShortUserName()), token);
+          ts.write(dosFinal);
+          dosFinal.close();
+          return null;
         }
       });
-      PrintStream os = new PrintStream(resp.getOutputStream());
-      os.println(result);
-      os.close();
+
     } catch(Exception e) {
-      LOG.info("Exception while renewing token. Re-throwing. ", e);
-      resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                     e.getMessage());
+      LOG.info("Exception while sending token. Re-throwing. ", e);
+      resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    } finally {
+      if(dos != null) dos.close();
     }
   }
 }

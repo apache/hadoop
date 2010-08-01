@@ -174,9 +174,6 @@ Trunk (unreleased changes)
     HDFS-1317. Remove the FILEPATH_PATTERN from hdfsproxy.AuthorizationFilter.
     (Rohini Palaniswamy via szetszwo)
 
-    HDFS-1296. using delegation token over hftp for long running 
-    clients (boryas)
-
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
