@@ -30,6 +30,9 @@ Trunk (unreleased changes)
     file systems associated with a particular UGI.  (Devaraj Das and Kan Zhang
     via szetszwo)
 
+    HADOOP-6892. Common component of HDFS-1150 (Verify datanodes' identities 
+    to clients in secure clusters) (jghoman)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
