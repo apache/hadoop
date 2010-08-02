@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -163,6 +164,12 @@ public class FilterFileSystem extends FileSystem {
   /** List files in a directory. */
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f);
+  }
+  
+  /** List files and its block locations in a directory. */
+  public Iterator<LocatedFileStatus> listLocatedStatus(Path f)
+  throws IOException {
+    return fs.listLocatedStatus(f);
   }
   
   public Path getHomeDirectory() {

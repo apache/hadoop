@@ -115,6 +115,13 @@ public class TestFilterFileSystem extends TestCase {
         final Path path, final boolean isRecursive) {
       return null;
     }
+    public Iterator<LocatedFileStatus> listLocatedStatus(Path f) {
+      return null;
+    }
+    public Iterator<LocatedFileStatus> listLocatedStatus(Path f,
+        final PathFilter filter) {
+      return null;
+    }
     public void copyFromLocalFile(Path src, Path dst) { }
     public void moveFromLocalFile(Path[] srcs, Path dst) { }
     public void moveFromLocalFile(Path src, Path dst) { }

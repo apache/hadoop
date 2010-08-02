@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -1320,13 +1319,95 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * List the statuses of the files/directories in the given path if the path is
+   * a directory. 
+   * Return the file's status and block locations If the path is a file.
+   * 
+   * If a returned status is a file, it contains the file's block locations.
+   * 
+   * @param f is the path
+   * @param filter path filter
+   *
+   * @return an iterator that traverses statuses of the files/directories 
+   *         in the given path
+   * If any IO exception (for example the input directory gets deleted while
+   * listing is being executed), next() or hasNext() of the returned iterator
+   * may throw a RuntimeException with the IO exception as the cause.
+   *
+   * @throws FileNotFoundException If <code>f</code> does not exist
+   * @throws IOException If an I/O error occurred
+   */
+  public Iterator<LocatedFileStatus> listLocatedStatus(final Path f)
+  throws FileNotFoundException, IOException {
+    return listLocatedStatus(f, DEFAULT_FILTER);
+  }
+
+  /**
+   * Listing a directory
+   * The returned results include its block location if it is a file
+   * The results are filtered by the given path filter
+   * @param f a path
+   * @param filter a path filter
+   * @return an iterator that traverses statuses of the files/directories 
+   *         in the given path
+   * @throws FileNotFoundException if <code>f</code> does not exist
+   * @throws IOException if any I/O error occurred
+   */
+  protected Iterator<LocatedFileStatus> listLocatedStatus(final Path f,
+      final PathFilter filter)
+  throws FileNotFoundException, IOException {
+    return new Iterator<LocatedFileStatus>() {
+      private final FileStatus[] stats = listStatus(f, filter);
+      private int i = 0;
+
+      /**
+       *  {@inheritDoc}
+       *  @return {@inheritDog} 
+       *  @throws Runtimeexception if any IOException occurs during traversal;
+       *  the IOException is set as the cause of the RuntimeException
+       */
+      @Override
+      public boolean hasNext() {
+        return i<stats.length;
+      }
+
+      /**
+       *  {@inheritDoc}
+       *  @return {@inheritDoc} 
+       *  @throws Runtimeexception if any IOException occurs during traversal;
+       *  the IOException is set as the cause of the RuntimeException
+       *  @exception {@inheritDoc}
+       */
+      @Override
+      public LocatedFileStatus next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException("No more entry in " + f);
+        }
+        FileStatus result = stats[i++];
+        try {
+          BlockLocation[] locs = result.isFile() ?
+            getFileBlockLocations(result.getPath(), 0, result.getLen()) :
+            null;
+          return new LocatedFileStatus(result, locs);
+        } catch (IOException ioe) {
+          throw (RuntimeException)new RuntimeException().initCause(ioe);
+        }
+      }
+      
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("Remove is not supported");
+      }
+    };
+  }
+
+  /**
    * List the statuses and block locations of the files in the given path.
    * 
    * If the path is a directory, 
    *   if recursive is false, returns files in the directory;
    *   if recursive is true, return files in the subtree rooted at the path.
    * If the path is a file, return the file's status and block locations.
-   * Files across symbolic links are also returned.
    * 
    * @param f is the path
    * @param recursive if the subdirectories need to be traversed recursively
@@ -1343,13 +1424,11 @@ public abstract class FileSystem extends Configured implements Closeable {
       final Path f, final boolean recursive)
   throws FileNotFoundException, IOException {
     return new Iterator<LocatedFileStatus>() {
-      private LinkedList<FileStatus> fileStats = new LinkedList<FileStatus>();
-      private Stack<FileStatus> dirStats = new Stack<FileStatus>();
-      
-      { // initializer
-        list(f);
-      }
-      
+      private Stack<Iterator<LocatedFileStatus>> itors = 
+        new Stack<Iterator<LocatedFileStatus>>();
+      Iterator<LocatedFileStatus> curItor = listLocatedStatus(f);
+      LocatedFileStatus curFile;
+     
       /**
        *  {@inheritDoc}
        *  @return {@inheritDog} 
@@ -1358,42 +1437,40 @@ public abstract class FileSystem extends Configured implements Closeable {
        */
       @Override
       public boolean hasNext() {
-        if (fileStats.isEmpty()) {
-          listDir();
+        while (curFile == null) {
+          if (curItor.hasNext()) {
+            handleFileStat(curItor.next());
+          } else if (!itors.empty()) {
+            curItor = itors.pop();
+          } else {
+            return false;
+          }
         }
-        return !fileStats.isEmpty();
-      }
-      
-      /**
-       * list at least one directory until file list is not empty
-       */
-      private void listDir() {
-        while (fileStats.isEmpty() && !dirStats.isEmpty()) {
-          FileStatus dir = dirStats.pop();
-          list(dir.getPath());
-        }
+        return true;
       }
 
       /**
-       * List the given path
-       * 
-       * @param dirPath a path
+       * Process the input stat.
+       * If it is a file, return the file stat.
+       * If it is a directory, tranverse the directory if recursive is true;
+       * ignore it if recursive is false.
+       * @param stat input status
+       * @throws RuntimeException if any io error occurs; the io exception
+       * is set as the cause of RuntimeException
        */
-      private void list(Path dirPath) {
+      private void handleFileStat(LocatedFileStatus stat) {
         try {
-          FileStatus[] stats = listStatus(dirPath);
-          for (FileStatus stat : stats) {
-            if (stat.isFile()) {
-              fileStats.add(stat);
-            } else if (recursive) { // directory & recursive
-              dirStats.push(stat);
-            }
+          if (stat.isFile()) { // file
+            curFile = stat;
+          } else if (recursive) { // directory
+            itors.push(curItor);
+            curItor = listLocatedStatus(stat.getPath());
           }
         } catch (IOException ioe) {
-          throw (RuntimeException) new RuntimeException().initCause(ioe);
-        }        
+          throw (RuntimeException)new RuntimeException().initCause(ioe);
+        }
       }
-      
+
       /**
        *  {@inheritDoc}
        *  @return {@inheritDoc} 
@@ -1403,19 +1480,14 @@ public abstract class FileSystem extends Configured implements Closeable {
        */
       @Override
       public LocatedFileStatus next() {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-        FileStatus status = fileStats.remove();
-        try {
-          BlockLocation[] locs = getFileBlockLocations(
-              status, 0, status.getLen());
-          return new LocatedFileStatus(status, locs);
-        } catch (IOException ioe) {
-          throw (RuntimeException) new RuntimeException().initCause(ioe);
-        }
+        if (hasNext()) {
+          LocatedFileStatus result = curFile;
+          curFile = null;
+          return result;
+        } 
+        throw new java.util.NoSuchElementException("No more entry in " + f);
       }
-      
+
       @Override
       public void remove() {
         throw new UnsupportedOperationException("Remove is not supported");

@@ -1644,16 +1644,16 @@ public final class FileContext {
          */
         @Override
         public boolean hasNext() {
-            while (curFile == null) {
-              if (curItor.hasNext()) {
-                handleFileStat(curItor.next());
-              } else if (!itors.empty()) {
-                curItor = itors.pop();
-              } else {
-                return false;
-              }
+          while (curFile == null) {
+            if (curItor.hasNext()) {
+              handleFileStat(curItor.next());
+            } else if (!itors.empty()) {
+              curItor = itors.pop();
+            } else {
+              return false;
             }
-            return true;
+          }
+          return true;
         }
 
         /**

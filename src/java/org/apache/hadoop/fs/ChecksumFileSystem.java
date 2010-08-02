@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.zip.CRC32;
 
 import org.apache.commons.logging.Log;
@@ -491,6 +492,21 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f, DEFAULT_FILTER);
+  }
+  
+  /**
+   * List the statuses of the files/directories in the given path if the path is
+   * a directory.
+   * 
+   * @param f
+   *          given path
+   * @return the statuses of the files/directories in the given patch
+   * @throws IOException
+   */
+  @Override
+  public Iterator<LocatedFileStatus> listLocatedStatus(Path f)
+  throws IOException {
+    return fs.listLocatedStatus(f, DEFAULT_FILTER);
   }
   
   @Override

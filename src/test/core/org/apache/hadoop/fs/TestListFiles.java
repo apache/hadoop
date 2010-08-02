@@ -138,13 +138,13 @@ public class TestListFiles {
     itor = fs.listFiles(TEST_DIR, true);
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertEquals(fs.makeQualified(FILE1), stat.getPath());
-    stat = itor.next();
-    assertTrue(stat.isFile());
     assertEquals(fs.makeQualified(FILE2), stat.getPath());
     stat = itor.next();
     assertTrue(stat.isFile());
     assertEquals(fs.makeQualified(FILE3), stat.getPath());
+    stat = itor.next();
+    assertTrue(stat.isFile());
+    assertEquals(fs.makeQualified(FILE1), stat.getPath());
     assertFalse(itor.hasNext());
     
     itor = fs.listFiles(TEST_DIR, false);
