@@ -53,10 +53,12 @@
   <property name="build.src" value="${build.dir}/src"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.anttasks" value="${build.dir}/ant"/>
+
   <!-- convert spaces to _ so that mac os doesn't break things -->
-  <exec executable="sed" inputstring="${os.name}" 
+  <exec executable="tr" inputstring="${os.name}" 
         outputproperty="nonspace.os">
-     <arg value="s/ /_/g"/>
+     <arg value="[:space:]"/>
+     <arg value="_"/>
   </exec>
   <property name="build.platform" 
             value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
