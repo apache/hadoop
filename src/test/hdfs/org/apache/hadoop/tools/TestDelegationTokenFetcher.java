@@ -74,7 +74,7 @@ public class TestDelegationTokenFetcher {
     // Create a token for the fetcher to fetch, wire NN to return it when asked
     // for this particular user.
     Token<DelegationTokenIdentifier> t = new Token<DelegationTokenIdentifier>();
-    when(dfs.getDelegationToken(eq(new Text(LONG_NAME)))).thenReturn(t);
+    when(dfs.getDelegationToken(eq(LONG_NAME))).thenReturn(t);
     
     // Now, actually let the TokenFetcher go fetch the token.
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();

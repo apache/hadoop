@@ -176,6 +176,9 @@ Trunk (unreleased changes)
 
     HDFS-912. sed in build.xml on Solaris fails. (Allen Wittenauer via jghoman)
 
+    HDFS-1296. using delegation token over hftp for long running 
+    clients (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
