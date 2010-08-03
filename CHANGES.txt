@@ -173,6 +173,9 @@ Trunk (unreleased changes)
     HADOOP-6873. using delegation token over hftp for long 
     running clients (boryas)
 
+    HADOOP-6706. Improves the sasl failure handling due to expired tickets,
+    and other server detected failures. (Jitendra Pandey and ddas via ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
