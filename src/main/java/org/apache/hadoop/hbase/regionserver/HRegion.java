@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -82,6 +81,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.eclipse.jdt.core.dom.ThisExpression;
 
 import com.google.common.collect.Lists;
 
@@ -123,7 +123,6 @@ import com.google.common.collect.Lists;
  */
 public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
-  static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
 
   final AtomicBoolean closed = new AtomicBoolean(false);
@@ -218,7 +217,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard splits and closes
-  private final ReentrantReadWriteLock splitsAndClosesLock =
+  final ReentrantReadWriteLock splitsAndClosesLock =
     new ReentrantReadWriteLock();
   private final ReentrantReadWriteLock newScannerLock =
     new ReentrantReadWriteLock();
@@ -226,7 +225,6 @@ public class HRegion implements HeapSize { // , Writable{
   // Stop updates lock
   private final ReentrantReadWriteLock updatesLock =
     new ReentrantReadWriteLock();
-  private final Object splitLock = new Object();
   private boolean splitRequest;
 
   private final ReadWriteConsistencyControl rwcc =
@@ -291,7 +289,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
     String encodedNameStr = this.regionInfo.getEncodedName();
-    this.regiondir = new Path(tableDir, encodedNameStr);
+    this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     if (LOG.isDebugEnabled()) {
       // Write out region name as string and its encoded name.
       LOG.debug("Creating region " + this);
@@ -324,12 +322,16 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public long initialize(final Progressable reporter)
   throws IOException {
+    // A region can be reopened if failed a split; reset flags
+    this.closing.set(false);
+    this.closed.set(false);
+
     // Write HRI to a file in case we need to recover .META.
     checkRegioninfoOnFilesystem();
 
     // Remove temporary data left over from old regions
     cleanupTmpDir();
-    
+
     // Load in all the HStores.  Get maximum seqid.
     long maxSeqId = -1;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
@@ -346,7 +348,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
-    FSUtils.deleteDirectory(this.fs, new Path(regiondir, SPLITDIR));
+    SplitTransaction.cleanupAnySplitDetritus(this);
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
 
     // See if region is meant to run read-only.
@@ -369,7 +371,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param initialFiles
    * @throws IOException
    */
-  private static void moveInitialFilesIntoPlace(final FileSystem fs,
+  static void moveInitialFilesIntoPlace(final FileSystem fs,
     final Path initialFiles, final Path regiondir)
   throws IOException {
     if (initialFiles != null && fs.exists(initialFiles)) {
@@ -468,70 +470,68 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException e
    */
-  public List<StoreFile> close(final boolean abort) throws IOException {
+  public synchronized List<StoreFile> close(final boolean abort)
+  throws IOException {
     if (isClosed()) {
-      LOG.warn("region " + this + " already closed");
+      LOG.warn("Region " + this + " already closed");
       return null;
     }
-    synchronized (splitLock) {
-      boolean wasFlushing = false;
-      synchronized (writestate) {
-        // Disable compacting and flushing by background threads for this
-        // region.
-        writestate.writesEnabled = false;
-        wasFlushing = writestate.flushing;
-        LOG.debug("Closing " + this + ": disabling compactions & flushes");
-        while (writestate.compacting || writestate.flushing) {
-          LOG.debug("waiting for" +
-              (writestate.compacting ? " compaction" : "") +
-              (writestate.flushing ?
-                  (writestate.compacting ? "," : "") + " cache flush" :
-                    "") + " to complete for region " + this);
-          try {
-            writestate.wait();
-          } catch (InterruptedException iex) {
-            // continue
-          }
-        }
-      }
-      // If we were not just flushing, is it worth doing a preflush...one
-      // that will clear out of the bulk of the memstore before we put up
-      // the close flag?
-      if (!abort && !wasFlushing && worthPreFlushing()) {
-        LOG.info("Running close preflush of " + this.getRegionNameAsString());
-        internalFlushcache();
-      }
-      newScannerLock.writeLock().lock();
-      this.closing.set(true);
-      try {
-        splitsAndClosesLock.writeLock().lock();
-        LOG.debug("Updates disabled for region, no outstanding scanners on " +
-          this);
+    boolean wasFlushing = false;
+    synchronized (writestate) {
+      // Disable compacting and flushing by background threads for this
+      // region.
+      writestate.writesEnabled = false;
+      wasFlushing = writestate.flushing;
+      LOG.debug("Closing " + this + ": disabling compactions & flushes");
+      while (writestate.compacting || writestate.flushing) {
+        LOG.debug("waiting for" +
+          (writestate.compacting ? " compaction" : "") +
+          (writestate.flushing ?
+            (writestate.compacting ? "," : "") + " cache flush" :
+              "") + " to complete for region " + this);
         try {
-          // Write lock means no more row locks can be given out.  Wait on
-          // outstanding row locks to come in before we close so we do not drop
-          // outstanding updates.
-          waitOnRowLocks();
-          LOG.debug("No more row locks outstanding on region " + this);
-
-          // Don't flush the cache if we are aborting
-          if (!abort) {
-            internalFlushcache();
-          }
-
-          List<StoreFile> result = new ArrayList<StoreFile>();
-          for (Store store: stores.values()) {
-            result.addAll(store.close());
-          }
-          this.closed.set(true);
-          LOG.info("Closed " + this);
-          return result;
-        } finally {
-          splitsAndClosesLock.writeLock().unlock();
+          writestate.wait();
+        } catch (InterruptedException iex) {
+          // continue
         }
-      } finally {
-        newScannerLock.writeLock().unlock();
       }
+    }
+    // If we were not just flushing, is it worth doing a preflush...one
+    // that will clear out of the bulk of the memstore before we put up
+    // the close flag?
+    if (!abort && !wasFlushing && worthPreFlushing()) {
+      LOG.info("Running close preflush of " + this.getRegionNameAsString());
+      internalFlushcache();
+    }
+    newScannerLock.writeLock().lock();
+    this.closing.set(true);
+    try {
+      splitsAndClosesLock.writeLock().lock();
+      LOG.debug("Updates disabled for region, no outstanding scanners on " + this);
+      try {
+        // Write lock means no more row locks can be given out.  Wait on
+        // outstanding row locks to come in before we close so we do not drop
+        // outstanding updates.
+        waitOnRowLocks();
+        LOG.debug("No more row locks outstanding on region " + this);
+
+        // Don't flush the cache if we are aborting
+        if (!abort) {
+          internalFlushcache();
+        }
+
+        List<StoreFile> result = new ArrayList<StoreFile>();
+        for (Store store: stores.values()) {
+          result.addAll(store.close());
+        }
+        this.closed.set(true);
+        LOG.info("Closed " + this);
+        return result;
+      } finally {
+        splitsAndClosesLock.writeLock().unlock();
+      }
+    } finally {
+      newScannerLock.writeLock().unlock();
     }
   }
 
@@ -592,6 +592,17 @@ public class HRegion implements HeapSize { // , Writable{
     return this.regiondir;
   }
 
+  /**
+   * Computes the Path of the HRegion
+   *
+   * @param tabledir qualified path for table
+   * @param name ENCODED region name
+   * @return Path of HRegion directory
+   */
+  public static Path getRegionDir(final Path tabledir, final String name) {
+    return new Path(tabledir, name);
+  }
+
   /** @return FileSystem being used by this region */
   public FileSystem getFilesystem() {
     return this.fs;
@@ -619,113 +630,6 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     return size;
-  }
-
-  /*
-   * Split the HRegion to create two brand-new ones.  This also closes
-   * current HRegion.  Split should be fast since we don't rewrite store files
-   * but instead create new 'reference' store files that read off the top and
-   * bottom ranges of parent store files.
-   * @param splitRow row on which to split region
-   * @return two brand-new HRegions or null if a split is not needed
-   * @throws IOException
-   */
-  HRegion [] splitRegion(final byte [] splitRow) throws IOException {
-    prepareToSplit();
-    synchronized (splitLock) {
-      if (closed.get()) {
-        return null;
-      }
-      // Add start/end key checking: hbase-428.
-      byte [] startKey = this.regionInfo.getStartKey();
-      byte [] endKey = this.regionInfo.getEndKey();
-      if (this.comparator.matchingRows(startKey, 0, startKey.length,
-          splitRow, 0, splitRow.length)) {
-        LOG.debug("Startkey and midkey are same, not splitting");
-        return null;
-      }
-      if (this.comparator.matchingRows(splitRow, 0, splitRow.length,
-          endKey, 0, endKey.length)) {
-        LOG.debug("Endkey and midkey are same, not splitting");
-        return null;
-      }
-      LOG.info("Starting split of region " + this);
-      Path splits = new Path(this.regiondir, SPLITDIR);
-      if(!this.fs.exists(splits)) {
-        this.fs.mkdirs(splits);
-      }
-      // Calculate regionid to use.  Can't be less than that of parent else
-      // it'll insert into wrong location over in .META. table: HBASE-710.
-      long rid = EnvironmentEdgeManager.currentTimeMillis();
-      if (rid < this.regionInfo.getRegionId()) {
-        LOG.warn("Clock skew; parent regions id is " +
-          this.regionInfo.getRegionId() + " but current time here is " + rid);
-        rid = this.regionInfo.getRegionId() + 1;
-      }
-      HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-        startKey, splitRow, false, rid);
-      Path dirA = getSplitDirForDaughter(splits, regionAInfo);
-      HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-        splitRow, endKey, false, rid);
-      Path dirB = getSplitDirForDaughter(splits, regionBInfo);
-
-      // Now close the HRegion.  Close returns all store files or null if not
-      // supposed to close (? What to do in this case? Implement abort of close?)
-      // Close also does wait on outstanding rows and calls a flush just-in-case.
-      List<StoreFile> hstoreFilesToSplit = close(false);
-      if (hstoreFilesToSplit == null) {
-        LOG.warn("Close came back null (Implement abort of close?)");
-        throw new RuntimeException("close returned empty vector of HStoreFiles");
-      }
-
-      // Split each store file.
-      for(StoreFile h: hstoreFilesToSplit) {
-        StoreFile.split(fs,
-          Store.getStoreHomedir(splits, regionAInfo.getEncodedName(),
-            h.getFamily()),
-          h, splitRow, Range.bottom);
-        StoreFile.split(fs,
-          Store.getStoreHomedir(splits, regionBInfo.getEncodedName(),
-            h.getFamily()),
-          h, splitRow, Range.top);
-      }
-
-      // Create a region instance and then move the splits into place under
-      // regionA and regionB.
-      HRegion regionA =
-        HRegion.newHRegion(tableDir, log, fs, conf, regionAInfo, null);
-      moveInitialFilesIntoPlace(this.fs, dirA, regionA.getRegionDir());
-      HRegion regionB =
-        HRegion.newHRegion(tableDir, log, fs, conf, regionBInfo, null);
-      moveInitialFilesIntoPlace(this.fs, dirB, regionB.getRegionDir());
-
-      return new HRegion [] {regionA, regionB};
-    }
-  }
-
-  /*
-   * Get the daughter directories in the splits dir.  The splits dir is under
-   * the parent regions' directory.
-   * @param splits
-   * @param hri
-   * @return Path to split dir.
-   * @throws IOException
-   */
-  private Path getSplitDirForDaughter(final Path splits, final HRegionInfo hri)
-  throws IOException {
-    Path d =
-      new Path(splits, hri.getEncodedName());
-    if (fs.exists(d)) {
-      // This should never happen; the splits dir will be newly made when we
-      // come in here.  Even if we crashed midway through a split, the reopen
-      // of the parent region clears out the dir in its initialize method.
-      throw new IOException("Cannot split; target file collision at " + d);
-    }
-    return d;
-  }
-
-  protected void prepareToSplit() {
-    // nothing
   }
 
   /*
@@ -2689,17 +2593,6 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Computes the Path of the HRegion
    *
-   * @param tabledir qualified path for table
-   * @param name ENCODED region name
-   * @return Path of HRegion directory
-   */
-  public static Path getRegionDir(final Path tabledir, final String name) {
-    return new Path(tabledir, name);
-  }
-
-  /**
-   * Computes the Path of the HRegion
-   *
    * @param rootdir qualified path of HBase root directory
    * @param info HRegionInfo for the region
    * @return qualified path of region directory
@@ -3086,7 +2979,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (19 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +

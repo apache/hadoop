@@ -40,6 +40,13 @@ public class TestImmutableBytesWritable extends TestCase {
       new ImmutableBytesWritable(Bytes.toBytes("xxabc"), 2, 2).hashCode());
   }
 
+  public void testSpecificCompare() {
+    ImmutableBytesWritable ibw1 = new ImmutableBytesWritable(new byte[]{0x0f});
+    ImmutableBytesWritable ibw2 = new ImmutableBytesWritable(new byte[]{0x00, 0x00});
+    ImmutableBytesWritable.Comparator c = new ImmutableBytesWritable.Comparator();
+    assertFalse("ibw1 < ibw2", c.compare( ibw1, ibw2 ) < 0 );
+  }
+
   public void testComparison() throws Exception {
     runTests("aa", "b", -1);
     runTests("aa", "aa", 0);

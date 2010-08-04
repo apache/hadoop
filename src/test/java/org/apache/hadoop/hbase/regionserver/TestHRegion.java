@@ -50,9 +50,11 @@ import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.base.Joiner;
@@ -1247,54 +1249,38 @@ public class TestHRegion extends HBaseTestCase {
   public void testMerge() throws IOException {
     byte [] tableName = Bytes.toBytes("testtable");
     byte [][] families = {fam1, fam2, fam3};
-
     HBaseConfiguration hc = initSplit();
     //Setting up region
     String method = this.getName();
     initHRegion(tableName, method, hc, families);
-
     try {
       LOG.info("" + addContent(region, fam3));
       region.flushcache();
       byte [] splitRow = region.compactStores();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion [] regions = split(region, splitRow);
+      HRegion [] subregions = splitRegion(region, splitRow);
       try {
         // Need to open the regions.
-        // TODO: Add an 'open' to HRegion... don't do open by constructing
-        // instance.
-        for (int i = 0; i < regions.length; i++) {
-          regions[i] = openClosedRegion(regions[i]);
+        for (int i = 0; i < subregions.length; i++) {
+          openClosedRegion(subregions[i]);
+          subregions[i].compactStores();
         }
         Path oldRegionPath = region.getRegionDir();
+        Path oldRegion1 = subregions[0].getRegionDir();
+        Path oldRegion2 = subregions[1].getRegionDir();
         long startTime = System.currentTimeMillis();
-        HRegion subregions [] = region.splitRegion(splitRow);
-        if (subregions != null) {
-          LOG.info("Split region elapsed time: "
-              + ((System.currentTimeMillis() - startTime) / 1000.0));
-          assertEquals("Number of subregions", subregions.length, 2);
-          for (int i = 0; i < subregions.length; i++) {
-            subregions[i] = openClosedRegion(subregions[i]);
-            subregions[i].compactStores();
-          }
-
-          // Now merge it back together
-          Path oldRegion1 = subregions[0].getRegionDir();
-          Path oldRegion2 = subregions[1].getRegionDir();
-          startTime = System.currentTimeMillis();
-          region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
-          LOG.info("Merge regions elapsed time: " +
-              ((System.currentTimeMillis() - startTime) / 1000.0));
-          fs.delete(oldRegion1, true);
-          fs.delete(oldRegion2, true);
-          fs.delete(oldRegionPath, true);
-        }
+        region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
+        LOG.info("Merge regions elapsed time: " +
+            ((System.currentTimeMillis() - startTime) / 1000.0));
+        fs.delete(oldRegion1, true);
+        fs.delete(oldRegion2, true);
+        fs.delete(oldRegionPath, true);
         LOG.info("splitAndMerge completed.");
       } finally {
-        for (int i = 0; i < regions.length; i++) {
+        for (int i = 0; i < subregions.length; i++) {
           try {
-            regions[i].close();
+            subregions[i].close();
           } catch (IOException e) {
             // Ignore.
           }
@@ -1306,6 +1292,38 @@ public class TestHRegion extends HBaseTestCase {
         region.getLog().closeAndDelete();
       }
     }
+  }
+
+  /**
+   * @param parent Region to split.
+   * @param midkey Key to split around.
+   * @return The Regions we created.
+   * @throws IOException
+   */
+  HRegion [] splitRegion(final HRegion parent, final byte [] midkey)
+  throws IOException {
+    PairOfSameType<HRegion> result = null;
+    SplitTransaction st = new SplitTransaction(parent, midkey);
+    // If prepare does not return true, for some reason -- logged inside in
+    // the prepare call -- we are not ready to split just now.  Just return.
+    if (!st.prepare()) return null;
+    try {
+      result = st.execute(null);
+    } catch (IOException ioe) {
+      try {
+        LOG.info("Running rollback of failed split of " +
+          parent.getRegionNameAsString() + "; " + ioe.getMessage());
+        st.rollback(null);
+        LOG.info("Successful rollback of failed split of " +
+          parent.getRegionNameAsString());
+        return null;
+      } catch (RuntimeException e) {
+        // If failed rollback, kill this server to avoid having a hole in table.
+        LOG.info("Failed rollback of failed split of " +
+          parent.getRegionNameAsString() + " -- aborting server", e);
+      }
+    }
+    return new HRegion [] {result.getFirst(), result.getSecond()};
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2140,7 +2158,7 @@ public class TestHRegion extends HBaseTestCase {
       byte [] splitRow = region.compactStores();
       assertNotNull(splitRow);
       LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion [] regions = split(region, splitRow);
+      HRegion [] regions = splitRegion(region, splitRow);
       try {
         // Need to open the regions.
         // TODO: Add an 'open' to HRegion... don't do open by constructing
@@ -2180,7 +2198,7 @@ public class TestHRegion extends HBaseTestCase {
         for (int i = 0; i < regions.length; i++) {
           HRegion[] rs = null;
           if (midkeys[i] != null) {
-            rs = split(regions[i], midkeys[i]);
+            rs = splitRegion(regions[i], midkeys[i]);
             for (int j = 0; j < rs.length; j++) {
               sortedMap.put(Bytes.toString(rs[j].getRegionName()),
                 openClosedRegion(rs[j]));
@@ -2233,7 +2251,7 @@ public class TestHRegion extends HBaseTestCase {
 
     HRegion [] regions = null;
     try {
-      regions = region.splitRegion(Bytes.toBytes("" + splitRow));
+      regions = splitRegion(region, Bytes.toBytes("" + splitRow));
       //Opening the regions returned.
       for (int i = 0; i < regions.length; i++) {
         regions[i] = openClosedRegion(regions[i]);
@@ -2784,15 +2802,6 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
-  protected HRegion [] split(final HRegion r, final byte [] splitRow)
-  throws IOException {
-    // Assert can get mid key from passed region.
-    assertGet(r, fam3, splitRow);
-    HRegion [] regions = r.splitRegion(splitRow);
-    assertEquals(regions.length, 2);
-    return regions;
-  }
-
   private HBaseConfiguration initSplit() {
     HBaseConfiguration conf = new HBaseConfiguration();
     // Always compact if there is more than one store file.
@@ -2827,6 +2836,11 @@ public class TestHRegion extends HBaseTestCase {
     }
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     Path path = new Path(DIR + callingMethod);
+    if (fs.exists(path)) {
+      if (!fs.delete(path, true)) {
+        throw new IOException("Failed delete of " + path);
+      }
+    }
     region = HRegion.createHRegion(info, path, conf);
   }
 

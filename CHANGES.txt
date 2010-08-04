@@ -464,6 +464,8 @@ Release 0.21.0 - Unreleased
    HBASE-2755  Duplicate assignment of a region after region server recovery
                (Kannan Muthukkaruppan via Stack)
    HBASE-2892  Replication metrics aren't updated
+   HBASE-2461  Split doesn't handle IOExceptions when creating new region
+               reference files
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

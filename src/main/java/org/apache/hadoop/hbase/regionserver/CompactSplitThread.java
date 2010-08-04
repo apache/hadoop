@@ -19,17 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.util.StringUtils;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
@@ -37,14 +26,18 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * Compact region on request and then run split if appropriate
  */
 class CompactSplitThread extends Thread {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
-  private HTable root = null;
-  private HTable meta = null;
   private final long frequency;
   private final ReentrantLock lock = new ReentrantLock();
 
@@ -68,7 +61,6 @@ class CompactSplitThread extends Thread {
 
   @Override
   public void run() {
-    int count = 0;
     while (!this.server.isStopRequested()) {
       HRegion r = null;
       try {
@@ -144,78 +136,39 @@ class CompactSplitThread extends Thread {
     }
   }
 
-  private void split(final HRegion region, final byte [] midKey)
+  private void split(final HRegion parent, final byte [] midKey)
   throws IOException {
-    final HRegionInfo oldRegionInfo = region.getRegionInfo();
     final long startTime = System.currentTimeMillis();
-    final HRegion[] newRegions = region.splitRegion(midKey);
-    if (newRegions == null) {
-      // Didn't need to be split
+    SplitTransaction st = new SplitTransaction(parent, midKey);
+    // If prepare does not return true, for some reason -- logged inside in
+    // the prepare call -- we are not ready to split just now.  Just return.
+    if (!st.prepare()) return;
+    try {
+      st.execute(this.server);
+    } catch (IOException ioe) {
+      try {
+        LOG.info("Running rollback of failed split of " +
+          parent.getRegionNameAsString() + "; " + ioe.getMessage());
+        st.rollback(this.server);
+        LOG.info("Successful rollback of failed split of " +
+          parent.getRegionNameAsString());
+      } catch (RuntimeException e) {
+        // If failed rollback, kill this server to avoid having a hole in table.
+        LOG.info("Failed rollback of failed split of " +
+          parent.getRegionNameAsString() + " -- aborting server", e);
+        this.server.abort("Failed split");
+      }
       return;
     }
 
-    // When a region is split, the META table needs to updated if we're
-    // splitting a 'normal' region, and the ROOT table needs to be
-    // updated if we are splitting a META region.
-    HTable t = null;
-    if (region.getRegionInfo().isMetaTable()) {
-      // We need to update the root region
-      if (this.root == null) {
-        this.root = new HTable(conf, HConstants.ROOT_TABLE_NAME);
-      }
-      t = root;
-    } else {
-      // For normal regions we need to update the meta region
-      if (meta == null) {
-        meta = new HTable(conf, HConstants.META_TABLE_NAME);
-      }
-      t = meta;
-    }
-
-    // Mark old region as offline and split in META.
-    // NOTE: there is no need for retry logic here. HTable does it for us.
-    oldRegionInfo.setOffline(true);
-    oldRegionInfo.setSplit(true);
-    // Inform the HRegionServer that the parent HRegion is no-longer online.
-    this.server.removeFromOnlineRegions(oldRegionInfo);
-
-    Put put = new Put(oldRegionInfo.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(oldRegionInfo));
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        HConstants.EMPTY_BYTE_ARRAY);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-        HConstants.EMPTY_BYTE_ARRAY);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
-      Writables.getBytes(newRegions[0].getRegionInfo()));
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
-      Writables.getBytes(newRegions[1].getRegionInfo()));
-    t.put(put);
-
-    // If we crash here, then the daughters will not be added and we'll have
-    // and offlined parent but no daughters to take up the slack.  hbase-2244
-    // adds fixup to the metascanners.
-
-    // Add new regions to META
-    for (int i = 0; i < newRegions.length; i++) {
-      put = new Put(newRegions[i].getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          Writables.getBytes(newRegions[i].getRegionInfo()));
-      t.put(put);
-    }
-
-    // If we crash here, the master will not know of the new daughters and they
-    // will not be assigned.  The metascanner when it runs will notice and take
-    // care of assigning the new daughters.
-
-    // Now tell the master about the new regions
-    server.reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
-      newRegions[1].getRegionInfo());
-
-    LOG.info("region split, META updated, and report to master all" +
-      " successful. Old region=" + oldRegionInfo.toString() +
-      ", new regions: " + newRegions[0].toString() + ", " +
-      newRegions[1].toString() + ". Split took " +
+    // Now tell the master about the new regions.  If we fail here, its OK.
+    // Basescanner will do fix up.  And reporting split to master is going away.
+    // TODO: Verify this still holds in new master rewrite.
+    this.server.reportSplit(parent.getRegionInfo(), st.getFirstDaughter(),
+      st.getSecondDaughter());
+    LOG.info("Region split, META updated, and report to master. Parent=" +
+      parent.getRegionInfo() + ", new regions: " +
+      st.getFirstDaughter() + ", " + st.getSecondDaughter() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
   }
 
