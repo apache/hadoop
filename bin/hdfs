@@ -46,6 +46,20 @@ fi
 COMMAND=$1
 shift
 
+# Determine if we're starting a secure datanode, and if so, redefine appropriate variables
+if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
+  if [ -n "$HADOOP_SECURE_DN_PID_DIR" ]; then
+    HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
+  fi
+
+  if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
+    HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+  fi
+ 
+  HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
+  starting_secure_dn="true"
+fi
+
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
@@ -54,7 +68,11 @@ elif [ "$COMMAND" = "secondarynamenode" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_DATANODE_OPTS"
+  if [[ $EUID -eq 0 ]]; then
+    HADOOP_OPTS="$HADOOP_OPTS -jvm server $HADOOP_DATANODE_OPTS"
+  else
+    HADOOP_OPTS="$HADOOP_OPTS -server $HADOOP_DATANODE_OPTS"
+  fi
 elif [ "$COMMAND" = "dfs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
@@ -110,4 +128,26 @@ if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
 fi
 export CLASSPATH=$CLASSPATH
-exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
+
+# Check to see if we should start a secure datanode
+if [ "$starting_secure_dn" = "true" ]; then
+  if [ "$HADOOP_PID_DIR" = "" ]; then
+    HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
+  else
+   HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
+  fi
+
+  exec "$HADOOP_HOME/bin/jsvc" \
+           -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
+           -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+           -pidfile "$HADOOP_SECURE_DN_PID" \
+           -nodetach \
+           -user "$HADOOP_SECURE_DN_USER" \
+            -cp "$CLASSPATH" \
+           $JAVA_HEAP_MAX $HADOOP_OPTS \
+           org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+else
+  # run it
+  exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
+fi
+

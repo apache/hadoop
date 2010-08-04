@@ -24,6 +24,9 @@ Trunk (unreleased changes)
     HDFS-1023. Allow http server to start as regular principal if https 
     principal not defined. (jghoman)
 
+    HDFS-1150. Verify datanodes' identities to clients in secure clusters.
+    (jghoman)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

@@ -48,5 +48,10 @@ fi
 # start namenode after datanodes, to minimize time namenode is up w/o data
 # note: datanodes will log connection errors until namenode starts
 "$HADOOP_COMMON_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start namenode $nameStartOpt
+#
+if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+  echo "Attempting to start secure cluster, skipping datanodes. Run start-secure-dns.sh as root to complete startup."
+else
 "$HADOOP_COMMON_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start datanode $dataStartOpt
+fi
 "$HADOOP_COMMON_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters --script "$bin"/hdfs start secondarynamenode

@@ -101,7 +101,7 @@ public class TestBlockRecovery {
     when(namenode.sendHeartbeat(any(DatanodeRegistration.class), anyLong(), 
         anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(
             new DatanodeCommand[0]);
-    dn = new DataNode(conf, dirs, namenode);
+    dn = new DataNode(conf, dirs, namenode, null);
   }
 
   /**

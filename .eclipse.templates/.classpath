@@ -15,6 +15,7 @@
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-cli-1.2.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-codec-1.4.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-el-1.0.jar"/>
+  <classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-daemon-1.0.1.jar" />
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-httpclient-3.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop-Hdfs/common/commons-net-1.4.1.jar"/>

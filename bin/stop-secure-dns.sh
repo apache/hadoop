@@ -15,18 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Run as root to start secure datanodes in a security-enabled cluster.
 
-# Stop hadoop DFS daemons.  Run this on master node.
+usage="Usage (run as root in order to stop secure datanodes): stop-secure-dns.sh"
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/hdfs-config.sh
 
-"$HADOOP_COMMON_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop namenode
-if [ -n "$HADOOP_SECURE_DN_USER" ]; then
-  echo "Attempting to stop secure cluster, skipping datanodes. Run stop-secure-dns.sh as root to complete shutdown."
-else
+if [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
   "$HADOOP_COMMON_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop datanode
+else
+  echo $usage
 fi
-"$HADOOP_COMMON_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters --script "$bin"/hdfs stop secondarynamenode

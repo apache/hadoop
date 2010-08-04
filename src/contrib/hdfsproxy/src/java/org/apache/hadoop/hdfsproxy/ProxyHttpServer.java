@@ -46,7 +46,7 @@ public class ProxyHttpServer extends HttpServer {
   }
 
   /** {@inheritDoc} */
-  protected Connector createBaseListener(Configuration conf)
+  public Connector createBaseListener(Configuration conf)
       throws IOException {
     final String sAddr;
     if (null == (sAddr = conf.get("proxy.http.test.listener.addr"))) {

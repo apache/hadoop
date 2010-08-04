@@ -139,6 +139,12 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 	
+	<!-- jsvc properties set here -->
+  <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
+  <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+  <property name="jsvc.location" value="http://apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
+  <property name="jsvc.dest.name" value="jsvc.tar.gz" />
+	
   <!-- IVY properties set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
@@ -919,7 +925,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, api-report, jar-test, ant-tasks"
+  <target name="package" depends="compile, jar, javadoc, docs, api-report, jar-test, ant-tasks, jsvc"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1017,7 +1023,7 @@
     </macro_tar>
   </target>
 
-  <target name="bin-package" depends="compile, jar, jar-test, ant-tasks" 
+  <target name="bin-package" depends="compile, jar, jar-test, ant-tasks, jsvc" 
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1621,4 +1627,15 @@
     </echo>
   </target>
 
+	<target name="jsvc" >
+    <mkdir dir="${jsvc.build.dir}" />
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
+
+    <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
+
+    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
+    <chmod perm="ugo+x" type="file">
+      <fileset file="${jsvc.install.dir}/jsvc"/>
+    </chmod>
+ </target>
 </project>
