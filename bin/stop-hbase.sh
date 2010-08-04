@@ -29,7 +29,34 @@ bin=`cd "$bin">/dev/null; pwd`
 
 . "$bin"/hbase-config.sh
 
-"$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
+# variables needed for stop command
+if [ "$HBASE_LOG_DIR" = "" ]; then
+  export HBASE_LOG_DIR="$HBASE_HOME/logs"
+fi
+mkdir -p "$HBASE_LOG_DIR"
+
+if [ "$HBASE_IDENT_STRING" = "" ]; then
+  export HBASE_IDENT_STRING="$USER"
+fi
+
+export HBASE_LOGFILE=hbase-$HBASE_IDENT_STRING-master-$HOSTNAME.log
+logout=$HBASE_LOG_DIR/hbase-$HBASE_IDENT_STRING-master-$HOSTNAME.out  
+loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
+pid=${HBASE_PID_DIR:-/tmp}/hbase-$HBASE_IDENT_STRING-master.pid
+
+echo -n stopping hbase
+echo "`date` Stopping hbase (via master)" >> $loglog
+
+nohup nice -n ${HBASE_NICENESS:-0} "$HBASE_HOME"/bin/hbase \
+   --config "${HBASE_CONF_DIR}" \
+   master stop "$@" > "$logout" 2>&1 < /dev/null &
+
+while kill -0 `cat $pid` > /dev/null 2>&1; do
+  echo -n "."
+  sleep 1;
+done
+
+# distributed == false means that the HMaster will kill ZK when it exits
 distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distributed`
 if [ "$distMode" == 'true' ] 
 then

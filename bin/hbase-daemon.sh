@@ -132,13 +132,12 @@ case $startStop in
 
   (stop)
     if [ -f $pid ]; then
+      # kill -0 == see if the PID exists 
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
-        echo "`date` Stopping $command" >> $loglog
         if [ "$command" = "master" ]; then
-          nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
-              --config "${HBASE_CONF_DIR}" \
-              $command $startStop "$@" > "$logout" 2>&1 < /dev/null &
+          echo "`date` Killing $command" >> $loglog
+          kill -9 `cat $pid` > /dev/null 2>&1
         else
           echo "`date` Killing $command" >> $loglog
           kill `cat $pid` > /dev/null 2>&1
@@ -150,7 +149,7 @@ case $startStop in
         echo
       else
         retval=$?
-        echo no $command to stop because kill of pid `cat $pid` failed with status $retval
+        echo no $command to stop because kill -0 of pid `cat $pid` failed with status $retval
       fi
     else
       echo no $command to stop because no pid file $pid
