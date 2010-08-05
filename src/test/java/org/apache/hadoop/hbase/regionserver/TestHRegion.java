@@ -2723,6 +2723,47 @@ public class TestHRegion extends HBaseTestCase {
     checkOneCell(kvs[3], FAMILY, 0, 0, 1);
   }
 
+  /**
+    * Testcase to cover bug-fix for HBASE-2823
+    * Ensures correct delete when issuing delete row
+    * on columns with bloom filter set to row+col (BloomType.ROWCOL)
+   */
+  public void testDeleteRowWithBloomFilter() throws IOException {
+    byte [] tableName = Bytes.toBytes("testDeleteRowWithBloomFilter");
+    byte [] familyName = Bytes.toBytes("familyName");
+
+    // Create Table
+    HColumnDescriptor hcd = new HColumnDescriptor(familyName, Integer.MAX_VALUE,
+        HColumnDescriptor.DEFAULT_COMPRESSION, false, true,
+        HColumnDescriptor.DEFAULT_TTL, "rowcol");
+
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(hcd);
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    Path path = new Path(DIR + "TestDeleteRowWithBloomFilter");
+    region = HRegion.createHRegion(info, path, conf);
+
+    // Insert some data
+    byte row[] = Bytes.toBytes("row1");
+    byte col[] = Bytes.toBytes("col1");
+
+    Put put = new Put(row);
+    put.add(familyName, col, 1, Bytes.toBytes("SomeRandomValue"));
+    region.put(put);
+    region.flushcache();
+
+    Delete del = new Delete(row);
+    region.delete(del, null, true);
+    region.flushcache();
+
+    // Get remaining rows (should have none)
+    Get get = new Get(row);
+    get.addColumn(familyName, col);
+
+    KeyValue[] keyValues = region.get(get, null).raw();
+    assertTrue(keyValues.length == 0);
+  }
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {

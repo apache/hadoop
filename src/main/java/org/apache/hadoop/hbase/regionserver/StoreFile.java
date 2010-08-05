@@ -694,6 +694,13 @@ public class StoreFile {
 
       if (bloomType != BloomType.NONE && conf != null) {
         float err = conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float)0.01);
+        // Since in row+col blooms we have 2 calls to shouldSeek() instead of 1
+        // and the false positives are adding up, we should keep the error rate
+        // twice as low in order to maintain the number of false positives as
+        // desired by the user
+        if (bloomType == BloomType.ROWCOL) {
+          err /= 2;
+        }
         int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, 7);
 
         this.bloomFilter = new ByteBloomFilter(maxKeys, err,
@@ -800,7 +807,6 @@ public class StoreFile {
             byte [] result = new byte[rl + ql];
             System.arraycopy(kv.getBuffer(), ro, result, 0,  rl);
             System.arraycopy(kv.getBuffer(), qo, result, rl, ql);
-
             this.bloomFilter.add(result);
             break;
           default:
@@ -943,7 +949,17 @@ public class StoreFile {
       try {
         ByteBuffer bloom = reader.getMetaBlock(BLOOM_FILTER_DATA_KEY, true);
         if (bloom != null) {
-          return this.bloomFilter.contains(key, bloom);
+          if (this.bloomFilterType == BloomType.ROWCOL) {
+            // Since a Row Delete is essentially a DeleteFamily applied to all
+            // columns, a file might be skipped if using row+col Bloom filter.
+            // In order to ensure this file is included an additional check is
+            // required looking only for a row bloom.
+            return this.bloomFilter.contains(key, bloom) ||
+                this.bloomFilter.contains(row, bloom);
+          }
+          else {
+            return this.bloomFilter.contains(key, bloom);
+          }
         }
       } catch (IOException e) {
         LOG.error("Error reading bloom filter data -- proceeding without",

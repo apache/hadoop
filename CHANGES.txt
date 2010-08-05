@@ -469,6 +469,8 @@ Release 0.21.0 - Unreleased
    HBASE-2871  Make "start|stop" commands symmetric for Master & Cluster
                (Nicolas Spiegelberg via Stack)
    HBASE-2901  HBASE-2461 broke build
+   HBASE-2823  Entire Row Deletes not stored in Row+Col Bloom
+               (Alexander Georgiev via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
