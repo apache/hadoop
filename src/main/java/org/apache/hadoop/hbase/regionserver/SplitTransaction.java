@@ -140,17 +140,10 @@ class SplitTransaction {
       // Check splitrow.
       byte [] startKey = hri.getStartKey();
       byte [] endKey = hri.getEndKey();
-      KVComparator comparator = this.parent.comparator;
-      if (comparator.compareRows(startKey, 0, startKey.length,
-          this.splitrow, 0, this.splitrow.length) >= 0) {
-        LOG.info("Split row is <= start key row, not splitting: " +
-          Bytes.toString(this.splitrow));
-        return prepared;
-      }
-      if (comparator.compareRows(this.splitrow, 0, this.splitrow.length,
-          endKey, 0, endKey.length) >= 0) {
-        LOG.info("Split row is >= end key row, not splitting: " +
-          Bytes.toString(this.splitrow));
+      if (Bytes.equals(startKey, splitrow) ||
+          !this.parent.getRegionInfo().containsRow(splitrow)) {
+        LOG.info("Split row is not inside region key range or is equal to " +
+          "startkey: " + Bytes.toString(this.splitrow));
         return prepared;
       }
       long rid = getDaughterRegionIdTimestamp(hri);

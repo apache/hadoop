@@ -468,6 +468,7 @@ Release 0.21.0 - Unreleased
                reference files
    HBASE-2871  Make "start|stop" commands symmetric for Master & Cluster
                (Nicolas Spiegelberg via Stack)
+   HBASE-2901  HBASE-2461 broke build
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
