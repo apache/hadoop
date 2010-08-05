@@ -33,6 +33,8 @@ Trunk (unreleased changes)
     HADOOP-6892. Common component of HDFS-1150 (Verify datanodes' identities 
     to clients in secure clusters) (jghoman)
 
+    HADOOP-6889. Make RPC to have an option to timeout. (hairong)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
@@ -105,6 +107,7 @@ Trunk (unreleased changes)
     periodically. (Owen O'Malley and ddas via ddas)
 
     HADOOP-6890. Improve listFiles API introduced by HADOOP-6870. (hairong)
+
   OPTIMIZATIONS
 
   BUG FIXES

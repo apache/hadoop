@@ -98,11 +98,13 @@ class AvroRpcEngine implements RpcEngine {
   
     public ClientTransceiver(InetSocketAddress addr,
                              UserGroupInformation ticket,
-                             Configuration conf, SocketFactory factory)
+                             Configuration conf, SocketFactory factory,
+                             int rpcTimeout)
       throws IOException {
       this.tunnel =
         (TunnelProtocol)ENGINE.getProxy(TunnelProtocol.class, VERSION,
-                                        addr, ticket, conf, factory);
+                                        addr, ticket, conf, factory,
+                                        rpcTimeout);
       this.remote = addr;
     }
 
@@ -128,14 +130,15 @@ class AvroRpcEngine implements RpcEngine {
 
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
-  public Object getProxy(Class protocol, long clientVersion,
+  public Object getProxy(Class<?> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
-                         Configuration conf, SocketFactory factory)
+                         Configuration conf, SocketFactory factory,
+                         int rpcTimeout)
     throws IOException {
     return Proxy.newProxyInstance
       (protocol.getClassLoader(),
        new Class[] { protocol },
-       new Invoker(protocol, addr, ticket, conf, factory));
+       new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
   }
 
   /** Stop this proxy. */
@@ -152,8 +155,9 @@ class AvroRpcEngine implements RpcEngine {
     private final ReflectRequestor requestor;
     public Invoker(Class<?> protocol, InetSocketAddress addr,
                    UserGroupInformation ticket, Configuration conf,
-                   SocketFactory factory) throws IOException {
-      this.tx = new ClientTransceiver(addr, ticket, conf, factory);
+                   SocketFactory factory,
+                   int rpcTimeout) throws IOException {
+      this.tx = new ClientTransceiver(addr, ticket, conf, factory, rpcTimeout);
       this.requestor = new ReflectRequestor(protocol, tx);
     }
     @Override public Object invoke(Object proxy, Method method, Object[] args) 
@@ -169,7 +173,7 @@ class AvroRpcEngine implements RpcEngine {
   private static class TunnelResponder extends ReflectResponder
     implements TunnelProtocol {
 
-    public TunnelResponder(Class iface, Object impl) {
+    public TunnelResponder(Class<?> iface, Object impl) {
       super(iface, impl);
     }
 
@@ -192,7 +196,7 @@ class AvroRpcEngine implements RpcEngine {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address. */
-  public RPC.Server getServer(Class iface, Object impl, String bindAddress,
+  public RPC.Server getServer(Class<?> iface, Object impl, String bindAddress,
                               int port, int numHandlers, boolean verbose,
                               Configuration conf, 
                        SecretManager<? extends TokenIdentifier> secretManager

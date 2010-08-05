@@ -48,7 +48,7 @@ class WritableRpcEngine implements RpcEngine {
   /** A method invocation, including the method name and its parameters.*/
   private static class Invocation implements Writable, Configurable {
     private String methodName;
-    private Class[] parameterClasses;
+    private Class<?>[] parameterClasses;
     private Object[] parameters;
     private Configuration conf;
 
@@ -64,7 +64,7 @@ class WritableRpcEngine implements RpcEngine {
     public String getMethodName() { return methodName; }
 
     /** The parameter classes. */
-    public Class[] getParameterClasses() { return parameterClasses; }
+    public Class<?>[] getParameterClasses() { return parameterClasses; }
 
     /** The parameter instances. */
     public Object[] getParameters() { return parameters; }
@@ -172,18 +172,21 @@ class WritableRpcEngine implements RpcEngine {
   private static ClientCache CLIENTS=new ClientCache();
   
   private static class Invoker implements InvocationHandler {
-    private Class protocol;
+    private Class<?> protocol;
     private InetSocketAddress address;
     private UserGroupInformation ticket;
+    private int rpcTimeout;
     private Client client;
     private boolean isClosed = false;
 
-    public Invoker(Class protocol,
+    public Invoker(Class<?> protocol,
                    InetSocketAddress address, UserGroupInformation ticket,
-                   Configuration conf, SocketFactory factory) {
+                   Configuration conf, SocketFactory factory,
+                   int rpcTimeout) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
+      this.rpcTimeout = rpcTimeout;
       this.client = CLIENTS.getClient(conf, factory);
     }
 
@@ -197,7 +200,7 @@ class WritableRpcEngine implements RpcEngine {
 
       ObjectWritable value = (ObjectWritable)
         client.call(new Invocation(method, args), address, 
-                    protocol, ticket);
+                    protocol, ticket, rpcTimeout);
       if (logDebug) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -216,14 +219,15 @@ class WritableRpcEngine implements RpcEngine {
   
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
-  public Object getProxy(Class protocol, long clientVersion,
+  public Object getProxy(Class<?> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
-                         Configuration conf, SocketFactory factory)
+                         Configuration conf, SocketFactory factory,
+                         int rpcTimeout)
     throws IOException {    
 
     Object proxy = Proxy.newProxyInstance
       (protocol.getClassLoader(), new Class[] { protocol },
-       new Invoker(protocol, addr, ticket, conf, factory));
+       new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
     if (proxy instanceof VersionedProtocol) {
       long serverVersion = ((VersionedProtocol)proxy)
         .getProtocolVersion(protocol.getName(), clientVersion);
@@ -276,7 +280,7 @@ class WritableRpcEngine implements RpcEngine {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address. */
-  public Server getServer(Class protocol,
+  public Server getServer(Class<?> protocol,
                           Object instance, String bindAddress, int port,
                           int numHandlers, boolean verbose, Configuration conf,
                       SecretManager<? extends TokenIdentifier> secretManager) 

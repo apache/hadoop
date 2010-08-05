@@ -219,6 +219,7 @@ public class Client {
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
     private DataOutputStream out;
+    private int rpcTimeout;
     
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
@@ -233,7 +234,7 @@ public class Client {
         throw new UnknownHostException("unknown host: " + 
                                        remoteId.getAddress().getHostName());
       }
-      
+      this.rpcTimeout = remoteId.getRpcTimeout();
       UserGroupInformation ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
       this.useSasl = UserGroupInformation.isSecurityEnabled();
@@ -321,11 +322,13 @@ public class Client {
       }
 
       /* Process timeout exception
-       * if the connection is not going to be closed, send a ping.
+       * if the connection is not going to be closed or 
+       * is not configured to have a RPC timeout, send a ping.
+       * (if rpcTimeout is not set to be 0, then RPC should timeout.
        * otherwise, throw the timeout exception.
        */
       private void handleTimeout(SocketTimeoutException e) throws IOException {
-        if (shouldCloseConnection.get() || !running.get()) {
+        if (shouldCloseConnection.get() || !running.get() || rpcTimeout > 0) {
           throw e;
         } else {
           sendPing();
@@ -405,6 +408,9 @@ public class Client {
           this.socket.setTcpNoDelay(tcpNoDelay);
           // connection time out is 20s
           NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
+          if (rpcTimeout > 0) {
+            pingInterval = rpcTimeout;  // rpcTimeout overwrites pingInterval
+          }
           this.socket.setSoTimeout(pingInterval);
           return;
         } catch (SocketTimeoutException toe) {
@@ -952,7 +958,7 @@ public class Client {
   public Writable call(Writable param, InetSocketAddress addr, 
       UserGroupInformation ticket)  
       throws InterruptedException, IOException {
-    return call(param, addr, null, ticket);
+    return call(param, addr, null, ticket, 0);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server running at
@@ -961,10 +967,12 @@ public class Client {
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception. */
   public Writable call(Writable param, InetSocketAddress addr, 
-                       Class<?> protocol, UserGroupInformation ticket)  
+                       Class<?> protocol, UserGroupInformation ticket,
+                       int rpcTimeout)  
                        throws InterruptedException, IOException {
     Call call = new Call(param);
-    Connection connection = getConnection(addr, protocol, ticket, call);
+    Connection connection = getConnection(
+        addr, protocol, ticket, rpcTimeout, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
     synchronized (call) {
@@ -1054,7 +1062,7 @@ public class Client {
         ParallelCall call = new ParallelCall(params[i], results, i);
         try {
           Connection connection = 
-            getConnection(addresses[i], protocol, ticket, call);
+            getConnection(addresses[i], protocol, ticket, 0, call);
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
           // log errors
@@ -1078,6 +1086,7 @@ public class Client {
   private Connection getConnection(InetSocketAddress addr,
                                    Class<?> protocol,
                                    UserGroupInformation ticket,
+                                   int rpcTimeout,
                                    Call call)
                                    throws IOException, InterruptedException {
     if (!running.get()) {
@@ -1089,7 +1098,8 @@ public class Client {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, protocol, ticket);
+    ConnectionId remoteId = new ConnectionId(
+        addr, protocol, ticket, rpcTimeout);
     do {
       synchronized (connections) {
         connection = connections.get(remoteId);
@@ -1117,12 +1127,14 @@ public class Client {
     UserGroupInformation ticket;
     Class<?> protocol;
     private static final int PRIME = 16777619;
+    private int rpcTimeout;
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
-                 UserGroupInformation ticket) {
+                 UserGroupInformation ticket, int rpcTimeout) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
+      this.rpcTimeout = rpcTimeout;
     }
     
     InetSocketAddress getAddress() {
@@ -1137,6 +1149,9 @@ public class Client {
       return ticket;
     }
     
+    private int getRpcTimeout() {
+      return rpcTimeout;
+    }
     
     @Override
     public boolean equals(Object obj) {
@@ -1144,15 +1159,19 @@ public class Client {
        ConnectionId id = (ConnectionId) obj;
        return address.equals(id.address) && protocol == id.protocol && 
               ((ticket != null && ticket.equals(id.ticket)) ||
-               (ticket == id.ticket));
+               (ticket == id.ticket)) && rpcTimeout == id.rpcTimeout;
      }
      return false;
     }
     
-    @Override
+    @Override  // simply use the default Object#hashcode() ?
     public int hashCode() {
-      return (address.hashCode() + PRIME * System.identityHashCode(protocol)) ^ 
-             (ticket == null ? 0 : ticket.hashCode());
+      return (address.hashCode() + PRIME * (
+                PRIME * (
+                  PRIME * System.identityHashCode(protocol) ^
+                  System.identityHashCode(ticket)
+                ) ^ System.identityHashCode(rpcTimeout)
+              ));
     }
   }  
 }

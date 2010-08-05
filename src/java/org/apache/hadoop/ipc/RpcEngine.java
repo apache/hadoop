@@ -32,10 +32,10 @@ import org.apache.hadoop.conf.Configuration;
 interface RpcEngine {
 
   /** Construct a client-side proxy object. */
-  Object getProxy(Class protocol,
+  Object getProxy(Class<?> protocol,
                   long clientVersion, InetSocketAddress addr,
                   UserGroupInformation ticket, Configuration conf,
-                  SocketFactory factory) throws IOException;
+                  SocketFactory factory, int rpcTimeout) throws IOException;
 
   /** Stop this proxy. */
   void stopProxy(Object proxy);
@@ -46,7 +46,7 @@ interface RpcEngine {
     throws IOException, InterruptedException;
 
   /** Construct a server for a protocol implementation instance. */
-  RPC.Server getServer(Class protocol, Object instance, String bindAddress,
+  RPC.Server getServer(Class<?> protocol, Object instance, String bindAddress,
                        int port, int numHandlers, boolean verbose,
                        Configuration conf, 
                        SecretManager<? extends TokenIdentifier> secretManager
