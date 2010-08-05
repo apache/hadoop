@@ -712,6 +712,8 @@ Release 0.21.0 - Unreleased
     HDFS-1277. [Herriot] New property for multi user list. (Vinay Thota via
     cos)
 
+    HDFS-806. Add new unit tests to the 10-mins 'run-commit-test' target (cos)
+
   OPTIMIZATIONS
 
     HDFS-946. NameNode should not return full path name when lisitng a
