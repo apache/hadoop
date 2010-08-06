@@ -107,6 +107,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -407,9 +408,10 @@ public class DataNode extends Configured
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = (secureResources == null) 
        ? new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0, 
-           conf)
+           conf, new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")))
        : new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0,
-           conf, secureResources.getListener());
+           conf, new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")),
+           secureResources.getListener());
     LOG.debug("Datanode listening on " + infoHost + ":" + tmpInfoPort);
     if (conf.getBoolean("dfs.https.enable", false)) {
       boolean needClientAuth = conf.getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,

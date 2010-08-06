@@ -52,6 +52,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
@@ -191,7 +192,8 @@ public class SecondaryNameNode implements Runnable {
 
           int tmpInfoPort = infoSocAddr.getPort();
           infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
-              tmpInfoPort == 0, conf);
+              tmpInfoPort == 0, conf, 
+              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")));
           
           if(UserGroupInformation.isSecurityEnabled()) {
             System.setProperty("https.cipherSuites", 

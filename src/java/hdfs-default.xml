@@ -210,6 +210,15 @@ creations/deletions), or "all".</description>
   <value>supergroup</value>
   <description>The name of the group of super-users.</description>
 </property>
+<!--
+<property>
+   <name>dfs.cluster.administrators</name>
+   <value>ACL for the admins</value>
+   <description>This configuration is used to control who can access the
+                default servlets in the namenode, etc.
+   </description>
+</property>
+-->
 
 <property>
   <name>dfs.block.access.token.enable</name>

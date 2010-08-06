@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     HDFS-1178. The NameNode servlets should not use RPC to connect to the 
     NameNode. (Kan Zhang via jghoman)
 
+    HDFS-1130. Adds dfs.cluster.administrator ACL configuration that can
+    be used to control who can view the default hdfs servlets. (ddas)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

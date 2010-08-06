@@ -242,6 +242,12 @@ are the user and group identity of the super-user, and <em>M</em> is a configura
     <br />The <code>umask</code> used when creating files and directories. For configuration files, the decimal 
 		value <em>18<sub>10</sub></em> may be used.
 	</li>
+
+        <li><code>dfs.cluster.administrators = ACL-for-admins></code>
+        <br />The administrators for the cluster specified as an ACL. This
+              controls who can access the default servlets, etc. in the
+              HDFS.
+        </li>
 </ul>
 </section>
 

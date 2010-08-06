@@ -92,6 +92,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
@@ -455,7 +456,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         public HttpServer run() throws IOException, InterruptedException {
           int infoPort = infoSocAddr.getPort();
           httpServer = new HttpServer("hdfs", infoHost, infoPort,
-              infoPort == 0, conf);
+              infoPort == 0, conf, 
+              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")));
 
           boolean certSSL = conf.getBoolean("dfs.https.enable", false);
           boolean useKrb = UserGroupInformation.isSecurityEnabled();
