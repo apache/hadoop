@@ -143,7 +143,7 @@ public class Client {
     int code = httpClient.executeMethod(method);
     long endTime = System.currentTimeMillis();
     if (LOG.isDebugEnabled()) {
-      LOG.debug(method.getName() + " " + uri + ": " + code + " " +
+      LOG.debug(method.getName() + " " + uri + " " + code + " " +
         method.getStatusText() + " in " + (endTime - startTime) + " ms");
     }
     return code;

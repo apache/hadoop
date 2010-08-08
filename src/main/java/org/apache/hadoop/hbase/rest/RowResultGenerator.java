@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
@@ -31,8 +34,11 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 
 public class RowResultGenerator extends ResultGenerator {
+  private static final Log LOG = LogFactory.getLog(RowResultGenerator.class);
+
   private Iterator<KeyValue> valuesI;
   private KeyValue cache;
 
@@ -67,6 +73,14 @@ public class RowResultGenerator extends ResultGenerator {
       if (result != null && !result.isEmpty()) {
         valuesI = result.list().iterator();
       }
+    } catch (NoSuchColumnFamilyException e) {
+      // Warn here because Stargate will return 404 in the case if multiple
+      // column families were specified but one did not exist -- currently
+      // HBase will fail the whole Get.
+      // Specifying multiple columns in a URI should be uncommon usage but
+      // help to avoid confusion by leaving a record of what happened here in
+      // the log.
+      LOG.warn(StringUtils.stringifyException(e));
     } finally {
       pool.putTable(table);
     }

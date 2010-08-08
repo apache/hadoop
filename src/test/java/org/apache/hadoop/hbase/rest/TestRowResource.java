@@ -312,6 +312,17 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     checkValueXML(TABLE, encodedKey, COLUMN_2, VALUE_2);
   }
 
+  public void testNoSuchCF() throws IOException, JAXBException {
+    final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA;
+    final String badPath = "/" + TABLE + "/" + ROW_1 + "/" + "BAD";
+    Response response = client.post(goodPath, MIMETYPE_BINARY,
+      Bytes.toBytes(VALUE_1));
+    assertEquals(response.getCode(), 200);
+    assertEquals(client.get(goodPath, MIMETYPE_BINARY).getCode(), 200);
+    assertEquals(client.get(badPath, MIMETYPE_BINARY).getCode(), 404);
+    assertEquals(client.get(goodPath, MIMETYPE_BINARY).getCode(), 200);
+  }
+
   void doTestMultiCellGetPutXML() throws IOException, JAXBException {
     String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
 
