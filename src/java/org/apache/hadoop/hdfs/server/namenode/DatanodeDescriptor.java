@@ -38,15 +38,13 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.WritableUtils;
 
 /**************************************************
- * DatanodeDescriptor tracks stats on a given DataNode,
- * such as available storage capacity, last update time, etc.,
- * and maintains a set of blocks stored on the datanode. 
+ * DatanodeDescriptor tracks stats on a given DataNode, such as
+ * available storage capacity, last update time, etc., and maintains a
+ * set of blocks stored on the datanode.
  *
- * This data structure is a data structure that is internal
- * to the namenode. It is *not* sent over-the-wire to the Client
- * or the Datnodes. Neither is it stored persistently in the
- * fsImage.
-
+ * This data structure is internal to the namenode. It is *not* sent
+ * over-the-wire to the Client or the Datanodes. Neither is it stored
+ * persistently in the fsImage.
  **************************************************/
 @InterfaceAudience.Private
 public class DatanodeDescriptor extends DatanodeInfo {

@@ -641,7 +641,7 @@ public class FSEditLog {
           numOpOther++;
           FSImage.DatanodeImage nodeimage = new FSImage.DatanodeImage();
           nodeimage.readFields(in);
-          //Datnodes are not persistent any more.
+          //Datanodes are not persistent any more.
           break;
         }
         case OP_DATANODE_REMOVE: {

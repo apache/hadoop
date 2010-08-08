@@ -196,7 +196,6 @@ class BlockSender implements java.io.Closeable, FSConstants {
         LOG.warn(datanode.dnRegistration + ":sendBlock() : " + msg);
         throw new IOException(msg);
       }
-
       
       offset = (startOffset - (startOffset % bytesPerChecksum));
       if (length >= 0) {
@@ -218,7 +217,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       // seek to the right offsets
       if (offset > 0) {
         long checksumSkip = (offset / bytesPerChecksum) * checksumSize;
-        // note blockInStream is  seeked when created below
+        // note blockInStream is seeked when created below
         if (checksumSkip > 0) {
           // Should we use seek() for checksum file as well?
           IOUtils.skipFully(checksumIn, checksumSkip);

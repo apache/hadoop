@@ -42,7 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
-/** This is a wrapper around connection to datadone
+/** This is a wrapper around connection to datanode
  * and understands checksum, offset etc
  */
 @InterfaceAudience.Private
