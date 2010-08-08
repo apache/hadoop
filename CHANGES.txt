@@ -102,6 +102,9 @@ Trunk (unreleased changes)
 
     HDFS-1297. Fix some comments. (Jeff Ames via jghoman)
 
+    HDFS-330.  Datanode Web UIs should provide robots.txt.
+    (Allen Wittenauer via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
