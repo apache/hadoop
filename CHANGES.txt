@@ -827,6 +827,7 @@ Release 0.21.0 - Unreleased
    HBASE-2886  Add search box to site (Alex Baranau via Stack)
    HBASE-2792  Create a better way to chain log cleaners
                (Chongxin Li via Stack)
+   HBASE-2844  Capping the number of regions (Pranav Khaitan via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

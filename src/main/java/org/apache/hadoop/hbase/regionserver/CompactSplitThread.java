@@ -49,11 +49,20 @@ class CompactSplitThread extends Thread {
 
   private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
+  /**
+   * Splitting should not take place if the total number of regions exceed this.
+   * This is not a hard limit to the number of regions but it is a guideline to
+   * stop splitting after number of online regions is greater than this.
+   */
+  private int regionSplitLimit;
+
   /** @param server */
   public CompactSplitThread(HRegionServer server) {
     super();
     this.server = server;
     this.conf = server.conf;
+    this.regionSplitLimit = conf.getInt("hbase.regionserver.regionSplitLimit",
+        Integer.MAX_VALUE);
     this.frequency =
       conf.getLong("hbase.regionserver.thread.splitcompactcheckfrequency",
       20 * 1000);
@@ -73,7 +82,8 @@ class CompactSplitThread extends Thread {
           try {
             // Don't interrupt us while we are working
             byte [] midKey = r.compactStores();
-            if (midKey != null && !this.server.isStopRequested()) {
+            if (shouldSplitRegion() && midKey != null &&
+                !this.server.isStopRequested()) {
               split(r, midKey);
             }
           } finally {
@@ -189,5 +199,16 @@ class CompactSplitThread extends Thread {
    */
   public int getCompactionQueueSize() {
     return compactionQueue.size();
+  }
+
+  private boolean shouldSplitRegion() {
+    return (regionSplitLimit > server.getNumberOfOnlineRegions());
+  }
+
+  /**
+   * @return the regionSplitLimit
+   */
+  public int getRegionSplitLimit() {
+    return this.regionSplitLimit;
   }
 }

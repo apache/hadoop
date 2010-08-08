@@ -2544,4 +2544,8 @@ public class HRegionServer implements HRegionInterface,
         HRegionServer.class);
     doMain(args, regionServerClass);
   }
+
+  public int getNumberOfOnlineRegions() {
+    return onlineRegions.size();
+  }
 }
