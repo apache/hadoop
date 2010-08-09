@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -49,7 +47,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 public class ProtobufMessageBodyProducer
   implements MessageBodyWriter<ProtobufMessageHandler> {
 
-  private Map<Object, byte[]> buffer = new WeakHashMap<Object, byte[]>();
+  private ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>();
 
 	@Override
 	public boolean isWriteable(Class<?> type, Type genericType, 
@@ -67,7 +65,7 @@ public class ProtobufMessageBodyProducer
 	    return -1;
 	  }
 	  byte[] bytes = baos.toByteArray();
-	  buffer.put(m, bytes);
+	  buffer.set(bytes);
 	  return bytes.length;
 	}
 
@@ -75,6 +73,8 @@ public class ProtobufMessageBodyProducer
 	    Annotation[] annotations, MediaType mediaType, 
 	    MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
 	    throws IOException, WebApplicationException {
-	  entityStream.write(buffer.remove(m));
+    byte[] bytes = buffer.get();
+	  entityStream.write(bytes);
+    buffer.remove();
 	}
 }

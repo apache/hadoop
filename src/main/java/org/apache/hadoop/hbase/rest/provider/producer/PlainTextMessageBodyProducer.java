@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -47,7 +45,7 @@ import org.apache.hadoop.hbase.rest.Constants;
 public class PlainTextMessageBodyProducer 
   implements MessageBodyWriter<Object> {
 
-  private Map<Object, byte[]> buffer = new WeakHashMap<Object, byte[]>();
+  private ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>();
 
   @Override
   public boolean isWriteable(Class<?> arg0, Type arg1, Annotation[] arg2,
@@ -58,9 +56,9 @@ public class PlainTextMessageBodyProducer
 	@Override
 	public long getSize(Object object, Class<?> type, Type genericType,
 			Annotation[] annotations, MediaType mediaType) {
-	  byte[] bytes = object.toString().getBytes(); 
-	  buffer.put(object, bytes);
-		return bytes.length;
+    byte[] bytes = object.toString().getBytes(); 
+	  buffer.set(bytes);
+    return bytes.length;
 	}
 
 	@Override
@@ -68,6 +66,8 @@ public class PlainTextMessageBodyProducer
 			Annotation[] annotations, MediaType mediaType,
 			MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
 			throws IOException, WebApplicationException {
-		outStream.write(buffer.remove(object));
+    byte[] bytes = buffer.get();
+		outStream.write(bytes);
+    buffer.remove();
 	}	
 }

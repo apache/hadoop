@@ -472,6 +472,8 @@ Release 0.21.0 - Unreleased
    HBASE-2823  Entire Row Deletes not stored in Row+Col Bloom
                (Alexander Georgiev via Stack)
    HBASE-2897  RowResultGenerator should handle NoSuchColumnFamilyException
+   HBASE-2905  NPE when inserting mass data via REST interface (Sandy Yin via
+               Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
