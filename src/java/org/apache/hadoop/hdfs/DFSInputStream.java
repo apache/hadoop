@@ -148,7 +148,7 @@ public class DFSInputStream extends FSInputStream {
     for(DatanodeInfo datanode : locatedblock.getLocations()) {
       try {
         final ClientDatanodeProtocol cdp = DFSClient.createClientDatanodeProtocolProxy(
-            datanode, dfsClient.conf, locatedblock);
+            datanode, dfsClient.conf, dfsClient.socketTimeout, locatedblock);
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
         if (n >= 0) {
           return n;

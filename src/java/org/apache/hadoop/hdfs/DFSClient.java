@@ -187,7 +187,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
-      DatanodeID datanodeid, Configuration conf, LocatedBlock locatedBlock)
+      DatanodeID datanodeid, Configuration conf, int socketTimeout,
+      LocatedBlock locatedBlock)
       throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(
       datanodeid.getHost() + ":" + datanodeid.getIpcPort());
@@ -199,7 +200,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     ticket.addToken(locatedBlock.getBlockToken());
     return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
         ClientDatanodeProtocol.versionID, addr, ticket, conf, NetUtils
-        .getDefaultSocketFactory(conf));
+        .getDefaultSocketFactory(conf), socketTimeout);
   }
         
   /**

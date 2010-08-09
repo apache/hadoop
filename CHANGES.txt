@@ -27,6 +27,8 @@ Trunk (unreleased changes)
     HDFS-1150. Verify datanodes' identities to clients in secure clusters.
     (jghoman)
 
+    HDFS-1330. Make RPCs to DataNodes timeout. (hairong)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

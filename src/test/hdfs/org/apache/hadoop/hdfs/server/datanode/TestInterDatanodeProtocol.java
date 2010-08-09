@@ -91,9 +91,9 @@ public class TestInterDatanodeProtocol {
       assertTrue(datanodeinfo.length > 0);
 
       //connect to a data node
-      InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
-          datanodeinfo[0], conf);
       DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
+      InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
+          datanodeinfo[0], conf, datanode.socketTimeout);
       assertTrue(datanode != null);
       
       //stop block scanner, so we could compare lastScanTime
