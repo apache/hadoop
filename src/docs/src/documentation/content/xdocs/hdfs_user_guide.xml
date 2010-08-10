@@ -97,6 +97,10 @@
     		<code>fsck</code>: a utility to diagnose health of the file system, to
     		find missing files or blocks.
     	</li>
+        <li>
+            <code>fetchdt</code>: a utility to fetch DelegationToken and store it 
+            in a file on the local system. 
+        </li>
     	<li>
     		Rebalancer: tool to balance the cluster when the data is
     		unevenly distributed among DataNodes.
@@ -519,7 +523,23 @@
       <code>fsck</code> can be run on the whole file system or on a subset of files.
      </p>
      
-   </section> <section> <title> Upgrade and Rollback </title>
+    </section> <section> <title> fetchdt </title>
+      <p>    
+       HDFS supports the <code>fetchdt</code> command to fetch Delegation Token 
+       and store it in a file on the local system. This token can be later used to 
+       access secure server (NameNode for example) from a non secure client.
+       Utility uses either RPC or HTTPS (over Kerberos) to get the token, and thus
+       requires kerberos tickets to be present before the run (run kinit to get 
+       the tickets). 
+       The HDFS <code>fetchdt</code> command is not a
+       Hadoop shell command. It can be run as '<code>bin/hadoop fetchdt DTfile </code>'.
+       After you got the token you can run an HDFS command without having Kerberos
+       tickets, by pointing HADOOP_TOKEN_FILE_LOCATION environmental variable to 
+       the delegation token file. 
+       For command usage, see <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#fetchdt"><code>fetchdt</code> command</a>. 
+      </p>
+             
+   </section><section> <title> Upgrade and Rollback </title>
      <p>
       When Hadoop is upgraded on an existing cluster, as with any
       software upgrade, it is possible there are new bugs or
