@@ -291,8 +291,9 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
-    URL u = getNamenodeURL("/data" + f.toUri().getPath(), 
-        "ugi=" + getUgiParameter());
+    String query = "ugi=" + getUgiParameter();
+    query = updateQuery(query);
+    URL u = getNamenodeURL("/data" + f.toUri().getPath(), query);
     return new FSDataInputStream(new ByteRangeInputStream(u));
   }
 
