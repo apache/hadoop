@@ -93,6 +93,138 @@ public class TestAccessControlList extends TestCase {
   }
 
   /**
+   * Test addUser/Group and removeUser/Group api.
+   */
+  public void testAddRemoveAPI() {
+    AccessControlList acl;
+    Set<String> users;
+    Set<String> groups;
+    acl = new AccessControlList("");
+    assertEquals(0, acl.getUsers().size());
+    assertEquals(0, acl.getGroups().size());
+    assertEquals("", acl.toString());
+    
+    acl.addUser("drwho");
+    users = acl.getUsers();
+    assertEquals(users.size(), 1);
+    assertEquals(users.iterator().next(), "drwho");
+    assertEquals("drwho", acl.toString());
+    
+    acl.addGroup("tardis");
+    groups = acl.getGroups();
+    assertEquals(groups.size(), 1);
+    assertEquals(groups.iterator().next(), "tardis");
+    assertEquals("drwho tardis", acl.toString());
+    
+    acl.addUser("joe");
+    acl.addGroup("users");
+    users = acl.getUsers();
+    assertEquals(users.size(), 2);
+    Iterator<String> iter = users.iterator();
+    assertEquals(iter.next(), "drwho");
+    assertEquals(iter.next(), "joe");
+    groups = acl.getGroups();
+    assertEquals(groups.size(), 2);
+    iter = groups.iterator();
+    assertEquals(iter.next(), "tardis");
+    assertEquals(iter.next(), "users");
+    assertEquals("drwho,joe tardis,users", acl.toString());
+
+    acl.removeUser("joe");
+    acl.removeGroup("users");
+    users = acl.getUsers();
+    assertEquals(users.size(), 1);
+    assertFalse(users.contains("joe"));
+    groups = acl.getGroups();
+    assertEquals(groups.size(), 1);
+    assertFalse(groups.contains("users"));
+    assertEquals("drwho tardis", acl.toString());
+    
+    acl.removeGroup("tardis");
+    groups = acl.getGroups();
+    assertEquals(0, groups.size());
+    assertFalse(groups.contains("tardis"));
+    assertEquals("drwho", acl.toString());
+    
+    acl.removeUser("drwho");
+    assertEquals(0, users.size());
+    assertFalse(users.contains("drwho"));
+    assertEquals(0, acl.getGroups().size());
+    assertEquals(0, acl.getUsers().size());
+    assertEquals("", acl.toString());
+  }
+  
+  /**
+   * Tests adding/removing wild card as the user/group.
+   */
+  public void testAddRemoveWildCard() {
+    AccessControlList acl = new AccessControlList("drwho tardis");
+    
+    Throwable th = null;
+    try {
+      acl.addUser(" * ");
+    } catch (Throwable t) {
+      th = t;
+    }
+    assertNotNull(th);
+    assertTrue(th instanceof IllegalArgumentException);
+    
+    th = null;
+    try {
+      acl.addGroup(" * ");
+    } catch (Throwable t) {
+      th = t;
+    }
+    assertNotNull(th);
+    assertTrue(th instanceof IllegalArgumentException);
+    th = null;
+    try {
+    acl.removeUser(" * ");
+    } catch (Throwable t) {
+      th = t;
+    }
+    assertNotNull(th);
+    assertTrue(th instanceof IllegalArgumentException);
+    th = null;
+    try {
+    acl.removeGroup(" * ");
+    } catch (Throwable t) {
+      th = t;
+    }
+    assertNotNull(th);
+    assertTrue(th instanceof IllegalArgumentException);
+  }
+  
+  /**
+   * Tests adding user/group to an wild card acl.
+   */
+  public void testAddRemoveToWildCardACL() {
+    AccessControlList acl = new AccessControlList(" * ");
+    assertTrue(acl.isAllAllowed());
+
+    UserGroupInformation drwho =
+      UserGroupInformation.createUserForTesting("drwho@APACHE.ORG",
+          new String[] { "aliens" });
+    UserGroupInformation drwho2 =
+      UserGroupInformation.createUserForTesting("drwho2@APACHE.ORG",
+          new String[] { "tardis" });
+
+    acl.addUser("drwho");
+    assertTrue(acl.isAllAllowed());
+    assertFalse(acl.toString().contains("drwho"));
+    acl.addGroup("tardis");
+    assertTrue(acl.isAllAllowed());
+    assertFalse(acl.toString().contains("tardis"));
+   
+    acl.removeUser("drwho");
+    assertTrue(acl.isAllAllowed());
+    assertUserAllowed(drwho, acl);
+    acl.removeGroup("tardis");
+    assertTrue(acl.isAllAllowed());
+    assertUserAllowed(drwho2, acl);
+  }
+
+  /**
    * Verify the method isUserAllowed()
    */
   public void testIsUserAllowed() {

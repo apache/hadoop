@@ -108,6 +108,8 @@ Trunk (unreleased changes)
 
     HADOOP-6890. Improve listFiles API introduced by HADOOP-6870. (hairong)
 
+    HADOOP-6862. Adds api to add/remove user and group to AccessControlList
+    (amareshwari)
   OPTIMIZATIONS
 
   BUG FIXES

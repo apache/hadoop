@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -54,8 +53,7 @@ public class AccessControlList {
   public AccessControlList(String aclString) {
     users = new TreeSet<String>();
     groups = new TreeSet<String>();
-    if (aclString.contains(WILDCARD_ACL_VALUE) && 
-        aclString.trim().equals(WILDCARD_ACL_VALUE)) {
+    if (isWildCardACLValue(aclString)) {
       allAllowed = true;
     } else {
       String[] userGroupStrings = aclString.split(" ", 2);
@@ -76,10 +74,79 @@ public class AccessControlList {
     }
   }
   
+  private boolean isWildCardACLValue(String aclString) {
+    if (aclString.contains(WILDCARD_ACL_VALUE) && 
+        aclString.trim().equals(WILDCARD_ACL_VALUE)) {
+      return true;
+    }
+    return false;
+  }
+
   public boolean isAllAllowed() {
     return allAllowed;
   }
   
+  /**
+   * Add user to the names of users allowed for this service.
+   * 
+   * @param user
+   *          The user name
+   */
+  public void addUser(String user) {
+    if (isWildCardACLValue(user)) {
+      throw new IllegalArgumentException("User " + user + " can not be added");
+    }
+    if (!isAllAllowed()) {
+      users.add(user);
+    }
+  }
+
+  /**
+   * Add group to the names of groups allowed for this service.
+   * 
+   * @param group
+   *          The group name
+   */
+  public void addGroup(String group) {
+    if (isWildCardACLValue(group)) {
+      throw new IllegalArgumentException("Group " + group + " can not be added");
+    }
+    if (!isAllAllowed()) {
+      groups.add(group);
+    }
+  }
+
+  /**
+   * Remove user from the names of users allowed for this service.
+   * 
+   * @param user
+   *          The user name
+   */
+  public void removeUser(String user) {
+    if (isWildCardACLValue(user)) {
+      throw new IllegalArgumentException("User " + user + " can not be removed");
+    }
+    if (!isAllAllowed()) {
+      users.remove(user);
+    }
+  }
+
+  /**
+   * Remove group from the names of groups allowed for this service.
+   * 
+   * @param group
+   *          The group name
+   */
+  public void removeGroup(String group) {
+    if (isWildCardACLValue(group)) {
+      throw new IllegalArgumentException("Group " + group
+          + " can not be removed");
+    }
+    if (!isAllAllowed()) {
+      groups.remove(group);
+    }
+  }
+
   /**
    * Get the names of users allowed for this service.
    * @return the set of user names. the set must not be modified.
