@@ -831,6 +831,7 @@ Release 0.21.0 - Unreleased
    HBASE-2792  Create a better way to chain log cleaners
                (Chongxin Li via Stack)
    HBASE-2844  Capping the number of regions (Pranav Khaitan via Stack)
+   HBASE-2870  Add Backup CLI Option to HMaster (Nicolas Spiegelberg via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

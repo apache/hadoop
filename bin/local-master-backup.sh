@@ -21,6 +21,7 @@ run_master () {
   DN=$2
   export HBASE_IDENT_STRING="$USER-$DN"
   HBASE_MASTER_ARGS="\
+    --backup \
     -D hbase.master.port=`expr 60000 + $DN` \
     -D hbase.master.info.port=`expr 60010 + $DN`"
   "$bin"/hbase-daemon.sh $1 master $HBASE_MASTER_ARGS

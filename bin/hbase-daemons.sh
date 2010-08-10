@@ -45,6 +45,9 @@ case $command in
   (zookeeper)
     exec "$bin/zookeepers.sh" $args
     ;;
+  (master-backup)
+    exec "$bin/master-backup.sh" $args
+    ;;
   (*)
     exec "$bin/regionservers.sh" $args
     ;;

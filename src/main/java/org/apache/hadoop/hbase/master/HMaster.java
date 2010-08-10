@@ -230,6 +230,22 @@ public class HMaster extends Thread implements HMasterInterface,
     this.zkMasterAddressWatcher =
       new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.shutdownRequested);
     zooKeeperWrapper.registerListener(zkMasterAddressWatcher);
+
+    // if we're a backup master, stall until a primary to writes his address
+    if(conf.getBoolean(HConstants.MASTER_TYPE_BACKUP, HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+      // this will only be a minute or so while the cluster starts up,
+      // so don't worry about setting watches on the parent znode
+      while (!zooKeeperWrapper.masterAddressExists()) {
+        try {
+          LOG.debug("Waiting for master address ZNode to be written " +
+            "(Also watching cluster state node)");
+          Thread.sleep(conf.getInt("zookeeper.session.timeout", 60 * 1000));
+        } catch (InterruptedException e) {
+          // interrupted = user wants to kill us.  Don't continue
+          throw new IOException("Interrupted waiting for master address");
+        }
+      }
+    }
     this.zkMasterAddressWatcher.writeAddressToZooKeeper(this.address, true);
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, this.closed);
@@ -1265,6 +1281,7 @@ public class HMaster extends Thread implements HMasterInterface,
     Options opt = new Options();
     opt.addOption("minServers", true, "Minimum RegionServers needed to host user tables");
     opt.addOption("D", true, "Override HBase Configuration Settings");
+    opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
     try {
       CommandLine cmd = new GnuParser().parse(opt, args);
 
@@ -1285,6 +1302,11 @@ public class HMaster extends Thread implements HMasterInterface,
             throw new ParseException("-D option format invalid: " + confOpt);
           }
         }
+      }
+      
+      // check if we are the backup master - override the conf if so
+      if (cmd.hasOption("backup")) {
+        conf.setBoolean(HConstants.MASTER_TYPE_BACKUP, true);
       }
 
       if (cmd.getArgList().contains("start")) {

@@ -464,6 +464,13 @@ public class ZooKeeperWrapper implements Watcher {
     LOG.debug("<" + instanceName + ">" + "Set watcher on master address ZNode " + masterElectionZNode);
     return true;
   }
+  
+  /**
+   * @return true if zookeeper has a master address.
+   */
+  public boolean masterAddressExists() {
+    return checkExistenceOf(masterElectionZNode);
+  }
 
   private HServerAddress readAddress(String znode, Watcher watcher) {
     try {

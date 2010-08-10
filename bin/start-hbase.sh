@@ -49,4 +49,6 @@ else
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_REGIONSERVERS}" start regionserver
+  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
+    --hosts "${HBASE_BACKUP_MASTERS}" start master-backup
 fi

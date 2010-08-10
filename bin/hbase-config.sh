@@ -73,6 +73,8 @@ done
 HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
 # List of hbase regions servers.
 HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
+# List of hbase secondary masters.
+HBASE_BACKUP_MASTERS="${HBASE_BACKUP_MASTERS:-$HBASE_CONF_DIR/backup-masters}"
 
 # Source the hbase-env.sh.  Will have JAVA_HOME defined.
 if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
