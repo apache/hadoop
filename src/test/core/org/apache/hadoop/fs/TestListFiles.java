@@ -80,7 +80,7 @@ public class TestListFiles {
     fs.mkdirs(TEST_DIR);
     writeFile(fs, FILE1, FILE_LEN);
 
-    Iterator<LocatedFileStatus> itor = fs.listFiles(
+    RemoteIterator<LocatedFileStatus> itor = fs.listFiles(
         FILE1, true);
     LocatedFileStatus stat = itor.next();
     assertFalse(itor.hasNext());
@@ -107,7 +107,7 @@ public class TestListFiles {
     fs.mkdirs(DIR1);
 
     // test empty directory
-    Iterator<LocatedFileStatus> itor = fs.listFiles(
+    RemoteIterator<LocatedFileStatus> itor = fs.listFiles(
         DIR1, true);
     assertFalse(itor.hasNext());
     itor = fs.listFiles(DIR1, false);

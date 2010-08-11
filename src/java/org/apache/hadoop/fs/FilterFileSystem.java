@@ -167,7 +167,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   /** List files and its block locations in a directory. */
-  public Iterator<LocatedFileStatus> listLocatedStatus(Path f)
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
   throws IOException {
     return fs.listLocatedStatus(f);
   }

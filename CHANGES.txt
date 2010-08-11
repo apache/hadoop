@@ -111,7 +111,11 @@ Trunk (unreleased changes)
     HADOOP-6862. Adds api to add/remove user and group to AccessControlList
     (amareshwari)
 
-    HADOOP6911. doc update for DelegationTokenFetcher (boryas)
+    HADOOP-6911. doc update for DelegationTokenFetcher (boryas)
+
+    HADOOP-6900. Make the iterator returned by FileSystem#listLocatedStatus to 
+    throw IOException rather than RuntimeException when there is an IO error
+    fetching the next file. (hairong)
 
   OPTIMIZATIONS
 

@@ -282,7 +282,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     Assert.assertEquals(0, paths.length);
     
     // test listStatus that returns an iterator
-    Iterator<FileStatus> pathsIterator = 
+    RemoteIterator<FileStatus> pathsIterator = 
       fc.listStatus(getTestRootPath(fc, "test"));
     Assert.assertEquals(getTestRootPath(fc, "test/hadoop"), 
         pathsIterator.next().getPath());

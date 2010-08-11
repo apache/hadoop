@@ -619,7 +619,7 @@ public abstract class AbstractFileSystem {
       }
       // Delete the destination that is a file or an empty directory
       if (dstStatus.isDirectory()) {
-        Iterator<FileStatus> list = listStatusIterator(dst);
+        RemoteIterator<FileStatus> list = listStatusIterator(dst);
         if (list != null && list.hasNext()) {
           throw new IOException(
               "Rename cannot overwrite non empty destination directory " + dst);
@@ -757,10 +757,10 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#listStatus(Path)} except that Path f must be for this
    * file system.
    */
-  protected Iterator<FileStatus> listStatusIterator(final Path f)
+  protected RemoteIterator<FileStatus> listStatusIterator(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    return new Iterator<FileStatus>() {
+    return new RemoteIterator<FileStatus>() {
       private int i = 0;
       private FileStatus[] statusList = listStatus(f);
       
@@ -776,11 +776,6 @@ public abstract class AbstractFileSystem {
         }
         return statusList[i++];
       }
-      
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported");
-      }
     };
   }
 
@@ -789,52 +784,29 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#listLocatedStatus(Path)} except that Path f 
    * must be for this file system.
    */
-  protected Iterator<LocatedFileStatus> listLocatedStatus(final Path f)
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    return new Iterator<LocatedFileStatus>() {
-      private Iterator<FileStatus> itor = listStatusIterator(f);
+    return new RemoteIterator<LocatedFileStatus>() {
+      private RemoteIterator<FileStatus> itor = listStatusIterator(f);
       
-      /**
-       *  {@inheritDoc}
-       *  @return {@inheritDog} 
-       *  @throws Runtimeexception if any IOException occurs during traversal;
-       *  the IOException is set as the cause of the RuntimeException
-       */
       @Override
-      public boolean hasNext() {
+      public boolean hasNext() throws IOException {
         return itor.hasNext();
       }
       
-      /**
-       *  {@inheritDoc}
-       *  @return {@inheritDoc} 
-       *  @throws Runtimeexception if any IOException occurs during traversal;
-       *  the IOException is set as the cause of the RuntimeException
-       *  @exception {@inheritDoc}
-       */
       @Override
-      public LocatedFileStatus next() {
+      public LocatedFileStatus next() throws IOException {
         if (!hasNext()) {
           throw new NoSuchElementException("No more entry in " + f);
         }
         FileStatus result = itor.next();
-        try {
-          
-          BlockLocation[] locs = null;
-          if (result.isFile()) {
-            locs = getFileBlockLocations(
+        BlockLocation[] locs = null;
+        if (result.isFile()) {
+          locs = getFileBlockLocations(
               result.getPath(), 0, result.getLen());
-          }
-          return new LocatedFileStatus(result, locs);
-        } catch (IOException ioe) {
-          throw (RuntimeException)new RuntimeException().initCause(ioe);
         }
-      }
-      
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported");
+        return new LocatedFileStatus(result, locs);
       }
     };
   }

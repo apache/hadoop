@@ -504,7 +504,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @throws IOException
    */
   @Override
-  public Iterator<LocatedFileStatus> listLocatedStatus(Path f)
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
   throws IOException {
     return fs.listLocatedStatus(f, DEFAULT_FILTER);
   }

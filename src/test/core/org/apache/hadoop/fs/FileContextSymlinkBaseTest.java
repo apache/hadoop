@@ -657,7 +657,7 @@ public abstract class FileContextSymlinkBaseTest {
     // and link) and LocalFs is 3 (file, link, file crc).
     FileStatus[] stats = fc.util().listStatus(link);
     assertTrue(stats.length == 2 || stats.length == 3);
-    Iterator<FileStatus> statsItor = fc.listStatus(link);
+    RemoteIterator<FileStatus> statsItor = fc.listStatus(link);
     int dirLen = 0;
     while(statsItor.hasNext()) {
       statsItor.next();
@@ -1274,7 +1274,7 @@ public abstract class FileContextSymlinkBaseTest {
     assertTrue(fc.getFileStatus(dirViaLink).isDirectory());
     FileStatus[] stats = fc.util().listStatus(dirViaLink);
     assertEquals(0, stats.length);
-    Iterator<FileStatus> statsItor = fc.listStatus(dirViaLink);
+    RemoteIterator<FileStatus> statsItor = fc.listStatus(dirViaLink);
     assertFalse(statsItor.hasNext());
     fc.delete(dirViaLink, false);
     assertFalse(exists(fc, dirViaLink));

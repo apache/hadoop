@@ -523,7 +523,8 @@ public abstract class FileContextURIBase {
     Assert.assertEquals(0, paths.length);
     
     // test listStatus that returns an iterator of FileStatus
-    Iterator<FileStatus> pathsItor = fc1.listStatus(qualifiedPath("test", fc1));
+    RemoteIterator<FileStatus> pathsItor = 
+      fc1.listStatus(qualifiedPath("test", fc1));
     Assert.assertEquals(qualifiedPath(hPrefix, fc1), pathsItor.next().getPath());
     Assert.assertFalse(pathsItor.hasNext());
 

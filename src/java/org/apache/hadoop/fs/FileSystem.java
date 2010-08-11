@@ -1326,18 +1326,14 @@ public abstract class FileSystem extends Configured implements Closeable {
    * If a returned status is a file, it contains the file's block locations.
    * 
    * @param f is the path
-   * @param filter path filter
    *
    * @return an iterator that traverses statuses of the files/directories 
    *         in the given path
-   * If any IO exception (for example the input directory gets deleted while
-   * listing is being executed), next() or hasNext() of the returned iterator
-   * may throw a RuntimeException with the IO exception as the cause.
    *
    * @throws FileNotFoundException If <code>f</code> does not exist
    * @throws IOException If an I/O error occurred
    */
-  public Iterator<LocatedFileStatus> listLocatedStatus(final Path f)
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
   throws FileNotFoundException, IOException {
     return listLocatedStatus(f, DEFAULT_FILTER);
   }
@@ -1353,50 +1349,28 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws FileNotFoundException if <code>f</code> does not exist
    * @throws IOException if any I/O error occurred
    */
-  protected Iterator<LocatedFileStatus> listLocatedStatus(final Path f,
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
       final PathFilter filter)
   throws FileNotFoundException, IOException {
-    return new Iterator<LocatedFileStatus>() {
+    return new RemoteIterator<LocatedFileStatus>() {
       private final FileStatus[] stats = listStatus(f, filter);
       private int i = 0;
 
-      /**
-       *  {@inheritDoc}
-       *  @return {@inheritDog} 
-       *  @throws Runtimeexception if any IOException occurs during traversal;
-       *  the IOException is set as the cause of the RuntimeException
-       */
       @Override
       public boolean hasNext() {
         return i<stats.length;
       }
 
-      /**
-       *  {@inheritDoc}
-       *  @return {@inheritDoc} 
-       *  @throws Runtimeexception if any IOException occurs during traversal;
-       *  the IOException is set as the cause of the RuntimeException
-       *  @exception {@inheritDoc}
-       */
       @Override
-      public LocatedFileStatus next() {
+      public LocatedFileStatus next() throws IOException {
         if (!hasNext()) {
           throw new NoSuchElementException("No more entry in " + f);
         }
         FileStatus result = stats[i++];
-        try {
-          BlockLocation[] locs = result.isFile() ?
+        BlockLocation[] locs = result.isFile() ?
             getFileBlockLocations(result.getPath(), 0, result.getLen()) :
             null;
-          return new LocatedFileStatus(result, locs);
-        } catch (IOException ioe) {
-          throw (RuntimeException)new RuntimeException().initCause(ioe);
-        }
-      }
-      
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported");
+        return new LocatedFileStatus(result, locs);
       }
     };
   }
@@ -1413,30 +1387,22 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param recursive if the subdirectories need to be traversed recursively
    *
    * @return an iterator that traverses statuses of the files
-   * If any IO exception (for example a sub-directory gets deleted while
-   * listing is being executed), next() or hasNext() of the returned iterator
-   * may throw a RuntimeException with the IO exception as the cause.
    *
    * @throws FileNotFoundException when the path does not exist;
    *         IOException see specific implementation
    */
-  public Iterator<LocatedFileStatus> listFiles(
+  public RemoteIterator<LocatedFileStatus> listFiles(
       final Path f, final boolean recursive)
   throws FileNotFoundException, IOException {
-    return new Iterator<LocatedFileStatus>() {
-      private Stack<Iterator<LocatedFileStatus>> itors = 
-        new Stack<Iterator<LocatedFileStatus>>();
-      Iterator<LocatedFileStatus> curItor = listLocatedStatus(f);
-      LocatedFileStatus curFile;
+    return new RemoteIterator<LocatedFileStatus>() {
+      private Stack<RemoteIterator<LocatedFileStatus>> itors = 
+        new Stack<RemoteIterator<LocatedFileStatus>>();
+      private RemoteIterator<LocatedFileStatus> curItor =
+        listLocatedStatus(f);
+      private LocatedFileStatus curFile;
      
-      /**
-       *  {@inheritDoc}
-       *  @return {@inheritDog} 
-       *  @throws Runtimeexception if any IOException occurs during traversal;
-       *  the IOException is set as the cause of the RuntimeException
-       */
       @Override
-      public boolean hasNext() {
+      public boolean hasNext() throws IOException {
         while (curFile == null) {
           if (curItor.hasNext()) {
             handleFileStat(curItor.next());
@@ -1452,45 +1418,28 @@ public abstract class FileSystem extends Configured implements Closeable {
       /**
        * Process the input stat.
        * If it is a file, return the file stat.
-       * If it is a directory, tranverse the directory if recursive is true;
+       * If it is a directory, traverse the directory if recursive is true;
        * ignore it if recursive is false.
        * @param stat input status
-       * @throws RuntimeException if any io error occurs; the io exception
-       * is set as the cause of RuntimeException
+       * @throws IOException if any IO error occurs
        */
-      private void handleFileStat(LocatedFileStatus stat) {
-        try {
-          if (stat.isFile()) { // file
-            curFile = stat;
-          } else if (recursive) { // directory
-            itors.push(curItor);
-            curItor = listLocatedStatus(stat.getPath());
-          }
-        } catch (IOException ioe) {
-          throw (RuntimeException)new RuntimeException().initCause(ioe);
+      private void handleFileStat(LocatedFileStatus stat) throws IOException {
+        if (stat.isFile()) { // file
+          curFile = stat;
+        } else if (recursive) { // directory
+          itors.push(curItor);
+          curItor = listLocatedStatus(stat.getPath());
         }
       }
 
-      /**
-       *  {@inheritDoc}
-       *  @return {@inheritDoc} 
-       *  @throws Runtimeexception if any IOException occurs during traversal;
-       *  the IOException is set as the cause of the RuntimeException
-       *  @exception {@inheritDoc}
-       */
       @Override
-      public LocatedFileStatus next() {
+      public LocatedFileStatus next() throws IOException {
         if (hasNext()) {
           LocatedFileStatus result = curFile;
           curFile = null;
           return result;
         } 
         throw new java.util.NoSuchElementException("No more entry in " + f);
-      }
-
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported");
       }
     };
   }
