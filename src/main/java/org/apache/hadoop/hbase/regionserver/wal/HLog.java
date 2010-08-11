@@ -28,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -1001,10 +1002,13 @@ public class HLog implements Syncable {
    * If the pipeline isn't started yet or is empty, you will get the default
    * replication factor.  Therefore, if this function returns 0, it means you
    * are not properly running with the HDFS-826 patch.
+   * @throws InvocationTargetException
+   * @throws IllegalAccessException
+   * @throws IllegalArgumentException
    *
    * @throws Exception
    */
-  int getLogReplication() throws Exception {
+  int getLogReplication() throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
     if(this.getNumCurrentReplicas != null && this.hdfs_out != null) {
       Object repl = this.getNumCurrentReplicas.invoke(this.hdfs_out, NO_ARGS);
       if (repl instanceof Integer) {
