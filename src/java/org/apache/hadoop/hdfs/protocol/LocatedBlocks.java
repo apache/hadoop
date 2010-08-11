@@ -46,7 +46,7 @@ public class LocatedBlocks implements Writable {
   private LocatedBlock lastLocatedBlock = null;
   private boolean isLastBlockComplete = false;
 
-  LocatedBlocks() {
+  public LocatedBlocks() {
     fileLength = 0;
     blocks = null;
     underConstruction = false;

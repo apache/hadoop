@@ -40,6 +40,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -1083,10 +1085,11 @@ class FSDirectory implements Closeable {
    *
    * @param src the directory name
    * @param startAfter the name to start listing after
+   * @param needLocation if block locations are returned
    * @return a partial listing starting after startAfter
    */
-  DirectoryListing getListing(String src, byte[] startAfter)
-  throws UnresolvedLinkException {
+  DirectoryListing getListing(String src, byte[] startAfter,
+      boolean needLocation) throws UnresolvedLinkException, IOException {
     String srcs = normalizePath(src);
 
     synchronized (rootDir) {
@@ -1095,8 +1098,9 @@ class FSDirectory implements Closeable {
         return null;
       
       if (!targetNode.isDirectory()) {
-        return new DirectoryListing(new HdfsFileStatus[]{createFileStatus(
-            HdfsFileStatus.EMPTY_NAME, targetNode)}, 0);
+        return new DirectoryListing(
+            new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
+                targetNode, needLocation)}, 0);
       }
       INodeDirectory dirInode = (INodeDirectory)targetNode;
       List<INode> contents = dirInode.getChildren();
@@ -1106,7 +1110,7 @@ class FSDirectory implements Closeable {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i=0; i<numOfListing; i++) {
         INode cur = contents.get(startChild+i);
-        listing[i] = createFileStatus(cur.name, cur);
+        listing[i] = createFileStatus(cur.name, cur, needLocation);
       }
       return new DirectoryListing(
           listing, totalNumChildren-startChild-numOfListing);
@@ -1801,15 +1805,40 @@ class FSDirectory implements Closeable {
   }
 
   /**
+   * create an hdfs file status from an inode
+   * 
+   * @param path the local name
+   * @param node inode
+   * @param needLocation if block locations need to be included or not
+   * @return a file status
+   * @throws IOException if any error occurs
+   */
+  private HdfsFileStatus createFileStatus(byte[] path, INode node,
+      boolean needLocation) throws IOException {
+    if (needLocation) {
+      return createLocatedFileStatus(path, node);
+    } else {
+      return createFileStatus(path, node);
+    }
+  }
+  /**
    * Create FileStatus by file INode 
    */
-   private static HdfsFileStatus createFileStatus(byte[] path, INode node) {
-    // length is zero for directories
-    return new HdfsFileStatus(
-        node instanceof INodeFile ? ((INodeFile)node).computeFileSize(true) : 0, 
+   private HdfsFileStatus createFileStatus(byte[] path, INode node) {
+     long size = 0;     // length is zero for directories
+     short replication = 0;
+     long blocksize = 0;
+     if (node instanceof INodeFile) {
+       INodeFile fileNode = (INodeFile)node;
+       size = fileNode.computeFileSize(true);
+       replication = fileNode.getReplication();
+       blocksize = fileNode.getPreferredBlockSize();
+     }
+     return new HdfsFileStatus(
+        size, 
         node.isDirectory(), 
-        (node.isDirectory() || node.isLink()) ? 0 : ((INodeFile)node).getReplication(), 
-        (node.isDirectory() || node.isLink()) ? 0 : ((INodeFile)node).getPreferredBlockSize(),
+        replication, 
+        blocksize,
         node.getModificationTime(),
         node.getAccessTime(),
         node.getFsPermission(),
@@ -1819,6 +1848,42 @@ class FSDirectory implements Closeable {
         path);
   }
 
+   /**
+    * Create FileStatus with location info by file INode 
+    */
+    private HdfsLocatedFileStatus createLocatedFileStatus(
+        byte[] path, INode node) throws IOException {
+      long size = 0;     // length is zero for directories
+      short replication = 0;
+      long blocksize = 0;
+      LocatedBlocks loc = null;
+      if (node instanceof INodeFile) {
+        INodeFile fileNode = (INodeFile)node;
+        size = fileNode.computeFileSize(true);
+        replication = fileNode.getReplication();
+        blocksize = fileNode.getPreferredBlockSize();
+        loc = getFSNamesystem().getBlockLocationsInternal(
+            fileNode, 0L, size, false);
+        if (loc==null) {
+          loc = new LocatedBlocks();
+        }
+      }
+      return new HdfsLocatedFileStatus(
+          size, 
+          node.isDirectory(), 
+          replication, 
+          blocksize,
+          node.getModificationTime(),
+          node.getAccessTime(),
+          node.getFsPermission(),
+          node.getUserName(),
+          node.getGroupName(),
+          node.isLink() ? ((INodeSymlink)node).getSymlink() : null,
+          path,
+          loc);
+      }
+
+    
   /**
    * Add the given symbolic link to the fs. Record it in the edits log.
    */

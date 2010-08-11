@@ -164,7 +164,7 @@ public class ListPathsServlet extends DfsServlet {
               DirectoryListing thisListing;
               do {
                 assert lastReturnedName != null;
-                thisListing = nn.getListing(p, lastReturnedName);
+                thisListing = nn.getListing(p, lastReturnedName, false);
                 if (thisListing == null) {
                   if (lastReturnedName.length == 0) {
                     LOG

@@ -774,6 +774,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (doAccessTime && isAccessTimeSupported()) {
       dir.setTimes(src, inode, -1, now(), false);
     }
+    return getBlockLocationsInternal(inode, offset, length, needBlockToken);
+  }
+  
+  synchronized LocatedBlocks getBlockLocationsInternal(INodeFile inode,
+      long offset, long length, boolean needBlockToken)
+  throws IOException {
     final BlockInfo[] blocks = inode.getBlocks();
     if (LOG.isDebugEnabled()) {
       LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
@@ -2255,13 +2261,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    *
    * @param src the directory name
    * @param startAfter the name to start after
+   * @param needLocation if blockLocations need to be returned
    * @return a partial listing starting after startAfter
    * 
    * @throws AccessControlException if access is denied
    * @throws UnresolvedLinkException if symbolic link is encountered
    * @throws IOException if other I/O error occurred
    */
-  public DirectoryListing getListing(String src, byte[] startAfter) 
+  public DirectoryListing getListing(String src, byte[] startAfter,
+      boolean needLocation) 
     throws AccessControlException, UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
       if (dir.isDir(src)) {
@@ -2276,7 +2284,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                     Server.getRemoteIp(),
                     "listStatus", src, null, null);
     }
-    return dir.getListing(src, startAfter);
+    return dir.getListing(src, startAfter, needLocation);
   }
 
   /////////////////////////////////////////////////////////

@@ -37,9 +37,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -341,6 +345,18 @@ public class DistributedFileSystem extends FileSystem {
             getUri(), getWorkingDirectory())); // fully-qualify path
   }
 
+  private LocatedFileStatus makeQualifiedLocated(
+      HdfsLocatedFileStatus f, Path parent) {
+    return new LocatedFileStatus(f.getLen(), f.isDir(), f.getReplication(),
+        f.getBlockSize(), f.getModificationTime(),
+        f.getAccessTime(),
+        f.getPermission(), f.getOwner(), f.getGroup(),
+        null,
+        (f.getFullPath(parent)).makeQualified(
+            getUri(), getWorkingDirectory()), // fully-qualify path
+        DFSUtil.locatedBlocks2Locations(f.getBlockLocations()));
+  }
+
   /**
    * List all the entries of a directory
    *
@@ -401,6 +417,68 @@ public class DistributedFileSystem extends FileSystem {
     return listing.toArray(new FileStatus[listing.size()]);
   }
 
+  @Override
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path p,
+      final PathFilter filter)
+  throws IOException {
+    return new RemoteIterator<LocatedFileStatus>() {
+      private DirectoryListing thisListing;
+      private int i;
+      private String src;
+      private LocatedFileStatus curStat = null;
+
+      { // initializer
+        src = getPathName(p);
+        // fetch the first batch of entries in the directory
+        thisListing = dfs.listPaths(src, HdfsFileStatus.EMPTY_NAME, true);
+        statistics.incrementReadOps(1);
+        if (thisListing == null) { // the directory does not exist
+          throw new FileNotFoundException("File " + p + " does not exist.");
+        }
+      }
+
+      @Override
+      public boolean hasNext() throws IOException {
+        while (curStat == null && hasNextNoFilter()) {
+          LocatedFileStatus next = makeQualifiedLocated(
+              (HdfsLocatedFileStatus)thisListing.getPartialListing()[i++], p);
+          if (filter.accept(next.getPath())) {
+            curStat = next;
+          }
+        }
+        return curStat != null;
+      }
+      
+      /** Check if there is a next item before applying the given filter */
+      private boolean hasNextNoFilter() throws IOException {
+        if (thisListing == null) {
+          return false;
+        }
+        if (i>=thisListing.getPartialListing().length
+            && thisListing.hasMore()) { 
+          // current listing is exhausted & fetch a new listing
+          thisListing = dfs.listPaths(src, thisListing.getLastName(), true);
+          statistics.incrementReadOps(1);
+          if (thisListing == null) {
+            return false;
+          }
+          i = 0;
+        }
+        return (i<thisListing.getPartialListing().length);
+      }
+
+      @Override
+      public LocatedFileStatus next() throws IOException {
+        if (hasNext()) {
+          LocatedFileStatus tmp = curStat;
+          curStat = null;
+          return tmp;
+        } 
+        throw new java.util.NoSuchElementException("No more entry in " + p);
+      }
+    };
+  }
+  
   /**
    * Create a directory with given name and permission, only when
    * parent directory exists.

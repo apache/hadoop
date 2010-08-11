@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -29,6 +28,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -150,7 +150,7 @@ public class TestFileStatus {
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
     
-    Iterator<FileStatus> itor = fc.listStatus(file1);
+    RemoteIterator<FileStatus> itor = fc.listStatus(file1);
     status = itor.next();
     assertEquals(stats[0], status);
     assertFalse(file1 + " should be a file", status.isDirectory());
@@ -206,7 +206,7 @@ public class TestFileStatus {
     assertEquals(dir + " should be zero size using hftp",
         0, hftpfs.getContentSummary(dir).getLength());
     
-    Iterator<FileStatus> itor = fc.listStatus(dir);
+    RemoteIterator<FileStatus> itor = fc.listStatus(dir);
     assertFalse(dir + " should be empty", itor.hasNext());
 
     // create another file that is smaller than a block.

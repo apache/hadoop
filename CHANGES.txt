@@ -29,6 +29,10 @@ Trunk (unreleased changes)
 
     HDFS-1330. Make RPCs to DataNodes timeout. (hairong)
 
+    HDFS-202.  HDFS support of listLocatedStatus introduced in HADOOP-6870.
+    HDFS piggyback block locations to each file status when listing a
+    directory.  (hairong)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

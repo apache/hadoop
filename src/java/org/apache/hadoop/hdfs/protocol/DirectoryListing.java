@@ -109,9 +109,16 @@ public class DirectoryListing implements Writable {
   public void readFields(DataInput in) throws IOException {
     int numEntries = in.readInt();
     partialListing = new HdfsFileStatus[numEntries];
-    for (int i=0; i<numEntries; i++) {
-      partialListing[i] = new HdfsFileStatus();
-      partialListing[i].readFields(in);
+    if (numEntries !=0 ) {
+      boolean hasLocation = in.readBoolean();
+      for (int i=0; i<numEntries; i++) {
+        if (hasLocation) {
+          partialListing[i] = new HdfsLocatedFileStatus();
+        } else {
+          partialListing[i] = new HdfsFileStatus();
+        }
+        partialListing[i].readFields(in);
+      }
     }
     remainingEntries = in.readInt();
   }
@@ -119,8 +126,15 @@ public class DirectoryListing implements Writable {
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(partialListing.length);
-    for (HdfsFileStatus fileStatus : partialListing) {
-      fileStatus.write(out);
+    if (partialListing.length != 0) { 
+       if (partialListing[0] instanceof HdfsLocatedFileStatus) {
+         out.writeBoolean(true);
+       } else {
+         out.writeBoolean(false);
+       }
+       for (HdfsFileStatus fileStatus : partialListing) {
+         fileStatus.write(out);
+       }
     }
     out.writeInt(remainingEntries);
   }

@@ -975,9 +975,11 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /**
    */
   @Override
-  public DirectoryListing getListing(String src, byte[] startAfter)
+  public DirectoryListing getListing(String src, byte[] startAfter,
+      boolean needLocation)
   throws IOException {
-    DirectoryListing files = namesystem.getListing(src, startAfter);
+    DirectoryListing files = namesystem.getListing(
+        src, startAfter, needLocation);
     if (files != null) {
       myMetrics.numGetListingOps.inc();
       myMetrics.numFilesInGetListingOps.inc(files.getPartialListing().length);

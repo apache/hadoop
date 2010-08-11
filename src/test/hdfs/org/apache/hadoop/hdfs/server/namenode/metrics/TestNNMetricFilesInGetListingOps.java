@@ -75,9 +75,9 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
     createFile("/tmp1/t2", 3200, (short)3);
     createFile("/tmp2/t1", 3200, (short)3);
     createFile("/tmp2/t2", 3200, (short)3);
-    cluster.getNameNode().getListing("/tmp1", HdfsFileStatus.EMPTY_NAME);
+    cluster.getNameNode().getListing("/tmp1", HdfsFileStatus.EMPTY_NAME, false);
     assertEquals(2,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
-    cluster.getNameNode().getListing("/tmp2", HdfsFileStatus.EMPTY_NAME) ;
+    cluster.getNameNode().getListing("/tmp2", HdfsFileStatus.EMPTY_NAME, false) ;
     assertEquals(4,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
   }
 }

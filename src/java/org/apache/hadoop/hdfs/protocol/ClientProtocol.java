@@ -68,9 +68,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 61: HDFS-1081. Performance optimization on getBlocksLocation().
+   * 62: Allow iterative getListinng piggyback block locations.
    */
-  public static final long versionID = 61L;
+  public static final long versionID = 62L;
   
   ///////////////////////////////////////
   // File contents
@@ -473,6 +473,7 @@ public interface ClientProtocol extends VersionedProtocol {
    *
    * @param src the directory name
    * @param startAfter the name to start listing after encoded in java UTF8
+   * @param needLocation if the FileStatus should contain block locations
    *
    * @return a partial listing starting after startAfter
    *
@@ -481,7 +482,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  public DirectoryListing getListing(String src, byte[] startAfter)
+  public DirectoryListing getListing(String src,
+                                     byte[] startAfter,
+                                     boolean needLocation)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 

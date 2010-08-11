@@ -267,7 +267,7 @@ public class NamenodeFsck {
       res.totalDirs++;
       do {
         assert lastReturnedName != null;
-        thisListing = namenode.getListing(path, lastReturnedName);
+        thisListing = namenode.getListing(path, lastReturnedName, false);
         if (thisListing == null) {
           return;
         }

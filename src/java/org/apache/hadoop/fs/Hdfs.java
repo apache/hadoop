@@ -25,16 +25,17 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
@@ -141,6 +142,17 @@ public class Hdfs extends AbstractFileSystem {
             getUri(), null)); // fully-qualify path
   }
 
+  private LocatedFileStatus makeQualifiedLocated(
+      HdfsLocatedFileStatus f, Path parent) {
+    return new LocatedFileStatus(f.getLen(), f.isDir(), f.getReplication(),
+        f.getBlockSize(), f.getModificationTime(),
+        f.getAccessTime(),
+        f.getPermission(), f.getOwner(), f.getGroup(),
+        f.isSymlink() ? new Path(f.getSymlink()) : null,
+        (f.getFullPath(parent)).makeQualified(
+            getUri(), null), // fully-qualify path
+        DFSUtil.locatedBlocks2Locations(f.getBlockLocations()));
+  }
 
   @Override
   protected FsStatus getFsStatus() throws IOException {
@@ -153,60 +165,93 @@ public class Hdfs extends AbstractFileSystem {
   }
 
   @Override
-  protected Iterator<FileStatus> listStatusIterator(final Path f)
-    throws AccessControlException, FileNotFoundException,
-    UnresolvedLinkException, IOException {
-    return new Iterator<FileStatus>() {
-      private DirectoryListing thisListing;
-      private int i;
-      private String src;
-
-
-      { // initializer
-        src = getUriPath(f);
-        // fetch the first batch of entries in the directory
-        thisListing = dfs.listPaths(src, HdfsFileStatus.EMPTY_NAME);
-        if (thisListing == null) { // the directory does not exist
-          throw new FileNotFoundException("File " + f + " does not exist.");
-        }
-      }
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(
+      final Path p)
+      throws FileNotFoundException, IOException {
+    return new DirListingIterator<LocatedFileStatus>(p, true) {
 
       @Override
-      public boolean hasNext() {
-        if (thisListing == null) {
-          return false;
-        }
-        try {
-          if (i>=thisListing.getPartialListing().length && thisListing.hasMore()) { 
-            // current listing is exhausted & fetch a new listing
-            thisListing = dfs.listPaths(src, thisListing.getLastName());
-            if (thisListing == null) {
-              return false; // the directory is deleted
-            }
-            i = 0;
-          }
-          return (i<thisListing.getPartialListing().length);
-        } catch (IOException ioe) {
-          return false;
-        }
-      }
-
-      @Override
-      public FileStatus next() {
-        if (hasNext()) {
-          return makeQualified(thisListing.getPartialListing()[i++], f);
-        } 
-        throw new java.util.NoSuchElementException("No more entry in " + f);
-      }
-
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported");
-
+      public LocatedFileStatus next() throws IOException {
+        return makeQualifiedLocated((HdfsLocatedFileStatus)getNext(), p);
       }
     };
   }
   
+  @Override
+  protected RemoteIterator<FileStatus> listStatusIterator(final Path f)
+    throws AccessControlException, FileNotFoundException,
+    UnresolvedLinkException, IOException {
+    return new DirListingIterator<FileStatus>(f, false) {
+
+      @Override
+      public FileStatus next() throws IOException {
+        return makeQualified(getNext(), f);
+      }
+    };
+  }
+
+  /**
+   * This class defines an iterator that returns
+   * the file status of each file/subdirectory of a directory
+   * 
+   * if needLocation, status contains block location if it is a file
+   * throws a RuntimeException with the error as its cause.
+   * 
+   * @param <T> the type of the file status
+   */
+  abstract private class  DirListingIterator<T extends FileStatus>
+  implements RemoteIterator<T> {
+    private DirectoryListing thisListing;
+    private int i;
+    final private String src;
+    final private boolean needLocation;  // if status
+
+    private DirListingIterator(Path p, boolean needLocation)
+      throws IOException {
+      this.src = Hdfs.this.getUriPath(p);
+      this.needLocation = needLocation;
+
+      // fetch the first batch of entries in the directory
+      thisListing = dfs.listPaths(
+          src, HdfsFileStatus.EMPTY_NAME, needLocation);
+      if (thisListing == null) { // the directory does not exist
+        throw new FileNotFoundException("File " + src + " does not exist.");
+      }
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      if (thisListing == null) {
+        return false;
+      }
+      if (i>=thisListing.getPartialListing().length
+          && thisListing.hasMore()) { 
+        // current listing is exhausted & fetch a new listing
+        thisListing = dfs.listPaths(src, thisListing.getLastName(),
+            needLocation);
+        if (thisListing == null) {
+          return false; // the directory is deleted
+        }
+        i = 0;
+      }
+      return (i<thisListing.getPartialListing().length);
+    }
+
+    /**
+     * Get the next item in the list
+     * @return the next item in the list
+     * 
+     * @throws IOException if there is any error
+     * @throws NoSuchElmentException if no more entry is available
+     */
+    protected HdfsFileStatus getNext() throws IOException {
+      if (hasNext()) {
+        return thisListing.getPartialListing()[i++];
+      }
+      throw new java.util.NoSuchElementException("No more entry in " + src);
+    }
+  }
+
   @Override
   protected FileStatus[] listStatus(Path f) 
       throws IOException, UnresolvedLinkException {

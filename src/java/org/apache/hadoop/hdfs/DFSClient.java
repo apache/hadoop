@@ -463,33 +463,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException, UnresolvedLinkException {
     LocatedBlocks blocks = callGetBlockLocations(namenode, src, start, length);
-    if (blocks == null) {
-      return new BlockLocation[0];
-    }
-    int nrBlocks = blocks.locatedBlockCount();
-    BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
-    int idx = 0;
-    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
-      assert idx < nrBlocks : "Incorrect index";
-      DatanodeInfo[] locations = blk.getLocations();
-      String[] hosts = new String[locations.length];
-      String[] names = new String[locations.length];
-      String[] racks = new String[locations.length];
-      for (int hCnt = 0; hCnt < locations.length; hCnt++) {
-        hosts[hCnt] = locations[hCnt].getHostName();
-        names[hCnt] = locations[hCnt].getName();
-        NodeBase node = new NodeBase(names[hCnt], 
-                                     locations[hCnt].getNetworkLocation());
-        racks[hCnt] = node.toString();
-      }
-      blkLocations[idx] = new BlockLocation(names, hosts, racks,
-                                            blk.getStartOffset(),
-                                            blk.getBlockSize());
-      idx++;
-    }
-    return blkLocations;
+    return DFSUtil.locatedBlocks2Locations(blocks);
   }
-
+  
   public DFSInputStream open(String src) 
       throws IOException, UnresolvedLinkException {
     return open(src, conf.getInt("io.file.buffer.size", 4096), true, null);
@@ -860,18 +836,28 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   /**
    * Get a partial listing of the indicated directory
+   * No block locations need to be fetched
+   */
+  public DirectoryListing listPaths(String src,  byte[] startAfter)
+    throws IOException {
+    return listPaths(src, startAfter, false);
+  }
+  
+  /**
+   * Get a partial listing of the indicated directory
    *
    * Recommend to use HdfsFileStatus.EMPTY_NAME as startAfter
    * if the application wants to fetch a listing starting from
    * the first entry in the directory
    *
-   * @see ClientProtocol#getListing(String, byte[])
+   * @see ClientProtocol#getListing(String, byte[], boolean)
    */
-  public DirectoryListing listPaths(String src,  byte[] startAfter) 
+  public DirectoryListing listPaths(String src,  byte[] startAfter,
+      boolean needLocation) 
     throws IOException {
     checkOpen();
     try {
-      return namenode.getListing(src, startAfter);
+      return namenode.getListing(src, startAfter, needLocation);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,

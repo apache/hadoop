@@ -33,14 +33,15 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 public privileged aspect ListPathAspects {
   public static final Log LOG = LogFactory.getLog(ListPathAspects.class);
 
-  /** When removeChild is called during rename, throw exception */
-  pointcut callGetListing(FSNamesystem fd, String src, byte[] startAfter) : 
-    call(DirectoryListing FSNamesystem.getListing(String, byte[]))
+  pointcut callGetListing(FSNamesystem fd, String src,
+                          byte[] startAfter, boolean needLocation) : 
+    call(DirectoryListing FSNamesystem.getListing(String, byte[], boolean))
     && target(fd)
-    && args(src, startAfter);
+    && args(src, startAfter, needLocation);
 
-  after(FSNamesystem fd, String src, byte[] startAfter) 
-    throws IOException, UnresolvedLinkException: callGetListing(fd, src, startAfter) {
+  after(FSNamesystem fd, String src, byte[] startAfter, boolean needLocation) 
+    throws IOException, UnresolvedLinkException: 
+      callGetListing(fd, src, startAfter, needLocation) {
     LOG.info("FI: callGetListing");
     fd.delete(src, true);
   }
