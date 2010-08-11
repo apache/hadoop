@@ -123,13 +123,13 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
+	if (table == null) {
+	    throw new IOException("No table was provided.");
+	}
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
       throw new IOException("Expecting at least one region.");
-    }
-    if (table == null) {
-      throw new IOException("No table was provided.");
     }
     int count = 0;
     List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length);
