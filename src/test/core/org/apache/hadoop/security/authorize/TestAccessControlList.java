@@ -43,7 +43,46 @@ public class TestAccessControlList extends TestCase {
     acl = new AccessControlList("*  ");
     assertTrue(acl.isAllAllowed());
   }
-  
+
+  // Check if AccessControlList.toString() works as expected.
+  // Also validate if getAclString() for various cases.
+  public void testAclString() {
+    AccessControlList acl;
+
+    acl = new AccessControlList("*");
+    assertTrue(acl.toString().equals("All users are allowed"));
+    validateGetAclString(acl);
+
+    acl = new AccessControlList(" ");
+    assertTrue(acl.toString().equals("No users are allowed"));
+
+    acl = new AccessControlList("user1,user2");
+    assertTrue(acl.toString().equals("Users [user1, user2] are allowed"));
+    validateGetAclString(acl);
+
+    acl = new AccessControlList("user1,user2 ");// with space
+    assertTrue(acl.toString().equals("Users [user1, user2] are allowed"));
+    validateGetAclString(acl);
+
+    acl = new AccessControlList(" group1,group2");
+    assertTrue(acl.toString().equals(
+        "Members of the groups [group1, group2] are allowed"));
+    validateGetAclString(acl);
+
+    acl = new AccessControlList("user1,user2 group1,group2");
+    assertTrue(acl.toString().equals(
+        "Users [user1, user2] and " +
+        "members of the groups [group1, group2] are allowed"));
+    validateGetAclString(acl);
+  }
+
+  // Validates if getAclString() is working as expected. i.e. if we can build
+  // a new ACL instance from the value returned by getAclString().
+  private void validateGetAclString(AccessControlList acl) {
+    assertTrue(acl.toString().equals(
+        new AccessControlList(acl.getAclString()).toString()));
+  }
+
   public void testAccessControlList() throws Exception {
     AccessControlList acl;
     Set<String> users;
@@ -99,22 +138,22 @@ public class TestAccessControlList extends TestCase {
     AccessControlList acl;
     Set<String> users;
     Set<String> groups;
-    acl = new AccessControlList("");
+    acl = new AccessControlList(" ");
     assertEquals(0, acl.getUsers().size());
     assertEquals(0, acl.getGroups().size());
-    assertEquals("", acl.toString());
+    assertEquals(" ", acl.getAclString());
     
     acl.addUser("drwho");
     users = acl.getUsers();
     assertEquals(users.size(), 1);
     assertEquals(users.iterator().next(), "drwho");
-    assertEquals("drwho", acl.toString());
+    assertEquals("drwho ", acl.getAclString());
     
     acl.addGroup("tardis");
     groups = acl.getGroups();
     assertEquals(groups.size(), 1);
     assertEquals(groups.iterator().next(), "tardis");
-    assertEquals("drwho tardis", acl.toString());
+    assertEquals("drwho tardis", acl.getAclString());
     
     acl.addUser("joe");
     acl.addGroup("users");
@@ -128,7 +167,7 @@ public class TestAccessControlList extends TestCase {
     iter = groups.iterator();
     assertEquals(iter.next(), "tardis");
     assertEquals(iter.next(), "users");
-    assertEquals("drwho,joe tardis,users", acl.toString());
+    assertEquals("drwho,joe tardis,users", acl.getAclString());
 
     acl.removeUser("joe");
     acl.removeGroup("users");
@@ -138,20 +177,20 @@ public class TestAccessControlList extends TestCase {
     groups = acl.getGroups();
     assertEquals(groups.size(), 1);
     assertFalse(groups.contains("users"));
-    assertEquals("drwho tardis", acl.toString());
+    assertEquals("drwho tardis", acl.getAclString());
     
     acl.removeGroup("tardis");
     groups = acl.getGroups();
     assertEquals(0, groups.size());
     assertFalse(groups.contains("tardis"));
-    assertEquals("drwho", acl.toString());
+    assertEquals("drwho ", acl.getAclString());
     
     acl.removeUser("drwho");
     assertEquals(0, users.size());
     assertFalse(users.contains("drwho"));
     assertEquals(0, acl.getGroups().size());
     assertEquals(0, acl.getUsers().size());
-    assertEquals("", acl.toString());
+    assertEquals(" ", acl.getAclString());
   }
   
   /**
@@ -211,10 +250,10 @@ public class TestAccessControlList extends TestCase {
 
     acl.addUser("drwho");
     assertTrue(acl.isAllAllowed());
-    assertFalse(acl.toString().contains("drwho"));
+    assertFalse(acl.getAclString().contains("drwho"));
     acl.addGroup("tardis");
     assertTrue(acl.isAllAllowed());
-    assertFalse(acl.toString().contains("tardis"));
+    assertFalse(acl.getAclString().contains("tardis"));
    
     acl.removeUser("drwho");
     assertTrue(acl.isAllAllowed());

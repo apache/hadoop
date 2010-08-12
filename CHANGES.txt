@@ -188,6 +188,9 @@ Trunk (unreleased changes)
     HADOOP-6706. Improves the sasl failure handling due to expired tickets,
     and other server detected failures. (Jitendra Pandey and ddas via ddas)
 
+    HADOOP-6715. Fixes AccessControlList.toString() to return a descriptive
+    String representation of the ACL. (Ravi Gummadi via amareshwari)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
