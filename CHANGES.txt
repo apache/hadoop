@@ -475,6 +475,7 @@ Release 0.21.0 - Unreleased
    HBASE-2905  NPE when inserting mass data via REST interface (Sandy Yin via
                Andrew Purtell)
    HBASE-2908  Wrong order of null-check [in TIF] (Libor Dener via Stack)
+   HBASE-2909  SoftValueSortedMap is broken, can generate NPEs
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

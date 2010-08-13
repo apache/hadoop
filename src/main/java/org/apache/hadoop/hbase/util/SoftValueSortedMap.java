@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.ReferenceQueue;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -72,7 +73,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
     for (Object obj; (obj = this.rq.poll()) != null;) {
       i++;
       //noinspection unchecked
-      this.internalMap.remove(((SoftValue<K,V>)obj).getKey());
+      this.internalMap.remove(((SoftValue<K,V>)obj).key);
     }
     return i;
   }
@@ -171,13 +172,7 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   }
 
   public synchronized Set<Map.Entry<K,V>> entrySet() {
-    checkReferences();
-    Set<Map.Entry<K, SoftValue<K,V>>> entries = this.internalMap.entrySet();
-    Set<Map.Entry<K, V>> real_entries = new TreeSet<Map.Entry<K,V>>();
-    for(Map.Entry<K, SoftValue<K,V>> entry : entries) {
-      real_entries.add(entry.getValue());
-    }
-    return real_entries;
+    throw new RuntimeException("Not implemented");
   }
 
   public synchronized Collection<V> values() {
@@ -188,5 +183,14 @@ public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
       hardValues.add(softValue.get());
     }
     return hardValues;
+  }
+
+  private static class SoftValue<K,V> extends SoftReference<V> {
+    final K key;
+
+    SoftValue(K key, V value, ReferenceQueue q) {
+      super(value, q);
+      this.key = key;
+    }
   }
 }
