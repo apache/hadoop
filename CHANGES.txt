@@ -835,6 +835,8 @@ Release 0.21.0 - Unreleased
    HBASE-2870  Add Backup CLI Option to HMaster (Nicolas Spiegelberg via Stack)
    HBASE-2868  Do some small cleanups in org.apache.hadoop.hbase.regionserver.wal
                (Alex Newman via Stack)
+   HBASE-1660  HBASE-1660 script to handle rolling restarts
+               (Nicolas Spiegelberg via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
