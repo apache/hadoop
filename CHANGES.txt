@@ -204,6 +204,10 @@ Trunk (unreleased changes)
     HDFS-1301.  TestHDFSProxy need to use server side conf for ProxyUser 
     stuff. (boryas)
 
+    HDFS-1340. When security is turned off, there is a potential XSS attack. 
+    This patch fixes it by removing delegationtoken string from the URL, 
+    before returning a response to the client. (Jitendra Pandey via ddas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

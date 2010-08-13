@@ -124,7 +124,7 @@ public class DatanodeJspHelper {
               + firstBlock.getBlock().getGenerationStamp() + "&filename="
               + URLEncoder.encode(dir, "UTF-8") + "&datanodePort="
               + datanodePort + "&namenodeInfoPort=" + namenodeInfoPort
-              + JspHelper.SET_DELEGATION + tokenString;
+              + JspHelper.getDelegationTokenUrlParam(tokenString);
           resp.sendRedirect(redirectLocation);
         }
         return;
@@ -144,7 +144,7 @@ public class DatanodeJspHelper {
       if ((parent = f.getParent()) != null)
         out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent
             + "&namenodeInfoPort=" + namenodeInfoPort
-            + JspHelper.SET_DELEGATION + tokenString
+            + JspHelper.getDelegationTokenUrlParam(tokenString)
             + "\">Go to parent directory</a><br>");
 
       DirectoryListing thisListing = 
@@ -175,7 +175,7 @@ public class DatanodeJspHelper {
             String datanodeUrl = req.getRequestURL() + "?dir="
               + URLEncoder.encode(files[i].getFullName(target), "UTF-8")
               + "&namenodeInfoPort=" + namenodeInfoPort
-              + JspHelper.SET_DELEGATION + tokenString;
+              + JspHelper.getDelegationTokenUrlParam(tokenString);
             cols[0] = "<a href=\"" + datanodeUrl + "\">"
               + localFileName + "</a>";
             cols[5] = FsShell.dateForm.format(new Date((files[i]
@@ -262,7 +262,7 @@ public class DatanodeJspHelper {
     String downloadUrl = "http://" + req.getServerName() + ":"
         + req.getServerPort() + "/streamFile?" + "filename="
         + URLEncoder.encode(filename, "UTF-8")
-        + JspHelper.SET_DELEGATION + tokenString;
+        + JspHelper.getDelegationTokenUrlParam(tokenString);
     out.print("<a name=\"viewOptions\"></a>");
     out.print("<a href=\"" + downloadUrl + "\">Download this file</a><br>");
 
@@ -282,7 +282,7 @@ public class DatanodeJspHelper {
         + "/tail.jsp?filename=" + URLEncoder.encode(filename, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
         + "&chunkSizeToView=" + chunkSizeToView
-        + JspHelper.SET_DELEGATION + tokenString
+        + JspHelper.getDelegationTokenUrlParam(tokenString)
         + "&referrer=" + URLEncoder.encode(
             req.getRequestURL() + "?" + req.getQueryString(), "UTF-8");
     out.print("<a href=\"" + tailUrl + "\">Tail this file</a><br>");
@@ -333,7 +333,7 @@ public class DatanodeJspHelper {
             + "&genstamp=" + cur.getBlock().getGenerationStamp()
             + "&namenodeInfoPort=" + namenodeInfoPort
             + "&chunkSizeToView=" + chunkSizeToView
-            + JspHelper.SET_DELEGATION + tokenString;
+            + JspHelper.getDelegationTokenUrlParam(tokenString);
 
         String blockInfoUrl = "http://" + namenodeHostName + ":"
             + namenodeInfoPort
@@ -441,7 +441,7 @@ public class DatanodeJspHelper {
         + req.getServerName() + ":" + req.getServerPort()
         + "/browseDirectory.jsp?dir=" + URLEncoder.encode(parent, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
-        + JspHelper.SET_DELEGATION + tokenString
+        + JspHelper.getDelegationTokenUrlParam(tokenString)
         + "\"><i>Go back to dir listing</i></a><br>");
     out.print("<a href=\"#viewOptions\">Advanced view/download options</a><br>");
     out.print("<hr>");
@@ -496,7 +496,7 @@ public class DatanodeJspHelper {
           + "&chunkSizeToView=" + chunkSizeToView
           + "&datanodePort=" + nextDatanodePort
           + "&namenodeInfoPort=" + namenodeInfoPort
-          + JspHelper.SET_DELEGATION + tokenString;
+          + JspHelper.getDelegationTokenUrlParam(tokenString);
       out.print("<a href=\"" + nextUrl + "\">View Next chunk</a>&nbsp;&nbsp;");
     }
     // determine data for the prev link
@@ -553,7 +553,7 @@ public class DatanodeJspHelper {
           + "&genstamp=" + prevGenStamp
           + "&datanodePort=" + prevDatanodePort
           + "&namenodeInfoPort=" + namenodeInfoPort
-          + JspHelper.SET_DELEGATION + tokenString;
+          + JspHelper.getDelegationTokenUrlParam(tokenString);
       out.print("<a href=\"" + prevUrl + "\">View Prev chunk</a>&nbsp;&nbsp;");
     }
     out.print("<hr>");

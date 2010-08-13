@@ -90,5 +90,23 @@ public class TestJspHelper {
         .next();
     Assert.assertEquals(tokenInUgi.getService(), tokenService);
   }
+  
+  @Test
+  public void testDelegationTokenUrlParam() {
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    String tokenString = "xyzabc";
+    String delegationTokenParam = JspHelper
+        .getDelegationTokenUrlParam(tokenString);
+    //Security is enabled
+    Assert.assertEquals(JspHelper.SET_DELEGATION + "xyzabc",
+        delegationTokenParam);
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(conf);
+    delegationTokenParam = JspHelper
+        .getDelegationTokenUrlParam(tokenString);
+    //Empty string must be returned because security is disabled.
+    Assert.assertEquals("", delegationTokenParam);
+  }
 
 }
