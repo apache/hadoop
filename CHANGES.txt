@@ -201,6 +201,9 @@ Trunk (unreleased changes)
     HDFS-1334. open in HftpFileSystem does not add delegation tokens to the url.
     (Jitendra Pandey via jghoman)
 
+    HDFS-1301.  TestHDFSProxy need to use server side conf for ProxyUser 
+    stuff. (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
