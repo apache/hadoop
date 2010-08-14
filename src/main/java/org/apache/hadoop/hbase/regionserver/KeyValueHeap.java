@@ -220,6 +220,33 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     return false;
   }
 
+  public boolean reseek(KeyValue seekKey) throws IOException {
+    //This function is very identical to the seek(KeyValue) function except that
+    //scanner.seek(seekKey) is changed to scanner.reseek(seekKey)
+    if (this.current == null) {
+      return false;
+    }
+    this.heap.add(this.current);
+    this.current = null;
+
+    KeyValueScanner scanner;
+    while ((scanner = this.heap.poll()) != null) {
+      KeyValue topKey = scanner.peek();
+      if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
+        // Top KeyValue is at-or-after Seek KeyValue
+        this.current = scanner;
+        return true;
+      }
+      if (!scanner.reseek(seekKey)) {
+        scanner.close();
+      } else {
+        this.heap.add(scanner);
+      }
+    }
+    // Heap is returning empty, scanner is done
+    return false;
+  }
+
   /**
    * @return the current Heap
    */

@@ -20,7 +20,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.rmi.UnexpectedException;
@@ -599,6 +598,20 @@ public class MemStore implements HeapSize {
 
       // has data := (lowest != null)
       return lowest != null;
+    }
+
+    @Override
+    public boolean reseek(KeyValue key) {
+      while (kvsetNextRow != null &&
+          comparator.compare(kvsetNextRow, key) < 0) {
+        kvsetNextRow = getNext(kvsetIt);
+      }
+
+      while (snapshotNextRow != null &&
+          comparator.compare(snapshotNextRow, key) < 0) {
+        snapshotNextRow = getNext(snapshotIt);
+      }
+      return (kvsetNextRow != null || snapshotNextRow != null);
     }
 
     public synchronized KeyValue peek() {

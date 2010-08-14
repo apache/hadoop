@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -254,6 +253,11 @@ public class TestKeyValueHeap extends HBaseTestCase {
         }
       }
       return false;
+    }
+
+    @Override
+    public boolean reseek(KeyValue key) throws IOException {
+      return seek(key);
     }
   }
 

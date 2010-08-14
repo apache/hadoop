@@ -279,6 +279,15 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           this.heap.next();
           break;
 
+        case SEEK_NEXT_USING_HINT:
+          KeyValue nextKV = matcher.getNextKeyHint(kv);
+          if (nextKV != null) {
+            reseek(nextKV);
+          } else {
+            heap.next();
+          }
+          break;
+
         default:
           throw new RuntimeException("UNEXPECTED");
       }
@@ -324,18 +333,20 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
 
   private void checkReseek() throws IOException {
     if (this.heap == null && this.lastTop != null) {
-
-      reseek(this.lastTop);
+      resetScannerStack(this.lastTop);
       this.lastTop = null; // gone!
     }
     // else dont need to reseek
   }
 
-  private void reseek(KeyValue lastTopKey) throws IOException {
+  private void resetScannerStack(KeyValue lastTopKey) throws IOException {
     if (heap != null) {
       throw new RuntimeException("StoreScanner.reseek run on an existing heap!");
     }
 
+    /* When we have the scan object, should we not pass it to getScanners()
+     * to get a limited set of scanners? We did so in the constructor and we
+     * could have done it now by storing the scan object from the constructor */
     List<KeyValueScanner> scanners = getScanners();
 
     for(KeyValueScanner scanner : scanners) {
@@ -349,5 +360,12 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     matcher.reset();
     KeyValue kv = heap.peek();
     matcher.setRow((kv == null ? lastTopKey : kv).getRow());
+  }
+
+  @Override
+  public synchronized boolean reseek(KeyValue kv) throws IOException {
+    //Heap cannot be null, because this is only called from next() which
+    //guarantees that heap will never be null before this call.
+    return this.heap.reseek(kv);
   }
 }

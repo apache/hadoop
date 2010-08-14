@@ -105,6 +105,20 @@ class StoreFileScanner implements KeyValueScanner {
     }
   }
 
+  public boolean reseek(KeyValue key) throws IOException {
+    try {
+      if (!reseekAtOrAfter(hfs, key)) {
+        close();
+        return false;
+      }
+      cur = hfs.getKeyValue();
+      hfs.next();
+      return true;
+    } catch (IOException ioe) {
+      throw new IOException("Could not seek " + this, ioe);
+    }
+  }
+
   public void close() {
     // Nothing to close on HFileScanner?
     cur = null;
@@ -130,6 +144,19 @@ class StoreFileScanner implements KeyValueScanner {
     }
     // Seeked to the exact key
     return true;
+  }
+
+  static boolean reseekAtOrAfter(HFileScanner s, KeyValue k)
+  throws IOException {
+    //This function is similar to seekAtOrAfter function
+    int result = s.reseekTo(k.getBuffer(), k.getKeyOffset(), k.getKeyLength());
+    if (result <= 0) {
+      return true;
+    } else {
+      // passed KV is larger than current KV in file, if there is a next
+      // it is after, if not then this scanner is done.
+      return s.next();
+    }
   }
 
   // StoreFile filter hook.

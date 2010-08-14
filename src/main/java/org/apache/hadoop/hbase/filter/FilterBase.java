@@ -110,4 +110,15 @@ public abstract class FilterBase implements Filter {
   public boolean filterRow() {
     return false;
   }
+
+  /**
+   * Filters that are not sure which key must be next seeked to, can inherit
+   * this implementation that, by default, returns a null KeyValue.
+   *
+   * @inheritDoc
+   */
+  public KeyValue getNextKeyHint(KeyValue currentKV) {
+    return null;
+  }
+
 }

@@ -201,6 +201,37 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return delegate.seekTo(key, offset, length);
       }
 
+      @Override
+      public int reseekTo(byte[] key) throws IOException {
+        return reseekTo(key, 0, key.length);
+      }
+
+      @Override
+      public int reseekTo(byte[] key, int offset, int length)
+      throws IOException {
+        //This function is identical to the corresponding seekTo function except
+        //that we call reseekTo (and not seekTo) on the delegate.
+        if (top) {
+          if (getComparator().compare(key, offset, length, splitkey, 0,
+              splitkey.length) < 0) {
+            return -1;
+          }
+        } else {
+          if (getComparator().compare(key, offset, length, splitkey, 0,
+              splitkey.length) >= 0) {
+            // we would place the scanner in the second half.
+            // it might be an error to return false here ever...
+            boolean res = delegate.seekBefore(splitkey, 0, splitkey.length);
+            if (!res) {
+              throw new IOException("Seeking for a key in bottom of file, but" +
+                  " key exists in top of file, failed on seekBefore(midkey)");
+            }
+            return 1;
+          }
+        }
+        return delegate.reseekTo(key, offset, length);
+      }
+
       public org.apache.hadoop.hbase.io.hfile.HFile.Reader getReader() {
         return this.delegate.getReader();
       }

@@ -185,7 +185,7 @@ public class TestQueryMatcher extends HBaseTestCase {
         ScanQueryMatcher.MatchCode.INCLUDE,
         ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
         ScanQueryMatcher.MatchCode.INCLUDE,
-        ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
+        ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW,
         ScanQueryMatcher.MatchCode.DONE
     };
 

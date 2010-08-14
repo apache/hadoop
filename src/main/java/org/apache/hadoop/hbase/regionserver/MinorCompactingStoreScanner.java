@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -71,6 +70,10 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
   public boolean seek(KeyValue key) {
     // cant seek.
     throw new UnsupportedOperationException("Can't seek a MinorCompactingStoreScanner");
+  }
+
+  public boolean reseek(KeyValue key) {
+    return seek(key);
   }
 
   /**

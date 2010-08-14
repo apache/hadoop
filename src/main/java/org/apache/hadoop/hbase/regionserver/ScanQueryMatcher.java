@@ -125,7 +125,7 @@ public class ScanQueryMatcher {
       // could optimize this, if necessary?
       // Could also be called SEEK_TO_CURRENT_ROW, but this
       // should be rare/never happens.
-      return MatchCode.SKIP;
+      return MatchCode.SEEK_NEXT_ROW;
     }
 
     // optimize case.
@@ -150,7 +150,7 @@ public class ScanQueryMatcher {
     long timestamp = kv.getTimestamp();
     if (isExpired(timestamp)) {
       // done, the rest of this column will also be expired as well.
-      return MatchCode.SEEK_NEXT_COL;
+      return getNextRowOrNextColumn(bytes, offset, qualLength);
     }
 
     byte type = kv.getType();
@@ -194,6 +194,8 @@ public class ScanQueryMatcher {
       } else if (filterResponse == ReturnCode.NEXT_ROW) {
         stickyNextRow = true;
         return MatchCode.SEEK_NEXT_ROW;
+      } else if (filterResponse == ReturnCode.SEEK_NEXT_USING_HINT) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
       }
     }
 
@@ -272,6 +274,14 @@ public class ScanQueryMatcher {
     return this.startKey;
   }
 
+  public KeyValue getNextKeyHint(KeyValue kv) {
+    if (filter == null) {
+      return null;
+    } else {
+      return filter.getNextKeyHint(kv);
+    }
+  }
+
   /**
    * {@link #match} return codes.  These instruct the scanner moving through
    * memstores and StoreFiles what to do with the current KeyValue.
@@ -317,5 +327,10 @@ public class ScanQueryMatcher {
      * Done with scan, thanks to the row filter.
      */
     DONE_SCAN,
+
+    /*
+     * Seek to next key which is given as hint.
+     */
+    SEEK_NEXT_USING_HINT,
   }
 }

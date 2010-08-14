@@ -245,4 +245,9 @@ public class FilterList implements Filter {
       HbaseObjectWritable.writeObject(out, filter, Writable.class, conf);
     }
   }
+
+  @Override
+  public KeyValue getNextKeyHint(KeyValue currentKV) {
+    return null;
+  }
 }

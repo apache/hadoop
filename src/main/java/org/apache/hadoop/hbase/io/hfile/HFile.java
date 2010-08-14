@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -1256,13 +1255,37 @@ public class HFile {
         return seekTo(key, 0, key.length);
       }
 
-
       public int seekTo(byte[] key, int offset, int length) throws IOException {
         int b = reader.blockContainingKey(key, offset, length);
         if (b < 0) return -1; // falls before the beginning of the file! :-(
         // Avoid re-reading the same block (that'd be dumb).
-        loadBlock(b);
+        loadBlock(b, true);
+        return blockSeek(key, offset, length, false);
+      }
 
+      public int reseekTo(byte [] key) throws IOException {
+        return reseekTo(key, 0, key.length);
+      }
+
+      public int reseekTo(byte[] key, int offset, int length)
+        throws IOException {
+
+        if (this.block != null && this.currKeyLen != 0) {
+          ByteBuffer bb = getKey();
+          int compared = this.reader.comparator.compare(key, offset, length,
+              bb.array(), bb.arrayOffset(), bb.limit());
+          if (compared < 1) {
+            //If the required key is less than or equal to current key, then
+            //don't do anything.
+            return compared;
+          }
+        }
+
+        int b = reader.blockContainingKey(key, offset, length);
+        if (b < 0) {
+          return -1;
+        }
+        loadBlock(b, false);
         return blockSeek(key, offset, length, false);
       }
 
@@ -1336,7 +1359,7 @@ public class HFile {
           b--;
           // TODO shortcut: seek forward in this block to the last key of the block.
         }
-        loadBlock(b);
+        loadBlock(b, true);
         blockSeek(key, offset, length, true);
         return true;
       }
@@ -1377,7 +1400,7 @@ public class HFile {
         return true;
       }
 
-      private void loadBlock(int bloc) throws IOException {
+      private void loadBlock(int bloc, boolean rewind) throws IOException {
         if (block == null) {
           block = reader.readBlock(bloc, this.cacheBlocks, this.pread);
           currBlock = bloc;
@@ -1389,7 +1412,13 @@ public class HFile {
             blockFetches++;
           } else {
             // we are already in the same block, just rewind to seek again.
-            block.rewind();
+            if (rewind) {
+              block.rewind();
+            }
+            else {
+              //Go back by (size of rowlength + size of valuelength) = 8 bytes
+              block.position(block.position()-8);
+            }
           }
         }
       }

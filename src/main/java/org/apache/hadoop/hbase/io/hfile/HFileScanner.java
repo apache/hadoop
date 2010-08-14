@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.KeyValue;
 
@@ -47,12 +46,37 @@ public interface HFileScanner {
    * @return -1, if key < k[0], no position;
    * 0, such that k[i] = key and scanner is left in position i; and
    * 1, such that k[i] < key, and scanner is left in position i.
-   * Furthermore, there may be a k[i+1], such that k[i] < key < k[i+1]
-   * but there may not be a k[i+1], and next() will return false (EOF).
+   * The scanner will position itself between k[i] and k[i+1] where
+   * k[i] < key <= k[i+1].
+   * If there is no key k[i+1] greater than or equal to the input key, then the
+   * scanner will position itself at the end of the file and next() will return
+   * false when it is called.
    * @throws IOException
    */
   public int seekTo(byte[] key) throws IOException;
   public int seekTo(byte[] key, int offset, int length) throws IOException;
+  /**
+   * Reseek to or just before the passed <code>key</code>. Similar to seekTo
+   * except that this can be called even if the scanner is not at the beginning
+   * of a file.
+   * This can be used to seek only to keys which come after the current position
+   * of the scanner.
+   * Consider the key stream of all the keys in the file,
+   * <code>k[0] .. k[n]</code>, where there are n keys in the file after
+   * current position of HFileScanner.
+   * The scanner will position itself between k[i] and k[i+1] where
+   * k[i] < key <= k[i+1].
+   * If there is no key k[i+1] greater than or equal to the input key, then the
+   * scanner will position itself at the end of the file and next() will return
+   * false when it is called.
+   * @param key Key to find (should be non-null)
+   * @return -1, if key < k[0], no position;
+   * 0, such that k[i] = key and scanner is left in position i; and
+   * 1, such that k[i] < key, and scanner is left in position i.
+   * @throws IOException
+   */
+  public int reseekTo(byte[] key) throws IOException;
+  public int reseekTo(byte[] key, int offset, int length) throws IOException;
   /**
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.

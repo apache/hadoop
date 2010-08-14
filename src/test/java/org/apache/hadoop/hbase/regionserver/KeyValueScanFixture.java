@@ -95,6 +95,11 @@ public class KeyValueScanFixture implements KeyValueScanner {
   }
 
   @Override
+  public boolean reseek(KeyValue key) {
+    return seek(key);
+  }
+
+  @Override
   public void close() {
     // noop.
   }
