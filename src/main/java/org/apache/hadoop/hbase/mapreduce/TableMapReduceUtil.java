@@ -141,7 +141,7 @@ public class TableMapReduceUtil {
   public static void initTableReducerJob(String table,
     Class<? extends TableReducer> reducer, Job job,
     Class partitioner) throws IOException {
-    initTableReducerJob(table, reducer, job, null, null, null, null);
+    initTableReducerJob(table, reducer, job, partitioner, null, null, null);
   }
 
   /**
