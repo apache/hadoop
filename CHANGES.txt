@@ -120,6 +120,8 @@ Trunk (unreleased changes)
     HADOOP-6905. Better logging messages when a delegation token is invalid.
     (Kan Zhang via jghoman)
 
+    HADOOP-6693. Add metrics to track kerberol login activity. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
