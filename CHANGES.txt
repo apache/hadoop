@@ -117,6 +117,9 @@ Trunk (unreleased changes)
     throw IOException rather than RuntimeException when there is an IO error
     fetching the next file. (hairong)
 
+    HADOOP-6905. Better logging messages when a delegation token is invalid.
+    (Kan Zhang via jghoman)
+
   OPTIMIZATIONS
 
   BUG FIXES
