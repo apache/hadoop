@@ -478,6 +478,7 @@ Release 0.21.0 - Unreleased
    HBASE-2909  SoftValueSortedMap is broken, can generate NPEs
    HBASE-2919  initTableReducerJob: Unused method parameter
                (Libor Dener via Stack)
+   HBASE-2923  Deadlock between HRegion.internalFlushCache and close
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

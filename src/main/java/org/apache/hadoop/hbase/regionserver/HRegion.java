@@ -470,7 +470,7 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException e
    */
-  public synchronized List<StoreFile> close(final boolean abort)
+  public List<StoreFile> close(final boolean abort)
   throws IOException {
     if (isClosed()) {
       LOG.warn("Region " + this + " already closed");
@@ -507,6 +507,10 @@ public class HRegion implements HeapSize { // , Writable{
     this.closing.set(true);
     try {
       splitsAndClosesLock.writeLock().lock();
+      if (this.isClosed()) {
+        // SplitTransaction handles the null
+        return null;
+      }
       LOG.debug("Updates disabled for region, no outstanding scanners on " + this);
       try {
         // Write lock means no more row locks can be given out.  Wait on
