@@ -113,6 +113,9 @@ Trunk (unreleased changes)
 
     HDFS-1036. docs for fetchdt
 
+    HDFS-1318. Add JMX interface for read access to namenode and datanode
+    web UI information. (Tanping Wang via suresh).
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
