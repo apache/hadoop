@@ -196,6 +196,9 @@ Trunk (unreleased changes)
     HADOOP-6715. Fixes AccessControlList.toString() to return a descriptive
     String representation of the ACL. (Ravi Gummadi via amareshwari)
 
+    HADOOP-6885. Fix java doc warnings in Groups and RefreshUserMappingsProtocol.
+    (Eli Collins via jghoman) 
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

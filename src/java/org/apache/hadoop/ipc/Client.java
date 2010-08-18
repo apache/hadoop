@@ -939,7 +939,7 @@ public class Client {
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception.
-   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation)} instead 
+   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation, int)} instead 
    */
   @Deprecated
   public Writable call(Writable param, InetSocketAddress address)
@@ -952,7 +952,7 @@ public class Client {
    * the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception.
-   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation)} instead 
+   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation, int)} instead 
    */
   @Deprecated
   public Writable call(Writable param, InetSocketAddress addr, 

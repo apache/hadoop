@@ -127,7 +127,7 @@ public class Groups {
   
   /**
    * Get the groups being used to map user-to-groups.
-   * @param Configuration
+   * @param conf
    * @return the groups being used to map user-to-groups.
    */
   public static Groups getUserToGroupsMappingService(Configuration conf) {
