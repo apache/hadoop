@@ -122,6 +122,9 @@ Trunk (unreleased changes)
 
     HADOOP-6693. Add metrics to track kerberol login activity. (suresh)
 
+    HADOOP-6803. Add native gzip read/write coverage to TestCodec.
+    (Eli Collins via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

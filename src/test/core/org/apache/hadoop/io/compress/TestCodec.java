@@ -57,6 +57,7 @@ import org.apache.hadoop.io.compress.CompressorStream;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
@@ -629,22 +630,30 @@ public class TestCodec {
     }
   }
 
-  @Test
-  public void testGzipCodecWrite() throws IOException {
+  public void testGzipCodecWrite(boolean useNative) throws IOException {
     // Create a gzipped file using a compressor from the CodecPool,
     // and try to read it back via the regular GZIPInputStream.
 
-    // Don't use native libs for this test.
+    // Use native libs per the parameter
     Configuration conf = new Configuration();
-    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, false);
-    assertFalse("ZlibFactory is using native libs against request",
-        ZlibFactory.isNativeZlibLoaded(conf));
+    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, useNative);
+    if (useNative) {
+      if (!ZlibFactory.isNativeZlibLoaded(conf)) {
+        LOG.warn("testGzipCodecWrite skipped: native libs not loaded");
+        return;
+      }
+    } else {
+      assertFalse("ZlibFactory is using native libs against request",
+          ZlibFactory.isNativeZlibLoaded(conf));
+    }
 
     // Ensure that the CodecPool has a BuiltInZlibDeflater in it.
     Compressor zlibCompressor = ZlibFactory.getZlibCompressor(conf);
     assertNotNull("zlibCompressor is null!", zlibCompressor);
     assertTrue("ZlibFactory returned unexpected deflator",
-        zlibCompressor instanceof BuiltInZlibDeflater);
+          useNative ? zlibCompressor instanceof ZlibCompressor
+                    : zlibCompressor instanceof BuiltInZlibDeflater);
+
     CodecPool.returnCompressor(zlibCompressor);
 
     // Create a GZIP text file via the Compressor interface.
@@ -679,5 +688,15 @@ public class TestCodec {
     w.close();
 
     verifyGzipFile(fileName, msg);
+  }
+
+  @Test
+  public void testGzipCodecWriteJava() throws IOException {
+    testGzipCodecWrite(false);
+  }
+
+  @Test
+  public void testGzipNativeCodecWrite() throws IOException {
+    testGzipCodecWrite(true);
   }
 }
