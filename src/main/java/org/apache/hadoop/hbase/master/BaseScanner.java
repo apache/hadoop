@@ -538,7 +538,7 @@ abstract class BaseScanner extends Chore {
    * @throws IOException
    */
   protected void checkAssigned(final HRegionInterface regionServer,
-    final MetaRegion meta, final HRegionInfo info,
+    final MetaRegion meta, HRegionInfo info,
     final String hostnameAndPort, final long startCode, boolean checkTwice)
   throws IOException {
     boolean tryAgain = false;
@@ -555,6 +555,7 @@ abstract class BaseScanner extends Chore {
       if (r != null && !r.isEmpty()) {
         sa = getServerAddress(r);
         sc = getStartCode(r);
+        info = master.getHRegionInfo(r.getRow(), r);
       }
     }
     if (sa != null && sa.length() > 0) {
@@ -566,7 +567,7 @@ abstract class BaseScanner extends Chore {
        * a dead server. Regions that were on a dead server will get reassigned
        * by ProcessServerShutdown
        */
-      if (info.isOffline() ||
+      if (info == null || info.isOffline() ||
         this.master.getRegionManager().regionIsInTransition(info.getRegionNameAsString()) ||
           (serverName != null && this.master.getServerManager().isDead(serverName))) {
         return;
