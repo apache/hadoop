@@ -480,6 +480,8 @@ Release 0.21.0 - Unreleased
                (Libor Dener via Stack)
    HBASE-2923  Deadlock between HRegion.internalFlushCache and close
    HBASE-2927  BaseScanner gets stale HRegionInfo in some race cases
+   HBASE-2928  Fault in logic in BinaryPrefixComparator leads to
+               ArrayIndexOutOfBoundsException (pranav via jgray)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

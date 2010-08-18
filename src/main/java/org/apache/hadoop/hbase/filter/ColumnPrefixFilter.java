@@ -20,9 +20,7 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataOutput;
