@@ -86,8 +86,8 @@ import org.apache.hadoop.fs.Path;
  * $ bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
  * list /data directory in dfs with namenode darwin:8020
  *     
- * $ bin/hadoop dfs -conf hadoop-site.xml -ls /data
- * list /data directory in dfs with conf specified in hadoop-site.xml
+ * $ bin/hadoop dfs -conf core-site.xml -conf hdfs-site.xml -ls /data
+ * list /data directory in dfs with multiple conf files specified.
  *     
  * $ bin/hadoop job -D mapred.job.tracker=darwin:50020 -submit job.xml
  * submit a job to job tracker darwin:50020
@@ -122,7 +122,7 @@ public class GenericOptionsParser {
    */
   public GenericOptionsParser(Options opts, String[] args) 
       throws IOException {
-    this(new Configuration(), new Options(), args);
+    this(new Configuration(), opts, args);
   }
 
   /**
@@ -400,25 +400,23 @@ public class GenericOptionsParser {
   /**
    * Parse the user-specified options, get the generic options, and modify
    * configuration accordingly
+   * @param opts Options to use for parsing args.
    * @param conf Configuration to be modified
    * @param args User-specified arguments
-   * @return Command-specific arguments
    */
-  private String[] parseGeneralOptions(Options opts, Configuration conf, 
+  private void parseGeneralOptions(Options opts, Configuration conf, 
       String[] args) throws IOException {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
     try {
       commandLine = parser.parse(opts, args, true);
       processGeneralOptions(conf, commandLine);
-      return commandLine.getArgs();
     } catch(ParseException e) {
       LOG.warn("options parsing failed: "+e.getMessage());
 
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("general options are: ", opts);
     }
-    return args;
   }
 
   /**

@@ -27,6 +27,9 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
 
 public class TestGenericOptionsParser extends TestCase {
   File testDir;
@@ -75,6 +78,42 @@ public class TestGenericOptionsParser extends TestCase {
       th instanceof FileNotFoundException);
     files = conf2.get("tmpfiles");
     assertNull("files is not null", files);
+  }
+
+  /**
+   * Test that options passed to the constructor are used.
+   */
+  @SuppressWarnings("static-access")
+  public void testCreateWithOptions() throws Exception {
+    // Create new option newOpt
+    Option opt = OptionBuilder.withArgName("int")
+    .hasArg()
+    .withDescription("A new option")
+    .create("newOpt");
+    Options opts = new Options();
+    opts.addOption(opt);
+
+    // Check newOpt is actually used to parse the args
+    String[] args = new String[2];
+    args[0] = "--newOpt";
+    args[1] = "7";
+    GenericOptionsParser g = new GenericOptionsParser(opts, args);
+    assertEquals("New option was ignored",
+      "7", g.getCommandLine().getOptionValues("newOpt")[0]);
+  }
+
+  /**
+   * Test that multiple conf arguments can be used.
+   */
+  public void testConfWithMultipleOpts() throws Exception {
+    String[] args = new String[2];
+    args[0] = "--conf=foo";
+    args[1] = "--conf=bar";
+    GenericOptionsParser g = new GenericOptionsParser(args);
+    assertEquals("1st conf param is incorrect",
+      "foo", g.getCommandLine().getOptionValues("conf")[0]);
+    assertEquals("2st conf param is incorrect",
+      "bar", g.getCommandLine().getOptionValues("conf")[1]);
   }
   
   @Override

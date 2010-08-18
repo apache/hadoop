@@ -202,6 +202,9 @@ Trunk (unreleased changes)
     HADOOP-6885. Fix java doc warnings in Groups and RefreshUserMappingsProtocol.
     (Eli Collins via jghoman) 
 
+    HADOOP-6482. GenericOptionsParser constructor that takes Options and 
+    String[] ignores options. (Eli Collins via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
