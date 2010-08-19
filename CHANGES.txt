@@ -211,6 +211,8 @@ Trunk (unreleased changes)
     This patch fixes it by removing delegationtoken string from the URL, 
     before returning a response to the client. (Jitendra Pandey via ddas)
 
+    HDFS-1347.  TestDelegationToken uses mortbay.log for logging (boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -27,27 +27,29 @@ import java.security.PrivilegedExceptionAction;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 public class TestDelegationToken {
   private MiniDFSCluster cluster;
   Configuration config;
+  private static final Log LOG = LogFactory.getLog(TestDelegationToken.class);
   
   @Before
   public void setUp() throws Exception {
@@ -97,7 +99,7 @@ public class TestDelegationToken {
     identifier.readFields(new DataInputStream(
              new ByteArrayInputStream(tokenId)));
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
-    Log.info("Sleep to expire the token");
+    LOG.info("Sleep to expire the token");
 	  Thread.sleep(6000);
 	  //Token should be expired
 	  try {
@@ -108,7 +110,7 @@ public class TestDelegationToken {
 	    //Success
 	  }
 	  dtSecretManager.renewToken(token, "JobTracker");
-	  Log.info("Sleep beyond the max lifetime");
+	  LOG.info("Sleep beyond the max lifetime");
 	  Thread.sleep(5000);
 	  try {
   	  dtSecretManager.renewToken(token, "JobTracker");
@@ -149,7 +151,7 @@ public class TestDelegationToken {
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
              new ByteArrayInputStream(tokenId)));
-    Log.info("A valid token should have non-null password, and should be renewed successfully");
+    LOG.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     dtSecretManager.renewToken(token, "JobTracker");
   }
