@@ -676,6 +676,26 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Tool to get the reference to the region server object that holds the
+   * region of the specified user table.
+   * It first searches for the meta rows that contain the region of the
+   * specified table, then gets the index of that RS, and finally retrieves
+   * the RS's reference.
+   * @param tableName user table to lookup in .META.
+   * @return region server that holds it, null if the row doesn't exist
+   * @throws IOException
+   */
+  public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
+      throws IOException {
+    List<byte[]> metaRows = getMetaTableRows(tableName);
+    if (metaRows == null || metaRows.size() == 0) {
+      return null;
+    }
+    int index = hbaseCluster.getServerWith(metaRows.get(0));
+    return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
+  }
+
+  /**
    * Starts a <code>MiniMRCluster</code> with a default number of
    * <code>TaskTracker</code>'s.
    *

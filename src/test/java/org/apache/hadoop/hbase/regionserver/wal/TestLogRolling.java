@@ -154,14 +154,15 @@ public class TestLogRolling  {
   private void startAndWriteData() throws IOException {
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
-    this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
-    this.log = server.getLog();
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
+    server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+    this.log = server.getLog();
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);
@@ -228,8 +229,6 @@ public class TestLogRolling  {
   @SuppressWarnings("null")
   DatanodeInfo[] getPipeline(HLog log) throws IllegalArgumentException,
       IllegalAccessException, InvocationTargetException {
-
-    // kill a datanode in the pipeline to force a log roll on the next sync()
     OutputStream stm = log.getOutputStream();
     Method getPipeline = null;
     for (Method m : stm.getClass().getDeclaredMethods()) {
@@ -263,7 +262,19 @@ public class TestLogRolling  {
         .getDefaultReplication() > 1);
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
-    this.server = cluster.getRegionServer(0);
+    // Create the test table and open it
+    String tableName = getName();
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+
+    if (admin.tableExists(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+    admin.createTable(desc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
+    server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getLog();
 
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
@@ -277,18 +288,6 @@ public class TestLogRolling  {
     dfsCluster.waitActive();
     assertTrue(dfsCluster.getDataNodes().size() >= fs.getDefaultReplication() + 1);
 
-    // Create the test table and open it
-    String tableName = getName();
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-
-    if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
-    }
-    admin.createTable(desc);
-
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     writeData(table, 2);
 
     table.setAutoFlush(true);
@@ -303,6 +302,7 @@ public class TestLogRolling  {
     DatanodeInfo[] pipeline = getPipeline(log);
     assertTrue(pipeline.length == fs.getDefaultReplication());
 
+    // kill a datanode in the pipeline to force a log roll on the next sync()
     assertTrue(dfsCluster.stopDataNode(pipeline[0].getName()) != null);
     Thread.sleep(10000);
     // this write should succeed, but trigger a log roll

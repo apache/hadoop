@@ -482,6 +482,7 @@ Release 0.21.0 - Unreleased
    HBASE-2927  BaseScanner gets stale HRegionInfo in some race cases
    HBASE-2928  Fault in logic in BinaryPrefixComparator leads to
                ArrayIndexOutOfBoundsException (pranav via jgray)
+   HBASE-2924  TestLogRolling doesn't use the right HLog half the time
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

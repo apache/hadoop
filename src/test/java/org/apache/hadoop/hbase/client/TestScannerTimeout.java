@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -114,9 +115,7 @@ public class TestScannerTimeout {
    */
   @Test
   public void test2772() throws Exception {
-    int rs = TEST_UTIL.getHBaseCluster().getServerWith(
-        TEST_UTIL.getHBaseCluster().getRegions(
-            TABLE_NAME).get(0).getRegionName());
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     Scan scan = new Scan();
     // Set a very high timeout, we want to test what happens when a RS
     // fails but the region is recovered before the lease times out.
@@ -128,7 +127,7 @@ public class TestScannerTimeout {
     HTable higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     // This takes way less than SCANNER_TIMEOUT*100
-    TEST_UTIL.getHBaseCluster().getRegionServer(rs).abort("die!");
+    rs.abort("die!");
     Result[] results = r.next(NB_ROWS);
     assertEquals(NB_ROWS, results.length);
     r.close();
