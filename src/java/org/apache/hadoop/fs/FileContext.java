@@ -2017,8 +2017,8 @@ public final class FileContext {
         mkdir(qDst, FsPermission.getDefault(), true);
         FileStatus[] contents = listStatus(qSrc);
         for (FileStatus content : contents) {
-          copy(content.getPath(), new Path(qDst, content.getPath()),
-               deleteSource, overwrite);
+          copy(makeQualified(content.getPath()), makeQualified(new Path(qDst,
+              content.getPath().getName())), deleteSource, overwrite);
         }
       } else {
         InputStream in=null;
@@ -2062,7 +2062,8 @@ public final class FileContext {
         // Recurse to check if dst/srcName exists.
         checkDest(null, new Path(dst, srcName), overwrite);
       } else if (!overwrite) {
-        throw new IOException("Target " + dst + " already exists");
+        throw new IOException("Target " + new Path(dst, srcName)
+            + " already exists");
       }
     } catch (FileNotFoundException e) {
       // dst does not exist - OK to copy.
@@ -2098,8 +2099,9 @@ public final class FileContext {
   private static boolean isSameFS(Path qualPath1, Path qualPath2) {
     URI srcUri = qualPath1.toUri();
     URI dstUri = qualPath2.toUri();
-    return (srcUri.getAuthority().equals(dstUri.getAuthority()) && srcUri
-        .getAuthority().equals(dstUri.getAuthority()));
+    return (srcUri.getScheme().equals(dstUri.getScheme()) && 
+        !(srcUri.getAuthority() != null && dstUri.getAuthority() != null && srcUri
+        .getAuthority().equals(dstUri.getAuthority())));
   }
 
   /**
@@ -2176,7 +2178,7 @@ public final class FileContext {
       // NB: More than one AbstractFileSystem can match a scheme, eg 
       // "file" resolves to LocalFs but could have come by RawLocalFs.
       AbstractFileSystem fs = fc.getFSofPath(p);      
-      
+
       // Loop until all symlinks are resolved or the limit is reached
       for (boolean isLink = true; isLink;) {
         try {

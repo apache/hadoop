@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 
@@ -477,5 +478,20 @@ public abstract class ChecksumFs extends FilterFs {
   public boolean reportChecksumFailure(Path f, FSDataInputStream in,
     long inPos, FSDataInputStream sums, long sumsPos) {
     return false;
+  }
+
+  @Override
+  protected FileStatus[] listStatus(Path f) throws IOException,
+      UnresolvedLinkException {
+    ArrayList<FileStatus> results = new ArrayList<FileStatus>();
+    FileStatus[] listing = getMyFs().listStatus(f);
+    if (listing != null) {
+      for (int i = 0; i < listing.length; i++) {
+        if (!isChecksumFile(listing[i].getPath())) {
+          results.add(listing[i]);
+        }
+      }
+    }
+    return results.toArray(new FileStatus[results.size()]);
   }
 }

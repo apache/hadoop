@@ -205,6 +205,9 @@ Trunk (unreleased changes)
     HADOOP-6482. GenericOptionsParser constructor that takes Options and 
     String[] ignores options. (Eli Collins via jghoman)
 
+    HADOOP-6906.  FileContext copy() utility doesn't work with recursive
+    copying of directories. (vinod k v via mahadev)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

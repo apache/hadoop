@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
+import static org.apache.hadoop.fs.FileContextTestHelper.readFile;
+import static org.apache.hadoop.fs.FileContextTestHelper.writeFile;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Arrays;
 
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-
-import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 /**
  * <p>
@@ -73,6 +75,29 @@ public abstract class FileContextUtilBase {
     writeFile(fc, file1, ts.getBytes());
     assertTrue(fc.util().exists(file1));
     fc.util().copy(file1, file2);
+
+    // verify that newly copied file2 exists
+    assertTrue("Failed to copy file2  ", fc.util().exists(file2));
+    // verify that file2 contains test string
+    assertTrue("Copied files does not match ",Arrays.equals(ts.getBytes(),
+        readFile(fc,file2,ts.getBytes().length)));
+  }
+
+  @Test
+  public void testRecursiveFcCopy() throws Exception {
+
+    final String ts = "some random text";
+    Path dir1 = getTestRootPath(fc, "dir1");
+    Path dir2 = getTestRootPath(fc, "dir2");
+
+    Path file1 = new Path(dir1, "file1");
+    fc.mkdir(dir1, null, false);
+    writeFile(fc, file1, ts.getBytes());
+    assertTrue(fc.util().exists(file1));
+
+    Path file2 = new Path(dir2, "file1");
+
+    fc.util().copy(dir1, dir2);
 
     // verify that newly copied file2 exists
     assertTrue("Failed to copy file2  ", fc.util().exists(file2));
