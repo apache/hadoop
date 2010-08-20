@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.test.system.DNProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.system.DaemonProtocol;
+import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 
 public privileged aspect DataNodeAspect {
   declare parents : DataNode implements DNProtocol;
@@ -34,18 +35,20 @@ public privileged aspect DataNodeAspect {
     return super.getConf();
   }
 
-  pointcut dnConstructorPointcut(Configuration conf, AbstractList<File> dirs) :
-    call(DataNode.new(Configuration, AbstractList<File>))
-    && args(conf, dirs);
+  pointcut dnConstructorPointcut(Configuration conf, AbstractList<File> dirs,
+      SecureResources resources) :
+    call(DataNode.new(Configuration, AbstractList<File>, SecureResources))
+    && args(conf, dirs, resources);
 
-  after(Configuration conf, AbstractList<File> dirs) returning (DataNode datanode):
-    dnConstructorPointcut(conf, dirs) {
+  after(Configuration conf, AbstractList<File> dirs, SecureResources resources)
+    returning (DataNode datanode):
+    dnConstructorPointcut(conf, dirs, resources) {
     try {
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       datanode.setUser(ugi.getShortUserName());
     } catch (IOException e) {
       datanode.LOG.warn("Unable to get the user information for the " +
-          "Jobtracker");
+          "DataNode");
     }
     datanode.setReady(true);
   }

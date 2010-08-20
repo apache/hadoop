@@ -213,6 +213,9 @@ Trunk (unreleased changes)
 
     HDFS-1347.  TestDelegationToken uses mortbay.log for logging (boryas)
 
+    HDFS-1157. Modifications introduced by HDFS-1150 are breaking aspect's
+    bindings (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
