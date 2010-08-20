@@ -444,22 +444,27 @@ public class HLog implements Syncable {
       if (closed) {
         return regionsToFlush;
       }
+      // Do all the preparation outside of the updateLock to block
+      // as less as possible the incoming writes
+      long currentFilenum = this.filenum;
+      this.filenum = System.currentTimeMillis();
+      Path newPath = computeFilename();
+      HLog.Writer nextWriter = createWriter(fs, newPath, HBaseConfiguration.create(conf));
+      int nextInitialReplication = fs.getFileStatus(newPath).getReplication();
+      // Can we get at the dfsclient outputstream?  If an instance of
+      // SFLW, it'll have done the necessary reflection to get at the
+      // protected field name.
+      OutputStream nextHdfsOut = null;
+      if (nextWriter instanceof SequenceFileLogWriter) {
+        nextHdfsOut =
+          ((SequenceFileLogWriter)nextWriter).getDFSCOutputStream();
+      }
       synchronized (updateLock) {
         // Clean up current writer.
-        Path oldFile = cleanupCurrentWriter(this.filenum);
-        this.filenum = System.currentTimeMillis();
-        Path newPath = computeFilename();
-        this.writer = createWriter(fs, newPath, HBaseConfiguration.create(conf));
-        this.initialReplication = fs.getFileStatus(newPath).getReplication();
-
-        // Can we get at the dfsclient outputstream?  If an instance of
-        // SFLW, it'll have done the necessary reflection to get at the
-        // protected field name.
-        this.hdfs_out = null;
-        if (this.writer instanceof SequenceFileLogWriter) {
-          this.hdfs_out =
-            ((SequenceFileLogWriter)this.writer).getDFSCOutputStream();
-        }
+        Path oldFile = cleanupCurrentWriter(currentFilenum);
+        this.writer = nextWriter;
+        this.initialReplication = nextInitialReplication;
+        this.hdfs_out = nextHdfsOut;
 
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
@@ -467,28 +472,28 @@ public class HLog implements Syncable {
             ", filesize=" +
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
           "New hlog " + FSUtils.getPath(newPath));
-        // Tell our listeners that a new log was created
-        if (!this.actionListeners.isEmpty()) {
-          for (LogActionsListener list : this.actionListeners) {
-            list.logRolled(newPath);
-          }
-        }
-        // Can we delete any of the old log files?
-        if (this.outputfiles.size() > 0) {
-          if (this.lastSeqWritten.size() <= 0) {
-            LOG.debug("Last sequenceid written is empty. Deleting all old hlogs");
-            // If so, then no new writes have come in since all regions were
-            // flushed (and removed from the lastSeqWritten map). Means can
-            // remove all but currently open log file.
-            for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
-              archiveLogFile(e.getValue(), e.getKey());
-            }
-            this.outputfiles.clear();
-          } else {
-            regionsToFlush = cleanOldLogs();
-          }
-        }
         this.numEntries.set(0);
+      }
+      // Tell our listeners that a new log was created
+      if (!this.actionListeners.isEmpty()) {
+        for (LogActionsListener list : this.actionListeners) {
+          list.logRolled(newPath);
+        }
+      }
+      // Can we delete any of the old log files?
+      if (this.outputfiles.size() > 0) {
+        if (this.lastSeqWritten.size() <= 0) {
+          LOG.debug("Last sequenceid written is empty. Deleting all old hlogs");
+          // If so, then no new writes have come in since all regions were
+          // flushed (and removed from the lastSeqWritten map). Means can
+          // remove all but currently open log file.
+          for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
+            archiveLogFile(e.getValue(), e.getKey());
+          }
+          this.outputfiles.clear();
+        } else {
+          regionsToFlush = cleanOldLogs();
+        }
       }
     } finally {
       this.cacheFlushLock.unlock();
@@ -660,7 +665,7 @@ public class HLog implements Syncable {
         throw e;
       }
       if (currentfilenum >= 0) {
-        oldFile = computeFilename();
+        oldFile = computeFilename(currentfilenum);
         this.outputfiles.put(Long.valueOf(this.logSeqNum.get() - 1), oldFile);
       }
     }
@@ -677,10 +682,20 @@ public class HLog implements Syncable {
 
   /**
    * This is a convenience method that computes a new filename with a given
-   * file-number.
+   * using the current HLog file-number
    * @return Path
    */
   protected Path computeFilename() {
+    return computeFilename(this.filenum);
+  }
+
+  /**
+   * This is a convenience method that computes a new filename with a given
+   * file-number.
+   * @param file-number to use
+   * @return Path
+   */
+  protected Path computeFilename(long filenum) {
     if (filenum < 0) {
       throw new RuntimeException("hlog file number can't be < 0");
     }

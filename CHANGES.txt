@@ -848,6 +848,8 @@ Release 0.21.0 - Unreleased
    HBASE-1517  Implement inexpensive seek operations in HFile (Pranav via Ryan)
    HBASE-2903  ColumnPrefix filtering (Pranav via Ryan)
    HBASE-2904  Smart seeking using filters (Pranav via Ryan)
+   HBASE-2922  HLog preparation and cleanup are done under the updateLock, 
+               major slowdown
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
