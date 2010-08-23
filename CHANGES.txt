@@ -208,6 +208,9 @@ Trunk (unreleased changes)
     HADOOP-6906.  FileContext copy() utility doesn't work with recursive
     copying of directories. (vinod k v via mahadev)
 
+    HADOOP-6453. Hadoop wrapper script shouldn't ignore an existing 
+    JAVA_LIBRARY_PATH. (Chad Metcalf via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
