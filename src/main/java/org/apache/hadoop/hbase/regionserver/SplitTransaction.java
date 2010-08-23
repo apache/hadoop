@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.Reference.Range;
@@ -133,7 +132,7 @@ class SplitTransaction {
    */
   public boolean prepare() {
     boolean prepared = false;
-    this.parent.splitsAndClosesLock.writeLock().lock();
+    this.parent.lock.writeLock().lock();
     try {
       if (this.parent.isClosed() || this.parent.isClosing()) return prepared;
       HRegionInfo hri = this.parent.getRegionInfo();
@@ -153,7 +152,7 @@ class SplitTransaction {
         false, rid);
       prepared = true;
     } finally {
-      if (!prepared) this.parent.splitsAndClosesLock.writeLock().unlock();
+      if (!prepared) this.parent.lock.writeLock().unlock();
     }
     return prepared;
   }
@@ -198,7 +197,7 @@ class SplitTransaction {
   PairOfSameType<HRegion> execute(final OnlineRegions or, final boolean updateMeta)
   throws IOException {
     LOG.info("Starting split of region " + this.parent);
-    if (!this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread()) {
+    if (!this.parent.lock.writeLock().isHeldByCurrentThread()) {
       throw new SplitAndCloseWriteLockNotHeld();
     }
 
@@ -274,7 +273,7 @@ class SplitTransaction {
     if (t != null) t.close();
 
     // Unlock if successful split.
-    this.parent.splitsAndClosesLock.writeLock().unlock();
+    this.parent.lock.writeLock().unlock();
 
     // Leaving here, the splitdir with its dross will be in place but since the
     // split was successful, just leave it; it'll be cleaned when parent is
@@ -447,7 +446,7 @@ class SplitTransaction {
    * @throws IOException If thrown, rollback failed.  Take drastic action.
    */
   public void rollback(final OnlineRegions or) throws IOException {
-    if (!this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread()) {
+    if (!this.parent.lock.writeLock().isHeldByCurrentThread()) {
       throw new SplitAndCloseWriteLockNotHeld();
     }
     FileSystem fs = this.parent.getFilesystem();
@@ -487,8 +486,8 @@ class SplitTransaction {
         throw new RuntimeException("Unhandled journal entry: " + je);
       }
     }
-    if (this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread()) {
-      this.parent.splitsAndClosesLock.writeLock().unlock();
+    if (this.parent.lock.writeLock().isHeldByCurrentThread()) {
+      this.parent.lock.writeLock().unlock();
     }
   }
 

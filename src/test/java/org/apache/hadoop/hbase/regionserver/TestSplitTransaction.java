@@ -93,7 +93,7 @@ public class TestSplitTransaction {
     SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
     assertTrue(st.prepare());
     // Assert the write lock is held on successful prepare as the javadoc asserts.
-    assertTrue(this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread());
+    assertTrue(this.parent.lock.writeLock().isHeldByCurrentThread());
     return st;
   }
 
@@ -162,7 +162,7 @@ public class TestSplitTransaction {
     }
     assertEquals(rowcount, daughtersRowCount);
     // Assert the write lock is no longer held on parent
-    assertTrue(!this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread());
+    assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
   }
 
   @Test public void testRollback() throws IOException {
@@ -194,7 +194,7 @@ public class TestSplitTransaction {
     // Assert rollback cleaned up stuff in fs
     assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir, st.getFirstDaughter())));
     assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir, st.getSecondDaughter())));
-    assertTrue(!this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread());
+    assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
 
     // Now retry the split but do not throw an exception this time.
     assertTrue(st.prepare());
@@ -215,7 +215,7 @@ public class TestSplitTransaction {
     }
     assertEquals(rowcount, daughtersRowCount);
     // Assert the write lock is no longer held on parent
-    assertTrue(!this.parent.splitsAndClosesLock.writeLock().isHeldByCurrentThread());
+    assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
   }
 
   /**

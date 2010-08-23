@@ -486,6 +486,7 @@ Release 0.21.0 - Unreleased
    HBASE-2931  Do not throw RuntimeExceptions in RPC/HbaseObjectWritable
                code, ensure we log and rethrow as IOE
                (Karthik Ranganathan via Stack)
+   HBASE-2915  Deadlock between HRegion.ICV and HRegion.close
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
