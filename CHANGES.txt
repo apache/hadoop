@@ -211,6 +211,9 @@ Trunk (unreleased changes)
     HADOOP-6453. Hadoop wrapper script shouldn't ignore an existing 
     JAVA_LIBRARY_PATH. (Chad Metcalf via jghoman)
 
+    HADOOP-6925. BZip2Codec incorrectly implements read(). 
+    (Todd Lipcon via Eli Collins)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
