@@ -129,10 +129,6 @@ public class TestCodec {
       key.write(data);
       value.write(data);
     }
-    DataInputBuffer originalData = new DataInputBuffer();
-    DataInputStream originalIn = new DataInputStream(new BufferedInputStream(originalData));
-    originalData.reset(data.getData(), 0, data.getLength());
-    
     LOG.info("Generated " + count + " records");
     
     // Compress data
@@ -156,6 +152,9 @@ public class TestCodec {
       new DataInputStream(new BufferedInputStream(inflateFilter));
 
     // Check
+    DataInputBuffer originalData = new DataInputBuffer();
+    originalData.reset(data.getData(), 0, data.getLength());
+    DataInputStream originalIn = new DataInputStream(new BufferedInputStream(originalData));
     for(int i=0; i < count; ++i) {
       RandomDatum k1 = new RandomDatum();
       RandomDatum v1 = new RandomDatum();
@@ -167,6 +166,23 @@ public class TestCodec {
       k2.readFields(inflateIn);
       v2.readFields(inflateIn);
     }
+
+    // De-compress data byte-at-a-time
+    originalData.reset(data.getData(), 0, data.getLength());
+    deCompressedDataBuffer.reset(compressedDataBuffer.getData(), 0, 
+                                 compressedDataBuffer.getLength());
+    inflateFilter = 
+      codec.createInputStream(deCompressedDataBuffer);
+
+    // Check
+    originalIn = new DataInputStream(new BufferedInputStream(originalData));
+    int expected;
+    do {
+      expected = originalIn.read();
+      assertEquals("Inflated stream read by byte does not match",
+        expected, inflateFilter.read());
+    } while (expected != -1);
+
     LOG.info("SUCCESS! Completed checking " + count + " records");
   }
 

@@ -1,5 +1,12 @@
 Hadoop Change Log
 
+Release 0.21.1 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-6925. BZip2Codec incorrectly implements read(). 
+    (Todd Lipcon via Eli Collins)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES

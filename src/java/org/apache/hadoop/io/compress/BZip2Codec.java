@@ -443,7 +443,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
     public int read() throws IOException {
       byte b[] = new byte[1];
       int result = this.read(b, 0, 1);
-      return (result < 0) ? result : b[0];
+      return (result < 0) ? result : (b[0] & 0xff);
     }
 
     private void internalReset() throws IOException {
