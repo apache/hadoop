@@ -961,7 +961,6 @@
          <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop-core ${version}"/>
          <param name="${jdiff.stability}"/>
-         <param name="${jdiff.compatibility}"/>
        </doclet>
        <packageset dir="src/java"/>
        <classpath >
