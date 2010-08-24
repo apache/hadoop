@@ -313,7 +313,7 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
   }
 
   public void testNoSuchCF() throws IOException, JAXBException {
-    final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA;
+    final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA+":";
     final String badPath = "/" + TABLE + "/" + ROW_1 + "/" + "BAD";
     Response response = client.post(goodPath, MIMETYPE_BINARY,
       Bytes.toBytes(VALUE_1));
