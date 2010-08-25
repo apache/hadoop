@@ -489,6 +489,14 @@ public class TestHRegion extends HBaseTestCase {
     res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
         true);
     assertTrue(res);
+
+    //checkAndPut looking for a null value
+    put = new Put(row1);
+    put.add(fam1, qf1, val1);
+
+    res = region.checkAndMutate(row1, fam1, qf1, null, put, lockId, true);
+    assertTrue(res);
+    
   }
 
   public void testCheckAndMutate_WithWrongValue() throws IOException{

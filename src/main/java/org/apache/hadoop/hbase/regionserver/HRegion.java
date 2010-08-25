@@ -1473,7 +1473,8 @@ public class HRegion implements HeapSize { // , Writable{
         result = get(get);
 
         boolean matches = false;
-        if (result.size() == 0 && expectedValue.length == 0) {
+        if (result.size() == 0 &&
+            (expectedValue == null || expectedValue.length == 0)) {
           matches = true;
         } else if (result.size() == 1) {
           //Compare the expected value with the actual value
