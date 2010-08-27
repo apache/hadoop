@@ -214,6 +214,9 @@ Trunk (unreleased changes)
     HADOOP-6925. BZip2Codec incorrectly implements read(). 
     (Todd Lipcon via Eli Collins)
 
+    HADOOP-6833. IPC leaks call parameters when exceptions thrown.
+    (Todd Lipcon via Eli Collins)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
