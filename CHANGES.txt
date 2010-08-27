@@ -47,6 +47,9 @@ Release 0.20.3 - Unreleased
     comparators in initializers, which are no longer automatically run
     in Java 6 when a class is referenced. (cutting via omalley)
 
+    HADOOP-6833. IPC leaks call parameters when exceptions thrown.
+    (Todd Lipcon via Eli Collins)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
