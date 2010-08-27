@@ -216,6 +216,13 @@ Trunk (unreleased changes)
     HDFS-1157. Modifications introduced by HDFS-1150 are breaking aspect's
     bindings (cos)
 
+    HDFS-1349. Remove empty java files. (Eli Collins)
+
+    HDFS-1340. A null delegation token is appended to the url if security
+    is disabled when browsing filesystem. (boryas)
+    
+    HDFS-1352. Fix jsvc.location. (Eli Collins via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -103,8 +103,8 @@ abstract class DfsServlet extends HttpServlet {
     params.append("filename=");
     params.append(filename);
     if (UserGroupInformation.isSecurityEnabled()) {
-      params.append(JspHelper.SET_DELEGATION);
-      params.append(ugi.getTokens().iterator().next().encodeToUrlString());
+      String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
+      params.append(JspHelper.getDelegationTokenUrlParam(tokenString));
     } else {
       params.append("&ugi=");
       params.append(ugi.getShortUserName());
