@@ -83,7 +83,9 @@ public class TestAvroRpc extends TestCase {
       try {
         proxy.error();
       } catch (AvroRemoteException e) {
-        LOG.debug("Caught " + e);
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Caught " + e);
+        }
         caught = true;
       }
       assertTrue(caught);

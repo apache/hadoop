@@ -331,7 +331,9 @@ public class NativeS3FileSystem extends FileSystem {
       throw new IOException("File already exists:"+f);
     }
     
-    LOG.debug("Creating new file '" + f + "' in S3");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Creating new file '" + f + "' in S3");
+    }
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     return new FSDataOutputStream(new NativeS3FsOutputStream(getConf(), store,
@@ -344,7 +346,10 @@ public class NativeS3FileSystem extends FileSystem {
     try {
       status = getFileStatus(f);
     } catch (FileNotFoundException e) {
-      LOG.debug("Delete called for '" + f + "' but file does not exist, so returning false");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Delete called for '" + f +
+            "' but file does not exist, so returning false");
+      }
       return false;
     }
     Path absolutePath = makeAbsolute(f);
@@ -356,7 +361,9 @@ public class NativeS3FileSystem extends FileSystem {
 
       createParent(f);
 
-      LOG.debug("Deleting directory '" + f  + "'");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Deleting directory '" + f  + "'");
+      }
       String priorLastKey = null;
       do {
         PartialListing listing = store.list(key, S3_MAX_LISTING_LENGTH, priorLastKey, true);
@@ -372,7 +379,9 @@ public class NativeS3FileSystem extends FileSystem {
         //this is fine, we don't require a marker
       }
     } else {
-      LOG.debug("Deleting file '" + f + "'");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Deleting file '" + f + "'");
+      }
       createParent(f);
       store.delete(key);
     }
@@ -388,27 +397,40 @@ public class NativeS3FileSystem extends FileSystem {
       return newDirectory(absolutePath);
     }
     
-    LOG.debug("getFileStatus retrieving metadata for key '" + key + "'");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("getFileStatus retrieving metadata for key '" + key + "'");
+    }
     FileMetadata meta = store.retrieveMetadata(key);
     if (meta != null) {
-      LOG.debug("getFileStatus returning 'file' for key '" + key + "'");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("getFileStatus returning 'file' for key '" + key + "'");
+      }
       return newFile(meta, absolutePath);
     }
     if (store.retrieveMetadata(key + FOLDER_SUFFIX) != null) {
-      LOG.debug("getFileStatus returning 'directory' for key '" + key + "' as '"
-          + key + FOLDER_SUFFIX + "' exists");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("getFileStatus returning 'directory' for key '" + key +
+            "' as '" + key + FOLDER_SUFFIX + "' exists");
+      }
       return newDirectory(absolutePath);
     }
     
-    LOG.debug("getFileStatus listing key '" + key + "'");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("getFileStatus listing key '" + key + "'");
+    }
     PartialListing listing = store.list(key, 1);
     if (listing.getFiles().length > 0 ||
         listing.getCommonPrefixes().length > 0) {
-      LOG.debug("getFileStatus returning 'directory' for key '" + key + "' as it has contents");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("getFileStatus returning 'directory' for key '" + key +
+            "' as it has contents");
+      }
       return newDirectory(absolutePath);
     }
     
-    LOG.debug("getFileStatus could not find key '" + key + "'");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("getFileStatus could not find key '" + key + "'");
+    }
     throw new FileNotFoundException("No such file or directory '" + absolutePath + "'");
   }
 
@@ -510,7 +532,9 @@ public class NativeS3FileSystem extends FileSystem {
 
       }
     } catch (FileNotFoundException e) {
-      LOG.debug("Making dir '" + f + "' in S3");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Making dir '" + f + "' in S3");
+      }
       String key = pathToKey(f) + FOLDER_SUFFIX;
       store.storeEmptyFile(key);    
     }
@@ -560,22 +584,35 @@ public class NativeS3FileSystem extends FileSystem {
     try {
       boolean dstIsFile = getFileStatus(dst).isFile();
       if (dstIsFile) {
-        LOG.debug(debugPreamble + "returning false as dst is an already existing file");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(debugPreamble +
+              "returning false as dst is an already existing file");
+        }
         return false;
       } else {
-        LOG.debug(debugPreamble + "using dst as output directory");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(debugPreamble + "using dst as output directory");
+        }
         dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
       }
     } catch (FileNotFoundException e) {
-      LOG.debug(debugPreamble + "using dst as output destination");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble + "using dst as output destination");
+      }
       dstKey = pathToKey(makeAbsolute(dst));
       try {
         if (getFileStatus(dst.getParent()).isFile()) {
-          LOG.debug(debugPreamble + "returning false as dst parent exists and is a file");
+          if(LOG.isDebugEnabled()) {
+            LOG.debug(debugPreamble +
+                "returning false as dst parent exists and is a file");
+          }
           return false;
         }
       } catch (FileNotFoundException ex) {
-        LOG.debug(debugPreamble + "returning false as dst parent does not exist");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(debugPreamble +
+              "returning false as dst parent does not exist");
+        }
         return false;
       }
     }
@@ -584,15 +621,22 @@ public class NativeS3FileSystem extends FileSystem {
     try {
       srcIsFile = getFileStatus(src).isFile();
     } catch (FileNotFoundException e) {
-      LOG.debug(debugPreamble + "returning false as src does not exist");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble + "returning false as src does not exist");
+      }
       return false;
     }
     if (srcIsFile) {
-      LOG.debug(debugPreamble + "src is file, so doing copy then delete in S3");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble +
+            "src is file, so doing copy then delete in S3");
+      }
       store.copy(srcKey, dstKey);
       store.delete(srcKey);
     } else {
-      LOG.debug(debugPreamble + "src is directory, so copying contents");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble + "src is directory, so copying contents");
+      }
       store.storeEmptyFile(dstKey + FOLDER_SUFFIX);
 
       List<String> keysToDelete = new ArrayList<String>();
@@ -606,7 +650,10 @@ public class NativeS3FileSystem extends FileSystem {
         priorLastKey = listing.getPriorLastKey();
       } while (priorLastKey != null);
 
-      LOG.debug(debugPreamble + "all files in src copied, now removing src files");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble +
+            "all files in src copied, now removing src files");
+      }
       for (String key: keysToDelete) {
         store.delete(key);
       }
@@ -616,7 +663,9 @@ public class NativeS3FileSystem extends FileSystem {
       } catch (FileNotFoundException e) {
         //this is fine, we don't require a marker
       }
-      LOG.debug(debugPreamble + "done");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble + "done");
+      }
     }
 
     return true;

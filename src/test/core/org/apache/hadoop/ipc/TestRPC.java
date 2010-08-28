@@ -296,7 +296,9 @@ public class TestRPC extends TestCase {
     try {
       proxy.error();
     } catch (IOException e) {
-      LOG.debug("Caught " + e);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Caught " + e);
+      }
       caught = true;
     }
     assertTrue(caught);

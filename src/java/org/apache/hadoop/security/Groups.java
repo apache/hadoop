@@ -78,14 +78,18 @@ public class Groups {
     long now = System.currentTimeMillis();
     // if cache has a value and it hasn't expired
     if (groups != null && (groups.getTimestamp() + cacheTimeout > now)) {
-      LOG.debug("Returning cached groups for '" + user + "'");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Returning cached groups for '" + user + "'");
+      }
       return groups.getGroups();
     }
     
     // Create and cache user's groups
     groups = new CachedGroups(impl.getGroups(user));
     userToGroupsMap.put(user, groups);
-    LOG.debug("Returning fetched groups for '" + user + "'");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Returning fetched groups for '" + user + "'");
+    }
     return groups.getGroups();
   }
   
@@ -132,7 +136,9 @@ public class Groups {
    */
   public static Groups getUserToGroupsMappingService(Configuration conf) {
     if(GROUPS == null) {
-      LOG.debug(" Creating new Groups object");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug(" Creating new Groups object");
+      }
       GROUPS = new Groups(conf);
     }
     return GROUPS;

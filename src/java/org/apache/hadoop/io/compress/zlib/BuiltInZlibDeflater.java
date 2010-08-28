@@ -76,6 +76,8 @@ public class BuiltInZlibDeflater extends Deflater implements Compressor {
       LOG.warn(strategy + " not supported by BuiltInZlibDeflater.");
       setStrategy(DEFAULT_STRATEGY);
     }
-    LOG.debug("Reinit compressor with new compression configuration");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Reinit compressor with new compression configuration");
+    }
   }
 }

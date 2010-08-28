@@ -534,13 +534,17 @@ public class UserGroupInformation {
             while (true) {
               try {
                 long now = System.currentTimeMillis();
-                LOG.debug("Current time is " + now);
-                LOG.debug("Next refresh is " + nextRefresh);
+                if(LOG.isDebugEnabled()) {
+                  LOG.debug("Current time is " + now);
+                  LOG.debug("Next refresh is " + nextRefresh);
+                }
                 if (now < nextRefresh) {
                   Thread.sleep(nextRefresh - now);
                 }
                 Shell.execCommand(cmd, "-R");
-                LOG.debug("renewed ticket");
+                if(LOG.isDebugEnabled()) {
+                  LOG.debug("renewed ticket");
+                }
                 reloginFromTicketCache();
                 tgt = getTGT();
                 if (tgt == null) {

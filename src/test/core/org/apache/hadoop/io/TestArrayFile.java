@@ -54,7 +54,9 @@ public class TestArrayFile extends TestCase {
   }
 
   private static RandomDatum[] generate(int count) {
-    LOG.debug("generating " + count + " records in debug");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("generating " + count + " records in debug");
+    }
     RandomDatum[] data = new RandomDatum[count];
     RandomDatum.Generator generator = new RandomDatum.Generator();
     for (int i = 0; i < count; i++) {
@@ -68,7 +70,9 @@ public class TestArrayFile extends TestCase {
     throws IOException {
     Configuration conf = new Configuration();
     MapFile.delete(fs, file);
-    LOG.debug("creating with " + data.length + " debug");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("creating with " + data.length + " debug");
+    }
     ArrayFile.Writer writer = new ArrayFile.Writer(conf, fs, file, RandomDatum.class);
     writer.setIndexInterval(100);
     for (int i = 0; i < data.length; i++)
@@ -79,7 +83,9 @@ public class TestArrayFile extends TestCase {
   private static void readTest(FileSystem fs, RandomDatum[] data, String file, Configuration conf)
     throws IOException {
     RandomDatum v = new RandomDatum();
-    LOG.debug("reading " + data.length + " debug");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("reading " + data.length + " debug");
+    }
     ArrayFile.Reader reader = new ArrayFile.Reader(fs, file, conf);
     for (int i = 0; i < data.length; i++) {       // try forwards
       reader.get(i, v);
@@ -94,7 +100,9 @@ public class TestArrayFile extends TestCase {
       }
     }
     reader.close();
-    LOG.debug("done reading " + data.length + " debug");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("done reading " + data.length + " debug");
+    }
   }
 
 

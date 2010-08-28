@@ -482,7 +482,9 @@ public abstract class AbstractDaemonCluster {
           LOG.info("Daemon is : " + daemon.getHostName() + " pinging...");
           break;
         } catch (Exception exp) {
-          LOG.debug(daemon.getHostName() + " is waiting to come up.");
+          if(LOG.isDebugEnabled()) {
+            LOG.debug(daemon.getHostName() + " is waiting to come up.");
+          }
           waitFor(60000);
         }
       }
@@ -502,7 +504,9 @@ public abstract class AbstractDaemonCluster {
       while (true) {
         try {
           daemon.ping();
-          LOG.debug(daemon.getHostName() +" is waiting state to stop.");
+          if(LOG.isDebugEnabled()) {
+            LOG.debug(daemon.getHostName() +" is waiting state to stop.");
+          }
           waitFor(60000);
         } catch (Exception exp) {
           LOG.info("Daemon is : " + daemon.getHostName() + " stopped...");

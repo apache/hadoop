@@ -333,7 +333,9 @@ public class NetworkTopology {
           numOfRacks++;
         }
       }
-      LOG.debug("NetworkTopology became:\n" + this.toString());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("NetworkTopology became:\n" + this.toString());
+      }
     } finally {
       netlock.writeLock().unlock();
     }
@@ -359,7 +361,9 @@ public class NetworkTopology {
           numOfRacks--;
         }
       }
-      LOG.debug("NetworkTopology became:\n" + this.toString());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("NetworkTopology became:\n" + this.toString());
+      }
     } finally {
       netlock.writeLock().unlock();
     }

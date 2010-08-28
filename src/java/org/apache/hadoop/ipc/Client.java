@@ -444,8 +444,10 @@ public class Client {
           disposeSasl();
           if (shouldAuthenticateOverKrb()) {
             if (currRetries < maxRetries) {
-              LOG.debug("Exception encountered while connecting to "
-                  + "the server : " + ex);
+              if(LOG.isDebugEnabled()) {
+                LOG.debug("Exception encountered while connecting to "
+                    + "the server : " + ex);
+              }
               // try re-login
               if (UserGroupInformation.isLoginKeytabBased()) {
                 UserGroupInformation.getLoginUser().reloginFromKeytab();

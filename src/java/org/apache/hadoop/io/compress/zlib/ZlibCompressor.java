@@ -253,7 +253,9 @@ public class ZlibCompressor implements Compressor {
     stream = init(level.compressionLevel(), 
                   strategy.compressionStrategy(), 
                   windowBits.windowBits());
-    LOG.debug("Reinit compressor with new compression configuration");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Reinit compressor with new compression configuration");
+    }
   }
 
   public synchronized void setInput(byte[] b, int off, int len) {

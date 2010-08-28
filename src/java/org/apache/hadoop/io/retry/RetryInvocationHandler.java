@@ -67,9 +67,11 @@ class RetryInvocationHandler implements InvocationHandler {
           }
           return null;
         }
-        LOG.debug("Exception while invoking " + method.getName()
-                 + " of " + implementation.getClass() + ". Retrying."
-                 + StringUtils.stringifyException(e));
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Exception while invoking " + method.getName()
+              + " of " + implementation.getClass() + ". Retrying."
+              + StringUtils.stringifyException(e));
+        }
       }
     }
   }

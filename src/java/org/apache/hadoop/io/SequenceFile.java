@@ -1834,7 +1834,7 @@ public class SequenceFile {
         --noBufferedValues;
         
         // Sanity check
-        if (valLength < 0) {
+        if ((valLength < 0) && LOG.isDebugEnabled()) {
           LOG.debug(val + " is a zero-length value");
         }
       }
@@ -1873,7 +1873,7 @@ public class SequenceFile {
         --noBufferedValues;
         
         // Sanity check
-        if (valLength < 0) {
+        if ((valLength < 0) && LOG.isDebugEnabled()) {
           LOG.debug(val + " is a zero-length value");
         }
       }
@@ -2415,7 +2415,9 @@ public class SequenceFile {
     }
     
     private int sortPass(boolean deleteInput) throws IOException {
-      LOG.debug("running sort pass");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("running sort pass");
+      }
       SortPass sortPass = new SortPass();         // make the SortPass
       sortPass.setProgressable(progressable);
       mergeSort = new MergeSort(sortPass.new SeqFileComparator());
@@ -2515,7 +2517,9 @@ public class SequenceFile {
           }
 
           // buffer is full -- sort & flush it
-          LOG.debug("flushing segment " + segments);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("flushing segment " + segments);
+          }
           rawBuffer = rawKeys.getData();
           sort(count);
           // indicate we're making progress
@@ -2798,7 +2802,9 @@ public class SequenceFile {
 
     /** sort calls this to generate the final merged output */
     private int mergePass(Path tmpDir) throws IOException {
-      LOG.debug("running merge pass");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("running merge pass");
+      }
       Writer writer = cloneFileAttributes(
                                           outFile.suffix(".0"), outFile, null);
       RawKeyValueIterator r = merge(outFile.suffix(".0"), 
@@ -3028,7 +3034,9 @@ public class SequenceFile {
             Path outputFile =  lDirAlloc.getLocalPathForWrite(
                                                 tmpFilename.toString(),
                                                 approxOutputSize, conf);
-            LOG.debug("writing intermediate results to " + outputFile);
+            if(LOG.isDebugEnabled()) { 
+              LOG.debug("writing intermediate results to " + outputFile);
+            }
             Writer writer = cloneFileAttributes(
                                                 fs.makeQualified(segmentsToMerge.get(0).segmentPathName), 
                                                 fs.makeQualified(outputFile), null);

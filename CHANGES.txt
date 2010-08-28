@@ -127,6 +127,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
+    (Erik Steffl via szetszwo)
+
   BUG FIXES
 
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 

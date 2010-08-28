@@ -278,7 +278,9 @@ final class Compression {
             // it.
             LOG.warn("Compressor obtained from CodecPool already finished()");
           } else {
-            LOG.debug("Got a compressor: " + compressor.hashCode());
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Got a compressor: " + compressor.hashCode());
+            }
           }
           /**
            * Following statement is necessary to get around bugs in 0.18 where a
@@ -293,7 +295,9 @@ final class Compression {
 
     public void returnCompressor(Compressor compressor) {
       if (compressor != null) {
-        LOG.debug("Return a compressor: " + compressor.hashCode());
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Return a compressor: " + compressor.hashCode());
+        }
         CodecPool.returnCompressor(compressor);
       }
     }
@@ -308,7 +312,9 @@ final class Compression {
             // it.
             LOG.warn("Deompressor obtained from CodecPool already finished()");
           } else {
-            LOG.debug("Got a decompressor: " + decompressor.hashCode());
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Got a decompressor: " + decompressor.hashCode());
+            }
           }
           /**
            * Following statement is necessary to get around bugs in 0.18 where a
@@ -324,7 +330,9 @@ final class Compression {
 
     public void returnDecompressor(Decompressor decompressor) {
       if (decompressor != null) {
-        LOG.debug("Returned a decompressor: " + decompressor.hashCode());
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Returned a decompressor: " + decompressor.hashCode());
+        }
         CodecPool.returnDecompressor(decompressor);
       }
     }

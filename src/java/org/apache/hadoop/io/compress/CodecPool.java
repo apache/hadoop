@@ -107,7 +107,9 @@ public class CodecPool {
       LOG.info("Got brand-new compressor");
     } else {
       compressor.reinit(conf);
-      LOG.debug("Got recycled compressor");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Got recycled compressor");
+      }
     }
     return compressor;
   }
@@ -131,7 +133,9 @@ public class CodecPool {
       decompressor = codec.createDecompressor();
       LOG.info("Got brand-new decompressor");
     } else {
-      LOG.debug("Got recycled decompressor");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Got recycled decompressor");
+      }
     }
     return decompressor;
   }

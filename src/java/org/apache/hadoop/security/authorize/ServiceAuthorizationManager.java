@@ -115,8 +115,10 @@ public class ServiceAuthorizationManager {
         // just keep going
       }
     }
-    LOG.debug("for protocol authorization compare (" + clientPrincipal + "): " 
-        + shortName + " with " + user.getShortUserName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("for protocol authorization compare (" + clientPrincipal +
+          "): " + shortName + " with " + user.getShortUserName());
+    }
     if((shortName != null &&  !shortName.equals(user.getShortUserName())) || 
         !acl.isUserAllowed(user)) {
       AUDITLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);

@@ -80,10 +80,9 @@ public class SaslRpcClient {
       break;
     case KERBEROS:
       if (LOG.isDebugEnabled()) {
-        LOG
-            .debug("Creating SASL " + AuthMethod.KERBEROS.getMechanismName()
-                + " client. Server's Kerberos principal name is "
-                + serverPrincipal);
+        LOG.debug("Creating SASL " + AuthMethod.KERBEROS.getMechanismName()
+            + " client. Server's Kerberos principal name is "
+            + serverPrincipal);
       }
       if (serverPrincipal == null || serverPrincipal.length() == 0) {
         throw new IOException(

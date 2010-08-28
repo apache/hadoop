@@ -310,7 +310,9 @@ public class LoadGenerator extends Configured implements Tool {
       }
     } 
     
-    LOG.debug("Done with testing.  Waiting for threads to finish.");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Done with testing.  Waiting for threads to finish.");
+    }
     for (DFSClientThread thread : threads) {
       thread.join();
       for (int i=0; i<TOTAL_OP_TYPES; i++) {

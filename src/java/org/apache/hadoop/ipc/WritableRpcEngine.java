@@ -192,16 +192,15 @@ class WritableRpcEngine implements RpcEngine {
 
     public Object invoke(Object proxy, Method method, Object[] args)
       throws Throwable {
-      final boolean logDebug = LOG.isDebugEnabled();
       long startTime = 0;
-      if (logDebug) {
+      if (LOG.isDebugEnabled()) {
         startTime = System.currentTimeMillis();
       }
 
       ObjectWritable value = (ObjectWritable)
         client.call(new Invocation(method, args), address, 
                     protocol, ticket, rpcTimeout);
-      if (logDebug) {
+      if (LOG.isDebugEnabled()) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
       }

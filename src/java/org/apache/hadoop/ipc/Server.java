@@ -615,7 +615,9 @@ public abstract class Server {
           // If there were some calls that have not been sent out for a
           // long time, discard them.
           //
-          LOG.debug("Checking for old call responses.");
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("Checking for old call responses.");
+          }
           ArrayList<Call> calls;
           
           // get the list of channels from list of keys.
