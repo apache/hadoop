@@ -599,6 +599,36 @@ runContribTests () {
 }
 
 ###############################################################################
+### Run the inject-system-faults target
+checkInjectSystemFaults () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking the integrity of system test framework code."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  
+  ### Kill any rogue build processes from the last attempt
+  $PS auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /usr/bin/kill -9 {} > /dev/null
+
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME inject-system-faults"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME inject-system-faults
+  if [[ $? != 0 ]] ; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    -1 system tests framework.  The patch failed system tests framework compile."
+    return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    +1 system tests framework.  The patch passed system tests framework compile."
+  return 0
+}
+
+###############################################################################
 ### Submit a comment to the defect's Jira
 submitJiraComment () {
   local result=$1
@@ -718,6 +748,8 @@ if [[ $HUDSON == "true" ]] ; then
   runContribTests
   (( RESULT = RESULT + $? ))
 fi
+checkInjectSystemFaults
+(( RESULT = RESULT + $? ))
 JIRA_COMMENT_FOOTER="Test results: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/testReport/
 $JIRA_COMMENT_FOOTER"
 
