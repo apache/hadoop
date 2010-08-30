@@ -16,12 +16,15 @@
  */
 package org.apache.hadoop.security;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestSecurityUtil {
@@ -69,5 +72,24 @@ public class TestSecurityUtil {
         + realm;
     verify(shouldNotReplace, hostname, shouldNotReplace);
     verify(shouldNotReplace, shouldNotReplace, shouldNotReplace);
+  }
+  
+  @Test
+  public void testStartsWithIncorrectSettings() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(
+        org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    String keyTabKey="key";
+    conf.set(keyTabKey, "");
+    UserGroupInformation.setConfiguration(conf);
+    boolean gotException = false;
+    try {
+      SecurityUtil.login(conf, keyTabKey, "", "");
+    } catch (IOException e) {
+      // expected
+      gotException=true;
+    }
+    assertTrue("Exception for empty keytabfile name was expected", gotException);
   }
 }

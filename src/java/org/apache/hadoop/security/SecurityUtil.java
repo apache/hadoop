@@ -174,7 +174,7 @@ public class SecurityUtil {
   }
 
   /**
-   * If a keytab has been provided, login as that user. Substitute $host in
+   * Login as a principal specified in config. Substitute $host in
    * user's Kerberos principal name with a dynamically looked-up fully-qualified
    * domain name of the current host.
    * 
@@ -192,8 +192,9 @@ public class SecurityUtil {
   }
 
   /**
-   * If a keytab has been provided, login as that user. Substitute $host in
-   * user's Kerberos principal name with hostname.
+   * Login as a principal specified in config. Substitute $host in user's Kerberos principal 
+   * name with hostname. If non-secure mode - return. If no keytab available -
+   * bail out with an exception
    * 
    * @param conf
    *          conf to use
@@ -208,9 +209,14 @@ public class SecurityUtil {
   public static void login(final Configuration conf,
       final String keytabFileKey, final String userNameKey, String hostname)
       throws IOException {
-    String keytabFilename = conf.get(keytabFileKey);
-    if (keytabFilename == null)
+    
+    if(! UserGroupInformation.isSecurityEnabled()) 
       return;
+    
+    String keytabFilename = conf.get(keytabFileKey);
+    if (keytabFilename == null || keytabFilename.length() == 0) {
+      throw new IOException("Running in secure mode, but config doesn't have a keytab");
+    }
 
     String principalConfig = conf.get(userNameKey, System
         .getProperty("user.name"));
