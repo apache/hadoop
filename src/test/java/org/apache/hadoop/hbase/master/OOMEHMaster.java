@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * An HMaster that runs out of memory.
@@ -37,7 +38,8 @@ import org.apache.hadoop.hbase.HServerInfo;
 public class OOMEHMaster extends HMaster {
   private List<byte []> retainer = new ArrayList<byte[]>();
 
-  public OOMEHMaster(HBaseConfiguration conf) throws IOException {
+  public OOMEHMaster(HBaseConfiguration conf)
+  throws IOException, KeeperException, InterruptedException {
     super(conf);
   }
 
@@ -52,8 +54,9 @@ public class OOMEHMaster extends HMaster {
 
   /**
    * @param args
+   * @throws IOException 
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     doMain(args, OOMEHMaster.class);
   }
 }

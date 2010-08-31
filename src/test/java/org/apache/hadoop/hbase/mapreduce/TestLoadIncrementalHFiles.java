@@ -112,7 +112,7 @@ public class TestLoadIncrementalHFiles {
       htd.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(htd, SPLIT_KEYS);
 
-      HTable table = new HTable(TABLE);
+      HTable table = new HTable(util.getConfiguration(), TABLE);
       util.waitTableAvailable(TABLE, 30000);
       LoadIncrementalHFiles loader = new LoadIncrementalHFiles(
           util.getConfiguration());

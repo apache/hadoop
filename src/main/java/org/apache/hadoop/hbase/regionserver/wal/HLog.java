@@ -47,6 +47,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -78,8 +79,9 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.util.concurrent.NamingThreadFactory;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
@@ -136,15 +138,15 @@ public class HLog implements Syncable {
   private final FileSystem fs;
   private final Path dir;
   private final Configuration conf;
-  private final LogRollListener listener;
+  // Listeners that are called on WAL events.
+  private List<WALObserver> listeners =
+    new CopyOnWriteArrayList<WALObserver>();
   private final long optionalFlushInterval;
   private final long blocksize;
   private final int flushlogentries;
   private final String prefix;
   private final AtomicInteger unflushedEntries = new AtomicInteger(0);
   private final Path oldLogDir;
-  private final List<LogActionsListener> actionListeners =
-      Collections.synchronizedList(new ArrayList<LogActionsListener>());
 
 
   private static Class<? extends Writer> logWriterClass;
@@ -187,7 +189,8 @@ public class HLog implements Syncable {
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
   /*
-   * Map of regions to first sequence/edit id in their memstore.
+   * Map of regions to most recent sequence/edit id in their memstore.
+   * Key is encoded region name.
    */
   private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
@@ -227,9 +230,6 @@ public class HLog implements Syncable {
    * Thread that handles group commit
    */
   private final LogSyncer logSyncerThread;
-
-  private final List<LogEntryVisitor> logEntryVisitors =
-      new CopyOnWriteArrayList<LogEntryVisitor>();
 
   /**
    * Pattern used to validate a HLog file name
@@ -278,19 +278,18 @@ public class HLog implements Syncable {
   }
 
   /**
-   * HLog creating with a null actions listener.
+   * Constructor.
    *
    * @param fs filesystem handle
    * @param dir path to where hlogs are stored
    * @param oldLogDir path to where hlogs are archived
    * @param conf configuration to use
-   * @param listener listerner used to request log rolls
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
-              final Configuration conf, final LogRollListener listener)
+              final Configuration conf)
   throws IOException {
-    this(fs, dir, oldLogDir, conf, listener, null, null);
+    this(fs, dir, oldLogDir, conf, null, null);
   }
 
   /**
@@ -304,22 +303,27 @@ public class HLog implements Syncable {
    * @param dir path to where hlogs are stored
    * @param oldLogDir path to where hlogs are archived
    * @param conf configuration to use
-   * @param listener listerner used to request log rolls
-   * @param actionListener optional listener for hlog actions like archiving
+   * @param listeners Listeners on WAL events. Listeners passed here will
+   * be registered before we do anything else; e.g. the
+   * Constructor {@link #rollWriter().
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
    *        If prefix is null, "hlog" will be used
    * @throws IOException
    */
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
-              final Configuration conf, final LogRollListener listener,
-              final LogActionsListener actionListener, final String prefix)
+    final Configuration conf, final List<WALObserver> listeners,
+    final String prefix)
   throws IOException {
     super();
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
-    this.listener = listener;
+    if (listeners != null) {
+      for (WALObserver i: listeners) {
+        registerWALActionsListener(i);
+      }
+    }
     this.flushlogentries =
       conf.getInt("hbase.regionserver.flushlogentries", 1);
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
@@ -339,14 +343,12 @@ public class HLog implements Syncable {
     }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
-    LOG.info("HLog configuration: blocksize=" + this.blocksize +
-      ", rollsize=" + this.logrollsize +
+    LOG.info("HLog configuration: blocksize=" +
+      StringUtils.byteDesc(this.blocksize) +
+      ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
       ", enabled=" + this.enabled +
       ", flushlogentries=" + this.flushlogentries +
       ", optionallogflushinternal=" + this.optionalFlushInterval + "ms");
-    if (actionListener != null) {
-      addLogActionsListerner(actionListener);
-    }
     // If prefix is null||empty then just name it hlog
     this.prefix = prefix == null || prefix.isEmpty() ?
         "hlog" : URLEncoder.encode(prefix, "UTF8");
@@ -355,27 +357,39 @@ public class HLog implements Syncable {
 
     // handle the reflection necessary to call getNumCurrentReplicas()
     this.getNumCurrentReplicas = null;
-    if(this.hdfs_out != null) {
+    Exception exception = null;
+    if (this.hdfs_out != null) {
       try {
         this.getNumCurrentReplicas = this.hdfs_out.getClass().
           getMethod("getNumCurrentReplicas", new Class<?> []{});
         this.getNumCurrentReplicas.setAccessible(true);
       } catch (NoSuchMethodException e) {
         // Thrown if getNumCurrentReplicas() function isn't available
+        exception = e;
       } catch (SecurityException e) {
         // Thrown if we can't get access to getNumCurrentReplicas()
+        exception = e;
         this.getNumCurrentReplicas = null; // could happen on setAccessible()
       }
     }
-    if(this.getNumCurrentReplicas != null) {
+    if (this.getNumCurrentReplicas != null) {
       LOG.info("Using getNumCurrentReplicas--HDFS-826");
     } else {
-      LOG.info("getNumCurrentReplicas--HDFS-826 not available" );
+      LOG.info("getNumCurrentReplicas--HDFS-826 not available; hdfs_out=" +
+        this.hdfs_out + ", exception=" + exception.getMessage());
     }
 
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread,
         Thread.currentThread().getName() + ".logSyncer");
+  }
+
+  public void registerWALActionsListener (final WALObserver listener) {
+    this.listeners.add(listener);
+  }
+
+  public boolean unregisterWALActionsListener(final WALObserver listener) {
+    return this.listeners.remove(listener);
   }
 
   /**
@@ -429,7 +443,8 @@ public class HLog implements Syncable {
    * for the lock on this and consequently never release the cacheFlushLock
    *
    * @return If lots of logs, flush the returned regions so next time through
-   * we can clean logs. Returns null if nothing to flush.
+   * we can clean logs. Returns null if nothing to flush.  Names are actual
+   * region names as returned by {@link HRegionInfo#getEncodedName()}
    * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
@@ -475,14 +490,14 @@ public class HLog implements Syncable {
         this.numEntries.set(0);
       }
       // Tell our listeners that a new log was created
-      if (!this.actionListeners.isEmpty()) {
-        for (LogActionsListener list : this.actionListeners) {
-          list.logRolled(newPath);
+      if (!this.listeners.isEmpty()) {
+        for (WALObserver i : this.listeners) {
+          i.logRolled(newPath);
         }
       }
       // Can we delete any of the old log files?
       if (this.outputfiles.size() > 0) {
-        if (this.lastSeqWritten.size() <= 0) {
+        if (this.lastSeqWritten.isEmpty()) {
           LOG.debug("Last sequenceid written is empty. Deleting all old hlogs");
           // If so, then no new writes have come in since all regions were
           // flushed (and removed from the lastSeqWritten map). Means can
@@ -557,7 +572,8 @@ public class HLog implements Syncable {
   /*
    * Clean up old commit logs.
    * @return If lots of logs, flush the returned region so next time through
-   * we can clean logs. Returns null if nothing to flush.
+   * we can clean logs. Returns null if nothing to flush.  Returns array of
+   * encoded region names to flush.
    * @throws IOException
    */
   private byte [][] cleanOldLogs() throws IOException {
@@ -584,10 +600,12 @@ public class HLog implements Syncable {
     }
 
     // If too many log files, figure which regions we need to flush.
+    // Array is an array of encoded region names.
     byte [][] regions = null;
     int logCount = this.outputfiles.size() - logsToRemove;
     if (logCount > this.maxLogs && this.outputfiles != null &&
         this.outputfiles.size() > 0) {
+      // This is an array of encoded region names.
       regions = findMemstoresWithEditsOlderThan(this.outputfiles.firstKey(),
         this.lastSeqWritten);
       StringBuilder sb = new StringBuilder();
@@ -631,6 +649,10 @@ public class HLog implements Syncable {
     return Collections.min(this.lastSeqWritten.values());
   }
 
+  /**
+   * @param oldestOutstandingSeqNum
+   * @return (Encoded) name of oldest outstanding region.
+   */
   private byte [] getOldestRegion(final Long oldestOutstandingSeqNum) {
     byte [] oldestRegion = null;
     for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
@@ -758,7 +780,7 @@ public class HLog implements Syncable {
     final long now,
     final boolean isMetaRegion)
   throws IOException {
-    byte [] regionName = regionInfo.getRegionName();
+    byte [] regionName = regionInfo.getEncodedNameAsBytes();
     byte [] tableName = regionInfo.getTableDesc().getName();
     this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
   }
@@ -787,7 +809,6 @@ public class HLog implements Syncable {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    byte [] regionName = regionInfo.getRegionName();
     synchronized (updateLock) {
       long seqNum = obtainSeqNum();
       logKey.setLogSeqNum(seqNum);
@@ -796,7 +817,8 @@ public class HLog implements Syncable {
       // memstore). When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
-      this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
+      this.lastSeqWritten.putIfAbsent(regionInfo.getEncodedNameAsBytes(),
+        Long.valueOf(seqNum));
       doWrite(regionInfo, logKey, logEdit);
       this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
@@ -807,8 +829,8 @@ public class HLog implements Syncable {
   }
 
   /**
-   * Append a set of edits to the log. Log edits are keyed by regionName,
-   * rowname, and log-sequence-id.
+   * Append a set of edits to the log. Log edits are keyed by (encoded)
+   * regionName, rowname, and log-sequence-id.
    *
    * Later, if we sort by these keys, we obtain all the relevant edits for a
    * given key-range of the HRegion (TODO). Any edits that do not have a
@@ -833,8 +855,6 @@ public class HLog implements Syncable {
     final long now)
   throws IOException {
     if (edits.isEmpty()) return;
-    
-    byte[] regionName = info.getRegionName();
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
@@ -845,8 +865,11 @@ public class HLog implements Syncable {
       // memstore). . When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
-      this.lastSeqWritten.putIfAbsent(regionName, seqNum);
-      HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
+      // Use encoded name.  Its shorter, guaranteed unique and a subset of
+      // actual  name.
+      byte [] hriKey = info.getEncodedNameAsBytes();
+      this.lastSeqWritten.putIfAbsent(hriKey, seqNum);
+      HLogKey logKey = makeKey(hriKey, tableName, seqNum, now);
       doWrite(info, logKey, edits);
       this.numEntries.incrementAndGet();
 
@@ -910,7 +933,7 @@ public class HLog implements Syncable {
         LOG.error("Error while syncing, requesting close of hlog ", e);
         requestLogRoll();
       } catch (InterruptedException e) {
-        LOG.debug(getName() + "interrupted while waiting for sync requests");
+        LOG.debug(getName() + " interrupted while waiting for sync requests");
       } finally {
         syncerShuttingDown = true;
         syncDone.signalAll();
@@ -1043,8 +1066,10 @@ public class HLog implements Syncable {
   }
 
   private void requestLogRoll() {
-    if (this.listener != null) {
-      this.listener.logRollRequested();
+    if (!this.listeners.isEmpty()) {
+      for (WALObserver i: this.listeners) {
+        i.logRollRequested();
+      }
     }
   }
 
@@ -1053,9 +1078,9 @@ public class HLog implements Syncable {
     if (!this.enabled) {
       return;
     }
-    if (!this.logEntryVisitors.isEmpty()) {
-      for (LogEntryVisitor visitor : this.logEntryVisitors) {
-        visitor.visitLogEntryBeforeWrite(info, logKey, logEdit);
+    if (!this.listeners.isEmpty()) {
+      for (WALObserver i: this.listeners) {
+        i.visitLogEntryBeforeWrite(info, logKey, logEdit);
       }
     }
     try {
@@ -1115,14 +1140,13 @@ public class HLog implements Syncable {
    *
    * Protected by cacheFlushLock
    *
-   * @param regionName
+   * @param encodedRegionName
    * @param tableName
    * @param logSeqId
    * @throws IOException
    */
-  public void completeCacheFlush(final byte [] regionName, final byte [] tableName,
-    final long logSeqId,
-    final boolean isMetaRegion)
+  public void completeCacheFlush(final byte [] encodedRegionName,
+      final byte [] tableName, final long logSeqId, final boolean isMetaRegion)
   throws IOException {
     try {
       if (this.closed) {
@@ -1131,15 +1155,15 @@ public class HLog implements Syncable {
       synchronized (updateLock) {
         long now = System.currentTimeMillis();
         WALEdit edit = completeCacheFlushLogEdit();
-        HLogKey key = makeKey(regionName, tableName, logSeqId,
+        HLogKey key = makeKey(encodedRegionName, tableName, logSeqId,
             System.currentTimeMillis());
         this.writer.append(new Entry(key, edit));
         writeTime += System.currentTimeMillis() - now;
         writeOps++;
         this.numEntries.incrementAndGet();
-        Long seq = this.lastSeqWritten.get(regionName);
+        Long seq = this.lastSeqWritten.get(encodedRegionName);
         if (seq != null && logSeqId >= seq.longValue()) {
-          this.lastSeqWritten.remove(regionName);
+          this.lastSeqWritten.remove(encodedRegionName);
         }
       }
       // sync txn to file system
@@ -1475,9 +1499,10 @@ public class HLog implements Syncable {
       conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
     HashMap<byte[], Future> writeFutureResult = new HashMap<byte[], Future>();
-    NamingThreadFactory f  = new NamingThreadFactory(
-            "SplitWriter-%1$d", Executors.defaultThreadFactory());
-    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, f);
+    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
+    builder.setNameFormat("SplitWriter-%1$d");
+    ThreadFactory factory = builder.build();
+    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, factory);
     for (final byte [] region : splitLogsMap.keySet()) {
       Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap, region, fs, conf);
       writeFutureResult.put(region, threadPool.submit(splitter));
@@ -1558,7 +1583,7 @@ public class HLog implements Syncable {
     try {
       Entry entry;
       while ((entry = in.next()) != null) {
-        byte[] region = entry.getKey().getRegionName();
+        byte[] region = entry.getKey().getEncodedRegionName();
         LinkedList<Entry> queue = splitLogsMap.get(region);
         if (queue == null) {
           queue = new LinkedList<Entry>();
@@ -1682,7 +1707,7 @@ public class HLog implements Syncable {
     Path tableDir = HTableDescriptor.getTableDir(rootDir,
       logEntry.getKey().getTablename());
     Path regiondir = HRegion.getRegionDir(tableDir,
-      HRegionInfo.encodeRegionName(logEntry.getKey().getRegionName()));
+      Bytes.toString(logEntry.getKey().getEncodedRegionName()));
     Path dir = getRegionDirRecoveredEditsDir(regiondir);
     if (!fs.exists(dir)) {
       if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
@@ -1759,32 +1784,6 @@ public class HLog implements Syncable {
     return new Path(regiondir, RECOVERED_EDITS_DIR);
   }
 
-  /**
-   *
-   * @param visitor
-   */
-  public void addLogEntryVisitor(LogEntryVisitor visitor) {
-    this.logEntryVisitors.add(visitor);
-  }
-
-  /**
-   * 
-   * @param visitor
-   */
-  public void removeLogEntryVisitor(LogEntryVisitor visitor) {
-    this.logEntryVisitors.remove(visitor);
-  }
-
-
-  public void addLogActionsListerner(LogActionsListener list) {
-    LOG.info("Adding a listener");
-    this.actionListeners.add(list);
-  }
-
-  public boolean removeLogActionsListener(LogActionsListener list) {
-    return this.actionListeners.remove(list);
-  }
-
   private static void usage() {
     System.err.println("Usage: java org.apache.hbase.HLog" +
         " {--dump <logfile>... | --split <logdir>...}");
@@ -1846,5 +1845,4 @@ public class HLog implements Syncable {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
       ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
-
 }

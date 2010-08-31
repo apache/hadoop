@@ -26,8 +26,8 @@ import java.io.IOException;
  * already being processed as dead. This can happen when a region server loses
  * its session but didn't figure it yet.
  */
+@SuppressWarnings("serial")
 public class YouAreDeadException extends IOException {
-
   public YouAreDeadException(String message) {
     super(message);
   }

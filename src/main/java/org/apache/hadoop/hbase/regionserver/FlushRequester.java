@@ -21,10 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 /**
- * Implementors of this interface want to be notified when an HRegion
- * determines that a cache flush is needed. A FlushRequester (or null)
- * must be passed to the HRegion constructor so it knows who to call when it
- * has a filled memstore.
+ * Request a flush.
  */
 public interface FlushRequester {
   /**
@@ -32,5 +29,5 @@ public interface FlushRequester {
    *
    * @param region the HRegion requesting the cache flush
    */
-  void request(HRegion region);
+  void requestFlush(HRegion region);
 }

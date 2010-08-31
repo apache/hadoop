@@ -23,16 +23,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventHandlerListener;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -51,7 +50,7 @@ import static org.junit.Assert.*;
 
 public class TestMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final Log LOG = LogFactory.getLog(TestMasterWithDisabling.class);
+  private static final Log LOG = LogFactory.getLog(TestMaster.class);
   private static final byte[] TABLENAME = Bytes.toBytes("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
 
@@ -73,10 +72,12 @@ public class TestMaster {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    TEST_UTIL.loadTable(new HTable(TABLENAME), FAMILYNAME);
+    TEST_UTIL.loadTable(new HTable(TEST_UTIL.getConfiguration(), TABLENAME),
+      FAMILYNAME);
 
     List<Pair<HRegionInfo, HServerAddress>> tableRegions =
-      m.getTableRegions(TABLENAME);
+      MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
+          Bytes.toString(TABLENAME));
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
     assertArrayEquals(HConstants.EMPTY_START_ROW,
@@ -85,11 +86,12 @@ public class TestMaster {
         tableRegions.get(0).getFirst().getEndKey());
 
     // Now trigger a split and stop when the split is in progress
-    
+
     CountDownLatch aboutToOpen = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
     RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
-    HBaseEventHandler.registerListener(list);
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS2ZK_REGION_OPENED, list);
 
     LOG.info("Splitting table");
     admin.split(TABLENAME);
@@ -97,7 +99,9 @@ public class TestMaster {
     aboutToOpen.await(60, TimeUnit.SECONDS);
     try {
       LOG.info("Making sure we can call getTableRegions while opening");
-      tableRegions = m.getTableRegions(TABLENAME);
+      tableRegions = MetaReader.getTableRegionsAndLocations(
+          m.getCatalogTracker(), Bytes.toString(TABLENAME));
+
       LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
       // We have three regions because one is split-in-progress
       assertEquals(3, tableRegions.size());
@@ -105,14 +109,16 @@ public class TestMaster {
       Pair<HRegionInfo,HServerAddress> pair =
         m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
       LOG.info("Result is: " + pair);
-      Pair<HRegionInfo, HServerAddress> tableRegionFromName = m.getTableRegionFromName(pair.getFirst().getRegionName());
+      Pair<HRegionInfo, HServerAddress> tableRegionFromName =
+        MetaReader.getRegion(m.getCatalogTracker(),
+            pair.getFirst().getRegionName());
       assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
     } finally {
       proceed.countDown();
     }
   }
 
-  static class RegionOpenListener implements HBaseEventHandlerListener {
+  static class RegionOpenListener implements EventHandlerListener {
     CountDownLatch aboutToOpen, proceed;
 
     public RegionOpenListener(CountDownLatch aboutToOpen, CountDownLatch proceed)
@@ -122,8 +128,8 @@ public class TestMaster {
     }
 
     @Override
-    public void afterProcess(HBaseEventHandler event) {
-      if (event.getHBEvent() != HBaseEventType.RS2ZK_REGION_OPENED) {
+    public void afterProcess(EventHandler event) {
+      if (event.getEventType() != EventType.RS2ZK_REGION_OPENED) {
         return;
       }
       try {
@@ -136,8 +142,7 @@ public class TestMaster {
     }
 
     @Override
-    public void beforeProcess(HBaseEventHandler event) {
+    public void beforeProcess(EventHandler event) {
     }
   }
-
 }

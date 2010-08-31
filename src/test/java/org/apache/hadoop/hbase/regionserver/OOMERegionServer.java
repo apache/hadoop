@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Put;
 public class OOMERegionServer extends HRegionServer {
   private List<Put> retainer = new ArrayList<Put>();
 
-  public OOMERegionServer(HBaseConfiguration conf) throws IOException {
+  public OOMERegionServer(HBaseConfiguration conf) throws IOException, InterruptedException {
     super(conf);
   }
 

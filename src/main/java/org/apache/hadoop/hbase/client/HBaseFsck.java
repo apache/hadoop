@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -73,9 +75,10 @@ public class HBaseFsck extends HBaseAdmin {
    *
    * @param conf Configuration object
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public HBaseFsck(Configuration conf) 
-    throws MasterNotRunningException, IOException {
+    throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     super(conf);
     this.conf = conf;
 
@@ -261,10 +264,10 @@ public class HBaseFsck extends HBaseAdmin {
                                     rsinfo.getServerAddress());
 
         // list all online regions from this region server
-        HRegionInfo[] regions = server.getRegionsAssignment();
+        NavigableSet<HRegionInfo> regions = server.getOnlineRegions();
         if (details) {
           System.out.print("\nRegionServer:" + rsinfo.getServerName() +
-                           " number of regions:" + regions.length);
+                           " number of regions:" + regions.size());
           for (HRegionInfo rinfo: regions) {
             System.out.print("\n\t name:" + rinfo.getRegionNameAsString() +
                              " id:" + rinfo.getRegionId() +

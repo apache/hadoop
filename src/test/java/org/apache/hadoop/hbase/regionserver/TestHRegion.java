@@ -1316,7 +1316,7 @@ public class TestHRegion extends HBaseTestCase {
     // the prepare call -- we are not ready to split just now.  Just return.
     if (!st.prepare()) return null;
     try {
-      result = st.execute(null);
+      result = st.execute(null, null);
     } catch (IOException ioe) {
       try {
         LOG.info("Running rollback of failed split of " +

@@ -345,8 +345,9 @@ public class HBaseRPC {
         if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
           LOG.info("Server at " + addr + " could not be reached after " +
             reconnectAttempts + " tries, giving up.");
-          throw new RetriesExhaustedException("Failed setting up proxy to " +
-            addr.toString() + " after attempts=" + reconnectAttempts);
+          throw new RetriesExhaustedException("Failed setting up proxy " +
+            protocol + " to " + addr.toString() + " after attempts=" +
+            reconnectAttempts, se);
       }
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);

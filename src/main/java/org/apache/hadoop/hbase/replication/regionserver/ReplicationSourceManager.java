@@ -20,16 +20,6 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.wal.LogActionsListener;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +28,16 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 
 /**
  * This class is responsible to manage all the replication
@@ -50,8 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * tries to grab a lock in order to transfer all the queues in a local
  * old source.
  */
-public class ReplicationSourceManager implements LogActionsListener {
-
+public class ReplicationSourceManager {
   private static final Log LOG =
       LogFactory.getLog(ReplicationSourceManager.class);
   // List of all the sources that read this RS's logs
@@ -61,9 +60,9 @@ public class ReplicationSourceManager implements LogActionsListener {
   // Indicates if we are currently replicating
   private final AtomicBoolean replicating;
   // Helper for zookeeper
-  private final ReplicationZookeeperWrapper zkHelper;
-  // Indicates if the region server is closing
-  private final AtomicBoolean stopper;
+  private final ReplicationZookeeper zkHelper;
+  // All about stopping
+  private final Stoppable stopper;
   // All logs we are currently trackign
   private final SortedSet<String> hlogs;
   private final Configuration conf;
@@ -88,9 +87,9 @@ public class ReplicationSourceManager implements LogActionsListener {
    * @param logDir the directory that contains all hlog directories of live RSs
    * @param oldLogDir the directory where old logs are archived
    */
-  public ReplicationSourceManager(final ReplicationZookeeperWrapper zkHelper,
+  public ReplicationSourceManager(final ReplicationZookeeper zkHelper,
                                   final Configuration conf,
-                                  final AtomicBoolean stopper,
+                                  final Stoppable stopper,
                                   final FileSystem fs,
                                   final AtomicBoolean replicating,
                                   final Path logDir,
@@ -146,7 +145,7 @@ public class ReplicationSourceManager implements LogActionsListener {
       ReplicationSourceInterface src = addSource(id);
       src.startup();
     }
-    List<String> currentReplicators = this.zkHelper.getListOfReplicators(null);
+    List<String> currentReplicators = this.zkHelper.getListOfReplicators();
     synchronized (otherRegionServers) {
       LOG.info("Current list of replicators: " + currentReplicators
           + " other RSs: " + otherRegionServers);
@@ -198,7 +197,7 @@ public class ReplicationSourceManager implements LogActionsListener {
    * @return a sorted set of hlog names
    */
   protected SortedSet<String> getHLogs() {
-    return new TreeSet(this.hlogs);
+    return new TreeSet<String>(this.hlogs);
   }
 
   /**
@@ -209,8 +208,7 @@ public class ReplicationSourceManager implements LogActionsListener {
     return this.sources;
   }
 
-  @Override
-  public void logRolled(Path newLog) {
+  void logRolled(Path newLog) {
     if (this.sources.size() > 0) {
       this.zkHelper.addLogToList(newLog.getName(),
           this.sources.get(0).getPeerClusterZnode());
@@ -229,7 +227,7 @@ public class ReplicationSourceManager implements LogActionsListener {
    * Get the ZK help of this manager
    * @return the helper
    */
-  public ReplicationZookeeperWrapper getRepZkWrapper() {
+  public ReplicationZookeeper getRepZkWrapper() {
     return zkHelper;
   }
 
@@ -248,11 +246,12 @@ public class ReplicationSourceManager implements LogActionsListener {
       final Configuration conf,
       final FileSystem fs,
       final ReplicationSourceManager manager,
-      final AtomicBoolean stopper,
+      final Stoppable stopper,
       final AtomicBoolean replicating,
       final String peerClusterId) throws IOException {
     ReplicationSourceInterface src;
     try {
+      @SuppressWarnings("rawtypes")
       Class c = Class.forName(conf.get("replication.replicationsource.implementation",
           ReplicationSource.class.getCanonicalName()));
       src = (ReplicationSourceInterface) c.newInstance();
@@ -276,7 +275,7 @@ public class ReplicationSourceManager implements LogActionsListener {
    */
   public void transferQueues(String rsZnode) {
     // We try to lock that rs' queue directory
-    if (this.stopper.get()) {
+    if (this.stopper.isStopped()) {
       LOG.info("Not transferring queue since we are shutting down");
       return;
     }
@@ -372,5 +371,4 @@ public class ReplicationSourceManager implements LogActionsListener {
   public FileSystem getFs() {
     return this.fs;
   }
-
 }

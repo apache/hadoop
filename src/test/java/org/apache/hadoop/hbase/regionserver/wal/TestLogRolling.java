@@ -154,6 +154,8 @@ public class TestLogRolling  {
   private void startAndWriteData() throws IOException {
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
+    this.log = server.getWAL();
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -162,7 +164,7 @@ public class TestLogRolling  {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
-    this.log = server.getLog();
+    this.log = server.getWAL();
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);
@@ -192,7 +194,7 @@ public class TestLogRolling  {
       // flush all regions
 
       List<HRegion> regions =
-        new ArrayList<HRegion>(server.getOnlineRegions());
+        new ArrayList<HRegion>(server.getOnlineRegionsLocalContext());
       for (HRegion r: regions) {
         r.flushcache();
       }
@@ -226,7 +228,6 @@ public class TestLogRolling  {
   /**
    * Give me the HDFS pipeline for this log file
    */
-  @SuppressWarnings("null")
   DatanodeInfo[] getPipeline(HLog log) throws IllegalArgumentException,
       IllegalAccessException, InvocationTargetException {
     OutputStream stm = log.getOutputStream();
@@ -258,10 +259,15 @@ public class TestLogRolling  {
   public void testLogRollOnDatanodeDeath() throws IOException,
       InterruptedException, IllegalArgumentException, IllegalAccessException,
       InvocationTargetException {
-    assertTrue("This test requires HLog file replication.", fs
-        .getDefaultReplication() > 1);
+    assertTrue("This test requires HLog file replication.",
+      fs.getDefaultReplication() > 1);
+    LOG.info("Replication=" + fs.getDefaultReplication());
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+
+    this.server = cluster.getRegionServer(0);
+    this.log = server.getWAL();
+    
     // Create the test table and open it
     String tableName = getName();
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -275,7 +281,7 @@ public class TestLogRolling  {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
-    this.log = server.getLog();
+    this.log = server.getWAL();
 
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
@@ -297,8 +303,7 @@ public class TestLogRolling  {
     assertTrue("Log should have a timestamp older than now",
         curTime > oldFilenum && oldFilenum != -1);
 
-    assertTrue("The log shouldn't have rolled yet", oldFilenum == log
-        .getFilenum());
+    assertTrue("The log shouldn't have rolled yet", oldFilenum == log.getFilenum());
     DatanodeInfo[] pipeline = getPipeline(log);
     assertTrue(pipeline.length == fs.getDefaultReplication());
 

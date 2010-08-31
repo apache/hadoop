@@ -49,7 +49,7 @@ then
 fi
 
 # quick function to get a value from the HBase config file
-distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distributed`
+distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
 if [ "$distMode" == 'false' ]; then
   "$bin"/hbase-daemon.sh restart master
 else 
@@ -59,9 +59,9 @@ else
     --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
 
   # make sure the master znode has been deleted before continuing
-  zparent=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool zookeeper.znode.parent`
+  zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
   if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
-  zmaster=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool zookeeper.znode.master`
+  zmaster=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.master`
   if [ "$zmaster" == "null" ]; then zmaster="master"; fi
   zmaster=$zparent/$zmaster
   echo -n "Waiting for Master ZNode to expire"
@@ -134,7 +134,7 @@ then
 fi
 
 # quick function to get a value from the HBase config file
-distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distributed`
+distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
 if [ "$distMode" == 'false' ]; then
   "$bin"/hbase-daemon.sh restart master
 else 
@@ -144,9 +144,9 @@ else
     --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
 
   # make sure the master znode has been deleted before continuing
-  zparent=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool zookeeper.znode.parent`
+  zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
   if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
-  zmaster=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool zookeeper.znode.master`
+  zmaster=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.master`
   if [ "$zmaster" == "null" ]; then zmaster="master"; fi
   zmaster=$zparent/$zmaster
   echo -n "Waiting for Master ZNode to expire"

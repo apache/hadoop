@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase;
 
 
+import static org.junit.Assert.*;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
@@ -44,23 +46,14 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.junit.Test;
 
 /**
  * Test HBase Writables serializations
  */
-public class TestSerialization extends HBaseTestCase {
+public class TestSerialization {
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-  }
-
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
-  }
-
-  public void testCompareFilter() throws Exception {
+  @Test public void testCompareFilter() throws Exception {
     Filter f = new RowFilter(CompareOp.EQUAL,
       new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     byte [] bytes = Writables.getBytes(f);
@@ -68,10 +61,11 @@ public class TestSerialization extends HBaseTestCase {
     assertNotNull(ff);
   }
 
-  public void testKeyValue() throws Exception {
-    byte [] row = Bytes.toBytes(getName());
-    byte [] family = Bytes.toBytes(getName());
-    byte [] qualifier = Bytes.toBytes(getName());
+  @Test public void testKeyValue() throws Exception {
+    final String name = "testKeyValue";
+    byte [] row = Bytes.toBytes(name);
+    byte [] family = Bytes.toBytes(name);
+    byte [] qualifier = Bytes.toBytes(name);
     KeyValue original = new KeyValue(row, family, qualifier);
     byte [] bytes = Writables.getBytes(original);
     KeyValue newone = (KeyValue)Writables.getWritable(bytes, new KeyValue());
@@ -79,7 +73,7 @@ public class TestSerialization extends HBaseTestCase {
   }
 
   @SuppressWarnings("unchecked")
-  public void testHbaseMapWritable() throws Exception {
+  @Test public void testHbaseMapWritable() throws Exception {
     HbaseMapWritable<byte [], byte []> hmw =
       new HbaseMapWritable<byte[], byte[]>();
     hmw.put("key".getBytes(), "value".getBytes());
@@ -90,13 +84,14 @@ public class TestSerialization extends HBaseTestCase {
     assertTrue(Bytes.equals("value".getBytes(), hmw.get("key".getBytes())));
   }
 
-  public void testHMsg() throws Exception {
-    HMsg  m = new HMsg(HMsg.Type.MSG_REGIONSERVER_QUIESCE);
+  @Test public void testHMsg() throws Exception {
+    final String name = "testHMsg";
+    HMsg  m = new HMsg(HMsg.Type.STOP_REGIONSERVER);
     byte [] mb = Writables.getBytes(m);
     HMsg deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
     assertTrue(m.equals(deserializedHMsg));
-    m = new HMsg(HMsg.Type.MSG_REGIONSERVER_QUIESCE,
-      new HRegionInfo(new HTableDescriptor(getName()),
+    m = new HMsg(HMsg.Type.STOP_REGIONSERVER,
+      new HRegionInfo(new HTableDescriptor(name),
         HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
         "Some message".getBytes());
     mb = Writables.getBytes(m);
@@ -104,8 +99,9 @@ public class TestSerialization extends HBaseTestCase {
     assertTrue(m.equals(deserializedHMsg));
   }
 
-  public void testTableDescriptor() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName());
+  @Test public void testTableDescriptor() throws Exception {
+    final String name = "testTableDescriptor";
+    HTableDescriptor htd = createTableDescriptor(name);
     byte [] mb = Writables.getBytes(htd);
     HTableDescriptor deserializedHtd =
       (HTableDescriptor)Writables.getWritable(mb, new HTableDescriptor());
@@ -116,8 +112,9 @@ public class TestSerialization extends HBaseTestCase {
    * Test RegionInfo serialization
    * @throws Exception
    */
-  public void testRegionInfo() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(getName());
+  @Test public void testRegionInfo() throws Exception {
+    final String name = "testRegionInfo";
+    HTableDescriptor htd = new HTableDescriptor(name);
     String [] families = new String [] {"info", "anchor"};
     for (int i = 0; i < families.length; i++) {
       htd.addFamily(new HColumnDescriptor(families[i]));
@@ -136,7 +133,7 @@ public class TestSerialization extends HBaseTestCase {
    * Test ServerInfo serialization
    * @throws Exception
    */
-  public void testServerInfo() throws Exception {
+  @Test public void testServerInfo() throws Exception {
     HServerInfo hsi = new HServerInfo(new HServerAddress("0.0.0.0:123"), -1,
       1245, "default name");
     byte [] b = Writables.getBytes(hsi);
@@ -145,7 +142,7 @@ public class TestSerialization extends HBaseTestCase {
     assertTrue(hsi.equals(deserializedHsi));
   }
 
-  public void testPut() throws Exception{
+  @Test public void testPut() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf1 = "qf1".getBytes();
@@ -193,7 +190,7 @@ public class TestSerialization extends HBaseTestCase {
   }
 
 
-  public void testPut2() throws Exception{
+  @Test public void testPut2() throws Exception{
     byte[] row = "testAbort,,1243116656250".getBytes();
     byte[] fam = "historian".getBytes();
     byte[] qf1 = "creation".getBytes();
@@ -221,7 +218,7 @@ public class TestSerialization extends HBaseTestCase {
   }
 
 
-  public void testDelete() throws Exception{
+  @Test public void testDelete() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf1 = "qf1".getBytes();
@@ -248,7 +245,7 @@ public class TestSerialization extends HBaseTestCase {
     }
   }
 
-  public void testGet() throws Exception{
+  @Test public void testGet() throws Exception{
     byte[] row = "row".getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf1 = "qf1".getBytes();
@@ -289,7 +286,8 @@ public class TestSerialization extends HBaseTestCase {
   }
 
 
-  public void testScan() throws Exception{
+  @Test public void testScan() throws Exception {
+    
     byte[] startRow = "startRow".getBytes();
     byte[] stopRow  = "stopRow".getBytes();
     byte[] fam = "fam".getBytes();
@@ -323,7 +321,8 @@ public class TestSerialization extends HBaseTestCase {
 
       // Test filters are serialized properly.
       scan = new Scan(startRow);
-      byte [] prefix = Bytes.toBytes(getName());
+      final String name = "testScan";
+      byte [] prefix = Bytes.toBytes(name);
       scan.setFilter(new PrefixFilter(prefix));
       sb = Writables.getBytes(scan);
       desScan = (Scan)Writables.getWritable(sb, new Scan());
@@ -338,7 +337,7 @@ public class TestSerialization extends HBaseTestCase {
     assertEquals(tr.getMin(), desTr.getMin());
   }
 
-  public void testResultEmpty() throws Exception {
+  @Test public void testResultEmpty() throws Exception {
     List<KeyValue> keys = new ArrayList<KeyValue>();
     Result r = new Result(keys);
     assertTrue(r.isEmpty());
@@ -348,7 +347,7 @@ public class TestSerialization extends HBaseTestCase {
   }
 
 
-  public void testResult() throws Exception {
+  @Test public void testResult() throws Exception {
     byte [] rowA = Bytes.toBytes("rowA");
     byte [] famA = Bytes.toBytes("famA");
     byte [] qfA = Bytes.toBytes("qfA");
@@ -380,7 +379,7 @@ public class TestSerialization extends HBaseTestCase {
     assertEquals(r.size(), deserialized.size());
   }
 
-  public void testResultDynamicBuild() throws Exception {
+  @Test public void testResultDynamicBuild() throws Exception {
     byte [] rowA = Bytes.toBytes("rowA");
     byte [] famA = Bytes.toBytes("famA");
     byte [] qfA = Bytes.toBytes("qfA");
@@ -421,7 +420,7 @@ public class TestSerialization extends HBaseTestCase {
 
   }
 
-  public void testResultArray() throws Exception {
+  @Test public void testResultArray() throws Exception {
     byte [] rowA = Bytes.toBytes("rowA");
     byte [] famA = Bytes.toBytes("famA");
     byte [] qfA = Bytes.toBytes("qfA");
@@ -470,7 +469,7 @@ public class TestSerialization extends HBaseTestCase {
 
   }
 
-  public void testResultArrayEmpty() throws Exception {
+  @Test public void testResultArrayEmpty() throws Exception {
     List<KeyValue> keys = new ArrayList<KeyValue>();
     Result r = new Result(keys);
     Result [] results = new Result [] {r};
@@ -512,7 +511,7 @@ public class TestSerialization extends HBaseTestCase {
 
   }
 
-  public void testTimeRange(String[] args) throws Exception{
+  @Test public void testTimeRange() throws Exception{
     TimeRange tr = new TimeRange(0,5);
     byte [] mb = Writables.getBytes(tr);
     TimeRange deserializedTr =
@@ -523,8 +522,9 @@ public class TestSerialization extends HBaseTestCase {
 
   }
 
-  public void testKeyValue2() throws Exception {
-    byte[] row = getName().getBytes();
+  @Test public void testKeyValue2() throws Exception {
+    final String name = "testKeyValue2";
+    byte[] row = name.getBytes();
     byte[] fam = "fam".getBytes();
     byte[] qf = "qf".getBytes();
     long ts = System.currentTimeMillis();
@@ -538,5 +538,49 @@ public class TestSerialization extends HBaseTestCase {
     assertTrue(Bytes.equals(kv.getBuffer(), deserializedKv.getBuffer()));
     assertEquals(kv.getOffset(), deserializedKv.getOffset());
     assertEquals(kv.getLength(), deserializedKv.getLength());
+  }
+
+  protected static final int MAXVERSIONS = 3;
+  protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
+  protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
+  protected final static byte [] fam3 = Bytes.toBytes("colfamily3");
+  protected static final byte [][] COLUMNS = {fam1, fam2, fam3};
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @return Column descriptor.
+   */
+  protected HTableDescriptor createTableDescriptor(final String name) {
+    return createTableDescriptor(name, MAXVERSIONS);
+  }
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @param versions How many versions to allow per column.
+   * @return Column descriptor.
+   */
+  protected HTableDescriptor createTableDescriptor(final String name,
+      final int versions) {
+    HTableDescriptor htd = new HTableDescriptor(name);
+    htd.addFamily(new HColumnDescriptor(fam1, versions,
+      HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+      Integer.MAX_VALUE, HConstants.FOREVER,
+      HColumnDescriptor.DEFAULT_BLOOMFILTER,
+      HConstants.REPLICATION_SCOPE_LOCAL));
+    htd.addFamily(new HColumnDescriptor(fam2, versions,
+        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        Integer.MAX_VALUE, HConstants.FOREVER,
+        HColumnDescriptor.DEFAULT_BLOOMFILTER,
+        HConstants.REPLICATION_SCOPE_LOCAL));
+    htd.addFamily(new HColumnDescriptor(fam3, versions,
+        HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
+        Integer.MAX_VALUE,  HConstants.FOREVER,
+        HColumnDescriptor.DEFAULT_BLOOMFILTER,
+        HConstants.REPLICATION_SCOPE_LOCAL));
+    return htd;
   }
 }

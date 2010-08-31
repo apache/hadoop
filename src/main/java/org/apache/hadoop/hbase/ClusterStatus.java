@@ -27,9 +27,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.io.VersionedWritable;
 
 /**
@@ -53,7 +53,7 @@ public class ClusterStatus extends VersionedWritable {
   private String hbaseVersion;
   private Collection<HServerInfo> liveServerInfo;
   private Collection<String> deadServers;
-  private NavigableMap<String, String> intransition;
+  private Map<String, RegionState> intransition;
 
   /**
    * Constructor, for Writable
@@ -186,11 +186,11 @@ public class ClusterStatus extends VersionedWritable {
     this.deadServers = deadServers;
   }
 
-  public Map<String, String> getRegionsInTransition() {
+  public Map<String, RegionState> getRegionsInTransition() {
     return this.intransition;
   }
 
-  public void setRegionsInTransition(final NavigableMap<String, String> m) {
+  public void setRegionsInTransition(final Map<String, RegionState> m) {
     this.intransition = m;
   }
 
@@ -210,9 +210,9 @@ public class ClusterStatus extends VersionedWritable {
       out.writeUTF(server);
     }
     out.writeInt(this.intransition.size());
-    for (Map.Entry<String, String> e: this.intransition.entrySet()) {
+    for (Map.Entry<String, RegionState> e: this.intransition.entrySet()) {
       out.writeUTF(e.getKey());
-      out.writeUTF(e.getValue());
+      e.getValue().write(out);
     }
   }
 
@@ -232,11 +232,12 @@ public class ClusterStatus extends VersionedWritable {
       deadServers.add(in.readUTF());
     }
     count = in.readInt();
-    this.intransition = new TreeMap<String, String>();
+    this.intransition = new TreeMap<String, RegionState>();
     for (int i = 0; i < count; i++) {
       String key = in.readUTF();
-      String value = in.readUTF();
-      this.intransition.put(key, value);
+      RegionState regionState = new RegionState();
+      regionState.readFields(in);
+      this.intransition.put(key, regionState);
     }
   }
 }

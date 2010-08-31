@@ -136,7 +136,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
 
   @Override
   public void run() {
-    while (!this.server.isStopRequested()) {
+    while (!this.server.isStopped()) {
       FlushQueueEntry fqe = null;
       try {
         fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
@@ -164,7 +164,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     LOG.info(getName() + " exiting");
   }
 
-  public void request(HRegion r) {
+  public void requestFlush(HRegion r) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
@@ -212,7 +212,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
         }
-        this.server.compactSplitThread.compactionRequested(region, getName());
+        this.server.compactSplitThread.requestCompaction(region, getName());
         // Put back on the queue.  Have it come back out of the queue
         // after a delay of this.blockingWaitTime / 100 ms.
         this.flushQueue.add(fqe.requeue(this.blockingWaitTime / 100));
@@ -247,7 +247,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
     try {
       if (region.flushcache()) {
-        server.compactSplitThread.compactionRequested(region, getName());
+        server.compactSplitThread.requestCompaction(region, getName());
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
@@ -325,7 +325,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       regionsToCompact.add(biggestMemStoreRegion);
     }
     for (HRegion region : regionsToCompact) {
-      server.compactSplitThread.compactionRequested(region, getName());
+      server.compactSplitThread.requestCompaction(region, getName());
     }
   }
 

@@ -27,106 +27,37 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
- * HMsg is for communicating instructions between the HMaster and the
- * HRegionServers.
+ * HMsg is used to send messages between master and regionservers.  Messages are
+ * sent as payload on the regionserver-to-master heartbeats.  Region assignment
+ * does not use this mechanism.  It goes via zookeeper.
  *
- * Most of the time the messages are simple but some messages are accompanied
- * by the region affected.  HMsg may also carry optional message.
+ * <p>Most of the time the messages are simple but some messages are accompanied
+ * by the region affected.  HMsg may also carry an optional message.
+ * 
+ * <p>TODO: Clean out all messages that go from master to regionserver; by
+ * design, these are to go via zk from here on out.
  */
 public class HMsg implements Writable {
-  public static final HMsg REGIONSERVER_QUIESCE =
-    new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
-  public static final HMsg REGIONSERVER_STOP =
-    new HMsg(Type.MSG_REGIONSERVER_STOP);
+  public static final HMsg [] STOP_REGIONSERVER_ARRAY =
+    new HMsg [] {new HMsg(Type.STOP_REGIONSERVER)};
   public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
 
-  /**
-   * Message types sent between master and regionservers
-   */
   public static enum Type {
-    /** null message */
-    MSG_NONE,
-
-    // Message types sent from master to region server
-    /** Start serving the specified region */
-    MSG_REGION_OPEN,
-
-    /** Stop serving the specified region */
-    MSG_REGION_CLOSE,
-
-    /** Split the specified region */
-    MSG_REGION_SPLIT,
-
-    /** Compact the specified region */
-    MSG_REGION_COMPACT,
-
-    /** Master tells region server to stop */
-    MSG_REGIONSERVER_STOP,
-
-    /** Stop serving the specified region and don't report back that it's
-     * closed
+    /** Master tells region server to stop.
      */
-    MSG_REGION_CLOSE_WITHOUT_REPORT,
-
-    /** Stop serving user regions */
-    MSG_REGIONSERVER_QUIESCE,
-
-    // Message types sent from the region server to the master
-    /** region server is now serving the specified region */
-    MSG_REPORT_OPEN,
-
-    /** region server is no longer serving the specified region */
-    MSG_REPORT_CLOSE,
-
-    /** region server is processing open request */
-    MSG_REPORT_PROCESS_OPEN,
+    STOP_REGIONSERVER,
 
     /**
      * Region server split the region associated with this message.
-     *
-     * Note that this message is immediately followed by two MSG_REPORT_OPEN
-     * messages, one for each of the new regions resulting from the split
-     * @deprecated See MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS
      */
-    MSG_REPORT_SPLIT,
-
-    /**
-     * Region server is shutting down
-     *
-     * Note that this message is followed by MSG_REPORT_CLOSE messages for each
-     * region the region server was serving, unless it was told to quiesce.
-     */
-    MSG_REPORT_EXITING,
-
-    /** Region server has closed all user regions but is still serving meta
-     * regions
-     */
-    MSG_REPORT_QUIESCED,
-
-    /**
-     * Flush
-     */
-    MSG_REGION_FLUSH,
-
-    /**
-     * Run Major Compaction
-     */
-    MSG_REGION_MAJOR_COMPACT,
-
-    /**
-     * Region server split the region associated with this message.
-     *
-     * Its like MSG_REPORT_SPLIT only it carries the daughters in the message
-     * rather than send them individually in MSG_REPORT_OPEN messages.
-     */
-    MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS,
+    REGION_SPLIT,
 
     /**
      * When RegionServer receives this message, it goes into a sleep that only
      * an exit will cure.  This message is sent by unit tests simulating
      * pathological states.
      */
-    TESTING_MSG_BLOCK_RS,
+    TESTING_BLOCK_REGIONSERVER,
   }
 
   private Type type = null;
@@ -137,7 +68,7 @@ public class HMsg implements Writable {
 
   /** Default constructor. Used during deserialization */
   public HMsg() {
-    this(Type.MSG_NONE);
+    this(null);
   }
 
   /**
@@ -181,9 +112,6 @@ public class HMsg implements Writable {
    */
   public HMsg(final HMsg.Type type, final HRegionInfo hri,
       final HRegionInfo daughterA, final HRegionInfo daughterB, final byte[] msg) {
-    if (type == null) {
-      throw new NullPointerException("Message type cannot be null");
-    }
     this.type = type;
     if (hri == null) {
       throw new NullPointerException("Region cannot be null");
@@ -301,7 +229,7 @@ public class HMsg implements Writable {
        out.writeBoolean(true);
        Bytes.writeByteArray(out, this.message);
      }
-     if (this.type.equals(Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS)) {
+     if (this.type.equals(Type.REGION_SPLIT)) {
        this.daughterA.write(out);
        this.daughterB.write(out);
      }
@@ -318,7 +246,7 @@ public class HMsg implements Writable {
      if (hasMessage) {
        this.message = Bytes.readByteArray(in);
      }
-     if (this.type.equals(Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS)) {
+     if (this.type.equals(Type.REGION_SPLIT)) {
        this.daughterA = new HRegionInfo();
        this.daughterB = new HRegionInfo();
        this.daughterA.readFields(in);

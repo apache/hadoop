@@ -30,16 +30,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.util.Progressable;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Executes region split as a "transaction".  Call {@link #prepare()} to setup
@@ -112,6 +112,8 @@ class SplitTransaction {
 
   /**
    * Constructor
+   * @param services So we can online new servces.  If null, we'll skip onlining
+   * (Useful testing).
    * @param c Configuration to use running split
    * @param r Region to split
    * @param splitrow Row to split around
@@ -176,35 +178,23 @@ class SplitTransaction {
 
   /**
    * Run the transaction.
-   * @param or Object that can online/offline parent region.
+   * @param server Hosting server instance.
+   * @param services Used to online/offline regions.
    * @throws IOException If thrown, transaction failed. Call {@link #rollback(OnlineRegions)}
    * @return Regions created
    * @see #rollback(OnlineRegions)
    */
-  public PairOfSameType<HRegion> execute(final OnlineRegions or) throws IOException {
-    return execute(or, or != null);
-  }
-
-  /**
-   * Run the transaction.
-   * @param or Object that can online/offline parent region.  Can be null (Tests
-   * will pass null).
-   * @param If <code>true</code>, update meta (set to false when testing).
-   * @throws IOException If thrown, transaction failed. Call {@link #rollback(OnlineRegions)}
-   * @return Regions created
-   * @see #rollback(OnlineRegions)
-   */
-  PairOfSameType<HRegion> execute(final OnlineRegions or, final boolean updateMeta)
+  PairOfSameType<HRegion> execute(final Server server,
+      final RegionServerServices services)
   throws IOException {
     LOG.info("Starting split of region " + this.parent);
     if (!this.parent.lock.writeLock().isHeldByCurrentThread()) {
       throw new SplitAndCloseWriteLockNotHeld();
     }
 
-    // We'll need one of these later but get it now because if we fail there
-    // is nothing to undo.
-    HTable t = null;
-    if (updateMeta) t = getTable(this.parent.getConf());
+    // If true, no cluster to write meta edits into.
+    boolean testing =
+      server.getConfiguration().getBoolean("hbase.testing.nocluster", false);
 
     createSplitDir(this.parent.getFilesystem(), this.splitdir);
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
@@ -212,7 +202,9 @@ class SplitTransaction {
     List<StoreFile> hstoreFilesToSplit = this.parent.close(false);
     this.journal.add(JournalEntry.CLOSED_PARENT_REGION);
 
-    if (or != null) or.removeFromOnlineRegions(this.parent.getRegionInfo());
+    if (!testing) {
+      services.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName());
+    }
     this.journal.add(JournalEntry.OFFLINED_PARENT);
 
     splitStoreFiles(this.splitdir, hstoreFilesToSplit);
@@ -225,52 +217,39 @@ class SplitTransaction {
     // stuff in fs that needs cleanup -- a storefile or two.  Thats why we
     // add entry to journal BEFORE rather than AFTER the change.
     this.journal.add(JournalEntry.STARTED_REGION_A_CREATION);
-    HRegion a = createDaughterRegion(this.hri_a);
+    HRegion a = createDaughterRegion(this.hri_a, this.parent.flushRequester);
 
     // Ditto
     this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
-    HRegion b = createDaughterRegion(this.hri_b);
+    HRegion b = createDaughterRegion(this.hri_b, this.parent.flushRequester);
 
-    Put editParentPut = createOfflineParentPut();
-    if (t != null) t.put(editParentPut);
-
-    // The is the point of no return.  We are committed to the split now.  Up to
-    // a failure editing parent in meta or a crash of the hosting regionserver,
-    // we could rollback (or, if crash, we could cleanup on redeploy) but now
-    // meta has been changed, we can only go forward.  If the below last steps
-    // do not complete, repair has to be done by another agent.  For example,
-    // basescanner, at least up till master rewrite, would add daughter rows if
-    // missing from meta.  It could do this because the parent edit includes the
-    // daughter specs.  In Bigtable paper, they have another mechanism where
-    // some feedback to the master somehow flags it that split is incomplete and
-    // needs fixup.  Whatever the mechanism, its a TODO that we have some fixup.
-    
-    // I looked at writing the put of the parent edit above out to the WAL log
-    // before changing meta with the notion that should we fail, then on replay
-    // the offlining of the parent and addition of daughters up into meta could
-    // be reinserted.  The edits would have to be 'special' and given how our
-    // splits work, splitting by region, I think the replay would have to happen
-    // inside in the split code -- as soon as it saw one of these special edits,
-    // rather than write the edit out a file for the .META. region to replay or
-    // somehow, write it out to this regions edits file for it to handle on
-    // redeploy -- this'd be whacky, we'd be telling meta about a split during
-    // the deploy of the parent -- instead we'd have to play the edit inside
-    // in the split code somehow; this would involve a stop-the-splitting till
-    // meta had been edited which might hold up splitting a good while.
-
-    // Finish up the meta edits.  If these fail, another agent needs to do fixup
-    HRegionInfo hri = this.hri_a;
-    try {
-      if (t != null) t.put(createDaughterPut(hri));
-      hri = this.hri_b;
-      if (t != null) t.put(createDaughterPut(hri));
-    } catch (IOException e) {
-      // Don't let this out or we'll run rollback.
-      LOG.warn("Failed adding daughter " + hri.toString());
+    // Edit parent in meta
+    if (!testing) {
+      MetaEditor.offlineParentInMeta(server.getCatalogTracker(),
+        this.parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo());
     }
-    // This should not fail because the HTable instance we are using is not
-    // running a buffer -- its immediately flushing its puts.
-    if (t != null) t.close();
+
+    // The is the point of no return.  We are committed to the split now.  We
+    // have still the daughter regions to open but meta has been changed.
+    // If we fail from here on out, we can not rollback so, we'll just abort.
+    // The meta has been changed though so there will need to be a fixup run
+    // during processing of the crashed server by master (TODO: Verify this in place).
+
+    // TODO: Could we be smarter about the sequence in which we do these steps?
+
+    if (!testing) {
+      // Open daughters in parallel.
+      DaughterOpener aOpener = new DaughterOpener(server, services, a);
+      DaughterOpener bOpener = new DaughterOpener(server, services, b);
+      aOpener.start();
+      bOpener.start();
+      try {
+        aOpener.join();
+        bOpener.join();
+      } catch (InterruptedException e) {
+        server.abort("Exception running daughter opens", e);
+      }
+    }
 
     // Unlock if successful split.
     this.parent.lock.writeLock().unlock();
@@ -279,6 +258,70 @@ class SplitTransaction {
     // split was successful, just leave it; it'll be cleaned when parent is
     // deleted and cleaned up.
     return new PairOfSameType<HRegion>(a, b);
+  }
+
+  class DaughterOpener extends Thread {
+    private final RegionServerServices services;
+    private final Server server;
+    private final HRegion r;
+
+    DaughterOpener(final Server s, final RegionServerServices services,
+        final HRegion r) {
+      super(s.getServerName() + "-daughterOpener=" + r.getRegionInfo().getEncodedName());
+      setDaemon(true);
+      this.services = services;
+      this.server = s;
+      this.r = r;
+    }
+
+    @Override
+    public void run() {
+      try {
+        openDaughterRegion(this.server, this.services, r);
+      } catch (Throwable t) {
+        this.server.abort("Failed open of daughter " +
+          this.r.getRegionInfo().getRegionNameAsString(), t);
+      }
+    }
+  }
+
+  /**
+   * Open daughter regions, add them to online list and update meta.
+   * @param server
+   * @param services
+   * @param daughter
+   * @throws IOException
+   * @throws KeeperException
+   */
+  void openDaughterRegion(final Server server,
+      final RegionServerServices services, final HRegion daughter)
+  throws IOException, KeeperException {
+    HRegionInfo hri = daughter.getRegionInfo();
+    LoggingProgressable reporter =
+      new LoggingProgressable(hri, server.getConfiguration());
+    HRegion r = daughter.openHRegion(reporter);
+    services.postOpenDeployTasks(r, server.getCatalogTracker(), true);
+  }
+
+  static class LoggingProgressable implements Progressable {
+    private final HRegionInfo hri;
+    private long lastLog = -1;
+    private final long interval;
+
+    LoggingProgressable(final HRegionInfo hri, final Configuration c) {
+      this.hri = hri;
+      this.interval = c.getLong("hbase.regionserver.split.daughter.open.log.interval",
+        10000);
+    }
+
+    @Override
+    public void progress() {
+      long now = System.currentTimeMillis();
+      if (now - lastLog > this.interval) {
+        LOG.info("Opening " + this.hri.getRegionNameAsString());
+        this.lastLog = now;
+      }
+    }
   }
 
   private static Path getSplitDir(final HRegion r) {
@@ -348,12 +391,14 @@ class SplitTransaction {
   }
 
   /**
-   * @param hri
+   * @param hri Spec. for daughter region to open.
+   * @param flusher Flusher this region should use.
    * @return Created daughter HRegion.
    * @throws IOException
    * @see #cleanupDaughterRegion(FileSystem, Path, HRegionInfo)
    */
-  HRegion createDaughterRegion(final HRegionInfo hri)
+  HRegion createDaughterRegion(final HRegionInfo hri,
+      final FlushRequester flusher)
   throws IOException {
     // Package private so unit tests have access.
     FileSystem fs = this.parent.getFilesystem();
@@ -361,7 +406,7 @@ class SplitTransaction {
       this.splitdir, hri);
     HRegion r = HRegion.newHRegion(this.parent.getTableDir(),
       this.parent.getLog(), fs, this.parent.getConf(),
-      hri, null);
+      hri, flusher);
     HRegion.moveInitialFilesIntoPlace(fs, regionDir, r.getRegionDir());
     return r;
   }
@@ -387,56 +432,6 @@ class SplitTransaction {
       final Path splitdir, final HRegionInfo hri)
   throws IOException {
     return new Path(splitdir, hri.getEncodedName());
-  }
-
-  /*
-   * @param r Parent region we want to edit.
-   * @return An HTable instance against the meta table that holds passed
-   * <code>r</code>; it has autoFlush enabled so we immediately send puts (No
-   * buffering enabled).
-   * @throws IOException
-   */
-  private HTable getTable(final Configuration conf) throws IOException {
-    // When a region is split, the META table needs to updated if we're
-    // splitting a 'normal' region, and the ROOT table needs to be
-    // updated if we are splitting a META region.
-    HTable t = null;
-    if (this.parent.getRegionInfo().isMetaTable()) {
-      t = new HTable(conf, HConstants.ROOT_TABLE_NAME);
-    } else {
-      t = new HTable(conf, HConstants.META_TABLE_NAME);
-    }
-    // Flush puts as we send them -- no buffering.
-    t.setAutoFlush(true);
-    return t;
-  }
-
-
-  private Put createOfflineParentPut() throws IOException  {
-    HRegionInfo editedParentRegionInfo =
-      new HRegionInfo(this.parent.getRegionInfo());
-    editedParentRegionInfo.setOffline(true);
-    editedParentRegionInfo.setSplit(true);
-    Put put = new Put(editedParentRegionInfo.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(editedParentRegionInfo));
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        HConstants.EMPTY_BYTE_ARRAY);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-        HConstants.EMPTY_BYTE_ARRAY);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
-      Writables.getBytes(this.hri_a));
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
-      Writables.getBytes(this.hri_b));
-    return put;
-  }
-
-  private Put createDaughterPut(final HRegionInfo daughter)
-  throws IOException {
-    Put p = new Put(daughter.getRegionName());
-    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(daughter));
-    return p;
   }
 
   /**

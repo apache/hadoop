@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -99,7 +100,7 @@ class ShutdownHook {
       LOG.info("Shutdown hook starting; " + RUN_SHUTDOWN_HOOK + "=" + b +
         "; fsShutdownHook=" + this.fsShutdownHook);
       if (b) {
-        this.stop.stop();
+        this.stop.stop("Shutdown hook");
         Threads.shutdown(this.threadToJoin);
         if (this.fsShutdownHook != null) {
           LOG.info("Starting fs shutdown hook thread.");
@@ -198,8 +199,14 @@ class ShutdownHook {
   // Stoppable with nothing to stop.  Used below in main testing.
   static class DoNothingStoppable implements Stoppable {
     @Override
-    public void stop() {
-      // Nothing to do.
+    public boolean isStopped() {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
+    @Override
+    public void stop(String why) {
+      // TODO Auto-generated method stub
     }
   }
 

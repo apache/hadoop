@@ -35,7 +35,7 @@ public class TestHMsg extends TestCase {
     final int size = 10;
     for (int i = 0; i < size; i++) {
       byte [] b = Bytes.toBytes(i);
-      hmsg = new HMsg(HMsg.Type.MSG_REGION_OPEN,
+      hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER,
         new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b));
       msgs.add(hmsg);
     }
@@ -45,12 +45,12 @@ public class TestHMsg extends TestCase {
     msgs.remove(index);
     assertEquals(size - 1, msgs.size());
     byte [] other = Bytes.toBytes("other");
-    hmsg = new HMsg(HMsg.Type.MSG_REGION_OPEN,
+    hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER,
       new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), other, other));
     assertEquals(-1, msgs.indexOf(hmsg));
     // Assert that two HMsgs are same if same content.
     byte [] b = Bytes.toBytes(1);
-    hmsg = new HMsg(HMsg.Type.MSG_REGION_OPEN,
+    hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER,
      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b));
     assertNotSame(-1, msgs.indexOf(hmsg));
   }
@@ -64,7 +64,7 @@ public class TestHMsg extends TestCase {
       new HRegionInfo(new HTableDescriptor(Bytes.toBytes("parent")),
       parentbytes, parentbytes);
     // Assert simple HMsg serializes
-    HMsg hmsg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, parent);
+    HMsg hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER, parent);
     byte [] bytes = Writables.getBytes(hmsg);
     HMsg close = (HMsg)Writables.getWritable(bytes, new HMsg());
     assertTrue(close.equals(hmsg));
@@ -73,8 +73,8 @@ public class TestHMsg extends TestCase {
       new HRegionInfo(new HTableDescriptor(Bytes.toBytes("a")), abytes, abytes);
     HRegionInfo daughterb =
       new HRegionInfo(new HTableDescriptor(Bytes.toBytes("b")), bbytes, bbytes);
-    HMsg splithmsg = new HMsg(HMsg.Type.MSG_REPORT_SPLIT_INCLUDES_DAUGHTERS,
-      parent, daughtera, daughterb, Bytes.toBytes("split"));
+    HMsg splithmsg = new HMsg(HMsg.Type.REGION_SPLIT,
+      parent, daughtera, daughterb, Bytes.toBytes("REGION_SPLIT"));
     bytes = Writables.getBytes(splithmsg);
     hmsg = (HMsg)Writables.getWritable(bytes, new HMsg());
     assertTrue(splithmsg.equals(hmsg));

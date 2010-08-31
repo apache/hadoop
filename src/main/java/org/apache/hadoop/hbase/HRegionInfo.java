@@ -103,11 +103,26 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       // old format region name. ROOT and first META region also 
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
-                                                            regionName.length,
-                                                            0));
+        regionName.length, 0));
       encodedName = String.valueOf(hashVal);
     }
     return encodedName;
+  }
+
+  /**
+   * Use logging.
+   * @param encodedRegionName The encoded regionname.
+   * @return <code>-ROOT-</code> if passed <code>70236052</code> or
+   * <code>.META.</code> if passed </code>1028785192</code> else returns
+   * <code>encodedRegionName</code>
+   */
+  public static String prettyPrint(final String encodedRegionName) {
+    if (encodedRegionName.equals("70236052")) {
+      return encodedRegionName + "/-ROOT-";
+    } else if (encodedRegionName.equals("1028785192")) {
+      return encodedRegionName + "/.META.";
+    }
+    return encodedRegionName;
   }
 
   /** delimiter used between portions of a region name */
@@ -133,6 +148,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   //TODO: Move NO_HASH to HStoreFile which is really the only place it is used.
   public static final String NO_HASH = null;
   private volatile String encodedName = NO_HASH;
+  private byte [] encodedNameAsBytes = null;
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -316,6 +332,24 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   }
 
   /**
+   * Gets the table name from the specified region name.
+   * @param regionName
+   * @return
+   */
+  public static byte [] getTableName(byte [] regionName) {
+    int offset = -1;
+    for (int i = 0; i < regionName.length; i++) {
+      if (regionName[i] == DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    byte [] tableName = new byte[offset];
+    System.arraycopy(regionName, 0, tableName, 0, offset);
+    return tableName;
+  }
+
+  /**
    * Separate elements of a regionName.
    * @param regionName
    * @return Array of byte[] containing tableName, startKey and id
@@ -391,6 +425,13 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       this.encodedName = encodeRegionName(this.regionName);
     }
     return this.encodedName;
+  }
+
+  public synchronized byte [] getEncodedNameAsBytes() {
+    if (this.encodedNameAsBytes == null) {
+      this.encodedNameAsBytes = Bytes.toBytes(getEncodedName());
+    }
+    return this.encodedNameAsBytes;
   }
 
   /** @return the startKey */

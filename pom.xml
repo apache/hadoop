@@ -782,11 +782,11 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
     </dependency>
-     <dependency>
-       <groupId>com.google.guava</groupId>
-       <artifactId>guava</artifactId>
-       <version>${guava.version}</version>
-    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+   </dependency>
   </dependencies>
 
   <!--
@@ -961,6 +961,7 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
+        <version>0.6</version>
       </plugin>
     </plugins>
   </reporting>

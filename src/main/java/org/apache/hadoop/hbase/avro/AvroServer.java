@@ -20,10 +20,7 @@ package org.apache.hadoop.hbase.avro;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericArray;
@@ -33,33 +30,17 @@ import org.apache.avro.specific.SpecificResponder;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.hadoop.hbase.avro.generated.AClusterStatus;
-import org.apache.hadoop.hbase.avro.generated.AColumnValue;
-import org.apache.hadoop.hbase.avro.generated.ACompressionAlgorithm;
 import org.apache.hadoop.hbase.avro.generated.ADelete;
 import org.apache.hadoop.hbase.avro.generated.AFamilyDescriptor;
 import org.apache.hadoop.hbase.avro.generated.AGet;
-import org.apache.hadoop.hbase.avro.generated.AIllegalArgument;
 import org.apache.hadoop.hbase.avro.generated.AIOError;
+import org.apache.hadoop.hbase.avro.generated.AIllegalArgument;
 import org.apache.hadoop.hbase.avro.generated.AMasterNotRunning;
 import org.apache.hadoop.hbase.avro.generated.APut;
 import org.apache.hadoop.hbase.avro.generated.AResult;
@@ -67,6 +48,12 @@ import org.apache.hadoop.hbase.avro.generated.AScan;
 import org.apache.hadoop.hbase.avro.generated.ATableDescriptor;
 import org.apache.hadoop.hbase.avro.generated.ATableExists;
 import org.apache.hadoop.hbase.avro.generated.HBase;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Start an Avro server
@@ -135,10 +122,9 @@ public class AvroServer {
     // TODO(hammer): figure out appropriate setting of maxSize for htablePool
     /**
      * Constructs an HBaseImpl object.
-     * 
-     * @throws MasterNotRunningException
+     * @throws IOException 
      */
-    HBaseImpl() throws MasterNotRunningException {
+    HBaseImpl() throws IOException {
       conf = HBaseConfiguration.create();
       admin = new HBaseAdmin(conf);
       htablePool = new HTablePool(conf, 10);
@@ -376,8 +362,7 @@ public class AvroServer {
     // NB: Asynchronous operation
     public Void modifyFamily(ByteBuffer table, ByteBuffer familyName, AFamilyDescriptor familyDescriptor) throws AIOError {
       try {
-	admin.modifyColumn(Bytes.toBytes(table), Bytes.toBytes(familyName),
-                           AvroUtil.afdToHCD(familyDescriptor));
+	admin.modifyColumn(Bytes.toBytes(table), AvroUtil.afdToHCD(familyDescriptor));
 	return null;
       } catch (IOException e) {
 	AIOError ioe = new AIOError();
@@ -506,7 +491,6 @@ public class AvroServer {
 	  aie.message = new Utf8("scanner ID is invalid: " + scannerId);
           throw aie;
         }
-        Result[] results = null;
         return AvroUtil.resultsToAResults(scanner.next(numberOfRows));
       } catch (IOException e) {
     	AIOError ioe = new AIOError();
@@ -566,7 +550,7 @@ public class AvroServer {
     Log LOG = LogFactory.getLog("AvroServer");
     LOG.info("starting HBase Avro server on port " + Integer.toString(port));
     SpecificResponder r = new SpecificResponder(HBase.class, new HBaseImpl());
-    HttpServer server = new HttpServer(r, 9090);
+    new HttpServer(r, 9090);
     Thread.sleep(1000000);
   }
 

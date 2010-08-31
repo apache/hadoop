@@ -39,7 +39,8 @@ import org.apache.hadoop.io.WritableComparable;
  * associated row.
  */
 public class HLogKey implements WritableComparable<HLogKey> {
-  private byte [] regionName;
+  //  The encoded region name.
+  private byte [] encodedRegionName;
   private byte [] tablename;
   private long logSeqNum;
   // Time at which this edit was written.
@@ -57,27 +58,24 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * We maintain the tablename mainly for debugging purposes.
    * A regionName is always a sub-table object.
    *
-   * @param regionName  - name of region
+   * @param encodedRegionName Encoded name of the region as returned by
+   * {@link HRegionInfo#getEncodedNameAsBytes()}.
    * @param tablename   - name of table
    * @param logSeqNum   - log sequence number
    * @param now Time at which this edit was written.
    */
-  public HLogKey(final byte [] regionName, final byte [] tablename,
+  public HLogKey(final byte [] encodedRegionName, final byte [] tablename,
       long logSeqNum, final long now) {
-    this.regionName = regionName;
+    this.encodedRegionName = encodedRegionName;
     this.tablename = tablename;
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
     this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
-  // A bunch of accessors
-  //////////////////////////////////////////////////////////////////////////////
-
-  /** @return region name */
-  public byte [] getRegionName() {
-    return regionName;
+  /** @return encoded region name */
+  public byte [] getEncodedRegionName() {
+    return encodedRegionName;
   }
 
   /** @return table name */
@@ -119,7 +117,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   @Override
   public String toString() {
-    return Bytes.toString(tablename) + "/" + Bytes.toString(regionName) + "/" +
+    return Bytes.toString(tablename) + "/" + Bytes.toString(encodedRegionName) + "/" +
       logSeqNum;
   }
 
@@ -136,7 +134,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   @Override
   public int hashCode() {
-    int result = Bytes.hashCode(this.regionName);
+    int result = Bytes.hashCode(this.encodedRegionName);
     result ^= this.logSeqNum;
     result ^= this.writeTime;
     result ^= this.clusterId;
@@ -144,7 +142,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   public int compareTo(HLogKey o) {
-    int result = Bytes.compareTo(this.regionName, o.regionName);
+    int result = Bytes.compareTo(this.encodedRegionName, o.encodedRegionName);
     if (result == 0) {
       if (this.logSeqNum < o.logSeqNum) {
         result = -1;
@@ -163,7 +161,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.regionName);
+    Bytes.writeByteArray(out, this.encodedRegionName);
     Bytes.writeByteArray(out, this.tablename);
     out.writeLong(this.logSeqNum);
     out.writeLong(this.writeTime);
@@ -171,7 +169,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.regionName = Bytes.readByteArray(in);
+    this.encodedRegionName = Bytes.readByteArray(in);
     this.tablename = Bytes.readByteArray(in);
     this.logSeqNum = in.readLong();
     this.writeTime = in.readLong();
@@ -181,5 +179,4 @@ public class HLogKey implements WritableComparable<HLogKey> {
       // Means it's an old key, just continue
     }
   }
-
 }

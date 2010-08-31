@@ -20,59 +20,62 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
+import org.junit.Before;
+import org.junit.Test;
+
+import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * Test for HQuorumPeer.
  */
-public class TestHQuorumPeer extends HBaseTestCase {
+public class TestHQuorumPeer {
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Path dataDir;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    String userName = System.getProperty("user.name");
-    dataDir = new Path("/tmp/hbase-" + userName, "zookeeper");
-    if (fs.exists(dataDir)) {
-      if (!fs.isDirectory(dataDir)) {
-        fail();
+
+  @Before public void setup() throws IOException {
+    // Set it to a non-standard port.
+    TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.clientPort",
+      21810);
+    this.dataDir = HBaseTestingUtility.getTestDir(this.getClass().getName());
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    if (fs.exists(this.dataDir)) {
+      if (!fs.delete(this.dataDir, true)) {
+        throw new IOException("Failed cleanup of " + this.dataDir);
       }
-    } else {
-      if (!fs.mkdirs(dataDir)) {
-        fail();
-      }
+    }
+    if (!fs.mkdirs(this.dataDir)) {
+      throw new IOException("Failed create of " + this.dataDir);
     }
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    if (fs.exists(dataDir) && !fs.delete(dataDir, true)) {
-      fail();
-    }
-    super.tearDown();
-  }
-
-  /** */
-  public void testMakeZKProps() {
-    Properties properties = HQuorumPeer.makeZKProps(conf);
-    assertEquals(dataDir.toString(), properties.get("dataDir"));
-    assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
+  @Test public void testMakeZKProps() {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set("hbase.zookeeper.property.dataDir", this.dataDir.toString());
+    Properties properties = ZKConfig.makeZKProps(conf);
+    assertEquals(dataDir.toString(), (String)properties.get("dataDir"));
+    assertEquals(Integer.valueOf(21810),
+      Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
     assertEquals(null, properties.get("server.1"));
 
     String oldValue = conf.get(HConstants.ZOOKEEPER_QUORUM);
     conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
-    properties = HQuorumPeer.makeZKProps(conf);
+    properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
     assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("a.foo.bar:2888:3888", properties.get("server.0"));
@@ -82,25 +85,26 @@ public class TestHQuorumPeer extends HBaseTestCase {
     conf.set(HConstants.ZOOKEEPER_QUORUM, oldValue);
   }
 
-  /** @throws Exception */
-  public void testConfigInjection() throws Exception {
+  @Test public void testConfigInjection() throws Exception {
     String s =
-      "dataDir=${hbase.tmp.dir}/zookeeper\n" +
+      "dataDir=" + this.dataDir.toString() + "\n" +
       "clientPort=2181\n" +
       "server.0=${hbase.master.hostname}:2888:3888\n";
 
     System.setProperty("hbase.master.hostname", "localhost");
     InputStream is = new ByteArrayInputStream(s.getBytes());
-    Properties properties = HQuorumPeer.parseZooCfg(conf, is);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    Properties properties = ZKConfig.parseZooCfg(conf, is);
 
-    assertEquals(dataDir.toString(), properties.get("dataDir"));
-    assertEquals(Integer.valueOf(2181), Integer.valueOf(properties.getProperty("clientPort")));
+    assertEquals(this.dataDir.toString(), properties.get("dataDir"));
+    assertEquals(Integer.valueOf(2181),
+      Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
 
     QuorumPeerConfig config = new QuorumPeerConfig();
     config.parseProperties(properties);
 
-    assertEquals(dataDir.toString(), config.getDataDir());
+    assertEquals(this.dataDir.toString(), config.getDataDir());
     assertEquals(2181, config.getClientPortAddress().getPort());
     Map<Long,QuorumServer> servers = config.getServers();
     assertEquals(1, servers.size());
@@ -111,7 +115,7 @@ public class TestHQuorumPeer extends HBaseTestCase {
     // Override with system property.
     System.setProperty("hbase.master.hostname", "foo.bar");
     is = new ByteArrayInputStream(s.getBytes());
-    properties = HQuorumPeer.parseZooCfg(conf, is);
+    properties = ZKConfig.parseZooCfg(conf, is);
     assertEquals("foo.bar:2888:3888", properties.get("server.0"));
 
     config.parseProperties(properties);
@@ -124,10 +128,10 @@ public class TestHQuorumPeer extends HBaseTestCase {
   /**
    * Test Case for HBASE-2305
    */
-  public void testShouldAssignDefaultZookeeperClientPort() {
+  @Test public void testShouldAssignDefaultZookeeperClientPort() {
     Configuration config = HBaseConfiguration.create();
     config.clear();
-    Properties p = HQuorumPeer.makeZKProps(config);
+    Properties p = ZKConfig.makeZKProps(config);
     assertNotNull(p);
     assertEquals(2181, p.get("hbase.zookeeper.property.clientPort"));
   }

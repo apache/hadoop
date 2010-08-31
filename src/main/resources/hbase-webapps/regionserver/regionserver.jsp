@@ -18,7 +18,7 @@
     e.printStackTrace();
   }
   RegionServerMetrics metrics = regionServer.getMetrics();
-  Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
+  Collection<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 
 %><?xml version="1.0" encoding="UTF-8" ?>
@@ -42,7 +42,7 @@
 <tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
 <tr><td>Metrics</td><td><%= metrics.toString() %></td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
-<tr><td>Zookeeper Quorum</td><td><%= regionServer.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers</td></tr>
+<tr><td>Zookeeper Quorum</td><td><%= regionServer.getZooKeeper().getQuorum() %></td><td>Addresses of all registered ZK servers</td></tr>
 </table>
 
 <h2>Online Regions</h2>
@@ -50,7 +50,7 @@
 <table>
 <tr><th>Region Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
 <%   for (HRegionInfo r: onlineRegions) { 
-        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
+        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
  %>
 <tr><td><%= r.getRegionNameAsString() %></td>
     <td><%= Bytes.toStringBinary(r.getStartKey()) %></td><td><%= Bytes.toStringBinary(r.getEndKey()) %></td>

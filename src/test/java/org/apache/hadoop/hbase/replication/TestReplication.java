@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniZooKeeperCluster;
+// import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+// import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -56,9 +56,10 @@ public class TestReplication {
 
   private static Configuration conf1;
   private static Configuration conf2;
-
+/*
   private static ZooKeeperWrapper zkw1;
   private static ZooKeeperWrapper zkw2;
+  */
 
   private static HTable htable1;
   private static HTable htable2;
@@ -96,6 +97,7 @@ public class TestReplication {
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
+    /* REENALBE
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     zkw1 = ZooKeeperWrapper.createInstance(conf1, "cluster1");
     zkw1.writeZNode("/1", "replication", "");
@@ -103,7 +105,7 @@ public class TestReplication {
         conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
             conf1.get("hbase.zookeeper.property.clientPort")+":/1");
     setIsReplication(true);
-
+*/
     LOG.info("Setup first Zk");
 
     conf2 = HBaseConfiguration.create();
@@ -112,7 +114,7 @@ public class TestReplication {
     conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf2.setBoolean("dfs.support.append", true);
     conf2.setLong("hbase.regions.percheckin", 1);
-
+/* REENALBE
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
     zkw2 = ZooKeeperWrapper.createInstance(conf2, "cluster2");
@@ -124,7 +126,7 @@ public class TestReplication {
     zkw1.writeZNode("/1/replication/peers", "1",
         conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
             conf2.get("hbase.zookeeper.property.clientPort")+":/2");
-
+*/
     LOG.info("Setup second Zk");
 
     utility1.startMiniCluster(2);
@@ -149,7 +151,7 @@ public class TestReplication {
 
   private static void setIsReplication(boolean rep) throws Exception {
     LOG.info("Set rep " + rep);
-    zkw1.writeZNode("/1/replication", "state", Boolean.toString(rep));
+   // REENALBE  zkw1.writeZNode("/1/replication", "state", Boolean.toString(rep));
     // Takes some ms for ZK to fire the watcher
     Thread.sleep(SLEEP_TIME);
   }

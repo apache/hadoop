@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 
 
 /**
@@ -38,8 +39,9 @@ public class ServerConnectionManager extends HConnectionManager {
    * If no current connection exists, create a new connection for that instance
    * @param conf configuration
    * @return HConnection object for the instance specified by the configuration
+   * @throws ZooKeeperConnectionException
    */
-  public static ServerConnection getConnection(Configuration conf) {
+  public static ServerConnection getConnection(Configuration conf) throws ZooKeeperConnectionException {
     return (ServerConnection) HConnectionManager.getConnection(conf);
   }
 }

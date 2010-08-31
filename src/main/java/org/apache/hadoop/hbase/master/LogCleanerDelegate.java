@@ -46,4 +46,3 @@ public interface LogCleanerDelegate extends Configurable {
    */
   public boolean isLogDeletable(Path filePath);
 }
-

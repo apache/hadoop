@@ -57,7 +57,7 @@ while kill -0 `cat $pid` > /dev/null 2>&1; do
 done
 
 # distributed == false means that the HMaster will kill ZK when it exits
-distMode=`$bin/hbase org.apache.hadoop.hbase.HBaseConfTool hbase.cluster.distributed`
+distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
 if [ "$distMode" == 'true' ] 
 then
   # TODO: store backup masters in ZooKeeper and have the primary send them a shutdown message

@@ -19,25 +19,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -53,6 +34,26 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * Class that handles the source of a replication stream.
@@ -76,7 +77,7 @@ public class ReplicationSource extends Thread
   private HLog.Entry[] entriesArray;
   private HConnection conn;
   // Helper class for zookeeper
-  private ReplicationZookeeperWrapper zkHelper;
+  private ReplicationZookeeper zkHelper;
   private Configuration conf;
   // ratio of region servers to chose from a slave cluster
   private float ratio;
@@ -88,7 +89,7 @@ public class ReplicationSource extends Thread
   // The manager of all sources to which we ping back our progress
   private ReplicationSourceManager manager;
   // Should we stop everything?
-  private AtomicBoolean stop;
+  private Stoppable stopper;
   // List of chosen sinks (region servers)
   private List<HServerAddress> currentPeers;
   // How long should we sleep for each retry
@@ -139,11 +140,11 @@ public class ReplicationSource extends Thread
   public void init(final Configuration conf,
                    final FileSystem fs,
                    final ReplicationSourceManager manager,
-                   final AtomicBoolean stopper,
+                   final Stoppable stopper,
                    final AtomicBoolean replicating,
                    final String peerClusterZnode)
       throws IOException {
-    this.stop = stopper;
+    this.stopper = stopper;
     this.conf = conf;
     this.replicationQueueSizeCapacity =
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
@@ -224,18 +225,18 @@ public class ReplicationSource extends Thread
   public void run() {
     connectToPeers();
     // We were stopped while looping to connect to sinks, just abort
-    if (this.stop.get()) {
+    if (this.stopper.isStopped()) {
       return;
     }
     // If this is recovered, the queue is already full and the first log
     // normally has a position (unless the RS failed between 2 logs)
     if (this.queueRecovered) {
-      this.position = this.zkHelper.getHLogRepPosition(
-          this.peerClusterZnode, this.queue.peek().getName());
+//      this.position = this.zkHelper.getHLogRepPosition(
+//          this.peerClusterZnode, this.queue.peek().getName());
     }
     int sleepMultiplier = 1;
     // Loop until we close down
-    while (!stop.get() && this.running) {
+    while (!stopper.isStopped() && this.running) {
       // Get a new path
       if (!getNextPath()) {
         if (sleepForRetries("No log to process", sleepMultiplier)) {
@@ -311,7 +312,7 @@ public class ReplicationSource extends Thread
       // If we didn't get anything to replicate, or if we hit a IOE,
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
-      if (!stop.get() && (gotIOE || currentNbEntries == 0)) {
+      if (!stopper.isStopped() && (gotIOE || currentNbEntries == 0)) {
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -373,7 +374,7 @@ public class ReplicationSource extends Thread
 
   private void connectToPeers() {
     // Connect to peer cluster first, unless we have to stop
-    while (!this.stop.get() && this.currentPeers.size() == 0) {
+    while (!this.stopper.isStopped() && this.currentPeers.size() == 0) {
       try {
         chooseSinks();
         Thread.sleep(this.sleepForRetries);
@@ -517,7 +518,7 @@ public class ReplicationSource extends Thread
    */
   protected void shipEdits() {
     int sleepMultiplier = 1;
-    while (!stop.get()) {
+    while (!this.stopper.isStopped()) {
       try {
         HRegionInterface rrs = getRS();
         LOG.debug("Replicating " + currentNbEntries);
@@ -549,7 +550,7 @@ public class ReplicationSource extends Thread
                 chooseSinks();
               }
             }
-          } while (!stop.get() && down);
+          } while (!this.stopper.isStopped() && down);
         } catch (InterruptedException e) {
           LOG.debug("Interrupted while trying to contact the peer cluster");
         }
@@ -688,5 +689,4 @@ public class ReplicationSource extends Thread
       return Long.parseLong(parts[parts.length-1]);
     }
   }
-
 }

@@ -21,9 +21,15 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
@@ -37,26 +43,31 @@ import java.util.concurrent.locks.ReentrantLock;
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
-class LogRoller extends Thread implements LogRollListener {
+class LogRoller extends Thread implements WALObserver {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
-  private final HRegionServer server;
+  private final Server server;
+  private final RegionServerServices services;
   private volatile long lastrolltime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollperiod;
+  private final int threadWakeFrequency;
 
   /** @param server */
-  public LogRoller(final HRegionServer server) {
+  public LogRoller(final Server server, final RegionServerServices services) {
     super();
     this.server = server;
-    this.rollperiod =
-      this.server.conf.getLong("hbase.regionserver.logroll.period", 3600000);
+    this.services = services;
+    this.rollperiod = this.server.getConfiguration().
+      getLong("hbase.regionserver.logroll.period", 3600000);
+    this.threadWakeFrequency = this.server.getConfiguration().
+      getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
   }
 
   @Override
   public void run() {
-    while (!server.isStopRequested()) {
+    while (!server.isStopped()) {
       long now = System.currentTimeMillis();
       boolean periodic = false;
       if (!rollLog.get()) {
@@ -64,7 +75,7 @@ class LogRoller extends Thread implements LogRollListener {
         if (!periodic) {
           synchronized (rollLog) {
             try {
-              rollLog.wait(server.threadWakeFrequency);
+              rollLog.wait(this.threadWakeFrequency);
             } catch (InterruptedException e) {
               // Fall through
             }
@@ -79,27 +90,21 @@ class LogRoller extends Thread implements LogRollListener {
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        byte [][] regionsToFlush = server.getLog().rollWriter();
+        // This is array of actual region names.
+        byte [][] regionsToFlush = this.services.getWAL().rollWriter();
         if (regionsToFlush != null) {
           for (byte [] r: regionsToFlush) scheduleFlush(r);
         }
       } catch (FailedLogCloseException e) {
-        LOG.fatal("Forcing server shutdown", e);
-        server.checkFileSystem();
         server.abort("Failed log close in log roller", e);
       } catch (java.net.ConnectException e) {
-        LOG.fatal("Forcing server shutdown", e);
-        server.checkFileSystem();
-        server.abort("Failed connect in log roller", e);
+        server.abort("Failed log close in log roller", e);
       } catch (IOException ex) {
-        LOG.fatal("Log rolling failed with ioe: ",
-          RemoteExceptionHandler.checkIOException(ex));
-        server.checkFileSystem();
         // Abort if we get here.  We probably won't recover an IOE. HBASE-1132
-        server.abort("IOE in log roller", ex);
+        server.abort("IOE in log roller",
+          RemoteExceptionHandler.checkIOException(ex));
       } catch (Exception ex) {
         LOG.error("Log rolling failed", ex);
-        server.checkFileSystem();
         server.abort("Log rolling failed", ex);
       } finally {
         rollLog.set(false);
@@ -109,14 +114,17 @@ class LogRoller extends Thread implements LogRollListener {
     LOG.info("LogRoller exiting.");
   }
 
+  /**
+   * @param region Encoded name of region to flush.
+   */
   private void scheduleFlush(final byte [] region) {
     boolean scheduled = false;
-    HRegion r = this.server.getOnlineRegion(region);
+    HRegion r = this.services.getFromOnlineRegions(Bytes.toString(region));
     FlushRequester requester = null;
     if (r != null) {
-      requester = this.server.getFlushRequester();
+      requester = this.services.getFlushRequester();
       if (requester != null) {
-        requester.request(r);
+        requester.requestFlush(r);
         scheduled = true;
       }
     }
@@ -144,5 +152,16 @@ class LogRoller extends Thread implements LogRollListener {
     } finally {
       rollLock.unlock();
     }
+  }
+
+  @Override
+  public void logRolled(Path newFile) {
+    // Not interested
+  }
+
+  @Override
+  public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+      WALEdit logEdit) {
+    // Not interested.
   }
 }

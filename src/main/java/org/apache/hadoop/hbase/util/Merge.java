@@ -277,9 +277,9 @@ public class Merge extends Configured implements Tool {
     }
     HRegion merged = null;
     HLog log = utils.getLog();
-    HRegion r1 = HRegion.openHRegion(info1, this.rootdir, log, getConf());
+    HRegion r1 = HRegion.openHRegion(info1, log, getConf());
     try {
-      HRegion r2 = HRegion.openHRegion(info2, this.rootdir, log, getConf());
+      HRegion r2 = HRegion.openHRegion(info2, log, getConf());
       try {
         merged = HRegion.merge(r1, r2);
       } finally {

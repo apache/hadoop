@@ -394,7 +394,7 @@ public class FSUtils {
   public static Map<String, Integer> getTableFragmentation(
     final HMaster master)
   throws IOException {
-    Path path = master.getRootDir();
+    Path path = getRootDir(master.getConfiguration());
     // since HMaster.getFileSystem() is package private
     FileSystem fs = path.getFileSystem(master.getConfiguration());
     return getTableFragmentation(fs, path);

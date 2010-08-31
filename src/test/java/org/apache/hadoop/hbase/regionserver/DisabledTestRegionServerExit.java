@@ -130,7 +130,7 @@ public class DisabledTestRegionServerExit extends HBaseClusterTestCase {
     int server = -1;
     for (int i = 0; i < regionThreads.size() && server == -1; i++) {
       HRegionServer s = regionThreads.get(i).getRegionServer();
-      Collection<HRegion> regions = s.getOnlineRegions();
+      Collection<HRegion> regions = s.getOnlineRegionsLocalContext();
       for (HRegion r : regions) {
         if (Bytes.equals(r.getTableDesc().getName(),
             HConstants.META_TABLE_NAME)) {

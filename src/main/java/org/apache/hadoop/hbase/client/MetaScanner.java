@@ -20,14 +20,16 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-
-import java.io.IOException;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic
@@ -38,7 +40,6 @@ import java.io.IOException;
  * minor releases.
  */
 public class MetaScanner {
-
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
    * start row value as table name.
@@ -50,7 +51,7 @@ public class MetaScanner {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
-    metaScan(configuration, visitor, HConstants.EMPTY_START_ROW);
+    metaScan(configuration, visitor, null);
   }
 
   /**
@@ -167,6 +168,32 @@ public class MetaScanner {
         connection.getRegionServerWithRetries(callable);
       }
     } while (Bytes.compareTo(startRow, HConstants.LAST_ROW) != 0);
+  }
+
+  /**
+   * Lists all of the regions currently in META.
+   * @return
+   * @throws IOException
+   */
+  public static List<HRegionInfo> listAllRegions(Configuration conf)
+  throws IOException {
+    final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    MetaScannerVisitor visitor =
+      new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result result) throws IOException {
+          if (result == null || result.isEmpty()) {
+            return true;
+          }
+          HRegionInfo regionInfo = Writables.getHRegionInfo(
+              result.getValue(HConstants.CATALOG_FAMILY,
+                  HConstants.REGIONINFO_QUALIFIER));
+          regions.add(regionInfo);
+          return true;
+        }
+    };
+    metaScan(conf, visitor);
+    return regions;
   }
 
   /**

@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -161,8 +160,9 @@ public class TestFSErrorsExposed {
           fam, 1, HColumnDescriptor.DEFAULT_COMPRESSION,
           false, false, HConstants.FOREVER, "NONE"));
       admin.createTable(desc);
-
-      HTable table = new HTable(tableName);
+      // Make it fail faster.
+      util.getConfiguration().setInt("hbase.client.retries.number", 1);
+      HTable table = new HTable(util.getConfiguration(), tableName);
 
       // Load some data
       util.loadTable(table, fam);

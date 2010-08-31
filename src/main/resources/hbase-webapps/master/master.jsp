@@ -6,17 +6,16 @@
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
-  import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
-  Map<byte [], MetaRegion> onlineRegions = master.getRegionManager().getOnlineMetaRegions();
+  HServerAddress rootLocation = master.getCatalogTracker().getRootLocation();
+  boolean metaOnline = master.getCatalogTracker().getMetaLocation() != null;
   Map<String, HServerInfo> serverToServerInfos =
-    master.getServerManager().getServersToServerInfo();
+    master.getServerManager().getOnlineServers();
   int interval = conf.getInt("hbase.regionserver.msginterval", 1000)/1000;
   if (interval == 0) {
       interval = 1;
@@ -24,7 +23,7 @@
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
-      frags = master.getTableFragmentation();
+      frags = FSUtils.getTableFragmentation(master);
   }
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
@@ -66,13 +65,12 @@
 <tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
 <tr><td>Hadoop Version</td><td><%= org.apache.hadoop.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
-<tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
+<tr><td>HBase Root Directory</td><td><%= FSUtils.getRootDir(master.getConfiguration()).toString() %></td><td>Location of HBase home directory</td></tr>
 <tr><td>Load average</td><td><%= master.getServerManager().getAverageLoad() %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
-<tr><td>Regions On FS</td><td><%= master.getRegionManager().countRegionsOnFS() %></td><td>Number of regions on FileSystem. Rough count.</td></tr>
 <%  if (showFragmentation) { %>
         <tr><td>Fragmentation</td><td><%= frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
 <%  } %>
-<tr><td>Zookeeper Quorum</td><td><%= master.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
+<tr><td>Zookeeper Quorum</td><td><%= master.getZooKeeperWatcher().getQuorum() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
 </table>
 
 <h2>Catalog Tables</h2>
@@ -94,7 +92,7 @@
     <td>The -ROOT- table holds references to all .META. regions.</td>
 </tr>
 <%
-    if (onlineRegions != null && onlineRegions.size() > 0) { %>
+    if (metaOnline) { %>
 <tr>
     <td><a href="table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>"><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
 <%  if (showFragmentation) { %>

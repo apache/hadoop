@@ -25,9 +25,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -41,7 +41,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -262,9 +261,11 @@ public class TestFromClientSide {
    * logs to ensure that we're not scanning more regions that we're supposed to.
    * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
    * @throws IOException
+   * @throws InterruptedException 
    */
   @Test
-  public void testFilterAcrossMutlipleRegions() throws IOException {
+  public void testFilterAcrossMultipleRegions()
+  throws IOException, InterruptedException {
     byte [] name = Bytes.toBytes("testFilterAcrossMutlipleRegions");
     HTable t = TEST_UTIL.createTable(name, FAMILY);
     int rowCount = TEST_UTIL.loadTable(t, FAMILY);
@@ -313,32 +314,6 @@ public class TestFromClientSide {
     countGreater = countRows(t, createScanWithRowFilter(endKey, endKey,
       CompareFilter.CompareOp.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
-  }
-  
-  /*
-   * Load table with rows from 'aaa' to 'zzz'.
-   * @param t
-   * @return Count of rows loaded.
-   * @throws IOException
-   */
-  private int loadTable(final HTable t) throws IOException {
-    // Add data to table.
-    byte[] k = new byte[3];
-    int rowCount = 0;
-    for (byte b1 = 'a'; b1 < 'z'; b1++) {
-      for (byte b2 = 'a'; b2 < 'z'; b2++) {
-        for (byte b3 = 'a'; b3 < 'z'; b3++) {
-          k[0] = b1;
-          k[1] = b2;
-          k[2] = b3;
-          Put put = new Put(k);
-          put.add(FAMILY, new byte[0], k);
-          t.put(put);
-          rowCount++;
-        }
-      }
-    }
-    return rowCount;
   }
 
   /*
@@ -399,7 +374,7 @@ public class TestFromClientSide {
    * @throws IOException
    */
   private Map<HRegionInfo, HServerAddress> splitTable(final HTable t)
-  throws IOException {
+  throws IOException, InterruptedException {
     // Split this table in two.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.split(t.getTableName());
@@ -3376,7 +3351,7 @@ public class TestFromClientSide {
   }
 
   @Test
-  public void testListTables() throws IOException {
+  public void testListTables() throws IOException, InterruptedException {
     byte [] t1 = Bytes.toBytes("testListTables1");
     byte [] t2 = Bytes.toBytes("testListTables2");
     byte [] t3 = Bytes.toBytes("testListTables3");
@@ -3459,7 +3434,7 @@ public class TestFromClientSide {
     for (HColumnDescriptor c : desc.getFamilies())
       c.setValue(attrName, attrValue);
     // update metadata for all regions of this table
-    admin.modifyTable(tableAname, HConstants.Modify.TABLE_SET_HTD, desc);
+    admin.modifyTable(tableAname, desc);
     // enable the table
     admin.enableTable(tableAname);
 

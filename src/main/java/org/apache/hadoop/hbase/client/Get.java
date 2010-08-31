@@ -60,7 +60,7 @@ import java.util.TreeSet;
  * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
-public class Get implements Writable, Row, Comparable<Row> {
+public class Get implements Writable {
   private static final byte GET_VERSION = (byte)1;
 
   private byte [] row = null;
@@ -325,11 +325,6 @@ public class Get implements Writable, Row, Comparable<Row> {
     return sb.toString();
   }
 
-  //Row
-  public int compareTo(Row other) {
-    return Bytes.compareTo(this.getRow(), other.getRow());
-  }
-  
   //Writable
   public void readFields(final DataInput in)
   throws IOException {

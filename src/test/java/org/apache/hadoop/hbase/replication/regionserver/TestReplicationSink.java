@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -69,9 +70,22 @@ public class TestReplicationSink {
   private static final byte[] FAM_NAME1 = Bytes.toBytes("info1");
   private static final byte[] FAM_NAME2 = Bytes.toBytes("info2");
 
-  private static final AtomicBoolean STOPPER = new AtomicBoolean(false);
-
   private static HTable table1;
+  private static Stoppable STOPPABLE = new Stoppable() {
+    final AtomicBoolean stop = new AtomicBoolean(false);
+
+    @Override
+    public boolean isStopped() {
+      return this.stop.get();
+    }
+
+    @Override
+    public void stop(String why) {
+      LOG.info("STOPPING BECAUSE: " + why);
+      this.stop.set(true);
+    }
+    
+  };
 
   private static HTable table2;
 
@@ -85,7 +99,7 @@ public class TestReplicationSink {
         HConstants.REPLICATION_ENABLE_KEY, true);
     TEST_UTIL.startMiniCluster(3);
     conf.setBoolean("dfs.support.append", true);
-    SINK = new ReplicationSink(conf,STOPPER);
+    SINK = new ReplicationSink(conf, STOPPABLE);
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
   }
@@ -95,7 +109,7 @@ public class TestReplicationSink {
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    STOPPER.set(true);
+    STOPPABLE.stop("Shutting down");
     TEST_UTIL.shutdownMiniCluster();
   }
 

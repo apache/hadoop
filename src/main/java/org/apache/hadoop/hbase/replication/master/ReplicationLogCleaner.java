@@ -25,8 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LogCleanerDelegate;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeperWrapper;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+// REENALBE import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
@@ -45,7 +45,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   private static final Log LOG =
     LogFactory.getLog(ReplicationLogCleaner.class);
   private Configuration conf;
-  private ReplicationZookeeperWrapper zkHelper;
+  private ReplicationZookeeper zkHelper;
   private Set<String> hlogs = new HashSet<String>();
 
   /**
@@ -78,30 +78,31 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   private boolean refreshHLogsAndSearch(String searchedLog) {
     this.hlogs.clear();
     final boolean lookForLog = searchedLog != null;
-    List<String> rss = zkHelper.getListOfReplicators(this);
-    if (rss == null) {
-      LOG.debug("Didn't find any region server that replicates, deleting: " +
-          searchedLog);
-      return false;
-    }
-    for (String rs: rss) {
-      List<String> listOfPeers = zkHelper.getListPeersForRS(rs, this);
-      // if rs just died, this will be null
-      if (listOfPeers == null) {
-        continue;
-      }
-      for (String id : listOfPeers) {
-        List<String> peersHlogs = zkHelper.getListHLogsForPeerForRS(rs, id, this);
-        if (peersHlogs != null) {
-          this.hlogs.addAll(peersHlogs);
-        }
-        // early exit if we found the log
-        if(lookForLog && this.hlogs.contains(searchedLog)) {
-          LOG.debug("Found log in ZK, keeping: " + searchedLog);
-          return true;
-        }
-      }
-    }
+// REENALBE
+//    List<String> rss = zkHelper.getListOfReplicators(this);
+//    if (rss == null) {
+//      LOG.debug("Didn't find any region server that replicates, deleting: " +
+//          searchedLog);
+//      return false;
+//    }
+//    for (String rs: rss) {
+//      List<String> listOfPeers = zkHelper.getListPeersForRS(rs, this);
+//      // if rs just died, this will be null
+//      if (listOfPeers == null) {
+//        continue;
+//      }
+//      for (String id : listOfPeers) {
+//        List<String> peersHlogs = zkHelper.getListHLogsForPeerForRS(rs, id, this);
+//        if (peersHlogs != null) {
+//          this.hlogs.addAll(peersHlogs);
+//        }
+//        // early exit if we found the log
+//        if(lookForLog && this.hlogs.contains(searchedLog)) {
+//          LOG.debug("Found log in ZK, keeping: " + searchedLog);
+//          return true;
+//        }
+//      }
+//    }
     LOG.debug("Didn't find this log in ZK, deleting: " + searchedLog);
     return false;
   }
@@ -109,14 +110,15 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-    try {
-      this.zkHelper = new ReplicationZookeeperWrapper(
-          ZooKeeperWrapper.createInstance(this.conf,
-              HMaster.class.getName()),
-          this.conf, new AtomicBoolean(true), null);
-    } catch (IOException e) {
-      LOG.error(e);
-    }
+//    try {
+      // REENABLE
+//      this.zkHelper = new ReplicationZookeeperWrapper(
+//          ZooKeeperWrapper.createInstance(this.conf,
+//              HMaster.class.getName()),
+//          this.conf, new AtomicBoolean(true), null);
+//    } catch (IOException e) {
+//      LOG.error(e);
+//    }
     refreshHLogsAndSearch(null);
   }
 

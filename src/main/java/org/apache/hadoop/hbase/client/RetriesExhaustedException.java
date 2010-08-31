@@ -31,6 +31,10 @@ public class RetriesExhaustedException extends IOException {
     super(msg);
   }
 
+  public RetriesExhaustedException(final String msg, final IOException e) {
+    super(msg, e);
+  }
+
   /**
    * Create a new RetriesExhaustedException from the list of prior failures.
    * @param serverName name of HRegionServer

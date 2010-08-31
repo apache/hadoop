@@ -19,72 +19,112 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
-import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.junit.AfterClass;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestRestartCluster {
   private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
-  private static Configuration conf;
-  private static HBaseTestingUtility utility;
-  private static ZooKeeperWrapper zkWrapper;
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static ZooKeeperWatcher zooKeeper;
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a")};
-  
-  @BeforeClass public static void beforeAllTests() throws Exception {
-    conf = HBaseConfiguration.create();
-    utility = new HBaseTestingUtility(conf);
+
+
+  private static final byte [][] TABLES = new byte[][] {
+      Bytes.toBytes("restartTableOne"),
+      Bytes.toBytes("restartTableTwo"),
+      Bytes.toBytes("restartTableThree")
+  };
+  private static final byte [] FAMILY = Bytes.toBytes("family");
+
+  @Before public void setup() throws Exception {
   }
 
-  @AfterClass public static void afterAllTests() throws IOException {
-    utility.shutdownMiniCluster();
+  @After public void teardown() throws IOException {
+    UTIL.shutdownMiniCluster();
   }
 
-  @Before public void setup() throws IOException {
-  }
-
-  @Test (timeout=300000) public void testRestartClusterAfterKill()throws Exception {
-    utility.startMiniZKCluster();
-    zkWrapper = ZooKeeperWrapper.createInstance(conf, "cluster1");
+  @Test (timeout=300000) public void testRestartClusterAfterKill()
+  throws Exception {
+    UTIL.startMiniZKCluster();
+    zooKeeper = new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null);
 
     // create the unassigned region, throw up a region opened state for META
-    String unassignedZNode = zkWrapper.getRegionInTransitionZNode();
-    zkWrapper.createZNodeIfNotExists(unassignedZNode);
-    byte[] data = null;
-    HBaseEventType hbEventType = HBaseEventType.RS2ZK_REGION_OPENED;
-    try {
-      data = Writables.getBytes(new RegionTransitionEventData(hbEventType, HMaster.MASTER));
-    } catch (IOException e) {
-      LOG.error("Error creating event data for " + hbEventType, e);
-    }
-    zkWrapper.createOrUpdateUnassignedRegion(
-        HRegionInfo.ROOT_REGIONINFO.getEncodedName(), data);
-    zkWrapper.createOrUpdateUnassignedRegion(
-        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(), data);
-    LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " + HBaseEventType.M2ZK_REGION_OFFLINE);
-    
+    String unassignedZNode = zooKeeper.assignmentZNode;
+    ZKUtil.createAndFailSilent(zooKeeper, unassignedZNode);
+
+    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.ROOT_REGIONINFO,
+      HMaster.MASTER);
+
+    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO,
+      HMaster.MASTER);
+
+    LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
+        EventType.M2ZK_REGION_OFFLINE);
+
     // start the HB cluster
     LOG.info("Starting HBase cluster...");
-    utility.startMiniCluster(2);  
-    
-    utility.createTable(TABLENAME, FAMILIES);
-    LOG.info("Created a table, waiting for table to be available...");
-    utility.waitTableAvailable(TABLENAME, 60*1000);
+    UTIL.startMiniCluster(2);
 
-    LOG.info("Master deleted unassgined region and started up successfully.");
+    UTIL.createTable(TABLENAME, FAMILIES);
+    LOG.info("Created a table, waiting for table to be available...");
+    UTIL.waitTableAvailable(TABLENAME, 60*1000);
+
+    LOG.info("Master deleted unassigned region and started up successfully.");
+  }
+
+  @Test (timeout=300000)
+  public void testClusterRestart() throws Exception {
+    UTIL.startMiniCluster(3);
+    LOG.info("\n\nCreating tables");
+    for(byte [] TABLE : TABLES) {
+      UTIL.createTable(TABLE, FAMILY);
+      UTIL.waitTableAvailable(TABLE, 30000);
+    }
+    List<HRegionInfo> allRegions =
+      MetaScanner.listAllRegions(UTIL.getConfiguration());
+    assertEquals(3, allRegions.size());
+
+    LOG.info("\n\nShutting down cluster");
+    UTIL.getHBaseCluster().shutdown();
+    UTIL.getHBaseCluster().join();
+
+    LOG.info("\n\nSleeping a bit");
+    Thread.sleep(2000);
+
+    LOG.info("\n\nStarting cluster the second time");
+    UTIL.restartHBaseCluster(3);
+
+    allRegions = MetaScanner.listAllRegions(UTIL.getConfiguration());
+    assertEquals(3, allRegions.size());
+
+    LOG.info("\n\nWaiting for tables to be available");
+    for(byte [] TABLE: TABLES) {
+      try {
+        UTIL.createTable(TABLE, FAMILY);
+        assertTrue("Able to create table that should already exist", false);
+      } catch(TableExistsException tee) {
+        LOG.info("Table already exists as expected");
+      }
+      UTIL.waitTableAvailable(TABLE, 30000);
+    }
   }
 }

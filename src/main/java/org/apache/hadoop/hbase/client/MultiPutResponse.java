@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * @deprecated Replaced by MultiResponse
  * Response class for MultiPut.
  */
 public class MultiPutResponse implements Writable {

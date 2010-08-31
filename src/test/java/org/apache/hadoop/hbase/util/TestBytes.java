@@ -93,6 +93,14 @@ public class TestBytes extends TestCase {
     // If split more than once, this should fail
     parts = Bytes.split(low, high, 2);
     assertTrue("Returned split but should have failed", parts == null);
+
+    // Split 0 times should throw IAE
+    try {
+      parts = Bytes.split(low, high, 0);
+      assertTrue("Should not be able to split 0 times", false);
+    } catch(IllegalArgumentException iae) {
+      // Correct
+    }
   }
 
   public void testToLong() throws Exception {

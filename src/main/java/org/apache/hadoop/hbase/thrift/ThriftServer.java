@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -35,7 +46,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -73,17 +83,6 @@ import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 /**
  * ThriftServer - this class starts up a Thrift server which implements the
  * Hbase API specified in the Hbase.thrift IDL file.
@@ -108,7 +107,6 @@ public class ThriftServer {
       protected Map<String, HTable> initialValue() {
         return new TreeMap<String, HTable>();
       }
-
     };
 
     /**
@@ -183,11 +181,16 @@ public class ThriftServer {
 
     /**
      * Constructs an HBaseHandler object.
-     *
-     * @throws MasterNotRunningException
+     * @throws IOException 
      */
-    HBaseHandler() throws MasterNotRunningException {
-      conf = HBaseConfiguration.create();
+    HBaseHandler()
+    throws IOException {
+      this(HBaseConfiguration.create());
+    }
+
+    HBaseHandler(final Configuration c)
+    throws IOException {
+      this.conf = c;
       admin = new HBaseAdmin(conf);
       scannerMap = new HashMap<Integer, ResultScanner>();
     }
@@ -210,7 +213,7 @@ public class ThriftServer {
 
     public boolean isTableEnabled(final byte[] tableName) throws IOError {
       try {
-        return HTable.isTableEnabled(tableName);
+        return HTable.isTableEnabled(this.conf, tableName);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

@@ -181,8 +181,7 @@ public class TestMergeTool extends HBaseTestCase {
 
     // Now verify that we can read all the rows from regions 0, 1
     // in the new merged region.
-    HRegion merged =
-      HRegion.openHRegion(mergedInfo, this.testDir, log, this.conf);
+    HRegion merged = HRegion.openHRegion(mergedInfo, log, this.conf);
     verifyMerge(merged, upperbound);
     merged.close();
     LOG.info("Verified " + msg);
@@ -249,7 +248,7 @@ public class TestMergeTool extends HBaseTestCase {
       System.currentTimeMillis());
     LOG.info("Creating log " + logPath.toString());
     Path oldLogDir = new Path("/tmp", HConstants.HREGION_OLDLOGDIR_NAME);
-    HLog log = new HLog(this.fs, logPath, oldLogDir, this.conf, null);
+    HLog log = new HLog(this.fs, logPath, oldLogDir, this.conf);
     try {
        // Merge Region 0 and Region 1
       HRegion merged = mergeAndVerify("merging regions 0 and 1",

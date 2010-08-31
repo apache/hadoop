@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Comparator;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -147,6 +148,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   }
 
   /**
+   * Gets the unique server instance name.  Includes the hostname, port, and
+   * start code.
    * @return Server name made of the concatenation of hostname, port and
    * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
@@ -240,6 +243,17 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   public int compareTo(HServerInfo o) {
     return this.getServerName().compareTo(o.getServerName());
+  }
+
+  /**
+   * Orders HServerInfos by load then name.  Natural/ascending order.
+   */
+  public static class LoadComparator implements Comparator<HServerInfo> {
+    @Override
+    public int compare(HServerInfo left, HServerInfo right) {
+      int loadCompare = left.getLoad().compareTo(right.getLoad());
+      return loadCompare != 0 ? loadCompare : left.compareTo(right);
+    }
   }
 
   /**

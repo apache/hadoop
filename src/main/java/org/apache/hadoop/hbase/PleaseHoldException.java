@@ -26,8 +26,8 @@ import java.io.IOException;
  * and restarted so fast that the master still hasn't processed the server
  * shutdown of the first instance.
  */
+@SuppressWarnings("serial")
 public class PleaseHoldException extends IOException {
-
   public PleaseHoldException(String message) {
     super(message);
   }

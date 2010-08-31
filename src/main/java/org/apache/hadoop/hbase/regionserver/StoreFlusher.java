@@ -59,5 +59,4 @@ interface StoreFlusher {
    * @throws IOException
    */
   boolean commit() throws IOException;
-
 }

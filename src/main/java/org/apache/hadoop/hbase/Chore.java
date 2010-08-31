@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -32,24 +30,24 @@ import org.apache.hadoop.hbase.util.Sleeper;
  * Implementers just need to add checking if there is work to be done and if
  * so, do it.  Its the base of most of the chore threads in hbase.
  *
- * Don't subclass Chore if the task relies on being woken up for something to
+ * <p>Don't subclass Chore if the task relies on being woken up for something to
  * do, such as an entry being added to a queue, etc.
  */
 public abstract class Chore extends Thread {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final Sleeper sleeper;
-  protected volatile AtomicBoolean stop;
+  protected final Stoppable stopper;
 
   /**
    * @param p Period at which we should run.  Will be adjusted appropriately
    * should we find work and it takes time to complete.
-   * @param s When this flag is set to true, this thread will cleanup and exit
-   * cleanly.
+   * @param stopper When {@link Stoppable#isStopped()} is true, this thread will
+   * cleanup and exit cleanly.
    */
-  public Chore(String name, final int p, final AtomicBoolean s) {
+  public Chore(String name, final int p, final Stoppable stopper) {
     super(name);
-    this.sleeper = new Sleeper(p, s);
-    this.stop = s;
+    this.sleeper = new Sleeper(p, stopper);
+    this.stopper = stopper;
   }
 
   /**
@@ -59,7 +57,7 @@ public abstract class Chore extends Thread {
   public void run() {
     try {
       boolean initialChoreComplete = false;
-      while (!this.stop.get()) {
+      while (!this.stopper.isStopped()) {
         long startTime = System.currentTimeMillis();
         try {
           if (!initialChoreComplete) {
@@ -69,15 +67,14 @@ public abstract class Chore extends Thread {
           }
         } catch (Exception e) {
           LOG.error("Caught exception", e);
-          if (this.stop.get()) {
+          if (this.stopper.isStopped()) {
             continue;
           }
         }
         this.sleeper.sleep(startTime);
       }
     } catch (Throwable t) {
-      LOG.fatal("Caught error. Starting shutdown.", t);
-      this.stop.set(true);
+      LOG.fatal(getName() + "error", t);
     } finally {
       LOG.info(getName() + " exiting");
     }

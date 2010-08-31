@@ -22,30 +22,23 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericArray;
 import org.apache.avro.generic.GenericData;
-
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.avro.generated.AColumn;
 import org.apache.hadoop.hbase.avro.generated.AColumnValue;
 import org.apache.hadoop.hbase.avro.generated.AFamilyDescriptor;
 import org.apache.hadoop.hbase.avro.generated.AGet;
 import org.apache.hadoop.hbase.avro.generated.APut;
-import org.apache.hadoop.hbase.avro.generated.AResult;
 import org.apache.hadoop.hbase.avro.generated.ATableDescriptor;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Unit testing for AvroServer.HBaseImpl, a part of the
@@ -129,7 +122,7 @@ public class TestAvroServer {
 
     tableA.maxFileSize = 123456L;
     impl.modifyTable(tableAname, tableA);
-    assertEquals((long) impl.describeTable(tableAname).maxFileSize, 123456L);
+    assertEquals(123456L, (long) impl.describeTable(tableAname).maxFileSize);
 
     impl.enableTable(tableAname);
     assertTrue(impl.isTableEnabled(tableAname));

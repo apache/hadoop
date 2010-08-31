@@ -123,7 +123,7 @@ public class TestStore extends TestCase {
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HLog hlog = new HLog(fs, logdir, oldLogDir, conf, null);
+    HLog hlog = new HLog(fs, logdir, oldLogDir, conf);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
 
     store = new Store(basedir, region, hcd, fs, conf);

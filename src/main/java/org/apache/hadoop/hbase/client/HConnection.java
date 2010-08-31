@@ -19,20 +19,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Cluster connection.
@@ -40,29 +41,33 @@ import java.util.concurrent.ExecutorService;
  */
 public interface HConnection {
   /**
-   * Retrieve ZooKeeperWrapper used by the connection.
-   * @return ZooKeeperWrapper handle being used by the connection.
+   * Retrieve ZooKeeperWatcher used by the connection.
+   * @return ZooKeeperWatcher handle being used by the connection.
    * @throws IOException if a remote or network exception occurs
    */
-  public ZooKeeperWrapper getZooKeeperWrapper() throws IOException;
+  public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
 
   /**
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HMasterInterface getMaster() throws MasterNotRunningException;
+  public HMasterInterface getMaster()
+  throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /** @return - true if the master server is running */
-  public boolean isMasterRunning();
+  public boolean isMasterRunning()
+  throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
    * Checks if <code>tableName</code> exists.
    * @param tableName Table to check.
    * @return True if table exists already.
    * @throws MasterNotRunningException if the master is not running
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException;
+  throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
    * A table that isTableEnabled == false and isTableDisabled == false
@@ -131,12 +136,31 @@ public interface HConnection {
    * lives in, ignoring any value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in
    * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the reigon in
+   * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation relocateRegion(final byte [] tableName,
       final byte [] row)
+  throws IOException;
+
+  /**
+   * Gets the location of the region of <i>regionName</i>.
+   * @param regionName name of the region to locate
+   * @return HRegionLocation that describes where to find the region in
+   * question
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionLocation locateRegion(final byte [] regionName)
+  throws IOException;
+
+  /**
+   * Gets the locations of all regions in the specified table, <i>tableName</i>.
+   * @param tableName table to get regions of
+   * @return list of region locations for all regions of table
+   * @throws IOException
+   */
+  public List<HRegionLocation> locateRegions(byte[] tableName)
   throws IOException;
 
   /**
@@ -197,21 +221,6 @@ public interface HConnection {
   public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
-  /**
-   * Process a mixed batch of Get, Put and Delete actions. All actions for a
-   * RegionServer are forwarded in one RPC call.
-   * 
-   * @param actions The collection of actions.
-   * @param tableName Name of the hbase table
-   * @param pool thread pool for parallel execution
-   * @param results An empty array, same size as list. If an exception is thrown,
-   * you can test here for partial results, and to determine which actions
-   * processed successfully.
-   * @throws IOException
-   */
-  public void processBatch(List<Row> actions, final byte[] tableName,
-      ExecutorService pool, Result[] results)
-  throws IOException;
 
   /**
    * Process a batch of Puts. Does the retries.
@@ -219,32 +228,20 @@ public interface HConnection {
    * @param tableName The name of the table
    * @return Count of committed Puts.  On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use HConnectionManager::processBatch instead.
    */
-  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName, ExecutorService pool)
+  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
   throws IOException;
 
   /**
    * Process a batch of Deletes. Does the retries.
    * @param list A batch of Deletes to process.
-   * @param tableName The name of the table
    * @return Count of committed Deletes. On fault, < list.size().
+   * @param tableName The name of the table
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use HConnectionManager::processBatch instead.
    */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName, ExecutorService pool)
+  public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
   throws IOException;
 
-  /**
-   * Process a batch of Puts.
-   *
-   * @param list The collection of actions. The list is mutated: all successful Puts 
-   * are removed from the list.
-   * @param tableName Name of the hbase table
-   * @param pool Thread pool for parallel execution
-   * @throws IOException
-   * @deprecated Use HConnectionManager::processBatch instead.
-   */
   public void processBatchOfPuts(List<Put> list,
                                  final byte[] tableName, ExecutorService pool) throws IOException;
 
@@ -261,7 +258,7 @@ public interface HConnection {
   /**
    * Check whether region cache prefetch is enabled or not.
    * @param tableName name of table to check
-   * @return true if table's region cache prefetch is enabled. Otherwise
+   * @return true if table's region cache prefecth is enabled. Otherwise
    * it is disabled.
    */
   public boolean getRegionCachePrefetch(final byte[] tableName);

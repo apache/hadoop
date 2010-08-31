@@ -29,7 +29,7 @@ public class InstrumentedSequenceFileLogWriter extends SequenceFileLogWriter {
   @Override
     public void append(HLog.Entry entry) throws IOException {
       super.append(entry);
-      if (activateFailure && Bytes.equals(entry.getKey().getRegionName(), "break".getBytes())) {
+      if (activateFailure && Bytes.equals(entry.getKey().getEncodedRegionName(), "break".getBytes())) {
         System.out.println(getClass().getName() + ": I will throw an exception now...");
         throw(new IOException("This exception is instrumented and should only be thrown for testing"));
       }

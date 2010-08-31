@@ -21,12 +21,13 @@ package org.apache.hadoop.hbase.client;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -37,9 +38,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -86,7 +92,173 @@ public class TestAdmin {
   }
 
   @Test
-  public void testCreateTableWithRegions() throws IOException {
+  public void testGetTableDescriptor() throws IOException {
+    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
+    HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
+    HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
+    HTableDescriptor htd = new HTableDescriptor("myTestTable");
+    htd.addFamily(fam1);
+    htd.addFamily(fam2);
+    htd.addFamily(fam3);
+    this.admin.createTable(htd);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
+    HTableDescriptor confirmedHtd = table.getTableDescriptor();
+    assertEquals(htd.compareTo(confirmedHtd), 0);
+  }
+
+  /**
+   * Verify schema modification takes.
+   * @throws IOException
+   */
+  @Test public void testChangeTableSchema() throws IOException {
+    final byte [] tableName = Bytes.toBytes("changeTableSchema");
+    HTableDescriptor [] tables = admin.listTables();
+    int numTables = tables.length;
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    tables = this.admin.listTables();
+    assertEquals(numTables + 1, tables.length);
+
+    // FIRST, do htabledescriptor changes.
+    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
+    // Make a copy and assert copy is good.
+    HTableDescriptor copy = new HTableDescriptor(htd);
+    assertTrue(htd.equals(copy));
+    // Now amend the copy. Introduce differences.
+    long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    copy.setMemStoreFlushSize(newFlushSize);
+    final String key = "anyoldkey";
+    assertTrue(htd.getValue(key) == null);
+    copy.setValue(key, key);
+    boolean expectedException = false;
+    try {
+      this.admin.modifyTable(tableName, copy);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+    this.admin.disableTable(tableName);
+    assertTrue(this.admin.isTableDisabled(tableName));
+    modifyTable(tableName, copy);
+    HTableDescriptor modifiedHtd = this.admin.getTableDescriptor(tableName);
+    // Assert returned modifiedhcd is same as the copy.
+    assertFalse(htd.equals(modifiedHtd));
+    assertTrue(copy.equals(modifiedHtd));
+    assertEquals(newFlushSize, modifiedHtd.getMemStoreFlushSize());
+    assertEquals(key, modifiedHtd.getValue(key));
+
+    // Reenable table to test it fails if not disabled.
+    this.admin.enableTable(tableName);
+    assertFalse(this.admin.isTableDisabled(tableName));
+
+    // Now work on column family changes.
+    int countOfFamilies = modifiedHtd.getFamilies().size();
+    assertTrue(countOfFamilies > 0);
+    HColumnDescriptor hcd = modifiedHtd.getFamilies().iterator().next();
+    int maxversions = hcd.getMaxVersions();
+    final int newMaxVersions = maxversions + 1;
+    hcd.setMaxVersions(newMaxVersions);
+    final byte [] hcdName = hcd.getName();
+    expectedException = false;
+    try {
+      this.admin.modifyColumn(tableName, hcd);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+    this.admin.disableTable(tableName);
+    assertTrue(this.admin.isTableDisabled(tableName));
+    // Modify Column is synchronous
+    this.admin.modifyColumn(tableName, hcd);
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    HColumnDescriptor modifiedHcd = modifiedHtd.getFamily(hcdName);
+    assertEquals(newMaxVersions, modifiedHcd.getMaxVersions());
+
+    // Try adding a column
+    // Reenable table to test it fails if not disabled.
+    this.admin.enableTable(tableName);
+    assertFalse(this.admin.isTableDisabled(tableName));
+    final String xtracolName = "xtracol";
+    HColumnDescriptor xtracol = new HColumnDescriptor(xtracolName);
+    xtracol.setValue(xtracolName, xtracolName);
+    try {
+      this.admin.addColumn(tableName, xtracol);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+    this.admin.disableTable(tableName);
+    assertTrue(this.admin.isTableDisabled(tableName));
+    this.admin.addColumn(tableName, xtracol);
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    hcd = modifiedHtd.getFamily(xtracol.getName());
+    assertTrue(hcd != null);
+    assertTrue(hcd.getValue(xtracolName).equals(xtracolName));
+
+    // Delete the just-added column.
+    this.admin.deleteColumn(tableName, xtracol.getName());
+    modifiedHtd = this.admin.getTableDescriptor(tableName);
+    hcd = modifiedHtd.getFamily(xtracol.getName());
+    assertTrue(hcd == null);
+
+    // Delete the table
+    this.admin.deleteTable(tableName);
+    this.admin.listTables();
+    assertFalse(this.admin.tableExists(tableName));
+  }
+
+  /**
+   * Modify table is async so wait on completion of the table operation in master.
+   * @param tableName
+   * @param htd
+   * @throws IOException
+   */
+  private void modifyTable(final byte [] tableName, final HTableDescriptor htd)
+  throws IOException {
+    MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    ExecutorService executor = services.getExecutorService();
+    AtomicBoolean done = new AtomicBoolean(false);
+    executor.registerListener(EventType.C2M_MODIFY_TABLE, new DoneListener(done));
+    this.admin.modifyTable(tableName, htd);
+    while (!done.get()) {
+      synchronized (done) {
+        try {
+          done.wait(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    }
+    executor.unregisterListener(EventType.C2M_MODIFY_TABLE);
+  }
+
+  /**
+   * Listens for when an event is done in Master.
+   */
+  static class DoneListener implements EventHandler.EventHandlerListener {
+    private final AtomicBoolean done;
+
+    DoneListener(final AtomicBoolean done) {
+      super();
+      this.done = done;
+    }
+
+    @Override
+    public void afterProcess(EventHandler event) {
+      this.done.set(true);
+      synchronized (this.done) {
+        // Wake anyone waiting on this value to change.
+        this.done.notifyAll();
+      }
+    }
+
+    @Override
+    public void beforeProcess(EventHandler event) {
+      // continue
+    }
+  }
+
+  @Test
+  public void testCreateTableWithRegions() throws IOException, InterruptedException {
 
     byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");
 
@@ -255,19 +427,24 @@ public class TestAdmin {
     Put put = new Put(row);
     put.add(HConstants.CATALOG_FAMILY, qualifier, value);
     ht.put(put);
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    ht.get(get);
 
     this.admin.disableTable(table);
 
     // Test that table is disabled
-    Get get = new Get(row);
+    get = new Get(row);
     get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
     boolean ok = false;
     try {
       ht.get(get);
+    } catch (NotServingRegionException e) {
+      ok = true;
     } catch (RetriesExhaustedException e) {
       ok = true;
     }
-    assertEquals(true, ok);
+    assertTrue(ok);
     this.admin.enableTable(table);
 
     //Test that table is enabled
@@ -276,7 +453,7 @@ public class TestAdmin {
     } catch (RetriesExhaustedException e) {
       ok = false;
     }
-    assertEquals(true, ok);
+    assertTrue(ok);
   }
 
   @Test
@@ -361,8 +538,8 @@ public class TestAdmin {
       }
     };
     t.start();
-    // tell the master to split the table
-    admin.split(Bytes.toString(tableName));
+    // Split the table
+    this.admin.split(Bytes.toString(tableName));
     t.join();
 
     // Verify row count
@@ -571,26 +748,13 @@ public class TestAdmin {
     for(int i = 0; i < times; i++) {
       String tableName = "table"+i;
       this.admin.disableTable(tableName);
+      byte [] tableNameBytes = Bytes.toBytes(tableName);
+      assertTrue(this.admin.isTableDisabled(tableNameBytes));
       this.admin.enableTable(tableName);
+      assertFalse(this.admin.isTableDisabled(tableNameBytes));
       this.admin.disableTable(tableName);
+      assertTrue(this.admin.isTableDisabled(tableNameBytes));
       this.admin.deleteTable(tableName);
     }
   }
-
-  @Test
-  public void testGetTableDescriptor() throws IOException {
-    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
-    HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
-    HTableDescriptor htd = new HTableDescriptor("myTestTable");
-    htd.addFamily(fam1);
-    htd.addFamily(fam2);
-    htd.addFamily(fam3);
-    this.admin.createTable(htd);
-    HTable table = new HTable("myTestTable");
-    HTableDescriptor confirmedHtd = table.getTableDescriptor();
-
-    assertEquals(htd.compareTo(confirmedHtd), 0);
-  }
 }
-

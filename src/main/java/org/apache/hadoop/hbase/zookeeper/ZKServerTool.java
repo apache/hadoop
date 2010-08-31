@@ -20,15 +20,14 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.Properties;
+import java.util.Map.Entry;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-
-import java.util.Map.Entry;
-import java.util.Properties;
 
 /**
- * Tool for reading ZooKeeper servers from HBase XML configuation and producing
+ * Tool for reading ZooKeeper servers from HBase XML configuration and producing
  * a line-by-line list for use by bash scripts.
  */
 public class ZKServerTool {
@@ -41,7 +40,7 @@ public class ZKServerTool {
     // Note that we do not simply grab the property
     // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
     // user may be using a zoo.cfg file.
-    Properties zkProps = HQuorumPeer.makeZKProps(conf);
+    Properties zkProps = ZKConfig.makeZKProps(conf);
     for (Entry<Object, Object> entry : zkProps.entrySet()) {
       String key = entry.getKey().toString().trim();
       String value = entry.getValue().toString().trim();

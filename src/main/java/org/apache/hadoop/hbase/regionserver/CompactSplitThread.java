@@ -35,9 +35,8 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Compact region on request and then run split if appropriate
  */
-class CompactSplitThread extends Thread {
+public class CompactSplitThread extends Thread implements CompactionRequestor {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
-
   private final long frequency;
   private final ReentrantLock lock = new ReentrantLock();
 
@@ -60,7 +59,7 @@ class CompactSplitThread extends Thread {
   public CompactSplitThread(HRegionServer server) {
     super();
     this.server = server;
-    this.conf = server.conf;
+    this.conf = server.getConfiguration();
     this.regionSplitLimit = conf.getInt("hbase.regionserver.regionSplitLimit",
         Integer.MAX_VALUE);
     this.frequency =
@@ -70,11 +69,11 @@ class CompactSplitThread extends Thread {
 
   @Override
   public void run() {
-    while (!this.server.isStopRequested()) {
+    while (!this.server.isStopped()) {
       HRegion r = null;
       try {
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (r != null && !this.server.isStopRequested()) {
+        if (r != null && !this.server.isStopped()) {
           synchronized (regionsInQueue) {
             regionsInQueue.remove(r);
           }
@@ -83,7 +82,7 @@ class CompactSplitThread extends Thread {
             // Don't interrupt us while we are working
             byte [] midKey = r.compactStores();
             if (shouldSplitRegion() && midKey != null &&
-                !this.server.isStopRequested()) {
+                !this.server.isStopped()) {
               split(r, midKey);
             }
           } finally {
@@ -113,13 +112,9 @@ class CompactSplitThread extends Thread {
     LOG.info(getName() + " exiting");
   }
 
-  /**
-   * @param r HRegion store belongs to
-   * @param why Why compaction requested -- used in debug messages
-   */
-  public synchronized void compactionRequested(final HRegion r,
+  public synchronized void requestCompaction(final HRegion r,
       final String why) {
-    compactionRequested(r, false, why);
+    requestCompaction(r, false, why);
   }
 
   /**
@@ -127,9 +122,9 @@ class CompactSplitThread extends Thread {
    * @param force Whether next compaction should be major
    * @param why Why compaction requested -- used in debug messages
    */
-  public synchronized void compactionRequested(final HRegion r,
+  public synchronized void requestCompaction(final HRegion r,
       final boolean force, final String why) {
-    if (this.server.stopRequested.get()) {
+    if (this.server.isStopped()) {
       return;
     }
     r.setForceMajorCompaction(force);
@@ -154,7 +149,7 @@ class CompactSplitThread extends Thread {
     // the prepare call -- we are not ready to split just now.  Just return.
     if (!st.prepare()) return;
     try {
-      st.execute(this.server);
+      st.execute(this.server, this.server);
     } catch (IOException ioe) {
       try {
         LOG.info("Running rollback of failed split of " +
@@ -177,8 +172,9 @@ class CompactSplitThread extends Thread {
     this.server.reportSplit(parent.getRegionInfo(), st.getFirstDaughter(),
       st.getSecondDaughter());
     LOG.info("Region split, META updated, and report to master. Parent=" +
-      parent.getRegionInfo() + ", new regions: " +
-      st.getFirstDaughter() + ", " + st.getSecondDaughter() + ". Split took " +
+      parent.getRegionInfo().getRegionNameAsString() + ", new regions: " +
+      st.getFirstDaughter().getRegionNameAsString() + ", " +
+      st.getSecondDaughter().getRegionNameAsString() + ". Split took " +
       StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
   }
 

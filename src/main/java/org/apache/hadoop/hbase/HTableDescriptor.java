@@ -678,10 +678,5 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
             10, // Ten is arbitrary number.  Keep versions to help debuggging.
             Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
             HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
-            HConstants.REPLICATION_SCOPE_LOCAL),
-          new HColumnDescriptor(HConstants.CATALOG_HISTORIAN_FAMILY,
-            HConstants.ALL_VERSIONS, Compression.Algorithm.NONE.getName(),
-            false, false,  8 * 1024,
-            HConstants.WEEK_IN_SECONDS,StoreFile.BloomType.NONE.toString(),
             HConstants.REPLICATION_SCOPE_LOCAL)});
 }

@@ -77,7 +77,7 @@ public class TestRemoteTable extends HBaseRESTClusterTestBase {
       htd.addFamily(new HColumnDescriptor(COLUMN_2));
       htd.addFamily(new HColumnDescriptor(COLUMN_3));
       admin.createTable(htd);
-      HTable table = new HTable(TABLE);
+      HTable table = new HTable(conf, TABLE);
       Put put = new Put(ROW_1);
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);

@@ -19,23 +19,32 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-
 /**
- * Add and remove online regions.
+ * Interface to Map of online regions.  In the  Map, the key is the region's
+ * encoded name and the value is an {@link HRegion} instance.
  */
 interface OnlineRegions {
   /**
    * Add to online regions.
    * @param r
    */
-  void addToOnlineRegions(final HRegion r);
+  public void addToOnlineRegions(final HRegion r);
 
   /**
    * This method removes HRegion corresponding to hri from the Map of onlineRegions.
    *
-   * @param hri the HRegionInfo corresponding to the HRegion to-be-removed.
-   * @return the removed HRegion, or null if the HRegion was not in onlineRegions.
+   * @param encodedRegionName
+   * @return True if we removed a region from online list.
    */
-  HRegion removeFromOnlineRegions(HRegionInfo hri);
+  public boolean removeFromOnlineRegions(String encodedRegionName);
+
+  /**
+   * Return {@link HRegion} instance.
+   * Only works if caller is in same context, in same JVM. HRegion is not
+   * serializable.
+   * @param encodedRegionName
+   * @return HRegion for the passed encoded <code>encodedRegionName</code> or
+   * null if named region is not member of the online regions.
+   */
+  public HRegion getFromOnlineRegions(String encodedRegionName);
 }

@@ -4,7 +4,8 @@
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnection"
   import="org.apache.hadoop.hbase.HRegionInfo"
-  import="org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper"
+  import="org.apache.hadoop.hbase.zookeeper.ZKUtil"
+  import="org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.HConstants"%><%
@@ -12,7 +13,7 @@
   Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   HConnection connection = hbadmin.getConnection();
-  ZooKeeperWrapper wrapper = connection.getZooKeeperWrapper();
+  ZooKeeperWatcher watcher = connection.getZooKeeperWatcher();
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -29,7 +30,7 @@
 <p id="links_menu"><a href="/master.jsp">Master</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
 <pre>
-<%= wrapper.dump() %>
+<%= ZKUtil.dump(watcher) %>
 </pre>
 
 </body>
