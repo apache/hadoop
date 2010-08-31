@@ -194,11 +194,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public ThriftHandle create(Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("create: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("create: " + path);
+        }
         FSDataOutputStream out = fs.create(new Path(path.pathname));
         long id = insert(out);
         ThriftHandle obj = new ThriftHandle(id);
-        HadoopThriftHandler.LOG.debug("created: " + path + " id: " + id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("created: " + path + " id: " + id);
+        }
         return obj;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -216,12 +220,14 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                                    long blockSize) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("create: " + path +
-                                     " permission: " + mode +
-                                     " overwrite: " + overwrite +
-                                     " bufferSize: " + bufferSize +
-                                     " replication: " + replication +
-                                     " blockSize: " + blockSize);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("create: " + path +
+                                       " permission: " + mode +
+                                       " overwrite: " + overwrite +
+                                       " bufferSize: " + bufferSize +
+                                       " replication: " + replication +
+                                       " blockSize: " + blockSize);
+        }
         FSDataOutputStream out = fs.create(new Path(path.pathname), 
                                            new FsPermission(mode),
                                            overwrite,
@@ -231,7 +237,9 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                                            null); // progress
         long id = insert(out);
         ThriftHandle obj = new ThriftHandle(id);
-        HadoopThriftHandler.LOG.debug("created: " + path + " id: " + id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("created: " + path + " id: " + id);
+        }
         return obj;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -244,11 +252,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public ThriftHandle open(Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("open: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("open: " + path);
+        }
         FSDataInputStream out = fs.open(new Path(path.pathname));
         long id = insert(out);
         ThriftHandle obj = new ThriftHandle(id);
-        HadoopThriftHandler.LOG.debug("opened: " + path + " id: " + id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("opened: " + path + " id: " + id);
+        }
         return obj;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -261,11 +273,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public ThriftHandle append(Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("append: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("append: " + path);
+        }
         FSDataOutputStream out = fs.append(new Path(path.pathname));
         long id = insert(out);
         ThriftHandle obj = new ThriftHandle(id);
-        HadoopThriftHandler.LOG.debug("appended: " + path + " id: " + id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("appended: " + path + " id: " + id);
+        }
         return obj;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -278,11 +294,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public boolean write(ThriftHandle tout, String data) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("write: " + tout.id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("write: " + tout.id);
+        }
         FSDataOutputStream out = (FSDataOutputStream)lookup(tout.id);
         byte[] tmp = data.getBytes("UTF-8");
         out.write(tmp, 0, tmp.length);
-        HadoopThriftHandler.LOG.debug("wrote: " + tout.id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("wrote: " + tout.id);
+        }
         return true;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -296,16 +316,20 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                        int length) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("read: " + tout.id +
-                                     " offset: " + offset +
-                                     " length: " + length);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("read: " + tout.id +
+                                       " offset: " + offset +
+                                       " length: " + length);
+        }
         FSDataInputStream in = (FSDataInputStream)lookup(tout.id);
         if (in.getPos() != offset) {
           in.seek(offset);
         }
         byte[] tmp = new byte[length];
         int numbytes = in.read(offset, tmp, 0, length);
-        HadoopThriftHandler.LOG.debug("read done: " + tout.id);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("read done: " + tout.id);
+        }
         return new String(tmp, 0, numbytes, "UTF-8");
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -319,10 +343,14 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                           throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("rm: " + path +
-                                     " recursive: " + recursive);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("rm: " + path +
+                                       " recursive: " + recursive);
+        }
         boolean ret = fs.delete(new Path(path.pathname), recursive);
-        HadoopThriftHandler.LOG.debug("rm: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("rm: " + path);
+        }
         return ret;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -336,11 +364,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                           throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("rename: " + path +
-                                     " destination: " + dest);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("rename: " + path +
+                                       " destination: " + dest);
+        }
         boolean ret = fs.rename(new Path(path.pathname), 
                                 new Path(dest.pathname));
-        HadoopThriftHandler.LOG.debug("rename: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("rename: " + path);
+        }
         return ret;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -353,7 +385,9 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
      public boolean close(ThriftHandle tout) throws ThriftIOException {
        try {
          now = now();
-         HadoopThriftHandler.LOG.debug("close: " + tout.id);
+         if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+           HadoopThriftHandler.LOG.debug("close: " + tout.id);
+         }
          Object obj = remove(tout.id);
          if (obj instanceof FSDataOutputStream) {
            FSDataOutputStream out = (FSDataOutputStream)obj;
@@ -364,7 +398,9 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
          } else {
            throw new ThriftIOException("Unknown thrift handle.");
          }
-         HadoopThriftHandler.LOG.debug("closed: " + tout.id);
+         if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+           HadoopThriftHandler.LOG.debug("closed: " + tout.id);
+         }
          return true;
        } catch (IOException e) {
          throw new ThriftIOException(e.getMessage());
@@ -377,9 +413,13 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public boolean mkdirs(Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("mkdirs: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("mkdirs: " + path);
+        }
         boolean ret = fs.mkdirs(new Path(path.pathname));
-        HadoopThriftHandler.LOG.debug("mkdirs: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("mkdirs: " + path);
+        }
         return ret;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -392,9 +432,13 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public boolean exists(Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("exists: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("exists: " + path);
+        }
         boolean ret = fs.exists(new Path(path.pathname));
-        HadoopThriftHandler.LOG.debug("exists done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("exists done: " + path);
+        }
         return ret;
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
@@ -408,10 +452,14 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                             Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("stat: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("stat: " + path);
+        }
         org.apache.hadoop.fs.FileStatus stat = fs.getFileStatus(
                                            new Path(path.pathname));
-        HadoopThriftHandler.LOG.debug("stat done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("stat done: " + path);
+        }
         return new org.apache.hadoop.thriftfs.api.FileStatus(
           stat.getPath().toString(),
           stat.getLen(),
@@ -435,11 +483,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                             Pathname path) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("listStatus: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("listStatus: " + path);
+        }
 
         org.apache.hadoop.fs.FileStatus[] stat = fs.listStatus(
                                            new Path(path.pathname));
-        HadoopThriftHandler.LOG.debug("listStatus done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("listStatus done: " + path);
+        }
         org.apache.hadoop.thriftfs.api.FileStatus tmp;
         List<org.apache.hadoop.thriftfs.api.FileStatus> value = 
           new LinkedList<org.apache.hadoop.thriftfs.api.FileStatus>();
@@ -469,10 +521,14 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public void chmod(Pathname path, short mode) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("chmod: " + path + 
-                                     " mode " + mode);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("chmod: " + path + 
+                                       " mode " + mode);
+        }
         fs.setPermission(new Path(path.pathname), new FsPermission(mode));
-        HadoopThriftHandler.LOG.debug("chmod done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("chmod done: " + path);
+        }
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
       }
@@ -485,11 +541,15 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                                                        throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("chown: " + path +
-                                     " owner: " + owner +
-                                     " group: " + group);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("chown: " + path +
+                                       " owner: " + owner +
+                                       " group: " + group);
+        }
         fs.setOwner(new Path(path.pathname), owner, group);
-        HadoopThriftHandler.LOG.debug("chown done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("chown done: " + path);
+        }
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
       }
@@ -501,10 +561,14 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
     public void setReplication(Pathname path, short repl) throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("setrepl: " + path +
-                                     " replication factor: " + repl);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("setrepl: " + path +
+                                       " replication factor: " + repl);
+        }
         fs.setReplication(new Path(path.pathname), repl);
-        HadoopThriftHandler.LOG.debug("setrepl done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("setrepl done: " + path);
+        }
       } catch (IOException e) {
         throw new ThriftIOException(e.getMessage());
       }
@@ -519,14 +583,16 @@ public class HadoopThriftServer extends ThriftHadoopFileSystem {
                                          throws ThriftIOException {
       try {
         now = now();
-        HadoopThriftHandler.LOG.debug("getFileBlockLocations: " + path);
-
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("getFileBlockLocations: " + path);
+        }
         org.apache.hadoop.fs.FileStatus status = fs.getFileStatus(
                                                  new Path(path.pathname));
-
         org.apache.hadoop.fs.BlockLocation[] stat = 
             fs.getFileBlockLocations(status, start, length);
-        HadoopThriftHandler.LOG.debug("getFileBlockLocations done: " + path);
+        if(HadoopThriftHandler.LOG.isDebugEnabled()) {
+          HadoopThriftHandler.LOG.debug("getFileBlockLocations done: " + path);
+        }
 
         org.apache.hadoop.thriftfs.api.BlockLocation tmp;
         List<org.apache.hadoop.thriftfs.api.BlockLocation> value = 

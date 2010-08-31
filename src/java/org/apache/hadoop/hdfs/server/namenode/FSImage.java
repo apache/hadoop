@@ -1697,7 +1697,9 @@ public class FSImage extends Storage {
       }
     }
     editLog.purgeEditLog(); // renamed edits.new to edits
-    LOG.debug("rollFSImage after purgeEditLog: storageList=" + listStorageDirectories());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("rollFSImage after purgeEditLog: storageList=" + listStorageDirectories());
+    }
     //
     // Renames new image
     //
@@ -1717,7 +1719,9 @@ public class FSImage extends Storage {
       File curFile = getImageFile(sd, NameNodeFile.IMAGE);
       // renameTo fails on Windows if the destination file 
       // already exists.
-      LOG.debug("renaming  " + ckpt.getAbsolutePath() + " to "  + curFile.getAbsolutePath());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("renaming  " + ckpt.getAbsolutePath() + " to "  + curFile.getAbsolutePath());
+      }
       if (!ckpt.renameTo(curFile)) {
         if (!curFile.delete() || !ckpt.renameTo(curFile)) {
           LOG.warn("renaming  " + ckpt.getAbsolutePath() + " to "  + 

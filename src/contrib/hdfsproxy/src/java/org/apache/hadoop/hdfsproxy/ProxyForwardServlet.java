@@ -74,7 +74,10 @@ public class ProxyForwardServlet extends HttpServlet {
       response.sendError(HttpServletResponse.SC_NOT_FOUND);
       return;
     }
-    LOG.debug("Request to " + hostname + " is forwarded to version " + version);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Request to " + hostname +
+          " is forwarded to version " + version);
+    }
     forwardRequest(request, response, dstContext, request.getServletPath());
 
   }

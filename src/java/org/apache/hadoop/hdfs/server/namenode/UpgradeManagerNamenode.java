@@ -72,10 +72,12 @@ class UpgradeManagerNamenode extends UpgradeManager {
 
   synchronized UpgradeCommand processUpgradeCommand(UpgradeCommand command
                                                     ) throws IOException {
-    NameNode.LOG.debug("\n   Distributed upgrade for NameNode version " 
-        + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is processing upgrade command: "
-        + command.getAction() + " status = " + getUpgradeStatus() + "%");
+    if(NameNode.LOG.isDebugEnabled()) {
+      NameNode.LOG.debug("\n   Distributed upgrade for NameNode version " 
+          + getUpgradeVersion() + " to current LV " 
+          + FSConstants.LAYOUT_VERSION + " is processing upgrade command: "
+          + command.getAction() + " status = " + getUpgradeStatus() + "%");
+    }
     if(currentUpgrades == null) {
       NameNode.LOG.info("Ignoring upgrade command: " 
           + command.getAction() + " version " + command.getVersion()

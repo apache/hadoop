@@ -393,7 +393,9 @@ public class SecondaryNameNode implements Runnable {
       }
       return fsName.getHost() + ":" + sockAddr.getPort();
     } else {
-      LOG.debug("configuredAddress = " + configuredAddress);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("configuredAddress = " + configuredAddress);
+      }
       return configuredAddress;
     }
   }

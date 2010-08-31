@@ -425,7 +425,9 @@ public class DataNode extends Configured
        : new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0,
            conf, new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")),
            secureResources.getListener());
-    LOG.debug("Datanode listening on " + infoHost + ":" + tmpInfoPort);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Datanode listening on " + infoHost + ":" + tmpInfoPort);
+    }
     if (conf.getBoolean("dfs.https.enable", false)) {
       boolean needClientAuth = conf.getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
                                                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
@@ -435,7 +437,9 @@ public class DataNode extends Configured
       sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
           "ssl-server.xml"));
       this.infoServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
-      LOG.debug("Datanode listening for SSL on " + secInfoSocAddr);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Datanode listening for SSL on " + secInfoSocAddr);
+      }
     }
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",

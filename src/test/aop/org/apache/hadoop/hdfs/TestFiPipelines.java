@@ -78,7 +78,9 @@ public class TestFiPipelines {
   @Test
   public void pipeline_04() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
-    LOG.debug("Running " + METHOD_NAME);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + METHOD_NAME);
+    }
 
     final PipelinesTestUtil.PipelinesTest pipst =
       (PipelinesTestUtil.PipelinesTest) PipelinesTestUtil.initTest();
@@ -99,7 +101,9 @@ public class TestFiPipelines {
   @Test
   public void pipeline_05() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
-    LOG.debug("Running " + METHOD_NAME);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + METHOD_NAME);
+    }
 
     final PipelinesTestUtil.PipelinesTest pipst =
       (PipelinesTestUtil.PipelinesTest) PipelinesTestUtil.initTest();
@@ -126,7 +130,9 @@ public class TestFiPipelines {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     final int MAX_PACKETS = 80;
     
-    LOG.debug("Running " + METHOD_NAME);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + METHOD_NAME);
+    }
 
     final PipelinesTestUtil.PipelinesTest pipst =
       (PipelinesTestUtil.PipelinesTest) PipelinesTestUtil.initTest();
@@ -148,13 +154,18 @@ public class TestFiPipelines {
       // The actual logic is expressed in DFSClient#computePacketChunkSize
       int bytesToSend = 700;
       while (cnt < 100 && pipst.getSuspend()) {
-        LOG.debug("_06(): " + cnt++ + " sending another " + bytesToSend + " bytes");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("_06(): " + cnt++ + " sending another " +
+              bytesToSend + " bytes");
+        }
         TestPipelines.writeData(fsOut, bytesToSend);
       }
     } catch (Exception e) {
       LOG.warn("Getting unexpected exception: ", e);
     }
-    LOG.debug("Last queued packet number " + pipst.getLastQueued());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Last queued packet number " + pipst.getLastQueued());
+    }
     assertTrue("Shouldn't be able to send more than 81 packet", pipst.getLastQueued() <= 81);
   }
 
@@ -171,23 +182,32 @@ public class TestFiPipelines {
     @Override
     public void run() {
       while (!done) {
-        LOG.debug("_06: checking for the limit " + test.getLastQueued() + 
-            " and " + MAX);
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("_06: checking for the limit " + test.getLastQueued() + 
+              " and " + MAX);
+        }
         if (test.getLastQueued() >= MAX) {
-          LOG.debug("FI: Resume packets acking");
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("FI: Resume packets acking");
+          }
           test.setSuspend(false); //Do not suspend ack sending any more
           done = true;
         }
         if (!done)
           try {
-            LOG.debug("_06: MAX isn't reached yet. Current=" + test.getLastQueued());
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("_06: MAX isn't reached yet. Current=" +
+                  test.getLastQueued());
+            }
             sleep(100);
           } catch (InterruptedException e) { }
       }
 
       assertTrue("Shouldn't be able to send more than 81 packet", test.getLastQueued() <= 81);
       try {
-        LOG.debug("_06: shutting down the cluster");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("_06: shutting down the cluster");
+        }
         // It has to be done like that, because local version of shutDownCluster()
         // won't work, because it tries to close an instance of FileSystem too.
         // Which is where the waiting is happening.
@@ -196,7 +216,9 @@ public class TestFiPipelines {
       } catch (Exception e) {
         e.printStackTrace();
       }
-      LOG.debug("End QueueChecker thread");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("End QueueChecker thread");
+      }
     }
   }
   

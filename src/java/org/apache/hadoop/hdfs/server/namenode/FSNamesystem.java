@@ -849,7 +849,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public void concat(String target, String [] srcs) 
     throws IOException, UnresolvedLinkException {
-    FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) + " to " + target);
+    if(FSNamesystem.LOG.isDebugEnabled()) {
+      FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) +
+          " to " + target);
+    }
     // check safe mode
     if (isInSafeMode()) {
       throw new SafeModeException("concat: cannot concat " + target, safeMode);
@@ -963,8 +966,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         throw new IllegalArgumentException("at least two files are the same");
       }
 
-      NameNode.stateChangeLog.debug("DIR* NameSystem.concat: " + 
-          Arrays.toString(srcs) + " to " + target);
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* NameSystem.concat: " + 
+            Arrays.toString(srcs) + " to " + target);
+      }
 
       dir.concatInternal(target,srcs);
     }
@@ -1453,8 +1458,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     DatanodeDescriptor clientNode = null;
     Block newBlock = null;
 
-    NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: file "
-                                  +src+" for "+clientName);
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.getAdditionalBlock: file "
+          +src+" for "+clientName);
+    }
 
     synchronized (this) {
       if (isInSafeMode()) {
@@ -1528,13 +1536,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     //
     // Remove the block from the pending creates list
     //
-    NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
-                                  +b+"of file "+src);
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
+                                    +b+"of file "+src);
+    }
     INodeFileUnderConstruction file = checkLease(src, holder);
     dir.removeBlock(src, file, b);
-    NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                     + b
                                     + " is removed from pendingCreates");
+    }
     return true;
   }
   
@@ -1588,7 +1600,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private synchronized boolean completeFileInternal(String src, 
       String holder, Block last) throws SafeModeException,
       UnresolvedLinkException, IOException {
-    NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " +
+          src + " for " + holder);
+    }
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
 
@@ -1722,7 +1737,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   @Deprecated
   private synchronized boolean renameToInternal(String src, String dst)
     throws IOException, UnresolvedLinkException {
-    NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst);
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src +
+          " to " + dst);
+    }
     if (isInSafeMode())
       throw new SafeModeException("Cannot rename " + src, safeMode);
     if (!DFSUtil.isValidName(dst)) {
@@ -1924,7 +1942,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private synchronized boolean mkdirsInternal(String src,
       PermissionStatus permissions, boolean createParent) 
       throws IOException, UnresolvedLinkException {
-    NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
+    }
     if (isPermissionEnabled) {
       checkTraverse(src);
     }
@@ -2368,8 +2388,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         // The same datanode has been just restarted to serve the same data 
         // storage. We do not need to remove old data blocks, the delta will
         // be calculated on the next block report from the datanode
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.registerDatanode: "
-                                      + "node restarted.");
+        if(NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.registerDatanode: "
+                                        + "node restarted.");
+        }
       } else {
         // nodeS is found
         /* The registering datanode is a replacement node for the existing 
@@ -2412,9 +2434,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       // this data storage has never been registered
       // it is either empty or was created by pre-storageID version of DFS
       nodeReg.storageID = newStorageID();
-      NameNode.stateChangeLog.debug(
-                                    "BLOCK* NameSystem.registerDatanode: "
-                                    + "new storageID " + nodeReg.getStorageID() + " assigned.");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+            "BLOCK* NameSystem.registerDatanode: "
+            + "new storageID " + nodeReg.getStorageID() + " assigned.");
+      }
     }
     // register new datanode
     DatanodeDescriptor nodeDescr 
@@ -2741,9 +2765,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
     nodeDescr.resetBlocks();
     blockManager.removeFromInvalidates(nodeDescr.getStorageID());
-    NameNode.stateChangeLog.debug(
-                                  "BLOCK* NameSystem.unprotectedRemoveDatanode: "
-                                  + nodeDescr.getName() + " is out of service now.");
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.unprotectedRemoveDatanode: "
+          + nodeDescr.getName() + " is out of service now.");
+    }
   }
     
   void unprotectedAddDatanode(DatanodeDescriptor nodeDescr) {
@@ -2755,9 +2781,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                             datanodeMap.put(nodeDescr.getStorageID(), nodeDescr));
     host2DataNodeMap.add(nodeDescr);
       
-    NameNode.stateChangeLog.debug(
-                                  "BLOCK* NameSystem.unprotectedAddDatanode: "
-                                  + "node " + nodeDescr.getName() + " is added to datanodeMap.");
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.unprotectedAddDatanode: "
+          + "node " + nodeDescr.getName() + " is added to datanodeMap.");
+    }
   }
 
   /**
@@ -2768,10 +2796,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   void wipeDatanode(DatanodeID nodeID) throws IOException {
     String key = nodeID.getStorageID();
     host2DataNodeMap.remove(datanodeMap.remove(key));
-    NameNode.stateChangeLog.debug(
-                                  "BLOCK* NameSystem.wipeDatanode: "
-                                  + nodeID.getName() + " storage " + key 
-                                  + " is removed from datanodeMap.");
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.wipeDatanode: "
+          + nodeID.getName() + " storage " + key 
+          + " is removed from datanodeMap.");
+    }
   }
 
   FSImage getFSImage() {

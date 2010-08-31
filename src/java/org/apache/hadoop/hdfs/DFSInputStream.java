@@ -744,9 +744,11 @@ public class DFSInputStream extends FSInputStream {
             done = true;
           }
         } catch (IOException e) {//make following read to retry
-          DFSClient.LOG.debug("Exception while seek to " + targetPos + " from "
-                    + currentBlock +" of " + src + " from " + currentNode + 
-                    ": " + StringUtils.stringifyException(e));
+          if(DFSClient.LOG.isDebugEnabled()) {
+            DFSClient.LOG.debug("Exception while seek to " + targetPos +
+                " from " + currentBlock +" of " + src + " from " +
+                currentNode + ": " + StringUtils.stringifyException(e));
+          }
         }
       }
     }

@@ -87,11 +87,15 @@ public class TestPipelines {
   @Test
   public void pipeline_01() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
-    LOG.debug("Running " + METHOD_NAME);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + METHOD_NAME);
+    }
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
 
     DFSTestUtil.createFile(fs, filePath, FILE_SIZE, REPL_FACTOR, rand.nextLong());
-    LOG.debug("Invoking append but doing nothing otherwise...");
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Invoking append but doing nothing otherwise...");
+    }
     FSDataOutputStream ofs = fs.append(filePath);
     ofs.writeBytes("Some more stuff to write");
     ((DFSOutputStream) ofs.getWrappedStream()).hflush();
@@ -130,7 +134,9 @@ public class TestPipelines {
       System.arraycopy(toWrite, 0, ret, (ret.length - bytesToWrite),
         bytesToWriteNext);
       written += bytesToWriteNext;
-      LOG.debug("Written: " + bytesToWriteNext + "; Total: " + written);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Written: " + bytesToWriteNext + "; Total: " + written);
+      }
       bytesToWrite -= bytesToWriteNext;
     }
     return ret;

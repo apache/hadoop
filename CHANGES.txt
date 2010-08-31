@@ -74,9 +74,6 @@ Trunk (unreleased changes)
     HDFS-1110. Reuses objects for commonly used file names in namenode to
     reduce the heap usage. (suresh)
 
-    HDFS-1114. Implement LightWeightGSet for BlocksMap in order to reduce
-    NameNode memory footprint.  (szetszwo)
-
     HDFS-752. Add interfaces classification to to HDFS source code. (suresh)
 
     HDFS-947. An Hftp read request is redirected to a datanode that has 
@@ -116,12 +113,21 @@ Trunk (unreleased changes)
     HDFS-1318. Add JMX interface for read access to namenode and datanode
     web UI information. (Tanping Wang via suresh).
 
+    HDFS-1356.  Provide information as to whether or not security is 
+    enabled on web interface for NameNode (boryas)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
 
     HDFS-1081. Performance regression in 
     DistributedFileSystem::getFileBlockLocations in secure systems (jghoman)
+
+    HDFS-1114. Implement LightWeightGSet for BlocksMap in order to reduce
+    NameNode memory footprint.  (szetszwo)
+
+    HDFS-1320. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
+    (Erik Steffl via szetszwo)
 
   BUG FIXES
 

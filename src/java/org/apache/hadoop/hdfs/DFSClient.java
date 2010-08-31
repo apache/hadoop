@@ -625,7 +625,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       permission = FsPermission.getDefault();
     }
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
-    LOG.debug(src + ": masked=" + masked);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug(src + ": masked=" + masked);
+    }
     OutputStream result = new DFSOutputStream(this, src, masked,
         flag, createParent, replication, blockSize, progress, buffersize,
         conf.getInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 
@@ -1212,7 +1214,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       permission = FsPermission.getDefault();
     }
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
-    LOG.debug(src + ": masked=" + masked);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug(src + ": masked=" + masked);
+    }
     try {
       return namenode.mkdirs(src, masked, createParent);
     } catch(RemoteException re) {
@@ -1239,7 +1243,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf));
     } 
 
-    LOG.debug(src + ": masked=" + absPermission);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug(src + ": masked=" + absPermission);
+    }
     try {
       return namenode.mkdirs(src, absPermission, true);
     } catch(RemoteException re) {
@@ -1347,7 +1353,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
      
       if (daemonCopy != null) {
-        LOG.debug("Wait for lease checker to terminate");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Wait for lease checker to terminate");
+        }
         daemonCopy.join();
       }
     }

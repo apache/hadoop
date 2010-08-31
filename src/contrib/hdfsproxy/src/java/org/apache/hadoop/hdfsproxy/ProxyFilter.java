@@ -210,7 +210,9 @@ public class ProxyFilter implements Filter {
       
       if (unitTest) {
         try {
-          LOG.debug("==> Entering https unit test");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("==> Entering https unit test");
+          }
           String SslPath = rqst.getParameter("SslPath");
           InputStream inStream = new FileInputStream(SslPath);
           CertificateFactory cf = CertificateFactory.getInstance("X.509");

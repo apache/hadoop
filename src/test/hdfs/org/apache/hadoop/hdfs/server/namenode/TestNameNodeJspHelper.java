@@ -24,12 +24,13 @@ import java.io.IOException;
 
 import javax.servlet.http.HttpServletRequest;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,5 +61,20 @@ public class TestNameNodeJspHelper {
     //tokenString returned must be null because security is disabled
     Assert.assertEquals(null, tokenString);
   }
-
+  
+  @Test
+  public void  tesSecurityModeText() {
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    String securityOnOff = NamenodeJspHelper.getSecurityModeText();
+    Assert.assertTrue("security mode doesn't match. Should be ON", 
+        securityOnOff.contains("ON"));
+    //Security is enabled
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "simple");
+    UserGroupInformation.setConfiguration(conf);
+    
+    securityOnOff = NamenodeJspHelper.getSecurityModeText();
+    Assert.assertTrue("security mode doesn't match. Should be OFF", 
+        securityOnOff.contains("OFF"));
+  }
 }

@@ -471,9 +471,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
                   Collection<Block> toAdd,    // add to DatanodeDescriptor
                   Collection<Block> toInvalidate, // should be removed from DN
                   Collection<BlockInfo> toCorrupt) {// add to corrupt replicas
-    FSNamesystem.LOG.debug("Reported block " + block
-        + " on " + getName() + " size " + block.getNumBytes()
-        + " replicaState = " + rState);
+    if(FSNamesystem.LOG.isDebugEnabled()) {
+      FSNamesystem.LOG.debug("Reported block " + block
+          + " on " + getName() + " size " + block.getNumBytes()
+          + " replicaState = " + rState);
+    }
 
     // find block by blockId
     BlockInfo storedBlock = blockManager.blocksMap.getStoredBlock(block);
@@ -484,7 +486,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
       return null;
     }
 
-    FSNamesystem.LOG.debug("In memory blockUCState = " + storedBlock.getBlockUCState());
+    if(FSNamesystem.LOG.isDebugEnabled()) {
+      FSNamesystem.LOG.debug("In memory blockUCState = " +
+          storedBlock.getBlockUCState());
+    }
 
     // Block is on the DN
     boolean isCorrupt = false;

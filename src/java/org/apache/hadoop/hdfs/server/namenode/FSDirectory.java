@@ -208,8 +208,10 @@ class FSDirectory implements Closeable {
     // add create file record to log, record new generation stamp
     fsImage.getEditLog().logOpenFile(path, newNode);
 
-    NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                  +path+" is added to the file system");
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+          +path+" is added to the file system");
+    }
     return newNode;
   }
 
@@ -338,10 +340,12 @@ class FSDirectory implements Closeable {
       getBlockManager().addINode(blockInfo, fileINode);
       fileINode.addBlock(blockInfo);
 
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                    + path + " with " + block
-                                    + " block is added to the in-memory "
-                                    + "file system");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+            + path + " with " + block
+            + " block is added to the in-memory "
+            + "file system");
+      }
       return blockInfo;
     }
   }
@@ -354,9 +358,11 @@ class FSDirectory implements Closeable {
 
     synchronized (rootDir) {
       fsImage.getEditLog().logOpenFile(path, file);
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
-                                    +path+" with "+ file.getBlocks().length 
-                                    +" blocks is persisted to the file system");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
+            +path+" with "+ file.getBlocks().length 
+            +" blocks is persisted to the file system");
+      }
     }
   }
 
@@ -372,8 +378,8 @@ class FSDirectory implements Closeable {
       fsImage.getEditLog().logCloseFile(path, file);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
-                                    +path+" with "+ file.getBlocks().length 
-                                    +" blocks is persisted to the file system");
+            +path+" with "+ file.getBlocks().length 
+            +" blocks is persisted to the file system");
       }
     }
   }
@@ -394,9 +400,11 @@ class FSDirectory implements Closeable {
 
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                    +path+" with "+block
-                                    +" block is added to the file system");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+            +path+" with "+block
+            +" block is added to the file system");
+      }
     }
     return true;
   }
@@ -411,7 +419,7 @@ class FSDirectory implements Closeable {
       FileAlreadyExistsException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
-                                  +src+" to "+dst);
+          +src+" to "+dst);
     }
     waitForReady();
     long now = now();
@@ -691,9 +699,9 @@ class FSDirectory implements Closeable {
         if (dstChild != null) {
           removedSrc = null;
           if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog
-                .debug("DIR* FSDirectory.unprotectedRenameTo: " + src
-                    + " is renamed to " + dst);
+            NameNode.stateChangeLog.debug(
+                "DIR* FSDirectory.unprotectedRenameTo: " + src
+                + " is renamed to " + dst);
           }
           srcInodes[srcInodes.length - 2].setModificationTime(timestamp);
           dstInodes[dstInodes.length - 2].setModificationTime(timestamp);
@@ -958,7 +966,9 @@ class FSDirectory implements Closeable {
     try {
       return isDirEmpty("/");
     } catch (UnresolvedLinkException e) {
-      NameNode.stateChangeLog.debug("/ cannot be a symlink");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("/ cannot be a symlink");
+      }
       assert false : "/ cannot be a symlink";
       return true;
     }
@@ -999,8 +1009,10 @@ class FSDirectory implements Closeable {
       INode targetNode = inodes[inodes.length-1];
 
       if (targetNode == null) { // non-existent src
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-            +"failed to remove "+src+" because it does not exist");
+        if(NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+              +"failed to remove "+src+" because it does not exist");
+        }
         return 0;
       }
       if (inodes.length == 1) { // src is the root
@@ -1020,7 +1032,7 @@ class FSDirectory implements Closeable {
       int filesRemoved = targetNode.collectSubtreeBlocksAndClear(collectedBlocks);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-          +src+" is removed");
+            +src+" is removed");
       }
       return filesRemoved;
     }
@@ -1376,8 +1388,10 @@ class FSDirectory implements Closeable {
         if (getFSNamesystem() != null)
           NameNode.getNameNodeMetrics().numFilesCreated.inc();
         fsImage.getEditLog().logMkDir(cur, inodes[i]);
-        NameNode.stateChangeLog.debug(
-            "DIR* FSDirectory.mkdirs: created directory " + cur);
+        if(NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug(
+              "DIR* FSDirectory.mkdirs: created directory " + cur);
+        }
       }
     }
     return true;
@@ -1911,8 +1925,10 @@ class FSDirectory implements Closeable {
     }
     fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode);
     
-    NameNode.stateChangeLog.debug("DIR* FSDirectory.addSymlink: "
-                                  +path+" is added to the file system");
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.addSymlink: "
+          +path+" is added to the file system");
+    }
     return newNode;
   }
 

@@ -454,8 +454,10 @@ public class BlockReader extends FSInputChecker {
       out.flush();
     } catch (IOException e) {
       // its ok not to be able to send this.
-      LOG.debug("Could not write to datanode " + sock.getInetAddress() +
-                ": " + e.getMessage());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Could not write to datanode " + sock.getInetAddress() +
+                  ": " + e.getMessage());
+      }
     }
   }
 }

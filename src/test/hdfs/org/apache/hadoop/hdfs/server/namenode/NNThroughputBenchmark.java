@@ -770,14 +770,18 @@ public class NNThroughputBenchmark {
           dnRegistration, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, 0, 0);
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
-          LOG.debug("sendHeartbeat Name-node reply: " + cmd.getAction());
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("sendHeartbeat Name-node reply: " + cmd.getAction());
+          }
         }
       }
     }
 
     boolean addBlock(Block blk) {
       if(nrBlocks == blocks.size()) {
-        LOG.debug("Cannot add block: datanode capacity = " + blocks.size());
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Cannot add block: datanode capacity = " + blocks.size());
+        }
         return false;
       }
       blocks.set(nrBlocks, blk);

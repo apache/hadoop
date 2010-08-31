@@ -108,13 +108,15 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     int priLevel = getPriority(block, curReplicas, decomissionedReplicas,
                                expectedReplicas);
     if(priLevel != LEVEL && priorityQueues.get(priLevel).add(block)) {
-      NameNode.stateChangeLog.debug(
-                                    "BLOCK* NameSystem.UnderReplicationBlock.add:"
-                                    + block
-                                    + " has only "+curReplicas
-                                    + " replicas and need " + expectedReplicas
-                                    + " replicas so is added to neededReplications"
-                                    + " at priority level " + priLevel);
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.UnderReplicationBlock.add:"
+          + block
+          + " has only "+curReplicas
+          + " replicas and need " + expectedReplicas
+          + " replicas so is added to neededReplications"
+          + " at priority level " + priLevel);
+      }
       return true;
     }
     return false;
@@ -135,18 +137,22 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   boolean remove(Block block, int priLevel) {
     if(priLevel >= 0 && priLevel < LEVEL 
         && priorityQueues.get(priLevel).remove(block)) {
-      NameNode.stateChangeLog.debug(
-                                    "BLOCK* NameSystem.UnderReplicationBlock.remove: "
-                                    + "Removing block " + block
-                                    + " from priority queue "+ priLevel);
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.UnderReplicationBlock.remove: "
+          + "Removing block " + block
+          + " from priority queue "+ priLevel);
+      }
       return true;
     } else {
       for(int i=0; i<LEVEL; i++) {
         if(i!=priLevel && priorityQueues.get(i).remove(block)) {
-          NameNode.stateChangeLog.debug(
-                                        "BLOCK* NameSystem.UnderReplicationBlock.remove: "
-                                        + "Removing block " + block
-                                        + " from priority queue "+ i);
+          if(NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog.debug(
+              "BLOCK* NameSystem.UnderReplicationBlock.remove: "
+              + "Removing block " + block
+              + " from priority queue "+ i);
+          }
           return true;
         }
       }
@@ -163,25 +169,29 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
     int curPri = getPriority(block, curReplicas, decommissionedReplicas, curExpectedReplicas);
     int oldPri = getPriority(block, oldReplicas, decommissionedReplicas, oldExpectedReplicas);
-    NameNode.stateChangeLog.debug("UnderReplicationBlocks.update " + 
-                                  block +
-                                  " curReplicas " + curReplicas +
-                                  " curExpectedReplicas " + curExpectedReplicas +
-                                  " oldReplicas " + oldReplicas +
-                                  " oldExpectedReplicas  " + oldExpectedReplicas +
-                                  " curPri  " + curPri +
-                                  " oldPri  " + oldPri);
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("UnderReplicationBlocks.update " + 
+        block +
+        " curReplicas " + curReplicas +
+        " curExpectedReplicas " + curExpectedReplicas +
+        " oldReplicas " + oldReplicas +
+        " oldExpectedReplicas  " + oldExpectedReplicas +
+        " curPri  " + curPri +
+        " oldPri  " + oldPri);
+    }
     if(oldPri != LEVEL && oldPri != curPri) {
       remove(block, oldPri);
     }
     if(curPri != LEVEL && priorityQueues.get(curPri).add(block)) {
-      NameNode.stateChangeLog.debug(
-                                    "BLOCK* NameSystem.UnderReplicationBlock.update:"
-                                    + block
-                                    + " has only "+curReplicas
-                                    + " replicas and need " + curExpectedReplicas
-                                    + " replicas so is added to neededReplications"
-                                    + " at priority level " + curPri);
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.UnderReplicationBlock.update:"
+          + block
+          + " has only "+curReplicas
+          + " replicas and need " + curExpectedReplicas
+          + " replicas so is added to neededReplications"
+          + " at priority level " + curPri);
+      }
     }
   }
 

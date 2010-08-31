@@ -191,12 +191,14 @@ class INodeDirectory extends INode {
         existing[index] = curNode;
       }
       if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
-        NameNode.stateChangeLog.debug("UnresolvedPathException " +
-           " count: " + count +
-           " componenent: " + DFSUtil.bytes2String(components[count]) +
-           " full path: " + constructPath(components, 0) +
-           " remaining path: " + constructPath(components, count+1) +
-           " symlink: " + ((INodeSymlink)curNode).getLinkValue());
+        if(NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("UnresolvedPathException " +
+              " count: " + count +
+              " componenent: " + DFSUtil.bytes2String(components[count]) +
+              " full path: " + constructPath(components, 0) +
+              " remaining path: " + constructPath(components, count+1) +
+              " symlink: " + ((INodeSymlink)curNode).getLinkValue());
+        }
         final String linkTarget = ((INodeSymlink)curNode).getLinkValue();
         throw new UnresolvedPathException(constructPath(components, 0),
                                           constructPath(components, count+1),

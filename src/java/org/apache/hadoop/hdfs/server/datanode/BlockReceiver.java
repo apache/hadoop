@@ -481,7 +481,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     buf.position(endOfHeader);        
     
     if (lastPacketInBlock || len == 0) {
-      LOG.debug("Receiving an empty packet or the end of the block " + block);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Receiving an empty packet or the end of the block " + block);
+      }
     } else {
       int checksumLen = ((len + bytesPerChecksum - 1)/bytesPerChecksum)*
                                                             checksumSize;
@@ -553,7 +555,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               buf, buf.length - checksumSize, buf.length
             );
             checksumOut.write(buf);
-            LOG.debug("Writing out partial crc for data len " + len);
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Writing out partial crc for data len " + len);
+            }
             partialCrc = null;
           } else {
             lastChunkChecksum = Arrays.copyOfRange(
@@ -733,8 +737,6 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                    FSInputChecker.checksum2long(crcbuf);
       throw new IOException(msg);
     }
-    //LOG.debug("Partial CRC matches 0x" + 
-    //            Long.toHexString(partialCrc.getValue()));
   }
   
   
@@ -777,8 +779,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
      */
     synchronized void enqueue(long seqno, boolean lastPacketInBlock, long lastByteInPacket) {
       if (running) {
-        LOG.debug("PacketResponder " + numTargets + " adding seqno " + seqno +
-                  " to ack queue.");
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("PacketResponder " + numTargets + " adding seqno " + seqno +
+                    " to ack queue.");
+        }
         ackQueue.addLast(new Packet(seqno, lastPacketInBlock, lastByteInPacket));
         notifyAll();
       }
@@ -795,8 +799,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           running = false;
         }
       }
-      LOG.debug("PacketResponder " + numTargets +
-               " for block " + block + " Closing down.");
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("PacketResponder " + numTargets +
+                 " for block " + block + " Closing down.");
+      }
       running = false;
       notifyAll();
     }

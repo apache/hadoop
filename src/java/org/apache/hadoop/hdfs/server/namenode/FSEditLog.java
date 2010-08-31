@@ -867,7 +867,10 @@ public class FSEditLog {
       ArrayList<EditLogOutputStream> errorStreams = null;
       long start = now();
       for(EditLogOutputStream eStream : editStreams) {
-        FSImage.LOG.debug("loggin edits into " + eStream.getName()  + " stream");
+        if(FSImage.LOG.isDebugEnabled()) {
+          FSImage.LOG.debug("loggin edits into " + eStream.getName() +
+              " stream");
+        }
         if(!eStream.isOperationSupported(op))
           continue;
         try {

@@ -804,8 +804,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                                Block previous,
                                DatanodeInfo[] excludedNodes)
       throws IOException {
-    stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
-                         +src+" for "+clientName);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
+          +src+" for "+clientName);
+    }
     HashMap<Node, Node> excludedNodesSet = null;
     if (excludedNodes != null) {
       excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
@@ -825,8 +827,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    */
   public void abandonBlock(Block b, String src, String holder)
       throws IOException {
-    stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
-                         +b+" of file "+src);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
+          +b+" of file "+src);
+    }
     if (!namesystem.abandonBlock(b, src, holder)) {
       throw new IOException("Cannot abandon block during write to " + src);
     }
@@ -835,7 +839,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /** {@inheritDoc} */
   public boolean complete(String src, String clientName, Block last)
       throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.complete: "
+          + src + " for " + clientName);
+    }
     return namesystem.completeFile(src, clientName, last);
   }
 
@@ -890,7 +897,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   @Deprecated
   @Override
   public boolean rename(String src, String dst) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    }
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -913,7 +922,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   @Override
   public void rename(String src, String dst, Options.Rename... options)
       throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    }
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -956,7 +967,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /** {@inheritDoc} */
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
+    }
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1212,8 +1225,11 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                                      long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
-    stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
-           +"from "+nodeReg.getName()+" "+blist.getNumberOfBlocks() +" blocks");
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
+           + "from " + nodeReg.getName() + " " + blist.getNumberOfBlocks()
+           + " blocks");
+    }
 
     namesystem.processReport(nodeReg, blist);
     if (getFSImage().isUpgradeFinalized())
@@ -1225,8 +1241,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                             Block blocks[],
                             String delHints[]) throws IOException {
     verifyRequest(nodeReg);
-    stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
-                         +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
+          +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
+    }
     for (int i = 0; i < blocks.length; i++) {
       namesystem.blockReceived(nodeReg, blocks[i], delHints[i]);
     }

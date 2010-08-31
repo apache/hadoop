@@ -147,8 +147,10 @@ public class HftpFileSystem extends FileSystem {
     // otherwise it is hostname:RPC_PORT
     String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
     SecurityUtil.buildDTServiceName(name, DEFAULT_PORT);
-    LOG.debug("Trying to find DT for " + name + " using key=" + key + 
-        "; conf=" + conf.get(key, ""));
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Trying to find DT for " + name + " using key=" + key + 
+          "; conf=" + conf.get(key, ""));
+    }
     String nnServiceName = conf.get(key);
     int nnPort = NameNode.DEFAULT_PORT;
     if (nnServiceName != null) { // get the real port
@@ -169,7 +171,9 @@ public class HftpFileSystem extends FileSystem {
       for (Token<? extends TokenIdentifier> t : ugi.getTokens()) {
         if (DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(t.getKind()) &&
             t.getService().toString().equals(canonicalName)) {
-          LOG.debug("Found existing DT for " + name);
+          if(LOG.isDebugEnabled()) {
+            LOG.debug("Found existing DT for " + name);
+          }
           delegationToken = (Token<DelegationTokenIdentifier>) t;
           break;
         }
@@ -195,13 +199,17 @@ public class HftpFileSystem extends FileSystem {
           } catch (Exception e) {
             LOG.info("Couldn't get a delegation token from " + nnHttpUrl + 
             " using https.");
-            LOG.debug("error was ", e);
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("error was ", e);
+            }
             //Maybe the server is in unsecure mode (that's bad but okay)
             return null;
           }
           for (Token<? extends TokenIdentifier> t : c.getAllTokens()) {
-            LOG.debug("Got dt for " + getUri() + ";t.service="
-                +t.getService());
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Got dt for " + getUri() + ";t.service="
+                  +t.getService());
+            }
             t.setService(new Text(getCanonicalServiceName()));
             return t;
           }

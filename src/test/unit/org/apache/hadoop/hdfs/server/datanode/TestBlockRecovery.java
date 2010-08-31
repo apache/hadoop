@@ -151,7 +151,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testFinalizedReplicas () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     ReplicaRecoveryInfo replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
         REPLICA_LEN1, GEN_STAMP-1, ReplicaState.FINALIZED);
     ReplicaRecoveryInfo replica2 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -186,7 +188,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testFinalizedRbwReplicas() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     
     // rbw and finalized replicas have the same length
     ReplicaRecoveryInfo replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -223,7 +227,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testFinalizedRwrReplicas() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     
     // rbw and finalized replicas have the same length
     ReplicaRecoveryInfo replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -261,7 +267,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testRBWReplicas() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     ReplicaRecoveryInfo replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
         REPLICA_LEN1, GEN_STAMP-1, ReplicaState.RBW);
     ReplicaRecoveryInfo replica2 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -283,7 +291,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testRBW_RWRReplicas() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     ReplicaRecoveryInfo replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
         REPLICA_LEN1, GEN_STAMP-1, ReplicaState.RBW);
     ReplicaRecoveryInfo replica2 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -305,7 +315,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testRWRReplicas() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     ReplicaRecoveryInfo replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
         REPLICA_LEN1, GEN_STAMP-1, ReplicaState.RWR);
     ReplicaRecoveryInfo replica2 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -339,7 +351,9 @@ public class TestBlockRecovery {
   @Test
   public void testRecoveryInProgressException()
     throws IOException, InterruptedException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     DataNode spyDN = spy(dn);
     doThrow(new RecoveryInProgressException("Replica recovery is in progress")).
        when(spyDN).initReplicaRecovery(any(RecoveringBlock.class));
@@ -357,7 +371,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testErrorReplicas() throws IOException, InterruptedException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     DataNode spyDN = spy(dn);
     doThrow(new IOException()).
        when(spyDN).initReplicaRecovery(any(RecoveringBlock.class));
@@ -374,7 +390,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testZeroLenReplicas() throws IOException, InterruptedException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     DataNode spyDN = spy(dn);
     doReturn(new ReplicaRecoveryInfo(block.getBlockId(), 0,
         block.getGenerationStamp(), ReplicaState.FINALIZED)).when(spyDN).
@@ -405,7 +423,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testFailedReplicaUpdate() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     DataNode spyDN = spy(dn);
     doThrow(new IOException()).when(spyDN).updateReplicaUnderRecovery(
         block, RECOVERY_ID, block.getNumBytes());
@@ -424,7 +444,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testNoReplicaUnderRecovery() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     dn.data.createRbw(block);
     try {
       dn.syncBlock(rBlock, initBlockRecords(dn));
@@ -444,7 +466,9 @@ public class TestBlockRecovery {
    */
   @Test
   public void testNotMatchedReplicaID() throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     ReplicaInPipelineInterface replicaInfo = dn.data.createRbw(block);
     BlockWriteStreams streams = null;
     try {

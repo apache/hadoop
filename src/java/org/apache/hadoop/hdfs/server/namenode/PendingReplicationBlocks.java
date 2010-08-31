@@ -85,7 +85,10 @@ class PendingReplicationBlocks {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
-        FSNamesystem.LOG.debug("Removing pending replication for block" + block);
+        if(FSNamesystem.LOG.isDebugEnabled()) {
+          FSNamesystem.LOG.debug("Removing pending replication for block" +
+              block);
+        }
         found.decrementReplicas();
         if (found.getNumReplicas() <= 0) {
           pendingReplications.remove(block);
@@ -181,8 +184,10 @@ class PendingReplicationBlocks {
           pendingReplicationCheck();
           Thread.sleep(period);
         } catch (InterruptedException ie) {
-          FSNamesystem.LOG.debug(
+          if(FSNamesystem.LOG.isDebugEnabled()) {
+            FSNamesystem.LOG.debug(
                 "PendingReplicationMonitor thread received exception. " + ie);
+          }
         }
       }
     }
@@ -195,7 +200,9 @@ class PendingReplicationBlocks {
         Iterator<Map.Entry<Block, PendingBlockInfo>> iter =
                                     pendingReplications.entrySet().iterator();
         long now = now();
-        FSNamesystem.LOG.debug("PendingReplicationMonitor checking Q");
+        if(FSNamesystem.LOG.isDebugEnabled()) {
+          FSNamesystem.LOG.debug("PendingReplicationMonitor checking Q");
+        }
         while (iter.hasNext()) {
           Map.Entry<Block, PendingBlockInfo> entry = iter.next();
           PendingBlockInfo pendingBlock = entry.getValue();

@@ -59,6 +59,18 @@ class NamenodeJspHelper {
       return "";
     return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
   }
+  
+  /**
+   * returns security mode of the cluster (namenode)
+   * @return "on" if security is on, and "off" otherwise
+   */
+  static String getSecurityModeText() {  
+    if(UserGroupInformation.isSecurityEnabled()) {
+      return "Security is <em>ON</em> <br>";
+    } else {
+      return "Security is <em>OFF</em> <br>";
+    }
+  }
 
   static String getInodeLimitText(FSNamesystem fsn) {
     long inodes = fsn.dir.totalInodes();

@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -360,7 +359,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     }
     
     private void endBlock() {
-      DFSClient.LOG.debug("Closing old block " + block);
+      if(DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Closing old block " + block);
+      }
       this.setName("DataStreamer for file " + src);
       closeResponder();
       closeStream();
@@ -427,11 +428,15 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
           // get new block from namenode.
           if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
-            DFSClient.LOG.debug("Allocating new block");
+            if(DFSClient.LOG.isDebugEnabled()) {
+              DFSClient.LOG.debug("Allocating new block");
+            }
             nodes = nextBlockOutputStream(src);
             initDataStreaming();
           } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
-            DFSClient.LOG.debug("Append to block " + block);
+            if(DFSClient.LOG.isDebugEnabled()) {
+              DFSClient.LOG.debug("Append to block " + block);
+            }
             setupPipelineForAppendOrRecovery();
             initDataStreaming();
           }
@@ -856,14 +861,18 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
       boolean result = false;
       try {
-        DFSClient.LOG.debug("Connecting to " + nodes[0].getName());
+        if(DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Connecting to " + nodes[0].getName());
+        }
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
         s = dfsClient.socketFactory.createSocket();
         int timeoutValue = dfsClient.getDatanodeReadTimeout(nodes.length);
         NetUtils.connect(s, target, timeoutValue);
         s.setSoTimeout(timeoutValue);
         s.setSendBufferSize(DFSClient.DEFAULT_DATA_SOCKET_SIZE);
-        DFSClient.LOG.debug("Send buf size " + s.getSendBufferSize());
+        if(DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Send buf size " + s.getSendBufferSize());
+        }
         long writeTimeout = dfsClient.getDatanodeWriteTimeout(nodes.length);
 
         //
@@ -1031,8 +1040,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     this.blockSize = blockSize;
     this.blockReplication = replication;
     this.progress = progress;
-    if (progress != null) {
-      DFSClient.LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
+    if ((progress != null) && DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug(
+          "Set non-null progress callback on DFSOutputStream " + src);
     }
     
     if ( bytesPerChecksum < 1 || blockSize % bytesPerChecksum != 0) {
@@ -1246,9 +1256,11 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       // flush checksum buffer, but keep checksum buffer intact
       flushBuffer(true);
 
-      DFSClient.LOG.debug("DFSClient flush() : saveOffset " + saveOffset +  
-                " bytesCurBlock " + bytesCurBlock +
-                " lastFlushOffset " + lastFlushOffset);
+      if(DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("DFSClient flush() : saveOffset " + saveOffset +  
+            " bytesCurBlock " + bytesCurBlock +
+            " lastFlushOffset " + lastFlushOffset);
+      }
       
       // Flush only if we haven't already flushed till this offset.
       if (lastFlushOffset != bytesCurBlock) {

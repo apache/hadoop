@@ -625,9 +625,11 @@ public class BlockManager {
     if (count > 1) {
       addToInvalidates(blk, dn);
       removeStoredBlock(blk, node);
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.invalidateBlocks: "
-                                   + blk + " on "
-                                   + dn.getName() + " listed for deletion.");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.invalidateBlocks: "
+            + blk + " on "
+            + dn.getName() + " listed for deletion.");
+      }
     } else {
       NameNode.stateChangeLog.info("BLOCK* NameSystem.invalidateBlocks: "
           + blk + " on " + dn.getName()
@@ -886,9 +888,11 @@ public class BlockManager {
         // The reason we use 'pending' is so we can retry
         // replications that fail after an appropriate amount of time.
         pendingReplications.add(block, targets.length);
-        NameNode.stateChangeLog.debug(
-            "BLOCK* block " + block
-            + " is moved from neededReplications to pendingReplications");
+        if(NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug(
+              "BLOCK* block " + block
+              + " is moved from neededReplications to pendingReplications");
+        }
 
         // remove from neededReplications
         if(numEffectiveReplicas + targets.length >= requiredReplication) {
@@ -905,9 +909,11 @@ public class BlockManager {
                     "BLOCK* ask "
                     + srcNode.getName() + " to replicate "
                     + block + " to " + targetList);
-          NameNode.stateChangeLog.debug(
-                    "BLOCK* neededReplications = " + neededReplications.size()
-                    + " pendingReplications = " + pendingReplications.size());
+          if(NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog.debug(
+                "BLOCK* neededReplications = " + neededReplications.size()
+                + " pendingReplications = " + pendingReplications.size());
+          }
         }
       }
     }
@@ -1255,9 +1261,11 @@ public class BlockManager {
     }
     if (excessBlocks.add(block)) {
       excessBlocksCount++;
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates:"
-          + " (" + dn.getName() + ", " + block
-          + ") is added to excessReplicateMap");
+      if(NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("BLOCK* NameSystem.chooseExcessReplicates:"
+            + " (" + dn.getName() + ", " + block
+            + ") is added to excessReplicateMap");
+      }
     }
   }
 
@@ -1266,12 +1274,16 @@ public class BlockManager {
    * removed block is still valid.
    */
   void removeStoredBlock(Block block, DatanodeDescriptor node) {
-    NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
-        + block + " from " + node.getName());
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
+          + block + " from " + node.getName());
+    }
     synchronized (namesystem) {
       if (!blocksMap.removeNode(block, node)) {
-        NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
-            + block + " has already been removed from node " + node);
+        if(NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
+              + block + " has already been removed from node " + node);
+        }
         return;
       }
 
@@ -1296,8 +1308,11 @@ public class BlockManager {
       if (excessBlocks != null) {
         if (excessBlocks.remove(block)) {
           excessBlocksCount--;
-          NameNode.stateChangeLog.debug("BLOCK* NameSystem.removeStoredBlock: "
-              + block + " is removed from excessBlocks");
+          if(NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog.debug(
+                "BLOCK* NameSystem.removeStoredBlock: "
+                + block + " is removed from excessBlocks");
+          }
           if (excessBlocks.size() == 0) {
             excessReplicateMap.remove(node.getStorageID());
           }

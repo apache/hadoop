@@ -95,7 +95,9 @@ public class ProbabilityModel {
 
     float ret = conf.getFloat(newProbName,
         conf.getFloat(ALL_PROBABILITIES, DEFAULT_PROB));
-    LOG.debug("Request for " + newProbName + " returns=" + ret);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Request for " + newProbName + " returns=" + ret);
+    }
     // Make sure that probability level is valid.
     if (ret < DEFAULT_PROB || ret > MAX_PROB) 
       ret = conf.getFloat(ALL_PROBABILITIES, DEFAULT_PROB);

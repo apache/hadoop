@@ -198,7 +198,9 @@ public class TestLargeDirectoryDelete {
       try {
         wait();
       } catch (InterruptedException e) {
-        LOG.debug("Ignoring " + e, e);
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Ignoring " + e, e);
+        }
       }
     }
   }

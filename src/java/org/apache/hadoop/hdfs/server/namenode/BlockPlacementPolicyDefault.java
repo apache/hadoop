@@ -381,11 +381,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                long blockSize, int maxTargetPerLoc,
                                boolean considerLoad,
                                List<DatanodeDescriptor> results) {
-    Log logr = FSNamesystem.LOG;
     // check if the node is (being) decommissed
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      logr.debug("Node "+NodeBase.getPath(node)+
-                " is not chosen because the node is (being) decommissioned");
+      if(FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug("Node "+NodeBase.getPath(node)+
+            " is not chosen because the node is (being) decommissioned");
+      }
       return false;
     }
 
@@ -393,8 +394,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                      (node.getBlocksScheduled() * blockSize); 
     // check the remaining capacity of the target machine
     if (blockSize* FSConstants.MIN_BLOCKS_FOR_WRITE>remaining) {
-      logr.debug("Node "+NodeBase.getPath(node)+
-                " is not chosen because the node does not have enough space");
+      if(FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug("Node "+NodeBase.getPath(node)+
+            " is not chosen because the node does not have enough space");
+      }
       return false;
     }
       
@@ -406,8 +409,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         avgLoad = (double)stats.getTotalLoad()/size;
       }
       if (node.getXceiverCount() > (2.0 * avgLoad)) {
-        logr.debug("Node "+NodeBase.getPath(node)+
-                  " is not chosen because the node is too busy");
+        if(FSNamesystem.LOG.isDebugEnabled()) {
+          FSNamesystem.LOG.debug("Node "+NodeBase.getPath(node)+
+              " is not chosen because the node is too busy");
+        }
         return false;
       }
     }
@@ -423,8 +428,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
     }
     if (counter>maxTargetPerLoc) {
-      logr.debug("Node "+NodeBase.getPath(node)+
-                " is not chosen because the rack has too many chosen nodes");
+      if(FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug("Node "+NodeBase.getPath(node)+
+            " is not chosen because the rack has too many chosen nodes");
+      }
       return false;
     }
     return true;

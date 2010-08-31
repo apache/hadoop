@@ -105,7 +105,9 @@ public class TestNNLeaseRecovery {
    */
   @Test
   public void testInternalReleaseLease_allCOMPLETE () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());    
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());    
+    }
     LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
     Path file = spy(new Path("/test.dat"));
     DatanodeDescriptor dnd = mock(DatanodeDescriptor.class);
@@ -127,7 +129,9 @@ public class TestNNLeaseRecovery {
    */
   @Test(expected=IOException.class)
   public void testInternalReleaseLease_UNKNOWN_COMM () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
     Path file = 
       spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));    
@@ -151,7 +155,9 @@ public class TestNNLeaseRecovery {
    */
   @Test(expected=AlreadyBeingCreatedException.class)
   public void testInternalReleaseLease_COMM_COMM () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
     Path file = 
       spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
@@ -174,7 +180,9 @@ public class TestNNLeaseRecovery {
    */
   @Test
   public void testInternalReleaseLease_0blocks () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
     Path file = 
       spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
@@ -196,7 +204,9 @@ public class TestNNLeaseRecovery {
    */
   @Test(expected=AlreadyBeingCreatedException.class)
   public void testInternalReleaseLease_1blocks () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
     Path file = 
       spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
@@ -219,7 +229,9 @@ public class TestNNLeaseRecovery {
    */
   @Test
   public void testInternalReleaseLease_COMM_CONSTRUCTION () throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     LeaseManager.Lease lm = mock(LeaseManager.Lease.class);
     Path file = 
       spy(new Path("/" + GenericTestUtils.getMethodName() + "_test.dat"));
@@ -237,7 +249,9 @@ public class TestNNLeaseRecovery {
   @Test
   public void testCommitBlockSynchronization_BlockNotFound () 
     throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     long recoveryId = 2002;
     long newSize = 273487234;
     Path file = 
@@ -261,7 +275,9 @@ public class TestNNLeaseRecovery {
   @Test
   public void testCommitBlockSynchronization_notUR () 
     throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     long recoveryId = 2002;
     long newSize = 273487234;
     Path file = 
@@ -287,7 +303,9 @@ public class TestNNLeaseRecovery {
   @Test
   public void testCommitBlockSynchronization_WrongGreaterRecoveryID() 
     throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     long recoveryId = 2002;
     long newSize = 273487234;
     Path file = 
@@ -313,7 +331,9 @@ public class TestNNLeaseRecovery {
   @Test
   public void testCommitBlockSynchronization_WrongLesserRecoveryID() 
     throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     long recoveryId = 2002;
     long newSize = 273487234;
     Path file = 
@@ -339,7 +359,9 @@ public class TestNNLeaseRecovery {
   @Test
   public void testCommitBlockSynchronization_EqualRecoveryID() 
     throws IOException {
-    LOG.debug("Running " + GenericTestUtils.getMethodName());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Running " + GenericTestUtils.getMethodName());
+    }
     long recoveryId = 2002;
     long newSize = 273487234;
     Path file = 
@@ -360,6 +382,7 @@ public class TestNNLeaseRecovery {
         recoveryId, newSize, true, false, new DatanodeID[1]);
     } catch (NullPointerException ioe) {
       // It is fine to get NPE here because the datanodes array is empty
+      LOG.info("Exception ", ioe);
       recoveryChecked = true;
     }
     assertTrue("commitBlockSynchronization had to throw NPE here", recoveryChecked);

@@ -67,8 +67,10 @@ public class PipelinesTestUtil extends DataTransferTestUtil {
           }
           assertTrue("FI: Wrong receiving length",
               counterPartsBytes <= n.bytes);
-          FiTestUtil.LOG.debug("FI: before compare of Recv bytes. Expected " +
-              n.bytes + ", got " + counterPartsBytes);
+          if(FiTestUtil.LOG.isDebugEnabled()) {
+            FiTestUtil.LOG.debug("FI: before compare of Recv bytes. Expected "
+                + n.bytes + ", got " + counterPartsBytes);
+          }
         }
       }
     }
@@ -104,8 +106,11 @@ public class PipelinesTestUtil extends DataTransferTestUtil {
           }
           assertTrue("FI: Wrong acknowledged length",
               counterPartsBytes == n.bytes);
-          FiTestUtil.LOG.debug("FI: before compare of Acked bytes. Expected " +
-              n.bytes + ", got " + counterPartsBytes);
+          if(FiTestUtil.LOG.isDebugEnabled()) {
+            FiTestUtil.LOG.debug(
+                "FI: before compare of Acked bytes. Expected " +
+                n.bytes + ", got " + counterPartsBytes);
+          }
         }
       }
     }
