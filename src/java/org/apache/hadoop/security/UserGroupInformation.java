@@ -209,10 +209,25 @@ public class UserGroupInformation {
   }
 
   /**
-   * Set the configuration values for UGI.
+   * Initialize UGI and related classes.
    * @param conf the configuration to use
    */
   private static synchronized void initialize(Configuration conf) {
+    initUGI(conf);
+    // give the configuration on how to translate Kerberos names
+    try {
+      KerberosName.setConfiguration(conf);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
+          "configuration", ioe);
+    }
+  }
+  
+  /**
+   * Set the configuration values for UGI.
+   * @param conf the configuration to use
+   */
+  private static synchronized void initUGI(Configuration conf) {
     String value = conf.get(HADOOP_SECURITY_AUTHENTICATION);
     if (value == null || "simple".equals(value)) {
       useKerberos = false;
@@ -233,13 +248,6 @@ public class UserGroupInformation {
     javax.security.auth.login.Configuration.setConfiguration
         (new HadoopConfiguration());
     
-    // give the configuration on how to translate Kerberos names
-    try {
-      KerberosName.setConfiguration(conf);
-    } catch (IOException ioe) {
-      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
-          "configuration", ioe);
-    }
     isInitialized = true;
     UserGroupInformation.conf = conf;
   }

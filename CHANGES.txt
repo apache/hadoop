@@ -223,6 +223,9 @@ Trunk (unreleased changes)
     HADOOP-6932.  Namenode start (init) fails because of invalid kerberos 
     key, even when security set to "simple" (boryas)
 
+    HADOOP-6913. Circular initialization between UserGroupInformation and 
+    KerberosName (Kan Zhang via boryas)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
