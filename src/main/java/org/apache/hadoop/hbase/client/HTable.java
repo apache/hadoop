@@ -45,6 +45,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -76,7 +77,7 @@ public class HTable implements HTableInterface {
   private long currentWriteBufferSize;
   protected int scannerCaching;
   private int maxKeyValueSize;
-
+  private ExecutorService pool;  // For Multi
   private long maxScannerResultSize;
 
   /**
@@ -143,13 +144,11 @@ public class HTable implements HTableInterface {
       HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
-
-    int nrHRS = getCurrentNrHRS();
-    if (nrHRS == 0) {
-      // No servers running -- set default of 10 threads.
-      nrHRS = 10;
+    
+    int nrThreads = conf.getInt("hbase.htable.threads.max", getCurrentNrHRS());
+    if (nrThreads == 0) {
+      nrThreads = 1; // is there a better default?
     }
-    int nrThreads = conf.getInt("hbase.htable.threads.max", nrHRS);
 
     // Unfortunately Executors.newCachedThreadPool does not allow us to
     // set the maximum size of the pool, so we have to do it ourselves.
@@ -175,9 +174,6 @@ public class HTable implements HTableInterface {
       .getZooKeeperWrapper()
       .getRSDirectoryCount();
   }
-
-  // For multiput
-  private ExecutorService pool;
 
   /**
    * Tells whether or not a table is enabled or not.
@@ -509,6 +505,40 @@ public class HTable implements HTableInterface {
     );
   }
 
+  /**
+   * Method that does a batch call on Deletes, Gets and Puts.
+   *
+   * @param actions list of Get, Put, Delete objects
+   * @param results Empty Result[], same size as actions. Provides access to partial
+   * results, in case an exception is thrown. A null in the result array means that
+   * the call for that action failed, even after retries
+   * @throws IOException
+   */
+  public synchronized void batch(final List<Row> actions, final Result[] results) throws IOException {
+    connection.processBatch(actions, tableName, pool, results);
+  }
+
+  /**
+   * Method that does a batch call on Deletes, Gets and Puts.
+   * 
+   * @param actions list of Get, Put, Delete objects
+   * @return the results from the actions. A null in the return array means that
+   * the call for that action failed, even after retries
+   * @throws IOException
+   */
+  public synchronized Result[] batch(final List<Row> actions) throws IOException {
+    Result[] results = new Result[actions.size()];
+    connection.processBatch(actions, tableName, pool, results);
+    return results;
+  }
+
+  /**
+   * Deletes the specified cells/row.
+   * 
+   * @param delete The object that specifies what to delete.
+   * @throws IOException if a remote or network exception occurs.
+   * @since 0.20.0
+   */
   public void delete(final Delete delete)
   throws IOException {
     connection.getRegionServerWithRetries(
@@ -521,13 +551,28 @@ public class HTable implements HTableInterface {
     );
   }
 
+  /**
+   * Deletes the specified cells/rows in bulk.
+   * @param deletes List of things to delete. As a side effect, it will be modified:
+   * successful {@link Delete}s are removed. The ordering of the list will not change. 
+   * @throws IOException if a remote or network exception occurs. In that case
+   * the {@code deletes} argument will contain the {@link Delete} instances
+   * that have not be successfully applied.
+   * @since 0.20.1
+   */
   public void delete(final List<Delete> deletes)
   throws IOException {
-    int last = 0;
-    try {
-      last = connection.processBatchOfDeletes(deletes, this.tableName);
-    } finally {
-      deletes.subList(0, last).clear();
+    Result[] results = new Result[deletes.size()];
+    connection.processBatch((List) deletes, tableName, pool, results);
+
+    // mutate list so that it is empty for complete success, or contains only failed records
+    // results are returned in the same order as the requests in list
+    // walk the list backwards, so we can remove from list without impacting the indexes of earlier members
+    for (int i = results.length - 1; i>=0; i--) {
+      // if result is not null, it succeeded
+      if (results[i] != null) {
+        deletes.remove(i);
+      }
     }
   }
 
@@ -659,10 +704,17 @@ public class HTable implements HTableInterface {
     );
   }
 
+  /**
+   * Executes all the buffered {@link Put} operations.
+   * <p>
+   * This method gets called once automatically for every {@link Put} or batch
+   * of {@link Put}s (when {@link #batch(List)} is used) when
+   * {@link #isAutoFlush()} is {@code true}.
+   * @throws IOException if a remote or network exception occurs.
+   */
   public void flushCommits() throws IOException {
     try {
-      connection.processBatchOfPuts(writeBuffer,
-          tableName, pool);
+      connection.processBatchOfPuts(writeBuffer, tableName, pool);
     } finally {
       // the write buffer was adjusted by processBatchOfPuts
       currentWriteBufferSize = 0;

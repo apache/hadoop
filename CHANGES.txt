@@ -855,6 +855,8 @@ Release 0.21.0 - Unreleased
    HBASE-2904  Smart seeking using filters (Pranav via Ryan)
    HBASE-2922  HLog preparation and cleanup are done under the updateLock, 
                major slowdown
+   HBASE-1845  MultiGet, MultiDelete, and MultiPut - batched to the 
+   	       appropriate region servers (Marc Limotte via Ryan)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

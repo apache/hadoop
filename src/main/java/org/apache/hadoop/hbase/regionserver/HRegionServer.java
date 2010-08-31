@@ -81,12 +81,16 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
@@ -1687,7 +1691,6 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     if (put.getRow() == null)
       throw new IllegalArgumentException("update has null row");
-
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
@@ -2376,19 +2379,64 @@ public class HRegionServer implements HRegionInterface,
   public HServerInfo getHServerInfo() throws IOException {
     return serverInfo;
   }
+  
+  @Override
+  public MultiResponse multi(MultiAction multi) throws IOException {
+    MultiResponse response = new MultiResponse();
+    for (Map.Entry<byte[], List<Action>> e : multi.actions.entrySet()) {
+      byte[] regionName = e.getKey();
+      List<Action> actionsForRegion = e.getValue();
+      // sort based on the row id - this helps in the case where we reach the
+      // end of a region, so that we don't have to try the rest of the 
+      // actions in the list.
+      Collections.sort(actionsForRegion);
+      Row action = null;
+      try {
+        for (Action a : actionsForRegion) {
+          action = a.getAction();
+          if (action instanceof Delete) {
+            delete(regionName, (Delete) action);
+            response.add(regionName, new Pair<Integer, Result>(
+                a.getOriginalIndex(), new Result()));
+          } else if (action instanceof Get) {
+            response.add(regionName, new Pair<Integer, Result>(
+                a.getOriginalIndex(), get(regionName, (Get) action)));
+          } else if (action instanceof Put) {
+            put(regionName, (Put) action);
+            response.add(regionName, new Pair<Integer, Result>(
+                a.getOriginalIndex(), new Result()));
+          } else {
+            LOG.debug("Error: invalid Action, row must be a Get, Delete or Put.");
+            throw new IllegalArgumentException("Invalid Action, row must be a Get, Delete or Put.");
+          }
+        }
+      } catch (IOException ioe) {
+          if (multi.size() == 1) {
+            throw ioe;
+          } else {
+            LOG.error("Exception found while attempting " + action.toString()
+                + " " + StringUtils.stringifyException(ioe));
+            response.add(regionName,null);
+            // stop processing on this region, continue to the next.
+          }
+        }
+      }
+      
+      return response;
+    }
 
+  /**
+   * @deprecated Use HRegionServer.multi( MultiAction action) instead
+   */
   @Override
   public MultiPutResponse multiPut(MultiPut puts) throws IOException {
     MultiPutResponse resp = new MultiPutResponse();
-
     // do each region as it's own.
     for( Map.Entry<byte[], List<Put>> e: puts.puts.entrySet()) {
       int result = put(e.getKey(), e.getValue());
       resp.addResult(e.getKey(), result);
-
       e.getValue().clear(); // clear some RAM
     }
-
     return resp;
   }
 
@@ -2403,7 +2451,7 @@ public class HRegionServer implements HRegionInterface,
   public int getThreadWakeFrequency() {
     return threadWakeFrequency;
   }
-
+  
   //
   // Main program and support routines
   //
