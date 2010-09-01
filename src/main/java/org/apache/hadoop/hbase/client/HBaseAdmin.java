@@ -138,24 +138,21 @@ public class HBaseAdmin implements Abortable {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @throws IOException 
    */
   public boolean tableExists(final String tableName)
-  throws MasterNotRunningException, ZooKeeperConnectionException {
-    return tableExists(Bytes.toBytes(tableName));
+  throws IOException {
+    return MetaReader.tableExists(getCatalogTracker(), tableName);
   }
 
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @throws IOException 
    */
   public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException, ZooKeeperConnectionException {
-    connection.isMasterRunning();
-    return connection.tableExists(tableName);
+  throws IOException {
+    return tableExists(Bytes.toString(tableName));
   }
 
   /**
@@ -945,11 +942,10 @@ public class HBaseAdmin implements Abortable {
    * @return True if <code>tableNameOrRegionName</code> is *possibly* a region
    * name else false if a verified tablename (we call {@link #tableExists(byte[])};
    * else we throw an exception.
-   * @throws ZooKeeperConnectionException 
-   * @throws MasterNotRunningException 
+   * @throws IOException 
    */
   private boolean isRegionName(final byte [] tableNameOrRegionName)
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+  throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }

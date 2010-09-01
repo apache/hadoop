@@ -60,16 +60,6 @@ public interface HConnection {
   throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
-   * Checks if <code>tableName</code> exists.
-   * @param tableName Table to check.
-   * @return True if table exists already.
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
-   */
-  public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException, ZooKeeperConnectionException;
-
-  /**
    * A table that isTableEnabled == false and isTableDisabled == false
    * is possible. This happens when a table has a lot of regions
    * that must be processed.

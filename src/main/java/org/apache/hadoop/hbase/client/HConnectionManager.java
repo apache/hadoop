@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
@@ -370,38 +369,6 @@ public class HConnectionManager {
       throw new MasterNotRunningException();
     }
 
-    public boolean tableExists(final byte [] tableName)
-    throws MasterNotRunningException, ZooKeeperConnectionException {
-      getMaster();
-      if (tableName == null) {
-        throw new IllegalArgumentException("Table name cannot be null");
-      }
-      if (isMetaTableName(tableName)) {
-        return true;
-      }
-      boolean exists = false;
-      try {
-        HTableDescriptor[] tables = listTables();
-        for (HTableDescriptor table : tables) {
-          if (Bytes.equals(table.getName(), tableName)) {
-            exists = true;
-          }
-        }
-      } catch (IOException e) {
-        LOG.warn("Testing for table existence threw exception", e);
-      }
-      return exists;
-    }
-
-    /*
-     * @param n
-     * @return Truen if passed tablename <code>n</code> is equal to the name
-     * of a catalog table.
-     */
-    private static boolean isMetaTableName(final byte [] n) {
-      return MetaUtils.isMetaTableName(n);
-    }
-
     public HRegionLocation getRegionLocation(final byte [] name,
         final byte [] row, boolean reload)
     throws IOException {
@@ -409,7 +376,6 @@ public class HConnectionManager {
     }
 
     public HTableDescriptor[] listTables() throws IOException {
-      getMaster();
       final TreeSet<HTableDescriptor> uniqueTables =
         new TreeSet<HTableDescriptor>();
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
@@ -433,7 +399,6 @@ public class HConnectionManager {
         }
       };
       MetaScanner.metaScan(conf, visitor);
-
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
 
@@ -475,10 +440,6 @@ public class HConnectionManager {
      */
     private boolean testTableOnlineState(byte[] tableName, boolean online)
     throws IOException {
-      // TODO: Replace w/ CatalogTracker-based tableExists test.
-      if (!tableExists(tableName)) {
-        throw new TableNotFoundException(Bytes.toString(tableName));
-      }
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         // The root region is always enabled
         return true;
