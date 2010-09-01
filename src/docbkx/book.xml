@@ -7,14 +7,11 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
   <info>
-    <title>HBase Book
-<?eval ${project.version}?>
-
-    </title>
+    <title>HBase Book <?eval ${project.version}?></title>
   </info>
 
   <chapter xml:id="getting_started">
-    <title >Getting Started</title>
+    <title>Getting Started</title>
 
     <section>
       <title>Requirements</title>
@@ -64,4 +61,580 @@
 
     <para></para>
   </chapter>
+
+  <chapter>
+    <title>Regions</title>
+
+    <para>This chapter is all about Regions.</para>
+
+    <note>
+      <para>TODO: Review all of the below to ensure it matches what was
+      committed -- St.Ack 20100901</para>
+    </note>
+
+    <section>
+      <title>Region Transitions</title>
+
+      <para>Regions only transition in a limited set of circumstances.</para>
+
+      <section>
+        <title>Cluster Startup</title>
+
+        <para>During cluster startup, the Master will know that it is a
+        cluster startup and do a bulk assignment.</para>
+
+        <note>
+          <para>This should take HDFS block locations into account.</para>
+        </note>
+
+        <itemizedlist>
+          <listitem>
+            <para>Master startup determines whether this is startup or
+            failover by counting the number of RegionServer nodes in ZooKeeper.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master waits for the minimum number of RegionServers to be
+            available to be assigned regions.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master clears out anything in the <filename>/unassigned</filename> directory in ZooKeeper.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master randomly assigns out <constant>-ROOT-</constant> and
+            then <constant>.META.</constant>.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master determines a bulk assignment plan via the
+            <classname>LoadBalancer</classname></para>
+          </listitem>
+
+          <listitem>
+            <para>Master stores the plan in the
+            <classname>AssignmentManager</classname>.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master creates <code>OFFLINE</code> ZooKeeper nodes in
+            <filename>/unassigned</filename> for every region.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sends RPCs to each RegionServer, telling them to
+            <code>OPEN</code> their regions.</para>
+          </listitem>
+        </itemizedlist>
+
+        <para>All special cluster startup logic ends here.</para>
+
+        <note>
+          <para>So what can go wrong?</para>
+
+          <itemizedlist>
+            <listitem>
+              <para>We assume that the Master will not fail until after the
+              <code>OFFLINE</code> nodes have been created in ZK. RegionServers can fail at
+              any time.</para>
+            </listitem>
+
+            <listitem>
+              <para>If an RS fails at some point during this process, normal
+              region open/opening/opened handling will take care of it.</para>
+
+              <para>If the RS successfully opened a region, then it will be
+              taken care of in the normal RS failure handling.</para>
+
+              <para>If the RS did not successfully open a region, the
+              RegionManager or MasterPlanner will notice that the OFFLINE (or
+              OPENING) node in ZK has not been updated. This will trigger a
+              re-assignment to a different server. This logic is not special
+              to startup, all assignments will eventually time out if the
+              destination server never proceeds.</para>
+            </listitem>
+
+            <listitem>
+              <para>If the Master fails (after creating the ZK nodes), the
+              failed-over Master will see all of the regions in transition. It
+              will handle it in the same way any failed-over Master will
+              handle existing regions in transition.</para>
+            </listitem>
+          </itemizedlist>
+        </note>
+      </section>
+
+      <section>
+        <title>Load Balancing</title>
+
+        <para> Periodically, and when there are not any regions in transition,
+        a load balancer will run and move regions around to balance cluster
+        load.</para>
+
+        <itemizedlist>
+          <listitem>
+            <para>Periodic timer expires initializing a load balance (Load
+            Balancer is an instance of <classname>Chore</classname>).</para>
+          </listitem>
+
+          <listitem>
+            <para>Currently if regions in transition, load balancer goes back
+            to sleep.</para>
+
+            <note>
+              <para>Should it block until there are no regions in
+              transition.</para>
+            </note>
+          </listitem>
+
+          <listitem>
+            <para> The <classname>AssignmentManager</classname> determines a
+            balancing plan via the LoadBalancer.</para>
+          </listitem>
+
+          <listitem>
+            <para> Master stores the plan in the
+            <classname>AssignmentMaster</classname> store of
+            <classname>RegionPlan</classname>s</para>
+          </listitem>
+
+          <listitem>
+            <para> Master sends RPCs to the source RSs, telling them to
+            <code>CLOSE</code> the regions.</para>
+          </listitem>
+        </itemizedlist>
+
+        <para>That is it for the initial part of the load balance. Further
+        steps will be executed following event-triggers from ZK or timeouts if
+        closes run too long. It's not clear what to do in the case of a
+        long-running CLOSE besides ask again.</para>
+
+        <itemizedlist>
+          <listitem>
+            <para> RS receives CLOSE RPC, changes to CLOSING, and begins
+            closing the region.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sees that region is now CLOSING but does
+            nothing.</para>
+          </listitem>
+
+          <listitem>
+            <para>RS closes region and changes ZK node to CLOSED.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sees that region is now CLOSED.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master looks at the plan for the specified region to figure
+            out the desired destination server.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sends an RPC to the destination RS telling it to OPEN
+            the region.</para>
+          </listitem>
+
+          <listitem>
+            <para>RS receives OPEN RPC, changes to OPENING, and begins opening
+            the region.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sees that region is now OPENING but does
+            nothing.</para>
+          </listitem>
+
+          <listitem>
+            <para>RS opens region and changes ZK node to OPENED. Edits .META.
+            updating the regions location.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sees that region is now OPENED.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master removes the region from all in-memory
+            structures.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master deletes the OPENED node from ZK.</para>
+          </listitem>
+        </itemizedlist>
+
+        <para>The Master or RSs can fail during this process. There is nothing
+        special about handling regions in transition due to load balancing so
+        consult the descriptions below for how this is handled.</para>
+      </section>
+
+      <section>
+        <title>Table Enable/Disable</title>
+
+        <para> Users can enable and disable tables manually. This is done to
+        make config changes to tables, drop tables, etc...</para>
+
+        <note>
+          <para>Because all failover logic is designed to ensure assignment of
+          all regions in transition, these operations will not properly ride
+          over Master or RegionServer failures. Since these are
+          client-triggered operations, this should be okay for the initial
+          master design. Moving forward, a special node could be put in ZK to
+          denote that a enable/disable has been requested. Another option is
+          to persist region movement plans into ZK instead of just in-memory.
+          In that case, an empty destination would signal that the region
+          should not be reopened after being closed.</para>
+        </note>
+
+        <section>
+          <title>Disable</title>
+
+          <itemizedlist>
+            <listitem>
+              <para>Client sends Master an RPC to disable a table.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master finds all regions of the table.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master stores the plan (do not re-open the regions once
+              closed).</para>
+            </listitem>
+
+            <listitem>
+              <para>Master sends RPCs to RSs to close all the regions of the
+              table.</para>
+            </listitem>
+
+            <listitem>
+              <para>RS receives CLOSE RPC, creates ZK node in CLOSING state,
+              and begins closing the region.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master sees that region is now CLOSING but does
+              nothing.</para>
+            </listitem>
+
+            <listitem>
+              <para>RS closes region and changes ZK node to CLOSED.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master sees that region is now CLOSED.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master looks at the plan for the specified region and sees
+              that it should not reopen.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master deletes the unassigned znode. It is no longer
+              responsible for ensuring assignment/availability of this
+              region.</para>
+            </listitem>
+          </itemizedlist>
+
+          <section>
+            <title>Enable</title>
+
+            <itemizedlist>
+              <listitem>
+                <para>Client sends Master an RPC to disable a table.</para>
+              </listitem>
+
+              <listitem>
+                <para>Master finds all regions of the table.</para>
+              </listitem>
+
+              <listitem>
+                <para>Master creates an unassigned node in an OFFLINE state
+                for each region.</para>
+              </listitem>
+
+              <listitem>
+                <para>Master sends RPCs to RSs to open all the regions of the
+                table.</para>
+              </listitem>
+
+              <listitem>
+                <para>RS receives OPEN RPC, transitions ZK node to OPENING
+                state, and begins opening the region.</para>
+              </listitem>
+
+              <listitem>
+                <para>Master sees that region is now OPENING but does
+                nothing.</para>
+              </listitem>
+
+              <listitem>
+                <para>RS opens region and changes ZK node to OPENED.</para>
+              </listitem>
+
+              <listitem>
+                <para>Master sees that region is now OPENED.</para>
+              </listitem>
+
+              <listitem>
+                <para>Master deletes the unassigned znode.</para>
+              </listitem>
+            </itemizedlist>
+          </section>
+        </section>
+      </section>
+
+      <section>
+        <title>RegionServer Failure</title>
+
+        <itemizedlist>
+          <listitem>
+            <para>Master is alerted via ZK that an RS ephemeral node is
+            gone.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master begins RS failure process.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master determines which regions need to be handled.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master in-memory state shows all regions currently assigned
+            to the dead RS.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master in-memory plans show any regions that were in
+            transitioning to the dead RS.</para>
+          </listitem>
+
+          <listitem>
+            <para>With list of regions, Master now forces assignment of all
+            regions to other RSs.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master creates or force updates all existing ZK unassigned
+            nodes to be OFFLINE.</para>
+          </listitem>
+
+          <listitem>
+            <para>Master sends RPCs to RSs to open all the regions.</para>
+          </listitem>
+
+          <listitem>
+            <para>Normal operations from here on.</para>
+          </listitem>
+        </itemizedlist>
+
+        <para>There are some complexities here. For regions in transition that
+        were somehow involved with the dead RS, these could be in any of the 5
+        states in ZK.</para>
+
+        <itemizedlist>
+          <listitem>
+            <para> <code>OFFLINE</code> Generate a new assignment and send an
+            OPEN RPC.</para>
+          </listitem>
+
+          <listitem>
+            <para> <code>CLOSING</code> If the failed RS is the source, we
+            overwrite the state to OFFLINE, generate a new assignment, and
+            send an OPEN RPC. If the failed RS is the destination, we
+            overwrite the state to OFFLINE and send an OPEN RPC to the
+            original destination. If for some reason we don't have an existing
+            plan (concurrent Master failure), generate a new assignment and
+            send an OPEN RPC.</para>
+          </listitem>
+
+          <listitem>
+            <para><code>CLOSED</code> If the failed RS is the source, we can
+            safely ignore this. The normal ZK event handling should deal with
+            this. If the failed RS is the destination, we generate a new
+            assignment and send an OPEN RPC.</para>
+          </listitem>
+
+          <listitem>
+            <para> OPENING or OPENED If the failed RS was the original source,
+            ignore. If the failed RS is the destination, we overwrite the
+            state to OFFLINE, generate a new assignment, and send an OPEN
+            RPC.</para>
+          </listitem>
+        </itemizedlist>
+
+        <para>In all of these cases, it is important to note that the
+        transitions on the RS side ensure only a single RS ever successfully
+        completes a transition. This is done by reading the current state,
+        verifying it is expected, and then issuing the update with the version
+        number of the read value. If multiple RSs are attempting this
+        operation, exactly one can succeed.</para>
+      </section>
+
+      <section>
+        <title>Master Failover</title>
+
+        <itemizedlist>
+          <listitem>
+            <para>Master initializes and finds out that he is a failed-over
+            Master.</para>
+          </listitem>
+
+          <listitem>
+            <para>Before Master starts up the normal handlers for region
+            transitions he grabs all nodes in /unassigned.</para>
+          </listitem>
+
+          <listitem>
+            <para>If no regions are in transition, failover is done and he
+            continues.</para>
+          </listitem>
+
+          <listitem>
+            <para>If regions are in transition, each will be handled according
+            to the current region state in ZK.</para>
+          </listitem>
+
+          <listitem>
+            <para> Before processing the regions in transition, the normal
+            handlers start to ensure we don't miss any transitions. The
+            handling of opens on the RS side ensures we don't dupe assign even
+            if things have changed before we finish acting on
+            them.<itemizedlist>
+                <listitem>
+                  <para>OFFLINE Generate a new assignment and send an OPEN
+                  RPC.</para>
+                </listitem>
+
+                <listitem>
+                  <para>CLOSING Nothing to be done. Normal handlers take care
+                  of timeouts.</para>
+                </listitem>
+
+                <listitem>
+                  <para>CLOSED Generate a new assignment and send an OPEN
+                  RPC.</para>
+                </listitem>
+
+                <listitem>
+                  <para>OPENING Nothing to be done. Normal handlers take care
+                  of timeouts.</para>
+                </listitem>
+
+                <listitem>
+                  <para>OPENED Delete the node from ZK. Region was
+                  successfully opened but the previous Master did not
+                  acknowledge it.</para>
+                </listitem>
+              </itemizedlist></para>
+          </listitem>
+
+          <listitem>
+            <para>Once this is done, everything further is dealt with as
+            normal by the RegionManager.</para>
+          </listitem>
+        </itemizedlist>
+      </section>
+
+      <section>
+        <title>Summary of Region Transition States</title>
+
+        <note>
+          <para>Check below is complete -- St.Ack 20100901</para>
+        </note>
+
+        <section>
+          <title>Master</title>
+
+          <itemizedlist>
+            <listitem>
+              <para>Master creates an unassigned node as OFFLINE.</para>
+
+              <para>Cluster startup and table enabling.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master forces an existing unassigned node to
+              OFFLINE.</para>
+
+              <para>RegionServer failure.</para>
+
+              <para>Allows transitions from all states to OFFLINE.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master deletes an unassigned node that was in a OPENED
+              state.</para>
+
+              <para>Normal region transitions. Besides cluster startup, no
+              other deletions of unassigned nodes is allowed.</para>
+            </listitem>
+
+            <listitem>
+              <para>Master deletes all unassigned nodes regardless of
+              state.</para>
+
+              <para>Cluster startup before any assignment happens.</para>
+            </listitem>
+          </itemizedlist>
+        </section>
+
+        <section>
+          <title>RegionServer</title>
+
+          <itemizedlist>
+            <listitem>
+              <para> RegionServer creates an unassigned node as
+              CLOSING.</para>
+
+              <para>All region closes will do this in response to a CLOSE RPC
+              from Master. </para>
+
+              <para>A node can never be transitioned to CLOSING, only
+              created.</para>
+            </listitem>
+
+            <listitem>
+              <para>RegionServer transitions an unassigned node from CLOSING
+              to CLOSED.</para>
+
+              <para>Normal region closes. CAS operation.</para>
+            </listitem>
+
+            <listitem>
+              <para>RegionServer transitions an unassigned node from OFFLINE
+              to OPENING.</para>
+
+              <para>All region opens will do this in response to an OPEN RPC
+              from the Master.</para>
+
+              <para>Normal region opens. CAS operation.</para>
+            </listitem>
+
+            <listitem>
+              <para>RegionServer transitions an unassigned node from OPENING
+              to OPENED.</para>
+
+              <para>Normal region opens. CAS operation.</para>
+            </listitem>
+          </itemizedlist>
+        </section>
+      </section>
+    </section>
+  </chapter>
+
+  <appendix>
+    <title></title>
+
+    <para></para>
+  </appendix>
 </book>
