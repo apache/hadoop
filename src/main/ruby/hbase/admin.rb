@@ -334,7 +334,7 @@ module Hbase
         arg.include?(HColumnDescriptor::BLOCKCACHE)? JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE]): HColumnDescriptor::DEFAULT_BLOCKCACHE,
         arg.include?(HColumnDescriptor::BLOCKSIZE)? JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE]): HColumnDescriptor::DEFAULT_BLOCKSIZE,
         arg.include?(HColumnDescriptor::TTL)? JInteger.new(arg[HColumnDescriptor::TTL]): HColumnDescriptor::DEFAULT_TTL,
-        arg.include?(HColumnDescriptor::BLOOMFILTER)? JBoolean.valueOf(arg[HColumnDescriptor::BLOOMFILTER]): HColumnDescriptor::DEFAULT_BLOOMFILTER,
+        arg.include?(HColumnDescriptor::BLOOMFILTER)? arg[HColumnDescriptor::BLOOMFILTER]: HColumnDescriptor::DEFAULT_BLOOMFILTER,
         arg.include?(HColumnDescriptor::REPLICATION_SCOPE)? JInteger.new(arg[REPLICATION_SCOPE]): HColumnDescriptor::DEFAULT_REPLICATION_SCOPE)
     end
 

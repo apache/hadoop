@@ -488,6 +488,8 @@ Release 0.21.0 - Unreleased
                (Karthik Ranganathan via Stack)
    HBASE-2915  Deadlock between HRegion.ICV and HRegion.close
    HBASE-2920  HTable.checkAndPut/Delete doesn't handle null values
+   HBASE-2944  cannot alter bloomfilter setting for a column family from
+               hbase shell (Kannan via jgray)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
