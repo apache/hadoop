@@ -27,6 +27,9 @@ Release 0.21.0 - Unreleased
    HBASE-2771  Update our hadoop jar to be latest from 0.20-append branch
    HBASE-2803  Remove remaining Get code from Store.java,etc
    HBASE-2553  Revisit IncrementColumnValue implementation in 0.22
+   HBASE-2692  Master rewrite and cleanup for 0.90
+               (Karthik Ranganathan, Jon Gray & Stack)
+               
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew
