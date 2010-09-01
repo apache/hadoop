@@ -36,7 +36,7 @@ module Hbase
     def initialize(configuration, formatter)
       @admin = HBaseAdmin.new(configuration)
       connection = @admin.getConnection()
-      @zk_wrapper = connection.getZooKeeperWrapper()
+      @zk_wrapper = connection.getZooKeeperWatcher()
       zk = @zk_wrapper.getZooKeeper()
       @zk_main = ZooKeeperMain.new(zk)
       @formatter = formatter
