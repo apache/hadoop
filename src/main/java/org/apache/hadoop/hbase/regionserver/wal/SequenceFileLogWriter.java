@@ -91,7 +91,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
     // Now do dirty work to see if syncFs is available.
     // Test if syncfs is available.
     Method m = null;
-    if (conf.getBoolean("dfs.support.append", false)) {
+    boolean append = conf.getBoolean("dfs.support.append", false);
+    if (append) {
       try {
         // function pointer to writer.syncFs()
         m = this.writer.getClass().getMethod("syncFs", new Class<?> []{});
@@ -103,7 +104,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
     }
     this.syncFs = m;
     LOG.info((this.syncFs != null)?
-      "Using syncFs -- HDFS-200": "syncFs -- HDFS-200 -- not available");
+      "Using syncFs -- HDFS-200":
+      ("syncFs -- HDFS-200 -- not available, dfs.support.append=" + append));
   }
 
   @Override

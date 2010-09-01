@@ -496,6 +496,8 @@ Release 0.21.0 - Unreleased
    HBASE-2948  bin/hbase shell broken (after hbase-2692)
                (Sebastian Bauer via Stack)
    HBASE-2954  Fix broken build caused by hbase-2692 commit
+   HBASE-2918  SequenceFileLogWriter doesnt make it clear if there is no
+               append by config or by missing lib/feature
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
