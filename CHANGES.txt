@@ -493,6 +493,8 @@ Release 0.21.0 - Unreleased
    HBASE-2920  HTable.checkAndPut/Delete doesn't handle null values
    HBASE-2944  cannot alter bloomfilter setting for a column family from
                hbase shell (Kannan via jgray)
+   HBASE-2948  bin/hbase shell broken (after hbase-2692)
+               (Sebastian Bauer via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
