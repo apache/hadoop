@@ -467,7 +467,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   private static Chore getAndStartBalancerChore(final HMaster master) {
     String name = master.getServerName() + "-balancerChore";
-    int period = master.getConfiguration().getInt("hbase.balancer.period", 600000);
+    int period = master.getConfiguration().
+      getInt("hbase.master.balancer.period", 3000000);
     // Start up the load balancer chore
     Chore chore = new Chore(name, period, master) {
       @Override

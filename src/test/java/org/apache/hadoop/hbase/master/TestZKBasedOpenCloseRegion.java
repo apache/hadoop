@@ -64,7 +64,6 @@ public class TestZKBasedOpenCloseRegion {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setBoolean("dfs.support.append", true);
     c.setInt("hbase.regionserver.info.port", 0);
-    c.setInt("hbase.master.meta.thread.rescanfrequency", 5*1000);
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);

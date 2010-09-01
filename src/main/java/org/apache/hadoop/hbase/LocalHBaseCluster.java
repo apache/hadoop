@@ -49,10 +49,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
  * that is 'local', not 'localhost', and the port number the master should use
  * instead of 60000.
  *
- * <p>To make 'local' mode more responsive, make values such as
- * <code>hbase.regionserver.msginterval</code>,
- * <code>hbase.master.meta.thread.rescanfrequency</code>, and
- * <code>hbase.server.thread.wakefrequency</code> a second or less.
  */
 public class LocalHBaseCluster {
   static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);

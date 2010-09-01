@@ -396,7 +396,7 @@ public class TestFromClientSide {
     for (int i = 0; i < TEST_UTIL.getConfiguration().getInt("hbase.test.retries", 30); i++) {
       Thread.currentThread();
       try {
-        Thread.sleep(TEST_UTIL.getConfiguration().getInt("hbase.server.thread.wakefrequency", 1000));
+        Thread.sleep(1000);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }

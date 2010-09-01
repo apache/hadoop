@@ -126,16 +126,14 @@ public class ServerManager {
     this.master = master;
     this.services = services;
     Configuration c = master.getConfiguration();
-    int metaRescanInterval = c.getInt("hbase.master.meta.thread.rescanfrequency",
-      60 * 1000);
+    int monitorInterval = c.getInt("hbase.master.monitor.interval", 60 * 1000);
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 1);
     this.metrics = new MasterMetrics(master.getServerName());
-    this.serverMonitorThread = new ServerMonitor(metaRescanInterval, master);
+    this.serverMonitorThread = new ServerMonitor(monitorInterval, master);
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
-    this.logCleaner = new LogCleaner(
-      c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
+    this.logCleaner = new LogCleaner(c.getInt("hbase.master.cleaner.interval", 60 * 1000),
       master, c, this.services.getMasterFileSystem().getFileSystem(),
       this.services.getMasterFileSystem().getOldLogDir());
     Threads.setDaemonThreadRunning(logCleaner,

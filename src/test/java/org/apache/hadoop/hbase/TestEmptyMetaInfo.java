@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Tests master cleanup of rows in meta table where there is no HRegionInfo
+ * TODO: Does this test make sense any more?
  */
 public class TestEmptyMetaInfo extends HBaseClusterTestCase {
   /**
@@ -50,8 +51,7 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
           Bytes.toBytes("localhost:1234"));
       t.put(put);
     }
-    long sleepTime =
-      conf.getLong("hbase.master.meta.thread.rescanfrequency", 10000);
+    long sleepTime = conf.getLong("hbase.master.monitor.interval", 1000);
     int tries = conf.getInt("hbase.client.retries.number", 5);
     int count = 0;
     do {

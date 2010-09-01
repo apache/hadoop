@@ -336,7 +336,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     initializeZooKeeper();
     initializeThreads();
-    int nbBlocks = 0; // TODO: FIX WAS OOME'ing in TESTS ->  conf.getInt("hbase.regionserver.nbreservationblocks", 4);
+    int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
     for (int i = 0; i < nbBlocks; i++) {
       reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
     }

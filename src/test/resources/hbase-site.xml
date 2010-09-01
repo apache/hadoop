@@ -46,13 +46,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.meta.thread.rescanfrequency</name>
-    <value>10000</value>
-    <description>How long the HMaster sleeps (in milliseconds) between scans of
-    the root and meta tables.
-    </description>
-  </property>
-  <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>1000</value>
     <description>Time to sleep in between searches for work (in milliseconds).

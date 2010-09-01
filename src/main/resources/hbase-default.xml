@@ -72,13 +72,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.meta.thread.rescanfrequency</name>
-    <value>60000</value>
-    <description>How long the HMaster sleeps (in milliseconds) between scans of
-    the root and meta tables.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.port</name>
     <value>60020</value>
     <description>The port an HBase region server binds to.
@@ -164,10 +157,10 @@
   </property>
   <property>
     <name>hbase.regionserver.msginterval</name>
-    <value>1000</value>
+    <value>3000</value>
     <description>Interval between messages from the RegionServer to HMaster
-    in milliseconds. Use a high value like 3000 for clusters with more than 10
-    nodes. Default is 1 second so that HBase seems more 'live'.
+    in milliseconds. Use a high value for clusters with more than 100
+    nodes. Default is 3 seconds.
     </description>
   </property>
   <property>
@@ -268,27 +261,10 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.global.memstore.upperLimit</name>
-    <value>0.4</value>
-    <description>Maximum size of all memstores in a region server before new
-      updates are blocked and flushes are forced. Defaults to 40% of heap
-    </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.global.memstore.lowerLimit</name>
-    <value>0.35</value>
-    <description>When memstores are being forced to flush to make room in
-      memory, keep flushing until we hit this mark. Defaults to 30% of heap.
-      This value equal to hbase.regionserver.global.memstore.upperLimit causes
-      the minimum possible flushing to occur when updates are blocked due to
-      memstore limiting.
-    </description>
-  </property>
-  <property>
-    <name>hbase.hbasemaster.maxregionopen</name>
-    <value>120000</value>
-    <description>Period to wait for a region open.  If regionserver
-    takes longer than this interval, assign to a new regionserver.
+    <name>hbase.master.balancer.period
+    </name>
+    <value>300000</value>
+    <description>Period at which the balancer runs in the master.
     </description>
   </property>
   <property>
@@ -310,17 +286,27 @@
     </description>
   </property>  
   <property>
-    <name>hbase.regions.percheckin</name>
-    <value>10</value>
-    <description>Maximum number of regions that can be assigned in a single go
-    to a region server.
+    <name>hbase.regionserver.global.memstore.upperLimit</name>
+    <value>0.4</value>
+    <description>Maximum size of all memstores in a region server before new
+      updates are blocked and flushes are forced. Defaults to 40% of heap
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.global.memstore.lowerLimit</name>
+    <value>0.35</value>
+    <description>When memstores are being forced to flush to make room in
+      memory, keep flushing until we hit this mark. Defaults to 30% of heap.
+      This value equal to hbase.regionserver.global.memstore.upperLimit causes
+      the minimum possible flushing to occur when updates are blocked due to
+      memstore limiting.
     </description>
   </property>
   <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>10000</value>
     <description>Time to sleep in between searches for work (in milliseconds).
-    Used as sleep interval by service threads such as META scanner and log roller.
+    Used as sleep interval by service threads such as log roller.
     </description>
   </property>
   <property>
@@ -415,13 +401,6 @@
     <description>The time (in miliseconds) between 'major' compactions of all
     HStoreFiles in a region.  Default: 1 day.
     Set to 0 to disable automated major compactions.
-    </description>
-  </property>
-  <property>
-    <name>hbase.regions.slop</name>
-    <value>0.3</value>
-    <description>Rebalance if regionserver has average + (average * slop) regions.
-    Default is 30% slop.
     </description>
   </property>
   <property>
