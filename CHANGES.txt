@@ -863,7 +863,13 @@ Release 0.21.0 - Unreleased
    HBASE-2922  HLog preparation and cleanup are done under the updateLock, 
                major slowdown
    HBASE-1845  MultiGet, MultiDelete, and MultiPut - batched to the 
-   	       appropriate region servers (Marc Limotte via Ryan)
+               appropriate region servers (Marc Limotte via Ryan)
+   HBASE-2652  Open daughters immediately on parent's regionserver
+   HBASE-2867  Have master show its address using hostname rather than IP
+   HBASE-2405  Close, split, open of regions in RegionServer are run by a single
+               thread only.
+   HBASE-1676  load balancing on a large cluster doesn't work very well
+
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
