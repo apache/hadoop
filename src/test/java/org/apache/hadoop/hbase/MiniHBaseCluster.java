@@ -192,6 +192,8 @@ public class MiniHBaseCluster {
     public void run() {
       try {
         super.run();
+      } catch (Throwable t) {
+        LOG.error("Exception in run", t);
       } finally {
         // Run this on the way out.
         if (this.shutdownThread != null) {

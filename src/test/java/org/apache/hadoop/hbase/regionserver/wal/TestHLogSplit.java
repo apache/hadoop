@@ -611,7 +611,7 @@ public class TestHLogSplit {
   throws IOException {
     Path tdir = HTableDescriptor.getTableDir(rootdir, table);
     Path editsdir = HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
-      HRegionInfo.encodeRegionName(region.getBytes())));
+      Bytes.toString(region.getBytes())));
     FileStatus [] files = this.fs.listStatus(editsdir);
     assertEquals(1, files.length);
     return files[0].getPath();

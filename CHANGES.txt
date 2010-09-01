@@ -495,6 +495,7 @@ Release 0.21.0 - Unreleased
                hbase shell (Kannan via jgray)
    HBASE-2948  bin/hbase shell broken (after hbase-2692)
                (Sebastian Bauer via Stack)
+   HBASE-2954  Fix broken build caused by hbase-2692 commit
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
