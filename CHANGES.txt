@@ -125,6 +125,9 @@ Trunk (unreleased changes)
     HADOOP-6803. Add native gzip read/write coverage to TestCodec.
     (Eli Collins via tomwhite)
 
+    HADOOP-6934. Test for ByteWritable comparator.
+    (Johannes Zillmann via Eli Collins)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
