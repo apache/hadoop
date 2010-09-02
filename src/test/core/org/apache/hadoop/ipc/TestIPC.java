@@ -94,7 +94,7 @@ public class TestIPC extends TestCase {
         try {
           LongWritable param = new LongWritable(RANDOM.nextLong());
           LongWritable value =
-            (LongWritable)client.call(param, server, null, null, 0);
+            (LongWritable)client.call(param, server, null, null, 0, conf);
           if (!param.equals(value)) {
             LOG.fatal("Call failed!");
             failed = true;
@@ -127,7 +127,7 @@ public class TestIPC extends TestCase {
           Writable[] params = new Writable[addresses.length];
           for (int j = 0; j < addresses.length; j++)
             params[j] = new LongWritable(RANDOM.nextLong());
-          Writable[] values = client.call(params, addresses, null, null);
+          Writable[] values = client.call(params, addresses, null, null, conf);
           for (int j = 0; j < addresses.length; j++) {
             if (!params[j].equals(values[j])) {
               LOG.fatal("Call failed!");
@@ -223,7 +223,7 @@ public class TestIPC extends TestCase {
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
       client.call(new LongWritable(RANDOM.nextLong()),
-              address, null, null, 0);
+              address, null, null, 0, conf);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       String message = e.getMessage();
@@ -280,7 +280,7 @@ public class TestIPC extends TestCase {
     Client client = new Client(LongErrorWritable.class, conf);
     try {
       client.call(new LongErrorWritable(RANDOM.nextLong()),
-              addr, null, null, 0);
+              addr, null, null, 0, conf);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       // check error
@@ -300,7 +300,7 @@ public class TestIPC extends TestCase {
     Client client = new Client(LongRTEWritable.class, conf);
     try {
       client.call(new LongRTEWritable(RANDOM.nextLong()),
-              addr, null, null, 0);
+              addr, null, null, 0, conf);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       // check error
@@ -326,7 +326,7 @@ public class TestIPC extends TestCase {
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
       client.call(new LongWritable(RANDOM.nextLong()),
-              address, null, null, 0);
+              address, null, null, 0, conf);
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       assertTrue(e.getMessage().contains("Injected fault"));
@@ -344,14 +344,14 @@ public class TestIPC extends TestCase {
     // set timeout to be less than MIN_SLEEP_TIME
     try {
       client.call(new LongWritable(RANDOM.nextLong()),
-              addr, null, null, MIN_SLEEP_TIME/2);
+              addr, null, null, MIN_SLEEP_TIME/2, conf);
       fail("Expected an exception to have been thrown");
     } catch (SocketTimeoutException e) {
       LOG.info("Get a SocketTimeoutException ", e);
     }
     // set timeout to be bigger than 3*ping interval
     client.call(new LongWritable(RANDOM.nextLong()),
-        addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME);
+        addr, null, null, 3*PING_INTERVAL+MIN_SLEEP_TIME, conf);
   }
   
   public static void main(String[] args) throws Exception {

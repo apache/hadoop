@@ -38,6 +38,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
@@ -172,21 +174,16 @@ class WritableRpcEngine implements RpcEngine {
   private static ClientCache CLIENTS=new ClientCache();
   
   private static class Invoker implements InvocationHandler {
-    private Class<?> protocol;
-    private InetSocketAddress address;
-    private UserGroupInformation ticket;
-    private int rpcTimeout;
+    private Client.ConnectionId remoteId;
     private Client client;
     private boolean isClosed = false;
 
     public Invoker(Class<?> protocol,
                    InetSocketAddress address, UserGroupInformation ticket,
                    Configuration conf, SocketFactory factory,
-                   int rpcTimeout) {
-      this.protocol = protocol;
-      this.address = address;
-      this.ticket = ticket;
-      this.rpcTimeout = rpcTimeout;
+                   int rpcTimeout) throws IOException {
+      this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
+          ticket, rpcTimeout, conf);
       this.client = CLIENTS.getClient(conf, factory);
     }
 
@@ -198,8 +195,7 @@ class WritableRpcEngine implements RpcEngine {
       }
 
       ObjectWritable value = (ObjectWritable)
-        client.call(new Invocation(method, args), address, 
-                    protocol, ticket, rpcTimeout);
+        client.call(new Invocation(method, args), remoteId);
       if (LOG.isDebugEnabled()) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -214,6 +210,13 @@ class WritableRpcEngine implements RpcEngine {
         CLIENTS.stopClient(client);
       }
     }
+  }
+  
+  // for unit testing only
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  static Client getClient(Configuration conf) {
+    return CLIENTS.getClient(conf);
   }
   
   /** Construct a client-side proxy object that implements the named protocol,
@@ -259,7 +262,7 @@ class WritableRpcEngine implements RpcEngine {
     Client client = CLIENTS.getClient(conf);
     try {
     Writable[] wrappedValues = 
-      client.call(invocations, addrs, method.getDeclaringClass(), ticket);
+      client.call(invocations, addrs, method.getDeclaringClass(), ticket, conf);
     
     if (method.getReturnType() == Void.TYPE) {
       return null;
