@@ -50,6 +50,9 @@ Release 0.20.3 - Unreleased
     HADOOP-6833. IPC leaks call parameters when exceptions thrown.
     (Todd Lipcon via Eli Collins)
 
+    HADOOP-6928. Fix BooleanWritable comparator in 0.20.
+    (Owen O'Malley and Johannes Zillmann via Eli Collins)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
