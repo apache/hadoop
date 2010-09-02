@@ -590,6 +590,16 @@ public class FSUtils {
     return append;
   }
 
+  /**
+   * @param conf
+   * @return True if this filesystem whose scheme is 'hdfs'.
+   * @throws IOException
+   */
+  public static boolean isHDFS(final Configuration conf) throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    String scheme = fs.getUri().getScheme();
+    return scheme.equalsIgnoreCase("hdfs");
+  }
 
   /*
    * Recover file lease. Used when a file might be suspect to be had been left open by another process. <code>p</code>

@@ -498,6 +498,8 @@ Release 0.21.0 - Unreleased
    HBASE-2954  Fix broken build caused by hbase-2692 commit
    HBASE-2918  SequenceFileLogWriter doesnt make it clear if there is no
                append by config or by missing lib/feature
+   HBASE-2799  "Append not enabled" warning should not show if hbase
+               root dir isn't on DFS
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

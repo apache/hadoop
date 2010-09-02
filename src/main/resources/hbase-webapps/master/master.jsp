@@ -47,7 +47,7 @@
   for details.
   </div>
 <% } %>
-<% if (!FSUtils.isAppendSupported(conf)) { %>
+<% if (!FSUtils.isAppendSupported(conf) && FSUtils.isHDFS(conf)) { %>
   <div class="warning">
   You are currently running the HMaster without HDFS append support enabled.
   This may result in data loss.
