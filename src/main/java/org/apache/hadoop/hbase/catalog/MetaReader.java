@@ -304,7 +304,7 @@ public class MetaReader {
       List<HRegionInfo> list = new ArrayList<HRegionInfo>();
       list.add(HRegionInfo.ROOT_REGIONINFO);
       return list;
-    } else if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+    } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       // Same for .META. table
       List<HRegionInfo> list = new ArrayList<HRegionInfo>();
       list.add(HRegionInfo.FIRST_META_REGIONINFO);
