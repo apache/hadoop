@@ -312,6 +312,10 @@ public class AvroServer {
       try {
 	admin.flush(Bytes.toBytes(table));
 	return null;
+      } catch (InterruptedException e) {
+	AIOError ioe = new AIOError();
+	ioe.message = new Utf8(e.getMessage());
+        throw ioe;
       } catch (IOException e) {
 	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());
@@ -324,6 +328,10 @@ public class AvroServer {
       try {
 	admin.split(Bytes.toBytes(table));
 	return null;
+      } catch (InterruptedException e) {
+	AIOError ioe = new AIOError();
+	ioe.message = new Utf8(e.getMessage());
+        throw ioe;
       } catch (IOException e) {
 	AIOError ioe = new AIOError();
 	ioe.message = new Utf8(e.getMessage());

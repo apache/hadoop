@@ -222,6 +222,8 @@ public class ThriftServer {
     public void compact(byte[] tableNameOrRegionName) throws IOError {
       try{
         admin.compact(tableNameOrRegionName);
+      } catch (InterruptedException e) {
+        throw new IOError(e.getMessage());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -230,6 +232,8 @@ public class ThriftServer {
     public void majorCompact(byte[] tableNameOrRegionName) throws IOError {
       try{
         admin.majorCompact(tableNameOrRegionName);
+      } catch (InterruptedException e) {
+        throw new IOError(e.getMessage());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

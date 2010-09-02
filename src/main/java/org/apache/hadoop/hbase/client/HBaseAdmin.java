@@ -740,8 +740,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to flush
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
-  public void flush(final String tableNameOrRegionName) throws IOException {
+  public void flush(final String tableNameOrRegionName)
+  throws IOException, InterruptedException {
     flush(Bytes.toBytes(tableNameOrRegionName));
   }
 
@@ -751,8 +753,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to flush
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
-  public void flush(final byte [] tableNameOrRegionName) throws IOException {
+  public void flush(final byte [] tableNameOrRegionName)
+  throws IOException, InterruptedException {
     boolean isRegionName = isRegionName(tableNameOrRegionName);
     if (isRegionName) {
       Pair<HRegionInfo, HServerAddress> pair =
@@ -780,8 +784,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to compact
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
-  public void compact(final String tableNameOrRegionName) throws IOException {
+  public void compact(final String tableNameOrRegionName)
+  throws IOException, InterruptedException {
     compact(Bytes.toBytes(tableNameOrRegionName));
   }
 
@@ -791,8 +797,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to compact
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
-  public void compact(final byte [] tableNameOrRegionName) throws IOException {
+  public void compact(final byte [] tableNameOrRegionName)
+  throws IOException, InterruptedException {
     compact(tableNameOrRegionName, false);
   }
 
@@ -802,9 +810,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to major compact
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
   public void majorCompact(final String tableNameOrRegionName)
-  throws IOException {
+  throws IOException, InterruptedException {
     majorCompact(Bytes.toBytes(tableNameOrRegionName));
   }
 
@@ -814,9 +823,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to major compact
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
   public void majorCompact(final byte [] tableNameOrRegionName)
-  throws IOException {
+  throws IOException, InterruptedException {
     compact(tableNameOrRegionName, true);
   }
 
@@ -827,9 +837,10 @@ public class HBaseAdmin implements Abortable {
    * @param tableNameOrRegionName table or region to compact
    * @param major True if we are to do a major compaction.
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
   private void compact(final byte [] tableNameOrRegionName, final boolean major)
-  throws IOException {
+  throws IOException, InterruptedException {
     if (isRegionName(tableNameOrRegionName)) {
       Pair<HRegionInfo, HServerAddress> pair =
         MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
@@ -882,8 +893,10 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to split
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
-  public void split(final String tableNameOrRegionName) throws IOException {
+  public void split(final String tableNameOrRegionName)
+  throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName));
   }
 
@@ -893,8 +906,9 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table to region to split
    * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException 
    */
-  public void split(final byte [] tableNameOrRegionName) throws IOException {
+  public void split(final byte [] tableNameOrRegionName) throws IOException, InterruptedException {
     if (isRegionName(tableNameOrRegionName)) {
       // Its a possible region name.
       Pair<HRegionInfo, HServerAddress> pair =

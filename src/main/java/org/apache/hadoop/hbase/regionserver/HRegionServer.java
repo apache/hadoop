@@ -1883,6 +1883,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public void flushRegion(HRegionInfo regionInfo)
       throws NotServingRegionException, IOException {
+    LOG.info("Flushing " + regionInfo.getRegionNameAsString());
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
   }

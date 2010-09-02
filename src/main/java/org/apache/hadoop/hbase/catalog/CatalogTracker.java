@@ -48,6 +48,7 @@ import org.apache.zookeeper.KeeperException;
  * be explicitly set.  Instead, ZooKeeper is used to learn of the availability
  * and location of ROOT.  ROOT is used to learn of the location of META.  If not
  * available in ROOT, ZooKeeper is used to monitor for a new location of META.
+ * <p>Call {@link #start()} to start up operation.
  */
 public class CatalogTracker {
   private static final Log LOG = LogFactory.getLog(CatalogTracker.class);
@@ -77,6 +78,21 @@ public class CatalogTracker {
    * @param zk
    * @param connection server connection
    * @param abortable if fatal exception
+   * @throws IOException 
+   */
+  public CatalogTracker(final ZooKeeperWatcher zk,
+      final ServerConnection connection, final Abortable abortable)
+  throws IOException {
+    this(zk, connection, abortable, 0);
+  }
+
+  /**
+   * Constructs the catalog tracker.  Find current state of catalog tables and
+   * begin active tracking by executing {@link #start()}.
+   * @param zk
+   * @param connection server connection
+   * @param abortable if fatal exception
+   * @param defaultTimeout Timeout to use.
    * @throws IOException 
    */
   public CatalogTracker(final ZooKeeperWatcher zk,
@@ -285,7 +301,7 @@ public class CatalogTracker {
       }
       if(getMetaServerConnection(true) == null) {
         throw new NotAllMetaRegionsOnlineException(
-            "Timed out (" + timeout + "ms");
+            "Timed out (" + timeout + "ms)");
       }
       return metaLocation;
     }

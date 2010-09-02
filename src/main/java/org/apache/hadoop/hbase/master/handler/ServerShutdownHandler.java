@@ -104,7 +104,7 @@ public class ServerShutdownHandler extends EventHandler {
     }
 
     NavigableMap<HRegionInfo, Result> hris =
-      MetaReader.getServerRegions(this.server.getCatalogTracker(), this.hsi);
+      MetaReader.getServerUserRegions(this.server.getCatalogTracker(), this.hsi);
     LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName +
       " was carrying.");
 
