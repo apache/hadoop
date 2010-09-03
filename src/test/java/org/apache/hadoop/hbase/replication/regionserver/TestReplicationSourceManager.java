@@ -151,7 +151,7 @@ public class TestReplicationSourceManager {
     setUp();
   }
 
-  @Test
+  @Ignore @Test
   public void testLogRoll() throws Exception {
     long seq = 0;
     long baseline = 1000;

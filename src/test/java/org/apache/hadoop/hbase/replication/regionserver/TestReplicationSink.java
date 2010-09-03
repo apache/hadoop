@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -127,7 +128,7 @@ public class TestReplicationSink {
    * Insert a whole batch of entries
    * @throws Exception
    */
-  @Test
+  @Ignore @Test
   public void testBatchSink() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE];
     for(int i = 0; i < BATCH_SIZE; i++) {
@@ -143,7 +144,7 @@ public class TestReplicationSink {
    * Insert a mix of puts and deletes
    * @throws Exception
    */
-  @Test
+  @Ignore @Test
   public void testMixedPutDelete() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE/2];
     for(int i = 0; i < BATCH_SIZE/2; i++) {
@@ -167,7 +168,7 @@ public class TestReplicationSink {
    * Insert to 2 different tables
    * @throws Exception
    */
-  @Test
+  @Ignore @Test
   public void testMixedPutTables() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE];
     for(int i = 0; i < BATCH_SIZE; i++) {
@@ -188,7 +189,7 @@ public class TestReplicationSink {
    * Insert then do different types of deletes
    * @throws Exception
    */
-  @Test
+  @Ignore @Test
   public void testMixedDeletes() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[3];
     for(int i = 0; i < 3; i++) {
@@ -213,7 +214,7 @@ public class TestReplicationSink {
    * before the actual Put that creates it.
    * @throws Exception
    */
-  @Test
+  @Ignore @Test
   public void testApplyDeleteBeforePut() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[5];
     for(int i = 0; i < 2; i++) {
