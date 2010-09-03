@@ -7,7 +7,20 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
   <info>
-    <title>HBase Book<?eval ${project.version}?></title>
+    <title>The <link xlink:href="http://www.hbase.org">HBase</link>
+    Book</title>
+
+    <revhistory>
+      <revision>
+        <date />
+
+        <revdescription>Initial layout</revdescription>
+
+        <revnumber>
+          <?eval ${project.version}?>
+        </revnumber>
+      </revision>
+    </revhistory>
   </info>
 
   <chapter xml:id="getting_started">
@@ -595,34 +608,58 @@
     <title>The WAL</title>
 
     <subtitle>HBase's<link
-    xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging"> <link
-    linkend="???">Write-Ahead Log</link></link></subtitle>
+    xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging"> Write-Ahead
+    Log</link></subtitle>
 
     <para>Each RegionServer adds updates to its <link linkend="???">WAL</link>
     first, and then to memory.</para>
 
-    <para></para>
+    <section>
+      <title>What is the purpose of the HBase WAL</title>
+
+      <para>The HBase WAL is...</para>
+    </section>
 
     <section>
-      <title>How EOFExceptions are treated when splitting a crashed
-      RegionServers' WALs </title>
+      <title>WAL splitting</title>
 
-      <para>If we get an EOF while splitting logs, we proceed with the split
-      even when <varname>hbase.hlog.split.skip.errors</varname> ==
-      <constant>false</constant>. An EOF while reading the last log in the set
-      of files to split is near-guaranteed since the RegionServer likely
-      crashed mid-write of a record. But we'll continue even if we got an EOF
-      reading other than the last file in the set.<footnote>
-          <para>For background, see <link
-          xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
-          Figure how to deal with eof splitting logs</link></para>
-        </footnote></para>
+      <subtitle>How edits are recovered from a crashed RegionServer</subtitle>
+
+      <para>When a RegionServer crashes, it will lose its ephemeral lease in
+      ZooKeeper...TODO</para>
+
+      <section>
+        <title><varname>hbase.hlog.split.skip.errors</varname></title>
+
+        <para>When set to <constant>true</constant>, the default, any error
+        encountered splitting will be logged, the problematic WAL will be
+        moved into the <filename>.corrupt</filename> directory under the hbase
+        <varname>rootdir</varname>, and processing will continue. If set to
+        <constant>false</constant>, the exception will be propagated and the
+        split logged as failed.<footnote>
+            <para>See <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958
+            When hbase.hlog.split.skip.errors is set to false, we fail the
+            split but thats it</link>. We need to do more than just fail split
+            if this flag is set.</para>
+          </footnote></para>
+      </section>
+
+      <section>
+        <title>How EOFExceptions are treated when splitting a crashed
+        RegionServers' WALs</title>
+
+        <para>If we get an EOF while splitting logs, we proceed with the split
+        even when <varname>hbase.hlog.split.skip.errors</varname> ==
+        <constant>false</constant>. An EOF while reading the last log in the
+        set of files to split is near-guaranteed since the RegionServer likely
+        crashed mid-write of a record. But we'll continue even if we got an
+        EOF reading other than the last file in the set.<footnote>
+            <para>For background, see <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
+            Figure how to deal with eof splitting logs</link></para>
+          </footnote></para>
+      </section>
     </section>
   </chapter>
-
-  <appendix>
-    <title></title>
-
-    <para></para>
-  </appendix>
 </book>
