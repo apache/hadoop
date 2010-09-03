@@ -1289,10 +1289,6 @@ public class HConnectionManager {
           HBaseRPC.stopProxy(i);
         }
       }
-      if (zooKeeper != null) {
-        zooKeeper.close();
-        zooKeeper = null;
-      }
     }
 
     /**
@@ -1527,6 +1523,10 @@ public class HConnectionManager {
     public void abort(final String msg, Throwable t) {
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
+      if(zooKeeper != null) {
+        zooKeeper.close();
+        zooKeeper = null;
+      }
     }
   }
 }
