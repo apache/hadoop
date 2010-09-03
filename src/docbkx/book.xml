@@ -7,7 +7,7 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
   <info>
-    <title>HBase Book <?eval ${project.version}?></title>
+    <title>HBase Book<?eval ${project.version}?></title>
   </info>
 
   <chapter xml:id="getting_started">
@@ -18,48 +18,6 @@
 
       <para>First...</para>
     </section>
-  </chapter>
-
-  <chapter xml:id="datamodel">
-    <title>Data Model</title>
-
-    <para></para>
-  </chapter>
-
-  <chapter xml:id="implementation">
-    <title>Implementation</title>
-
-    <para></para>
-  </chapter>
-
-  <chapter xml:id="mapreduce">
-    <title>MapReduce</title>
-
-    <para></para>
-  </chapter>
-
-  <chapter xml:id="schema">
-    <title>Schema Design</title>
-
-    <para></para>
-  </chapter>
-
-  <chapter xml:id="shell">
-    <title>Shell</title>
-
-    <para></para>
-  </chapter>
-
-  <chapter xml:id="thrift">
-    <title>Thrift</title>
-
-    <para></para>
-  </chapter>
-
-  <chapter xml:id="rest">
-    <title>REST</title>
-
-    <para></para>
   </chapter>
 
   <chapter>
@@ -90,7 +48,8 @@
         <itemizedlist>
           <listitem>
             <para>Master startup determines whether this is startup or
-            failover by counting the number of RegionServer nodes in ZooKeeper.</para>
+            failover by counting the number of RegionServer nodes in
+            ZooKeeper.</para>
           </listitem>
 
           <listitem>
@@ -99,7 +58,8 @@
           </listitem>
 
           <listitem>
-            <para>Master clears out anything in the <filename>/unassigned</filename> directory in ZooKeeper.</para>
+            <para>Master clears out anything in the
+            <filename>/unassigned</filename> directory in ZooKeeper.</para>
           </listitem>
 
           <listitem>
@@ -136,8 +96,8 @@
           <itemizedlist>
             <listitem>
               <para>We assume that the Master will not fail until after the
-              <code>OFFLINE</code> nodes have been created in ZK. RegionServers can fail at
-              any time.</para>
+              <code>OFFLINE</code> nodes have been created in ZK.
+              RegionServers can fail at any time.</para>
             </listitem>
 
             <listitem>
@@ -168,7 +128,7 @@
       <section>
         <title>Load Balancing</title>
 
-        <para> Periodically, and when there are not any regions in transition,
+        <para>Periodically, and when there are not any regions in transition,
         a load balancer will run and move regions around to balance cluster
         load.</para>
 
@@ -189,18 +149,18 @@
           </listitem>
 
           <listitem>
-            <para> The <classname>AssignmentManager</classname> determines a
+            <para>The <classname>AssignmentManager</classname> determines a
             balancing plan via the LoadBalancer.</para>
           </listitem>
 
           <listitem>
-            <para> Master stores the plan in the
+            <para>Master stores the plan in the
             <classname>AssignmentMaster</classname> store of
             <classname>RegionPlan</classname>s</para>
           </listitem>
 
           <listitem>
-            <para> Master sends RPCs to the source RSs, telling them to
+            <para>Master sends RPCs to the source RSs, telling them to
             <code>CLOSE</code> the regions.</para>
           </listitem>
         </itemizedlist>
@@ -212,7 +172,7 @@
 
         <itemizedlist>
           <listitem>
-            <para> RS receives CLOSE RPC, changes to CLOSING, and begins
+            <para>RS receives CLOSE RPC, changes to CLOSING, and begins
             closing the region.</para>
           </listitem>
 
@@ -276,7 +236,7 @@
       <section>
         <title>Table Enable/Disable</title>
 
-        <para> Users can enable and disable tables manually. This is done to
+        <para>Users can enable and disable tables manually. This is done to
         make config changes to tables, drop tables, etc...</para>
 
         <note>
@@ -443,12 +403,12 @@
 
         <itemizedlist>
           <listitem>
-            <para> <code>OFFLINE</code> Generate a new assignment and send an
+            <para><code>OFFLINE</code> Generate a new assignment and send an
             OPEN RPC.</para>
           </listitem>
 
           <listitem>
-            <para> <code>CLOSING</code> If the failed RS is the source, we
+            <para><code>CLOSING</code> If the failed RS is the source, we
             overwrite the state to OFFLINE, generate a new assignment, and
             send an OPEN RPC. If the failed RS is the destination, we
             overwrite the state to OFFLINE and send an OPEN RPC to the
@@ -465,7 +425,7 @@
           </listitem>
 
           <listitem>
-            <para> OPENING or OPENED If the failed RS was the original source,
+            <para>OPENING or OPENED If the failed RS was the original source,
             ignore. If the failed RS is the destination, we overwrite the
             state to OFFLINE, generate a new assignment, and send an OPEN
             RPC.</para>
@@ -505,7 +465,7 @@
           </listitem>
 
           <listitem>
-            <para> Before processing the regions in transition, the normal
+            <para>Before processing the regions in transition, the normal
             handlers start to ensure we don't miss any transitions. The
             handling of opens on the RS side ensures we don't dupe assign even
             if things have changed before we finish acting on
@@ -593,11 +553,10 @@
 
           <itemizedlist>
             <listitem>
-              <para> RegionServer creates an unassigned node as
-              CLOSING.</para>
+              <para>RegionServer creates an unassigned node as CLOSING.</para>
 
               <para>All region closes will do this in response to a CLOSE RPC
-              from Master. </para>
+              from Master.</para>
 
               <para>A node can never be transitioned to CLOSING, only
               created.</para>
@@ -629,6 +588,35 @@
           </itemizedlist>
         </section>
       </section>
+    </section>
+  </chapter>
+
+  <chapter>
+    <title>The WAL</title>
+
+    <subtitle>HBase's<link
+    xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging"> <link
+    linkend="???">Write-Ahead Log</link></link></subtitle>
+
+    <para>Each RegionServer adds updates to its <link linkend="???">WAL</link>
+    first, and then to memory.</para>
+
+    <para></para>
+
+    <section>
+      <title>How EOFExceptions are treated when splitting a crashed
+      RegionServers' WALs </title>
+
+      <para>If we get an EOF while splitting logs, we proceed with the split
+      even when <varname>hbase.hlog.split.skip.errors</varname> ==
+      <constant>false</constant>. An EOF while reading the last log in the set
+      of files to split is near-guaranteed since the RegionServer likely
+      crashed mid-write of a record. But we'll continue even if we got an EOF
+      reading other than the last file in the set.<footnote>
+          <para>For background, see <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
+          Figure how to deal with eof splitting logs</link></para>
+        </footnote></para>
     </section>
   </chapter>
 

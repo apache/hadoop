@@ -501,6 +501,8 @@ Release 0.21.0 - Unreleased
    HBASE-2799  "Append not enabled" warning should not show if hbase
                root dir isn't on DFS
    HBASE-2943  major_compact (and other admin commands) broken for .META.
+   HBASE-2643  Figure how to deal with eof splitting logs
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
