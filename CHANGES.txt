@@ -232,6 +232,9 @@ Trunk (unreleased changes)
     HADOOP-6907. Rpc client doesn't use the per-connection conf to figure
     out server's Kerberos principal (Kan Zhang via hairong)
 
+    HADOOP-6938. ConnectionId.getRemotePrincipal() should check if security
+    is enabled. (Kan Zhang via hairong)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

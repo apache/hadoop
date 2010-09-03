@@ -87,7 +87,7 @@ public class Client {
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
   
-  final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
+  final static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
   final static int PING_CALL_ID = -1;
   
@@ -1244,18 +1244,19 @@ public class Client {
         Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
         Configuration conf) throws IOException {
       String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
+      boolean doPing = conf.getBoolean("ipc.client.ping", true);
       return new ConnectionId(addr, protocol, ticket,
           rpcTimeout, remotePrincipal,
           conf.getInt("ipc.client.connection.maxidletime", 10000), // 10s
           conf.getInt("ipc.client.connect.max.retries", 10),
           conf.getBoolean("ipc.client.tcpnodelay", false),
-          conf.getBoolean("ipc.client.ping", true),
-          Client.getPingInterval(conf));
+          doPing, 
+          (doPing ? Client.getPingInterval(conf) : 0));
     }
     
     private static String getRemotePrincipal(Configuration conf,
         InetSocketAddress address, Class<?> protocol) throws IOException {
-      if (protocol == null) {
+      if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
         return null;
       }
       KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);

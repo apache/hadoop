@@ -255,6 +255,45 @@ public class TestSaslRPC {
   }
   
   @Test
+  public void testPingInterval() throws Exception {
+    Configuration newConf = new Configuration(conf);
+    newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
+    conf.setInt(Client.PING_INTERVAL_NAME, Client.DEFAULT_PING_INTERVAL);
+    // set doPing to true
+    newConf.setBoolean("ipc.client.ping", true);
+    ConnectionId remoteId = ConnectionId.getConnectionId(
+        new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
+    assertEquals(Client.DEFAULT_PING_INTERVAL, remoteId.getPingInterval());
+    // set doPing to false
+    newConf.setBoolean("ipc.client.ping", false);
+    remoteId = ConnectionId.getConnectionId(
+        new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
+    assertEquals(0, remoteId.getPingInterval());
+  }
+  
+  @Test
+  public void testGetRemotePrincipal() throws Exception {
+    try {
+      Configuration newConf = new Configuration(conf);
+      newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
+      ConnectionId remoteId = ConnectionId.getConnectionId(
+          new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
+      assertEquals(SERVER_PRINCIPAL_1, remoteId.getServerPrincipal());
+      // this following test needs security to be off
+      newConf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+      UserGroupInformation.setConfiguration(newConf);
+      remoteId = ConnectionId.getConnectionId(new InetSocketAddress(0),
+          TestSaslProtocol.class, null, 0, newConf);
+      assertEquals(
+          "serverPrincipal should be null when security is turned off", null,
+          remoteId.getServerPrincipal());
+    } finally {
+      // revert back to security is on
+      UserGroupInformation.setConfiguration(conf);
+    }
+  }
+  
+  @Test
   public void testPerConnectionConf() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     final Server server = RPC.getServer(TestSaslProtocol.class,
