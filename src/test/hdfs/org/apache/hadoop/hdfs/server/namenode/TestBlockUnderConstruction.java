@@ -163,7 +163,7 @@ public class TestBlockUnderConstruction {
       final LocatedBlocks lb = namenode.getBlockLocations(src, 0, len);
       final List<LocatedBlock> blocks = lb.getLocatedBlocks();
       assertEquals(i, blocks.size());
-      final Block b = blocks.get(blocks.size() - 1).getBlock();
+      final Block b = blocks.get(blocks.size() - 1).getBlock().getLocalBlock();
       assertTrue(b instanceof BlockInfoUnderConstruction);
 
       if (++i < NUM_BLOCKS) {

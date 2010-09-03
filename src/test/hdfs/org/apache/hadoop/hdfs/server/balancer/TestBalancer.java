@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -82,7 +83,8 @@ public class TestBalancer extends TestCase {
   /* fill up a cluster with <code>numNodes</code> datanodes 
    * whose used space to be <code>size</code>
    */
-  private Block[] generateBlocks(Configuration conf, long size, short numNodes) throws IOException {
+  private ExtendedBlock[] generateBlocks(Configuration conf, long size,
+      short numNodes) throws IOException {
     cluster = new MiniDFSCluster( conf, numNodes, true, null);
     try {
       cluster.waitActive();
@@ -96,10 +98,11 @@ public class TestBalancer extends TestCase {
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
 
       int numOfBlocks = locatedBlocks.size();
-      Block[] blocks = new Block[numOfBlocks];
+      ExtendedBlock[] blocks = new ExtendedBlock[numOfBlocks];
       for(int i=0; i<numOfBlocks; i++) {
-        Block b = locatedBlocks.get(i).getBlock();
-        blocks[i] = new Block(b.getBlockId(), b.getNumBytes(), b.getGenerationStamp());
+        ExtendedBlock b = locatedBlocks.get(i).getBlock();
+        blocks[i] = new ExtendedBlock(b.getPoolId(), b.getBlockId(), b
+            .getNumBytes(), b.getGenerationStamp());
       }
 
       return blocks;
@@ -109,7 +112,7 @@ public class TestBalancer extends TestCase {
   }
 
   /* Distribute all blocks according to the given distribution */
-  Block[][] distributeBlocks(Block[] blocks, short replicationFactor, 
+  Block[][] distributeBlocks(ExtendedBlock[] blocks, short replicationFactor, 
       final long[] distribution ) {
     // make a copy
     long[] usedSpace = new long[distribution.length];
@@ -128,7 +131,7 @@ public class TestBalancer extends TestCase {
           int chosenIndex = r.nextInt(usedSpace.length);
           if( usedSpace[chosenIndex]>0 ) {
             notChosen = false;
-            blockReports.get(chosenIndex).add(blocks[i]);
+            blockReports.get(chosenIndex).add(blocks[i].getLocalBlock());
             usedSpace[chosenIndex] -= blocks[i].getNumBytes();
           }
         }
@@ -159,7 +162,8 @@ public class TestBalancer extends TestCase {
     }
 
     // fill the cluster
-    Block[] blocks = generateBlocks(conf, totalUsedSpace, (short)numDatanodes);
+    ExtendedBlock[] blocks = generateBlocks(conf, totalUsedSpace,
+        (short) numDatanodes);
 
     // redistribute blocks
     Block[][] blocksDN = distributeBlocks(

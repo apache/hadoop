@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -132,6 +133,7 @@ public class TestBlockReport {
     }
     cluster.getNameNode().blockReport(
       cluster.getDataNodes().get(DN_N0).dnRegistration,
+      cluster.getNamesystem().getPoolId(),
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
 
     List<LocatedBlock> blocksAfterReport =
@@ -143,7 +145,7 @@ public class TestBlockReport {
     }
 
     for (int i = 0; i < blocksAfterReport.size(); i++) {
-      Block b = blocksAfterReport.get(i).getBlock();
+      ExtendedBlock b = blocksAfterReport.get(i).getBlock();
       assertEquals("Length of " + i + "th block is incorrect",
         oldLengths[i], b.getNumBytes());
     }
@@ -184,7 +186,7 @@ public class TestBlockReport {
     }
 
     for (Integer aRemovedIndex : removedIndex) {
-      blocks2Remove.add(lBlocks.get(aRemovedIndex).getBlock());
+      blocks2Remove.add(lBlocks.get(aRemovedIndex).getBlock().getLocalBlock());
     }
     ArrayList<Block> blocks = locatedToBlocks(lBlocks, removedIndex);
 
@@ -208,6 +210,7 @@ public class TestBlockReport {
 
     cluster.getNameNode().blockReport(
       cluster.getDataNodes().get(DN_N0).dnRegistration,
+      cluster.getNamesystem().getPoolId(),
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
 
     cluster.getNamesystem().computeDatanodeWork();
@@ -244,6 +247,7 @@ public class TestBlockReport {
     DatanodeCommand dnCmd =
       cluster.getNameNode().blockReport(
         cluster.getDataNodes().get(DN_N0).dnRegistration,
+        cluster.getNamesystem().getPoolId(),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     if(LOG.isDebugEnabled()) {
       LOG.debug("Got the command: " + dnCmd);
@@ -293,6 +297,7 @@ public class TestBlockReport {
 
     cluster.getNameNode().blockReport(
       cluster.getDataNodes().get(DN_N1).dnRegistration,
+      cluster.getNamesystem().getPoolId(),
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
     assertEquals("Wrong number of PendingReplication Blocks",
@@ -340,6 +345,7 @@ public class TestBlockReport {
     }
     cluster.getNameNode().blockReport(
       cluster.getDataNodes().get(DN_N1).dnRegistration,
+      cluster.getNamesystem().getPoolId(),
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
     assertEquals("Wrong number of Corrupted blocks",
@@ -362,6 +368,7 @@ public class TestBlockReport {
     }
     cluster.getNameNode().blockReport(
       cluster.getDataNodes().get(DN_N1).dnRegistration,
+      cluster.getNamesystem().getPoolId(),
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     printStats();
 
@@ -409,6 +416,7 @@ public class TestBlockReport {
 
       cluster.getNameNode().blockReport(
         cluster.getDataNodes().get(DN_N1).dnRegistration,
+        cluster.getNamesystem().getPoolId(),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
       printStats();
       assertEquals("Wrong number of PendingReplication blocks",
@@ -452,6 +460,7 @@ public class TestBlockReport {
                                                 
       cluster.getNameNode().blockReport(
         cluster.getDataNodes().get(DN_N1).dnRegistration,
+        cluster.getNamesystem().getPoolId(),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
       printStats();
       assertEquals("Wrong number of PendingReplication blocks",
@@ -593,7 +602,7 @@ public class TestBlockReport {
         }
         continue;
       }
-      newList.add(new Block(locatedBlks.get(i).getBlock()));
+      newList.add(new Block(locatedBlks.get(i).getBlock().getLocalBlock()));
     }
     return newList;
   }

@@ -27,9 +27,9 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -70,12 +70,15 @@ public class TestBlockRecovery {
   private DataNode dn;
   private Configuration conf;
   private final static long RECOVERY_ID = 3000L;
+  // TODO:FEDERATION fix pool ID
+  private final static String POOL_ID = "TODO";
   private final static long BLOCK_ID = 1000L;
   private final static long GEN_STAMP = 2000L;
   private final static long BLOCK_LEN = 3000L;
   private final static long REPLICA_LEN1 = 6000L;
   private final static long REPLICA_LEN2 = 5000L;
-  private final static Block block = new Block(BLOCK_ID, BLOCK_LEN, GEN_STAMP);
+  private final static ExtendedBlock block = new ExtendedBlock(POOL_ID,
+      BLOCK_ID, BLOCK_LEN, GEN_STAMP);
 
   static {
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
@@ -447,7 +450,7 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    dn.data.createRbw(block);
+    dn.data.createRbw(block.getLocalBlock());
     try {
       dn.syncBlock(rBlock, initBlockRecords(dn));
       fail("Sync should fail");
@@ -455,7 +458,7 @@ public class TestBlockRecovery {
       e.getMessage().startsWith("Cannot recover ");
     }
     verify(dn.namenode, never()).commitBlockSynchronization(
-        any(Block.class), anyLong(), anyLong(), anyBoolean(),
+        any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
         anyBoolean(), any(DatanodeID[].class));
   }
 
@@ -469,7 +472,7 @@ public class TestBlockRecovery {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Running " + GenericTestUtils.getMethodName());
     }
-    ReplicaInPipelineInterface replicaInfo = dn.data.createRbw(block);
+    ReplicaInPipelineInterface replicaInfo = dn.data.createRbw(block.getLocalBlock());
     BlockWriteStreams streams = null;
     try {
       streams = replicaInfo.createStreams(true, 0, 0);
@@ -482,7 +485,7 @@ public class TestBlockRecovery {
         e.getMessage().startsWith("Cannot recover ");
       }
       verify(dn.namenode, never()).commitBlockSynchronization(
-          any(Block.class), anyLong(), anyLong(), anyBoolean(),
+          any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
           anyBoolean(), any(DatanodeID[].class));
     } finally {
       streams.close();

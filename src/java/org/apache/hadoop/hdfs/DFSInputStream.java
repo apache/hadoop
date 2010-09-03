@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -61,7 +61,7 @@ public class DFSInputStream extends FSInputStream {
   private LocatedBlocks locatedBlocks = null;
   private long lastBlockBeingWrittenLength = 0;
   private DatanodeInfo currentNode = null;
-  private Block currentBlock = null;
+  private ExtendedBlock currentBlock = null;
   private long pos = 0;
   private long blockEnd = -1;
 
@@ -195,7 +195,7 @@ public class DFSInputStream extends FSInputStream {
   /**
    * Returns the block containing the target position. 
    */
-  public Block getCurrentBlock() {
+  public ExtendedBlock getCurrentBlock() {
     return currentBlock;
   }
 
@@ -375,7 +375,7 @@ public class DFSInputStream extends FSInputStream {
         s = dfsClient.socketFactory.createSocket();
         NetUtils.connect(s, targetAddr, dfsClient.socketTimeout);
         s.setSoTimeout(dfsClient.socketTimeout);
-        Block blk = targetBlock.getBlock();
+        ExtendedBlock blk = targetBlock.getBlock();
         Token<BlockTokenIdentifier> accessToken = targetBlock.getBlockToken();
         
         blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 

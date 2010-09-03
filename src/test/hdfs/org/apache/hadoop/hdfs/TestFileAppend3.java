@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -191,14 +192,14 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     final LocatedBlocks locatedblocks = fs.dfs.getNamenode().getBlockLocations(p.toString(), 0L, len1);
     assertEquals(1, locatedblocks.locatedBlockCount());
     final LocatedBlock lb = locatedblocks.get(0);
-    final Block blk = lb.getBlock();
+    final ExtendedBlock blk = lb.getBlock();
     assertEquals(len1, lb.getBlockSize());
 
     DatanodeInfo[] datanodeinfos = lb.getLocations();
     assertEquals(repl, datanodeinfos.length);
     final DataNode dn = cluster.getDataNode(datanodeinfos[0].getIpcPort());
     final FSDataset data = (FSDataset)dn.getFSDataset();
-    final RandomAccessFile raf = new RandomAccessFile(data.getBlockFile(blk), "rw");
+    final RandomAccessFile raf = new RandomAccessFile(data.getBlockFile(blk.getLocalBlock()), "rw");
     AppendTestUtil.LOG.info("dn=" + dn + ", blk=" + blk + " (length=" + blk.getNumBytes() + ")");
     assertEquals(len1, raf.length());
     raf.setLength(0);
@@ -260,7 +261,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     final int numblock = locatedblocks.locatedBlockCount();
     for(int i = 0; i < numblock; i++) {
       final LocatedBlock lb = locatedblocks.get(i);
-      final Block blk = lb.getBlock();
+      final ExtendedBlock blk = lb.getBlock();
       final long size = lb.getBlockSize();
       if (i < numblock - 1) {
         assertEquals(BLOCK_SIZE, size);

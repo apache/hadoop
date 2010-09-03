@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 
 import junit.framework.TestCase;
@@ -51,7 +52,7 @@ public class TestNodeCount extends TestCase {
       final Path FILE_PATH = new Path("/testfile");
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
-      Block block = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
 
       // keep a copy of all datanode descriptor
       DatanodeDescriptor[] datanodes = 
@@ -80,12 +81,13 @@ public class TestNodeCount extends TestCase {
       NumberReplicas num = null;
       do {
        synchronized (namesystem) {
-         num = namesystem.blockManager.countNodes(block);
+         num = namesystem.blockManager.countNodes(block.getLocalBlock());
        }
       } while (num.excessReplicas() == 0);
       
       // find out a non-excess node
-      Iterator<DatanodeDescriptor> iter = namesystem.blockManager.blocksMap.nodeIterator(block);
+      Iterator<DatanodeDescriptor> iter = namesystem.blockManager.blocksMap
+          .nodeIterator(block.getLocalBlock());
       DatanodeDescriptor nonExcessDN = null;
       while (iter.hasNext()) {
         DatanodeDescriptor dn = iter.next();
@@ -107,7 +109,7 @@ public class TestNodeCount extends TestCase {
       
       // The block should be replicated
       do {
-        num = namesystem.blockManager.countNodes(block);
+        num = namesystem.blockManager.countNodes(block.getLocalBlock());
       } while (num.liveReplicas() != REPLICATION_FACTOR);
       
       // restart the first datanode
@@ -116,7 +118,7 @@ public class TestNodeCount extends TestCase {
       
       // check if excessive replica is detected
       do {
-       num = namesystem.blockManager.countNodes(block);
+       num = namesystem.blockManager.countNodes(block.getLocalBlock());
       } while (num.excessReplicas() != 2);
     } finally {
       cluster.shutdown();

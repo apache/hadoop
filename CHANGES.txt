@@ -33,6 +33,8 @@ Trunk (unreleased changes)
     HDFS piggyback block locations to each file status when listing a
     directory.  (hairong)
 
+    HDFS-1359. Add BlockPoolID to Block. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

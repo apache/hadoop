@@ -36,10 +36,10 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 6: recoverBlock() removed.
+   * 7: Add block pool ID to Block
    */
-  public static final long versionID = 6L;
+  public static final long versionID = 7L;
 
   /** Return the visible length of a replica. */
-  long getReplicaVisibleLength(Block b) throws IOException;
+  long getReplicaVisibleLength(ExtendedBlock b) throws IOException;
 }

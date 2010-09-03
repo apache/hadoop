@@ -38,9 +38,9 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -131,7 +131,7 @@ public class TestFileCorruption extends TestCase {
       // get the block
       File dataDir = new File(cluster.getDataDirectory(),
           "data1" + MiniDFSCluster.FINALIZED_DIR_NAME);
-      Block blk = getBlock(dataDir);
+      ExtendedBlock blk = getBlock(dataDir);
       if (blk == null) {
         blk = getBlock(new File(cluster.getDataDirectory(),
           "dfs/data/data2" + MiniDFSCluster.FINALIZED_DIR_NAME));
@@ -159,7 +159,7 @@ public class TestFileCorruption extends TestCase {
     
   }
   
-  private Block getBlock(File dataDir) {
+  private ExtendedBlock getBlock(File dataDir) {
     assertTrue("data directory does not exist", dataDir.exists());
     File[] blocks = dataDir.listFiles();
     assertTrue("Blocks do not exist in dataDir", (blocks != null) && (blocks.length > 0));
@@ -186,7 +186,8 @@ public class TestFileCorruption extends TestCase {
         break;
       }
     }
-    return new Block(blockId, blocks[idx].length(), blockTimeStamp);
+    // TODO:FEDERATION cleanup when BlockPoolID support in Datanode is complete
+    return new ExtendedBlock("TODO", blockId, blocks[idx].length(), blockTimeStamp);
   }
 
   /** check if ClientProtocol.getCorruptFiles() returns a file that has missing blocks */

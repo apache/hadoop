@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -51,7 +51,7 @@ public class TestClientProtocolForPipelineRecovery {
       Path file = new Path("dataprotocol.dat");    
       DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
       // get the first blockid for the file
-      Block firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
+      ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
 
       // test getNewStampAndToken on a finalized block
       try {
@@ -64,8 +64,8 @@ public class TestClientProtocolForPipelineRecovery {
       // test getNewStampAndToken on a non-existent block
       try {
         long newBlockId = firstBlock.getBlockId() + 1;
-        Block newBlock = new Block(newBlockId, 0, 
-            firstBlock.getGenerationStamp());
+        ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getPoolId(),
+            newBlockId, 0, firstBlock.getGenerationStamp());
         namenode.updateBlockForPipeline(newBlock, "");
         Assert.fail("Cannot get a new GS from a non-existent block");
       } catch (IOException e) {

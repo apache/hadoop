@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -73,7 +74,7 @@ import org.apache.log4j.LogManager;
  * <li>-logLevel L specifies the logging level when the benchmark runs.
  * The default logging level is {@link Level#ERROR}.</li>
  * <li>-UGCacheRefreshCount G will cause the benchmark to call
- * {@link NameNode#refreshUserToGroupsMappings(Configuration)} after
+ * {@link NameNode#refreshUserToGroupsMappings()} after
  * every G operations, which purges the name-node's user group cache.
  * By default the refresh is never called.</li>
  * </ol>
@@ -842,6 +843,7 @@ public class NNThroughputBenchmark {
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
           nameNode.blockReceived( receivedDNReg, 
+                                  nameNode.getNamesystem().getPoolId(),
                                   new Block[] {blocks[i]},
                                   new String[] {DataNode.EMPTY_DEL_HINT});
         }
@@ -937,7 +939,7 @@ public class NNThroughputBenchmark {
         nameNode.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.OVERWRITE)), true, replication,
             BLOCK_SIZE);
-        Block lastBlock = addBlocks(fileName, clientName);
+        ExtendedBlock lastBlock = addBlocks(fileName, clientName);
         nameNode.complete(fileName, clientName, lastBlock);
       }
       // prepare block reports
@@ -946,18 +948,19 @@ public class NNThroughputBenchmark {
       }
     }
 
-    private Block addBlocks(String fileName, String clientName)
+    private ExtendedBlock addBlocks(String fileName, String clientName)
     throws IOException {
-      Block prevBlock = null;
+      ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
         LocatedBlock loc = nameNode.addBlock(fileName, clientName, prevBlock, null);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
-          datanodes[dnIdx].addBlock(loc.getBlock());
+          datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
-              new Block[] {loc.getBlock()},
+              loc.getBlock().getPoolId(),
+              new Block[] {loc.getBlock().getLocalBlock()},
               new String[] {""});
         }
       }
@@ -975,7 +978,8 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
-      nameNode.blockReport(dn.dnRegistration, dn.getBlockReportList());
+      nameNode.blockReport(dn.dnRegistration, nameNode.getNamesystem()
+          .getPoolId(), dn.getBlockReportList());
       long end = System.currentTimeMillis();
       return end-start;
     }

@@ -19,21 +19,18 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Properties;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.BlockMissingException;
@@ -64,7 +61,7 @@ public class TestBlockMissingException extends TestCase {
       // extract block locations from File system. Wait till file is closed.
       LocatedBlocks locations = null;
       locations = fileSys.dfs.getNamenode().getBlockLocations(file1.toString(),
-                                                             0, numBlocks * blockSize);
+          0, numBlocks * blockSize);
       // remove block of file
       LOG.info("Remove first block of file");
       corruptBlock(file1, locations.get(0).getBlock());
@@ -139,7 +136,7 @@ public class TestBlockMissingException extends TestCase {
   //
   // Corrupt specified block of file
   //
-  void corruptBlock(Path file, Block blockNum) throws IOException {
+  void corruptBlock(Path file, ExtendedBlock blockNum) throws IOException {
     long id = blockNum.getBlockId();
 
     // Now deliberately remove/truncate data blocks from the block.

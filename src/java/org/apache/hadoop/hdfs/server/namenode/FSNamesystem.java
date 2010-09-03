@@ -186,6 +186,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   //
   public FSDirectory dir;
 
+  // TODO:FEDERATION initialize from the persisted information
+  String  poolId = "TODO";
   BlockManager blockManager;
     
   /**
@@ -836,7 +838,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /** Create a LocatedBlock. */
   LocatedBlock createLocatedBlock(final Block b, final DatanodeInfo[] locations,
       final long offset, final boolean corrupt) throws IOException {
-    return new LocatedBlock(b, locations, offset, corrupt);
+    return new LocatedBlock(getExtendedBlock(b), locations, offset, corrupt);
   }
   
   /**
@@ -1397,7 +1399,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           // convert last block to under-construction and set its locations
           blockManager.convertLastBlockToUnderConstruction(file, targets);
 
-          lb = new LocatedBlock(lastBlock, targets, 
+          lb = new LocatedBlock(getExtendedBlock(lastBlock), targets, 
                                 fileLength-lastBlock.getNumBytes());
           if (isBlockTokenEnabled) {
             lb.setBlockToken(blockTokenSecretManager.generateToken(lb.getBlock(), 
@@ -1434,6 +1436,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return lb;
   }
 
+  ExtendedBlock getExtendedBlock(Block blk) {
+    return new ExtendedBlock(poolId, blk);
+  }
+
   /**
    * The client would like to obtain an additional block for the indicated
    * filename (which is being written-to).  Return an array that consists
@@ -1447,12 +1453,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public LocatedBlock getAdditionalBlock(String src,
                                          String clientName,
-                                         Block previous,
+                                         ExtendedBlock previous,
                                          HashMap<Node, Node> excludedNodes
                                          ) 
       throws LeaseExpiredException, NotReplicatedYetException,
       QuotaExceededException, SafeModeException, UnresolvedLinkException,
       IOException {
+    checkBlock(previous);
     long fileLength, blockSize;
     int replication;
     DatanodeDescriptor clientNode = null;
@@ -1475,7 +1482,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
       // commit the last block and complete it if it has minimum replicas
-      blockManager.commitOrCompleteLastBlock(pendingFile, previous);
+      blockManager.commitOrCompleteLastBlock(pendingFile, ExtendedBlock
+          .getLocalBlock(previous));
 
       //
       // If we fail this, bad things happen!
@@ -1519,7 +1527,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
         
     // Create next block
-    LocatedBlock b = new LocatedBlock(newBlock, targets, fileLength);
+    LocatedBlock b = new LocatedBlock(getExtendedBlock(newBlock), targets, fileLength);
     if (isBlockTokenEnabled) {
       b.setBlockToken(blockTokenSecretManager.generateToken(b.getBlock(), 
           EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
@@ -1530,9 +1538,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * The client would like to let go of the given block
    */
-  public synchronized boolean abandonBlock(Block b, String src, String holder)
+  public synchronized boolean abandonBlock(ExtendedBlock b, String src, String holder)
       throws LeaseExpiredException, FileNotFoundException,
       UnresolvedLinkException, IOException {
+    checkBlock(b);
     //
     // Remove the block from the pending creates list
     //
@@ -1541,7 +1550,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                                     +b+"of file "+src);
     }
     INodeFileUnderConstruction file = checkLease(src, holder);
-    dir.removeBlock(src, file, b);
+    dir.removeBlock(src, file, ExtendedBlock.getLocalBlock(b));
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                     + b
@@ -1590,9 +1599,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    *         (e.g if not all blocks have reached minimum replication yet)
    * @throws IOException on error (eg lease mismatch, file not open, file deleted)
    */
-  public boolean completeFile(String src, String holder, Block last) 
+  public boolean completeFile(String src, String holder, ExtendedBlock last) 
     throws SafeModeException, UnresolvedLinkException, IOException {
-    boolean success = completeFileInternal(src, holder, last);
+    checkBlock(last);
+    boolean success = completeFileInternal(src, holder, 
+        ExtendedBlock.getLocalBlock(last));
     getEditLog().logSync();
     return success ;
   }
@@ -1698,9 +1709,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param blk Block to be marked as corrupt
    * @param dn Datanode which holds the corrupt replica
    */
-  public synchronized void markBlockAsCorrupt(Block blk, DatanodeInfo dn)
+  public synchronized void markBlockAsCorrupt(ExtendedBlock blk, DatanodeInfo dn)
     throws IOException {
-    blockManager.findAndMarkBlockAsCorrupt(blk, dn);
+    checkBlock(blk);
+    blockManager.findAndMarkBlockAsCorrupt(ExtendedBlock.getLocalBlock(blk), dn);
   }
 
 
@@ -2183,7 +2195,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     checkReplicationFactor(newFile);
   }
 
-  synchronized void commitBlockSynchronization(Block lastblock,
+  synchronized void commitBlockSynchronization(ExtendedBlock lastblock,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
       throws IOException, UnresolvedLinkException {
@@ -2194,7 +2206,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           + ", closeFile=" + closeFile
           + ", deleteBlock=" + deleteblock
           + ")");
-    final BlockInfo storedBlock = blockManager.getStoredBlock(lastblock);
+    final BlockInfo storedBlock = blockManager.getStoredBlock(ExtendedBlock
+        .getLocalBlock(lastblock));
     if (storedBlock == null) {
       throw new IOException("Block (=" + lastblock + ") not found");
     }
@@ -2216,7 +2229,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
 
     if (deleteblock) {
-      pendingFile.removeLastBlock(lastblock);
+      pendingFile.removeLastBlock(ExtendedBlock.getLocalBlock(lastblock));
       blockManager.removeBlockFromMap(storedBlock);
     }
     else {
@@ -2867,9 +2880,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * The given node is reporting all its blocks.  Use this info to 
    * update the (machine-->blocklist) and (block-->machinelist) tables.
    */
-  public synchronized void processReport(DatanodeID nodeID, 
-                                         BlockListAsLongs newReport
-                                        ) throws IOException {
+  public synchronized void processReport(DatanodeID nodeID, String poolId,
+      BlockListAsLongs newReport) throws IOException {
+    checkPoolId(poolId);
     long startTime = now();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
@@ -2998,9 +3011,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * The given node is reporting that it received a certain block.
    */
   public synchronized void blockReceived(DatanodeID nodeID,  
+                                         String poolId,
                                          Block block,
                                          String delHint
                                          ) throws IOException {
+    checkPoolId(poolId);
     DatanodeDescriptor node = getDatanode(nodeID);
     if (node == null || !node.isAlive) {
       NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: " + block
@@ -3021,6 +3036,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
 
     blockManager.addBlock(node, block, delHint);
+  }
+
+  private void checkPoolId(String thatPoolId) throws IOException {
+    if (!this.poolId.equals(thatPoolId)) {
+      throw new IOException("PoolId " + thatPoolId
+          + " does not belong to expected pool " + poolId);
+    }
+  }
+
+  private void checkBlock(ExtendedBlock block) throws IOException {
+    if (block != null && !this.poolId.equals(block.getPoolId())) {
+      throw new IOException("Block " + block
+          + " does not belong to expected pool " + poolId);
+    }
   }
 
   public long getMissingBlocksCount() {
@@ -4233,15 +4262,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return gs;
   }
 
-  private INodeFileUnderConstruction checkUCBlock(Block block, String clientName) 
-  throws IOException {
+  private INodeFileUnderConstruction checkUCBlock(ExtendedBlock block,
+      String clientName) throws IOException {
     // check safe mode
     if (isInSafeMode())
       throw new SafeModeException("Cannot get a new generation stamp and an " +
                                 "access token for block " + block, safeMode);
     
     // check stored block state
-    BlockInfo storedBlock = blockManager.getStoredBlock(block);
+    BlockInfo storedBlock = blockManager.getStoredBlock(ExtendedBlock.getLocalBlock(block));
     if (storedBlock == null || 
         storedBlock.getBlockUCState() != BlockUCState.UNDER_CONSTRUCTION) {
         throw new IOException(block + 
@@ -4252,7 +4281,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     INodeFile file = storedBlock.getINode();
     if (file==null || !file.isUnderConstruction()) {
       throw new IOException("The file " + storedBlock + 
-          " is belonged to does not exist or it is not under construction.");
+          " belonged to does not exist or it is not under construction.");
     }
     
     // check lease
@@ -4277,8 +4306,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @return a located block with a new generation stamp and an access token
    * @throws IOException if any error occurs
    */
-  synchronized LocatedBlock updateBlockForPipeline(Block block, 
+  synchronized LocatedBlock updateBlockForPipeline(ExtendedBlock block, 
       String clientName) throws IOException {
+    checkBlock(block);
     // check vadility of parameters
     checkUCBlock(block, clientName);
     
@@ -4302,9 +4332,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @param newNodes datanodes in the pipeline
    * @throws IOException if any error occurs
    */
-  synchronized void updatePipeline(String clientName, Block oldBlock, 
-      Block newBlock, DatanodeID[] newNodes)
+  synchronized void updatePipeline(String clientName, ExtendedBlock oldBlock,
+      ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
+    checkBlock(oldBlock);
+    checkBlock(newBlock);
+    
     assert newBlock.getBlockId()==oldBlock.getBlockId() : newBlock + " and "
     + oldBlock + " has different block identifier";
     LOG.info("updatePipeline(block=" + oldBlock
@@ -4887,5 +4920,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   private long getDfsUsed(DatanodeDescriptor alivenode) {
     return alivenode.getDfsUsed();
+  }
+
+  public String getPoolId() {
+    return poolId;
   }
 }

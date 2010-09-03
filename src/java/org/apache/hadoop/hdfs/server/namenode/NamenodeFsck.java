@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -316,7 +316,7 @@ public class NamenodeFsck {
     StringBuilder report = new StringBuilder();
     int i = 0;
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
-      Block block = lBlk.getBlock();
+      ExtendedBlock block = lBlk.getBlock();
       boolean isCorrupt = lBlk.isCorrupt();
       String blkName = block.toString();
       DatanodeInfo[] locs = lBlk.getLocations();
@@ -495,7 +495,7 @@ public class NamenodeFsck {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     Socket s = null;
     BlockReader blockReader = null; 
-    Block block = lblock.getBlock(); 
+    ExtendedBlock block = lblock.getBlock(); 
 
     while (s == null) {
       DatanodeInfo chosenNode;

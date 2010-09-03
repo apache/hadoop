@@ -25,8 +25,8 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -70,7 +70,7 @@ public class BlockRecoveryCommand extends DatanodeCommand {
     /**
      * Create RecoveringBlock.
      */
-    public RecoveringBlock(Block b, DatanodeInfo[] locs, long newGS) {
+    public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs, long newGS) {
       super(b, locs, -1, false); // startOffset is unknown
       this.newGenerationStamp = newGS;
     }

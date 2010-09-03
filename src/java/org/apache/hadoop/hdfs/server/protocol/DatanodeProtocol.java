@@ -23,6 +23,7 @@ import java.io.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -44,9 +45,9 @@ import org.apache.avro.reflect.Nullable;
 @InterfaceAudience.Private
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 25: HDFS-1081. Performance optimization on getBlocksLocation()
+   * 26: Add block pool ID to Block
    */
-  public static final long versionID = 25L;
+  public static final long versionID = 26L;
   
   // error code
   final static int NOTIFY = 0;
@@ -101,6 +102,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * the locally-stored blocks.  It's invoked upon startup and then
    * infrequently afterwards.
    * @param registration
+   * @param poolId - the block pool ID for the blocks
    * @param blocks - the block list as an array of longs.
    *     Each block is represented as 2 longs.
    *     This is done instead of Block[] to reduce memory used by block reports.
@@ -109,6 +111,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public DatanodeCommand blockReport(DatanodeRegistration registration,
+                                     String poolId,
                                      long[] blocks) throws IOException;
     
   /**
@@ -120,6 +123,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * this DataNode, it will call blockReceived().
    */
   public void blockReceived(DatanodeRegistration registration,
+                            String poolId,
                             Block blocks[],
                             String[] delHints) throws IOException;
 
@@ -154,7 +158,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   /**
    * Commit block synchronization in lease recovery
    */
-  public void commitBlockSynchronization(Block block,
+  public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
       ) throws IOException;

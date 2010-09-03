@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -119,7 +120,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
     // make sure a block report is sent 
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
     long[] bReport = dn.getFSDataset().getBlockReport().getBlockListAsLongs();
-    cluster.getNameNode().blockReport(dn.dnRegistration, bReport);
+    String poolId = cluster.getNamesystem().getPoolId();
+    cluster.getNameNode().blockReport(dn.dnRegistration, poolId, bReport);
 
     // verify number of blocks and files...
     verify(filename, filesize);
@@ -197,7 +199,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     
     for(LocatedBlock lb : locatedBlocks) {
       DatanodeInfo dinfo = lb.getLocations()[1];
-      Block b = lb.getBlock();
+      ExtendedBlock b = lb.getBlock();
     //  System.out.println(i++ + ". " + b.getBlockName());
       try {
         accessBlock(dinfo, lb);
@@ -238,8 +240,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     throws IOException {
     InetSocketAddress targetAddr = null;
     Socket s = null;
-    BlockReader blockReader = null; 
-    Block block = lblock.getBlock(); 
+    ExtendedBlock block = lblock.getBlock(); 
    
     targetAddr = NetUtils.createSocketAddr(datanode.getName());
       
@@ -247,7 +248,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-    blockReader = 
+    BlockReader blockReader = 
       BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
           block.getBlockId(), 
           block.getBlockId(), 

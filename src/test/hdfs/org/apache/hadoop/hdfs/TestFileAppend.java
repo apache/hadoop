@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil.HardLink;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -134,8 +134,8 @@ public class TestFileAppend extends TestCase {
       // Create hard links for a few of the blocks
       //
       for (int i = 0; i < blocks.size(); i = i + 2) {
-        Block b = blocks.get(i).getBlock();
-        File f = dataset.getFile(b);
+        ExtendedBlock b = blocks.get(i).getBlock();
+        File f = dataset.getFile(b.getLocalBlock());
         File link = new File(f.toString() + ".link");
         System.out.println("Creating hardlink for File " + f + " to " + link);
         HardLink.createHardLink(f, link);
@@ -145,20 +145,20 @@ public class TestFileAppend extends TestCase {
       // Detach all blocks. This should remove hardlinks (if any)
       //
       for (int i = 0; i < blocks.size(); i++) {
-        Block b = blocks.get(i).getBlock();
+        ExtendedBlock b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
-            dataset.unlinkBlock(b, 1));
+            dataset.unlinkBlock(b.getLocalBlock(), 1));
       }
 
       // Since the blocks were already detached earlier, these calls should
       // return false
       //
       for (int i = 0; i < blocks.size(); i++) {
-        Block b = blocks.get(i).getBlock();
+        ExtendedBlock b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
-            !dataset.unlinkBlock(b, 1));
+            !dataset.unlinkBlock(b.getLocalBlock(), 1));
       }
 
     } finally {

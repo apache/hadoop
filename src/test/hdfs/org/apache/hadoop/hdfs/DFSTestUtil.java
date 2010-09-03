@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.io.IOUtils;
@@ -252,7 +252,7 @@ public class DFSTestUtil {
     files = null;
   }
   
-  public static Block getFirstBlock(FileSystem fs, Path path) throws IOException {
+  public static ExtendedBlock getFirstBlock(FileSystem fs, Path path) throws IOException {
     DFSDataInputStream in = 
       (DFSDataInputStream) ((DistributedFileSystem)fs).open(path);
     in.readByte();

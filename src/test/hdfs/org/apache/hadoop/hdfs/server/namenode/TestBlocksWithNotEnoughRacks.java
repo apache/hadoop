@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NumberReplicas;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -64,10 +65,10 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
       
-      Block b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
+      ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       final FSNamesystem namesystem = cluster.getNamesystem();
-      int numRacks = namesystem.blockManager.getNumberOfRacks(b);
-      NumberReplicas number = namesystem.blockManager.countNodes(b);
+      int numRacks = namesystem.blockManager.getNumberOfRacks(b.getLocalBlock());
+      NumberReplicas number = namesystem.blockManager.countNodes(b.getLocalBlock());
       int curReplicas = number.liveReplicas();
       int neededReplicationSize = 
                            namesystem.blockManager.neededReplications.size();
@@ -80,8 +81,8 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
               (neededReplicationSize > 0) ) {
         LOG.info("Waiting for replication");
         Thread.sleep(600);
-        numRacks = namesystem.blockManager.getNumberOfRacks(b);
-        number = namesystem.blockManager.countNodes(b);
+        numRacks = namesystem.blockManager.getNumberOfRacks(b.getLocalBlock());
+        number = namesystem.blockManager.countNodes(b.getLocalBlock());
         curReplicas = number.liveReplicas();
         neededReplicationSize = 
                            namesystem.blockManager.neededReplications.size();
@@ -118,10 +119,10 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
       DFSTestUtil.createFile(fs, FILE_PATH, 1L, REPLICATION_FACTOR, 1L);
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
       
-      Block b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
+      ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
       final FSNamesystem namesystem = cluster.getNamesystem();
-      int numRacks = namesystem.blockManager.getNumberOfRacks(b);
-      NumberReplicas number = namesystem.blockManager.countNodes(b);
+      int numRacks = namesystem.blockManager.getNumberOfRacks(b.getLocalBlock());
+      NumberReplicas number = namesystem.blockManager.countNodes(b.getLocalBlock());
       int curReplicas = number.liveReplicas();
       int neededReplicationSize = 
                            namesystem.blockManager.neededReplications.size();
@@ -136,8 +137,8 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
               (neededReplicationSize > 0) ) {
         LOG.info("Waiting for replication");
         Thread.sleep(600);
-        numRacks = namesystem.blockManager.getNumberOfRacks(b);
-        number = namesystem.blockManager.countNodes(b);
+        numRacks = namesystem.blockManager.getNumberOfRacks(b.getLocalBlock());
+        number = namesystem.blockManager.countNodes(b.getLocalBlock());
         curReplicas = number.liveReplicas();
         neededReplicationSize = 
                            namesystem.blockManager.neededReplications.size();

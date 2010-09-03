@@ -24,7 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
@@ -39,9 +39,9 @@ public interface InterDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
 
   /**
-   * 5: getBlockMetaDataInfo(), updateBlock() removed.
+   * 6: Add block pool ID to Block
    */
-  public static final long versionID = 5L;
+  public static final long versionID = 6L;
 
   /**
    * Initialize a replica recovery.
@@ -55,7 +55,7 @@ public interface InterDatanodeProtocol extends VersionedProtocol {
   /**
    * Update replica with the new generation stamp and length.  
    */
-  Block updateReplicaUnderRecovery(Block oldBlock,
+  ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                    long recoveryId,
                                    long newLength) throws IOException;
 }

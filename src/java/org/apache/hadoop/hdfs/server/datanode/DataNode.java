@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -1057,7 +1058,8 @@ public class DataNode extends Configured
       if(delHintArray == null || delHintArray.length != blockArray.length ) {
         LOG.warn("Panic: block array & delHintArray are not the same" );
       }
-      namenode.blockReceived(dnRegistration, blockArray, delHintArray);
+      // TODO:FEDERATION add support for pool ID
+      namenode.blockReceived(dnRegistration, "TODO", blockArray, delHintArray);
       synchronized(receivedBlockList) {
         synchronized(delHints){
           for(int i=0; i<blockArray.length; i++) {
@@ -1086,7 +1088,9 @@ public class DataNode extends Configured
       long brStartTime = now();
       BlockListAsLongs bReport = data.getBlockReport();
 
-      cmd = namenode.blockReport(dnRegistration, bReport.getBlockListAsLongs());
+      // TODO:FEDERATION add support for pool ID
+      cmd = namenode.blockReport(dnRegistration, "TODO", bReport
+          .getBlockListAsLongs());
       long brTime = now() - brStartTime;
       myMetrics.blockReports.inc(brTime);
       LOG.info("BlockReport of " + bReport.getNumberOfBlocks() +
@@ -1658,7 +1662,7 @@ public class DataNode extends Configured
       public void run() {
         for(RecoveringBlock b : blocks) {
           try {
-            logRecoverBlock("NameNode", b.getBlock(), b.getLocations());
+            logRecoverBlock("NameNode", b.getBlock().getLocalBlock(), b.getLocations());
             recoverBlock(b);
           } catch (IOException e) {
             LOG.warn("recoverBlocks FAILED: " + b, e);
@@ -1695,12 +1699,12 @@ public class DataNode extends Configured
    * Update replica with the new generation stamp and length.  
    */
   @Override // InterDatanodeProtocol
-  public Block updateReplicaUnderRecovery(Block oldBlock,
+  public ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                           long recoveryId,
                                           long newLength) throws IOException {
-    ReplicaInfo r =
-      data.updateReplicaUnderRecovery(oldBlock, recoveryId, newLength);
-    return new Block(r);
+    ReplicaInfo r = data.updateReplicaUnderRecovery(oldBlock.getLocalBlock(),
+        recoveryId, newLength);
+    return new ExtendedBlock(oldBlock.getPoolId(), r);
   }
 
   /** {@inheritDoc} */
@@ -1737,7 +1741,7 @@ public class DataNode extends Configured
 
   /** Recover a block */
   private void recoverBlock(RecoveringBlock rBlock) throws IOException {
-    Block block = rBlock.getBlock();
+    ExtendedBlock block = rBlock.getBlock();
     DatanodeInfo[] targets = rBlock.getLocations();
     DatanodeID[] datanodeids = (DatanodeID[])targets;
     List<BlockRecord> syncList = new ArrayList<BlockRecord>(datanodeids.length);
@@ -1780,7 +1784,7 @@ public class DataNode extends Configured
   /** Block synchronization */
   void syncBlock(RecoveringBlock rBlock,
                          List<BlockRecord> syncList) throws IOException {
-    Block block = rBlock.getBlock();
+    ExtendedBlock block = rBlock.getBlock();
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
@@ -1815,7 +1819,8 @@ public class DataNode extends Configured
     // Calculate list of nodes that will participate in the recovery
     // and the new block size
     List<BlockRecord> participatingList = new ArrayList<BlockRecord>();
-    Block newBlock = new Block(block.getBlockId(), -1, recoveryId);
+    final ExtendedBlock newBlock = new ExtendedBlock(block.getPoolId(), block
+        .getBlockId(), -1, recoveryId);
     switch(bestState) {
     case FINALIZED:
       assert finalizedLength > 0 : "finalizedLength is not positive";
@@ -1849,8 +1854,9 @@ public class DataNode extends Configured
     List<DatanodeID> successList = new ArrayList<DatanodeID>();
     for(BlockRecord r : participatingList) {
       try {
-        Block reply = r.datanode.updateReplicaUnderRecovery(
-            r.rInfo, recoveryId, newBlock.getNumBytes());
+        ExtendedBlock reply = r.datanode.updateReplicaUnderRecovery(
+            new ExtendedBlock(newBlock.getPoolId(), r.rInfo), recoveryId,
+            newBlock.getNumBytes());
         assert reply.equals(newBlock) &&
                reply.getNumBytes() == newBlock.getNumBytes() :
           "Updated replica must be the same as the new block.";
@@ -1894,7 +1900,7 @@ public class DataNode extends Configured
   // ClientDataNodeProtocol implementation
   /** {@inheritDoc} */
   @Override // ClientDataNodeProtocol
-  public long getReplicaVisibleLength(final Block block) throws IOException {
+  public long getReplicaVisibleLength(final ExtendedBlock block) throws IOException {
     if (isBlockTokenEnabled) {
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
@@ -1913,7 +1919,7 @@ public class DataNode extends Configured
       }
     }
 
-    return data.getReplicaVisibleLength(block);
+    return data.getReplicaVisibleLength(block.getLocalBlock());
   }
   
   // Determine a Datanode's streaming address

@@ -41,9 +41,9 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -118,7 +118,7 @@ public class TestBlockReplacement extends TestCase {
       LocatedBlock block = locatedBlocks.get(0);
       DatanodeInfo[]  oldNodes = block.getLocations();
       assertEquals(oldNodes.length, 3);
-      Block b = block.getBlock();
+      ExtendedBlock b = block.getBlock();
       
       // add a new datanode to the cluster
       cluster.startDataNodes(CONF, 1, true, null, NEW_RACKS);
@@ -222,7 +222,7 @@ public class TestBlockReplacement extends TestCase {
    * 
    * Return true if a block is successfully copied; otherwise false.
    */
-  private boolean replaceBlock( Block block, DatanodeInfo source,
+  private boolean replaceBlock( ExtendedBlock block, DatanodeInfo source,
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     Socket sock = new Socket();
     sock.connect(NetUtils.createSocketAddr(

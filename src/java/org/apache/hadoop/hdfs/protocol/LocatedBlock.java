@@ -42,7 +42,7 @@ public class LocatedBlock implements Writable {
        });
   }
 
-  private Block b;
+  private ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
   private DatanodeInfo[] locs;
   // corrupt flag is true if all of the replicas of a block are corrupt.
@@ -51,27 +51,24 @@ public class LocatedBlock implements Writable {
   private boolean corrupt;
   private Token<BlockTokenIdentifier> blockToken = new Token<BlockTokenIdentifier>();
 
-  /**
-   */
   public LocatedBlock() {
-    this(new Block(), new DatanodeInfo[0], 0L, false);
+    this(new ExtendedBlock(), new DatanodeInfo[0], 0L, false);
   }
 
-  /**
-   */
+  // TODO:FEDERATION To remove when block pool ID related coding is complete
   public LocatedBlock(Block b, DatanodeInfo[] locs) {
+    this(new ExtendedBlock(b), locs, -1, false); // startOffset is unknown
+  }
+
+  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs) {
     this(b, locs, -1, false); // startOffset is unknown
   }
 
-  /**
-   */
-  public LocatedBlock(Block b, DatanodeInfo[] locs, long startOffset) {
+  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset) {
     this(b, locs, startOffset, false);
   }
 
-  /**
-   */
-  public LocatedBlock(Block b, DatanodeInfo[] locs, long startOffset, 
+  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset, 
                       boolean corrupt) {
     this.b = b;
     this.offset = startOffset;
@@ -93,7 +90,7 @@ public class LocatedBlock implements Writable {
 
   /**
    */
-  public Block getBlock() {
+  public ExtendedBlock getBlock() {
     return b;
   }
 
@@ -141,7 +138,7 @@ public class LocatedBlock implements Writable {
     blockToken.readFields(in);
     this.corrupt = in.readBoolean();
     offset = in.readLong();
-    this.b = new Block();
+    this.b = new ExtendedBlock();
     b.readFields(in);
     int count = in.readInt();
     this.locs = new DatanodeInfo[count];

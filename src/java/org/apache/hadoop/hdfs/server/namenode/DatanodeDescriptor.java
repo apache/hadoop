@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -355,7 +356,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     BlockRecoveryCommand brCommand = new BlockRecoveryCommand(blocks.size());
     for(BlockInfoUnderConstruction b : blocks) {
       brCommand.add(new RecoveringBlock(
-          b, b.getExpectedLocations(), b.getBlockRecoveryId()));
+          new ExtendedBlock(b), b.getExpectedLocations(), b.getBlockRecoveryId()));
     }
     return brCommand;
   }

@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.*;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
@@ -122,7 +122,7 @@ public class TestBlockTokenWithDFS extends TestCase {
     InetSocketAddress targetAddr = null;
     Socket s = null;
     BlockReader blockReader = null;
-    Block block = lblock.getBlock();
+    ExtendedBlock block = lblock.getBlock();
     try {
       DatanodeInfo[] nodes = lblock.getLocations();
       targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
@@ -352,7 +352,8 @@ public class TestBlockTokenWithDFS extends TestCase {
       // read should succeed
       tryRead(conf, lblock, true);
       // use a token with wrong blockID
-      Block wrongBlock = new Block(lblock.getBlock().getBlockId() + 1);
+      ExtendedBlock wrongBlock = new ExtendedBlock(lblock.getBlock()
+          .getPoolId(), lblock.getBlock().getBlockId() + 1);
       lblock.setBlockToken(cluster.getNameNode().getNamesystem()
           .blockTokenSecretManager.generateToken(wrongBlock,
               EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));

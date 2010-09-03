@@ -28,8 +28,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import junit.framework.TestCase;
@@ -53,8 +53,9 @@ public class TestOverReplicatedBlocks extends TestCase {
       DFSTestUtil.waitReplication(fs, fileName, (short)3);
       
       // corrupt the block on datanode 0
-      Block block = DFSTestUtil.getFirstBlock(fs, fileName);
-      TestDatanodeBlockScanner.corruptReplica(block.getBlockName(), 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
+      TestDatanodeBlockScanner.corruptReplica(block.getLocalBlock()
+          .getBlockName(), 0);
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
       File scanLog = new File(System.getProperty("test.build.data"),
@@ -89,7 +90,8 @@ public class TestOverReplicatedBlocks extends TestCase {
 
         // corrupt one won't be chosen to be excess one
         // without 4910 the number of live replicas would be 0: block gets lost
-        assertEquals(1, namesystem.blockManager.countNodes(block).liveReplicas());
+        assertEquals(1, namesystem.blockManager.countNodes(block.getLocalBlock())
+            .liveReplicas());
       }
     } finally {
       cluster.shutdown();

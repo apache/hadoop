@@ -32,6 +32,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
@@ -81,9 +82,9 @@ public class TestBlockToken {
 
   long blockKeyUpdateInterval = 10 * 60 * 1000; // 10 mins
   long blockTokenLifetime = 2 * 60 * 1000; // 2 mins
-  Block block1 = new Block(0L);
-  Block block2 = new Block(10L);
-  Block block3 = new Block(-108L);
+  ExtendedBlock block1 = new ExtendedBlock("0", 0L);
+  ExtendedBlock block2 = new ExtendedBlock("10", 10L);
+  ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
 
   private static class getLengthAnswer implements Answer<Long> {
     BlockTokenSecretManager sm;
@@ -99,7 +100,7 @@ public class TestBlockToken {
     public Long answer(InvocationOnMock invocation) throws IOException {
       Object args[] = invocation.getArguments();
       assertEquals(1, args.length);
-      Block block = (Block) args[0];
+      ExtendedBlock block = (ExtendedBlock) args[0];
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
       assertEquals("Only one BlockTokenIdentifier expected", 1, tokenIds.size());
@@ -117,7 +118,7 @@ public class TestBlockToken {
   }
 
   private BlockTokenIdentifier generateTokenId(BlockTokenSecretManager sm,
-      Block block, EnumSet<BlockTokenSecretManager.AccessMode> accessModes)
+      ExtendedBlock block, EnumSet<BlockTokenSecretManager.AccessMode> accessModes)
       throws IOException {
     Token<BlockTokenIdentifier> token = sm.generateToken(block, accessModes);
     BlockTokenIdentifier id = sm.createIdentifier();
@@ -197,7 +198,7 @@ public class TestBlockToken {
     id.readFields(new DataInputStream(new ByteArrayInputStream(token
         .getIdentifier())));
     doAnswer(new getLengthAnswer(sm, id)).when(mockDN).getReplicaVisibleLength(
-        any(Block.class));
+        any(ExtendedBlock.class));
 
     final Server server = RPC.getServer(ClientDatanodeProtocol.class, mockDN,
         ADDRESS, 0, 5, true, conf, sm);

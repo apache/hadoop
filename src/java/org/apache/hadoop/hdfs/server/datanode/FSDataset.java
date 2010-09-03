@@ -1953,7 +1953,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   public synchronized ReplicaRecoveryInfo initReplicaRecovery(
       RecoveringBlock rBlock) throws IOException {
     return initReplicaRecovery(
-        volumeMap, rBlock.getBlock(), rBlock.getNewGenerationStamp());
+        volumeMap, rBlock.getBlock().getLocalBlock(), rBlock.getNewGenerationStamp());
   }
 
   /** static version of {@link #initReplicaRecovery(Block, long)}. */

@@ -42,9 +42,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -157,7 +157,7 @@ public class TestDFSClientRetries extends TestCase {
     };
     when(mockNN.addBlock(anyString(), 
                          anyString(),
-                         any(Block.class),
+                         any(ExtendedBlock.class),
                          any(DatanodeInfo[].class))).thenAnswer(answer);
 
     final DFSClient client = new DFSClient(null, mockNN, conf, null);

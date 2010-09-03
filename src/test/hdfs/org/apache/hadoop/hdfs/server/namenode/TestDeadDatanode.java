@@ -97,13 +97,13 @@ public class TestDeadDatanode {
     waitForDatanodeState(reg.getStorageID(), false, 20000);
 
     DatanodeProtocol dnp = cluster.getNameNode();
-    Block block = new Block(0);
-    Block[] blocks = new Block[] { block };
+    String poolId = cluster.getNamesystem().getPoolId();
+    Block[] blocks = new Block[] { new Block(0) };
     String[] delHints = new String[] { "" };
     
     // Ensure blockReceived call from dead datanode is rejected with IOException
     try {
-      dnp.blockReceived(reg, blocks, delHints);
+      dnp.blockReceived(reg, poolId, blocks, delHints);
       Assert.fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
@@ -112,7 +112,7 @@ public class TestDeadDatanode {
     // Ensure blockReport from dead datanode is rejected with IOException
     long[] blockReport = new long[] { 0L, 0L, 0L };
     try {
-      dnp.blockReport(reg, blockReport);
+      dnp.blockReport(reg, poolId, blockReport);
       Assert.fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected

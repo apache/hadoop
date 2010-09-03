@@ -153,13 +153,23 @@ public class Block implements Writable, Comparable<Block> {
   /////////////////////////////////////
   // Writable
   /////////////////////////////////////
+  @Override // Writable
   public void write(DataOutput out) throws IOException {
+    writeHelper(out);
+  }
+
+  @Override // Writable
+  public void readFields(DataInput in) throws IOException {
+    readHelper(in);
+  }
+  
+  final void writeHelper(DataOutput out) throws IOException {
     out.writeLong(blockId);
     out.writeLong(numBytes);
     out.writeLong(generationStamp);
   }
-
-  public void readFields(DataInput in) throws IOException {
+  
+  final void readHelper(DataInput in) throws IOException {
     this.blockId = in.readLong();
     this.numBytes = in.readLong();
     this.generationStamp = in.readLong();

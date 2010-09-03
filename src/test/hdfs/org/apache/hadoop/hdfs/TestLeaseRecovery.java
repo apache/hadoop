@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -34,7 +35,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
   static final short REPLICATION_NUM = (short)3;
   private static final long LEASE_PERIOD = 300L;
 
-  static void checkMetaInfo(Block b, DataNode dn
+  static void checkMetaInfo(ExtendedBlock b, DataNode dn
       ) throws IOException {
     TestInterDatanodeProtocol.checkMetaInfo(b, dn);
   }
@@ -96,7 +97,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       }
       
       //verify Block Info
-      Block lastblock = locatedblock.getBlock();
+      ExtendedBlock lastblock = locatedblock.getBlock();
       DataNode.LOG.info("newblocks=" + lastblock);
       for(int i = 0; i < REPLICATION_NUM; i++) {
         checkMetaInfo(lastblock, datanodes[i]);

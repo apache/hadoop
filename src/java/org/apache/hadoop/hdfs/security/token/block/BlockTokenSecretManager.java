@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -174,7 +175,7 @@ public class BlockTokenSecretManager extends
   }
 
   /** Generate an block token for current user */
-  public Token<BlockTokenIdentifier> generateToken(Block block,
+  public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
       EnumSet<AccessMode> modes) throws IOException {
     return generateToken(new long [] { block.getBlockId() }, modes);
   }
@@ -203,12 +204,20 @@ public class BlockTokenSecretManager extends
   }
 
   /**
+   * TODO:FEDERATION To remove when block pool ID related coding is complete
+   */
+  public void checkAccess(Token<BlockTokenIdentifier> blockToken, String userId,
+      Block block, AccessMode mode) throws InvalidToken {
+    checkAccess(blockToken, userId, new ExtendedBlock(block), mode);
+  }
+  
+  /**
    * Check if access should be allowed. userID is not checked if null. This
    * method doesn't check if token password is correct. It should be used only
    * when token password has already been verified (e.g., in the RPC layer).
    */
-  public void checkAccess(BlockTokenIdentifier id, String userId, Block block,
-      AccessMode mode) throws InvalidToken {
+  public void checkAccess(BlockTokenIdentifier id, String userId,
+      ExtendedBlock block, AccessMode mode) throws InvalidToken {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Checking access for user=" + userId + ", block=" + block
           + ", access mode=" + mode + " using " + id.toString());
@@ -233,7 +242,7 @@ public class BlockTokenSecretManager extends
 
   /** Check if access should be allowed. userID is not checked if null */
   public void checkAccess(Token<BlockTokenIdentifier> token, String userId,
-      Block block, AccessMode mode) throws InvalidToken {
+      ExtendedBlock block, AccessMode mode) throws InvalidToken {
     BlockTokenIdentifier id = new BlockTokenIdentifier();
     try {
       id.readFields(new DataInputStream(new ByteArrayInputStream(token

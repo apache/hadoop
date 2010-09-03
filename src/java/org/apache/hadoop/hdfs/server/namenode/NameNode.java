@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -801,7 +802,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   @Override
   public LocatedBlock addBlock(String src,
                                String clientName,
-                               Block previous,
+                               ExtendedBlock previous,
                                DatanodeInfo[] excludedNodes)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
@@ -825,7 +826,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /**
    * The client needs to give up on the block.
    */
-  public void abandonBlock(Block b, String src, String holder)
+  public void abandonBlock(ExtendedBlock b, String src, String holder)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
@@ -837,7 +838,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
   /** {@inheritDoc} */
-  public boolean complete(String src, String clientName, Block last)
+  public boolean complete(String src, String clientName, ExtendedBlock last)
       throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.complete: "
@@ -855,7 +856,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     stateChangeLog.info("*DIR* NameNode.reportBadBlocks");
     for (int i = 0; i < blocks.length; i++) {
-      Block blk = blocks[i].getBlock();
+      ExtendedBlock blk = blocks[i].getBlock();
       DatanodeInfo[] nodes = blocks[i].getLocations();
       for (int j = 0; j < nodes.length; j++) {
         DatanodeInfo dn = nodes[j];
@@ -866,21 +867,21 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   /** {@inheritDoc} */
   @Override
-  public LocatedBlock updateBlockForPipeline(Block block, String clientName)
+  public LocatedBlock updateBlockForPipeline(ExtendedBlock block, String clientName)
       throws IOException {
     return namesystem.updateBlockForPipeline(block, clientName);
   }
 
 
   @Override
-  public void updatePipeline(String clientName, Block oldBlock,
-      Block newBlock, DatanodeID[] newNodes)
+  public void updatePipeline(String clientName, ExtendedBlock oldBlock,
+      ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
     namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes);
   }
   
   /** {@inheritDoc} */
-  public void commitBlockSynchronization(Block block,
+  public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
       throws IOException {
@@ -1222,6 +1223,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
+                                     String poolId,
                                      long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
@@ -1231,13 +1233,14 @@ public class NameNode implements NamenodeProtocols, FSConstants {
            + " blocks");
     }
 
-    namesystem.processReport(nodeReg, blist);
+    namesystem.processReport(nodeReg, poolId, blist);
     if (getFSImage().isUpgradeFinalized())
       return DatanodeCommand.FINALIZE;
     return null;
   }
 
   public void blockReceived(DatanodeRegistration nodeReg, 
+                            String poolId,
                             Block blocks[],
                             String delHints[]) throws IOException {
     verifyRequest(nodeReg);
@@ -1246,7 +1249,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
           +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
     }
     for (int i = 0; i < blocks.length; i++) {
-      namesystem.blockReceived(nodeReg, blocks[i], delHints[i]);
+      namesystem.blockReceived(nodeReg, poolId, blocks[i], delHints[i]);
     }
   }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -46,7 +47,7 @@ import org.junit.Test;
  * This tests InterDataNodeProtocol for block handling. 
  */
 public class TestInterDatanodeProtocol {
-  public static void checkMetaInfo(Block b, DataNode dn) throws IOException {
+  public static void checkMetaInfo(ExtendedBlock b, DataNode dn) throws IOException {
     Block metainfo = dn.data.getStoredBlock(b.getBlockId());
     Assert.assertEquals(b.getBlockId(), metainfo.getBlockId());
     Assert.assertEquals(b.getNumBytes(), metainfo.getNumBytes());
@@ -100,7 +101,7 @@ public class TestInterDatanodeProtocol {
       datanode.blockScannerThread.interrupt();
 
       //verify BlockMetaDataInfo
-      Block b = locatedblock.getBlock();
+      ExtendedBlock b = locatedblock.getBlock();
       InterDatanodeProtocol.LOG.info("b=" + b + ", " + b.getClass());
       checkMetaInfo(b, datanode);
       long recoveryId = b.getGenerationStamp() + 1;
@@ -108,7 +109,7 @@ public class TestInterDatanodeProtocol {
           new RecoveringBlock(b, locatedblock.getLocations(), recoveryId));
 
       //verify updateBlock
-      Block newblock = new Block(
+      ExtendedBlock newblock = new ExtendedBlock(b.getPoolId(),
           b.getBlockId(), b.getNumBytes()/2, b.getGenerationStamp()+1);
       idp.updateReplicaUnderRecovery(b, recoveryId, newblock.getNumBytes());
       checkMetaInfo(newblock, datanode);
@@ -208,7 +209,7 @@ public class TestInterDatanodeProtocol {
     }
   }
 
-  /** Test {@link FSDataset#updateReplicaUnderRecovery(ReplicaUnderRecovery, long, long)} */
+  /** Test {@link FSDataset#updateReplicaUnderRecovery(Block, long, long)} */
   @Test
   public void testUpdateReplicaUnderRecovery() throws IOException {
     final Configuration conf = new HdfsConfiguration();
@@ -237,7 +238,7 @@ public class TestInterDatanodeProtocol {
       final FSDataset fsdataset = (FSDataset)datanode.data;
 
       //initReplicaRecovery
-      final Block b = locatedblock.getBlock();
+      final ExtendedBlock b = locatedblock.getBlock();
       final long recoveryid = b.getGenerationStamp() + 1;
       final long newlength = b.getNumBytes() - 1;
       final ReplicaRecoveryInfo rri = fsdataset.initReplicaRecovery(
