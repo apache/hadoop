@@ -229,6 +229,8 @@ Trunk (unreleased changes)
     
     HDFS-1352. Fix jsvc.location. (Eli Collins via jghoman)
 
+    HDFS-1284. TestBlockToken fails.  (Kan Zhang via jghoman)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
