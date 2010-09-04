@@ -82,6 +82,10 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Action;
+import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.MultiResponse;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
@@ -2205,6 +2209,54 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
+  public MultiResponse multi(MultiAction multi) throws IOException {
+    MultiResponse response = new MultiResponse();
+    for (Map.Entry<byte[], List<Action>> e : multi.actions.entrySet()) {
+      byte[] regionName = e.getKey();
+      List<Action> actionsForRegion = e.getValue();
+      // sort based on the row id - this helps in the case where we reach the
+      // end of a region, so that we don't have to try the rest of the 
+      // actions in the list.
+      Collections.sort(actionsForRegion);
+      Row action = null;
+      try {
+        for (Action a : actionsForRegion) {
+          action = a.getAction();
+          if (action instanceof Delete) {
+            delete(regionName, (Delete) action);
+            response.add(regionName, new Pair<Integer, Result>(
+                a.getOriginalIndex(), new Result()));
+          } else if (action instanceof Get) {
+            response.add(regionName, new Pair<Integer, Result>(
+                a.getOriginalIndex(), get(regionName, (Get) action)));
+          } else if (action instanceof Put) {
+            put(regionName, (Put) action);
+            response.add(regionName, new Pair<Integer, Result>(
+                a.getOriginalIndex(), new Result()));
+          } else {
+            LOG.debug("Error: invalid Action, row must be a Get, Delete or Put.");
+            throw new IllegalArgumentException("Invalid Action, row must be a Get, Delete or Put.");
+          }
+        }
+      } catch (IOException ioe) {
+          if (multi.size() == 1) {
+            throw ioe;
+          } else {
+            LOG.error("Exception found while attempting " + action.toString()
+                + " " + StringUtils.stringifyException(ioe));
+            response.add(regionName,null);
+            // stop processing on this region, continue to the next.
+          }
+        }
+      }
+      
+      return response;
+    }
+  
+  /**
+   * @deprecated Use HRegionServer.multi( MultiAction action) instead
+   */
+  @Override
   public MultiPutResponse multiPut(MultiPut puts) throws IOException {
     MultiPutResponse resp = new MultiPutResponse();
 
@@ -2246,7 +2298,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public CompactionRequestor getCompactionRequester() {
     return this.compactSplitThread;
   }
-
+  
   //
   // Main program and support routines
   //

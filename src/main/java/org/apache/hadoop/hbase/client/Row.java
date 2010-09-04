@@ -29,5 +29,4 @@ public interface Row extends WritableComparable<Row> {
    * @return The row.
    */
   public byte [] getRow();
-  
 }

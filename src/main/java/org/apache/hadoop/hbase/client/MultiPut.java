@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
+ * @deprecated Use MultiAction instead
  * Data type class for putting multiple regions worth of puts in one RPC.
  */
 public class MultiPut implements Writable {

@@ -211,6 +211,21 @@ public interface HConnection {
   public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
+  /**
+   * Process a mixed batch of Get, Put and Delete actions. All actions for a
+   * RegionServer are forwarded in one RPC call.
+   * 
+   * @param actions The collection of actions.
+   * @param tableName Name of the hbase table
+   * @param pool thread pool for parallel execution
+   * @param results An empty array, same size as list. If an exception is thrown,
+   * you can test here for partial results, and to determine which actions
+   * processed successfully.
+   * @throws IOException
+   */
+  public void processBatch(List<Row> actions, final byte[] tableName,
+      ExecutorService pool, Result[] results)
+  throws IOException;
 
   /**
    * Process a batch of Puts. Does the retries.
@@ -218,20 +233,32 @@ public interface HConnection {
    * @param tableName The name of the table
    * @return Count of committed Puts.  On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use HConnectionManager::processBatch instead.
    */
-  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
+  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName, ExecutorService pool)
   throws IOException;
 
   /**
    * Process a batch of Deletes. Does the retries.
    * @param list A batch of Deletes to process.
-   * @return Count of committed Deletes. On fault, < list.size().
    * @param tableName The name of the table
+   * @return Count of committed Deletes. On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use HConnectionManager::processBatch instead.
    */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
+  public int processBatchOfDeletes(List<Delete> list, byte[] tableName, ExecutorService pool)
   throws IOException;
 
+  /**
+   * Process a batch of Puts.
+   *
+   * @param list The collection of actions. The list is mutated: all successful Puts 
+   * are removed from the list.
+   * @param tableName Name of the hbase table
+   * @param pool Thread pool for parallel execution
+   * @throws IOException
+   * @deprecated Use HConnectionManager::processBatch instead.
+   */
   public void processBatchOfPuts(List<Put> list,
                                  final byte[] tableName, ExecutorService pool) throws IOException;
 
@@ -248,7 +275,7 @@ public interface HConnection {
   /**
    * Check whether region cache prefetch is enabled or not.
    * @param tableName name of table to check
-   * @return true if table's region cache prefecth is enabled. Otherwise
+   * @return true if table's region cache prefetch is enabled. Otherwise
    * it is disabled.
    */
   public boolean getRegionCachePrefetch(final byte[] tableName);

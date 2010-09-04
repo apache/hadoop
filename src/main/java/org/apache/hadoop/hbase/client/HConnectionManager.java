@@ -29,12 +29,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -65,6 +68,7 @@ import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
@@ -863,7 +867,7 @@ public class HConnectionManager {
      * Allows flushing the region cache.
      */
     public void clearRegionCache() {
-     cachedRegionLocations.clear();
+      cachedRegionLocations.clear();
     }
 
     /*
@@ -1105,176 +1109,38 @@ public class HConnectionManager {
       return location;
     }
 
-    /*
-     * Helper class for batch updates.
-     * Holds code shared doing batch puts and batch deletes.
+    /**
+     * @deprecated Use HConnectionManager::processBatch instead.
      */
-    private abstract class Batch {
-      final HConnection c;
-
-      private Batch(final HConnection c) {
-        this.c = c;
-      }
-
-      /**
-       * This is the method subclasses must implement.
-       * @param currentList current list of rows
-       * @param tableName table we are processing
-       * @param row row
-       * @return Count of items processed or -1 if all.
-       * @throws IOException if a remote or network exception occurs
-       * @throws RuntimeException other undefined exception
-       */
-      abstract int doCall(final List<? extends Row> currentList,
-        final byte [] row, final byte [] tableName)
-      throws IOException, RuntimeException;
-
-      /**
-       * Process the passed <code>list</code>.
-       * @param list list of rows to process
-       * @param tableName table we are processing
-       * @return Count of how many added or -1 if all added.
-       * @throws IOException if a remote or network exception occurs
-       */
-      int process(final List<? extends Row> list, final byte[] tableName)
-      throws IOException {
-        byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
-        byte [] currentRegion = region;
-        boolean isLastRow;
-        boolean retryOnlyOne = false;
-        List<Row> currentList = new ArrayList<Row>();
-        int i, tries;
-        for (i = 0, tries = 0; i < list.size() && tries < numRetries; i++) {
-          Row row = list.get(i);
-          currentList.add(row);
-          // If the next record goes to a new region, then we are to clear
-          // currentList now during this cycle.
-          isLastRow = (i + 1) == list.size();
-          if (!isLastRow) {
-            region = getRegionName(tableName, list.get(i + 1).getRow(), false);
-          }
-          if (!Bytes.equals(currentRegion, region) || isLastRow || retryOnlyOne) {
-            int index = doCall(currentList, row.getRow(), tableName);
-            // index is == -1 if all processed successfully, else its index
-            // of last record successfully processed.
-            if (index != -1) {
-              if (tries == numRetries - 1) {
-                throw new RetriesExhaustedException("Some server, retryOnlyOne=" +
-                  retryOnlyOne + ", index=" + index + ", islastrow=" + isLastRow +
-                  ", tries=" + tries + ", numtries=" + numRetries + ", i=" + i +
-                  ", listsize=" + list.size() + ", region=" +
-                  Bytes.toStringBinary(region), currentRegion, row.getRow(),
-                  tries, new ArrayList<Throwable>());
-              }
-              tries = doBatchPause(currentRegion, tries);
-              i = i - currentList.size() + index;
-              retryOnlyOne = true;
-              // Reload location.
-              region = getRegionName(tableName, list.get(i + 1).getRow(), true);
-            } else {
-              // Reset these flags/counters on successful batch Put
-              retryOnlyOne = false;
-              tries = 0;
-            }
-            currentRegion = region;
-            currentList.clear();
-          }
-        }
-        return i;
-      }
-
-      /*
-       * @param t
-       * @param r
-       * @param re
-       * @return Region name that holds passed row <code>r</code>
-       * @throws IOException
-       */
-      private byte [] getRegionName(final byte [] t, final byte [] r,
-        final boolean re)
-      throws IOException {
-        HRegionLocation location = getRegionLocationForRowWithRetries(t, r, re);
-        return location.getRegionInfo().getRegionName();
-      }
-
-      /*
-       * Do pause processing before retrying...
-       * @param currentRegion
-       * @param tries
-       * @return New value for tries.
-       */
-      private int doBatchPause(final byte [] currentRegion, final int tries) {
-        int localTries = tries;
-        long sleepTime = getPauseTime(tries);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Reloading region " + Bytes.toStringBinary(currentRegion) +
-            " location because regionserver didn't accept updates; tries=" +
-            tries + " of max=" + numRetries + ", waiting=" + sleepTime + "ms");
-        }
-        try {
-          Thread.sleep(sleepTime);
-          localTries++;
-        } catch (InterruptedException e) {
-          // continue
-        }
-        return localTries;
-      }
-    }
-
-    public int processBatchOfRows(final ArrayList<Put> list,
-      final byte[] tableName)
+    public int processBatchOfRows(final ArrayList<Put> list, final byte[] tableName, ExecutorService pool)
     throws IOException {
-      if (list.isEmpty()) {
-        return 0;
-      }
-      if (list.size() > 1) {
-        Collections.sort(list);
-      }
-      Batch b = new Batch(this) {
-        @SuppressWarnings("unchecked")
-        @Override
-        int doCall(final List<? extends Row> currentList, final byte [] row,
-          final byte [] tableName)
-        throws IOException, RuntimeException {
-          final List<Put> puts = (List<Put>)currentList;
-          return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
-              tableName, row) {
-            public Integer call() throws IOException {
-              return server.put(location.getRegionInfo().getRegionName(), puts);
-            }
-          });
+      Result[] results = new Result[list.size()];
+      processBatch((List) list, tableName, pool, results);
+      int count = 0;
+      for (Result r : results) {
+        if (r != null) {
+          count++;
         }
-      };
-      return b.process(list, tableName);
+      }
+      return (count == list.size() ? -1 : count);
     }
 
+    /**
+     * @deprecated Use HConnectionManager::processBatch instead.
+     */
     public int processBatchOfDeletes(final List<Delete> list,
-      final byte[] tableName)
+      final byte[] tableName, ExecutorService pool)
     throws IOException {
-      if (list.isEmpty()) {
-        return 0;
+      Result[] results = new Result[list.size()];
+      processBatch((List) list, tableName, pool, results);
+      int count = 0;
+      for (Result r : results) {
+        if (r != null) {
+          count++;
+        }
       }
-      if (list.size() > 1) {
-        Collections.sort(list);
-      }
-      Batch b = new Batch(this) {
-        @SuppressWarnings("unchecked")
-        @Override
-        int doCall(final List<? extends Row> currentList, final byte [] row,
-          final byte [] tableName)
-        throws IOException, RuntimeException {
-          final List<Delete> deletes = (List<Delete>)currentList;
-          return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
-                tableName, row) {
-              public Integer call() throws IOException {
-                return server.delete(location.getRegionInfo().getRegionName(),
-                  deletes);
-              }
-            });
-          }
-        };
-        return b.process(list, tableName);
-      }
+      return (count == list.size() ? -1 : count);
+    }
 
     void close(boolean stopProxy) {
       if (master != null) {
@@ -1291,168 +1157,196 @@ public class HConnectionManager {
       }
     }
 
-    /**
-     * Process a batch of Puts on the given executor service.
-     *
-     * @param list the puts to make - successful puts will be removed.
-     * @param pool thread pool to execute requests on
-     *
-     * In the case of an exception, we take different actions depending on the
-     * situation:
-     *  - If the exception is a DoNotRetryException, we rethrow it and leave the
-     *    'list' parameter in an indeterminate state.
-     *  - If the 'list' parameter is a singleton, we directly throw the specific
-     *    exception for that put.
-     *  - Otherwise, we throw a generic exception indicating that an error occurred.
-     *    The 'list' parameter is mutated to contain those puts that did not succeed.
-     */
-    public void processBatchOfPuts(List<Put> list,
-                                   final byte[] tableName, ExecutorService pool) throws IOException {
-      boolean singletonList = list.size() == 1;
+    private Callable<MultiResponse> createCallable(
+        final HServerAddress address, 
+        final MultiAction multi,
+        final byte [] tableName) {
+  	  final HConnection connection = this;
+  	  return new Callable<MultiResponse>() {
+  	    public MultiResponse call() throws IOException {
+  	      return getRegionServerWithoutRetries(
+  	          new ServerCallable<MultiResponse>(connection, tableName, null) {
+  	            public MultiResponse call() throws IOException {
+  	              return server.multi(multi);
+  	            }
+  	            @Override
+  	            public void instantiateServer(boolean reload) throws IOException {
+  	              server = connection.getHRegionConnection(address);
+  	            }
+  	          }
+  	      );
+  	    }
+  	  };
+  	}
+
+    public void processBatch(List<Row> list, 
+        final byte[] tableName,
+        ExecutorService pool,
+        Result[] results) throws IOException {
+
+      // results must be the same size as list
+      if (results.length != list.size()) {
+        throw new IllegalArgumentException("argument results must be the same size as argument list");
+      }
+      
+      if (list.size() == 0) {
+        return;
+      }
+      
+      List<Row> workingList = new ArrayList<Row>(list);
+      final boolean singletonList = (list.size() == 1);
+      boolean retry = true;
       Throwable singleRowCause = null;
-      for ( int tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
-        Collections.sort(list);
-        Map<HServerAddress, MultiPut> regionPuts =
-            new HashMap<HServerAddress, MultiPut>();
-        // step 1:
-        //  break up into regionserver-sized chunks and build the data structs
-        for ( Put put : list ) {
-          byte [] row = put.getRow();
 
-          HRegionLocation loc = locateRegion(tableName, row, true);
-          HServerAddress address = loc.getServerAddress();
-          byte [] regionName = loc.getRegionInfo().getRegionName();
+      for (int tries = 0; tries < numRetries && retry; ++tries) {
 
-          MultiPut mput = regionPuts.get(address);
-          if (mput == null) {
-            mput = new MultiPut(address);
-            regionPuts.put(address, mput);
+        // sleep first, if this is a retry
+        if (tries >= 1) {
+          long sleepTime = getPauseTime(tries);
+          LOG.debug("Retry " +tries+ ", sleep for " +sleepTime+ "ms!");
+          try { 
+            Thread.sleep(sleepTime); 
+          } catch (InterruptedException ignore) {
+            LOG.debug("Interupted");
+            Thread.currentThread().interrupt();
+            break;
           }
-          mput.add(regionName, put);
         }
 
-        // step 2:
-        //  make the requests
-        // Discard the map, just use a list now, makes error recovery easier.
-        List<MultiPut> multiPuts = new ArrayList<MultiPut>(regionPuts.values());
+        // step 1: break up into regionserver-sized chunks and build the data structs
 
-        List<Future<MultiPutResponse>> futures =
-            new ArrayList<Future<MultiPutResponse>>(regionPuts.size());
-        for ( MultiPut put : multiPuts ) {
-          futures.add(pool.submit(createPutCallable(put.address,
-              put,
-              tableName)));
+        Map<HServerAddress, MultiAction> actionsByServer = new HashMap<HServerAddress, MultiAction>();
+        for (int i=0; i<workingList.size(); i++) {
+          Row row = workingList.get(i);
+          if (row != null) {
+            HRegionLocation loc = locateRegion(tableName, row.getRow(), true);
+            HServerAddress address = loc.getServerAddress();
+            byte[] regionName = loc.getRegionInfo().getRegionName();
+  
+            MultiAction actions = actionsByServer.get(address);
+            if (actions == null) {
+              actions = new MultiAction();
+              actionsByServer.put(address, actions);
+            }
+            
+            Action action = new Action(regionName, row, i); 
+            actions.add(regionName, action);
+          }
         }
-        // RUN!
-        List<Put> failed = new ArrayList<Put>();
+        
+        // step 2: make the requests
 
-        // step 3:
-        //  collect the failures and tries from step 1.
-        for (int i = 0; i < futures.size(); i++ ) {
-          Future<MultiPutResponse> future = futures.get(i);
-          MultiPut request = multiPuts.get(i);
+        Map<HServerAddress,Future<MultiResponse>> futures = 
+            new HashMap<HServerAddress, Future<MultiResponse>>(actionsByServer.size());
+         
+        for (Entry<HServerAddress, MultiAction> e : actionsByServer.entrySet()) {
+          futures.put(e.getKey(), pool.submit(createCallable(e.getKey(), e.getValue(), tableName)));
+        }
+        
+        // step 3: collect the failures and successes and prepare for retry
+
+        for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer : futures.entrySet()) {
+          HServerAddress address = responsePerServer.getKey();
+          
           try {
-            MultiPutResponse resp = future.get();
+            // Gather the results for one server
+            Future<MultiResponse> future = responsePerServer.getValue();
 
-            // For each region
-            for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
-              Integer result = resp.getAnswer(e.getKey());
-              if (result == null) {
-                // failed
-                LOG.debug("Failed all for region: " +
-                    Bytes.toStringBinary(e.getKey()) + ", removing from cache");
-                failed.addAll(e.getValue());
-              } else if (result >= 0) {
-                // some failures
-                List<Put> lst = e.getValue();
-                failed.addAll(lst.subList(result, lst.size()));
-                LOG.debug("Failed past " + result + " for region: " +
-                    Bytes.toStringBinary(e.getKey()) + ", removing from cache");
-              }
-            }
-          } catch (InterruptedException e) {
-            // go into the failed list.
-            LOG.debug("Failed all from " + request.address, e);
-            failed.addAll(request.allPuts());
-          } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            // Don't print stack trace if NSRE; NSRE is 'normal' operation.
-            if (cause instanceof NotServingRegionException) {
-              String msg = cause.getMessage();
-              if (msg != null && msg.length() > 0) {
-                // msg is the exception as a String... we just want first line.
-                msg = msg.split("[\\n\\r]+\\s*at")[0];
-              }
-              LOG.debug("Failed execution of all on " + request.address +
-                " because: " + msg);
+            // Not really sure what a reasonable timeout value is. Here's a first try.
+            
+            MultiResponse resp = future.get(1000, TimeUnit.MILLISECONDS);
+
+            if (resp == null) {
+              // Entire server failed
+              LOG.debug("Failed all for server: " + address + ", removing from cache");
             } else {
-              // all go into the failed list.
-              LOG.debug("Failed execution of all on " + request.address,
-                e.getCause());
+              // For each region
+              for (Entry<byte[], List<Pair<Integer,Result>>> e : resp.getResults().entrySet()) {
+                byte[] regionName = e.getKey();
+                List<Pair<Integer, Result>> regionResults = e.getValue();
+                for (int i = 0; i < regionResults.size(); i++) {
+                  Pair<Integer, Result> regionResult = regionResults.get(i);
+                  if (regionResult.getSecond() == null) {
+                    // failed
+                    LOG.debug("Failures for region: " + Bytes.toStringBinary(regionName) + ", removing from cache");
+                  } else {
+                    // success
+                    results[regionResult.getFirst()] = regionResult.getSecond();
+                  }
+                }
+              }
             }
-            failed.addAll(request.allPuts());
+          } catch (TimeoutException e) {
+            LOG.debug("Timeout for region server: " + address + ", removing from cache");
+          } catch (InterruptedException e) {
+            LOG.debug("Failed all from " + address, e);
+            Thread.currentThread().interrupt();
+            break;
+          } catch (ExecutionException e) {
+            LOG.debug("Failed all from " + address, e);
 
-            // Just give up, leaving the batch put list in an untouched/semi-committed state
+            // Just give up, leaving the batch incomplete
             if (e.getCause() instanceof DoNotRetryIOException) {
               throw (DoNotRetryIOException) e.getCause();
             }
-
+            
             if (singletonList) {
               // be richer for reporting in a 1 row case.
               singleRowCause = e.getCause();
             }
-          }
+          } 
         }
-        list.clear();
-        if (!failed.isEmpty()) {
-          for (Put failedPut: failed) {
-            deleteCachedLocation(tableName, failedPut.getRow());
-          }
 
-          list.addAll(failed);
-
-          long sleepTime = getPauseTime(tries);
-          LOG.debug("processBatchOfPuts had some failures, sleeping for " + sleepTime +
-              " ms!");
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException ignored) {
+        // Find failures (i.e. null Result), and add them to the workingList (in
+        // order), so they can be retried.
+        retry = false;
+        workingList.clear();
+        for (int i = 0; i < results.length; i++) {
+          if (results[i] == null) {
+            retry = true;
+            Row row = list.get(i);
+            workingList.add(row);
+            deleteCachedLocation(tableName, row.getRow());
+          } else {
+            // add null to workingList, so the order remains consistent with the original list argument.
+            workingList.add(null);
           }
         }
       }
-      if (!list.isEmpty()) {
-        if (singletonList && singleRowCause != null) {
-          throw new IOException(singleRowCause);
-        }
 
-        // ran out of retries and didnt succeed everything!
-        throw new RetriesExhaustedException("Still had " + list.size() + " puts left after retrying " +
-            numRetries + " times.");
+      if (Thread.currentThread().isInterrupted()) {
+        throw new IOException("Aborting attempt because of a thread interruption");
+      }
+      
+      if (retry) {
+        // ran out of retries and didn't successfully finish everything!
+        if (singleRowCause != null) {
+          throw new IOException(singleRowCause);
+        } else {
+          throw new RetriesExhaustedException("Still had " + workingList.size()
+              + " actions left after retrying " + numRetries + " times.");
+        }
       }
     }
 
-
-    private Callable<MultiPutResponse> createPutCallable(
-        final HServerAddress address, final MultiPut puts,
-        final byte [] tableName) {
-      final HConnection connection = this;
-      return new Callable<MultiPutResponse>() {
-        public MultiPutResponse call() throws IOException {
-          return getRegionServerWithoutRetries(
-              new ServerCallable<MultiPutResponse>(connection, tableName, null) {
-                public MultiPutResponse call() throws IOException {
-                  MultiPutResponse resp = server.multiPut(puts);
-                  resp.request = puts;
-                  return resp;
-                }
-                @Override
-                public void instantiateServer(boolean reload) throws IOException {
-                  server = connection.getHRegionConnection(address);
-                }
-              }
-          );
+    /**
+     * @deprecated Use HConnectionManager::processBatch instead.
+     */
+    public void processBatchOfPuts(List<Put> list,
+        final byte[] tableName,
+        ExecutorService pool) throws IOException {
+      Result[] results = new Result[list.size()];
+      processBatch((List) list, tableName, pool, results);
+      
+      // mutate list so that it is empty for complete success, or contains only failed records
+      // results are returned in the same order as the requests in list
+      // walk the list backwards, so we can remove from list without impacting the indexes of earlier members
+      for (int i = results.length - 1; i>=0; i--) {
+        // if result is not null, it succeeded
+        if (results[i] != null) {
+          list.remove(i);
         }
-      };
+      }
     }
 
     private Throwable translateException(Throwable t) throws IOException {
