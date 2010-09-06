@@ -106,7 +106,7 @@ class HMerge {
       HConnection connection = HConnectionManager.getConnection(conf);
       masterIsRunning = connection.isMasterRunning();
     }
-    HConnectionManager.deleteConnectionInfo(conf, false);
+    HConnectionManager.deleteConnection(conf, false);
     if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       if (masterIsRunning) {
         throw new IllegalStateException(

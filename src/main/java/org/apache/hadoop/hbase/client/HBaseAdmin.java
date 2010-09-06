@@ -408,7 +408,7 @@ public class HBaseAdmin implements Abortable {
       }
     }
     // Delete cached information to prevent clients from using old locations
-    HConnectionManager.deleteConnectionInfo(conf, false);
+    HConnectionManager.deleteConnection(conf, false);
     LOG.info("Deleted " + Bytes.toString(tableName));
   }
 

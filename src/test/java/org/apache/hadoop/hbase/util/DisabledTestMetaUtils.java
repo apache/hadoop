@@ -50,7 +50,7 @@ public class DisabledTestMetaUtils extends HBaseClusterTestCase {
     utils.deleteColumn(editTable, Bytes.toBytes(oldColumn));
     utils.shutdown();
     // Delete again so we go get it all fresh.
-    HConnectionManager.deleteConnectionInfo(conf, false);
+    HConnectionManager.deleteConnection(conf, false);
     // Now assert columns were added and deleted.
     this.cluster = new MiniHBaseCluster(this.conf, 1);
     // Now assert columns were added and deleted.

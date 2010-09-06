@@ -29,7 +29,6 @@ import java.io.IOException;
  * @since 0.21.0
  */
 public class HTableFactory implements HTableInterfaceFactory {
-
   @Override
   public HTableInterface createHTableInterface(Configuration config,
       byte[] tableName) {
@@ -47,9 +46,5 @@ public class HTableFactory implements HTableInterfaceFactory {
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
-
   }
-
-
-
 }

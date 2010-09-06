@@ -172,7 +172,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     }
     super.tearDown();
     try {
-      HConnectionManager.deleteConnectionInfo(conf, true);
+      HConnectionManager.deleteConnection(conf, true);
       if (this.cluster != null) {
         try {
           this.cluster.shutdown();

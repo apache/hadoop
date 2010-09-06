@@ -45,7 +45,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -74,9 +73,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * A non-instantiable class that manages connections to multiple tables in
- * multiple HBase instances.
- *
+ * A non-instantiable class that manages connections to tables.
  * Used by {@link HTable} and {@link HBaseAdmin}
  */
 @SuppressWarnings("serial")
@@ -91,44 +88,43 @@ public class HConnectionManager {
     });
   }
 
+  static final int MAX_CACHED_HBASE_INSTANCES = 31;
+
+  // A LRU Map of Configuration hashcode -> TableServers. We set instances to 31.
+  // The zk default max connections to the ensemble from the one client is 30 so
+  // should run into zk issues before hit this value of 31.
+  private static final Map<Configuration, TableServers> HBASE_INSTANCES =
+    new LinkedHashMap<Configuration, TableServers>
+      ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<Configuration, TableServers> eldest) {
+        return size() > MAX_CACHED_HBASE_INSTANCES;
+      }
+  };
+
   /*
-   * Not instantiable.
+   * Non-instantiable.
    */
   protected HConnectionManager() {
     super();
   }
 
-  private static final int MAX_CACHED_HBASE_INSTANCES=31;
-  // A LRU Map of master HBaseConfiguration -> connection information for that
-  // instance. The objects it contains are mutable and hence require
-  // synchronized access to them.  We set instances to 31.  The zk default max
-  // connections is 30 so should run into zk issues before hit this value of 31.
-  private static
-  final Map<Integer, TableServers> HBASE_INSTANCES =
-    new LinkedHashMap<Integer, TableServers>
-      ((int) (MAX_CACHED_HBASE_INSTANCES/0.75F)+1, 0.75F, true) {
-      @Override
-      protected boolean removeEldestEntry(Map.Entry<Integer, TableServers> eldest) {
-        return size() > MAX_CACHED_HBASE_INSTANCES;
-      }
-  };
-
   /**
-   * Get the connection object for the instance specified by the configuration
-   * If no current connection exists, create a new connection for that instance
+   * Get the connection that goes with the passed <code>conf</code> configuration.
+   * If no current connection exists, method creates a new connection for the
+   * passed <code>conf</code> instance.
    * @param conf configuration
-   * @return HConnection object for the instance specified by the configuration
+   * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
   public static HConnection getConnection(Configuration conf)
   throws ZooKeeperConnectionException {
     TableServers connection;
-    Integer key = HBaseConfiguration.hashCode(conf);
     synchronized (HBASE_INSTANCES) {
-      connection = HBASE_INSTANCES.get(key);
+      connection = HBASE_INSTANCES.get(conf);
       if (connection == null) {
         connection = new TableServers(conf);
-        HBASE_INSTANCES.put(key, connection);
+        HBASE_INSTANCES.put(conf, connection);
       }
     }
     return connection;
@@ -139,11 +135,9 @@ public class HConnectionManager {
    * @param conf configuration
    * @param stopProxy stop the proxy as well
    */
-  public static void deleteConnectionInfo(Configuration conf,
-      boolean stopProxy) {
+  public static void deleteConnection(Configuration conf, boolean stopProxy) {
     synchronized (HBASE_INSTANCES) {
-      Integer key = HBaseConfiguration.hashCode(conf);
-      TableServers t = HBASE_INSTANCES.remove(key);
+      TableServers t = HBASE_INSTANCES.remove(conf);
       if (t != null) {
         t.close(stopProxy);
       }
@@ -172,7 +166,8 @@ public class HConnectionManager {
    * @throws ZooKeeperConnectionException
    */
   static int getCachedRegionCount(Configuration conf,
-      byte[] tableName) throws ZooKeeperConnectionException {
+      byte[] tableName)
+  throws ZooKeeperConnectionException {
     TableServers connection = (TableServers)getConnection(conf);
     return connection.getNumberOfCachedRegionLocations(tableName);
   }
@@ -189,7 +184,7 @@ public class HConnectionManager {
     return connection.isRegionCached(tableName, row);
   }
 
-  /* Encapsulates finding the servers for an HBase instance */
+  /* Encapsulates connection to zookeeper and regionservers.*/
   static class TableServers implements ServerConnection, Abortable {
     static final Log LOG = LogFactory.getLog(TableServers.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
@@ -212,7 +207,7 @@ public class HConnectionManager {
     private final Object metaRegionLock = new Object();
     private final Object userRegionLock = new Object();
 
-    private volatile Configuration conf;
+    private final Configuration conf;
 
     // Known region HServerAddress.toString() -> HRegionInterface
     private final Map<String, HRegionInterface> servers =
