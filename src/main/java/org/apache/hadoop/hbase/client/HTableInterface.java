@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 
 import java.io.IOException;
 import java.util.List;
@@ -70,6 +71,29 @@ public interface HTableInterface {
   boolean exists(Get get) throws IOException;
 
   /**
+   * Method that does a batch call on Deletes, Gets and Puts.
+   *
+   * @param actions list of Get, Put, Delete objects
+   * @param results Empty Result[], same size as actions. Provides access to partial
+   *                results, in case an exception is thrown. A null in the result array means that
+   *                the call for that action failed, even after retries
+   * @throws IOException
+   * @since 0.90.0
+   */
+  void batch(final List<Row> actions, final Result[] results) throws IOException;
+
+  /**
+   * Method that does a batch call on Deletes, Gets and Puts.
+   *
+   * @param actions list of Get, Put, Delete objects
+   * @return the results from the actions. A null in the return array means that
+   *         the call for that action failed, even after retries
+   * @throws IOException
+   * @since 0.90.0
+   */
+  Result[] batch(final List<Row> actions) throws IOException;
+
+  /**
    * Extracts certain cells from a given row.
    * @param get The object that specifies what data to fetch and from which row.
    * @return The data coming from the specified row, if it exists.  If the row
@@ -79,6 +103,22 @@ public interface HTableInterface {
    * @since 0.20.0
    */
   Result get(Get get) throws IOException;
+
+  /**
+   * Extracts certain cells from the given rows, in batch.
+   *
+   * @param gets The objects that specify what data to fetch and from which rows.
+   *
+   * @return The data coming from the specified rows, if it exists.  If the row
+   *         specified doesn't exist, the {@link Result} instance returned won't
+   *         contain any {@link KeyValue}, as indicated by {@link Result#isEmpty()}.
+   *         A null in the return array means that the get operation for that
+   *         Get failed, even after retries.
+   * @throws IOException if a remote or network exception occurs.
+   *
+   * @since 0.90.0
+   */
+  Result[] get(List<Get> gets) throws IOException;
 
   /**
    * Return the row that matches <i>row</i> exactly,

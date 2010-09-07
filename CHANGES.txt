@@ -884,6 +884,8 @@ Release 0.21.0 - Unreleased
    HBASE-1676  load balancing on a large cluster doesn't work very well
    HBASE-2953  Edit of hbase-default.xml removing stale configs.
    HBASE-2857  HBaseAdmin.tableExists() should not require a full meta scan
+   HBASE-2962  Add missing methods to HTableInterface (and HTable)
+               (Lars Francke via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowLock;
@@ -596,6 +597,21 @@ public class RemoteHTable implements HTableInterface {
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, boolean writeToWAL) throws IOException {
     throw new IOException("incrementColumnValue not supported");
+  }
+
+  @Override
+  public void batch(List<Row> actions, Result[] results) throws IOException {
+    throw new IOException("batch not supported");
+  }
+
+  @Override
+  public Result[] batch(List<Row> actions) throws IOException {
+    throw new IOException("batch not supported");
+  }
+
+  @Override
+  public Result[] get(List<Get> gets) throws IOException {
+    throw new IOException("get(List<Get>) not supported");
   }
 
 }

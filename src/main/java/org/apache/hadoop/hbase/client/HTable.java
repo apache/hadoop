@@ -268,6 +268,7 @@ public class HTable implements HTableInterface {
     return connection.getRegionLocation(tableName, row, false);
   }
 
+  @Override
   public byte [] getTableName() {
     return this.tableName;
   }
@@ -305,6 +306,7 @@ public class HTable implements HTableInterface {
     this.scannerCaching = scannerCaching;
   }
 
+  @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     return new UnmodifyableHTableDescriptor(
       this.connection.getHTableDescriptor(this.tableName));
@@ -492,6 +494,7 @@ public class HTable implements HTableInterface {
     return allRegions;
   }
 
+   @Override
    public Result getRowOrBefore(final byte[] row, final byte[] family)
    throws IOException {
      return connection.getRegionServerWithRetries(
@@ -503,18 +506,21 @@ public class HTable implements HTableInterface {
      });
    }
 
+  @Override
   public ResultScanner getScanner(final Scan scan) throws IOException {
     ClientScanner s = new ClientScanner(scan);
     s.initialize();
     return s;
   }
 
+  @Override
   public ResultScanner getScanner(byte [] family) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(family);
     return getScanner(scan);
   }
 
+  @Override
   public ResultScanner getScanner(byte [] family, byte [] qualifier)
   throws IOException {
     Scan scan = new Scan();
@@ -532,6 +538,10 @@ public class HTable implements HTableInterface {
     );
   }
 
+   public Result[] get(List<Get> gets) throws IOException {
+    return batch((List) gets);
+  }
+
   /**
    * Method that does a batch call on Deletes, Gets and Puts.
    *
@@ -541,6 +551,7 @@ public class HTable implements HTableInterface {
    * the call for that action failed, even after retries
    * @throws IOException
    */
+  @Override
   public synchronized void batch(final List<Row> actions, final Result[] results) throws IOException {
     connection.processBatch(actions, tableName, pool, results);
   }
@@ -553,6 +564,7 @@ public class HTable implements HTableInterface {
    * the call for that action failed, even after retries
    * @throws IOException
    */
+  @Override
   public synchronized Result[] batch(final List<Row> actions) throws IOException {
     Result[] results = new Result[actions.size()];
     connection.processBatch(actions, tableName, pool, results);
@@ -566,6 +578,7 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
+  @Override
   public void delete(final Delete delete)
   throws IOException {
     connection.getRegionServerWithRetries(
@@ -587,6 +600,7 @@ public class HTable implements HTableInterface {
    * that have not be successfully applied.
    * @since 0.20.1
    */
+  @Override
   public void delete(final List<Delete> deletes)
   throws IOException {
     Result[] results = new Result[deletes.size()];
@@ -603,10 +617,12 @@ public class HTable implements HTableInterface {
     }
   }
 
+  @Override
   public void put(final Put put) throws IOException {
     doPut(Arrays.asList(put));
   }
 
+  @Override
   public void put(final List<Put> puts) throws IOException {
     doPut(puts);
   }
@@ -622,12 +638,14 @@ public class HTable implements HTableInterface {
     }
   }
 
+  @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {
     return incrementColumnValue(row, family, qualifier, amount, true);
   }
 
+  @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount, final boolean writeToWAL)
   throws IOException {
@@ -665,6 +683,7 @@ public class HTable implements HTableInterface {
    * @throws IOException
    * @return true if the new put was execute, false otherwise
    */
+  @Override
   public boolean checkAndPut(final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
@@ -692,6 +711,7 @@ public class HTable implements HTableInterface {
    * @throws IOException
    * @return true if the new delete was executed, false otherwise
    */
+  @Override
   public boolean checkAndDelete(final byte [] row,
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Delete delete)
@@ -719,6 +739,7 @@ public class HTable implements HTableInterface {
    * @return true if the specified Get matches one or more keys, false if not
    * @throws IOException
    */
+  @Override
   public boolean exists(final Get get) throws IOException {
     return connection.getRegionServerWithRetries(
         new ServerCallable<Boolean>(connection, tableName, get.getRow()) {
@@ -738,6 +759,7 @@ public class HTable implements HTableInterface {
    * {@link #isAutoFlush()} is {@code true}.
    * @throws IOException if a remote or network exception occurs.
    */
+  @Override
   public void flushCommits() throws IOException {
     try {
       connection.processBatchOfPuts(writeBuffer, tableName, pool);
@@ -750,10 +772,7 @@ public class HTable implements HTableInterface {
     }
   }
 
-  /**
-   * Close down this HTable instance.
-   * Calls {@link #flushCommits()}.
-   */
+  @Override
   public void close() throws IOException{
     flushCommits();
   }
@@ -774,6 +793,7 @@ public class HTable implements HTableInterface {
     }
   }
 
+  @Override
   public RowLock lockRow(final byte [] row)
   throws IOException {
     return connection.getRegionServerWithRetries(
@@ -787,6 +807,7 @@ public class HTable implements HTableInterface {
     );
   }
 
+  @Override
   public void unlockRow(final RowLock rl)
   throws IOException {
     connection.getRegionServerWithRetries(
@@ -800,6 +821,7 @@ public class HTable implements HTableInterface {
     );
   }
 
+  @Override
   public boolean isAutoFlush() {
     return autoFlush;
   }
