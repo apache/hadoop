@@ -473,6 +473,17 @@
     </schema>
   </target>
 
+  <target name="generate-avro-protocols" depends="init, ivy-retrieve-test">
+    <taskdef name="schema" classname="org.apache.avro.specific.ProtocolTask">
+      <classpath refid="test.classpath"/>
+    </taskdef>
+    <schema destdir="${test.generated.dir}">
+      <fileset dir="${test.src.dir}">
+        <include name="**/*.avpr" />
+     </fileset>
+    </schema>
+  </target>
+
   <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
@@ -480,7 +491,7 @@
   <target name="-classes-compilation"
     depends="compile-core-classes, compile-core-test"/> 
 
-  <target name="compile-core-test" depends="compile-core-classes, ivy-retrieve-test, generate-test-records, generate-avro-records">
+  <target name="compile-core-test" depends="compile-core-classes, ivy-retrieve-test, generate-test-records, generate-avro-records, generate-avro-protocols">
     <mkdir dir="${test.core.build.classes}"/>
     <javac 
      encoding="${build.encoding}" 

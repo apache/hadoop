@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.ipc;
 
-import java.lang.reflect.Method;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+
 import javax.net.SocketFactory;
 
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.conf.Configuration;
 
 /** An RPC implementation. */
-interface RpcEngine {
+@InterfaceStability.Evolving
+public interface RpcEngine {
 
   /** Construct a client-side proxy object. */
   Object getProxy(Class<?> protocol,

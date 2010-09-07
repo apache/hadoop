@@ -18,34 +18,40 @@
 
 package org.apache.hadoop.ipc;
 
-import java.io.*;
-import java.util.*;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+import java.io.Closeable;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.net.SocketFactory;
-import javax.security.auth.login.LoginException;
 
-import org.apache.commons.logging.*;
-
+import org.apache.avro.ipc.Responder;
+import org.apache.avro.ipc.Transceiver;
+import org.apache.avro.reflect.ReflectRequestor;
+import org.apache.avro.reflect.ReflectResponder;
+import org.apache.avro.specific.SpecificRequestor;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.net.NetUtils;
-
-import org.apache.avro.*;
-import org.apache.avro.ipc.*;
-import org.apache.avro.reflect.*;
 
 /** Tunnel Avro-format RPC requests over a Hadoop {@link RPC} connection.  This
  * does not give cross-language wire compatibility, since the Hadoop RPC wire
  * format is non-standard, but it does permit use of Avro's protocol versioning
  * features for inter-Java RPCs. */
-class AvroRpcEngine implements RpcEngine {
+@InterfaceStability.Evolving
+public class AvroRpcEngine implements RpcEngine {
   private static final Log LOG = LogFactory.getLog(RPC.class);
 
   private static int VERSION = 0;
@@ -150,15 +156,15 @@ class AvroRpcEngine implements RpcEngine {
     }
   }
 
-  private static class Invoker implements InvocationHandler, Closeable {
+  private class Invoker implements InvocationHandler, Closeable {
     private final ClientTransceiver tx;
-    private final ReflectRequestor requestor;
+    private final SpecificRequestor requestor;
     public Invoker(Class<?> protocol, InetSocketAddress addr,
                    UserGroupInformation ticket, Configuration conf,
                    SocketFactory factory,
                    int rpcTimeout) throws IOException {
       this.tx = new ClientTransceiver(addr, ticket, conf, factory, rpcTimeout);
-      this.requestor = new ReflectRequestor(protocol, tx);
+      this.requestor = createRequestor(protocol, tx);
     }
     @Override public Object invoke(Object proxy, Method method, Object[] args) 
       throws Throwable {
@@ -169,12 +175,20 @@ class AvroRpcEngine implements RpcEngine {
     }
   }
 
-  /** An Avro RPC Responder that can process requests passed via Hadoop RPC. */
-  private static class TunnelResponder extends ReflectResponder
-    implements TunnelProtocol {
+  protected SpecificRequestor createRequestor(Class<?> protocol, 
+      Transceiver transeiver) throws IOException {
+    return new ReflectRequestor(protocol, transeiver);
+  }
 
+  protected Responder createResponder(Class<?> iface, Object impl) {
+    return new ReflectResponder(iface, impl);
+  }
+
+  /** An Avro RPC Responder that can process requests passed via Hadoop RPC. */
+  private class TunnelResponder implements TunnelProtocol {
+    private Responder responder;
     public TunnelResponder(Class<?> iface, Object impl) {
-      super(iface, impl);
+      responder = createResponder(iface, impl);
     }
 
     public long getProtocolVersion(String protocol, long version)
@@ -184,7 +198,7 @@ class AvroRpcEngine implements RpcEngine {
 
     public BufferListWritable call(final BufferListWritable request)
       throws IOException {
-      return new BufferListWritable(respond(request.buffers));
+      return new BufferListWritable(responder.respond(request.buffers));
     }
   }
 

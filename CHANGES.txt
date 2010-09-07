@@ -235,6 +235,9 @@ Trunk (unreleased changes)
     HADOOP-6938. ConnectionId.getRemotePrincipal() should check if security
     is enabled. (Kan Zhang via hairong)
 
+    HADOOP-6930. AvroRpcEngine doesn't work with generated Avro code. 
+    (sharad)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

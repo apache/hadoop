@@ -44,7 +44,8 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /** An RpcEngine implementation for Writable data. */
-class WritableRpcEngine implements RpcEngine {
+@InterfaceStability.Evolving
+public class WritableRpcEngine implements RpcEngine {
   private static final Log LOG = LogFactory.getLog(RPC.class);
 
   /** A method invocation, including the method name and its parameters.*/

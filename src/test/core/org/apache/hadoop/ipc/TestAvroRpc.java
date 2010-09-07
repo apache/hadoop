@@ -18,18 +18,16 @@
 
 package org.apache.hadoop.ipc;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.conf.Configuration;
-
-import org.apache.hadoop.net.NetUtils;
-
 import org.apache.avro.ipc.AvroRemoteException;
+import org.apache.avro.util.Utf8;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 
 /** Unit tests for AvroRpc. */
 public class TestAvroRpc extends TestCase {
@@ -94,4 +92,47 @@ public class TestAvroRpc extends TestCase {
       server.stop();
     }
   }
+
+  public void testAvroSpecificRpc() throws Exception {
+    Configuration conf = new Configuration();
+    RPC.setProtocolEngine(conf, AvroSpecificTestProtocol.class, 
+        AvroSpecificRpcEngine.class);
+    Server server = RPC.getServer(AvroSpecificTestProtocol.class,
+                                  new AvroSpecificTestProtocolImpl(), 
+                                  ADDRESS, 0, conf);
+    AvroSpecificTestProtocol proxy = null;
+    try {
+      server.start();
+
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      proxy =
+        (AvroSpecificTestProtocol)RPC.getProxy(AvroSpecificTestProtocol.class, 
+            0, addr, conf);
+      
+      Utf8 echo = proxy.echo(new Utf8("hello world"));
+      assertEquals("hello world", echo.toString());
+
+      int intResult = proxy.add(1, 2);
+      assertEquals(3, intResult);
+
+    } finally {
+      server.stop();
+    }
+  }
+  
+  public static class AvroSpecificTestProtocolImpl implements 
+      AvroSpecificTestProtocol {
+
+    @Override
+    public int add(int arg1, int arg2) throws AvroRemoteException {
+      return arg1 + arg2;
+    }
+
+    @Override
+    public Utf8 echo(Utf8 msg) throws AvroRemoteException {
+      return msg;
+    }
+    
+  }
+  
 }

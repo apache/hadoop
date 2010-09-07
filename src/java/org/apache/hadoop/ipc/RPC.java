@@ -78,8 +78,13 @@ public class RPC {
 
   private static final String ENGINE_PROP = "rpc.engine";
 
-  // set a protocol to use a non-default RpcEngine
-  static void setProtocolEngine(Configuration conf,
+  /**
+   * Set a protocol to use a non-default RpcEngine.
+   * @param conf configuration to use
+   * @param protocol the protocol interface
+   * @param engine the RpcEngine impl
+   */
+  public static void setProtocolEngine(Configuration conf,
                                 Class protocol, Class engine) {
     conf.setClass(ENGINE_PROP+"."+protocol.getName(), engine, RpcEngine.class);
   }
