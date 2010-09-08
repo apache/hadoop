@@ -661,5 +661,22 @@
           </footnote></para>
       </section>
     </section>
+    <section>
+        <title>WAL Tools</title>
+            <section>
+                <title><classname>HLog</classname> main</title>
+                <para>The main method on <classname>HLog</classname> offers manual split and dump facilities.
+                </para>
+                <para>
+                    You can get a textual dump of a WAL file content by doing the following:
+                    <code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> 
+                    The return code will be non-zero if issues with the file so you can test wholesomeness of file by
+                    redirecting <varname>STDOUT</varname> to <code>/dev/null</code> and testing the program return.
+                </para>
+                <para>Similarily you can force a split of a log file directory by doing
+                    <code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code> 
+               </para>
+            </section>
+     </section>
   </chapter>
 </book>
