@@ -513,6 +513,7 @@ Release 0.21.0 - Unreleased
                written out to SequenceFile
    HBASE-2969  missing sync in HTablePool.getTable()
                (Guilherme Mauro Germoglio Barbosa via Stack)
+   HBASE-2973  NPE in LogCleaner
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

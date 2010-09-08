@@ -123,7 +123,8 @@ public class LogCleaner extends Chore {
   @Override
   protected void chore() {
     try {
-      FileStatus[] files = this.fs.listStatus(this.oldLogDir);
+      FileStatus [] files = this.fs.listStatus(this.oldLogDir);
+      if (files == null) return;
       int nbDeletedLog = 0;
       FILE: for (FileStatus file : files) {
         Path filePath = file.getPath();
