@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.SequenceFile;
+import org.mortbay.log.Log;
 
 public class SequenceFileLogReader implements HLog.Reader {
 
@@ -93,6 +94,9 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   Configuration conf;
   WALReader reader;
+  // Needed logging exceptions
+  Path path;
+  int edit = 0;
 
   public SequenceFileLogReader() { }
 
@@ -100,12 +104,17 @@ public class SequenceFileLogReader implements HLog.Reader {
   public void init(FileSystem fs, Path path, Configuration conf)
       throws IOException {
     this.conf = conf;
+    this.path = path;
     reader = new WALReader(fs, path, conf);
   }
 
   @Override
   public void close() throws IOException {
-    reader.close();
+    try {
+      reader.close();
+    } catch (IOException ioe) {
+      throw addFileInfoToException(ioe);
+    }
   }
 
   @Override
@@ -115,21 +124,29 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   @Override
   public HLog.Entry next(HLog.Entry reuse) throws IOException {
-    if (reuse == null) {
+    HLog.Entry e = reuse;
+    if (e == null) {
       HLogKey key = HLog.newKey(conf);
       WALEdit val = new WALEdit();
-      if (reader.next(key, val)) {
-        return new HLog.Entry(key, val);
-      }
-    } else if (reader.next(reuse.getKey(), reuse.getEdit())) {
-      return reuse;
+      e = new HLog.Entry(key, val);
     }
-    return null;
+    boolean b = false;
+    try {
+      b = this.reader.next(e.getKey(), e.getEdit());
+    } catch (IOException ioe) {
+      throw addFileInfoToException(ioe);
+    }
+    edit++;
+    return b? e: null;
   }
 
   @Override
   public void seek(long pos) throws IOException {
-    reader.seek(pos);
+    try {
+      reader.seek(pos);
+    } catch (IOException ioe) {
+      throw addFileInfoToException(ioe);
+    }
   }
 
   @Override
@@ -137,4 +154,15 @@ public class SequenceFileLogReader implements HLog.Reader {
     return reader.getPosition();
   }
 
+  private IOException addFileInfoToException(final IOException ioe)
+  throws IOException {
+    long pos = -1;
+    try {
+      pos = getPosition();
+    } catch (IOException e) {
+      Log.warn("Failed getting position to add to throw", e);
+    }
+    return new IOException((this.path == null? "": this.path.toString()) +
+      ", pos=" + pos + ", edit=" + this.edit, ioe);
+  }
 }
