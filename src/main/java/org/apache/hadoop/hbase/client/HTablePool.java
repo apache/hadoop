@@ -23,6 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,8 +43,8 @@ import java.util.Queue;
  * is {@link Integer#MAX_VALUE}.<p>
  */
 public class HTablePool {
-  private final Map<String, LinkedList<HTableInterface>> tables =
-      Collections.synchronizedMap(new HashMap<String, LinkedList<HTableInterface>>());
+  private final ConcurrentMap<String, LinkedList<HTableInterface>> tables =
+    new ConcurrentHashMap<String, LinkedList<HTableInterface>>();
   private final Configuration config;
   private final int maxSize;
   private HTableInterfaceFactory tableFactory = new HTableFactory();
@@ -82,7 +84,7 @@ public class HTablePool {
     LinkedList<HTableInterface> queue = tables.get(tableName);
     if(queue == null) {
       queue = new LinkedList<HTableInterface>();
-      tables.put(tableName, queue);
+      tables.putIfAbsent(tableName, queue);
       return createHTable(tableName);
     }
     HTableInterface table;

@@ -511,6 +511,8 @@ Release 0.21.0 - Unreleased
                versions of a column (pranav via jgray)
    HBASE-2967  Failed split: IOE 'File is Corrupt!' -- sync length not being
                written out to SequenceFile
+   HBASE-2969  missing sync in HTablePool.getTable()
+               (Guilherme Mauro Germoglio Barbosa via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
